@@ -5,6 +5,7 @@ use super::{
     chat::handler::ChatHandler,
     game::handler::GameActionHandler,
     oauth::handler::OauthHandler,
+    resync::ResyncHandler,
     schedules::ScheduleHandler,
     tournaments::handler::TournamentHandler,
     user_status::handler::UserStatusHandler,
@@ -115,6 +116,17 @@ impl RequestHandler {
             ClientRequest::Pong(nonce) => {
                 self.data.pings.update(self.user_id, nonce);
                 HandlerOutput::empty()
+            }
+            ClientRequest::Resync => {
+                ResyncHandler::new(
+                    self.hub.clone(),
+                    self.pool.clone(),
+                    self.received_from.clone(),
+                    self.user_id,
+                    self.authed,
+                )
+                .handle()
+                .await?
             }
             ClientRequest::Game {
                 action: game_action,

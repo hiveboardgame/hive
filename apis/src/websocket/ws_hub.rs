@@ -12,7 +12,6 @@ use super::{
 };
 use crate::{
     common::{
-        ChallengeUpdate,
         GameUpdate,
         ScheduleUpdate,
         ServerMessage,
@@ -22,8 +21,6 @@ use crate::{
         UserUpdate,
     },
     responses::{
-        ChallengeResponse,
-        GameResponse,
         HeartbeatResponse,
         ScheduleResponse,
         TournamentResponse,
@@ -36,12 +33,11 @@ use codee::{binary::MsgpackSerdeCodec, Encoder};
 use dashmap::DashMap;
 use db_lib::{
     get_conn,
-    models::{Challenge, Game, Schedule, Tournament, TournamentInvitation, User},
+    models::{Game, Schedule, Tournament, TournamentInvitation, User},
     DbPool,
     DB_POOL_MAX_SIZE,
 };
 use hive_lib::GameStatus;
-use log::error;
 use rand::Rng;
 use shared_types::{GameId, TimeMode, TournamentId};
 use std::{
@@ -97,16 +93,17 @@ pub struct WsHub {
     /// `user_id → (socket_id → Sender)`. Outer DashMap shards on user_id;
     /// inner DashMap shards on socket_id. We never hold outer write while holding
     /// any inner lock, which keeps the two-level locking deadlock-free.
-    sessions: DashMap<Uuid, DashMap<Uuid, mpsc::Sender<Bytes>>>,
+    pub(in crate::websocket) sessions: DashMap<Uuid, DashMap<Uuid, mpsc::Sender<Bytes>>>,
     membership: RwLock<Membership>,
     pub(crate) data: Arc<WebsocketData>,
-    pool: DbPool,
+    pub(in crate::websocket) pool: DbPool,
     /// Bounds the number of concurrent `load_user_state` tasks so connect-burst
     /// can't blow up pool-connection usage or transient loader retention.
     loader_permits: Arc<Semaphore>,
     /// Last TV broadcast timestamp per game. Used by `should_send_tv` to
-    /// coalesce per-move global fanout. Evicted on game finalization.
-    last_tv_broadcast: DashMap<GameId, Instant>,
+    /// coalesce per-move global fanout. Evicted on game finalization. Also
+    /// doubles as the "currently on TV" set consumed by `send_lobby_snapshot`.
+    pub(in crate::websocket) last_tv_broadcast: DashMap<GameId, Instant>,
     /// Cached tournament membership (players ∪ organizers). Refreshed lazily
     /// on dispatch when older than `TOURNAMENT_MEMBERS_TTL`. Bounds DB load
     /// from chatty tournament lobbies.
@@ -815,7 +812,11 @@ impl WsHub {
         outcome
     }
 
-    fn send_own_state_via_tx(&self, tx: &mpsc::Sender<Bytes>, bytes: &Bytes) {
+    pub(in crate::websocket) fn send_own_state_via_tx(
+        &self,
+        tx: &mpsc::Sender<Bytes>,
+        bytes: &Bytes,
+    ) {
         if !matches!(self.send_via_tx(tx, DestKind::User, bytes), SendOutcome::Ok) {
             self.data.telemetry.inc_own_state_drop();
         }
@@ -1030,7 +1031,6 @@ impl WsHub {
     /// Otherwise coalesces to at most once per `TV_THROTTLE`.
     pub fn should_send_tv(&self, game_id: &GameId, is_final: bool) -> bool {
         if is_final {
-            // Clear the throttle entry so any post-finish call starts fresh.
             self.last_tv_broadcast.remove(game_id);
             return true;
         }
@@ -1054,7 +1054,11 @@ impl WsHub {
     /// Returns true iff the specific socket we were spawned for is still in
     /// `sessions`. Used by `load_user_state` to bail when a fast disconnect
     /// (or disconnect+reconnect with a different socket_id) raced our DB load.
-    fn is_socket_connected(&self, user_id: Uuid, socket_id: Uuid) -> bool {
+    pub(in crate::websocket) fn is_socket_connected(
+        &self,
+        user_id: Uuid,
+        socket_id: Uuid,
+    ) -> bool {
         self.sessions
             .get(&user_id)
             .is_some_and(|sockets| sockets.contains_key(&socket_id))
@@ -1137,10 +1141,10 @@ impl WsHub {
             return;
         }
 
-        // Own-state messages are sent before the online roster so they always
-        // arrive even when the 128-message queue would otherwise fill with
-        // roster entries in a large lobby.
-        if let Ok(user) = User::find_by_uuid(&user_id, &mut conn).await {
+        // Connect-only side effects (Online broadcast, tournament invites,
+        // schedule notifications) run first; lobby snapshot is shared with
+        // the Resync path via `send_lobby_snapshot`.
+        let authed = if let Ok(user) = User::find_by_uuid(&user_id, &mut conn).await {
             // Re-check before the Online broadcast: the slow DB lookup gives
             // plenty of time for a disconnect to race in. If it has, our Online
             // would override the Offline that on_disconnect already sent and
@@ -1164,27 +1168,6 @@ impl WsHub {
                 })));
                 if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
                     self.fanout_lobby(&Bytes::from(serialized), DestKind::Global);
-                }
-            }
-
-            // Urgent games. get_games_with_notifications already filters
-            // finished=false; from_games_batch coalesces user/tournament
-            // lookups into ~2 queries instead of 3 per game.
-            let urgent = match user.get_games_with_notifications(&mut conn).await {
-                Ok(v) => v,
-                Err(e) => {
-                    error!("Failed to get urgent games for user {user_id}: {e}");
-                    Vec::new()
-                }
-            };
-            if !urgent.is_empty() {
-                if let Ok(games) = GameResponse::from_games_batch(urgent, &mut conn).await {
-                    let message = ServerResult::Ok(Box::new(ServerMessage::Game(Box::new(
-                        GameUpdate::Urgent(games),
-                    ))));
-                    if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                        self.send_own_state_via_tx(&tx, &Bytes::from(serialized));
-                    }
                 }
             }
 
@@ -1223,70 +1206,13 @@ impl WsHub {
                 }
             }
 
-            // Challenges (public excluding self + own + direct).
-            let mut responses = Vec::new();
-            if let Ok(challenges) = Challenge::get_public_exclude_user(user.id, &mut conn).await {
-                for challenge in challenges {
-                    if let Ok(response) = ChallengeResponse::from_model(&challenge, &mut conn).await
-                    {
-                        responses.push(response);
-                    }
-                }
-            }
-            if let Ok(challenges) = Challenge::get_own(user.id, &mut conn).await {
-                for challenge in challenges {
-                    if let Ok(response) = ChallengeResponse::from_model(&challenge, &mut conn).await
-                    {
-                        responses.push(response);
-                    }
-                }
-            }
-            if let Ok(challenges) = Challenge::direct_challenges(user.id, &mut conn).await {
-                for challenge in challenges {
-                    if let Ok(response) = ChallengeResponse::from_model(&challenge, &mut conn).await
-                    {
-                        responses.push(response);
-                    }
-                }
-            }
-            let message = ServerResult::Ok(Box::new(ServerMessage::Challenge(
-                ChallengeUpdate::Challenges(responses),
-            )));
-            if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                self.send_own_state_via_tx(&tx, &Bytes::from(serialized));
-            }
+            true
         } else {
-            // Anonymous: only public challenges.
-            let mut responses = Vec::new();
-            if let Ok(challenges) = Challenge::get_public(&mut conn).await {
-                for challenge in challenges {
-                    if let Ok(response) = ChallengeResponse::from_model(&challenge, &mut conn).await
-                    {
-                        responses.push(response);
-                    }
-                }
-            }
-            let message = ServerResult::Ok(Box::new(ServerMessage::Challenge(
-                ChallengeUpdate::Challenges(responses),
-            )));
-            if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                self.send_own_state_via_tx(&tx, &Bytes::from(serialized));
-            }
-        }
+            false
+        };
 
-        // Online roster: send last so own-state messages above are never
-        // crowded out in a large lobby. One batched query + one channel send,
-        // so a 150-user lobby doesn't overflow the 128-slot socket buffer.
-        let existing_user_ids: Vec<Uuid> = self.sessions.iter().map(|e| *e.key()).collect();
-        if !existing_user_ids.is_empty() {
-            if let Ok(map) = UserResponse::from_uuids(&existing_user_ids, &mut conn).await {
-                let users: Vec<UserResponse> = map.into_values().collect();
-                let message = ServerResult::Ok(Box::new(ServerMessage::UserStatusBatch(users)));
-                if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                    self.send_own_state_via_tx(&tx, &Bytes::from(serialized));
-                }
-            }
-        }
+        self.send_lobby_snapshot(&mut conn, socket_id, user_id, &tx, authed)
+            .await;
     }
 }
 

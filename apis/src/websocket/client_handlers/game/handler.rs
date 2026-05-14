@@ -17,6 +17,9 @@ pub fn handle_game(game_update: GameUpdate) {
         GameUpdate::Tv(game) => {
             games_signal.live_games_add(game);
         }
+        GameUpdate::TvSnapshot(games) => {
+            games_signal.live_games_replace_all(games);
+        }
         GameUpdate::Urgent(games) => {
             games_signal.own_games_set(games);
         }

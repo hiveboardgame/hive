@@ -51,7 +51,7 @@ pub fn handle_challenge(challenge: ChallengeUpdate) {
                     }
                 }
             });
-            challenges.add(new_challanges);
+            challenges.replace_all(new_challanges);
         }
         ChallengeUpdate::Removed(challenge_id) => {
             let mut challenges = expect_context::<ChallengeStateSignal>();

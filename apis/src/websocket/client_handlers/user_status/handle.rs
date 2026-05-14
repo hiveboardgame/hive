@@ -22,7 +22,5 @@ pub fn handle_user_status(user_update: UserUpdate) {
 
 pub fn handle_user_status_batch(users: Vec<UserResponse>) {
     let mut online_users = expect_context::<OnlineUsersSignal>();
-    for user in users {
-        online_users.add(user, UserStatus::Online);
-    }
+    online_users.replace_all(users);
 }

@@ -35,6 +35,16 @@ impl ChallengeStateSignal {
             }
         })
     }
+
+    pub fn replace_all(&mut self, challenges: Vec<ChallengeResponse>) {
+        self.signal.update(|s| {
+            s.challenges.clear();
+            for challenge in challenges {
+                s.challenges
+                    .insert(challenge.challenge_id.to_owned(), challenge);
+            }
+        })
+    }
 }
 
 #[derive(Clone, Debug)]

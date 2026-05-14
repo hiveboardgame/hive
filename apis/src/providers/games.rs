@@ -211,18 +211,22 @@ impl GamesSignal {
         }
     }
 
+    fn should_show_on_live_tv(&self, game: &GameResponse) -> bool {
+        let viewer = self.user.with_untracked(|a| a.as_ref().map(|u| u.id));
+        tv_visible_to(
+            game.finished,
+            game.white_player.uid,
+            game.black_player.uid,
+            viewer,
+        )
+    }
+
     pub fn live_games_add(&mut self, game: GameResponse) {
-        let mut should_show = true;
-        self.user.with_untracked(|a| {
-            if let Some(user) = a {
-                if game.black_player.uid == user.id || game.white_player.uid == user.id {
-                    should_show = false;
-                }
-            }
-        });
         if game.finished {
             self.live_games_remove(&game.game_id);
-        } else if should_show {
+            return;
+        }
+        if self.should_show_on_live_tv(&game) {
             self.live.update(|s| {
                 s.live_games.insert(game.game_id.to_owned(), game);
             });
@@ -232,6 +236,19 @@ impl GamesSignal {
     pub fn live_games_remove(&mut self, game_id: &GameId) {
         self.live.update(|s| {
             s.live_games.remove(game_id);
+        });
+    }
+
+    pub fn live_games_replace_all(&mut self, games: Vec<GameResponse>) {
+        let to_insert: Vec<GameResponse> = games
+            .into_iter()
+            .filter(|game| self.should_show_on_live_tv(game))
+            .collect();
+        self.live.update(|s| {
+            s.live_games.clear();
+            for game in to_insert {
+                s.live_games.insert(game.game_id.to_owned(), game);
+            }
         });
     }
 }
@@ -310,4 +327,60 @@ impl Default for LiveGames {
 pub fn provide_games() {
     let auth_context = expect_context::<AuthContext>();
     provide_context(GamesSignal::new(auth_context.user))
+}
+
+/// A game is shown on TV unless it's finished or the viewer is one of the
+/// players (their own game is rendered elsewhere). Pulled out as a free
+/// function so the predicate can be unit-tested without a Leptos runtime.
+fn tv_visible_to(
+    finished: bool,
+    white_uid: uuid::Uuid,
+    black_uid: uuid::Uuid,
+    viewer_uid: Option<uuid::Uuid>,
+) -> bool {
+    if finished {
+        return false;
+    }
+    match viewer_uid {
+        Some(uid) => white_uid != uid && black_uid != uid,
+        None => true,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::tv_visible_to;
+    use uuid::Uuid;
+
+    #[test]
+    fn anonymous_viewer_sees_any_ongoing_game() {
+        let white = Uuid::new_v4();
+        let black = Uuid::new_v4();
+        assert!(tv_visible_to(false, white, black, None));
+    }
+
+    #[test]
+    fn finished_games_are_hidden_even_from_strangers() {
+        let white = Uuid::new_v4();
+        let black = Uuid::new_v4();
+        let stranger = Uuid::new_v4();
+        assert!(!tv_visible_to(true, white, black, None));
+        assert!(!tv_visible_to(true, white, black, Some(stranger)));
+    }
+
+    #[test]
+    fn players_dont_see_their_own_game_on_tv() {
+        let white = Uuid::new_v4();
+        let black = Uuid::new_v4();
+        assert!(!tv_visible_to(false, white, black, Some(white)));
+        assert!(!tv_visible_to(false, white, black, Some(black)));
+    }
+
+    #[test]
+    fn third_party_sees_the_game() {
+        let white = Uuid::new_v4();
+        let black = Uuid::new_v4();
+        let stranger = Uuid::new_v4();
+        assert!(tv_visible_to(false, white, black, Some(stranger)));
+    }
 }
