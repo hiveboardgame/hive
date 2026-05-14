@@ -15,6 +15,7 @@ pub struct ChallengeHandler {
     challenge_action: ChallengeAction,
     pool: DbPool,
     user_id: Uuid,
+    admin: bool,
     username: String,
 }
 
@@ -23,12 +24,14 @@ impl ChallengeHandler {
         action: ChallengeAction,
         username: &str,
         user_id: Uuid,
+        admin: bool,
         pool: &DbPool,
     ) -> Result<Self> {
         Ok(Self {
             pool: pool.clone(),
             challenge_action: action,
             user_id,
+            admin,
             username: username.to_owned(),
         })
     }
@@ -48,7 +51,7 @@ impl ChallengeHandler {
                     .await?
             }
             ChallengeAction::Delete(challenge_id) => {
-                DeleteHandler::new(challenge_id, self.user_id, &self.pool)
+                DeleteHandler::new(challenge_id, self.user_id, self.admin, &self.pool)
                     .await?
                     .handle()
                     .await?
@@ -56,16 +59,17 @@ impl ChallengeHandler {
             ChallengeAction::DeleteMany(ids) => {
                 let mut messages = Vec::new();
                 for challenge_id in ids {
-                    let mut msgs = DeleteHandler::new(challenge_id, self.user_id, &self.pool)
-                        .await?
-                        .handle()
-                        .await?;
+                    let mut msgs =
+                        DeleteHandler::new(challenge_id, self.user_id, self.admin, &self.pool)
+                            .await?
+                            .handle()
+                            .await?;
                     messages.append(&mut msgs);
                 }
                 messages
             }
             ChallengeAction::Decline(challenge_id) => {
-                DeleteHandler::new(challenge_id, self.user_id, &self.pool)
+                DeleteHandler::new(challenge_id, self.user_id, self.admin, &self.pool)
                     .await?
                     .handle()
                     .await?
