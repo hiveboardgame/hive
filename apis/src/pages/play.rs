@@ -329,6 +329,16 @@ pub fn Play() -> impl IntoView {
         if key != "ArrowLeft" && key != "ArrowRight" {
             return;
         }
+        // Don't steal arrow keys from text inputs (chat, search fields, etc.).
+        if let Some(target) = evt.target() {
+            let tag = target
+                .unchecked_ref::<web_sys::Element>()
+                .tag_name()
+                .to_uppercase();
+            if tag == "INPUT" || tag == "TEXTAREA" || tag == "SELECT" {
+                return;
+            }
+        }
         evt.prevent_default();
         if key == "ArrowLeft" {
             let has_turns = game_state.signal.with_untracked(|gs| gs.state.turn > 0);
@@ -337,9 +347,11 @@ pub fn Play() -> impl IntoView {
             }
             // When entering from live game view, position to the last turn first so
             // previous_history_turn() steps back one from the most-recent move.
+            // Don't re-trigger this if already in History view — that would teleport
+            // the user back to the end when they've navigated to the beginning.
             let entering = game_state
                 .signal
-                .with_untracked(|gs| matches!(gs.view, View::Game) || gs.history_turn.is_none());
+                .with_untracked(|gs| matches!(gs.view, View::Game));
             if entering {
                 game_state.signal.update(|gs| {
                     gs.history_turn = gs.state.turn.checked_sub(1);
