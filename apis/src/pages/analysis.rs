@@ -129,8 +129,9 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                                         />
                                     </div>
                                 </div>
-                                <AnalysisInfo />
+                                <AnalysisInfo extend_tw_classes="border-gray-500 border-dashed border-b-[1px]" />
                                 <Board />
+                                <div class="border-gray-500 border-dashed border-t-[1px]"></div>
                                 <div class="flex flex-col flex-grow shrink">
                                     <div class="flex justify-between h-full max-h-16">
                                         <Reserve
