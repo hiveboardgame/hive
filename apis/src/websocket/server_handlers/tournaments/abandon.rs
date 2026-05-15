@@ -50,9 +50,18 @@ impl AbandonHandler {
                     let mut abandoned = Vec::new();
                     let tournament =
                         Tournament::find_by_tournament_id(&self.tournament_id, tc).await?;
-                    for game in tournament.games(tc).await?.iter() {
+                    // Lock all target games before rating updates so abandon cannot hold rating
+                    // locks from one game while waiting on a later game row.
+                    for game in tournament
+                        .unfinished_games_for_user_locked(self.user_id, tc)
+                        .await?
+                    {
                         if let Some(color) = game.user_color(self.user_id) {
-                            abandoned.push(game.resign(&GameControl::Resign(color), tc).await?);
+                            match game.resign(&GameControl::Resign(color), tc).await {
+                                Ok(game) => abandoned.push(game),
+                                Err(DbError::GameIsOver) => continue,
+                                Err(err) => return Err(err),
+                            }
                         }
                     }
                     Ok(abandoned)

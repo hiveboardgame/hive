@@ -95,42 +95,54 @@ pub struct Rating {
 }
 
 impl Rating {
+    fn normalized_game_speed(game_speed: GameSpeed) -> String {
+        match game_speed {
+            GameSpeed::Untimed => GameSpeed::Correspondence.to_string(),
+            _ => game_speed.to_string(),
+        }
+    }
+
     pub async fn for_uuid(
         uuid: &Uuid,
         game_speed: &GameSpeed,
         conn: &mut DbConn<'_>,
     ) -> Result<Self, DbError> {
-        let game_speed = match game_speed {
-            GameSpeed::Untimed => GameSpeed::Correspondence.to_string(),
-            _ => game_speed.to_string(),
-        };
+        let game_speed = Self::normalized_game_speed(*game_speed);
         Ok(ratings_table
             .filter(user_uid.eq(uuid).and(speed.eq(game_speed)))
             .first(conn)
             .await?)
     }
 
-    pub async fn update(
+    // Must be called inside the game-finalization transaction so these row locks
+    // are held until the derived rating writes are complete.
+    pub(crate) async fn update(
         rated: bool,
-        mut game_speed: String,
+        game_speed: String,
         white_id: Uuid,
         black_id: Uuid,
         game_result: GameResult,
         conn: &mut DbConn<'_>,
     ) -> Result<(f64, f64, Option<f64>, Option<f64>), DbError> {
-        if GameSpeed::from_str(&game_speed).expect("Valid GameSpeed") == GameSpeed::Untimed {
-            game_speed = GameSpeed::Correspondence.to_string()
+        let game_speed =
+            Self::normalized_game_speed(GameSpeed::from_str(&game_speed).expect("Valid GameSpeed"));
+        if white_id == black_id {
+            return Err(DbError::InvalidAction {
+                info: "Cannot update ratings for self-play".to_string(),
+            });
         }
-        let white_rating: Rating = ratings_table
-            .filter(user_uid.eq(white_id))
-            .filter(speed.eq(game_speed.clone()))
-            .first(conn)
-            .await?;
-        let black_rating: Rating = ratings_table
-            .filter(user_uid.eq(black_id))
-            .filter(speed.eq(game_speed))
-            .first(conn)
-            .await?;
+
+        let first_id = white_id.min(black_id);
+        let second_id = white_id.max(black_id);
+
+        let first_rating = Self::lock_for_update(first_id, &game_speed, conn).await?;
+        let second_rating = Self::lock_for_update(second_id, &game_speed, conn).await?;
+
+        let (white_rating, black_rating) = if first_id == white_id {
+            (first_rating, second_rating)
+        } else {
+            (second_rating, first_rating)
+        };
 
         let (white_change, black_change) = match game_result {
             GameResult::Draw => Rating::draw(rated, &white_rating, &black_rating, conn).await,
@@ -147,6 +159,19 @@ impl Rating {
             white_change,
             black_change,
         ))
+    }
+
+    async fn lock_for_update(
+        player_id: Uuid,
+        game_speed: &str,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Rating, DbError> {
+        Ok(ratings_table
+            .filter(user_uid.eq(player_id))
+            .filter(speed.eq(game_speed))
+            .for_update()
+            .first(conn)
+            .await?)
     }
 
     fn calculate_glicko2(
