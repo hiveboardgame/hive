@@ -78,7 +78,18 @@ pub fn App() -> impl IntoView {
     provide_config();
     provide_users();
     provide_challenges();
-    provide_websocket("/ws/");
+    // WebSocket URL: same-origin "/ws/" for SSR/hydrate (the backend serves
+    // the page AND the WS); absolute for CSR (Apiary / standalone WASM)
+    // because the WS lives on a different origin than the bundled assets.
+    // LEPTOS_WS_URL overrides at build time (e.g. wss://hivegame.com/ws/).
+    #[cfg(feature = "csr")]
+    const WS_URL: &str = match option_env!("LEPTOS_WS_URL") {
+        Some(url) => url,
+        None => "ws://localhost:3000/ws/",
+    };
+    #[cfg(not(feature = "csr"))]
+    const WS_URL: &str = "/ws/";
+    provide_websocket(WS_URL);
 
     //expects websocket
     provide_auth();

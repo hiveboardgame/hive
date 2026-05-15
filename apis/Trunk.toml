@@ -1,0 +1,24 @@
+# Trunk config for the CSR build of the apis crate. Sits alongside the
+# existing cargo-leptos SSR config in [package.metadata.leptos] in Cargo.toml
+# — they don't conflict (different output dirs, different feature sets).
+#
+# Run from apis/:
+#   trunk serve        # dev server with watch + reload at http://127.0.0.1:8080
+#   trunk build        # produces dist/ for bundling into apiary/
+
+[build]
+target = "index.html"
+dist = "dist"
+# Filename hashing is annoying for Tauri (paths in index.html change every
+# build); turn it off until we have a real release pipeline.
+filehash = false
+
+[serve]
+address = "127.0.0.1"
+port = 8080
+# Reload on Rust changes.
+open = false
+
+[tools]
+# Pin tailwind to whatever's on PATH (the nix flake provides tailwindcss_4).
+# Leave empty so trunk auto-detects rather than downloading its own copy.

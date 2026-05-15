@@ -9,6 +9,7 @@ lto = true
 opt-level = 'z'
 
 [workspace.dependencies]
+actix-cors = "0.7"
 actix-files = { version = "0.6" }
 actix-identity = { version = "0.9" }
 actix-rt = "2.10.0"

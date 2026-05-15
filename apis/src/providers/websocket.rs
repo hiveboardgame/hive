@@ -507,6 +507,10 @@ mod platform {
 }
 
 fn fix_wss(url: &str) -> String {
+    // Already-absolute (CSR build pointing at a remote backend): pass through.
+    if url.starts_with("ws://") || url.starts_with("wss://") {
+        return url.to_string();
+    }
     let Address { hostname, port } = hostname_and_port();
     match port {
         None => format!("wss://{}{url}", hostname),

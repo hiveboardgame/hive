@@ -25,6 +25,7 @@ async fn main() -> std::io::Result<()> {
     use api::v1::auth::get_identity_handler::get_identity;
     use api::v1::auth::jwt_secret::JwtSecret;
     use api::v1::bot::users::api_get_user;
+    use actix_cors::Cors;
     use actix_files::Files;
     use actix_identity::IdentityMiddleware;
     use actix_session::{storage::CookieSessionStore, SessionMiddleware};
@@ -171,6 +172,22 @@ async fn main() -> std::io::Result<()> {
                 session_builder.build()
             })
             .wrap(Compress::default())
+            // CORS for cross-origin clients: the trunk dev server during
+            // CSR work, and Tauri webviews (Apiary mobile app) once we bundle
+            // the CSR build. supports_credentials() so session cookies flow.
+            // Note: same-origin SSR + hydrate is unaffected — browsers don't
+            // run CORS checks against same-origin requests.
+            .wrap(
+                Cors::default()
+                    .allowed_origin("http://127.0.0.1:8080")
+                    .allowed_origin("http://localhost:8080")
+                    .allowed_origin("tauri://localhost")
+                    .allowed_origin("http://tauri.localhost")
+                    .allow_any_method()
+                    .allow_any_header()
+                    .supports_credentials()
+                    .max_age(3600),
+            )
     })
     .bind(&addr)?
     .run()

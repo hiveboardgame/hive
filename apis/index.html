@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Apiary</title>
+
+    <!-- Build the apis crate as WASM in CSR mode. The leptos `csr` feature
+         flips `set_server_url("https://hivegame.com")` + `mount_to_body(App)`
+         in apis/src/lib.rs. Cookies and WebSocket auth across origins are
+         handled later (Tasks #4, #7). -->
+    <link
+      data-trunk
+      rel="rust"
+      data-cargo-no-default-features
+      data-cargo-features="csr"
+    />
+
+    <!-- Tailwind input is the same file cargo-leptos uses. -->
+    <link data-trunk rel="tailwind-css" href="style/tailwind.css" />
+
+    <!-- Static assets (favicons, images, fonts). Mirror what the SSR setup
+         serves from apis/assets/ at /assets/. -->
+    <link data-trunk rel="copy-dir" href="assets" />
+  </head>
+  <body></body>
+</html>

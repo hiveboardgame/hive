@@ -4,6 +4,7 @@
 pkg
 apis/target/
 apis/.cargo
+apis/dist/apis_bg.wasm
 .cargo/target/
 todos
 site/

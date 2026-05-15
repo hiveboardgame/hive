@@ -6,7 +6,18 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+# Make the SSR binary opt-in. Without this, `cargo build` for CSR/hydrate
+# (browser WASM) targets tries to compile main.rs and explodes on missing
+# actix/db crates. With `required-features = ["ssr"]`, cargo silently skips
+# the bin when ssr isn't on. cargo-leptos enables `bin-features = ["ssr"]`
+# already, so the SSR build path is unaffected.
+[[bin]]
+name = "apis"
+path = "src/main.rs"
+required-features = ["ssr"]
+
 [dependencies]
+actix-cors = { workspace = true, optional = true }
 actix-files = { workspace = true, optional = true }
 actix-identity = { workspace = true, optional = true }
 actix-rt = { workspace = true, optional = true }
@@ -84,6 +95,7 @@ leptos_i18n_build = { workspace = true }
 hydrate = ["leptos/hydrate", "leptos_i18n/hydrate", "leptos_i18n_build/hydrate"]
 csr = ["leptos/csr", "leptos_i18n/csr", "leptos_i18n_build/csr"]
 ssr = [
+  "dep:actix-cors",
   "dep:actix-files",
   "dep:actix-rt",
   "dep:actix-identity",
