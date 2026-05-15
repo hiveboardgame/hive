@@ -94,6 +94,7 @@ async fn main() -> std::io::Result<()> {
     jobs::ping(Data::clone(&hub));
     jobs::game_cleanup(pool.clone());
     jobs::challenge_cleanup(pool.clone());
+    jobs::tournament_cleanup(pool.clone());
     let pwa_manifest = PwaManifest::from_site_root(&conf.leptos_options.site_root);
 
     println!("listening on http://{}", addr);
