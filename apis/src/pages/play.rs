@@ -32,8 +32,9 @@ use crate::{
     websocket::client_handlers::game::{reset_game_state, reset_game_state_for_takeback},
 };
 use hive_lib::{Color, GameControl, GameResult, GameStatus, Turn};
-use leptos::prelude::*;
+use leptos::{ev::keydown, prelude::*};
 use leptos_router::hooks::{use_params_map, use_query_map};
+use leptos_use::{use_event_listener, use_window};
 use shared_types::{GameId, GameStart};
 use uuid::Uuid;
 use wasm_bindgen_futures::spawn_local;
@@ -233,19 +234,23 @@ pub fn Play() -> impl IntoView {
                             game_state.clear_gc();
                             game_state.set_game_response(gar.game.clone());
                             sounds.play_sound(SoundType::Turn);
-                            let (pos, reserve_pos, history_moves, active) =
+                            let (pos, reserve_pos, history_moves, active, was_at_live_edge) =
                                 game_state.signal.with_untracked(|gs| {
                                     (
                                         gs.move_info.current_position,
                                         gs.move_info.reserve_position,
                                         gs.state.history.moves.clone(),
                                         gs.move_info.active,
+                                        matches!(gs.view, View::History) && gs.is_last_turn(),
                                     )
                                 });
                             if history_moves != gar.game.history {
                                 match turn {
                                     Turn::Move(piece, position) => {
                                         game_state.play_turn(piece, position);
+                                        if was_at_live_edge {
+                                            game_state.view_game();
+                                        }
                                         if let Some((piece, piece_type)) = active {
                                             match piece_type {
                                                 PieceType::Board => {
@@ -314,6 +319,58 @@ pub fn Play() -> impl IntoView {
         },
         false,
     );
+
+    // Global keyboard handler: ArrowLeft enters history mode (from anywhere) and steps back;
+    // ArrowRight steps forward when already in history.
+    // use_window() returns None on SSR so use_event_listener becomes a no-op there.
+    let body = use_window().document().body();
+    _ = use_event_listener(body, keydown, move |evt| {
+        let key = evt.key();
+        if key != "ArrowLeft" && key != "ArrowRight" {
+            return;
+        }
+        // Don't steal arrow keys from text inputs (chat, search fields, etc.).
+        if let Some(target) = evt.target() {
+            let tag = target
+                .unchecked_ref::<web_sys::Element>()
+                .tag_name()
+                .to_uppercase();
+            if tag == "INPUT" || tag == "TEXTAREA" || tag == "SELECT" {
+                return;
+            }
+        }
+        evt.prevent_default();
+        if key == "ArrowLeft" {
+            let has_turns = game_state.signal.with_untracked(|gs| gs.state.turn > 0);
+            if !has_turns {
+                return;
+            }
+            // When entering from live game view, position to the last turn first so
+            // previous_history_turn() steps back one from the most-recent move.
+            // Don't re-trigger this if already in History view — that would teleport
+            // the user back to the end when they've navigated to the beginning.
+            let entering = game_state
+                .signal
+                .with_untracked(|gs| matches!(gs.view, View::Game));
+            if entering {
+                game_state.signal.update(|gs| {
+                    gs.history_turn = gs.state.turn.checked_sub(1);
+                });
+            }
+            game_state.previous_history_turn();
+            tab.set(TabView::History);
+            controls_signal.hidden.set(false);
+        } else {
+            // ArrowRight: navigate forward only when already browsing history.
+            let in_history = game_state
+                .signal
+                .with_untracked(|gs| matches!(gs.view, View::History));
+            if in_history {
+                game_state.next_history_turn();
+            }
+        }
+    });
+
     view! {
         <div class=move || {
             format!(
