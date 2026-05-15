@@ -1,8 +1,15 @@
 use crate::responses::UserResponse;
 use leptos::prelude::*;
+use serde::{Deserialize, Serialize};
 use server_fn::codec;
 use shared_types::GameSpeed;
 use uuid::Uuid;
+
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
+pub struct ResolvedUsername {
+    pub username: String,
+    pub uid: Uuid,
+}
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_user_by_uuid(uuid: Uuid) -> Result<UserResponse, ServerFnError> {
@@ -60,6 +67,22 @@ pub async fn get_profile(username: String) -> Result<UserResponse, ServerFnError
     UserResponse::from_username(&username, &mut conn)
         .await
         .map_err(ServerFnError::new)
+}
+
+#[server(input = codec::Cbor, output = codec::Cbor)]
+pub async fn resolve_username(username: String) -> Result<ResolvedUsername, ServerFnError> {
+    use crate::functions::db::pool;
+    use db_lib::{get_conn, models::User};
+    let pool = pool().await?;
+    let mut conn = get_conn(&pool).await?;
+    let user = User::find_by_username(&username, &mut conn)
+        .await
+        .map_err(ServerFnError::new)?;
+
+    Ok(ResolvedUsername {
+        username: user.username,
+        uid: user.id,
+    })
 }
 
 #[server(input = codec::Cbor, output = codec::Cbor)]

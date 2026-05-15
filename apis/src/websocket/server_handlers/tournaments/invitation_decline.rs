@@ -25,14 +25,11 @@ impl InvitationDecline {
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let mut conn = get_conn(&self.pool).await?;
+        let tournament = Tournament::find_by_tournament_id(&self.tournament_id, &mut conn).await?;
         let tournament = conn
             .transaction::<_, anyhow::Error, _>(move |tc| {
-                async move {
-                    let tournament =
-                        Tournament::find_by_tournament_id(&self.tournament_id, tc).await?;
-                    Ok(tournament.decline_invitation(&self.user_id, tc).await?)
-                }
-                .scope_boxed()
+                async move { Ok(tournament.decline_invitation(&self.user_id, tc).await?) }
+                    .scope_boxed()
             })
             .await?;
 

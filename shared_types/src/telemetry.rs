@@ -47,15 +47,18 @@ pub struct TelemetryRow {
     pub own_state_drops: u64,
     pub lags_trackers: u64,
     pub game_start_games_date: u64,
-    pub chat_tournament_channels: u64,
-    pub chat_tournament_msgs: u64,
-    pub chat_games_public_channels: u64,
-    pub chat_games_public_msgs: u64,
-    pub chat_games_private_channels: u64,
-    pub chat_games_private_msgs: u64,
-    pub chat_direct_pairs: u64,
-    pub chat_direct_msgs: u64,
-    pub chat_direct_lookup_users: u64,
+    pub chat_recent_tournament_channels: u64,
+    pub chat_recent_tournament_msgs: u64,
+    pub chat_recent_game_spectator_channels: u64,
+    pub chat_recent_game_spectator_msgs: u64,
+    pub chat_recent_game_player_channels: u64,
+    pub chat_recent_game_player_msgs: u64,
+    pub chat_recent_direct_channels: u64,
+    pub chat_recent_direct_msgs: u64,
+    pub chat_persist_attempts: u64,
+    pub chat_persist_successes: u64,
+    pub chat_persist_failures: u64,
+    pub chat_message_normalizations: u64,
     pub sessions_outer: u64,
     pub sessions_inner_total: u64,
     pub membership_games_sockets: u64,
@@ -68,19 +71,17 @@ pub struct TelemetryRow {
     pub load_user_state_permit_max: u64,
 }
 
-pub const TELEMETRY_COLUMN_COUNT: usize = 45;
-const LEGACY_TELEMETRY_COLUMN_COUNT: usize = 43;
+pub const TELEMETRY_COLUMN_COUNT: usize = 48;
 
 impl TelemetryRow {
     /// Parse a single CSV row. Returns None if the row has the wrong number of
     /// fields or any field fails to parse as u64.
     pub fn from_csv_line(line: &str) -> Option<Self> {
         let parts: Vec<&str> = line.split(',').collect();
-        if parts.len() != TELEMETRY_COLUMN_COUNT && parts.len() != LEGACY_TELEMETRY_COLUMN_COUNT {
+        if parts.len() != TELEMETRY_COLUMN_COUNT {
             return None;
         }
         let p = |i: usize| parts[i].trim().parse::<u64>().ok();
-        let optional = |i: usize| parts.get(i).and_then(|v| v.trim().parse::<u64>().ok());
         Some(Self {
             timestamp: p(0)?,
             interval_secs: p(1)?,
@@ -108,25 +109,28 @@ impl TelemetryRow {
             own_state_drops: p(23)?,
             lags_trackers: p(24)?,
             game_start_games_date: p(25)?,
-            chat_tournament_channels: p(26)?,
-            chat_tournament_msgs: p(27)?,
-            chat_games_public_channels: p(28)?,
-            chat_games_public_msgs: p(29)?,
-            chat_games_private_channels: p(30)?,
-            chat_games_private_msgs: p(31)?,
-            chat_direct_pairs: p(32)?,
-            chat_direct_msgs: p(33)?,
-            chat_direct_lookup_users: p(34)?,
-            sessions_outer: p(35)?,
-            sessions_inner_total: p(36)?,
-            membership_games_sockets: p(37)?,
-            membership_sockets_games: p(38)?,
-            game_response_cache: p(39)?,
-            last_tv_broadcast: p(40)?,
-            process_vm_rss_bytes: p(41)?,
-            process_vm_hwm_bytes: p(42)?,
-            db_pool_max_size: optional(43).unwrap_or_default(),
-            load_user_state_permit_max: optional(44).unwrap_or_default(),
+            chat_recent_tournament_channels: p(26)?,
+            chat_recent_tournament_msgs: p(27)?,
+            chat_recent_game_spectator_channels: p(28)?,
+            chat_recent_game_spectator_msgs: p(29)?,
+            chat_recent_game_player_channels: p(30)?,
+            chat_recent_game_player_msgs: p(31)?,
+            chat_recent_direct_channels: p(32)?,
+            chat_recent_direct_msgs: p(33)?,
+            chat_persist_attempts: p(34)?,
+            chat_persist_successes: p(35)?,
+            chat_persist_failures: p(36)?,
+            chat_message_normalizations: p(37)?,
+            sessions_outer: p(38)?,
+            sessions_inner_total: p(39)?,
+            membership_games_sockets: p(40)?,
+            membership_sockets_games: p(41)?,
+            game_response_cache: p(42)?,
+            last_tv_broadcast: p(43)?,
+            process_vm_rss_bytes: p(44)?,
+            process_vm_hwm_bytes: p(45)?,
+            db_pool_max_size: p(46)?,
+            load_user_state_permit_max: p(47)?,
         })
     }
 }

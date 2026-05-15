@@ -9,6 +9,7 @@ pub mod control_buttons;
 pub mod game_info;
 pub mod game_previews;
 pub mod game_row;
+pub mod game_thread_toggle;
 pub mod hamburger;
 pub mod hex_stack;
 pub mod history_controls;

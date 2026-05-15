@@ -33,6 +33,8 @@ impl JoinHandler {
             })
             .await?;
         let response = TournamentId(tournament.nanoid.clone());
+
+        // Chat history is fetched by the client via REST when viewing the tournament chat.
         Ok(vec![
             InternalServerMessage {
                 destination: MessageDestination::User(self.user_id),

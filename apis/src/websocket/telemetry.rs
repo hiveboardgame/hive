@@ -65,7 +65,7 @@ impl From<&MessageDestination> for DestKind {
             MessageDestination::Game(_) => DestKind::Game,
             MessageDestination::GameSpectators(_, _, _) => DestKind::GameSpectators,
             MessageDestination::Global => DestKind::Global,
-            MessageDestination::Tournament(_) => DestKind::Tournament,
+            MessageDestination::Tournament(_, _) => DestKind::Tournament,
             MessageDestination::Direct(_) => DestKind::Direct,
         }
     }
@@ -120,15 +120,18 @@ pub struct TelemetrySnapshot {
     // Computed from external state at snapshot time.
     pub lags_trackers_len: u64,
     pub game_start_games_date_len: u64,
-    pub chat_tournament_channels: u64,
-    pub chat_tournament_msgs: u64,
-    pub chat_games_public_channels: u64,
-    pub chat_games_public_msgs: u64,
-    pub chat_games_private_channels: u64,
-    pub chat_games_private_msgs: u64,
-    pub chat_direct_pairs: u64,
-    pub chat_direct_msgs: u64,
-    pub chat_direct_lookup_users: u64,
+    pub chat_recent_tournament_channels: u64,
+    pub chat_recent_tournament_msgs: u64,
+    pub chat_recent_game_spectator_channels: u64,
+    pub chat_recent_game_spectator_msgs: u64,
+    pub chat_recent_game_player_channels: u64,
+    pub chat_recent_game_player_msgs: u64,
+    pub chat_recent_direct_channels: u64,
+    pub chat_recent_direct_msgs: u64,
+    pub chat_persist_attempts_total: u64,
+    pub chat_persist_successes_total: u64,
+    pub chat_persist_failures_total: u64,
+    pub chat_message_normalizations_total: u64,
     pub sessions_outer_len: u64,
     pub sessions_inner_total: u64,
     pub membership_games_sockets_len: u64,
@@ -246,6 +249,7 @@ impl WsTelemetry {
     /// Prometheus `/metrics` endpoint), split the destructive read into a
     /// separate method and have `snapshot()` use `load()` instead.
     pub fn snapshot(&self) -> TelemetrySnapshot {
+        let chat_metrics = crate::websocket::server_handlers::chat::metrics::snapshot();
         let load = |a: &AtomicU64| a.load(Ordering::Relaxed);
         let load_dest = |arr: &[AtomicU64; DEST_KIND_COUNT]| {
             std::array::from_fn(|i| arr[i].load(Ordering::Relaxed))
@@ -277,6 +281,10 @@ impl WsTelemetry {
             active_games: load(&self.active_games),
             lobby_subscribers: load(&self.lobby_subscribers),
             max_queue_depth_seen: self.max_queue_depth_seen.swap(0, Ordering::Relaxed),
+            chat_persist_attempts_total: chat_metrics.persist_attempts_total,
+            chat_persist_successes_total: chat_metrics.persist_successes_total,
+            chat_persist_failures_total: chat_metrics.persist_failures_total,
+            chat_message_normalizations_total: chat_metrics.message_normalizations_total,
             // Filled in by snapshot_with_state at the call site.
             ..TelemetrySnapshot::default()
         }
@@ -400,7 +408,8 @@ pub fn diff_and_format(
          loader_queued:    {} loader_in_flight: {}/{} db_pool_max={} own_state_drops: {}\n  \
          lags_trackers:    {}\n  \
          game_start_dates: {}\n  \
-         chat:             tour=({} ch, {} msg) gpub=({} ch, {} msg) gpriv=({} ch, {} msg) direct=({} pairs, {} msg) lookup_users={}\n  \
+         chat_persistence: attempts={} successes={} failures={} normalizations={}\n  \
+         chat_recent:      tournament=({} ch, {} msg) game_spectators=({} ch, {} msg) game_players=({} ch, {} msg) direct=({} ch, {} msg)\n  \
          sessions:         outer={} inner_total={}\n  \
          membership:       games_sockets={} sockets_games={}\n  \
          caches:           game_response={} last_tv={}\n  \
@@ -454,15 +463,30 @@ pub fn diff_and_format(
         d(curr.own_state_drops_total, prev.own_state_drops_total),
         curr.lags_trackers_len,
         curr.game_start_games_date_len,
-        curr.chat_tournament_channels,
-        curr.chat_tournament_msgs,
-        curr.chat_games_public_channels,
-        curr.chat_games_public_msgs,
-        curr.chat_games_private_channels,
-        curr.chat_games_private_msgs,
-        curr.chat_direct_pairs,
-        curr.chat_direct_msgs,
-        curr.chat_direct_lookup_users,
+        d(
+            curr.chat_persist_attempts_total,
+            prev.chat_persist_attempts_total,
+        ),
+        d(
+            curr.chat_persist_successes_total,
+            prev.chat_persist_successes_total,
+        ),
+        d(
+            curr.chat_persist_failures_total,
+            prev.chat_persist_failures_total,
+        ),
+        d(
+            curr.chat_message_normalizations_total,
+            prev.chat_message_normalizations_total,
+        ),
+        curr.chat_recent_tournament_channels,
+        curr.chat_recent_tournament_msgs,
+        curr.chat_recent_game_spectator_channels,
+        curr.chat_recent_game_spectator_msgs,
+        curr.chat_recent_game_player_channels,
+        curr.chat_recent_game_player_msgs,
+        curr.chat_recent_direct_channels,
+        curr.chat_recent_direct_msgs,
         curr.sessions_outer_len,
         curr.sessions_inner_total,
         curr.membership_games_sockets_len,

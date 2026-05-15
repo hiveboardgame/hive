@@ -6,6 +6,11 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[[bin]]
+name = "apis"
+path = "src/main.rs"
+required-features = ["ssr"]
+
 [dependencies]
 actix-files = { workspace = true, optional = true }
 actix-identity = { workspace = true, optional = true }

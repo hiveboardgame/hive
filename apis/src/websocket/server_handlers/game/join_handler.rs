@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
     websocket::{
@@ -16,6 +14,7 @@ use crate::{
 use anyhow::Result;
 use db_lib::{get_conn, models::Game, DbPool};
 use shared_types::GameId;
+use std::sync::Arc;
 use uuid::Uuid;
 
 #[derive(Debug)]
@@ -39,10 +38,10 @@ impl JoinHandler {
     ) -> Self {
         Self {
             received_from,
+            data,
             game: game.to_owned(),
             user_id,
             username: username.to_owned(),
-            data,
             pool: pool.clone(),
         }
     }
@@ -73,17 +72,6 @@ impl JoinHandler {
                 username: self.username.to_owned(),
             }))),
         });
-        let chat = if self.user_id == self.game.white_id || self.user_id == self.game.black_id {
-            self.data.chat_storage.games_private.read().unwrap()
-        } else {
-            self.data.chat_storage.games_public.read().unwrap()
-        };
-        if let Some(messages_to_push) = chat.get(&GameId(self.game.nanoid.clone())) {
-            messages.push(InternalServerMessage {
-                destination: MessageDestination::Direct(self.received_from.clone()),
-                message: ServerMessage::Chat(messages_to_push.clone()),
-            });
-        };
         Ok(HandlerOutput {
             messages,
             subscriptions,

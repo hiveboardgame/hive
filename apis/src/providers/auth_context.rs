@@ -8,15 +8,18 @@ use leptos::prelude::*;
 pub struct AuthContext {
     pub logout: ServerAction<Logout>,
     pub user: Signal<Option<AccountResponse>>,
+    /// Used to avoid redirecting to login while auth is still loading (e.g. on refresh).
+    pub action: Action<(), Result<Option<AccountResponse>, ServerFnError>>,
     pub logged_in: Signal<Option<bool>>,
     pub admin: Signal<Option<bool>>,
     ws_refresh: StoredValue<bool>,
-    action: Action<(), Result<AccountResponse, ServerFnError>>,
 }
 
 impl AuthContext {
     pub fn refresh(&self, ws_reconnect: bool) {
-        self.ws_refresh.set_value(ws_reconnect);
+        if ws_reconnect {
+            self.ws_refresh.set_value(true);
+        }
         self.action.dispatch(());
     }
 }
@@ -28,18 +31,18 @@ pub fn provide_auth() {
     // Get the current user and place it in Context
     action.dispatch(());
 
-    let account = action.value();
-    let user = Signal::derive(move || account.get().and_then(|v| v.ok()));
+    let user = Signal::derive(move || action.value().get().and_then(|v| v.ok().flatten()));
     let account = action.value();
     let logged_in = Signal::derive(move || match account.get() {
-        Some(Ok(_)) => Some(true),
+        Some(Ok(Some(_))) => Some(true),
+        Some(Ok(None)) => Some(false),
         Some(Err(_)) => Some(false),
         None => None,
     });
     let account = action.value();
     let admin = Signal::derive(move || match account.get() {
-        Some(Ok(account)) => Some(account.user.admin),
-        Some(Err(_)) => Some(false),
+        Some(Ok(Some(account))) => Some(account.user.admin),
+        Some(Ok(None)) | Some(Err(_)) => Some(false),
         None => None,
     });
     let ws_refresh = StoredValue::new(false);
@@ -49,16 +52,18 @@ pub fn provide_auth() {
         logged_in,
         admin,
         logout,
-        action,
         ws_refresh,
+        action,
     });
 
     let ctx = use_context::<AuthContext>().unwrap();
+    let action_pending = ctx.action.pending();
 
     Effect::watch(
-        ctx.action.version(),
-        move |_, _, _| {
-            if ctx.ws_refresh.get_value() {
+        move || action_pending.get(),
+        move |is_pending, _, _| {
+            if !is_pending && ctx.ws_refresh.get_value() {
+                ctx.ws_refresh.set_value(false);
                 websocket_context.close();
                 websocket_context.open();
             }
