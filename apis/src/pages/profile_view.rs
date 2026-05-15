@@ -78,19 +78,18 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     Effect::watch(
         ctx.next_batch.version(),
         move |_, _, _| {
-            let next_batch = if let Some(Ok(next_batch)) = ctx.next_batch.value().get_untracked() {
-                next_batch
-            } else {
-                vec![]
+            let Some(Ok(batch)) = ctx.next_batch.value().get_untracked() else {
+                return;
             };
-            if next_batch.is_empty() {
+            ctx.next_batch_token.set(batch.next_batch.clone());
+            if batch.next_batch.is_none() {
                 ctx.has_more.set_value(false);
             }
             ctx.games.update(|games| {
                 if ctx.is_first_batch.get_value() {
-                    *games = next_batch;
+                    *games = batch.games;
                 } else {
-                    games.extend(next_batch);
+                    games.extend(batch.games);
                 }
             });
         },

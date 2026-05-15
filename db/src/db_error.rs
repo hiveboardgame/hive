@@ -48,3 +48,12 @@ impl From<shared_types::ChallengeError> for DbError {
         }
     }
 }
+
+impl From<shared_types::GameQueryValidationError> for DbError {
+    fn from(err: shared_types::GameQueryValidationError) -> Self {
+        DbError::InvalidInput {
+            info: err.to_string(),
+            error: String::new(),
+        }
+    }
+}

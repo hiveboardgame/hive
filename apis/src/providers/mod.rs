@@ -36,6 +36,7 @@ pub use games_search_context::{
     provide_games_search_context,
     FilterState,
     GamesSearchContext,
+    ResultType,
 };
 pub use notifications::{provide_notifications, NotificationContext};
 pub use ping::{provide_ping, PingContext, FRESH_WINDOW_SECS};
