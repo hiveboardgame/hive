@@ -14,6 +14,7 @@ pub enum ClientRequest {
     Game { game_id: GameId, action: GameAction },
     LinkDiscord,
     Pong(u64),
+    Resync,
     Schedule(ScheduleAction),
     Tournament(TournamentAction),
     // leptos-use idle or window unfocused will send

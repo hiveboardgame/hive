@@ -75,6 +75,7 @@ pub enum GameUpdate {
     Urgent(Vec<GameResponse>),
     OwnGameRemoved(GameId),
     Tv(GameResponse),
+    TvSnapshot(Vec<GameResponse>),
     Heartbeat(HeartbeatResponse),
 }
 

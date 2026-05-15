@@ -158,14 +158,17 @@ mod platform {
             let controls = controls.clone();
             move |_| {
                 if !document().hidden() {
-                    controls.reconnect_now();
+                    controls.refresh_on_wake();
                 }
             }
         });
         let _ = use_event_listener(use_window(), pageshow, {
             let controls = controls.clone();
-            move |_| controls.reconnect_now()
+            move |_| controls.refresh_on_wake()
         });
+        // `online` (network came back) almost always implies the WS is dead,
+        // so go straight to reconnect rather than issuing a Resync that would
+        // never reach the server.
         let _ = use_event_listener(use_window(), online, {
             let controls = controls.clone();
             move |_| controls.reconnect_now()
@@ -359,6 +362,19 @@ mod platform {
                 return;
             }
             self.connect();
+        }
+
+        /// On tab focus: Resync if the socket is open, otherwise hard
+        /// reconnect (whose connect path sends the same snapshot).
+        fn refresh_on_wake(&self) {
+            if self.manually_closed.get_value() {
+                return;
+            }
+            if self.socket_is_open() {
+                self.send(&ClientRequest::Resync);
+            } else {
+                self.reconnect_now();
+            }
         }
 
         fn disconnect_current_socket(&self) {
