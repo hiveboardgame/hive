@@ -350,8 +350,9 @@ pub fn Play() -> impl IntoView {
             controls_signal.hidden.set(false);
         } else {
             // ArrowRight: navigate forward only when already browsing history.
-            let in_history =
-                game_state.signal.with_untracked(|gs| matches!(gs.view, View::History));
+            let in_history = game_state
+                .signal
+                .with_untracked(|gs| matches!(gs.view, View::History));
             if in_history {
                 game_state.next_history_turn();
             }
