@@ -281,6 +281,7 @@ pub struct Chat {
     pub messages_hub_data: RwSignal<Option<MessagesHubData>>,
     pub messages_hub_loading: RwSignal<bool>,
     muted_tournament_ids: RwSignal<HashSet<TournamentId>>,
+    session_epoch: RwSignal<u64>,
     /// Bump to invalidate any cached block list snapshots used by chat UIs.
     block_list_version: RwSignal<u32>,
     user: Signal<Option<AccountResponse>>,
@@ -305,10 +306,42 @@ impl Chat {
             messages_hub_data: RwSignal::new(None),
             messages_hub_loading: RwSignal::new(false),
             muted_tournament_ids: RwSignal::new(HashSet::new()),
+            session_epoch: RwSignal::new(0),
             block_list_version: RwSignal::new(0),
             user,
             api,
         }
+    }
+
+    fn clear_session_state(&self) {
+        self.messages.set(HashMap::new());
+        self.blocked_user_ids.set(HashSet::new());
+        self.draft_messages.set(HashMap::new());
+        self.pending_outgoing_messages.set(Vec::new());
+        self.chat_send_errors.set(HashMap::new());
+        self.loaded_history_channels.set(HashSet::new());
+        self.unread_counts.set(HashMap::new());
+        self.optimistic_unread_counts.set(HashMap::new());
+        self.pending_read_channels.set(HashSet::new());
+        self.visible_channels.set(HashMap::new());
+        self.pending_visible_channel_reads.set(HashSet::new());
+        self.deferred_visible_unread_counts.set(HashMap::new());
+        self.messages_hub_data.set(None);
+        self.messages_hub_loading.set(false);
+        self.muted_tournament_ids.set(HashSet::new());
+        self.session_epoch.update(|epoch| *epoch += 1);
+    }
+
+    pub fn session_epoch(&self) -> u64 {
+        self.session_epoch.get()
+    }
+
+    pub fn current_user_id_untracked(&self) -> Option<Uuid> {
+        self.user.get_untracked().as_ref().map(|a| a.user.uid)
+    }
+
+    fn is_current_user_untracked(&self, user_id: Option<Uuid>) -> bool {
+        self.current_user_id_untracked() == user_id
     }
 
     fn apply_messages_hub_data(&self, data: MessagesHubData) {
@@ -323,16 +356,20 @@ impl Chat {
     }
 
     async fn fetch_and_store_messages_hub(self) {
-        if self.user.get_untracked().is_none() {
+        let request_user_id = self.current_user_id_untracked();
+        if request_user_id.is_none() {
             self.apply_messages_hub_data(empty_messages_hub_data());
             return;
         }
 
         match get_messages_hub_data().await {
-            Ok(data) => self.apply_messages_hub_data(data),
-            Err(_) => {
+            Ok(data) if self.is_current_user_untracked(request_user_id) => {
+                self.apply_messages_hub_data(data)
+            }
+            Err(_) if self.is_current_user_untracked(request_user_id) => {
                 self.messages_hub_loading.set(false);
             }
+            _ => {}
         }
     }
 
@@ -559,7 +596,6 @@ impl Chat {
     }
 
     fn append_live_messages_for_key(&self, key: &ConversationKey, messages: Vec<ChatMessage>) {
-        self.mark_history_loaded(key);
         self.update_messages_for_key(key, |mut existing| {
             existing.extend(messages);
             existing
@@ -647,20 +683,26 @@ impl Chat {
     }
 
     async fn fetch_and_store_unread_counts(self) {
+        let request_user_id = self.current_user_id_untracked();
         if let Ok(counts) = get_chat_unread_counts().await {
-            self.apply_server_unread_counts(counts)
+            if self.is_current_user_untracked(request_user_id) {
+                self.apply_server_unread_counts(counts)
+            }
         }
     }
 
     async fn fetch_and_store_blocked_user_ids(self) {
-        if self.user.get_untracked().is_none() {
+        let request_user_id = self.current_user_id_untracked();
+        if request_user_id.is_none() {
             self.blocked_user_ids.set(HashSet::new());
             return;
         }
 
         if let Ok(blocked_user_ids) = get_blocked_user_ids().await {
-            self.blocked_user_ids
-                .set(blocked_user_ids.into_iter().collect());
+            if self.is_current_user_untracked(request_user_id) {
+                self.blocked_user_ids
+                    .set(blocked_user_ids.into_iter().collect());
+            }
         }
     }
 
@@ -680,8 +722,12 @@ impl Chat {
             pending.insert(mark_key.clone());
         });
         let chat = *self;
+        let request_user_id = self.current_user_id_untracked();
         spawn_local(async move {
             let did_mark = mark_chat_read(mark_key.clone()).await.is_ok();
+            if !chat.is_current_user_untracked(request_user_id) {
+                return;
+            }
             if !did_mark {
                 chat.pending_read_channels.update(|pending| {
                     pending.remove(&mark_key);
@@ -965,7 +1011,6 @@ impl Chat {
     pub fn has_cached_history(&self, key: &ConversationKey) -> bool {
         self.loaded_history_channels
             .with_untracked(|loaded| loaded.contains(key))
-            || self.with_messages_for_key_untracked(key, |messages| !messages.is_empty())
     }
 
     fn acknowledge_outgoing_message(&self, container: &ChatMessageContainer) {
@@ -1363,18 +1408,7 @@ pub fn provide_chat() {
             };
 
             if user_changed || user_id.is_none() {
-                chat.blocked_user_ids.set(HashSet::new());
-                chat.draft_messages.set(HashMap::new());
-                chat.pending_outgoing_messages.set(Vec::new());
-                chat.chat_send_errors.set(HashMap::new());
-                chat.loaded_history_channels.set(HashSet::new());
-                chat.optimistic_unread_counts.set(HashMap::new());
-                chat.messages_hub_data.set(None);
-                chat.messages_hub_loading.set(false);
-                chat.muted_tournament_ids.set(HashSet::new());
-                if user_id.is_none() {
-                    chat.unread_counts.set(HashMap::new());
-                }
+                chat.clear_session_state();
             }
 
             if user_id.is_some() {
@@ -1510,6 +1544,81 @@ mod tests {
         );
 
         assert_eq!(result, vec![incoming_unique]);
+    }
+
+    #[test]
+    fn live_message_does_not_count_as_cached_history() {
+        let owner = Owner::new();
+        owner.set();
+
+        let current_user_id = Uuid::new_v4();
+        let sender_id = Uuid::new_v4();
+        let account = account(current_user_id);
+        let mut chat = Chat::new(
+            Signal::derive(move || Some(account.clone())),
+            Signal::derive(|| panic!("api is not used in this test")),
+        );
+        let tournament_id = TournamentId("live-before-open".to_string());
+        let key = ConversationKey::tournament(&tournament_id);
+        chat.apply_messages_hub_data(hub_with_tournament(&tournament_id, false));
+
+        chat.recv(&[ChatMessageContainer::new(
+            ChatDestination::TournamentLobby(tournament_id),
+            &message(sender_id, "latest", Some(2_000)),
+        )]);
+
+        assert_eq!(chat.cached_messages(&key).len(), 1);
+        assert!(!chat.has_cached_history(&key));
+
+        chat.inject_history(&key, vec![message(sender_id, "older", Some(1_000))]);
+
+        assert!(chat.has_cached_history(&key));
+    }
+
+    #[test]
+    fn clear_session_state_removes_private_cached_chat_state() {
+        let owner = Owner::new();
+        owner.set();
+
+        let chat = Chat::new(
+            Signal::derive(|| None),
+            Signal::derive(|| panic!("api is not used in this test")),
+        );
+        let user_id = Uuid::new_v4();
+        let tournament_id = TournamentId("previous-session".to_string());
+        let key = ConversationKey::tournament(&tournament_id);
+
+        chat.inject_history(&key, vec![message(user_id, "private", Some(1_000))]);
+        chat.apply_server_unread_counts(vec![UnreadCount {
+            key: key.clone(),
+            count: 3,
+        }]);
+        chat.set_draft_message(&key, "draft".to_string());
+        chat.set_channel_visible(&key);
+
+        chat.clear_session_state();
+
+        assert!(chat.cached_messages(&key).is_empty());
+        assert!(!chat.has_cached_history(&key));
+        assert_eq!(chat.unread_count_for_channel_untracked(&key), 0);
+        assert!(chat.draft_message(&key).is_empty());
+        assert!(!chat.is_channel_visible(&key));
+    }
+
+    #[test]
+    fn clear_session_state_bumps_session_epoch() {
+        let owner = Owner::new();
+        owner.set();
+
+        let chat = Chat::new(
+            Signal::derive(|| None),
+            Signal::derive(|| panic!("api is not used in this test")),
+        );
+        let initial_epoch = chat.session_epoch();
+
+        chat.clear_session_state();
+
+        assert_eq!(chat.session_epoch(), initial_epoch + 1);
     }
 
     #[test]

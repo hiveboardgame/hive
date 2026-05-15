@@ -187,9 +187,11 @@ fn use_thread_history(
     let history = ThreadHistoryState::new();
 
     Effect::watch(
-        move || active_channel_key.get(),
-        move |channel_key, previous, _| {
-            if previous.is_some_and(|previous_key| previous_key == channel_key) {
+        move || (active_channel_key.get(), chat.session_epoch()),
+        move |(channel_key, session_epoch), previous, _| {
+            if previous.is_some_and(|(previous_key, previous_epoch)| {
+                previous_key == channel_key && previous_epoch == session_epoch
+            }) {
                 return;
             }
 
@@ -199,9 +201,17 @@ fn use_thread_history(
             }
 
             let key = channel_key.clone();
+            let request_session_epoch = *session_epoch;
+            let request_user_id = chat.current_user_id_untracked();
             history.begin_loading(&key);
             spawn_local(async move {
-                match chat.fetch_channel_history(&key).await {
+                let result = chat.fetch_channel_history(&key).await;
+                if chat.session_epoch() != request_session_epoch
+                    || chat.current_user_id_untracked() != request_user_id
+                {
+                    return;
+                }
+                match result {
                     Ok(ChatHistoryResponse::Messages(messages)) => {
                         history.clear(&key);
                         chat.inject_history(&key, messages);
@@ -225,9 +235,9 @@ fn use_thread_ui_state(chat: Chat, active_channel_key: Signal<ConversationKey>) 
     let thread_ui = ThreadUiState::new();
 
     Effect::watch(
-        move || active_channel_key.get(),
-        move |channel_key, previous, _| {
-            if let Some(previous_key) = previous.cloned() {
+        move || (active_channel_key.get(), chat.session_epoch()),
+        move |(channel_key, _session_epoch), previous, _| {
+            if let Some((previous_key, _previous_epoch)) = previous.cloned() {
                 chat.clear_channel_visible(&previous_key);
             }
 

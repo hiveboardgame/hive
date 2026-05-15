@@ -1807,18 +1807,13 @@ mod tests {
 
         hub.on_game_finished(&game_id, white_id, black_id);
 
+        let snapshot = hub.data.chat_storage.snapshot_counts();
         assert_eq!(
-            hub.data
-                .chat_storage
-                .recent_len(CHANNEL_TYPE_GAME_SPECTATORS, &game_id.0),
-            Some(1),
+            snapshot.game_spectator_messages, 1,
             "public game chat must be preserved after finalization",
         );
         assert_eq!(
-            hub.data
-                .chat_storage
-                .recent_len(CHANNEL_TYPE_GAME_PLAYERS, &game_id.0),
-            Some(1),
+            snapshot.game_player_messages, 1,
             "private game chat must be preserved after finalization",
         );
     }

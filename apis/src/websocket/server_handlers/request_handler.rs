@@ -115,11 +115,13 @@ impl RequestHandler {
     pub async fn handle(&self) -> Result<HandlerOutput> {
         let output: HandlerOutput = match self.command.clone() {
             ClientRequest::LinkDiscord => OauthHandler::new(self.user_id).handle().await?.into(),
-            ClientRequest::Chat(message_container) => {
+            ClientRequest::Chat(mut message_container) => {
                 self.ensure_auth()?;
                 if self.user_id != message_container.message.user_id {
                     Err(AuthError::Unauthorized)?
                 }
+                message_container.message.user_id = self.user_id;
+                message_container.message.username = self.username.clone();
                 let channel_key =
                     shared_types::ConversationKey::from_destination(&message_container.destination);
                 let mut conn = get_conn(&self.pool)

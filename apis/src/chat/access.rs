@@ -33,6 +33,7 @@ pub struct ResolvedGameChat {
     pub id: Uuid,
     pub white_id: Uuid,
     pub black_id: Uuid,
+    pub finished: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -201,6 +202,7 @@ pub async fn authorize_chat_send_and_resolve_channel_key(
                     id: game.id,
                     white_id: game.white_id,
                     black_id: game.black_id,
+                    finished: game.finished,
                 }),
             })
         }

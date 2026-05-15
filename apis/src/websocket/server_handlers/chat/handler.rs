@@ -75,6 +75,16 @@ impl ChatHandler {
                     .game
                     .as_ref()
                     .context("missing spectators chat fanout metadata")?;
+                if game.finished {
+                    messages.push(InternalServerMessage {
+                        destination: MessageDestination::User(game.white_id),
+                        message: ServerMessage::Chat(vec![self.container.to_owned()]),
+                    });
+                    messages.push(InternalServerMessage {
+                        destination: MessageDestination::User(game.black_id),
+                        message: ServerMessage::Chat(vec![self.container.to_owned()]),
+                    });
+                }
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::GameSpectators(
                         game_id.clone(),

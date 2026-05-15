@@ -86,13 +86,4 @@ impl Chats {
         }
         snapshot
     }
-
-    #[cfg(test)]
-    pub(crate) fn recent_len(&self, channel_type: &str, channel_id: &str) -> Option<usize> {
-        self.recent_counts
-            .read()
-            .unwrap_or_else(|error| error.into_inner())
-            .get(&(channel_type.to_string(), channel_id.to_string()))
-            .copied()
-    }
 }

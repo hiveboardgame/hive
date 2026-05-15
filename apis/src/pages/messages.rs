@@ -1073,7 +1073,10 @@ fn GameChannelItem(game: GameChannel, current_route: Signal<MessageRoute>) -> im
     .href();
     let display_label_with_nanoid =
         StoredValue::new(format!("{} ({})", label, game_id.get_value().0));
-    let unread = Signal::derive(move || chat.unread_count_for_game(&game_id.get_value()));
+    let unread = Signal::derive(move || match thread {
+        GameThread::Players => chat.unread_count_for_game(&game_id.get_value()),
+        GameThread::Spectators => 0,
+    });
     let is_selected = Signal::derive(move || {
         current_route
             .get()
