@@ -98,56 +98,29 @@ fn build_messages_hub_data(
     section_limit: usize,
 ) -> MessagesHubData {
     let unread_count_map = unread_count_map(&unread_counts);
-    let dms = prioritize_unread_then_limit(
-        dms.into_iter().filter(|row| {
-            should_keep_channel(
-                &ConversationKey::direct(row.other_user_id),
-                row.last_message_at,
-                &unread_count_map,
-                recent_cutoff,
-            )
-        }),
+    let dms = prioritize_recent_or_unread_channels(
+        dms,
         section_limit,
-        |row| {
-            channel_unread_count(
-                &unread_count_map,
-                &ConversationKey::direct(row.other_user_id),
-            ) > 0
-        },
+        &unread_count_map,
+        recent_cutoff,
+        |row| ConversationKey::direct(row.other_user_id),
+        |row| row.last_message_at,
     );
-    let tournaments = prioritize_unread_then_limit(
-        tournaments.into_iter().filter(|row| {
-            should_keep_channel(
-                &ConversationKey::tournament(&TournamentId(row.nanoid.clone())),
-                row.last_message_at,
-                &unread_count_map,
-                recent_cutoff,
-            )
-        }),
+    let tournaments = prioritize_recent_or_unread_channels(
+        tournaments,
         section_limit,
-        |row| {
-            channel_unread_count(
-                &unread_count_map,
-                &ConversationKey::tournament(&TournamentId(row.nanoid.clone())),
-            ) > 0
-        },
+        &unread_count_map,
+        recent_cutoff,
+        |row| ConversationKey::tournament(&TournamentId(row.nanoid.clone())),
+        |row| row.last_message_at,
     );
-    let games = prioritize_unread_then_limit(
-        games.into_iter().filter(|row| {
-            should_keep_channel(
-                &ConversationKey::game(&row.game_id, row.thread),
-                row.last_message_at,
-                &unread_count_map,
-                recent_cutoff,
-            )
-        }),
+    let games = prioritize_recent_or_unread_channels(
+        games,
         section_limit,
-        |row| {
-            channel_unread_count(
-                &unread_count_map,
-                &ConversationKey::game(&row.game_id, row.thread),
-            ) > 0
-        },
+        &unread_count_map,
+        recent_cutoff,
+        |row| ConversationKey::game(&row.game_id, row.thread),
+        |row| row.last_message_at,
     );
 
     MessagesHubData {
@@ -156,6 +129,32 @@ fn build_messages_hub_data(
         games,
         muted_tournament_ids,
     }
+}
+
+#[cfg(feature = "ssr")]
+fn prioritize_recent_or_unread_channels<T>(
+    rows: Vec<T>,
+    limit: usize,
+    unread_counts: &HashMap<ConversationKey, i64>,
+    recent_cutoff: DateTime<Utc>,
+    key_for_row: impl Fn(&T) -> ConversationKey,
+    last_message_at: impl Fn(&T) -> DateTime<Utc>,
+) -> Vec<T> {
+    prioritize_unread_then_limit(
+        rows.into_iter()
+            .map(|row| {
+                let key = key_for_row(&row);
+                (row, key)
+            })
+            .filter(|(row, key)| {
+                should_keep_channel(key, last_message_at(row), unread_counts, recent_cutoff)
+            }),
+        limit,
+        |(_, key)| channel_unread_count(unread_counts, key) > 0,
+    )
+    .into_iter()
+    .map(|(row, _)| row)
+    .collect()
 }
 
 #[cfg(feature = "ssr")]

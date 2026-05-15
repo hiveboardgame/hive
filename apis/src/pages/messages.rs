@@ -486,7 +486,6 @@ fn MessagesResolvedDmView(
     let auth_pending = auth.action.pending();
     let destination =
         Signal::derive(move || ChatDestination::User((other_user_id, username.get_value())));
-    let username = StoredValue::new(username.get_value());
     let unavailable_message = Signal::derive(move || {
         if auth_pending.get() {
             loading_message.get()

@@ -1294,13 +1294,7 @@ mod tests {
         *,
     };
     use crate::websocket::WsTelemetry;
-    use shared_types::{
-        ChatDestination,
-        ChatMessage,
-        ChatMessageContainer,
-        CHANNEL_TYPE_GAME_PLAYERS,
-        CHANNEL_TYPE_GAME_SPECTATORS,
-    };
+    use shared_types::{CHANNEL_TYPE_GAME_PLAYERS, CHANNEL_TYPE_GAME_SPECTATORS};
 
     async fn make_hub() -> Arc<WsHub> {
         // bb8 builds the pool struct without making DB connections (min_idle = 0 by default).
@@ -1803,18 +1797,13 @@ mod tests {
         let white_id = Uuid::new_v4();
         let black_id = Uuid::new_v4();
         let game_id = GameId("chat-preserve".to_string());
-        let message = ChatMessage::new("tester".to_string(), white_id, "post game", None, None);
 
-        hub.data.chat_storage.push_recent(
-            CHANNEL_TYPE_GAME_SPECTATORS,
-            &game_id.0,
-            ChatMessageContainer::new(ChatDestination::GameSpectators(game_id.clone()), &message),
-        );
-        hub.data.chat_storage.push_recent(
-            CHANNEL_TYPE_GAME_PLAYERS,
-            &game_id.0,
-            ChatMessageContainer::new(ChatDestination::GamePlayers(game_id.clone()), &message),
-        );
+        hub.data
+            .chat_storage
+            .push_recent(CHANNEL_TYPE_GAME_SPECTATORS, &game_id.0);
+        hub.data
+            .chat_storage
+            .push_recent(CHANNEL_TYPE_GAME_PLAYERS, &game_id.0);
 
         hub.on_game_finished(&game_id, white_id, black_id);
 

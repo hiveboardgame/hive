@@ -1,11 +1,9 @@
-//! In-memory recent-chat cache only. All durable chat state is in Postgres.
+//! In-memory recent-chat counters only. All durable chat state is in Postgres.
 //!
-//! This cache holds the last CHAT_RECENT_CACHE_MAX messages per (channel_type, channel_id).
-//! It is only appended to on successful message persistence.
+//! These counters track up to CHAT_RECENT_CACHE_MAX messages per (channel_type, channel_id).
 
 use std::{collections::HashMap, sync::RwLock};
 
-use shared_types::ChatMessageContainer;
 #[cfg(feature = "ssr")]
 use shared_types::{
     CHANNEL_TYPE_DIRECT,
@@ -35,40 +33,37 @@ pub(crate) struct ChatCacheSnapshot {
 
 #[derive(Debug, Default)]
 pub struct Chats {
-    /// Recent messages per (channel_type, channel_id), cap at CHAT_RECENT_CACHE_MAX.
-    recent_cache: RwLock<HashMap<ChatChannelKey, Vec<ChatMessageContainer>>>,
+    /// Recent message counts per (channel_type, channel_id), capped at CHAT_RECENT_CACHE_MAX.
+    recent_counts: RwLock<HashMap<ChatChannelKey, usize>>,
 }
 
 impl Chats {
     pub fn new() -> Self {
         Self {
-            recent_cache: RwLock::new(HashMap::new()),
+            recent_counts: RwLock::new(HashMap::new()),
         }
     }
 
-    /// Appends one message to the channel's recent cache, keeping at most CHAT_RECENT_CACHE_MAX.
-    pub fn push_recent(&self, channel_type: &str, channel_id: &str, msg: ChatMessageContainer) {
+    /// Records one recent message for a channel, keeping at most CHAT_RECENT_CACHE_MAX.
+    pub fn push_recent(&self, channel_type: &str, channel_id: &str) {
         let key = (channel_type.to_string(), channel_id.to_string());
-        let mut cache = self
-            .recent_cache
+        let mut counts = self
+            .recent_counts
             .write()
             .unwrap_or_else(|error| error.into_inner());
-        let entry = cache.entry(key).or_default();
-        entry.push(msg);
-        if entry.len() > CHAT_RECENT_CACHE_MAX {
-            entry.drain(0..entry.len() - CHAT_RECENT_CACHE_MAX);
-        }
+        let count = counts.entry(key).or_default();
+        *count = (*count + 1).min(CHAT_RECENT_CACHE_MAX);
     }
 
     #[cfg(feature = "ssr")]
     pub(crate) fn snapshot_counts(&self) -> ChatCacheSnapshot {
-        let cache = self
-            .recent_cache
+        let counts = self
+            .recent_counts
             .read()
             .unwrap_or_else(|error| error.into_inner());
         let mut snapshot = ChatCacheSnapshot::default();
-        for ((channel_type, _), messages) in cache.iter() {
-            let message_count = messages.len() as u64;
+        for ((channel_type, _), message_count) in counts.iter() {
+            let message_count = *message_count as u64;
             match channel_type.as_str() {
                 CHANNEL_TYPE_TOURNAMENT_LOBBY => {
                     snapshot.tournament_channels += 1;
@@ -94,10 +89,10 @@ impl Chats {
 
     #[cfg(test)]
     pub(crate) fn recent_len(&self, channel_type: &str, channel_id: &str) -> Option<usize> {
-        self.recent_cache
+        self.recent_counts
             .read()
             .unwrap_or_else(|error| error.into_inner())
             .get(&(channel_type.to_string(), channel_id.to_string()))
-            .map(Vec::len)
+            .copied()
     }
 }

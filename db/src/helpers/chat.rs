@@ -135,7 +135,10 @@ pub async fn insert_chat_message(
     conn: &mut DbConn<'_>,
     new: NewChatMessage<'_>,
 ) -> Result<ChatMessage, DbError> {
-    let game_id = resolve_game_id_for_channel(conn, new.channel_type, new.channel_id).await?;
+    let game_id = match new.game_id {
+        Some(game_id) => Some(game_id),
+        None => resolve_game_id_for_channel(conn, new.channel_type, new.channel_id).await?,
+    };
     ensure_game_channel_has_game_id(new.channel_type, new.channel_id, &game_id)?;
     NewChatMessage { game_id, ..new }.insert(conn).await
 }

@@ -28,6 +28,28 @@ pub enum ChatSendAccessError {
     },
 }
 
+#[derive(Debug, Clone)]
+pub struct ResolvedGameChat {
+    pub id: Uuid,
+    pub white_id: Uuid,
+    pub black_id: Uuid,
+}
+
+#[derive(Debug, Clone)]
+pub struct ResolvedChatChannel {
+    pub channel_key: PersistentChannelKey,
+    pub game: Option<ResolvedGameChat>,
+}
+
+impl ResolvedChatChannel {
+    fn new(channel_key: PersistentChannelKey) -> Self {
+        Self {
+            channel_key,
+            game: None,
+        }
+    }
+}
+
 fn map_not_found(
     err: DbError,
     not_found_message: &'static str,
@@ -101,7 +123,7 @@ pub async fn authorize_chat_send_and_resolve_channel_key(
     sender_id: Uuid,
     sender_is_admin: bool,
     conversation_key: &ConversationKey,
-) -> Result<PersistentChannelKey, ChatSendAccessError> {
+) -> Result<ResolvedChatChannel, ChatSendAccessError> {
     let resolved_channel_key = conversation_key
         .persistent_key(Some(sender_id))
         .ok_or(ChatSendAccessError::BadRequest("Invalid channel"))?;
@@ -137,13 +159,13 @@ pub async fn authorize_chat_send_and_resolve_channel_key(
                 ));
             }
 
-            Ok(resolved_channel_key)
+            Ok(ResolvedChatChannel::new(resolved_channel_key))
         }
         ConversationKey::Global => {
             if !sender_is_admin {
                 return Err(ChatSendAccessError::Forbidden("Global chat requires admin"));
             }
-            Ok(resolved_channel_key)
+            Ok(ResolvedChatChannel::new(resolved_channel_key))
         }
         ConversationKey::Tournament(tournament_id) => {
             let access = get_tournament_chat_capabilities(conn, sender_id, &tournament_id.0)
@@ -160,7 +182,7 @@ pub async fn authorize_chat_send_and_resolve_channel_key(
                     "Only tournament participants and organizers can send messages",
                 ));
             }
-            Ok(resolved_channel_key)
+            Ok(ResolvedChatChannel::new(resolved_channel_key))
         }
         ConversationKey::Game { game_id, thread } => {
             let game = load_game_or_404(conn, game_id).await?;
@@ -173,7 +195,14 @@ pub async fn authorize_chat_send_and_resolve_channel_key(
                 };
                 return Err(ChatSendAccessError::Forbidden(message));
             }
-            Ok(resolved_channel_key)
+            Ok(ResolvedChatChannel {
+                channel_key: resolved_channel_key,
+                game: Some(ResolvedGameChat {
+                    id: game.id,
+                    white_id: game.white_id,
+                    black_id: game.black_id,
+                }),
+            })
         }
     }
 }

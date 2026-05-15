@@ -1,15 +1,11 @@
 use crate::{
     common::{ServerMessage, TournamentUpdate},
-    websocket::{
-        messages::{InternalServerMessage, MessageDestination},
-        WebsocketData,
-    },
+    websocket::messages::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
 use db_lib::{get_conn, models::Tournament, DbPool};
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
 use shared_types::TournamentId;
-use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct JoinHandler {
@@ -19,12 +15,7 @@ pub struct JoinHandler {
 }
 
 impl JoinHandler {
-    pub async fn new(
-        tournament_id: TournamentId,
-        user_id: Uuid,
-        pool: &DbPool,
-        _data: Arc<WebsocketData>,
-    ) -> Result<Self> {
+    pub async fn new(tournament_id: TournamentId, user_id: Uuid, pool: &DbPool) -> Result<Self> {
         Ok(Self {
             tournament_id,
             user_id,

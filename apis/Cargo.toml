@@ -76,7 +76,6 @@ simple_logger = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, optional = true }
 tree-ds = { workspace = true }
-urlencoding = { workspace = true }
 uuid = { workspace = true }
 walkdir = { workspace = true }
 wasm-bindgen = { workspace = true }

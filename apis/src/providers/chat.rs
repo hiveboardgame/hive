@@ -152,28 +152,6 @@ fn trim_stored_messages(messages: &mut Vec<ChatMessage>) {
     }
 }
 
-fn evict_oldest_channels<K>(
-    messages: &mut HashMap<K, Vec<ChatMessage>>,
-    max_channels: usize,
-) -> Vec<K>
-where
-    K: Clone + Eq + std::hash::Hash,
-{
-    let mut removed_keys = Vec::new();
-    while messages.len() > max_channels {
-        let Some(oldest_key) = messages
-            .iter()
-            .min_by_key(|(_, stored_messages)| last_message_timestamp(stored_messages))
-            .map(|(key, _)| key.clone())
-        else {
-            break;
-        };
-        messages.remove(&oldest_key);
-        removed_keys.push(oldest_key);
-    }
-    removed_keys
-}
-
 fn live_message_match_score(a: &ChatMessage, b: &ChatMessage) -> Option<i64> {
     (a == b).then_some(0)
 }
@@ -279,23 +257,17 @@ struct PendingOutgoingChat {
 
 #[derive(Copy, Clone, Debug)]
 pub struct Chat {
-    users_messages: RwSignal<HashMap<Uuid, Vec<ChatMessage>>>, // Uuid -> Messages
-    users_new_messages: RwSignal<HashMap<Uuid, bool>>,
-    games_private_messages: RwSignal<HashMap<GameId, Vec<ChatMessage>>>, // game_id -> Messages
-    games_private_new_messages: RwSignal<HashMap<GameId, bool>>,
-    games_public_messages: RwSignal<HashMap<GameId, Vec<ChatMessage>>>, // game_id -> Messages
-    games_public_new_messages: RwSignal<HashMap<GameId, bool>>,
-    tournament_lobby_messages: RwSignal<HashMap<TournamentId, Vec<ChatMessage>>>, // tournament_id -> Messages
-    tournament_lobby_new_messages: RwSignal<HashMap<TournamentId, bool>>,
-    global_messages: RwSignal<Vec<ChatMessage>>,
+    messages: RwSignal<HashMap<ConversationKey, Vec<ChatMessage>>>,
     draft_messages: RwSignal<HashMap<ConversationKey, String>>,
     pending_outgoing_messages: RwSignal<Vec<PendingOutgoingChat>>,
     chat_send_errors: RwSignal<HashMap<ConversationKey, String>>,
     loaded_history_channels: RwSignal<HashSet<ConversationKey>>,
     /// Stable shared block list for chat-adjacent surfaces.
     pub blocked_user_ids: RwSignal<HashSet<Uuid>>,
-    /// Server-backed unread counts keyed by canonical conversation identity.
+    /// Displayed unread counts keyed by canonical conversation identity.
     unread_counts: RwSignal<HashMap<ConversationKey, i64>>,
+    /// Live unread increments preserved for one server reconciliation if persistence lags.
+    optimistic_unread_counts: RwSignal<HashMap<ConversationKey, i64>>,
     /// Channels currently marked read optimistically; stale refreshes should not reintroduce unread.
     pending_read_channels: RwSignal<HashSet<ConversationKey>>,
     /// Channels currently visible in the UI. Used to suppress unread bumps for live messages in open threads.
@@ -318,21 +290,14 @@ pub struct Chat {
 impl Chat {
     pub fn new(user: Signal<Option<AccountResponse>>, api: Signal<ApiRequests>) -> Self {
         Self {
-            users_messages: RwSignal::new(HashMap::new()),
-            users_new_messages: RwSignal::new(HashMap::new()),
-            games_private_messages: RwSignal::new(HashMap::new()),
-            games_private_new_messages: RwSignal::new(HashMap::new()),
-            games_public_messages: RwSignal::new(HashMap::new()),
-            games_public_new_messages: RwSignal::new(HashMap::new()),
-            tournament_lobby_messages: RwSignal::new(HashMap::new()),
-            tournament_lobby_new_messages: RwSignal::new(HashMap::new()),
-            global_messages: RwSignal::new(Vec::new()),
+            messages: RwSignal::new(HashMap::new()),
             draft_messages: RwSignal::new(HashMap::new()),
             pending_outgoing_messages: RwSignal::new(Vec::new()),
             chat_send_errors: RwSignal::new(HashMap::new()),
             loaded_history_channels: RwSignal::new(HashSet::new()),
             blocked_user_ids: RwSignal::new(HashSet::new()),
             unread_counts: RwSignal::new(HashMap::new()),
+            optimistic_unread_counts: RwSignal::new(HashMap::new()),
             pending_read_channels: RwSignal::new(HashSet::new()),
             visible_channels: RwSignal::new(HashMap::new()),
             pending_visible_channel_reads: RwSignal::new(HashSet::new()),
@@ -428,10 +393,10 @@ impl Chat {
 
     fn clear_tournament_unread_state(&self, tournament_id: &TournamentId) {
         let channel_key = ConversationKey::tournament(tournament_id);
-        self.tournament_lobby_new_messages.update(|messages| {
-            messages.remove(tournament_id);
-        });
         self.unread_counts.update(|counts| {
+            counts.remove(&channel_key);
+        });
+        self.optimistic_unread_counts.update(|counts| {
             counts.remove(&channel_key);
         });
         self.pending_read_channels.update(|pending| {
@@ -530,37 +495,8 @@ impl Chat {
         key: &ConversationKey,
         f: impl FnOnce(&[ChatMessage]) -> R,
     ) -> R {
-        match key {
-            ConversationKey::Direct(other_user_id) => {
-                self.users_messages.with_untracked(|messages| {
-                    f(messages
-                        .get(other_user_id)
-                        .map(Vec::as_slice)
-                        .unwrap_or(&[]))
-                })
-            }
-            ConversationKey::Tournament(tournament_id) => {
-                self.tournament_lobby_messages.with_untracked(|messages| {
-                    f(messages
-                        .get(tournament_id)
-                        .map(Vec::as_slice)
-                        .unwrap_or(&[]))
-                })
-            }
-            ConversationKey::Game {
-                game_id,
-                thread: GameThread::Players,
-            } => self.games_private_messages.with_untracked(|messages| {
-                f(messages.get(game_id).map(Vec::as_slice).unwrap_or(&[]))
-            }),
-            ConversationKey::Game {
-                game_id,
-                thread: GameThread::Spectators,
-            } => self.games_public_messages.with_untracked(|messages| {
-                f(messages.get(game_id).map(Vec::as_slice).unwrap_or(&[]))
-            }),
-            ConversationKey::Global => self.global_messages.with_untracked(|messages| f(messages)),
-        }
+        self.messages
+            .with_untracked(|messages| f(messages.get(key).map(Vec::as_slice).unwrap_or(&[])))
     }
 
     fn with_messages_for_key<R>(
@@ -568,35 +504,8 @@ impl Chat {
         key: &ConversationKey,
         f: impl FnOnce(&[ChatMessage]) -> R,
     ) -> R {
-        match key {
-            ConversationKey::Direct(other_user_id) => self.users_messages.with(|messages| {
-                f(messages
-                    .get(other_user_id)
-                    .map(Vec::as_slice)
-                    .unwrap_or(&[]))
-            }),
-            ConversationKey::Tournament(tournament_id) => {
-                self.tournament_lobby_messages.with(|messages| {
-                    f(messages
-                        .get(tournament_id)
-                        .map(Vec::as_slice)
-                        .unwrap_or(&[]))
-                })
-            }
-            ConversationKey::Game {
-                game_id,
-                thread: GameThread::Players,
-            } => self
-                .games_private_messages
-                .with(|messages| f(messages.get(game_id).map(Vec::as_slice).unwrap_or(&[]))),
-            ConversationKey::Game {
-                game_id,
-                thread: GameThread::Spectators,
-            } => self
-                .games_public_messages
-                .with(|messages| f(messages.get(game_id).map(Vec::as_slice).unwrap_or(&[]))),
-            ConversationKey::Global => self.global_messages.with(|messages| f(messages)),
-        }
+        self.messages
+            .with(|messages| f(messages.get(key).map(Vec::as_slice).unwrap_or(&[])))
     }
 
     fn mark_history_loaded(&self, key: &ConversationKey) {
@@ -605,163 +514,69 @@ impl Chat {
         });
     }
 
-    fn replace_messages_for_key(&self, key: &ConversationKey, mut messages: Vec<ChatMessage>) {
-        self.mark_history_loaded(key);
-        match key {
-            ConversationKey::Direct(other_id) => {
-                self.users_messages.update(|stored| {
-                    if messages.is_empty() {
-                        stored.remove(other_id);
-                    } else {
-                        stored.insert(*other_id, messages);
-                    }
-                });
-            }
-            ConversationKey::Tournament(tournament_id) => {
-                self.tournament_lobby_messages.update(|stored| {
-                    if messages.is_empty() {
-                        stored.remove(tournament_id);
-                    } else {
-                        stored.insert(tournament_id.clone(), messages);
-                    }
-                });
-            }
-            ConversationKey::Game {
-                game_id,
-                thread: GameThread::Players,
-            } => {
-                self.games_private_messages.update(|stored| {
-                    if messages.is_empty() {
-                        stored.remove(game_id);
-                    } else {
-                        stored.insert(game_id.clone(), messages);
-                    }
-                });
-            }
-            ConversationKey::Game {
-                game_id,
-                thread: GameThread::Spectators,
-            } => {
-                self.games_public_messages.update(|stored| {
-                    if messages.is_empty() {
-                        stored.remove(game_id);
-                    } else {
-                        stored.insert(game_id.clone(), messages);
-                    }
-                });
-            }
-            ConversationKey::Global => {
-                retain_recent_announcements(&mut messages);
-                self.global_messages.set(messages);
-            }
+    fn finish_channel_messages(key: &ConversationKey, messages: &mut Vec<ChatMessage>) {
+        if matches!(key, ConversationKey::Global) {
+            retain_recent_announcements(messages);
+        } else {
+            trim_stored_messages(messages);
         }
+    }
+
+    fn set_messages_for_key(&self, key: &ConversationKey, mut messages: Vec<ChatMessage>) {
+        Self::finish_channel_messages(key, &mut messages);
+        self.messages.update(|stored| {
+            if messages.is_empty() {
+                stored.remove(key);
+            } else {
+                stored.insert(key.clone(), messages);
+            }
+        });
+    }
+
+    fn update_messages_for_key(
+        &self,
+        key: &ConversationKey,
+        update: impl FnOnce(Vec<ChatMessage>) -> Vec<ChatMessage>,
+    ) {
+        self.messages.update(|stored| {
+            let existing = stored.remove(key).unwrap_or_default();
+            let mut messages = update(existing);
+            Self::finish_channel_messages(key, &mut messages);
+            if !messages.is_empty() {
+                stored.insert(key.clone(), messages);
+            }
+        });
+    }
+
+    fn replace_messages_for_key(&self, key: &ConversationKey, messages: Vec<ChatMessage>) {
+        self.mark_history_loaded(key);
+        self.set_messages_for_key(key, messages);
     }
 
     fn inject_messages_for_key(&self, key: &ConversationKey, messages: Vec<ChatMessage>) {
         self.mark_history_loaded(key);
-        match key {
-            ConversationKey::Direct(other_id) => {
-                self.users_messages.update(|stored| {
-                    let entry = stored.entry(*other_id).or_default();
-                    let existing = std::mem::take(entry);
-                    let mut merged = merge_and_dedupe(existing, messages);
-                    trim_stored_messages(&mut merged);
-                    *entry = merged;
-                });
-            }
-            ConversationKey::Tournament(tournament_id) => {
-                self.tournament_lobby_messages.update(|stored| {
-                    let entry = stored.entry(tournament_id.clone()).or_default();
-                    let existing = std::mem::take(entry);
-                    let mut merged = merge_and_dedupe(existing, messages);
-                    trim_stored_messages(&mut merged);
-                    *entry = merged;
-                });
-            }
-            ConversationKey::Game {
-                game_id,
-                thread: GameThread::Players,
-            } => {
-                self.games_private_messages.update(|stored| {
-                    let entry = stored.entry(game_id.clone()).or_default();
-                    let existing = std::mem::take(entry);
-                    let mut merged = merge_and_dedupe(existing, messages);
-                    trim_stored_messages(&mut merged);
-                    *entry = merged;
-                });
-            }
-            ConversationKey::Game {
-                game_id,
-                thread: GameThread::Spectators,
-            } => {
-                self.games_public_messages.update(|stored| {
-                    let entry = stored.entry(game_id.clone()).or_default();
-                    let existing = std::mem::take(entry);
-                    let mut merged = merge_and_dedupe(existing, messages);
-                    trim_stored_messages(&mut merged);
-                    *entry = merged;
-                });
-            }
-            ConversationKey::Global => {
-                self.global_messages.update(|existing| {
-                    *existing = merge_and_dedupe(std::mem::take(existing), messages);
-                    retain_recent_announcements(existing);
-                });
-            }
-        }
+        self.update_messages_for_key(key, |existing| merge_and_dedupe(existing, messages));
     }
 
     fn append_live_messages_for_key(&self, key: &ConversationKey, messages: Vec<ChatMessage>) {
         self.mark_history_loaded(key);
-        match key {
-            ConversationKey::Direct(other_id) => {
-                self.users_messages.update(|stored| {
-                    let entry = stored.entry(*other_id).or_default();
-                    entry.extend(messages);
-                    trim_stored_messages(entry);
-                });
-            }
-            ConversationKey::Tournament(tournament_id) => {
-                self.tournament_lobby_messages.update(|stored| {
-                    let entry = stored.entry(tournament_id.clone()).or_default();
-                    entry.extend(messages);
-                    trim_stored_messages(entry);
-                });
-            }
-            ConversationKey::Game {
-                game_id,
-                thread: GameThread::Players,
-            } => {
-                self.games_private_messages.update(|stored| {
-                    let entry = stored.entry(game_id.clone()).or_default();
-                    entry.extend(messages);
-                    trim_stored_messages(entry);
-                });
-            }
-            ConversationKey::Game {
-                game_id,
-                thread: GameThread::Spectators,
-            } => {
-                self.games_public_messages.update(|stored| {
-                    let entry = stored.entry(game_id.clone()).or_default();
-                    entry.extend(messages);
-                    trim_stored_messages(entry);
-                });
-            }
-            ConversationKey::Global => {
-                self.global_messages.update(|existing| {
-                    existing.extend(messages);
-                    retain_recent_announcements(existing);
-                });
-            }
-        }
+        self.update_messages_for_key(key, |mut existing| {
+            existing.extend(messages);
+            existing
+        });
     }
 
     fn prune_threads_for_key(&self, key: &ConversationKey) {
         match key {
-            ConversationKey::Direct(_) => self.prune_dm_threads(),
-            ConversationKey::Tournament(_) => self.prune_tournament_threads(),
-            ConversationKey::Game { thread, .. } => self.prune_game_threads(*thread),
+            ConversationKey::Direct(_) => {
+                self.prune_threads_matching(|key| matches!(key, ConversationKey::Direct(_)));
+            }
+            ConversationKey::Tournament(_) => {
+                self.prune_threads_matching(|key| matches!(key, ConversationKey::Tournament(_)));
+            }
+            ConversationKey::Game { thread, .. } => self.prune_threads_matching(|key| {
+                matches!(key, ConversationKey::Game { thread: key_thread, .. } if key_thread == thread)
+            }),
             ConversationKey::Global => {}
         }
     }
@@ -785,6 +600,9 @@ impl Chat {
         // Preserve server-backed unread counts when only the cached message body is pruned.
         // The Messages hub and header badge still read unread state for channels whose thread
         // contents are no longer resident locally.
+        self.optimistic_unread_counts.update(|counts| {
+            counts.retain(|key, _| !keys.contains(key));
+        });
         self.pending_read_channels.update(|pending| {
             pending.retain(|key| !keys.contains(key));
         });
@@ -802,78 +620,30 @@ impl Chat {
         });
     }
 
-    fn prune_dm_threads(&self) {
-        let mut removed_user_ids = Vec::new();
-        self.users_messages.update(|messages| {
-            removed_user_ids = evict_oldest_channels(messages, MAX_STORED_CHANNELS_PER_SECTION);
-        });
-        if removed_user_ids.is_empty() {
-            return;
-        }
-        self.users_new_messages.update(|messages| {
-            for user_id in &removed_user_ids {
-                messages.remove(user_id);
+    fn prune_threads_matching(&self, belongs_to_section: impl Fn(&ConversationKey) -> bool) {
+        let mut removed_keys = Vec::new();
+        self.messages.update(|messages| {
+            while messages
+                .keys()
+                .filter(|key| belongs_to_section(key))
+                .count()
+                > MAX_STORED_CHANNELS_PER_SECTION
+            {
+                let Some(oldest_key) = messages
+                    .iter()
+                    .filter(|(key, _)| belongs_to_section(key))
+                    .min_by_key(|(_, stored_messages)| last_message_timestamp(stored_messages))
+                    .map(|(key, _)| key.clone())
+                else {
+                    break;
+                };
+                messages.remove(&oldest_key);
+                removed_keys.push(oldest_key);
             }
         });
-        self.remove_channel_keys(removed_user_ids.into_iter().map(ConversationKey::direct));
-    }
-
-    fn prune_tournament_threads(&self) {
-        let mut removed_tournament_ids = Vec::new();
-        self.tournament_lobby_messages.update(|messages| {
-            removed_tournament_ids =
-                evict_oldest_channels(messages, MAX_STORED_CHANNELS_PER_SECTION);
-        });
-        if removed_tournament_ids.is_empty() {
-            return;
+        if !removed_keys.is_empty() {
+            self.remove_channel_keys(removed_keys);
         }
-        self.tournament_lobby_new_messages.update(|messages| {
-            for tournament_id in &removed_tournament_ids {
-                messages.remove(tournament_id);
-            }
-        });
-        self.remove_channel_keys(
-            removed_tournament_ids
-                .into_iter()
-                .map(|tournament_id| ConversationKey::tournament(&tournament_id)),
-        );
-    }
-
-    fn prune_game_threads(&self, thread: GameThread) {
-        let mut removed_game_ids = Vec::new();
-        match thread {
-            GameThread::Players => {
-                self.games_private_messages.update(|messages| {
-                    removed_game_ids =
-                        evict_oldest_channels(messages, MAX_STORED_CHANNELS_PER_SECTION);
-                });
-                self.games_private_new_messages.update(|messages| {
-                    for game_id in &removed_game_ids {
-                        messages.remove(game_id);
-                    }
-                });
-            }
-            GameThread::Spectators => {
-                self.games_public_messages.update(|messages| {
-                    removed_game_ids =
-                        evict_oldest_channels(messages, MAX_STORED_CHANNELS_PER_SECTION);
-                });
-                self.games_public_new_messages.update(|messages| {
-                    for game_id in &removed_game_ids {
-                        messages.remove(game_id);
-                    }
-                });
-            }
-        }
-
-        if removed_game_ids.is_empty() {
-            return;
-        }
-
-        self.remove_channel_keys(removed_game_ids.into_iter().map(|game_id| match thread {
-            GameThread::Players => ConversationKey::game_players(&game_id),
-            GameThread::Spectators => ConversationKey::game_spectators(&game_id),
-        }));
     }
 
     async fn fetch_and_store_unread_counts(self) {
@@ -894,10 +664,11 @@ impl Chat {
         }
     }
 
-    /// Apply a fresh server snapshot of unread counts while preserving optimistic local state.
+    /// Apply a fresh server snapshot of unread counts while preserving optimistic local state once.
     pub fn apply_server_unread_counts(&self, counts: Vec<UnreadCount>) {
         let merged = self.merge_server_counts_with_optimistic(counts);
         self.unread_counts.set(merged);
+        self.optimistic_unread_counts.set(HashMap::new());
     }
 
     /// Mark a channel as read on the server (fire-and-forget).
@@ -941,6 +712,18 @@ impl Chat {
     fn is_channel_visible(&self, key: &ConversationKey) -> bool {
         self.visible_channels
             .with_untracked(|visible| visible.get(key).copied().unwrap_or(0) > 0)
+    }
+
+    fn tracks_unread(key: &ConversationKey) -> bool {
+        matches!(
+            key,
+            ConversationKey::Direct(_)
+                | ConversationKey::Tournament(_)
+                | ConversationKey::Game {
+                    thread: GameThread::Players,
+                    ..
+                }
+        )
     }
 
     fn flush_visible_channel_read(&self, key: &ConversationKey) {
@@ -1019,50 +802,20 @@ impl Chat {
         if deferred == 0 {
             return;
         }
-        match key {
-            ConversationKey::Direct(other_user_id) => {
-                self.users_new_messages.update(|messages| {
-                    messages
-                        .entry(*other_user_id)
-                        .and_modify(|value| *value = true)
-                        .or_insert(true);
-                });
-                self.optimistically_increment_unread_by(key, deferred);
-            }
-            ConversationKey::Tournament(tournament_id) => {
-                if self.is_tournament_muted(tournament_id) {
-                    return;
-                }
-                self.tournament_lobby_new_messages.update(|messages| {
-                    messages
-                        .entry(tournament_id.clone())
-                        .and_modify(|value| *value = true)
-                        .or_insert(true);
-                });
-                self.optimistically_increment_unread_by(key, deferred);
-            }
-            ConversationKey::Game {
-                game_id,
-                thread: GameThread::Players,
-            } => {
-                self.games_private_new_messages.update(|messages| {
-                    messages
-                        .entry(game_id.clone())
-                        .and_modify(|value| *value = true)
-                        .or_insert(true);
-                });
-                self.optimistically_increment_unread_by(key, deferred);
-            }
-            ConversationKey::Game {
-                thread: GameThread::Spectators,
-                ..
-            }
-            | ConversationKey::Global => {}
+        if matches!(key, ConversationKey::Tournament(tournament_id) if self.is_tournament_muted(tournament_id))
+        {
+            return;
+        }
+        if Self::tracks_unread(key) {
+            self.optimistically_increment_unread_by(key, deferred);
         }
     }
 
     /// Optimistically set unread count for channel(s) to 0 so badges update immediately.
     fn optimistically_clear_unread(&self, key: &ConversationKey) {
+        self.optimistic_unread_counts.update(|counts| {
+            counts.remove(key);
+        });
         self.unread_counts.update(|counts| {
             if let Some(count) = counts.get_mut(key) {
                 *count = 0;
@@ -1082,6 +835,12 @@ impl Chat {
         self.pending_read_channels.update(|pending| {
             pending.remove(key);
         });
+        self.optimistic_unread_counts.update(|counts| {
+            counts
+                .entry(key.clone())
+                .and_modify(|count| *count += delta)
+                .or_insert(delta);
+        });
         self.unread_counts.update(|counts| {
             counts
                 .entry(key.clone())
@@ -1090,42 +849,23 @@ impl Chat {
         });
     }
 
-    /// Clear local "new" state for game chat.
-    /// This is safe to call from passive UI flows and does not write server read receipts.
-    pub fn seen_messages(&self, game_id: GameId) {
-        self.games_public_new_messages.update(|m| {
-            m.entry(game_id.clone())
-                .and_modify(|b| *b = false)
-                .or_insert(false);
-        });
-        self.games_private_new_messages.update(|m| {
-            m.entry(game_id.clone())
-                .and_modify(|b| *b = false)
-                .or_insert(false);
-        });
-    }
-
     pub fn clear_game_thread(&self, game_id: &GameId) {
         let players_key = ConversationKey::game_players(game_id);
         let spectators_key = ConversationKey::game_spectators(game_id);
 
-        self.games_private_messages.update(|games| {
-            games.remove(game_id);
-        });
-        self.games_public_messages.update(|games| {
-            games.remove(game_id);
-        });
-        self.games_private_new_messages.update(|games| {
-            games.remove(game_id);
-        });
-        self.games_public_new_messages.update(|games| {
-            games.remove(game_id);
+        self.messages.update(|messages| {
+            messages.remove(&players_key);
+            messages.remove(&spectators_key);
         });
         self.loaded_history_channels.update(|loaded| {
             loaded.remove(&players_key);
             loaded.remove(&spectators_key);
         });
         self.unread_counts.update(|counts| {
+            counts.remove(&players_key);
+            counts.remove(&spectators_key);
+        });
+        self.optimistic_unread_counts.update(|counts| {
             counts.remove(&players_key);
             counts.remove(&spectators_key);
         });
@@ -1145,33 +885,6 @@ impl Chat {
             counts.remove(&players_key);
             counts.remove(&spectators_key);
         });
-    }
-
-    fn clear_tournament_lobby_new_messages(&self, tournament_id: &TournamentId) {
-        self.tournament_lobby_new_messages.update(|m| {
-            m.entry(tournament_id.clone())
-                .and_modify(|b| *b = false)
-                .or_insert(false);
-        });
-    }
-
-    fn clear_dm_new_messages(&self, other_user_id: Uuid) {
-        self.users_new_messages.update(|m| {
-            m.entry(other_user_id)
-                .and_modify(|b| *b = false)
-                .or_insert(false);
-        });
-    }
-
-    fn clear_local_new_for_channel(&self, key: &ConversationKey) {
-        match key {
-            ConversationKey::Direct(other_user_id) => self.clear_dm_new_messages(*other_user_id),
-            ConversationKey::Tournament(tournament_id) => {
-                self.clear_tournament_lobby_new_messages(tournament_id);
-            }
-            ConversationKey::Game { game_id, .. } => self.seen_messages(game_id.clone()),
-            ConversationKey::Global => {}
-        }
     }
 
     fn queue_pending_outgoing_message(
@@ -1297,7 +1010,6 @@ impl Chat {
     }
 
     pub fn open_channel(&self, key: &ConversationKey) {
-        self.clear_local_new_for_channel(key);
         if !matches!(key, ConversationKey::Global)
             && self.unread_count_for_channel_untracked(key) > 0
         {
@@ -1305,7 +1017,8 @@ impl Chat {
         }
     }
 
-    /// Merge server counts with local "new" flags so optimistic unread is not overwritten by stale server state (e.g. 0 before message is persisted).
+    /// Merge server counts with short-lived live-message increments so optimistic unread is not
+    /// overwritten by stale server state (e.g. 0 before message is persisted).
     fn merge_server_counts_with_optimistic(
         &self,
         server: Vec<UnreadCount>,
@@ -1315,33 +1028,17 @@ impl Chat {
             .map(|unread| (unread.key, unread.count))
             .collect();
         let server_map = map.clone();
-        self.users_new_messages.with_untracked(|m| {
-            for (other_id, &has_new) in m.iter() {
-                if has_new {
-                    map.entry(ConversationKey::direct(*other_id))
-                        .and_modify(|n| *n = (*n).max(1))
-                        .or_insert(1);
+        self.optimistic_unread_counts
+            .with_untracked(|optimistic_counts| {
+                for (key, &local_count) in optimistic_counts {
+                    if local_count <= 0 {
+                        continue;
+                    }
+                    map.entry(key.clone())
+                        .and_modify(|count| *count = (*count).max(local_count))
+                        .or_insert(local_count);
                 }
-            }
-        });
-        self.tournament_lobby_new_messages.with_untracked(|m| {
-            for (tid, &has_new) in m.iter() {
-                if has_new && !self.is_tournament_muted(tid) {
-                    map.entry(ConversationKey::tournament(tid))
-                        .and_modify(|n| *n = (*n).max(1))
-                        .or_insert(1);
-                }
-            }
-        });
-        self.games_private_new_messages.with_untracked(|m| {
-            for (gid, &has_new) in m.iter() {
-                if has_new {
-                    map.entry(ConversationKey::game_players(gid))
-                        .and_modify(|n| *n = (*n).max(1))
-                        .or_insert(1);
-                }
-            }
-        });
+            });
         let pending_keys: Vec<ConversationKey> = self
             .pending_read_channels
             .with_untracked(|pending| pending.iter().cloned().collect());
@@ -1367,7 +1064,7 @@ impl Chat {
     }
 
     /// Fetch unread counts from the server and update unread_counts signal.
-    /// Merges with local "new" flags so that a just-received DM/tournament message is not overwritten with 0.
+    /// Preserves just-received unread once so persistence lag does not drop the badge.
     pub fn refresh_unread_counts(&self) {
         let chat = *self;
         spawn_local(async move {
@@ -1424,48 +1121,21 @@ impl Chat {
 
     /// Unread count for a game (players channel only). Use for game list badges.
     /// Spectator messages intentionally do not contribute to badges/notifications.
-    /// If local "new" flag is set, returns at least 1 so badge is not lost.
     pub fn unread_count_for_game(&self, game_id: &GameId) -> i64 {
-        let from_list = self.unread_count_for_channel(&ConversationKey::game_players(game_id));
-        let has_local_new = self
-            .games_private_new_messages
-            .with(|m| m.get(game_id).copied().unwrap_or(false));
-        if has_local_new {
-            from_list.max(1)
-        } else {
-            from_list
-        }
+        self.unread_count_for_channel(&ConversationKey::game_players(game_id))
     }
 
     /// Unread count for a tournament lobby. Use for tournament page badge.
-    /// If local "new" flag is set, returns at least 1 so badge is not lost before server state is updated.
     pub fn unread_count_for_tournament(&self, tournament_id: &TournamentId) -> i64 {
         if self.is_tournament_muted(tournament_id) {
             return 0;
         }
-        let from_list = self.unread_count_for_channel(&ConversationKey::tournament(tournament_id));
-        let has_local_new = self
-            .tournament_lobby_new_messages
-            .with(|m| m.get(tournament_id).copied().unwrap_or(false));
-        if has_local_new {
-            from_list.max(1)
-        } else {
-            from_list
-        }
+        self.unread_count_for_channel(&ConversationKey::tournament(tournament_id))
     }
 
     /// Unread count for a DM with another user. Use for DM list badge.
-    /// If local "new" flag is set, returns at least 1 so badge is not lost before server state is updated.
     pub fn unread_count_for_dm(&self, other_user_id: Uuid) -> i64 {
-        let from_list = self.unread_count_for_channel(&ConversationKey::direct(other_user_id));
-        let has_local_new = self
-            .users_new_messages
-            .with(|m| m.get(&other_user_id).copied().unwrap_or(false));
-        if has_local_new {
-            from_list.max(1)
-        } else {
-            from_list
-        }
+        self.unread_count_for_channel(&ConversationKey::direct(other_user_id))
     }
 
     pub fn unread_count_for_channel_untracked(&self, key: &ConversationKey) -> i64 {
@@ -1550,131 +1220,6 @@ impl Chat {
                 .as_ref()
                 .is_some_and(|a| last_message.message.user_id == a.user.uid);
             match &last_message.destination {
-                ChatDestination::TournamentLobby(id) => {
-                    let channel_key = ConversationKey::tournament(id);
-                    let muted = self.is_tournament_muted(id);
-                    let new_messages = self.filter_duplicate_live_messages_for_key(
-                        &channel_key,
-                        containers.iter().map(|c| c.message.clone()),
-                    );
-                    if new_messages.is_empty() {
-                        return;
-                    }
-                    self.append_live_messages_for_key(&channel_key, new_messages);
-                    self.prune_threads_for_key(&channel_key);
-                    self.record_catalog_activity_for_key(
-                        &channel_key,
-                        None,
-                        last_message.message.timestamp,
-                    );
-                    if is_live && !from_self {
-                        if self.is_channel_visible(&channel_key) {
-                            self.clear_tournament_lobby_new_messages(id);
-                            self.defer_visible_channel_unread(&channel_key);
-                        } else if !muted {
-                            self.tournament_lobby_new_messages.update(|m| {
-                                m.entry(id.clone())
-                                    .and_modify(|value| *value = true)
-                                    .or_insert(true);
-                            });
-                            self.optimistically_increment_unread(&channel_key);
-                        }
-                    }
-                }
-
-                ChatDestination::User((dest_id, _name)) => {
-                    // Container destination is from sender's perspective. For recipient, the
-                    // "other" in the thread is the sender (message.user_id), not dest_id.
-                    let current_user_id = self.user.get_untracked().as_ref().map(|a| a.user.uid);
-                    let thread_other_id = match current_user_id {
-                        Some(me) if last_message.message.user_id == me => *dest_id, // I sent: other is recipient
-                        _ => last_message.message.user_id, // I received: other is sender
-                    };
-                    let thread_username = match current_user_id {
-                        Some(me) if last_message.message.user_id == me => _name.clone(),
-                        _ => last_message.message.username.clone(),
-                    };
-                    let channel_key = ConversationKey::direct(thread_other_id);
-                    let new_messages = self.filter_duplicate_live_messages_for_key(
-                        &channel_key,
-                        containers.iter().map(|c| c.message.clone()),
-                    );
-                    if new_messages.is_empty() {
-                        return;
-                    }
-                    self.append_live_messages_for_key(&channel_key, new_messages);
-                    self.prune_threads_for_key(&channel_key);
-                    self.record_catalog_activity_for_key(
-                        &channel_key,
-                        Some(thread_username),
-                        last_message.message.timestamp,
-                    );
-                    if is_live && !from_self {
-                        if self.is_channel_visible(&channel_key) {
-                            self.clear_dm_new_messages(thread_other_id);
-                            self.defer_visible_channel_unread(&channel_key);
-                        } else {
-                            self.users_new_messages.update(|m| {
-                                m.entry(thread_other_id)
-                                    .and_modify(|value| *value = true)
-                                    .or_insert(true);
-                            });
-                            self.optimistically_increment_unread(&channel_key);
-                        }
-                    }
-                }
-                ChatDestination::GamePlayers(id) => {
-                    let channel_key = ConversationKey::game_players(id);
-                    let new_messages = self.filter_duplicate_live_messages_for_key(
-                        &channel_key,
-                        containers.iter().map(|c| c.message.clone()),
-                    );
-                    if new_messages.is_empty() {
-                        return;
-                    }
-                    self.append_live_messages_for_key(&channel_key, new_messages);
-                    self.prune_threads_for_key(&channel_key);
-                    self.record_catalog_activity_for_key(
-                        &channel_key,
-                        None,
-                        last_message.message.timestamp,
-                    );
-                    if is_live && !from_self {
-                        if self.is_channel_visible(&channel_key) {
-                            self.seen_messages(id.clone());
-                            self.defer_visible_channel_unread(&channel_key);
-                        } else {
-                            self.games_private_new_messages.update(|m| {
-                                m.entry(id.clone())
-                                    .and_modify(|value| *value = true)
-                                    .or_insert(true);
-                            });
-                            self.optimistically_increment_unread(&channel_key);
-                        }
-                    }
-                }
-                ChatDestination::GameSpectators(id) => {
-                    let channel_key = ConversationKey::game_spectators(id);
-                    let new_messages = self.filter_duplicate_live_messages_for_key(
-                        &channel_key,
-                        containers.iter().map(|c| c.message.clone()),
-                    );
-                    if new_messages.is_empty() {
-                        return;
-                    }
-                    self.append_live_messages_for_key(&channel_key, new_messages);
-                    self.prune_threads_for_key(&channel_key);
-                    self.record_catalog_activity_for_key(
-                        &channel_key,
-                        None,
-                        last_message.message.timestamp,
-                    );
-                    if is_live && !from_self && self.is_channel_visible(&channel_key) {
-                        self.seen_messages(id.clone());
-                        self.schedule_visible_channel_read_flush(&channel_key);
-                        // Spectator chat intentionally does not contribute to unread badges/notifications.
-                    }
-                }
                 ChatDestination::Global => {
                     let channel_key = ConversationKey::Global;
                     let to_add = self.filter_duplicate_live_messages_for_key(
@@ -1688,6 +1233,67 @@ impl Chat {
                     alerts.last_alert.update(|v| {
                         *v = Some(AlertType::Warn(last_message.message.message.to_string()))
                     });
+                }
+                destination => {
+                    let current_user_id = self.user.get_untracked().as_ref().map(|a| a.user.uid);
+                    let (channel_key, dm_username) = match destination {
+                        ChatDestination::TournamentLobby(id) => {
+                            (ConversationKey::tournament(id), None)
+                        }
+                        ChatDestination::User((dest_id, name)) => {
+                            // Container destination is from sender's perspective. For recipient,
+                            // the thread's "other" user is the sender, not dest_id.
+                            let thread_other_id = match current_user_id {
+                                Some(me) if last_message.message.user_id == me => *dest_id,
+                                _ => last_message.message.user_id,
+                            };
+                            let thread_username = match current_user_id {
+                                Some(me) if last_message.message.user_id == me => name.clone(),
+                                _ => last_message.message.username.clone(),
+                            };
+                            (
+                                ConversationKey::direct(thread_other_id),
+                                Some(thread_username),
+                            )
+                        }
+                        ChatDestination::GamePlayers(id) => {
+                            (ConversationKey::game_players(id), None)
+                        }
+                        ChatDestination::GameSpectators(id) => {
+                            (ConversationKey::game_spectators(id), None)
+                        }
+                        ChatDestination::Global => unreachable!(),
+                    };
+                    let new_messages = self.filter_duplicate_live_messages_for_key(
+                        &channel_key,
+                        containers.iter().map(|c| c.message.clone()),
+                    );
+                    if new_messages.is_empty() {
+                        return;
+                    }
+                    let tracks_unread = Self::tracks_unread(&channel_key)
+                        && !matches!(
+                            &channel_key,
+                            ConversationKey::Tournament(id) if self.is_tournament_muted(id)
+                        );
+                    self.append_live_messages_for_key(&channel_key, new_messages);
+                    self.prune_threads_for_key(&channel_key);
+                    self.record_catalog_activity_for_key(
+                        &channel_key,
+                        dm_username,
+                        last_message.message.timestamp,
+                    );
+                    if is_live && !from_self {
+                        if self.is_channel_visible(&channel_key) {
+                            if tracks_unread {
+                                self.defer_visible_channel_unread(&channel_key);
+                            } else {
+                                self.schedule_visible_channel_read_flush(&channel_key);
+                            }
+                        } else if tracks_unread {
+                            self.optimistically_increment_unread(&channel_key);
+                        }
+                    }
                 }
             }
         }
@@ -1762,6 +1368,7 @@ pub fn provide_chat() {
                 chat.pending_outgoing_messages.set(Vec::new());
                 chat.chat_send_errors.set(HashMap::new());
                 chat.loaded_history_channels.set(HashSet::new());
+                chat.optimistic_unread_counts.set(HashMap::new());
                 chat.messages_hub_data.set(None);
                 chat.messages_hub_loading.set(false);
                 chat.muted_tournament_ids.set(HashSet::new());
@@ -1798,6 +1405,7 @@ mod tests {
         TournamentChannel,
         TournamentChatCapabilities,
         TournamentId,
+        UnreadCount,
     };
     use std::collections::HashMap;
     use uuid::Uuid;
@@ -2004,9 +1612,6 @@ mod tests {
         assert_eq!(cached[0].message, "muted but delivered");
         assert_eq!(chat.unread_count_for_tournament(&tournament_id), 0);
         assert_eq!(chat.total_unread_count(), 0);
-        assert!(!chat
-            .tournament_lobby_new_messages
-            .with_untracked(|m| { m.get(&tournament_id).copied().unwrap_or(false) }));
     }
 
     #[test]
@@ -2032,9 +1637,59 @@ mod tests {
 
         assert_eq!(chat.unread_count_for_tournament(&tournament_id), 1);
         assert_eq!(chat.total_unread_count(), 1);
-        assert!(chat
-            .tournament_lobby_new_messages
-            .with_untracked(|m| { m.get(&tournament_id).copied().unwrap_or(false) }));
+    }
+
+    #[test]
+    fn server_snapshot_can_clear_previous_server_unread_count() {
+        let owner = Owner::new();
+        owner.set();
+
+        let chat = Chat::new(
+            Signal::derive(|| None),
+            Signal::derive(|| panic!("api is not used in this test")),
+        );
+        let tournament_id = TournamentId("read-elsewhere".to_string());
+
+        chat.apply_server_unread_counts(vec![UnreadCount {
+            key: ConversationKey::tournament(&tournament_id),
+            count: 3,
+        }]);
+        assert_eq!(chat.unread_count_for_tournament(&tournament_id), 3);
+
+        chat.apply_server_unread_counts(Vec::new());
+
+        assert_eq!(chat.unread_count_for_tournament(&tournament_id), 0);
+        assert_eq!(chat.total_unread_count(), 0);
+    }
+
+    #[test]
+    fn optimistic_unread_is_only_preserved_for_one_server_reconciliation() {
+        let owner = Owner::new();
+        owner.set();
+
+        let current_user_id = Uuid::new_v4();
+        let sender_id = Uuid::new_v4();
+        let account = account(current_user_id);
+        let mut chat = Chat::new(
+            Signal::derive(move || Some(account.clone())),
+            Signal::derive(|| panic!("api is not used in this test")),
+        );
+        let tournament_id = TournamentId("one-reconciliation".to_string());
+        chat.apply_messages_hub_data(hub_with_tournament(&tournament_id, false));
+
+        let container = ChatMessageContainer::new(
+            ChatDestination::TournamentLobby(tournament_id.clone()),
+            &message(sender_id, "badge briefly", Some(2_000)),
+        );
+        chat.recv(&[container]);
+
+        chat.apply_server_unread_counts(Vec::new());
+        assert_eq!(chat.unread_count_for_tournament(&tournament_id), 1);
+
+        chat.apply_server_unread_counts(Vec::new());
+
+        assert_eq!(chat.unread_count_for_tournament(&tournament_id), 0);
+        assert_eq!(chat.total_unread_count(), 0);
     }
 
     #[test]
@@ -2063,9 +1718,6 @@ mod tests {
 
         assert_eq!(chat.unread_count_for_tournament(&tournament_id), 0);
         assert_eq!(chat.total_unread_count(), 0);
-        assert!(!chat
-            .tournament_lobby_new_messages
-            .with_untracked(|m| { m.get(&tournament_id).copied().unwrap_or(false) }));
     }
 
     #[test]
@@ -2091,9 +1743,6 @@ mod tests {
         assert_eq!(chat.cached_messages(&key).len(), 1);
         assert_eq!(chat.unread_count_for_tournament(&tournament_id), 0);
         assert_eq!(chat.total_unread_count(), 0);
-        assert!(!chat
-            .tournament_lobby_new_messages
-            .with_untracked(|m| { m.get(&tournament_id).copied().unwrap_or(false) }));
     }
 
     #[test]
@@ -2122,8 +1771,5 @@ mod tests {
 
         assert_eq!(chat.unread_count_for_tournament(&tournament_id), 0);
         assert_eq!(chat.total_unread_count(), 0);
-        assert!(!chat
-            .tournament_lobby_new_messages
-            .with_untracked(|m| { m.get(&tournament_id).copied().unwrap_or(false) }));
     }
 }

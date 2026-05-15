@@ -1,11 +1,54 @@
-use crate::i18n::*;
+use crate::{
+    i18n::*,
+    providers::{game_state::GameStateSignal, AuthContext},
+};
 use leptos::prelude::*;
-use shared_types::GameThread;
+use shared_types::{GameChatCapabilities, GameThread};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum GameThreadToggleSize {
     Compact,
     Roomy,
+}
+
+#[derive(Copy, Clone)]
+pub struct EmbeddedGameChatState {
+    pub access: Signal<GameChatCapabilities>,
+    pub selected_thread: RwSignal<GameThread>,
+    pub explicit_thread: Signal<Option<GameThread>>,
+}
+
+pub fn use_embedded_game_chat_state() -> EmbeddedGameChatState {
+    let game_state = expect_context::<GameStateSignal>();
+    let auth_context = expect_context::<AuthContext>();
+    let access = Signal::derive(move || {
+        let is_player = auth_context.user.with(|user| {
+            user.as_ref().is_some_and(|user| {
+                game_state.signal.with(|game| {
+                    game.white_id == Some(user.user.uid) || game.black_id == Some(user.user.uid)
+                })
+            })
+        });
+        let finished = game_state.signal.with(|game| {
+            game.game_response
+                .as_ref()
+                .is_some_and(|game| game.finished)
+        });
+        GameChatCapabilities::new(is_player, finished)
+    });
+    let selected_thread = RwSignal::new(GameThread::Players);
+    let explicit_thread = Signal::derive(move || {
+        access
+            .get()
+            .can_toggle_embedded_threads()
+            .then_some(selected_thread.get())
+    });
+
+    EmbeddedGameChatState {
+        access,
+        selected_thread,
+        explicit_thread,
+    }
 }
 
 impl GameThreadToggleSize {

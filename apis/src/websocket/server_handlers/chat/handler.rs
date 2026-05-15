@@ -4,18 +4,19 @@ use anyhow::{Context, Result};
 
 use super::{metrics, persist::PersistableChatMessage};
 use crate::{
+    chat::access::ResolvedChatChannel,
     common::ServerMessage,
     websocket::{
         messages::{InternalServerMessage, MessageDestination},
         WebsocketData,
     },
 };
-use db_lib::{get_conn, helpers::insert_chat_message, models::Game, DbPool};
-use shared_types::{ChatDestination, ChatMessageContainer, PersistentChannelKey};
+use db_lib::{get_conn, helpers::insert_chat_message, DbPool};
+use shared_types::{ChatDestination, ChatMessageContainer};
 
 pub struct ChatHandler {
     container: ChatMessageContainer,
-    channel_key: PersistentChannelKey,
+    resolved_channel: ResolvedChatChannel,
     data: Arc<WebsocketData>,
     pool: DbPool,
 }
@@ -23,7 +24,7 @@ pub struct ChatHandler {
 impl ChatHandler {
     pub fn new(
         mut container: ChatMessageContainer,
-        channel_key: PersistentChannelKey,
+        resolved_channel: ResolvedChatChannel,
         data: Arc<WebsocketData>,
         pool: DbPool,
     ) -> Self {
@@ -35,7 +36,7 @@ impl ChatHandler {
         }
         Self {
             container,
-            channel_key,
+            resolved_channel,
             data,
             pool,
         }
@@ -53,13 +54,12 @@ impl ChatHandler {
                     message: ServerMessage::Chat(vec![self.container.to_owned()]),
                 })
             }
-            ChatDestination::GamePlayers(game_id) => {
-                let mut conn = get_conn(&self.pool)
-                    .await
-                    .context("loading DB connection for players chat fanout")?;
-                let game = Game::find_by_game_id(game_id, &mut conn)
-                    .await
-                    .context("loading game for players chat fanout")?;
+            ChatDestination::GamePlayers(_) => {
+                let game = self
+                    .resolved_channel
+                    .game
+                    .as_ref()
+                    .context("missing players chat fanout metadata")?;
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::User(game.white_id),
                     message: ServerMessage::Chat(vec![self.container.to_owned()]),
@@ -70,12 +70,11 @@ impl ChatHandler {
                 });
             }
             ChatDestination::GameSpectators(game_id) => {
-                let mut conn = get_conn(&self.pool)
-                    .await
-                    .context("loading DB connection for spectators chat fanout")?;
-                let game = Game::find_by_game_id(game_id, &mut conn)
-                    .await
-                    .context("loading game for spectators chat fanout")?;
+                let game = self
+                    .resolved_channel
+                    .game
+                    .as_ref()
+                    .context("missing spectators chat fanout metadata")?;
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::GameSpectators(
                         game_id.clone(),
@@ -103,8 +102,11 @@ impl ChatHandler {
             }),
         };
 
-        let persistable =
-            PersistableChatMessage::from_container(&self.container, &self.channel_key);
+        let persistable = PersistableChatMessage::from_container(
+            &self.container,
+            &self.resolved_channel.channel_key,
+            self.resolved_channel.game.as_ref().map(|game| game.id),
+        );
         metrics::record_persist_attempt();
         let mut conn = get_conn(&self.pool)
             .await
@@ -126,9 +128,8 @@ impl ChatHandler {
 
         // Update the in-memory recent cache only after persistence succeeds.
         self.data.chat_storage.push_recent(
-            self.channel_key.channel_type.as_str(),
-            &self.channel_key.channel_id,
-            self.container.clone(),
+            self.resolved_channel.channel_key.channel_type.as_str(),
+            &self.resolved_channel.channel_key.channel_id,
         );
 
         Ok(messages)

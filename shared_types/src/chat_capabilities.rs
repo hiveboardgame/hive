@@ -24,10 +24,7 @@ impl GameChatCapabilities {
     }
 
     pub const fn can_send(self, thread: GameThread) -> bool {
-        match thread {
-            GameThread::Players => self.is_player,
-            GameThread::Spectators => !self.is_player || self.finished,
-        }
+        self.can_read(thread)
     }
 
     pub const fn can_toggle_embedded_threads(self) -> bool {

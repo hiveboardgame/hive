@@ -82,14 +82,9 @@ CREATE TABLE user_blocks (
     CHECK (blocker_id != blocked_id)
 );
 
-CREATE INDEX idx_user_blocks_blocker ON user_blocks (blocker_id);
-
 CREATE TABLE user_tournament_chat_mutes (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     tournament_id UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (user_id, tournament_id)
 );
-
-CREATE INDEX idx_user_tournament_chat_mutes_user
-    ON user_tournament_chat_mutes (user_id);

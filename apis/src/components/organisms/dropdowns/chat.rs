@@ -1,16 +1,20 @@
 use crate::{
     components::{
         molecules::{
-            game_thread_toggle::{GameThreadToggle, GameThreadToggleSize},
+            game_thread_toggle::{
+                use_embedded_game_chat_state,
+                GameThreadToggle,
+                GameThreadToggleSize,
+            },
             hamburger::Hamburger,
         },
         organisms::chat::GameChatWindow,
     },
-    providers::{chat::Chat, game_state::GameStateSignal, AuthContext},
+    providers::{chat::Chat, game_state::GameStateSignal},
 };
 use leptos::prelude::*;
 use leptos_icons::*;
-use shared_types::{GameChatCapabilities, GameThread};
+use shared_types::GameThread;
 
 #[component]
 pub fn ChatDropdown() -> impl IntoView {
@@ -37,35 +41,7 @@ pub fn ChatDropdown() -> impl IntoView {
         }
     });
 
-    Effect::new(move |_| {
-        if hamburger_show() {
-            if let Some(game_id) = current_game_id.get() {
-                chat.seen_messages(game_id);
-            }
-        }
-    });
-
-    let auth_context = expect_context::<AuthContext>();
-    let game_chat_access = Signal::derive(move || {
-        let is_player = auth_context.user.with(|u| {
-            u.as_ref().is_some_and(|user| {
-                game_state.signal.with(|gs| {
-                    gs.white_id == Some(user.user.uid) || gs.black_id == Some(user.user.uid)
-                })
-            })
-        });
-        let finished = game_state
-            .signal
-            .with(|gs| gs.game_response.as_ref().is_some_and(|gr| gr.finished));
-        GameChatCapabilities::new(is_player, finished)
-    });
-    let selected_game_thread = RwSignal::new(GameThread::Players);
-    let explicit_game_thread = Signal::derive(move || {
-        game_chat_access
-            .get()
-            .can_toggle_embedded_threads()
-            .then_some(selected_game_thread.get())
-    });
+    let game_chat = use_embedded_game_chat_state();
 
     view! {
         <Hamburger
@@ -84,17 +60,17 @@ pub fn ChatDropdown() -> impl IntoView {
             id="chat"
         >
             <div class="flex overflow-hidden flex-col flex-1 min-h-0">
-                <Show when=move || game_chat_access.get().can_toggle_embedded_threads()>
+                <Show when=move || game_chat.access.get().can_toggle_embedded_threads()>
                     <GameThreadToggle
-                        selected=selected_game_thread
+                        selected=game_chat.selected_thread
                         spectators_enabled=Signal::derive(move || {
-                            game_chat_access.get().can_read(GameThread::Spectators)
+                            game_chat.access.get().can_read(GameThread::Spectators)
                         })
                         size=GameThreadToggleSize::Roomy
                     />
                 </Show>
                 <div class="flex overflow-hidden flex-col flex-1 min-h-0">
-                    <GameChatWindow explicit_thread=explicit_game_thread />
+                    <GameChatWindow explicit_thread=game_chat.explicit_thread />
                 </div>
             </div>
         </Hamburger>

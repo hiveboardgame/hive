@@ -125,7 +125,7 @@ impl RequestHandler {
                 let mut conn = get_conn(&self.pool)
                     .await
                     .map_err(|e| Self::db_connection_error("checking chat send permissions", e))?;
-                let resolved_channel_key = authorize_chat_send_and_resolve_channel_key(
+                let resolved_channel = authorize_chat_send_and_resolve_channel_key(
                     &mut conn,
                     self.user_id,
                     self.admin,
@@ -135,7 +135,7 @@ impl RequestHandler {
                 .map_err(Self::map_chat_send_access_error)?;
                 ChatHandler::new(
                     message_container,
-                    resolved_channel_key,
+                    resolved_channel,
                     self.data.clone(),
                     self.pool.clone(),
                 )

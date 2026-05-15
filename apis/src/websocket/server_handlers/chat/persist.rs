@@ -7,13 +7,13 @@ use uuid::Uuid;
 /// Call `as_new()` to get a reference type for `insert_chat_message`.
 #[derive(Debug, Clone)]
 pub struct PersistableChatMessage {
-    pub channel_type: String,
-    pub channel_id: String,
+    pub channel_key: PersistentChannelKey,
     pub sender_id: Uuid,
     pub username: String,
     pub body: String,
     pub turn: Option<i32>,
     pub created_at: DateTime<Utc>,
+    pub game_id: Option<Uuid>,
 }
 
 impl PersistableChatMessage {
@@ -21,37 +21,36 @@ impl PersistableChatMessage {
     pub fn from_container(
         container: &ChatMessageContainer,
         channel_key: &PersistentChannelKey,
+        game_id: Option<Uuid>,
     ) -> Self {
         let turn = container.message.turn.map(|u| u as i32);
         // Preserve send-time ordering for unread/read logic even if DB persistence is delayed.
         let created_at = container.message.timestamp.unwrap_or_else(Utc::now);
         Self {
-            channel_type: channel_key.channel_type.to_string(),
-            channel_id: channel_key.channel_id.clone(),
+            channel_key: channel_key.clone(),
             sender_id: container.message.user_id,
             username: container.message.username.clone(),
             body: container.message.message.clone(),
             turn,
             created_at,
+            game_id,
         }
     }
 
     /// Borrow as `NewChatMessage` for use with `insert_chat_message`.
     pub fn as_new(&self) -> NewChatMessage<'_> {
-        let recipient_id =
-            PersistentChannelKey::from_raw(self.channel_type.as_str(), self.channel_id.as_str())
-                .and_then(|channel_key| channel_key.direct_other_user_id(self.sender_id));
+        let recipient_id = self.channel_key.direct_other_user_id(self.sender_id);
 
         NewChatMessage {
-            channel_type: self.channel_type.as_str(),
-            channel_id: self.channel_id.as_str(),
+            channel_type: self.channel_key.channel_type.as_str(),
+            channel_id: self.channel_key.channel_id.as_str(),
             sender_id: self.sender_id,
             recipient_id,
             username: self.username.as_str(),
             body: self.body.as_str(),
             turn: self.turn,
             created_at: self.created_at,
-            game_id: None,
+            game_id: self.game_id,
         }
     }
 }

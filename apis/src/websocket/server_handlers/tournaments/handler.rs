@@ -63,7 +63,7 @@ impl TournamentHandler {
                     .into()
             }
             TournamentAction::Join(tournament_id) => {
-                JoinHandler::new(tournament_id, self.user_id, &self.pool, self.data.clone())
+                JoinHandler::new(tournament_id, self.user_id, &self.pool)
                     .await?
                     .handle()
                     .await?
