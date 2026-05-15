@@ -128,6 +128,7 @@ fn build_messages_hub_data(
         tournaments,
         games,
         muted_tournament_ids,
+        unread_counts,
     }
 }
 
@@ -223,15 +224,9 @@ pub async fn mark_chat_read(channel_key: ConversationKey) -> Result<(), ServerFn
         return Err(ServerFnError::new("Access denied"));
     }
 
-    upsert_chat_read_receipt(
-        &mut conn,
-        user_id,
-        persistent_key.channel_type.as_str(),
-        &persistent_key.channel_id,
-        chrono::Utc::now(),
-    )
-    .await
-    .map_err(|err| generic_chat_server_error("marking chat as read", err))?;
+    upsert_chat_read_receipt(&mut conn, user_id, &persistent_key, chrono::Utc::now())
+        .await
+        .map_err(|err| generic_chat_server_error("marking chat as read", err))?;
     Ok(())
 }
 
@@ -301,14 +296,9 @@ pub async fn get_chat_history(
         return Ok(ChatHistoryResponse::AccessDenied);
     }
 
-    let messages = get_chat_messages_for_channel(
-        &mut conn,
-        persistent_key.channel_type.as_str(),
-        &persistent_key.channel_id,
-        effective_limit,
-    )
-    .await
-    .map_err(|err| generic_chat_server_error("loading chat history", err))?;
+    let messages = get_chat_messages_for_channel(&mut conn, &persistent_key, effective_limit)
+        .await
+        .map_err(|err| generic_chat_server_error("loading chat history", err))?;
 
     Ok(ChatHistoryResponse::Messages(
         messages

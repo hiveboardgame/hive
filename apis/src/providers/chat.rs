@@ -45,6 +45,7 @@ fn empty_messages_hub_data() -> MessagesHubData {
         tournaments: Vec::new(),
         games: Vec::new(),
         muted_tournament_ids: Vec::new(),
+        unread_counts: Vec::new(),
     }
 }
 
@@ -345,12 +346,14 @@ impl Chat {
     }
 
     fn apply_messages_hub_data(&self, data: MessagesHubData) {
+        let unread_counts = data.unread_counts.clone();
         let muted_tournament_ids: HashSet<TournamentId> =
             data.muted_tournament_ids.iter().cloned().collect();
         for tournament_id in &muted_tournament_ids {
             self.clear_tournament_unread_state(tournament_id);
         }
         self.muted_tournament_ids.set(muted_tournament_ids);
+        self.apply_server_unread_counts(unread_counts);
         self.messages_hub_loading.set(false);
         self.messages_hub_data.set(Some(data));
     }
@@ -627,12 +630,27 @@ impl Chat {
         })
     }
 
-    fn remove_channel_keys(&self, keys: impl IntoIterator<Item = ConversationKey>) {
+    fn remove_channel_keys(
+        &self,
+        keys: impl IntoIterator<Item = ConversationKey>,
+        remove_messages: bool,
+        remove_unread_counts: bool,
+    ) {
         let keys: HashSet<_> = keys.into_iter().collect();
         if keys.is_empty() {
             return;
         }
 
+        if remove_messages {
+            self.messages.update(|messages| {
+                messages.retain(|key, _| !keys.contains(key));
+            });
+        }
+        if remove_unread_counts {
+            self.unread_counts.update(|counts| {
+                counts.retain(|key, _| !keys.contains(key));
+            });
+        }
         // Preserve server-backed unread counts when only the cached message body is pruned.
         // The Messages hub and header badge still read unread state for channels whose thread
         // contents are no longer resident locally.
@@ -678,7 +696,7 @@ impl Chat {
             }
         });
         if !removed_keys.is_empty() {
-            self.remove_channel_keys(removed_keys);
+            self.remove_channel_keys(removed_keys, false, false);
         }
     }
 
@@ -898,39 +916,7 @@ impl Chat {
     pub fn clear_game_thread(&self, game_id: &GameId) {
         let players_key = ConversationKey::game_players(game_id);
         let spectators_key = ConversationKey::game_spectators(game_id);
-
-        self.messages.update(|messages| {
-            messages.remove(&players_key);
-            messages.remove(&spectators_key);
-        });
-        self.loaded_history_channels.update(|loaded| {
-            loaded.remove(&players_key);
-            loaded.remove(&spectators_key);
-        });
-        self.unread_counts.update(|counts| {
-            counts.remove(&players_key);
-            counts.remove(&spectators_key);
-        });
-        self.optimistic_unread_counts.update(|counts| {
-            counts.remove(&players_key);
-            counts.remove(&spectators_key);
-        });
-        self.pending_read_channels.update(|pending| {
-            pending.remove(&players_key);
-            pending.remove(&spectators_key);
-        });
-        self.visible_channels.update(|visible| {
-            visible.remove(&players_key);
-            visible.remove(&spectators_key);
-        });
-        self.pending_visible_channel_reads.update(|pending| {
-            pending.remove(&players_key);
-            pending.remove(&spectators_key);
-        });
-        self.deferred_visible_unread_counts.update(|counts| {
-            counts.remove(&players_key);
-            counts.remove(&spectators_key);
-        });
+        self.remove_channel_keys([players_key, spectators_key], true, true);
     }
 
     fn queue_pending_outgoing_message(
@@ -1281,34 +1267,28 @@ impl Chat {
                 }
                 destination => {
                     let current_user_id = self.user.get_untracked().as_ref().map(|a| a.user.uid);
-                    let (channel_key, dm_username) = match destination {
-                        ChatDestination::TournamentLobby(id) => {
-                            (ConversationKey::tournament(id), None)
-                        }
-                        ChatDestination::User((dest_id, name)) => {
+                    let (channel_key, dm_username) =
+                        if let ChatDestination::User((dest_id, name)) = destination {
                             // Container destination is from sender's perspective. For recipient,
                             // the thread's "other" user is the sender, not dest_id.
-                            let thread_other_id = match current_user_id {
-                                Some(me) if last_message.message.user_id == me => *dest_id,
-                                _ => last_message.message.user_id,
+                            let from_self = current_user_id == Some(last_message.message.user_id);
+                            let thread_other_id = if from_self {
+                                *dest_id
+                            } else {
+                                last_message.message.user_id
                             };
-                            let thread_username = match current_user_id {
-                                Some(me) if last_message.message.user_id == me => name.clone(),
-                                _ => last_message.message.username.clone(),
+                            let thread_username = if from_self {
+                                name.clone()
+                            } else {
+                                last_message.message.username.clone()
                             };
                             (
                                 ConversationKey::direct(thread_other_id),
                                 Some(thread_username),
                             )
-                        }
-                        ChatDestination::GamePlayers(id) => {
-                            (ConversationKey::game_players(id), None)
-                        }
-                        ChatDestination::GameSpectators(id) => {
-                            (ConversationKey::game_spectators(id), None)
-                        }
-                        ChatDestination::Global => unreachable!(),
-                    };
+                        } else {
+                            (ConversationKey::from_destination(destination), None)
+                        };
                     let new_messages = self.filter_duplicate_live_messages_for_key(
                         &channel_key,
                         containers.iter().map(|c| c.message.clone()),
@@ -1477,6 +1457,7 @@ mod tests {
             } else {
                 Vec::new()
             },
+            unread_counts: Vec::new(),
         }
     }
 
@@ -1486,6 +1467,7 @@ mod tests {
             tournaments: Vec::new(),
             games: Vec::new(),
             muted_tournament_ids: vec![tournament_id.clone()],
+            unread_counts: Vec::new(),
         }
     }
 

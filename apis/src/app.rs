@@ -36,7 +36,7 @@ use crate::{
     },
     providers::{
         challenges::provide_challenges,
-        chat::{provide_chat, Chat},
+        chat::provide_chat,
         games::provide_games,
         online_users::provide_users,
         provide_alerts,
@@ -108,13 +108,6 @@ pub fn App() -> impl IntoView {
     //expects auth, api_requests, gameStateSignal
     provide_chat();
     let auth = expect_context::<AuthContext>();
-    let chat = expect_context::<Chat>();
-    // Refresh server-backed unread counts when user is logged in (for badges)
-    Effect::new(move |_| {
-        if auth.user.with(|u| u.is_some()) {
-            chat.refresh_unread_counts();
-        }
-    });
     let is_logged_in = move || auth.logged_in.get();
     let is_admin = move || auth.admin.get();
     view! {

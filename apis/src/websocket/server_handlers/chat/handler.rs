@@ -11,14 +11,13 @@ use crate::{
         WebsocketData,
     },
 };
-use db_lib::{get_conn, helpers::insert_chat_message, DbPool};
+use db_lib::{helpers::insert_chat_message, DbConn};
 use shared_types::{ChatDestination, ChatMessageContainer};
 
 pub struct ChatHandler {
     container: ChatMessageContainer,
     resolved_channel: ResolvedChatChannel,
     data: Arc<WebsocketData>,
-    pool: DbPool,
 }
 
 impl ChatHandler {
@@ -26,7 +25,6 @@ impl ChatHandler {
         mut container: ChatMessageContainer,
         resolved_channel: ResolvedChatChannel,
         data: Arc<WebsocketData>,
-        pool: DbPool,
     ) -> Self {
         container.time();
         let original_body = container.message.message.clone();
@@ -38,11 +36,10 @@ impl ChatHandler {
             container,
             resolved_channel,
             data,
-            pool,
         }
     }
 
-    pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
+    pub async fn handle(&self, conn: &mut DbConn<'_>) -> Result<Vec<InternalServerMessage>> {
         let mut messages = Vec::new();
         match &self.container.destination {
             ChatDestination::TournamentLobby(tournament_id) => {
@@ -118,10 +115,7 @@ impl ChatHandler {
             self.resolved_channel.game.as_ref().map(|game| game.id),
         );
         metrics::record_persist_attempt();
-        let mut conn = get_conn(&self.pool)
-            .await
-            .context("getting chat persistence connection")?;
-        if let Err(error) = insert_chat_message(&mut conn, persistable.as_new()).await {
+        if let Err(error) = insert_chat_message(conn, persistable.as_new()).await {
             metrics::record_persist_failure();
             let snapshot = metrics::snapshot();
             log::error!(

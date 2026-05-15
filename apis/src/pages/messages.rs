@@ -87,31 +87,32 @@ impl MessageRoute {
     fn parse(path: &str) -> Self {
         let path = path.trim_end_matches('/');
 
-        match path {
-            "/message" | "" => Self::Root,
-            "/message/global" => Self::Global,
-            _ if path.starts_with("/message/dm/") => Self::Dm {
-                username: path["/message/dm/".len()..].to_string(),
-            },
-            _ if path.starts_with("/message/tournament/") => Self::Tournament {
-                nanoid: path["/message/tournament/".len()..].to_string(),
-            },
-            _ if path.starts_with("/message/game/") => {
-                let rest = &path["/message/game/".len()..];
-                let mut parts = rest.split('/');
-                match (parts.next(), parts.next(), parts.next()) {
-                    (Some(id), Some(thread), None) => {
-                        if let Some(thread) = GameThread::parse_slug(thread) {
-                            Self::Game {
-                                id: GameId(id.to_string()),
-                                thread,
-                            }
-                        } else {
-                            Self::Root
-                        }
-                    }
-                    _ => Self::Root,
-                }
+        if path == "/message" || path.is_empty() {
+            return Self::Root;
+        }
+        if path == "/message/global" {
+            return Self::Global;
+        }
+        if let Some(username) = path.strip_prefix("/message/dm/") {
+            return Self::Dm {
+                username: username.to_string(),
+            };
+        }
+        if let Some(nanoid) = path.strip_prefix("/message/tournament/") {
+            return Self::Tournament {
+                nanoid: nanoid.to_string(),
+            };
+        }
+        let Some(rest) = path.strip_prefix("/message/game/") else {
+            return Self::Root;
+        };
+        let mut parts = rest.split('/');
+        match (parts.next(), parts.next(), parts.next()) {
+            (Some(id), Some(thread), None) => {
+                GameThread::parse_slug(thread).map_or(Self::Root, |thread| Self::Game {
+                    id: GameId(id.to_string()),
+                    thread,
+                })
             }
             _ => Self::Root,
         }
@@ -882,6 +883,31 @@ fn GameChatHeader(
 }
 
 #[component]
+fn GameChatToggleSegment(
+    href: String,
+    selected: bool,
+    disabled: bool,
+    children: Children,
+) -> impl IntoView {
+    if disabled {
+        Either::Left(
+            view! { <span class=game_chat_toggle_segment_class(selected, true)>{children()}</span> },
+        )
+    } else {
+        Either::Right(view! {
+            <A
+                href=href
+                prop:replace=true
+                scroll=false
+                attr:class=game_chat_toggle_segment_class(selected, false)
+            >
+                {children()}
+            </A>
+        })
+    }
+}
+
+#[component]
 fn GameChatToggle(
     game_id: GameId,
     current_thread: GameThread,
@@ -905,50 +931,20 @@ fn GameChatToggle(
 
     view! {
         <div class=GAME_CHAT_TOGGLE_CONTAINER_CLASS>
-            {if can_read_players {
-                Either::Left(
-                    view! {
-                        <A
-                            href=players_href
-                            prop:replace=true
-                            scroll=false
-                            attr:class=game_chat_toggle_segment_class(viewing_players, false)
-                        >
-                            {t!(i18n, messages.chat.players)}
-                        </A>
-                    },
-                )
-            } else {
-                Either::Right(
-                    view! {
-                        <span class=game_chat_toggle_segment_class(viewing_players, true)>
-                            {t!(i18n, messages.chat.players)}
-                        </span>
-                    },
-                )
-            }}
-            {if can_read_spectators {
-                Either::Left(
-                    view! {
-                        <A
-                            href=spectators_href
-                            prop:replace=true
-                            scroll=false
-                            attr:class=game_chat_toggle_segment_class(viewing_spectators, false)
-                        >
-                            {t!(i18n, messages.chat.spectators)}
-                        </A>
-                    },
-                )
-            } else {
-                Either::Right(
-                    view! {
-                        <span class=game_chat_toggle_segment_class(viewing_spectators, true)>
-                            {t!(i18n, messages.chat.spectators)}
-                        </span>
-                    },
-                )
-            }}
+            <GameChatToggleSegment
+                href=players_href
+                selected=viewing_players
+                disabled=!can_read_players
+            >
+                {t!(i18n, messages.chat.players)}
+            </GameChatToggleSegment>
+            <GameChatToggleSegment
+                href=spectators_href
+                selected=viewing_spectators
+                disabled=!can_read_spectators
+            >
+                {t!(i18n, messages.chat.spectators)}
+            </GameChatToggleSegment>
         </div>
     }
 }

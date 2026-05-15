@@ -135,15 +135,10 @@ impl RequestHandler {
                 )
                 .await
                 .map_err(Self::map_chat_send_access_error)?;
-                ChatHandler::new(
-                    message_container,
-                    resolved_channel,
-                    self.data.clone(),
-                    self.pool.clone(),
-                )
-                .handle()
-                .await?
-                .into()
+                ChatHandler::new(message_container, resolved_channel, self.data.clone())
+                    .handle(&mut conn)
+                    .await?
+                    .into()
             }
             ClientRequest::Tournament(tournament_action) => {
                 TournamentHandler::new(

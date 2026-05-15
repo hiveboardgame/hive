@@ -21,6 +21,7 @@ use diesel::{
 };
 use diesel_async::RunQueryDsl;
 use shared_types::{
+    ChannelType,
     ConversationKey,
     DmConversation,
     GameChannel,
@@ -135,24 +136,30 @@ pub async fn insert_chat_message(
     conn: &mut DbConn<'_>,
     new: NewChatMessage<'_>,
 ) -> Result<ChatMessage, DbError> {
+    let channel_key =
+        PersistentChannelKey::from_raw(new.channel_type, new.channel_id).ok_or_else(|| {
+            DbError::InvalidInput {
+                info: "Invalid chat channel".to_string(),
+                error: format!("{}:{}", new.channel_type, new.channel_id),
+            }
+        })?;
     let game_id = match new.game_id {
         Some(game_id) => Some(game_id),
-        None => resolve_game_id_for_channel(conn, new.channel_type, new.channel_id).await?,
+        None => resolve_game_id_for_channel(conn, &channel_key).await?,
     };
-    ensure_game_channel_has_game_id(new.channel_type, new.channel_id, &game_id)?;
+    ensure_game_channel_has_game_id(&channel_key, &game_id)?;
     NewChatMessage { game_id, ..new }.insert(conn).await
 }
 
 /// Load messages for a channel, newest first.
 pub async fn get_chat_messages_for_channel(
     conn: &mut DbConn<'_>,
-    channel_type: &str,
-    channel_id: &str,
+    channel_key: &PersistentChannelKey,
     limit: i64,
 ) -> Result<Vec<ChatMessage>, DbError> {
     chat_messages::table
-        .filter(chat_messages::channel_type.eq(channel_type))
-        .filter(chat_messages::channel_id.eq(channel_id))
+        .filter(chat_messages::channel_type.eq(channel_key.channel_type.as_str()))
+        .filter(chat_messages::channel_id.eq(&channel_key.channel_id))
         .order(chat_messages::created_at.desc())
         .limit(limit)
         .get_results(conn)
@@ -160,21 +167,20 @@ pub async fn get_chat_messages_for_channel(
         .map_err(DbError::from)
 }
 
-fn is_game_chat_channel_type(channel_type: &str) -> bool {
+fn is_game_chat_channel_type(channel_type: ChannelType) -> bool {
     matches!(
         channel_type,
-        shared_types::CHANNEL_TYPE_GAME_PLAYERS | shared_types::CHANNEL_TYPE_GAME_SPECTATORS
+        ChannelType::GamePlayers | ChannelType::GameSpectators
     )
 }
 
 fn ensure_game_channel_has_game_id(
-    channel_type: &str,
-    channel_id: &str,
+    channel_key: &PersistentChannelKey,
     game_id: &Option<Uuid>,
 ) -> Result<(), DbError> {
-    if is_game_chat_channel_type(channel_type) && game_id.is_none() {
+    if is_game_chat_channel_type(channel_key.channel_type) && game_id.is_none() {
         return Err(DbError::NotFound {
-            reason: format!("Game chat channel not found: {channel_id}"),
+            reason: format!("Game chat channel not found: {}", channel_key.channel_id),
         });
     }
     Ok(())
@@ -182,15 +188,14 @@ fn ensure_game_channel_has_game_id(
 
 async fn resolve_game_id_for_channel(
     conn: &mut DbConn<'_>,
-    channel_type: &str,
-    channel_id: &str,
+    channel_key: &PersistentChannelKey,
 ) -> Result<Option<Uuid>, DbError> {
-    if !is_game_chat_channel_type(channel_type) {
+    if !is_game_chat_channel_type(channel_key.channel_type) {
         return Ok(None);
     }
 
     match games::table
-        .filter(games::nanoid.eq(channel_id))
+        .filter(games::nanoid.eq(&channel_key.channel_id))
         .select(games::id)
         .first(conn)
         .await
@@ -205,16 +210,15 @@ async fn resolve_game_id_for_channel(
 pub async fn upsert_chat_read_receipt(
     conn: &mut DbConn<'_>,
     user_id: Uuid,
-    channel_type: &str,
-    channel_id: &str,
+    channel_key: &PersistentChannelKey,
     last_read_at: chrono::DateTime<Utc>,
 ) -> Result<(), DbError> {
-    let game_id = resolve_game_id_for_channel(conn, channel_type, channel_id).await?;
-    ensure_game_channel_has_game_id(channel_type, channel_id, &game_id)?;
+    let game_id = resolve_game_id_for_channel(conn, channel_key).await?;
+    ensure_game_channel_has_game_id(channel_key, &game_id)?;
     let new_receipt = NewChatReadReceipt {
         user_id,
-        channel_type,
-        channel_id,
+        channel_type: channel_key.channel_type.as_str(),
+        channel_id: &channel_key.channel_id,
         last_read_at,
         game_id,
     };
@@ -710,9 +714,6 @@ pub async fn get_unread_counts_for_messages_hub_channels(
     ];
 
     for (channel_type, channels) in channel_groups {
-        if channels.is_empty() {
-            continue;
-        }
         let channel_map: HashMap<String, ConversationKey> = channels
             .iter()
             .map(|(key, persistent_key)| (persistent_key.channel_id.clone(), key.clone()))

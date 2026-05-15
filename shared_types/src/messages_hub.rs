@@ -2,7 +2,13 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{GameId, GameThread, TournamentChatCapabilities, TournamentId};
+use crate::{
+    chat_message::UnreadCount,
+    GameId,
+    GameThread,
+    TournamentChatCapabilities,
+    TournamentId,
+};
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DmConversation {
@@ -38,4 +44,5 @@ pub struct MessagesHubData {
     pub tournaments: Vec<TournamentChannel>,
     pub games: Vec<GameChannel>,
     pub muted_tournament_ids: Vec<TournamentId>,
+    pub unread_counts: Vec<UnreadCount>,
 }
