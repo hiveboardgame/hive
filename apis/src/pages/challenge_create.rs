@@ -14,7 +14,10 @@ use reactive_stores::Store;
 use shared_types::{ChallengeDetails, ChallengeVisibility, GameSpeed, TimeMode};
 
 #[component]
-pub fn ChallengeCreate(#[prop(optional)] opponent: Option<String>) -> impl IntoView {
+pub fn ChallengeCreate(
+    #[prop(optional)] opponent: Option<String>,
+    #[prop(optional)] realtime_disabled: Signal<bool>,
+) -> impl IntoView {
     let i18n = use_i18n();
     let params = expect_context::<Store<ChallengeParams>>();
     let api = expect_context::<ApiRequestsProvider>().0;
@@ -124,6 +127,9 @@ pub fn ChallengeCreate(#[prop(optional)] opponent: Option<String>) -> impl IntoV
     });
     let untimed_no_rated =
         Signal::derive(move || params.time_signals().time_mode().get() == TimeMode::Untimed);
+    let trio_disabled = Signal::derive(move || {
+        realtime_disabled() && params.time_signals().time_mode().get() == TimeMode::RealTime
+    });
     let upper_slider_callback = Callback::new(move |new: i32| {
         params.upper_slider().update(|v| *v = new);
     });
@@ -192,7 +198,7 @@ pub fn ChallengeCreate(#[prop(optional)] opponent: Option<String>) -> impl IntoV
                     </div>
                 </div>
             </Show>
-            <ChallengeButtonsTrio create_challenge />
+            <ChallengeButtonsTrio create_challenge disabled=trio_disabled />
         </div>
     }
 }

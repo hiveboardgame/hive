@@ -47,6 +47,7 @@ pub enum ServerMessage {
     // sent to everyone in the game when a user joins the game
     Join(Uuid),
     Ping { nonce: u64, value: f64 },
+    RealtimeEnabled(bool),
     Schedule(ScheduleUpdate),
     Tournament(TournamentUpdate),
     UserStatus(UserUpdate),
