@@ -629,6 +629,21 @@ impl Tournament {
             .await?)
     }
 
+    pub async fn unfinished_games_for_user_locked(
+        &self,
+        user_id: Uuid,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Game>, DbError> {
+        Ok(games::table
+            .filter(tournament_id_column.eq(Some(self.id)))
+            .filter(games::finished.eq(false))
+            .filter(games::white_id.eq(user_id).or(games::black_id.eq(user_id)))
+            .order(games::id.asc())
+            .for_update()
+            .get_results(conn)
+            .await?)
+    }
+
     pub async fn start_by_organizer(
         &self,
         organizer: &Uuid,
