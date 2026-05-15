@@ -7,7 +7,7 @@ use shared_types::{
     BatchToken, Conclusion, GameId, GameSpeed, GameStart, TimeMode, TournamentGameResult,
 };
 #[cfg(feature = "ssr")]
-use shared_types::{FinishedGamesQueryOptions, GamesQueryOptions};
+use shared_types::GamesQueryOptions;
 use std::{cmp::Ordering, collections::HashMap, time::Duration};
 use uuid::Uuid;
 
@@ -74,7 +74,7 @@ pub struct GameResponse {
 pub struct GameBatchResponse {
     pub games: Vec<GameResponse>,
     pub next_batch: Option<BatchToken>,
-    pub total: i64,
+    pub total: Option<i64>,
 }
 
 impl PartialEq for GameResponse {
@@ -212,20 +212,11 @@ impl GameResponse {
         GameResponse::new_from(game, state, conn).await
     }
 
-    pub async fn vec_from_options(
+    pub async fn batch_from_options(
         options: GamesQueryOptions,
         conn: &mut DbConn<'_>,
-    ) -> Result<Vec<Self>> {
-        let games = Game::get_rows_from_options(&options, conn).await?;
-        Self::from_games_batch(games, conn).await
-    }
-
-    pub async fn batch_from_finished_options(
-        options: FinishedGamesQueryOptions,
-        conn: &mut DbConn<'_>,
     ) -> Result<GameBatchResponse> {
-        let (games, next_batch, total) =
-            Game::get_finished_rows_from_options(&options, conn).await?;
+        let (games, next_batch, total) = Game::get_rows_from_options(&options, conn).await?;
         let games = Self::from_games_batch(games, conn).await?;
         Ok(GameBatchResponse {
             games,

@@ -30,18 +30,14 @@ pub use game_speed::GameSpeed;
 pub use game_start::GameStart;
 pub use games_query_options::{
     ALLOWED_BATCH_SIZES,
-    BatchInfo,
     BatchToken,
-    FinishedGameQueryValidationError,
-    FinishedGameSort,
-    FinishedGameSortKey,
-    FinishedGamesQueryOptions,
-    FinishedGamesQueryParseError,
-    FinishedResultFilter,
     GameProgress,
+    GameQueryValidationError,
+    GameSort,
+    GameSortKey,
     GamesQueryOptions,
-    PlayerFilter,
-    ResultType,
+    GamesQueryParseError,
+    ResultFilter,
     SortValue,
 };
 pub use newtypes::{ApisId, ChallengeId, GameId, Password, TournamentId};

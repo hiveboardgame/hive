@@ -5,19 +5,15 @@ use diesel::expression::SqlLiteral;
 use diesel::{prelude::*, sql_types, BoxableExpression, ExpressionMethods, QueryDsl};
 use hive_lib::{Color, GameResult, GameStatus, GameType};
 use shared_types::{
-    BatchInfo,
     BatchToken,
     Conclusion,
-    FinishedGameSort,
-    FinishedGameSortKey,
-    FinishedGamesQueryOptions,
-    FinishedResultFilter,
     GameProgress,
+    GameSort,
+    GameSortKey,
     GameSpeed,
     GameStart,
     GamesQueryOptions,
-    PlayerFilter,
-    ResultType,
+    ResultFilter,
     SortValue,
     TimeMode,
 };
@@ -42,14 +38,12 @@ impl GameQueryBuilder {
         }
     }
 
-    pub fn finished_base_query(options: &FinishedGamesQueryOptions) -> Self {
-        GameQueryBuilder::new()
-            .filters(options)
-            .apply_finished_gate()
+    pub fn base_query(options: &GamesQueryOptions) -> Self {
+        GameQueryBuilder::new().filters(options)
     }
 
-    pub fn finished_batch_query(options: &FinishedGamesQueryOptions) -> Self {
-        let base = GameQueryBuilder::finished_base_query(options).sort(&options.sort);
+    pub fn batch_query(options: &GamesQueryOptions) -> Self {
+        let base = GameQueryBuilder::base_query(options).sort(&options.sort);
         match &options.batch_token {
             Some(token) => base.keyset(&options.sort, Some(token)).limit(options.batch_size),
             None => base
@@ -58,11 +52,7 @@ impl GameQueryBuilder {
         }
     }
 
-    pub fn apply_finished_options(self, options: &FinishedGamesQueryOptions) -> Self {
-        GameQueryBuilder::finished_batch_query(options)
-    }
-
-    pub fn filters(mut self, options: &FinishedGamesQueryOptions) -> Self {
+    pub fn filters(mut self, options: &GamesQueryOptions) -> Self {
         self = self
             .scope(options.game_progress)
             .player_filters(
@@ -108,7 +98,21 @@ impl GameQueryBuilder {
                 );
             }
             GameProgress::Finished => {
+                let finished_values = vec![
+                    GameStatus::Finished(GameResult::Winner(Color::White)).to_string(),
+                    GameStatus::Finished(GameResult::Winner(Color::Black)).to_string(),
+                    GameStatus::Finished(GameResult::Draw).to_string(),
+                ];
+                let allowed_conclusions = vec![
+                    Conclusion::Board.to_string(),
+                    Conclusion::Resigned.to_string(),
+                    Conclusion::Timeout.to_string(),
+                    Conclusion::Draw.to_string(),
+                    Conclusion::Repetition.to_string(),
+                ];
                 self.query = self.query.filter(games::finished.eq(true));
+                self.query = self.query.filter(games::game_status.eq_any(finished_values));
+                self.query = self.query.filter(games::conclusion.eq_any(allowed_conclusions));
             }
             GameProgress::All => {}
         }
@@ -117,14 +121,6 @@ impl GameQueryBuilder {
 
     pub fn speeds(mut self, speeds: &[GameSpeed]) -> Self {
         if !speeds.is_empty() {
-            let speed_strings: Vec<String> = speeds.iter().map(|s| s.to_string()).collect();
-            self.query = self.query.filter(games::speed.eq_any(speed_strings));
-        }
-        self
-    }
-
-    pub fn legacy_speeds(mut self, speeds: &[GameSpeed]) -> Self {
-        if !speeds.is_empty() && speeds.len() != GameSpeed::all_games().len() {
             let speed_strings: Vec<String> = speeds.iter().map(|s| s.to_string()).collect();
             self.query = self.query.filter(games::speed.eq_any(speed_strings));
         }
@@ -154,21 +150,6 @@ impl GameQueryBuilder {
         if let Some(mode) = time_mode {
             self.query = self.query.filter(games::time_mode.eq(mode.to_string()));
         }
-        self
-    }
-
-    pub fn apply_legacy_options(mut self, options: &GamesQueryOptions) -> Self {
-        self = self
-            .legacy_player_filters(
-                options.player1.as_ref(),
-                options.player2.as_ref(),
-                options.exclude_bots,
-            )
-            .scope(options.game_progress)
-            .legacy_speeds(&options.speeds)
-            .expansions(options.expansions)
-            .rated_filter(options.rated)
-            .paginate(options.current_batch.as_ref(), options.batch_size);
         self
     }
 
@@ -246,31 +227,31 @@ impl GameQueryBuilder {
 
     pub fn result_filter(
         mut self,
-        result_filter: &FinishedResultFilter,
+        result_filter: &ResultFilter,
         player1: Option<&str>,
         player2: Option<&str>,
         fixed_colors: bool,
     ) -> Self {
         match result_filter {
-            FinishedResultFilter::Any => self,
-            FinishedResultFilter::ColorWins(color) => {
+            ResultFilter::Any => self,
+            ResultFilter::ColorWins(color) => {
                 let status = self.winner_status(*color);
                 self.query = self.query.filter(status);
                 self
             }
-            FinishedResultFilter::Draw => {
+            ResultFilter::Draw => {
                 let status = self.draw_status();
                 self.query = self.query.filter(status);
                 self
             }
-            FinishedResultFilter::NotDraw => {
+            ResultFilter::NotDraw => {
                 let white_won = self.winner_status(Color::White);
                 let black_won = self.winner_status(Color::Black);
                 let condition: GamePredicate = Box::new(white_won.or(black_won));
                 self.query = self.query.filter(condition);
                 self
             }
-            FinishedResultFilter::PlayerWins(slot) => {
+            ResultFilter::PlayerWins(slot) => {
                 if let Some(condition) =
                     self.winner_for_players(*slot, player1, player2, fixed_colors)
                 {
@@ -278,91 +259,14 @@ impl GameQueryBuilder {
                 }
                 self
             }
-        }
-    }
-
-    pub fn legacy_player_filters(
-        mut self,
-        player1: Option<&PlayerFilter>,
-        player2: Option<&PlayerFilter>,
-        exclude_bots: bool,
-    ) -> Self {
-        match (player1, player2) {
-            (None, None) => {
-                if exclude_bots {
-                    self = self.legacy_apply_bot_exclusion();
+            ResultFilter::PlayerLoses(slot) => {
+                if let Some(condition) =
+                    self.loser_for_players(*slot, player1, player2, fixed_colors)
+                {
+                    self.query = self.query.filter(condition);
                 }
+                self
             }
-            (Some(p1), None) | (None, Some(p1)) => {
-                let condition =
-                    self.legacy_build_player_condition(&p1.username, p1.color, p1.result);
-                self.query = self.query.filter(condition);
-
-                if exclude_bots {
-                    self = self.legacy_apply_bot_exclusion_for_player(&p1.username, p1.color);
-                }
-            }
-            (Some(p1), Some(p2)) => {
-                let condition1 =
-                    self.legacy_build_player_condition(&p1.username, p1.color, p1.result);
-                let condition2 =
-                    self.legacy_build_player_condition(&p2.username, p2.color, p2.result);
-                self.query = self.query.filter(condition1.and(condition2));
-            }
-        }
-        self
-    }
-
-    fn legacy_build_player_condition(
-        &self,
-        username: &str,
-        color: Option<Color>,
-        result: Option<ResultType>,
-    ) -> GamePredicate {
-        let user_subquery = users::table
-            .filter(users::normalized_username.eq(username.to_lowercase()))
-            .select(users::id);
-
-        let white_won = games::game_status
-            .eq(GameStatus::Finished(GameResult::Winner(Color::White)).to_string());
-        let black_won = games::game_status
-            .eq(GameStatus::Finished(GameResult::Winner(Color::Black)).to_string());
-        let is_draw = games::game_status.eq(GameStatus::Finished(GameResult::Draw).to_string());
-
-        let is_white = games::white_id.eq_any(user_subquery.clone());
-        let is_black = games::black_id.eq_any(user_subquery);
-
-        match (result, color) {
-            (Some(ResultType::Win), Some(Color::White)) => Box::new(is_white.and(white_won)),
-            (Some(ResultType::Win), Some(Color::Black)) => Box::new(is_black.and(black_won)),
-            (Some(ResultType::Win), None) => Box::new(
-                is_white
-                    .clone()
-                    .and(white_won)
-                    .or(is_black.clone().and(black_won)),
-            ),
-
-            (Some(ResultType::Loss), Some(Color::White)) => Box::new(is_white.and(black_won)),
-            (Some(ResultType::Loss), Some(Color::Black)) => Box::new(is_black.and(white_won)),
-            (Some(ResultType::Loss), None) => Box::new(
-                is_white
-                    .clone()
-                    .and(black_won)
-                    .or(is_black.clone().and(white_won)),
-            ),
-
-            (Some(ResultType::Draw), Some(Color::White)) => Box::new(is_white.and(is_draw)),
-            (Some(ResultType::Draw), Some(Color::Black)) => Box::new(is_black.and(is_draw)),
-            (Some(ResultType::Draw), None) => Box::new(
-                is_white
-                    .clone()
-                    .and(is_draw.clone())
-                    .or(is_black.clone().and(is_draw)),
-            ),
-
-            (None, Some(Color::White)) => Box::new(is_white),
-            (None, Some(Color::Black)) => Box::new(is_black),
-            (None, None) => Box::new(is_white.or(is_black)),
         }
     }
 
@@ -414,10 +318,10 @@ impl GameQueryBuilder {
         self
     }
 
-    pub fn sort(mut self, sort: &FinishedGameSort) -> Self {
+    pub fn sort(mut self, sort: &GameSort) -> Self {
         let asc = sort.ascending;
         self.query = match sort.key {
-            FinishedGameSortKey::Date => {
+            GameSortKey::Date => {
                 if asc {
                     self.query
                         .order_by((games::updated_at.asc(), games::id.asc()))
@@ -426,7 +330,7 @@ impl GameQueryBuilder {
                         .order_by((games::updated_at.desc(), games::id.desc()))
                 }
             }
-            FinishedGameSortKey::Turns => {
+            GameSortKey::Turns => {
                 if asc {
                     self.query.order_by((
                         games::turn.asc(),
@@ -441,7 +345,7 @@ impl GameQueryBuilder {
                     ))
                 }
             }
-            FinishedGameSortKey::RatingAvg => {
+            GameSortKey::RatingAvg => {
                 self = self.ensure_ratings_present();
                 let average = Self::rating_average_expr();
                 if asc {
@@ -459,27 +363,12 @@ impl GameQueryBuilder {
         self
     }
 
-    pub fn keyset(mut self, sort: &FinishedGameSort, token: Option<&BatchToken>) -> Self {
+    pub fn keyset(mut self, sort: &GameSort, token: Option<&BatchToken>) -> Self {
         if let Some(batch) = token {
             if let Some(condition) = self.keyset_condition(sort, batch) {
                 self.query = self.query.filter(condition);
             }
         }
-        self
-    }
-
-    pub fn paginate(mut self, batch: Option<&BatchInfo>, size: usize) -> Self {
-        self.query = self
-            .query
-            .order_by((games::updated_at.desc(), games::id.desc()));
-        if let Some(batch) = batch {
-            self.query = self.query.filter(
-                games::updated_at.lt(batch.timestamp).or(games::updated_at
-                    .eq(batch.timestamp)
-                    .and(games::id.ne(batch.id))),
-            );
-        }
-        self.query = self.query.limit(size as i64);
         self
     }
 
@@ -499,30 +388,6 @@ impl GameQueryBuilder {
 
     fn rating_average_expr() -> SqlLiteral<sql_types::Double> {
         sql::<sql_types::Double>("(white_rating + black_rating) / 2.0")
-    }
-
-    fn apply_finished_gate(mut self) -> Self {
-        let finished_values = vec![
-            GameStatus::Finished(GameResult::Winner(Color::White)).to_string(),
-            GameStatus::Finished(GameResult::Winner(Color::Black)).to_string(),
-            GameStatus::Finished(GameResult::Draw).to_string(),
-        ];
-        let allowed_conclusions = vec![
-            Conclusion::Board.to_string(),
-            Conclusion::Resigned.to_string(),
-            Conclusion::Timeout.to_string(),
-            Conclusion::Draw.to_string(),
-            Conclusion::Repetition.to_string(),
-        ];
-
-        self.query = self.query.filter(games::finished.eq(true));
-        self.query = self
-            .query
-            .filter(games::game_status.eq_any(finished_values));
-        self.query = self
-            .query
-            .filter(games::conclusion.eq_any(allowed_conclusions));
-        self
     }
 
     fn winner_status(&self, color: Color) -> GamePredicate {
@@ -597,49 +462,6 @@ impl GameQueryBuilder {
         self
     }
 
-    fn legacy_apply_bot_exclusion(mut self) -> Self {
-        let bot_subquery = users::table.filter(users::bot.eq(true)).select(users::id);
-
-        self.query = self.query.filter(
-            games::white_id
-                .ne_all(bot_subquery)
-                .and(games::black_id.ne_all(bot_subquery)),
-        );
-        self
-    }
-
-    fn legacy_apply_bot_exclusion_for_player(
-        mut self,
-        username: &str,
-        color: Option<Color>,
-    ) -> Self {
-        let bot_subquery = users::table.filter(users::bot.eq(true)).select(users::id);
-
-        let user_subquery = users::table
-            .filter(users::normalized_username.eq(username.to_lowercase()))
-            .select(users::id);
-
-        match color {
-            Some(Color::White) => {
-                self.query = self.query.filter(games::black_id.ne_all(bot_subquery));
-            }
-            Some(Color::Black) => {
-                self.query = self.query.filter(games::white_id.ne_all(bot_subquery));
-            }
-            None => {
-                self.query = self.query.filter(
-                    (games::white_id
-                        .eq_any(user_subquery.clone())
-                        .and(games::black_id.ne_all(bot_subquery)))
-                    .or(games::black_id
-                        .eq_any(user_subquery)
-                        .and(games::white_id.ne_all(bot_subquery))),
-                );
-            }
-        }
-        self
-    }
-
     fn ensure_ratings_present(mut self) -> Self {
         self.query = self.query.filter(
             games::white_rating
@@ -651,11 +473,11 @@ impl GameQueryBuilder {
 
     fn keyset_condition(
         &self,
-        sort: &FinishedGameSort,
+        sort: &GameSort,
         token: &BatchToken,
     ) -> Option<GamePredicate> {
         match sort.key {
-            FinishedGameSortKey::Date => {
+            GameSortKey::Date => {
                 if sort.ascending {
                     Some(Box::new(
                         games::updated_at.gt(token.updated_at).or(games::updated_at
@@ -670,7 +492,7 @@ impl GameQueryBuilder {
                     ))
                 }
             }
-            FinishedGameSortKey::Turns => {
+            GameSortKey::Turns => {
                 let SortValue::Turns(turn_value) = token.primary_value else {
                     return None;
                 };
@@ -692,7 +514,7 @@ impl GameQueryBuilder {
                     ))
                 }
             }
-            FinishedGameSortKey::RatingAvg => {
+            GameSortKey::RatingAvg => {
                 let SortValue::RatingAvg(primary_value) = token.primary_value else {
                     return None;
                 };
@@ -760,6 +582,38 @@ impl GameQueryBuilder {
         }
     }
 
+    fn loser_for_players(
+        &self,
+        slot: u8,
+        player1: Option<&str>,
+        player2: Option<&str>,
+        fixed_colors: bool,
+    ) -> Option<GamePredicate> {
+        match slot {
+            1 => {
+                let loser = player1?;
+                let loser_color = fixed_colors.then_some(Color::White);
+                let predicates = self.player_loss_assignments(loser, player2, loser_color);
+                Self::any_of(predicates)
+            }
+            2 => match (player2, player1) {
+                (Some(loser), opponent) => {
+                    let loser_color = fixed_colors.then_some(Color::Black);
+                    let predicates = self.player_loss_assignments(loser, opponent, loser_color);
+                    Self::any_of(predicates)
+                }
+                (None, Some(opponent)) => {
+                    let opponent_color = fixed_colors.then_some(Color::White);
+                    let predicates =
+                        self.player_win_assignments(opponent, None, opponent_color);
+                    Self::any_of(predicates)
+                }
+                (None, None) => None,
+            },
+            _ => None,
+        }
+    }
+
     fn player_win_assignments(
         &self,
         winner: &str,
@@ -789,6 +643,35 @@ impl GameQueryBuilder {
             .collect()
     }
 
+    fn player_loss_assignments(
+        &self,
+        loser: &str,
+        opponent: Option<&str>,
+        fixed_color: Option<Color>,
+    ) -> Vec<GamePredicate> {
+        let seats = match fixed_color {
+            Some(color) => vec![color],
+            None => vec![Color::White, Color::Black],
+        };
+
+        seats
+            .into_iter()
+            .map(|loser_color| {
+                let opponent_color = loser_color.opposite_color();
+                let mut predicate: GamePredicate = Box::new(
+                    self.player_in_color(loser, loser_color)
+                        .and(self.winner_status(opponent_color)),
+                );
+                if let Some(opponent_name) = opponent {
+                    predicate = Box::new(
+                        predicate.and(self.player_in_color(opponent_name, opponent_color)),
+                    );
+                }
+                predicate
+            })
+            .collect()
+    }
+
     fn any_of(predicates: Vec<GamePredicate>) -> Option<GamePredicate> {
         let mut iter = predicates.into_iter();
         let first = iter.next()?;
@@ -801,13 +684,19 @@ mod tests {
     use super::*;
     use crate::schema::games;
     use diesel::debug_query;
-    use shared_types::{FinishedGamesQueryOptions, FinishedResultFilter};
+    use shared_types::{GameProgress, GamesQueryOptions, ResultFilter};
+
+    fn finished_defaults() -> GamesQueryOptions {
+        GamesQueryOptions {
+            game_progress: GameProgress::Finished,
+            ..GamesQueryOptions::default()
+        }
+    }
 
     #[test]
     fn finished_scope_applies_gate() {
-        let prepared = FinishedGamesQueryOptions::default().validate_all().unwrap();
-        let query = GameQueryBuilder::new()
-            .apply_finished_options(&prepared)
+        let prepared = finished_defaults().validate_all().unwrap();
+        let query = GameQueryBuilder::base_query(&prepared)
             .build()
             .select(games::all_columns);
 
@@ -819,14 +708,31 @@ mod tests {
 
     #[test]
     fn player_loss_without_color_filters_winner() {
-        let options = FinishedGamesQueryOptions {
+        let options = GamesQueryOptions {
             player1: Some("player".into()),
-            result_filter: FinishedResultFilter::PlayerWins(2),
-            ..FinishedGamesQueryOptions::default()
+            result_filter: ResultFilter::PlayerWins(2),
+            ..finished_defaults()
         };
         let prepared = options.validate_all().unwrap();
-        let query = GameQueryBuilder::new()
-            .apply_finished_options(&prepared)
+        let query = GameQueryBuilder::base_query(&prepared)
+            .build()
+            .select(games::all_columns);
+
+        let sql = debug_query::<diesel::pg::Pg, _>(&query).to_string();
+        assert!(sql.contains("game_status"));
+        assert!(sql.contains("white_id"));
+        assert!(sql.contains("black_id"));
+    }
+
+    #[test]
+    fn player_loses_emits_winner_status_for_opposite_color() {
+        let options = GamesQueryOptions {
+            player1: Some("player".into()),
+            result_filter: ResultFilter::PlayerLoses(1),
+            ..finished_defaults()
+        };
+        let prepared = options.validate_all().unwrap();
+        let query = GameQueryBuilder::base_query(&prepared)
             .build()
             .select(games::all_columns);
 
@@ -838,9 +744,9 @@ mod tests {
 
     #[test]
     fn rating_range_requires_present_ratings() {
-        let options = FinishedGamesQueryOptions {
+        let options = GamesQueryOptions {
             rating_min: Some(1200),
-            ..FinishedGamesQueryOptions::default()
+            ..finished_defaults()
         };
         let prepared = options.validate_all().unwrap();
         let query = GameQueryBuilder::new()
@@ -858,9 +764,9 @@ mod tests {
 
     #[test]
     fn tournament_filter_limits_to_tournament_games() {
-        let options = FinishedGamesQueryOptions {
+        let options = GamesQueryOptions {
             only_tournament: true,
-            ..FinishedGamesQueryOptions::default()
+            ..finished_defaults()
         };
         let prepared = options.validate_all().unwrap();
         let query = GameQueryBuilder::new()

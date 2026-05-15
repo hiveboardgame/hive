@@ -20,9 +20,8 @@ use shared_types::{
     BatchToken,
     ChallengeId,
     Conclusion,
-    FinishedGameSortKey,
-    FinishedGamesQueryOptions,
     GameId,
+    GameSortKey,
     GameSpeed,
     GameStart,
     GamesQueryOptions,
@@ -1170,18 +1169,7 @@ impl Game {
     pub async fn get_rows_from_options(
         options: &GamesQueryOptions,
         conn: &mut DbConn<'_>,
-    ) -> Result<Vec<Game>, DbError> {
-        let query = GameQueryBuilder::new()
-            .apply_legacy_options(options)
-            .build();
-
-        Ok(query.select(games::all_columns).get_results(conn).await?)
-    }
-
-    pub async fn get_finished_rows_from_options(
-        options: &FinishedGamesQueryOptions,
-        conn: &mut DbConn<'_>,
-    ) -> Result<(Vec<Game>, Option<BatchToken>, i64), DbError> {
+    ) -> Result<(Vec<Game>, Option<BatchToken>, Option<i64>), DbError> {
         let prepared = options.clone().validate_all().map_err(|errs| DbError::InvalidInput {
             info: errs
                 .into_iter()
@@ -1190,19 +1178,25 @@ impl Game {
                 .join("; "),
             error: String::new(),
         })?;
-        let query = GameQueryBuilder::finished_batch_query(&prepared).build();
+        let query = GameQueryBuilder::batch_query(&prepared).build();
         let records: Vec<Game> = query.select(games::all_columns).get_results(conn).await?;
-        let total: i64 = GameQueryBuilder::finished_base_query(&prepared)
-            .build()
-            .count()
-            .get_result(conn)
-            .await?;
+        let total = if prepared.include_total {
+            Some(
+                GameQueryBuilder::base_query(&prepared)
+                    .build()
+                    .count()
+                    .get_result(conn)
+                    .await?,
+            )
+        } else {
+            None
+        };
         let next = Self::next_batch_token(&records, &prepared);
         Ok((records, next, total))
     }
 
-    pub async fn export_finished_games(
-        options: &FinishedGamesQueryOptions,
+    pub async fn export_games(
+        options: &GamesQueryOptions,
         conn: &mut DbConn<'_>,
     ) -> Result<Vec<Game>, DbError> {
         let mut prepared = options.clone().validate_all().map_err(|errs| DbError::InvalidInput {
@@ -1222,15 +1216,15 @@ impl Game {
         Ok(query.select(games::all_columns).get_results(conn).await?)
     }
 
-    fn next_batch_token(rows: &[Game], options: &FinishedGamesQueryOptions) -> Option<BatchToken> {
+    fn next_batch_token(rows: &[Game], options: &GamesQueryOptions) -> Option<BatchToken> {
         if rows.len() < options.batch_size {
             return None;
         }
         let last = rows.last()?;
         let primary_value = match options.sort.key {
-            FinishedGameSortKey::Date => SortValue::UpdatedAt(last.updated_at),
-            FinishedGameSortKey::Turns => SortValue::Turns(last.turn),
-            FinishedGameSortKey::RatingAvg => {
+            GameSortKey::Date => SortValue::UpdatedAt(last.updated_at),
+            GameSortKey::Turns => SortValue::Turns(last.turn),
+            GameSortKey::RatingAvg => {
                 let (Some(white), Some(black)) = (last.white_rating, last.black_rating) else {
                     return None;
                 };

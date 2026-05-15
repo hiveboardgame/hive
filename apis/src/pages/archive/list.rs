@@ -4,7 +4,7 @@ use crate::responses::GameResponse;
 use leptos::prelude::*;
 use leptos_icons::Icon;
 use leptos_router::hooks::use_query_map;
-use shared_types::{FinishedGamesQueryOptions, ALLOWED_BATCH_SIZES};
+use shared_types::{GamesQueryOptions, ALLOWED_BATCH_SIZES};
 
 const PAGE_SIZE_SELECT_CLASS: &str =
     "select select-bordered select-sm w-16 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 h-11 min-h-11 font-medium focus:ring-2 focus:ring-pillbug-teal/50";
@@ -21,7 +21,7 @@ pub fn ArchiveGameList(
     page: Signal<usize>,
     batch_size: Signal<usize>,
     on_page_change: Callback<usize>,
-    #[prop(optional)] draft_options: Option<RwSignal<FinishedGamesQueryOptions>>,
+    #[prop(optional)] draft_options: Option<RwSignal<GamesQueryOptions>>,
     #[prop(optional)] on_search: Option<Callback<()>>,
 ) -> impl IntoView {
     let i18n = use_i18n();

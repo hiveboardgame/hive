@@ -5,7 +5,7 @@ use chrono::{DateTime, NaiveDate, Utc};
 use leptos::prelude::*;
 use leptos_icons::Icon;
 use shared_types::{
-    FinishedGameSortKey, FinishedGamesQueryOptions, FinishedResultFilter, GameSpeed, TimeMode,
+    GameSortKey, GamesQueryOptions, ResultFilter, GameSpeed, TimeMode,
 };
 use std::collections::HashSet;
 use std::str::FromStr;
@@ -62,7 +62,7 @@ fn speed_disabled_for_mode(mode: Option<TimeMode>, speed: GameSpeed) -> bool {
     }
 }
 
-fn enforce_rating_rules(options: &mut FinishedGamesQueryOptions) {
+fn enforce_rating_rules(options: &mut GamesQueryOptions) {
     let rated_forbidden =
         options.time_mode == Some(TimeMode::Untimed) || options.expansions == Some(false);
     if rated_forbidden {
@@ -80,7 +80,7 @@ fn enforce_rating_rules(options: &mut FinishedGamesQueryOptions) {
 fn ArchivePlayerField(
     label: impl Fn() -> String + 'static + Send,
     placeholder: String,
-    draft_options: RwSignal<FinishedGamesQueryOptions>,
+    draft_options: RwSignal<GamesQueryOptions>,
     is_player1: bool,
 ) -> impl IntoView {
     let filtered = Signal::derive(move || {
@@ -117,7 +117,7 @@ fn ArchivePlayerField(
 }
 
 #[component]
-fn ArchiveAdvancedFilters(draft_options: RwSignal<FinishedGamesQueryOptions>) -> impl IntoView {
+fn ArchiveAdvancedFilters(draft_options: RwSignal<GamesQueryOptions>) -> impl IntoView {
     let i18n = use_i18n();
 
     view! {
@@ -396,7 +396,7 @@ fn ArchiveAdvancedFilters(draft_options: RwSignal<FinishedGamesQueryOptions>) ->
                                 prop:value=Signal::derive(move || draft_options.with(|o| o.sort.key.to_string()))
                                 on:change=move |ev| {
                                     let val = event_target_value(&ev);
-                                    if let Ok(next) = FinishedGameSortKey::from_str(&val) {
+                                    if let Ok(next) = GameSortKey::from_str(&val) {
                                         draft_options.update(|o| o.sort.key = next);
                                     }
                                 }
@@ -452,7 +452,7 @@ fn ArchiveAdvancedFilters(draft_options: RwSignal<FinishedGamesQueryOptions>) ->
 
 #[component]
 pub fn ArchiveSearchForm(
-    draft_options: RwSignal<FinishedGamesQueryOptions>,
+    draft_options: RwSignal<GamesQueryOptions>,
     on_search: Callback<()>,
 ) -> impl IntoView {
     let i18n = use_i18n();
@@ -494,7 +494,7 @@ pub fn ArchiveSearchForm(
                                 prop:value=Signal::derive(move || draft_options.with(|o| o.result_filter.to_string()))
                                 on:change=move |ev| {
                                     let val = event_target_value(&ev);
-                                    if let Ok(next) = FinishedResultFilter::from_str(&val) {
+                                    if let Ok(next) = ResultFilter::from_str(&val) {
                                         draft_options.update(|o| o.result_filter = next);
                                     }
                                 }

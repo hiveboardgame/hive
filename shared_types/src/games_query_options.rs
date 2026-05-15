@@ -6,38 +6,6 @@ use std::str::FromStr;
 use thiserror::Error;
 use uuid::Uuid;
 
-// Legacy search types (existing UI)
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Copy)]
-pub enum ResultType {
-    Win,
-    Loss,
-    Draw,
-}
-
-impl std::fmt::Display for ResultType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ResultType::Win => write!(f, "Win"),
-            ResultType::Loss => write!(f, "Loss"),
-            ResultType::Draw => write!(f, "Draw"),
-        }
-    }
-}
-
-impl std::str::FromStr for ResultType {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "Win" => Ok(ResultType::Win),
-            "Loss" => Ok(ResultType::Loss),
-            "Draw" => Ok(ResultType::Draw),
-            _ => Err(anyhow::anyhow!("Invalid ResultType string")),
-        }
-    }
-}
-
 #[derive(Clone, PartialEq, Copy, Debug, Eq, Hash, Default, Serialize, Deserialize)]
 pub enum GameProgress {
     Unstarted,
@@ -72,123 +40,100 @@ impl std::fmt::Display for GameProgress {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default, Hash)]
-pub struct BatchInfo {
-    pub id: Uuid,
-    pub timestamp: DateTime<Utc>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct PlayerFilter {
-    pub username: String,
-    pub color: Option<Color>,
-    pub result: Option<ResultType>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct GamesQueryOptions {
-    pub player1: Option<PlayerFilter>,
-    pub player2: Option<PlayerFilter>,
-    pub speeds: Vec<GameSpeed>,
-    pub current_batch: Option<BatchInfo>,
-    pub batch_size: usize,
-    pub game_progress: GameProgress,
-    pub expansions: Option<bool>,
-    pub rated: Option<bool>,
-    pub exclude_bots: bool,
-}
-
-// Finished/advanced search types (parallel path)
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum FinishedResultFilter {
+pub enum ResultFilter {
     Any,
     ColorWins(Color),
     PlayerWins(u8),
+    PlayerLoses(u8),
     Draw,
     NotDraw,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub enum FinishedGameSortKey {
+pub enum GameSortKey {
     Date,
     Turns,
     RatingAvg,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct FinishedGameSort {
-    pub key: FinishedGameSortKey,
+pub struct GameSort {
+    pub key: GameSortKey,
     pub ascending: bool,
 }
 
-impl Default for FinishedGameSort {
+impl Default for GameSort {
     fn default() -> Self {
         Self {
-            key: FinishedGameSortKey::Date,
+            key: GameSortKey::Date,
             ascending: false,
         }
     }
 }
 
-impl FinishedGameSort {
+impl GameSort {
     pub fn is_desc(&self) -> bool {
         !self.ascending
     }
 }
 
-impl std::str::FromStr for FinishedGameSortKey {
+impl std::str::FromStr for GameSortKey {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "Date" => Ok(FinishedGameSortKey::Date),
-            "Turns" => Ok(FinishedGameSortKey::Turns),
-            "RatingAvg" => Ok(FinishedGameSortKey::RatingAvg),
+            "Date" => Ok(GameSortKey::Date),
+            "Turns" => Ok(GameSortKey::Turns),
+            "RatingAvg" => Ok(GameSortKey::RatingAvg),
             _ => Err(()),
         }
     }
 }
 
-impl std::str::FromStr for FinishedResultFilter {
+impl std::str::FromStr for ResultFilter {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "any" => Ok(FinishedResultFilter::Any),
-            "white_wins" => Ok(FinishedResultFilter::ColorWins(Color::White)),
-            "black_wins" => Ok(FinishedResultFilter::ColorWins(Color::Black)),
-            "player1_wins" => Ok(FinishedResultFilter::PlayerWins(1)),
-            "player2_wins" => Ok(FinishedResultFilter::PlayerWins(2)),
-            "draw" => Ok(FinishedResultFilter::Draw),
-            "not_draw" => Ok(FinishedResultFilter::NotDraw),
+            "any" => Ok(ResultFilter::Any),
+            "white_wins" => Ok(ResultFilter::ColorWins(Color::White)),
+            "black_wins" => Ok(ResultFilter::ColorWins(Color::Black)),
+            "player1_wins" => Ok(ResultFilter::PlayerWins(1)),
+            "player2_wins" => Ok(ResultFilter::PlayerWins(2)),
+            "player1_loses" => Ok(ResultFilter::PlayerLoses(1)),
+            "player2_loses" => Ok(ResultFilter::PlayerLoses(2)),
+            "draw" => Ok(ResultFilter::Draw),
+            "not_draw" => Ok(ResultFilter::NotDraw),
             _ => Err(()),
         }
     }
 }
 
-impl std::fmt::Display for FinishedResultFilter {
+impl std::fmt::Display for ResultFilter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let value = match self {
-            FinishedResultFilter::Any => "any",
-            FinishedResultFilter::ColorWins(Color::White) => "white_wins",
-            FinishedResultFilter::ColorWins(Color::Black) => "black_wins",
-            FinishedResultFilter::PlayerWins(1) => "player1_wins",
-            FinishedResultFilter::PlayerWins(2) => "player2_wins",
-            FinishedResultFilter::Draw => "draw",
-            FinishedResultFilter::NotDraw => "not_draw",
-            FinishedResultFilter::PlayerWins(_) => "any",
+            ResultFilter::Any => "any",
+            ResultFilter::ColorWins(Color::White) => "white_wins",
+            ResultFilter::ColorWins(Color::Black) => "black_wins",
+            ResultFilter::PlayerWins(1) => "player1_wins",
+            ResultFilter::PlayerWins(2) => "player2_wins",
+            ResultFilter::PlayerLoses(1) => "player1_loses",
+            ResultFilter::PlayerLoses(2) => "player2_loses",
+            ResultFilter::Draw => "draw",
+            ResultFilter::NotDraw => "not_draw",
+            ResultFilter::PlayerWins(_) | ResultFilter::PlayerLoses(_) => "any",
         };
         write!(f, "{value}")
     }
 }
 
-impl std::fmt::Display for FinishedGameSortKey {
+impl std::fmt::Display for GameSortKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let value = match self {
-            FinishedGameSortKey::Date => "Date",
-            FinishedGameSortKey::Turns => "Turns",
-            FinishedGameSortKey::RatingAvg => "RatingAvg",
+            GameSortKey::Date => "Date",
+            GameSortKey::Turns => "Turns",
+            GameSortKey::RatingAvg => "RatingAvg",
         };
         write!(f, "{value}")
     }
@@ -204,14 +149,14 @@ pub enum SortValue {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BatchToken {
-    pub sort: FinishedGameSort,
+    pub sort: GameSort,
     pub primary_value: SortValue,
     pub updated_at: DateTime<Utc>,
     pub id: Uuid,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct FinishedGamesQueryOptions {
+pub struct GamesQueryOptions {
     pub player1: Option<String>,
     pub player2: Option<String>,
     pub fixed_colors: bool,
@@ -227,15 +172,16 @@ pub struct FinishedGamesQueryOptions {
     pub turn_max: Option<i32>,
     pub date_start: Option<DateTime<Utc>>,
     pub date_end: Option<DateTime<Utc>>,
-    pub result_filter: FinishedResultFilter,
+    pub result_filter: ResultFilter,
     pub batch_token: Option<BatchToken>,
     pub batch_size: usize,
     pub page: usize,
-    pub sort: FinishedGameSort,
+    pub sort: GameSort,
     pub game_progress: GameProgress,
+    pub include_total: bool,
 }
 
-impl Default for FinishedGamesQueryOptions {
+impl Default for GamesQueryOptions {
     fn default() -> Self {
         Self {
             player1: None,
@@ -253,18 +199,19 @@ impl Default for FinishedGamesQueryOptions {
             turn_max: None,
             date_start: None,
             date_end: None,
-            result_filter: FinishedResultFilter::Any,
+            result_filter: ResultFilter::Any,
             batch_token: None,
             batch_size: 10,
             page: 1,
-            sort: FinishedGameSort::default(),
-            game_progress: GameProgress::Finished,
+            sort: GameSort::default(),
+            game_progress: GameProgress::All,
+            include_total: true,
         }
     }
 }
 
 #[derive(Error, Debug, PartialEq, Eq, Clone)]
-pub enum FinishedGameQueryValidationError {
+pub enum GameQueryValidationError {
     #[error("player filters must not reference the same normalized username")]
     DuplicatePlayers,
     #[error("result filter for player {slot} requires that player to be provided")]
@@ -293,10 +240,12 @@ pub enum FinishedGameQueryValidationError {
     BatchSizeInvalid,
     #[error("page must be at least 1 and at most 10000")]
     PageOutOfRange,
+    #[error("sort key is only valid for finished games")]
+    SortKeyRequiresFinished,
 }
 
 #[derive(Error, Debug, PartialEq, Eq, Clone)]
-pub enum FinishedGamesQueryParseError {
+pub enum GamesQueryParseError {
     #[error("invalid bool for {0}")]
     InvalidBool(&'static str),
     #[error("invalid option bool for {0}")]
@@ -322,7 +271,7 @@ pub enum FinishedGamesQueryParseError {
     #[error("invalid page")]
     InvalidPage,
     #[error("validation failed: {0:?}")]
-    ValidationFailedList(Vec<FinishedGameQueryValidationError>),
+    ValidationFailedList(Vec<GameQueryValidationError>),
     #[error("parse error: {0}")]
     Generic(String),
 }
@@ -330,16 +279,16 @@ pub enum FinishedGamesQueryParseError {
 /// Allowed page sizes for archive game search.
 pub const ALLOWED_BATCH_SIZES: [usize; 3] = [10, 25, 50];
 
-impl FinishedGamesQueryOptions {
-    pub fn validate_all(mut self) -> Result<Self, Vec<FinishedGameQueryValidationError>> {
+impl GamesQueryOptions {
+    pub fn validate_all(mut self) -> Result<Self, Vec<GameQueryValidationError>> {
         let mut errors = Vec::new();
 
         if !ALLOWED_BATCH_SIZES.contains(&self.batch_size) {
-            errors.push(FinishedGameQueryValidationError::BatchSizeInvalid);
+            errors.push(GameQueryValidationError::BatchSizeInvalid);
         }
 
         if self.page == 0 || self.page > 10000 {
-            errors.push(FinishedGameQueryValidationError::PageOutOfRange);
+            errors.push(GameQueryValidationError::PageOutOfRange);
         }
 
         let player1 = self.normalize_player(self.player1.as_ref());
@@ -347,18 +296,26 @@ impl FinishedGamesQueryOptions {
 
         if let (Some(p1), Some(p2)) = (&player1, &player2) {
             if p1 == p2 {
-                errors.push(FinishedGameQueryValidationError::DuplicatePlayers);
+                errors.push(GameQueryValidationError::DuplicatePlayers);
             }
         }
 
-        if matches!(self.result_filter, FinishedResultFilter::PlayerWins(1)) && player1.is_none() {
-            errors.push(FinishedGameQueryValidationError::MissingPlayerForResult { slot: 1 });
+        if matches!(self.result_filter, ResultFilter::PlayerWins(1) | ResultFilter::PlayerLoses(1))
+            && player1.is_none()
+        {
+            errors.push(GameQueryValidationError::MissingPlayerForResult { slot: 1 });
         }
-        if matches!(self.result_filter, FinishedResultFilter::PlayerWins(2))
+        if matches!(self.result_filter, ResultFilter::PlayerWins(2) | ResultFilter::PlayerLoses(2))
             && player2.is_none()
             && player1.is_none()
         {
-            errors.push(FinishedGameQueryValidationError::MissingPlayerForResult { slot: 2 });
+            errors.push(GameQueryValidationError::MissingPlayerForResult { slot: 2 });
+        }
+
+        if self.game_progress != GameProgress::Finished
+            && matches!(self.sort.key, GameSortKey::Turns | GameSortKey::RatingAvg)
+        {
+            errors.push(GameQueryValidationError::SortKeyRequiresFinished);
         }
 
         let mut speeds = self.speeds.clone();
@@ -381,17 +338,17 @@ impl FinishedGamesQueryOptions {
             match mode {
                 TimeMode::RealTime => {
                     if speeds.iter().any(|s| !realtime_speeds.contains(s)) {
-                        errors.push(FinishedGameQueryValidationError::InvalidSpeedForTimeMode);
+                        errors.push(GameQueryValidationError::InvalidSpeedForTimeMode);
                     }
                 }
                 TimeMode::Correspondence => {
                     if speeds.iter().any(|s| *s != GameSpeed::Correspondence) {
-                        errors.push(FinishedGameQueryValidationError::InvalidSpeedForTimeMode);
+                        errors.push(GameQueryValidationError::InvalidSpeedForTimeMode);
                     }
                 }
                 TimeMode::Untimed => {
                     if speeds.iter().any(|s| *s != GameSpeed::Untimed) {
-                        errors.push(FinishedGameQueryValidationError::InvalidSpeedForTimeMode);
+                        errors.push(GameQueryValidationError::InvalidSpeedForTimeMode);
                     }
                 }
             }
@@ -399,28 +356,28 @@ impl FinishedGamesQueryOptions {
 
         if self.uses_rating_filter() {
             if rated != Some(true) {
-                errors.push(FinishedGameQueryValidationError::RatingFiltersRequireRated);
+                errors.push(GameQueryValidationError::RatingFiltersRequireRated);
             }
             rated = Some(true);
 
             let valid_bounds = self.rating_min.is_none_or(|min| (0..=3000).contains(&min))
                 && self.rating_max.is_none_or(|max| (0..=3000).contains(&max));
             if !valid_bounds {
-                errors.push(FinishedGameQueryValidationError::RatingOutOfRange);
+                errors.push(GameQueryValidationError::RatingOutOfRange);
             }
             if let (Some(min), Some(max)) = (self.rating_min, self.rating_max) {
                 if min > max {
-                    errors.push(FinishedGameQueryValidationError::RatingBoundsInvalid);
+                    errors.push(GameQueryValidationError::RatingBoundsInvalid);
                 }
             }
         }
 
         if matches!(rated, Some(true)) && self.time_mode == Some(TimeMode::Untimed) {
-            errors.push(FinishedGameQueryValidationError::RatedNotAllowedForUntimed);
+            errors.push(GameQueryValidationError::RatedNotAllowedForUntimed);
         }
 
         if matches!(rated, Some(true)) && self.expansions == Some(false) {
-            errors.push(FinishedGameQueryValidationError::RatedNotAllowedForBaseOnly);
+            errors.push(GameQueryValidationError::RatedNotAllowedForBaseOnly);
         }
 
         let has_untimed_speed = speeds.contains(&GameSpeed::Untimed);
@@ -428,24 +385,24 @@ impl FinishedGamesQueryOptions {
             rated = Some(false);
         }
         if matches!(rated, Some(true)) && has_untimed_speed {
-            errors.push(FinishedGameQueryValidationError::RatedNotAllowedForUntimed);
+            errors.push(GameQueryValidationError::RatedNotAllowedForUntimed);
         }
 
         if let (Some(min), Some(max)) = (self.turn_min, self.turn_max) {
             if min > max {
-                errors.push(FinishedGameQueryValidationError::TurnBoundsInvalid);
+                errors.push(GameQueryValidationError::TurnBoundsInvalid);
             }
         }
 
         if let (Some(start), Some(end)) = (self.date_start, self.date_end) {
             if start > end {
-                errors.push(FinishedGameQueryValidationError::DateBoundsInvalid);
+                errors.push(GameQueryValidationError::DateBoundsInvalid);
             }
         }
 
         if let Some(token) = &self.batch_token {
             if token.sort != self.sort {
-                errors.push(FinishedGameQueryValidationError::BatchTokenSortMismatch);
+                errors.push(GameQueryValidationError::BatchTokenSortMismatch);
             }
         }
 
@@ -476,7 +433,7 @@ impl FinishedGamesQueryOptions {
     }
 }
 
-impl std::fmt::Display for FinishedGamesQueryOptions {
+impl std::fmt::Display for GamesQueryOptions {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut parts: Vec<String> = Vec::new();
         let mut push = |key: &str, value: String| {
@@ -561,17 +518,17 @@ impl std::fmt::Display for FinishedGamesQueryOptions {
     }
 }
 
-impl std::str::FromStr for FinishedGamesQueryOptions {
-    type Err = FinishedGamesQueryParseError;
+impl std::str::FromStr for GamesQueryOptions {
+    type Err = GamesQueryParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        FinishedGamesQueryOptions::parse_with_errors(s).map_err(|errs| {
+        GamesQueryOptions::parse_with_errors(s).map_err(|errs| {
             let mut validation_errs = Vec::new();
             let mut parse_errs = Vec::new();
 
             for err in errs {
                 match err {
-                    FinishedGamesQueryParseError::ValidationFailedList(v) => {
+                    GamesQueryParseError::ValidationFailedList(v) => {
                         validation_errs.extend(v);
                     }
                     other => parse_errs.push(other),
@@ -579,7 +536,7 @@ impl std::str::FromStr for FinishedGamesQueryOptions {
             }
 
             if parse_errs.is_empty() {
-                return FinishedGamesQueryParseError::ValidationFailedList(validation_errs);
+                return GamesQueryParseError::ValidationFailedList(validation_errs);
             }
 
             if parse_errs.len() == 1 && validation_errs.is_empty() {
@@ -595,15 +552,15 @@ impl std::str::FromStr for FinishedGamesQueryOptions {
                 messages.extend(validation_errs.into_iter().map(|e| e.to_string()));
             }
 
-            FinishedGamesQueryParseError::Generic(messages.join("; "))
+            GamesQueryParseError::Generic(messages.join("; "))
         })
     }
 }
 
-impl FinishedGamesQueryOptions {
+impl GamesQueryOptions {
     /// Parses from a query string, collecting all parse and validation errors.
-    pub fn parse_with_errors(s: &str) -> Result<Self, Vec<FinishedGamesQueryParseError>> {
-        let mut opts = FinishedGamesQueryOptions::default();
+    pub fn parse_with_errors(s: &str) -> Result<Self, Vec<GamesQueryParseError>> {
+        let mut opts = GamesQueryOptions::default();
         let mut errs = Vec::new();
         let mut speeds_set = false;
 
@@ -679,7 +636,7 @@ impl FinishedGamesQueryOptions {
                         match GameSpeed::from_str(part.trim()) {
                             Ok(speed) => speeds.push(speed),
                             Err(_) => {
-                                errs.push(FinishedGamesQueryParseError::InvalidSpeed(
+                                errs.push(GamesQueryParseError::InvalidSpeed(
                                     part.to_string(),
                                 ));
                             }
@@ -735,31 +692,31 @@ impl FinishedGamesQueryOptions {
                     }
                     Err(e) => Some(e),
                 },
-                "result_filter" => match FinishedResultFilter::from_str(&value) {
+                "result_filter" => match ResultFilter::from_str(&value) {
                     Ok(v) => {
                         opts.result_filter = v;
                         None
                     }
-                    Err(_) => Some(FinishedGamesQueryParseError::InvalidResultFilter),
+                    Err(_) => Some(GamesQueryParseError::InvalidResultFilter),
                 },
-                "sort_key" => match FinishedGameSortKey::from_str(&value) {
+                "sort_key" => match GameSortKey::from_str(&value) {
                     Ok(v) => {
                         opts.sort.key = v;
                         None
                     }
-                    Err(_) => Some(FinishedGamesQueryParseError::InvalidSortKey),
+                    Err(_) => Some(GamesQueryParseError::InvalidSortKey),
                 },
                 "sort_asc" => parse_bool(&value, "sort_asc")
                     .map(|v| opts.sort.ascending = v)
                     .err()
-                    .map(|_| FinishedGamesQueryParseError::InvalidSortDirection),
+                    .map(|_| GamesQueryParseError::InvalidSortDirection),
                 "page" => {
                     match value.trim().parse::<usize>() {
                         Ok(p) if p >= 1 && p <= 10000 => {
                             opts.page = p;
                             None
                         }
-                        _ => Some(FinishedGamesQueryParseError::InvalidPage),
+                        _ => Some(GamesQueryParseError::InvalidPage),
                     }
                 }
                 "batch_size" => {
@@ -768,7 +725,7 @@ impl FinishedGamesQueryOptions {
                             opts.batch_size = s;
                             None
                         }
-                        _ => Some(FinishedGamesQueryParseError::InvalidBatchSize),
+                        _ => Some(GamesQueryParseError::InvalidBatchSize),
                     }
                 }
                 _ => None,
@@ -785,7 +742,7 @@ impl FinishedGamesQueryOptions {
 
         let validated = opts.clone().validate_all();
         if let Err(ref validation_errs) = validated {
-            errs.push(FinishedGamesQueryParseError::ValidationFailedList(
+            errs.push(GamesQueryParseError::ValidationFailedList(
                 validation_errs.to_vec(),
             ));
         }
@@ -798,30 +755,30 @@ impl FinishedGamesQueryOptions {
     }
 }
 
-fn parse_bool(input: &str, field: &'static str) -> Result<bool, FinishedGamesQueryParseError> {
+fn parse_bool(input: &str, field: &'static str) -> Result<bool, GamesQueryParseError> {
     match input {
         "true" => Ok(true),
         "false" => Ok(false),
-        _ => Err(FinishedGamesQueryParseError::InvalidBool(field)),
+        _ => Err(GamesQueryParseError::InvalidBool(field)),
     }
 }
 
 fn parse_option_bool(
     input: &str,
     field: &'static str,
-) -> Result<Option<bool>, FinishedGamesQueryParseError> {
+) -> Result<Option<bool>, GamesQueryParseError> {
     match input {
         "true" => Ok(Some(true)),
         "false" => Ok(Some(false)),
         "any" => Ok(None),
-        _ => Err(FinishedGamesQueryParseError::InvalidOptionBool(field)),
+        _ => Err(GamesQueryParseError::InvalidOptionBool(field)),
     }
 }
 
 fn parse_i32(
     input: &str,
     field: &'static str,
-) -> Result<Option<i32>, FinishedGamesQueryParseError> {
+) -> Result<Option<i32>, GamesQueryParseError> {
     if input.trim().is_empty() {
         return Ok(None);
     }
@@ -829,7 +786,7 @@ fn parse_i32(
         .trim()
         .parse::<i32>()
         .map(Some)
-        .map_err(|e| FinishedGamesQueryParseError::InvalidRating {
+        .map_err(|e| GamesQueryParseError::InvalidRating {
             field,
             error: e.to_string(),
         })
@@ -838,32 +795,32 @@ fn parse_i32(
 fn parse_date(
     input: &str,
     field: &'static str,
-) -> Result<Option<DateTime<Utc>>, FinishedGamesQueryParseError> {
+) -> Result<Option<DateTime<Utc>>, GamesQueryParseError> {
     if input.trim().is_empty() {
         return Ok(None);
     }
     let date = chrono::NaiveDate::parse_from_str(input, "%Y-%m-%d").map_err(|e| {
-        FinishedGamesQueryParseError::InvalidDate {
+        GamesQueryParseError::InvalidDate {
             field,
             error: e.to_string(),
         }
     })?;
     let dt =
         date.and_hms_opt(0, 0, 0)
-            .ok_or_else(|| FinishedGamesQueryParseError::InvalidDate {
+            .ok_or_else(|| GamesQueryParseError::InvalidDate {
                 field,
                 error: "invalid date".to_string(),
             })?;
     Ok(Some(DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc)))
 }
 
-fn parse_time_mode(input: &str) -> Result<Option<TimeMode>, FinishedGamesQueryParseError> {
+fn parse_time_mode(input: &str) -> Result<Option<TimeMode>, GamesQueryParseError> {
     if input == "any" {
         return Ok(None);
     }
     TimeMode::from_str(input)
         .map(Some)
-        .map_err(|_| FinishedGamesQueryParseError::InvalidTimeMode)
+        .map_err(|_| GamesQueryParseError::InvalidTimeMode)
 }
 
 #[cfg(test)]
@@ -872,16 +829,17 @@ mod tests {
     use chrono::Utc;
     use uuid::Uuid;
 
-    fn base_options() -> FinishedGamesQueryOptions {
-        FinishedGamesQueryOptions {
+    fn base_options() -> GamesQueryOptions {
+        GamesQueryOptions {
             batch_size: 10,
-            ..FinishedGamesQueryOptions::default()
+            game_progress: GameProgress::Finished,
+            ..GamesQueryOptions::default()
         }
     }
 
     #[test]
     fn rejects_duplicate_players() {
-        let options = FinishedGamesQueryOptions {
+        let options = GamesQueryOptions {
             player1: Some("User".to_string()),
             player2: Some("user".to_string()),
             ..base_options()
@@ -889,25 +847,47 @@ mod tests {
 
         assert!(matches!(
             options.validate_all(),
-            Err(errs) if errs.contains(&FinishedGameQueryValidationError::DuplicatePlayers)
+            Err(errs) if errs.contains(&GameQueryValidationError::DuplicatePlayers)
         ));
     }
 
     #[test]
     fn rejects_missing_player_for_result() {
-        let options = FinishedGamesQueryOptions {
-            result_filter: FinishedResultFilter::PlayerWins(1),
+        let options = GamesQueryOptions {
+            result_filter: ResultFilter::PlayerWins(1),
             ..base_options()
         };
         assert!(matches!(
             options.validate_all(),
-            Err(errs) if errs.contains(&FinishedGameQueryValidationError::MissingPlayerForResult { slot: 1 })
+            Err(errs) if errs.contains(&GameQueryValidationError::MissingPlayerForResult { slot: 1 })
         ));
     }
 
     #[test]
+    fn rejects_missing_player_for_loses() {
+        let options = GamesQueryOptions {
+            result_filter: ResultFilter::PlayerLoses(1),
+            ..base_options()
+        };
+        assert!(matches!(
+            options.validate_all(),
+            Err(errs) if errs.contains(&GameQueryValidationError::MissingPlayerForResult { slot: 1 })
+        ));
+    }
+
+    #[test]
+    fn allows_player_loses_with_player_one_present() {
+        let options = GamesQueryOptions {
+            player1: Some("someone".into()),
+            result_filter: ResultFilter::PlayerLoses(1),
+            ..base_options()
+        };
+        assert!(options.validate_all().is_ok());
+    }
+
+    #[test]
     fn rejects_speed_that_does_not_match_time_mode() {
-        let options = FinishedGamesQueryOptions {
+        let options = GamesQueryOptions {
             time_mode: Some(TimeMode::Correspondence),
             speeds: vec![GameSpeed::Blitz],
             ..base_options()
@@ -915,13 +895,13 @@ mod tests {
 
         assert!(matches!(
             options.validate_all(),
-            Err(errs) if errs.contains(&FinishedGameQueryValidationError::InvalidSpeedForTimeMode)
+            Err(errs) if errs.contains(&GameQueryValidationError::InvalidSpeedForTimeMode)
         ));
     }
 
     #[test]
     fn rejects_non_realtime_speed_in_realtime_mode() {
-        let options = FinishedGamesQueryOptions {
+        let options = GamesQueryOptions {
             time_mode: Some(TimeMode::RealTime),
             speeds: vec![GameSpeed::Correspondence],
             ..base_options()
@@ -929,13 +909,13 @@ mod tests {
 
         assert!(matches!(
             options.validate_all(),
-            Err(errs) if errs.contains(&FinishedGameQueryValidationError::InvalidSpeedForTimeMode)
+            Err(errs) if errs.contains(&GameQueryValidationError::InvalidSpeedForTimeMode)
         ));
     }
 
     #[test]
     fn fills_correspondence_speed_when_time_mode_set() {
-        let options = FinishedGamesQueryOptions {
+        let options = GamesQueryOptions {
             time_mode: Some(TimeMode::Correspondence),
             speeds: vec![],
             ..base_options()
@@ -947,7 +927,7 @@ mod tests {
 
     #[test]
     fn from_str_allows_correspondence_without_speeds() {
-        let opts = FinishedGamesQueryOptions::from_str("time_mode=Correspondence").unwrap();
+        let opts = GamesQueryOptions::from_str("time_mode=Correspondence").unwrap();
 
         assert_eq!(opts.time_mode, Some(TimeMode::Correspondence));
         assert_eq!(opts.speeds, vec![GameSpeed::Correspondence]);
@@ -955,7 +935,7 @@ mod tests {
 
     #[test]
     fn allows_any_time_mode_with_speeds() {
-        let options = FinishedGamesQueryOptions {
+        let options = GamesQueryOptions {
             time_mode: None,
             speeds: vec![GameSpeed::Blitz, GameSpeed::Correspondence],
             ..base_options()
@@ -971,7 +951,7 @@ mod tests {
 
     #[test]
     fn untimed_rated_is_rejected() {
-        let options = FinishedGamesQueryOptions {
+        let options = GamesQueryOptions {
             time_mode: Some(TimeMode::Untimed),
             rated: Some(true),
             speeds: vec![],
@@ -980,13 +960,13 @@ mod tests {
 
         assert!(matches!(
             options.validate_all(),
-            Err(errs) if errs.contains(&FinishedGameQueryValidationError::RatedNotAllowedForUntimed)
+            Err(errs) if errs.contains(&GameQueryValidationError::RatedNotAllowedForUntimed)
         ));
     }
 
     #[test]
     fn rated_with_untimed_speed_is_rejected() {
-        let options = FinishedGamesQueryOptions {
+        let options = GamesQueryOptions {
             time_mode: None,
             speeds: vec![GameSpeed::Untimed, GameSpeed::Blitz],
             rated: Some(true),
@@ -995,13 +975,13 @@ mod tests {
 
         assert!(matches!(
             options.validate_all(),
-            Err(errs) if errs.contains(&FinishedGameQueryValidationError::RatedNotAllowedForUntimed)
+            Err(errs) if errs.contains(&GameQueryValidationError::RatedNotAllowedForUntimed)
         ));
     }
 
     #[test]
     fn rated_any_with_untimed_speed_is_allowed() {
-        let options = FinishedGamesQueryOptions {
+        let options = GamesQueryOptions {
             time_mode: None,
             speeds: vec![GameSpeed::Untimed, GameSpeed::Blitz],
             rated: None,
@@ -1018,7 +998,7 @@ mod tests {
 
     #[test]
     fn parses_exclude_bots_and_fixed_colors() {
-        let opts = FinishedGamesQueryOptions::from_str(
+        let opts = GamesQueryOptions::from_str(
             "player1=ion&exclude_bots=true&fixed_colors=true",
         )
         .unwrap();
@@ -1029,7 +1009,7 @@ mod tests {
 
     #[test]
     fn base_only_rated_is_rejected() {
-        let options = FinishedGamesQueryOptions {
+        let options = GamesQueryOptions {
             expansions: Some(false),
             rated: Some(true),
             ..base_options()
@@ -1037,13 +1017,13 @@ mod tests {
 
         assert!(matches!(
             options.validate_all(),
-            Err(errs) if errs.contains(&FinishedGameQueryValidationError::RatedNotAllowedForBaseOnly)
+            Err(errs) if errs.contains(&GameQueryValidationError::RatedNotAllowedForBaseOnly)
         ));
     }
 
     #[test]
     fn any_expansions_serializes_as_any() {
-        let opts = FinishedGamesQueryOptions {
+        let opts = GamesQueryOptions {
             expansions: None,
             rated: None,
             ..base_options()
@@ -1056,7 +1036,7 @@ mod tests {
 
     #[test]
     fn any_time_mode_serializes_as_any() {
-        let opts = FinishedGamesQueryOptions {
+        let opts = GamesQueryOptions {
             time_mode: None,
             speeds: vec![GameSpeed::Untimed],
             rated: Some(false),
@@ -1070,7 +1050,7 @@ mod tests {
     #[test]
     fn from_str_allows_any_time_mode_with_speeds() {
         let opts =
-            FinishedGamesQueryOptions::from_str("time_mode=any&speeds=Blitz,Correspondence")
+            GamesQueryOptions::from_str("time_mode=any&speeds=Blitz,Correspondence")
                 .unwrap();
 
         assert_eq!(opts.time_mode, None);
@@ -1082,7 +1062,7 @@ mod tests {
 
     #[test]
     fn rejects_rating_bounds_conflicts() {
-        let options = FinishedGamesQueryOptions {
+        let options = GamesQueryOptions {
             rating_min: Some(2500),
             rating_max: Some(2400),
             ..base_options()
@@ -1090,26 +1070,26 @@ mod tests {
 
         assert!(matches!(
             options.validate_all(),
-            Err(errs) if errs.contains(&FinishedGameQueryValidationError::RatingBoundsInvalid)
+            Err(errs) if errs.contains(&GameQueryValidationError::RatingBoundsInvalid)
         ));
     }
 
     #[test]
     fn rejects_rating_out_of_range() {
-        let options = FinishedGamesQueryOptions {
+        let options = GamesQueryOptions {
             rating_min: Some(3500),
             ..base_options()
         };
 
         assert!(matches!(
             options.validate_all(),
-            Err(errs) if errs.contains(&FinishedGameQueryValidationError::RatingOutOfRange)
+            Err(errs) if errs.contains(&GameQueryValidationError::RatingOutOfRange)
         ));
     }
 
     #[test]
     fn rejects_turn_bounds_conflicts() {
-        let options = FinishedGamesQueryOptions {
+        let options = GamesQueryOptions {
             turn_min: Some(20),
             turn_max: Some(10),
             ..base_options()
@@ -1117,14 +1097,14 @@ mod tests {
 
         assert!(matches!(
             options.validate_all(),
-            Err(errs) if errs.contains(&FinishedGameQueryValidationError::TurnBoundsInvalid)
+            Err(errs) if errs.contains(&GameQueryValidationError::TurnBoundsInvalid)
         ));
     }
 
     #[test]
     fn rejects_invalid_batch_size() {
         for invalid in [7, 20, 101] {
-            let options = FinishedGamesQueryOptions {
+            let options = GamesQueryOptions {
                 batch_size: invalid,
                 ..base_options()
             };
@@ -1139,7 +1119,7 @@ mod tests {
     #[test]
     fn accepts_valid_batch_sizes() {
         for valid in ALLOWED_BATCH_SIZES {
-            let options = FinishedGamesQueryOptions {
+            let options = GamesQueryOptions {
                 batch_size: valid,
                 ..base_options()
             };
@@ -1149,13 +1129,13 @@ mod tests {
 
     #[test]
     fn rejects_batch_token_sort_mismatch() {
-        let options = FinishedGamesQueryOptions {
-            sort: FinishedGameSort {
-                key: FinishedGameSortKey::Turns,
+        let options = GamesQueryOptions {
+            sort: GameSort {
+                key: GameSortKey::Turns,
                 ascending: true,
             },
             batch_token: Some(BatchToken {
-                sort: FinishedGameSort::default(),
+                sort: GameSort::default(),
                 primary_value: SortValue::Turns(0),
                 updated_at: Utc::now(),
                 id: Uuid::new_v4(),
@@ -1165,13 +1145,13 @@ mod tests {
 
         assert!(matches!(
             options.validate_all(),
-            Err(errs) if errs.contains(&FinishedGameQueryValidationError::BatchTokenSortMismatch)
+            Err(errs) if errs.contains(&GameQueryValidationError::BatchTokenSortMismatch)
         ));
     }
 
     #[test]
     fn rejects_rating_filter_with_rated_false() {
-        let options = FinishedGamesQueryOptions {
+        let options = GamesQueryOptions {
             rated: Some(false),
             rating_min: Some(1000),
             ..base_options()
@@ -1179,27 +1159,27 @@ mod tests {
 
         assert!(matches!(
             options.validate_all(),
-            Err(errs) if errs.contains(&FinishedGameQueryValidationError::RatingFiltersRequireRated)
+            Err(errs) if errs.contains(&GameQueryValidationError::RatingFiltersRequireRated)
         ));
     }
 
     #[test]
     fn rejects_player_two_wins_without_any_player() {
-        let options = FinishedGamesQueryOptions {
-            result_filter: FinishedResultFilter::PlayerWins(2),
+        let options = GamesQueryOptions {
+            result_filter: ResultFilter::PlayerWins(2),
             ..base_options()
         };
         assert!(matches!(
             options.validate_all(),
-            Err(errs) if errs.contains(&FinishedGameQueryValidationError::MissingPlayerForResult { slot: 2 })
+            Err(errs) if errs.contains(&GameQueryValidationError::MissingPlayerForResult { slot: 2 })
         ));
     }
 
     #[test]
     fn allows_player_two_wins_with_player_one_present() {
-        let options = FinishedGamesQueryOptions {
+        let options = GamesQueryOptions {
             player1: Some("someone".into()),
-            result_filter: FinishedResultFilter::PlayerWins(2),
+            result_filter: ResultFilter::PlayerWins(2),
             ..base_options()
         };
 
@@ -1208,18 +1188,18 @@ mod tests {
 
     #[test]
     fn from_str_preserves_parse_error() {
-        let err = FinishedGamesQueryOptions::from_str("fixed_colors=maybe").unwrap_err();
+        let err = GamesQueryOptions::from_str("fixed_colors=maybe").unwrap_err();
 
         assert!(matches!(
             err,
-            FinishedGamesQueryParseError::InvalidBool("fixed_colors")
+            GamesQueryParseError::InvalidBool("fixed_colors")
         ));
     }
 
     #[test]
     fn from_str_reports_multiple_parse_errors() {
         let err =
-            FinishedGamesQueryOptions::from_str("fixed_colors=maybe&speeds=hyper&sort_asc=up")
+            GamesQueryOptions::from_str("fixed_colors=maybe&speeds=hyper&sort_asc=up")
                 .unwrap_err();
         let msg = err.to_string();
 
@@ -1230,7 +1210,7 @@ mod tests {
 
     #[test]
     fn only_tournament_round_trips_in_query_string() {
-        let opts = FinishedGamesQueryOptions {
+        let opts = GamesQueryOptions {
             only_tournament: true,
             ..base_options()
         };
@@ -1238,92 +1218,108 @@ mod tests {
         let query = opts.to_string();
         assert!(query.contains("only_tournament=true"));
 
-        let parsed = FinishedGamesQueryOptions::from_str(&query).unwrap();
+        let parsed = GamesQueryOptions::from_str(&query).unwrap();
         assert!(parsed.only_tournament);
     }
 
     #[test]
     fn from_str_allows_leading_question_mark() {
-        let opts = FinishedGamesQueryOptions::from_str("?player1=someone").unwrap();
+        let opts = GamesQueryOptions::from_str("?player1=someone").unwrap();
 
         assert_eq!(opts.player1.as_deref(), Some("someone"));
     }
 
     #[test]
     fn display_omits_batch_size_when_default() {
-        let opts = FinishedGamesQueryOptions {
+        let opts = GamesQueryOptions {
             batch_size: 10,
-            ..FinishedGamesQueryOptions::default()
+            ..base_options()
         };
         assert!(!opts.to_string().contains("batch_size="));
     }
 
     #[test]
     fn display_includes_batch_size_when_non_default() {
-        let opts = FinishedGamesQueryOptions {
+        let opts = GamesQueryOptions {
             batch_size: 25,
-            ..FinishedGamesQueryOptions::default()
+            ..base_options()
         };
         assert!(opts.to_string().contains("batch_size=25"));
     }
 
     #[test]
     fn display_includes_page_when_gt_one() {
-        let opts = FinishedGamesQueryOptions {
+        let opts = GamesQueryOptions {
             page: 2,
-            ..FinishedGamesQueryOptions::default()
+            ..base_options()
         };
         assert!(opts.to_string().contains("page=2"));
     }
 
     #[test]
     fn display_omits_page_when_one() {
-        let opts = FinishedGamesQueryOptions {
+        let opts = GamesQueryOptions {
             page: 1,
-            ..FinishedGamesQueryOptions::default()
+            ..base_options()
         };
         assert!(!opts.to_string().contains("page=1"));
     }
 
     #[test]
     fn parse_page() {
-        let opts = FinishedGamesQueryOptions::from_str("player1=ion&page=3").unwrap();
+        let opts = GamesQueryOptions::from_str("player1=ion&page=3").unwrap();
         assert_eq!(opts.page, 3);
     }
 
     #[test]
     fn parse_batch_size() {
         let opts =
-            FinishedGamesQueryOptions::from_str("batch_size=25").unwrap();
+            GamesQueryOptions::from_str("batch_size=25").unwrap();
         assert_eq!(opts.batch_size, 25);
     }
 
     #[test]
     fn parse_rejects_invalid_batch_size() {
-        assert!(FinishedGamesQueryOptions::from_str("batch_size=7").is_err());
+        assert!(GamesQueryOptions::from_str("batch_size=7").is_err());
     }
 
     #[test]
     fn rejects_page_zero() {
-        let options = FinishedGamesQueryOptions {
+        let options = GamesQueryOptions {
             page: 0,
             ..base_options()
         };
         assert!(matches!(
             options.validate_all(),
-            Err(errs) if errs.contains(&FinishedGameQueryValidationError::PageOutOfRange)
+            Err(errs) if errs.contains(&GameQueryValidationError::PageOutOfRange)
         ));
     }
 
     #[test]
     fn rejects_page_over_max() {
-        let options = FinishedGamesQueryOptions {
+        let options = GamesQueryOptions {
             page: 10001,
             ..base_options()
         };
         assert!(matches!(
             options.validate_all(),
-            Err(errs) if errs.contains(&FinishedGameQueryValidationError::PageOutOfRange)
+            Err(errs) if errs.contains(&GameQueryValidationError::PageOutOfRange)
+        ));
+    }
+
+    #[test]
+    fn rejects_turns_sort_for_unfinished() {
+        let options = GamesQueryOptions {
+            game_progress: GameProgress::Playing,
+            sort: GameSort {
+                key: GameSortKey::Turns,
+                ascending: false,
+            },
+            ..base_options()
+        };
+        assert!(matches!(
+            options.validate_all(),
+            Err(errs) if errs.contains(&GameQueryValidationError::SortKeyRequiresFinished)
         ));
     }
 }

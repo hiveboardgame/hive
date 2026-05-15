@@ -1,12 +1,12 @@
 use crate::pages::archive::{form::ArchiveSearchForm, list::ArchiveGameList};
-use crate::functions::games::get::GetFinishedBatchFromOptions;
+use crate::functions::games::get::GetBatchFromOptions;
 use leptos::{html, prelude::*};
 use leptos_router::{
     hooks::{use_navigate, use_query_map},
     location::State,
     NavigateOptions,
 };
-use shared_types::{FinishedGamesQueryOptions, GameProgress};
+use shared_types::{GamesQueryOptions, GameProgress};
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -23,25 +23,25 @@ impl std::error::Error for GameSearchViewError {}
 
 #[component]
 pub fn GameSearch() -> impl IntoView {
-    let draft_options = RwSignal::new(FinishedGamesQueryOptions::default());
+    let draft_options = RwSignal::new(GamesQueryOptions::default());
 
     let games = RwSignal::new(Vec::new());
     let total = RwSignal::new(None::<i64>);
     let errors = RwSignal::new(Vec::<String>::new());
-    let applied_options = RwSignal::new(FinishedGamesQueryOptions::default());
-    let next_batch_action = ServerAction::<GetFinishedBatchFromOptions>::new();
+    let applied_options = RwSignal::new(GamesQueryOptions::default());
+    let next_batch_action = ServerAction::<GetBatchFromOptions>::new();
     let has_searched = RwSignal::new(false);
 
     let scroll_ref = NodeRef::<html::Div>::new();
     let is_loading = next_batch_action.pending();
 
-    let fetch_page: Arc<dyn Fn(FinishedGamesQueryOptions) + Send + Sync> = {
+    let fetch_page: Arc<dyn Fn(GamesQueryOptions) + Send + Sync> = {
         let action = next_batch_action;
-        Arc::new(move |opts: FinishedGamesQueryOptions| {
+        Arc::new(move |opts: GamesQueryOptions| {
             if action.pending().get_untracked() {
                 return;
             }
-            action.dispatch(GetFinishedBatchFromOptions { options: opts });
+            action.dispatch(GetBatchFromOptions { options: opts });
         })
     };
 
@@ -51,7 +51,7 @@ pub fn GameSearch() -> impl IntoView {
             if let Some(result) = next_batch_action.value().get_untracked() {
                 match result {
                     Ok(batch) => {
-                        total.set(Some(batch.total));
+                        total.set(batch.total);
                         errors.update(|e| {
                             if !e.is_empty() {
                                 e.clear();
@@ -88,7 +88,7 @@ pub fn GameSearch() -> impl IntoView {
                 }
 
                 errors.set(Vec::new());
-                match FinishedGamesQueryOptions::from_str(&query_string) {
+                match GamesQueryOptions::from_str(&query_string) {
                     Ok(mut opts) => {
                         opts.batch_token = None;
                         opts.game_progress = GameProgress::Finished;
@@ -109,7 +109,7 @@ pub fn GameSearch() -> impl IntoView {
                     }
                     Err(e) => {
                         let msgs = match e {
-                            shared_types::FinishedGamesQueryParseError::ValidationFailedList(
+                            shared_types::GamesQueryParseError::ValidationFailedList(
                                 errs,
                             ) => errs.into_iter().map(|e| e.to_string()).collect(),
                             _ => vec![e.to_string()],
