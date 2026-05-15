@@ -7,7 +7,7 @@ use crate::{
         online_users::{OnlineUsersSignal, OnlineUsersState},
         AuthContext,
     },
-    responses::ChallengeResponse,
+    responses::{ChallengeResponse, UserResponse},
 };
 use leptos::prelude::*;
 use shared_types::ChallengeId;
@@ -134,6 +134,41 @@ fn challenge_tab_state_changed(
     prev.map(|state| &state.signature) != next.map(|state| &state.signature)
 }
 
+fn challenge_time_sort_key(challenge: &ChallengeResponse) -> (i32, i32) {
+    (
+        challenge.time_base.unwrap_or(i32::MAX),
+        challenge.time_increment.unwrap_or(i32::MAX),
+    )
+}
+
+fn displayed_player(challenge: &ChallengeResponse, viewer_id: Option<Uuid>) -> &UserResponse {
+    if Some(challenge.challenger.uid) == viewer_id {
+        if let Some(opponent) = challenge.opponent.as_ref() {
+            return opponent;
+        }
+    }
+
+    &challenge.challenger
+}
+
+fn displayed_player_rating(challenge: &ChallengeResponse, viewer_id: Option<Uuid>) -> u64 {
+    let player = displayed_player(challenge, viewer_id);
+    player.rating_for_speed(&challenge.speed)
+}
+
+fn displayed_player_is_online(
+    challenge: &ChallengeResponse,
+    online_users: &OnlineUsersState,
+    viewer_id: Option<Uuid>,
+) -> bool {
+    matches!(
+        online_users
+            .username_status
+            .get(&displayed_player(challenge, viewer_id).username),
+        Some(UserStatus::Online)
+    )
+}
+
 fn build_tab_state(
     tab: ChallengeTab,
     challenges: &HashMap<ChallengeId, ChallengeResponse>,
@@ -171,36 +206,23 @@ fn build_tab_state(
 
         let mut grouped = GroupedChallenge::group_challenges(challenges_list);
         grouped.sort_by(|a, b| {
-            let online_a = matches!(
-                online_users
-                    .username_status
-                    .get(&a.challenge.challenger.username),
-                Some(UserStatus::Online)
-            );
-            let online_b = matches!(
-                online_users
-                    .username_status
-                    .get(&b.challenge.challenger.username),
-                Some(UserStatus::Online)
-            );
-
-            if a.challenge.challenge_id.0 == b.challenge.challenge_id.0 {
-                std::cmp::Ordering::Equal
-            } else if online_a && !online_b {
-                std::cmp::Ordering::Less
-            } else if !online_a && online_b {
-                std::cmp::Ordering::Greater
-            } else if a.challenge.time_base == b.challenge.time_base {
-                a.challenge
-                    .time_increment
-                    .unwrap_or(i32::MAX)
-                    .cmp(&b.challenge.time_increment.unwrap_or(i32::MAX))
-            } else {
-                a.challenge
-                    .time_base
-                    .unwrap_or(i32::MAX)
-                    .cmp(&b.challenge.time_base.unwrap_or(i32::MAX))
-            }
+            b.challenge
+                .rated
+                .cmp(&a.challenge.rated)
+                .then_with(|| {
+                    challenge_time_sort_key(&a.challenge)
+                        .cmp(&challenge_time_sort_key(&b.challenge))
+                })
+                .then_with(|| {
+                    displayed_player_is_online(&b.challenge, online_users, viewer_id).cmp(
+                        &displayed_player_is_online(&a.challenge, online_users, viewer_id),
+                    )
+                })
+                .then_with(|| {
+                    displayed_player_rating(&b.challenge, viewer_id)
+                        .cmp(&displayed_player_rating(&a.challenge, viewer_id))
+                })
+                .then_with(|| a.challenge.challenge_id.0.cmp(&b.challenge.challenge_id.0))
         });
 
         for group in grouped {
