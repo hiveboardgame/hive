@@ -84,6 +84,42 @@
             #!/usr/bin/env bash
             cargo run --package hive-hydra -- --config hive-hydra/hive-hydra.prod.yaml
           '')
+          (pkgs.writeShellScriptBin "tauri-ios" ''
+            #!/usr/bin/env bash
+            # Wraps `cargo tauri ios <args>` with:
+            #  1. DEVELOPER_DIR pointing at real Xcode (so xcrun/simctl work).
+            #     Can't be set globally — breaks nix's clang wrapper for macOS
+            #     host builds (Android cross-compile, build scripts, etc.).
+            #  2. CC/CXX/AR/linker pointing at Xcode's UNWRAPPED clang for
+            #     iOS targets. Nix's cc-wrapper auto-injects -mmacos-version-min
+            #     which conflicts with -mios-simulator-version-min and fails
+            #     iOS cross-compile (e.g. objc2-exception-helper's try_catch.m).
+            if [ ! -d /Applications/Xcode.app/Contents/Developer ]; then
+              echo "tauri-ios: Xcode not found at /Applications/Xcode.app — install from the App Store first." >&2
+              exit 1
+            fi
+            export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+
+            sim_clang=$(xcrun --sdk iphonesimulator -f clang)
+            sim_clangpp=$(xcrun --sdk iphonesimulator -f clang++)
+            sim_ar=$(xcrun --sdk iphonesimulator -f ar)
+            dev_clang=$(xcrun --sdk iphoneos -f clang)
+            dev_clangpp=$(xcrun --sdk iphoneos -f clang++)
+            dev_ar=$(xcrun --sdk iphoneos -f ar)
+
+            export CC_aarch64_apple_ios_sim="$sim_clang"
+            export CXX_aarch64_apple_ios_sim="$sim_clangpp"
+            export AR_aarch64_apple_ios_sim="$sim_ar"
+            export CARGO_TARGET_AARCH64_APPLE_IOS_SIM_LINKER="$sim_clang"
+
+            export CC_aarch64_apple_ios="$dev_clang"
+            export CXX_aarch64_apple_ios="$dev_clangpp"
+            export AR_aarch64_apple_ios="$dev_ar"
+            export CARGO_TARGET_AARCH64_APPLE_IOS_LINKER="$dev_clang"
+
+            cd "$(git rev-parse --show-toplevel)/apiary"
+            exec cargo tauri ios "$@"
+          '')
         ];
       in
       with pkgs;
@@ -117,13 +153,44 @@
                     "rust-src"
                     "rust-analyzer"
                   ];
-                  targets = [ "wasm32-unknown-unknown" ];
+                  targets = [
+                    "wasm32-unknown-unknown"
+                  ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
+                    # Apiary mobile app (Tauri) — only meaningful on macOS
+                    # (iOS requires Xcode; Android is doable on Linux but
+                    # the primary dev path is Mac).
+                    "aarch64-linux-android"
+                    "armv7-linux-androideabi"
+                    "i686-linux-android"
+                    "x86_64-linux-android"
+                    "aarch64-apple-ios"
+                    "aarch64-apple-ios-sim"
+                  ];
                 }
               ))
             ]
             ++ aliases;
           shellHook = ''
             export CARGO_TARGET_DIR="$PWD/.cargo/target"
+            # NOTE on iOS Tauri (Apiary): we do NOT export DEVELOPER_DIR
+            # globally. Setting it to Xcode breaks nix's clang-wrapper for
+            # host build-script compilation (libSystem unresolved). For iOS
+            # builds, prefix the command instead:
+            #   DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cargo tauri ios dev
+            # The `tauri-ios` alias below wraps this.
+            # For Apiary (Android Tauri): pick up Android Studio's SDK/NDK/JBR
+            # when present. Tauri's android init/dev needs ANDROID_HOME and
+            # NDK_HOME; gradle wants JAVA_HOME; adb/emulator on PATH is handy.
+            if [ -d "$HOME/Library/Android/sdk" ]; then
+              export ANDROID_HOME="$HOME/Library/Android/sdk"
+              export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
+              if [ -d "$ANDROID_HOME/ndk" ] && [ -n "$(ls "$ANDROID_HOME/ndk" 2>/dev/null)" ]; then
+                export NDK_HOME="$ANDROID_HOME/ndk/$(ls "$ANDROID_HOME/ndk" | sort -V | tail -1)"
+              fi
+            fi
+            if [ -d "/Applications/Android Studio.app/Contents/jbr/Contents/Home" ]; then
+              export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+            fi
             # Install wasm-bindgen-cli at the version matching our Cargo.lock
             WASM_BINDGEN_VERSION="0.2.108"
             if ! command -v wasm-bindgen &> /dev/null || [[ "$(wasm-bindgen --version 2>/dev/null | cut -d' ' -f2)" != "$WASM_BINDGEN_VERSION" ]]; then
