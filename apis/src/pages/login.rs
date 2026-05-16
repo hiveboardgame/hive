@@ -4,6 +4,7 @@ use crate::{
     providers::{AuthContext, RefererContext},
 };
 use leptos::{form::ActionForm, html, prelude::*};
+use leptos_router::hooks::use_navigate;
 
 #[component]
 pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
@@ -15,13 +16,45 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
     });
     let auth_context = expect_context::<AuthContext>();
     let login = ServerAction::<Login>::new();
+    // Capture the navigate closure in the synchronous component body,
+    // where the <Router> owner is live. Calling use_navigate() inside the
+    // async Effect::watch callback panics on CSR because the callback
+    // fires outside that owner.
+    let navigate = use_navigate();
+    // Watch login.value() rather than login.version(): version fires on
+    // dispatch (value still None) and again on completion, while value
+    // transitions None -> Some(Ok(_)) exactly once on success and we can
+    // react to that single transition without racing on which signal
+    // updates first inside Leptos' batched microtask.
     Effect::watch(
-        login.version(),
-        move |_, _, _| auth_context.refresh(true),
+        move || login.value().get(),
+        move |result, _, _| {
+            let Some(result) = result.as_ref() else { return };
+            let Ok(response) = result else {
+                // Server returned an error (bad credentials, etc.). Surface
+                // it via the existing Show-block; nothing to do here.
+                return;
+            };
+            // Capture the bearer token before auth refresh fires —
+            // get_account() needs it on the next request in cross-origin
+            // (Apiary mobile) contexts.
+            crate::client::set_token(Some(response.token.clone()));
+            auth_context.refresh(true);
+            // SSR follows the server-issued redirect for us; CSR (Apiary)
+            // doesn't, so push the route client-side too. Idempotent on SSR
+            // since we land on the same path either way.
+            let target = pathname.get_value();
+            let target = if target.is_empty() || target == "/login" {
+                "/".to_string()
+            } else {
+                target
+            };
+            navigate(&target, Default::default());
+        },
         false,
     );
     view! {
-        <div class=format!("w-full max-w-xs mx-auto pt-20 {extend_tw_classes}")>
+        <div class=format!("w-full max-w-xs mx-auto pt-page {extend_tw_classes}")>
             <ActionForm
                 action=login
                 attr:class="px-8 pt-6 pb-8 mb-4 rounded shadow-md bg-stone-300 dark:bg-reserve-twilight"

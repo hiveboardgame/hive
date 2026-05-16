@@ -4,14 +4,14 @@
   "version": "0.1.0",
   "identifier": "com.hivegame.apiary",
   "build": {
-    "frontendDist": "../dist"
+    "frontendDist": "../dist",
+    "devUrl": "http://127.0.0.1:8080"
   },
   "app": {
     "windows": [
       {
         "title": "Apiary",
         "label": "main",
-        "url": "https://hivegame.com",
         "width": 420,
         "height": 800
       }

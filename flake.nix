@@ -84,6 +84,38 @@
             #!/usr/bin/env bash
             cargo run --package hive-hydra -- --config hive-hydra/hive-hydra.prod.yaml
           '')
+          (pkgs.writeShellScriptBin "trunk-ios" ''
+            #!/usr/bin/env bash
+            # Trunk dev server for the Apiary iOS simulator. Defaults are
+            # fine: WASM hits the backend at localhost:3000, which the iOS
+            # simulator shares with the host.
+            cd "$(git rev-parse --show-toplevel)/apis"
+            exec trunk serve "$@"
+          '')
+          (pkgs.writeShellScriptBin "trunk-android" ''
+            #!/usr/bin/env bash
+            # Trunk dev server for the Apiary Android emulator. The emulator
+            # reaches the host machine via 10.0.2.2, so bake that into the
+            # WASM bundle (LEPTOS_SERVER_URL / LEPTOS_WS_URL are read at
+            # compile time in apis/src/lib.rs and apis/src/app.rs).
+            export LEPTOS_SERVER_URL="http://10.0.2.2:3000"
+            export LEPTOS_WS_URL="ws://10.0.2.2:3000/ws/"
+            cd "$(git rev-parse --show-toplevel)/apis"
+            exec trunk serve "$@"
+          '')
+          (pkgs.writeShellScriptBin "tauri-android" ''
+            #!/usr/bin/env bash
+            # Wraps `cargo tauri android <args>` from the apiary/ directory.
+            # tauri.android.conf.json overrides devUrl to http://10.0.2.2:8080
+            # so the emulator's webview can reach the host's trunk server.
+            # ANDROID_HOME / NDK_HOME / JAVA_HOME come from the shellHook.
+            if [ -z "$ANDROID_HOME" ]; then
+              echo "tauri-android: ANDROID_HOME is unset — install Android Studio + SDK first." >&2
+              exit 1
+            fi
+            cd "$(git rev-parse --show-toplevel)/apiary"
+            exec cargo tauri android "$@"
+          '')
           (pkgs.writeShellScriptBin "tauri-ios" ''
             #!/usr/bin/env bash
             # Wraps `cargo tauri ios <args>` with:
@@ -206,6 +238,9 @@
             echo "'migration' to 'run', 'revert', ... DB changes"
             echo "'pg-stop' to stop PosgreSQL"
             echo "'database' to connect to the PosgreSQL database"
+            echo "Apiary mobile:"
+            echo "  'trunk-ios' / 'trunk-android' — trunk serve with the right backend URL baked in"
+            echo "  'tauri-ios dev' / 'tauri-android dev' — launch the mobile app"
           '';
           LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath buildInputs;
         };

@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- maximum-scale=1.0 + user-scalable=no prevents iOS Safari from
+         auto-zooming when an input with font-size < 16px is focused. We're
+         a webview-hosted mobile app, so pinch-to-zoom isn't expected UX. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Apiary</title>
 
     <!-- Build the apis crate as WASM in CSR mode. The leptos `csr` feature

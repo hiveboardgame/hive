@@ -27,10 +27,10 @@ actix-ws = { workspace = true, optional = true }
 anyhow = { workspace = true }
 argon2 = { workspace = true, optional = true }
 bimap = { workspace = true }
-bytes = { workspace = true, optional = true }
+bytes = { workspace = true }
 cfg-if = { workspace = true }
 dashmap = { workspace = true, optional = true }
-futures-util = { workspace = true, optional = true }
+futures-util = { workspace = true }
 chrono.workspace = true
 codee = { workspace = true }
 console_error_panic_hook = { workspace = true }
@@ -74,7 +74,7 @@ reqwest = { workspace = true }
 reactive_stores = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
-server_fn = { workspace = true }
+server_fn = { workspace = true, features = ["browser"] }
 send_wrapper = { workspace = true }
 sha2 = { workspace = true }
 shared_types = { path = "../shared_types" }
@@ -103,9 +103,7 @@ ssr = [
   "dep:actix-web",
   "dep:actix-ws",
   "dep:argon2",
-  "dep:bytes",
   "dep:dashmap",
-  "dep:futures-util",
   "dep:tokio",
   "dep:db",
   "dep:diesel",

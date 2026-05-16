@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::api::v1::auth::jwt_secret::JwtSecret;
 use crate::websocket::{
     messages::SocketTx,
     ws_connection::reader_task,
@@ -27,6 +28,7 @@ pub async fn start_connection(
     pool: Data<DbPool>,
     identity: Option<Identity>,
     data: Data<WebsocketData>,
+    jwt_secret: Data<JwtSecret>,
 ) -> Result<HttpResponse, Error> {
     let (user_uid, username, admin, authed) = resolve_identity(identity, &pool).await;
 
@@ -64,19 +66,36 @@ pub async fn start_connection(
     let hub = hub.get_ref().clone();
     let data = Arc::clone(&data);
     let pool = pool.get_ref().clone();
+    let jwt_secret = jwt_secret.into_inner();
     actix_web::rt::spawn(reader_task(
-        session, msg_stream, socket, hub, data, pool, user_uid, username, admin, authed,
+        session,
+        msg_stream,
+        socket,
+        hub,
+        data,
+        pool,
+        jwt_secret,
+        user_uid,
+        username,
+        admin,
+        authed,
     ));
 
     Ok(response)
 }
 
-async fn resolve_identity(identity: Option<Identity>, pool: &DbPool) -> (Uuid, String, bool, bool) {
+async fn resolve_identity(
+    identity: Option<Identity>,
+    pool: &DbPool,
+) -> (Uuid, String, bool, bool) {
     let anonymous = || {
         let id = Uuid::new_v4();
         (id, id.to_string(), false, false)
     };
 
+    // Identity cookie (SSR + hydrate same-origin path). Cross-origin
+    // clients (Apiary mobile) start anonymous and upgrade via a
+    // `ClientRequest::Auth(token)` frame sent immediately after open.
     let Some(id) = identity else {
         log::debug!("WS connect (anonymous): no identity cookie");
         return anonymous();
@@ -92,17 +111,21 @@ async fn resolve_identity(identity: Option<Identity>, pool: &DbPool) -> (Uuid, S
         return anonymous();
     };
 
+    load_user(uuid, pool, "cookie").await.unwrap_or_else(anonymous)
+}
+
+async fn load_user(uuid: Uuid, pool: &DbPool, source: &str) -> Option<(Uuid, String, bool, bool)> {
     match get_conn(pool).await {
         Ok(mut conn) => match User::find_by_uuid(&uuid, &mut conn).await {
             Ok(user) => {
-                log::debug!("WS connect: user {} authed", user.username);
-                (uuid, user.username, user.admin, true)
+                log::debug!("WS connect ({source}): user {} authed", user.username);
+                Some((uuid, user.username, user.admin, true))
             }
-            Err(_) => anonymous(),
+            Err(_) => None,
         },
         Err(err) => {
-            log::warn!("WS connect: DB pool unavailable, falling back to anonymous: {err}");
-            anonymous()
+            log::warn!("WS connect ({source}): DB pool unavailable: {err}");
+            None
         }
     }
 }

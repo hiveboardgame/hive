@@ -74,6 +74,21 @@ html[data-display-mode="standalone"] {
   grid-template-columns: repeat(8, minmax(0, 1fr)) repeat(2, minmax(0, 220px));
 }
 
+/* Padding equal to the fixed <Header> height, including the iOS safe-area
+   inset. Use on the top-level container of any page so its content clears
+   the header (and the notch on iOS).
+   Header height is 2.5rem; safe-area-inset-top is 0 on devices without a
+   top inset, so this collapses to pt-10 there. */
+@utility pt-header {
+  padding-top: calc(2.5rem + env(safe-area-inset-top));
+}
+
+/* Larger variant for pages that want aesthetic breathing room below the
+   header (used to be pt-20 = 5rem). Collapses to pt-20 on non-iOS. */
+@utility pt-page {
+  padding-top: calc(5rem + env(safe-area-inset-top));
+}
+
 @layer base {
   :root {
     color-scheme: light;

@@ -1,7 +1,7 @@
 use crate::responses::HomeBanner;
 use leptos::prelude::*;
 
-#[server]
+#[server(client = crate::client::ApiClient)]
 pub async fn get() -> Result<Option<HomeBanner>, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::{get_conn, models};
@@ -12,7 +12,7 @@ pub async fn get() -> Result<Option<HomeBanner>, ServerFnError> {
     Ok(banner)
 }
 
-#[server]
+#[server(client = crate::client::ApiClient)]
 pub async fn get_with_display() -> Result<(HomeBanner, bool), ServerFnError> {
     use crate::functions::{auth::identity::ensure_admin, db::pool};
     use db_lib::{get_conn, models};
@@ -25,7 +25,7 @@ pub async fn get_with_display() -> Result<(HomeBanner, bool), ServerFnError> {
     Ok((banner, display))
 }
 
-#[server]
+#[server(client = crate::client::ApiClient)]
 pub async fn update(title: String, content: String, display: bool) -> Result<(), ServerFnError> {
     use crate::functions::{auth::identity::ensure_admin, db::pool};
     use db_lib::{get_conn, models};

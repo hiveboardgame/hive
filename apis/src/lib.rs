@@ -1,4 +1,10 @@
+// SSR-only modules. Mirror what main.rs declares for the binary so that
+// ssr-gated lib-side code (server function bodies, websocket handlers,
+// identity helpers) can reach `crate::api::v1::*`.
+#[cfg(feature = "ssr")]
+pub mod api;
 pub mod app;
+pub mod client;
 pub mod common;
 pub mod components;
 pub mod functions;
@@ -21,6 +27,9 @@ if #[cfg(feature = "hydrate")] {
       use app::*;
 
       console_error_panic_hook::set_once();
+      // Rehydrate any stored bearer token before server functions fire. Empty
+      // on first run, populated after the user logs in.
+      client::load_token_from_storage();
 
       leptos::mount::hydrate_body(App);
     }
@@ -49,6 +58,8 @@ if #[cfg(feature = "csr")] {
 
       console_error_panic_hook::set_once();
       server_fn::client::set_server_url(SERVER_URL);
+      // Rehydrate any stored bearer token before server functions fire.
+      client::load_token_from_storage();
       leptos::mount::mount_to_body(App);
     }
 }

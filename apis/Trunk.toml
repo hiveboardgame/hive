@@ -8,13 +8,18 @@
 
 [build]
 target = "index.html"
-dist = "dist"
+# Output into apiary/dist/ so Tauri's `frontendDist: "../dist"` picks it up
+# for production bundles. trunk serve also reads from here when consumed by
+# `cargo tauri ios dev` via devUrl.
+dist = "../apiary/dist"
 # Filename hashing is annoying for Tauri (paths in index.html change every
 # build); turn it off until we have a real release pipeline.
 filehash = false
 
 [serve]
-address = "127.0.0.1"
+# Bind to all interfaces so emulator/simulator clients can reach the dev
+# server: iOS simulator via 127.0.0.1, Android emulator via 10.0.2.2.
+address = "0.0.0.0"
 port = 8080
 # Reload on Rust changes.
 open = false

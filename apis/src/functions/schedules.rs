@@ -2,7 +2,7 @@ use crate::responses::GameResponse;
 use chrono::{DateTime, Utc};
 use leptos::prelude::*;
 
-#[server]
+#[server(client = crate::client::ApiClient)]
 pub async fn mark_schedule_seen(schedule_id: String) -> Result<(), ServerFnError> {
     use crate::functions::{auth::identity::uuid, db::pool};
     use db_lib::{get_conn, models::Schedule};
@@ -18,7 +18,7 @@ pub async fn mark_schedule_seen(schedule_id: String) -> Result<(), ServerFnError
     Ok(())
 }
 
-#[server]
+#[server(client = crate::client::ApiClient)]
 pub async fn get_upcoming_tournament_games(
 ) -> Result<Vec<(DateTime<Utc>, GameResponse)>, ServerFnError> {
     use crate::{functions::db::pool, responses::GameResponse};

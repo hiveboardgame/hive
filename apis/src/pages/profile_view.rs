@@ -98,7 +98,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     );
 
     view! {
-        <div class="flex overflow-hidden flex-col px-3 pt-12 bg-light h-[100vh] dark:bg-gray-950">
+        <div class="flex overflow-hidden flex-col px-3 pt-[calc(3rem+env(safe-area-inset-top))] bg-light h-[100vh] dark:bg-gray-950">
             <Transition fallback=move || {
                 view! { <p>"Loading Profile..."</p> }
             }>

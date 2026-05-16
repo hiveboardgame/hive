@@ -1,5 +1,9 @@
 #![recursion_limit = "256"]
 pub mod api;
+// `client` mirrors lib.rs so the #[server(client = crate::client::ApiClient)]
+// annotations on functions in functions/*.rs resolve when those files are
+// compiled as part of the bin too. The token store is a no-op server-side.
+pub mod client;
 pub mod common;
 pub mod functions;
 pub mod jobs;
@@ -181,6 +185,7 @@ async fn main() -> std::io::Result<()> {
                 Cors::default()
                     .allowed_origin("http://127.0.0.1:8080")
                     .allowed_origin("http://localhost:8080")
+                    .allowed_origin("http://10.0.2.2:8080")
                     .allowed_origin("tauri://localhost")
                     .allowed_origin("http://tauri.localhost")
                     .allow_any_method()

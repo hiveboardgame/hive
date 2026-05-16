@@ -2,7 +2,7 @@ use crate::responses::AccountResponse;
 use leptos::prelude::*;
 use shared_types::Takeback;
 
-#[server]
+#[server(client = crate::client::ApiClient)]
 pub async fn edit_account(
     new_password: String,
     new_password_confirmation: String,
@@ -51,7 +51,7 @@ pub async fn edit_account(
     AccountResponse::from_uuid(&user.id, &mut conn).await
 }
 
-#[server]
+#[server(client = crate::client::ApiClient)]
 pub async fn edit_takeback(takeback: Takeback) -> Result<(), ServerFnError> {
     use crate::functions::{auth::identity::uuid, db::pool};
     use db_lib::{get_conn, models::User};

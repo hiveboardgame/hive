@@ -21,7 +21,7 @@ pub fn validate_password(password: &str, password_confirmation: &str) -> Result<
     Ok(())
 }
 
-#[server]
+#[server(client = crate::client::ApiClient)]
 pub async fn register(
     username: String,
     email: String,

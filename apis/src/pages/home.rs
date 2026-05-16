@@ -18,7 +18,7 @@ use leptos::prelude::*;
 pub fn Home() -> impl IntoView {
     let banner = OnceResource::new(async move { home_banner::get().await.ok().flatten() });
     view! {
-        <div class="flex overflow-x-hidden flex-col justify-start items-center pt-20 w-full md:justify-center">
+        <div class="flex overflow-x-hidden flex-col justify-start items-center pt-page w-full md:justify-center">
             <Transition>
                 {move || {
                     banner

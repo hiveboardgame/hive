@@ -30,7 +30,14 @@ pub struct Sounds {
 
 impl Sounds {
     pub fn play_sound(&self, kind: SoundType) {
-        let config = expect_context::<Config>().0;
+        // Some scheduled callbacks (notably reactive effects polled via
+        // wasm_bindgen_futures on CSR) fire outside the owner that provided
+        // Config. Falling back to use_context + early return keeps the
+        // caller's downstream state updates running instead of panicking.
+        let Some(config) = use_context::<Config>() else {
+            return;
+        };
+        let config = config.0;
         if !config.get_untracked().prefers_sound {
             return;
         };
