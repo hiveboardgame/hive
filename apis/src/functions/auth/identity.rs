@@ -10,7 +10,7 @@ pub async fn identity() -> Result<Identity, ServerFnError> {
 }
 
 /// Resolve the current user's UUID from either:
-/// 1. `Authorization: Bearer <jwt>` header — used by the Apiary mobile app
+/// 1. `Authorization: Bearer <jwt>` header — used by the HiveGame mobile app
 ///    (CSR build, cross-origin so cookies don't flow reliably).
 /// 2. `actix-identity` session cookie — used by the SSR + hydrate path
 ///    (same-origin, HttpOnly cookie).

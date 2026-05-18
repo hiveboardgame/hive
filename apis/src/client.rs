@@ -1,7 +1,7 @@
 //! Custom `server_fn::client::Client` implementation that attaches a bearer
 //! token to every request (both HTTP and WebSocket).
 //!
-//! Used by the Apiary mobile app's CSR build, where cookies don't flow
+//! Used by the HiveGame mobile (culex) CSR build, where cookies don't flow
 //! reliably between the Tauri webview origin and the backend. SSR + hydrate
 //! same-origin builds also link this — the token store stays empty in those
 //! paths, so it transparently becomes a no-op pass-through to the underlying
@@ -26,7 +26,7 @@ use server_fn::{
 use std::future::Future;
 use std::sync::{OnceLock, RwLock};
 
-const STORAGE_KEY: &str = "apiary_token";
+const STORAGE_KEY: &str = "hivegame_token";
 
 fn store() -> &'static RwLock<Option<String>> {
     static TOKEN: OnceLock<RwLock<Option<String>>> = OnceLock::new();

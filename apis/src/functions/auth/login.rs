@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 /// What login() returns to the client.
 ///
 /// - `account`: the user object the frontend uses to populate auth state.
-/// - `token`: a JWT for bearer auth, used by cross-origin clients (Apiary
+/// - `token`: a JWT for bearer auth, used by cross-origin clients (HiveGame
 ///   mobile, future native clients). SSR + hydrate ignore this — they're
 ///   same-origin and rely on the Identity cookie set in the same response.
 #[derive(Debug, Clone, Serialize, Deserialize)]

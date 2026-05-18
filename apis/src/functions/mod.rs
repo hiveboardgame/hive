@@ -3,6 +3,7 @@ pub mod auth;
 pub mod challenges;
 #[cfg(feature = "ssr")]
 pub mod db;
+pub mod devices;
 pub mod games;
 pub mod home_banner;
 pub mod hostname;
@@ -10,6 +11,8 @@ pub mod oauth;
 #[cfg(feature = "ssr")]
 pub mod pwa;
 pub mod schedules;
+#[cfg(feature = "ssr")]
+pub mod well_known;
 pub mod telemetry;
 pub mod tournaments;
 pub mod users;

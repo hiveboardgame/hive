@@ -8,6 +8,8 @@ pub mod client;
 pub mod common;
 pub mod components;
 pub mod functions;
+#[cfg(feature = "ssr")]
+pub mod notifications;
 pub mod pages;
 pub mod providers;
 pub mod responses;
@@ -41,10 +43,10 @@ if #[cfg(feature = "csr")] {
 
   use wasm_bindgen::prelude::wasm_bindgen;
 
-    /// CSR-only entry point used by the Apiary mobile shell (and any other
-    /// bundled-WASM consumer). Points server functions at the backend URL
+    /// CSR-only entry point used by the HiveGame mobile shell (culex) and any
+    /// other bundled-WASM consumer. Points server functions at the backend URL
     /// chosen at build time via `LEPTOS_SERVER_URL` (default: local dev
-    /// server). For prod Apiary bundles, build with
+    /// server). For prod HiveGame mobile bundles, build with
     /// `LEPTOS_SERVER_URL=https://hivegame.com trunk build`.
     /// SSR/hydrate paths use the `hydrate()` fn above instead.
     #[wasm_bindgen(start)]

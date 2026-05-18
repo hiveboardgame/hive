@@ -7,6 +7,7 @@ pub mod client;
 pub mod common;
 pub mod functions;
 pub mod jobs;
+pub mod notifications;
 pub mod providers;
 pub mod responses;
 pub mod websocket;
@@ -45,6 +46,16 @@ async fn main() -> std::io::Result<()> {
     use leptos_actix::{generate_route_list, LeptosRoutes};
     use sha2::*;
 
+    // rustls 0.23 requires a CryptoProvider to be picked explicitly when more
+    // than one provider feature is enabled across the dep graph. Both
+    // aws-lc-rs and ring end up in our tree (gcp_auth + reqwest each pull
+    // their own preference), so we install aws-lc-rs once at startup —
+    // rustls's preferred default since 0.23. Must run before any TLS
+    // handshake (i.e. before gcp_auth fetches its first access token).
+    rustls::crypto::aws_lc_rs::default_provider()
+        .install_default()
+        .expect("failed to install rustls aws-lc-rs crypto provider");
+
     let conf = get_configuration(None).expect("Got configuration");
     let addr = conf.leptos_options.site_addr;
     let routes = generate_route_list(App);
@@ -68,6 +79,49 @@ async fn main() -> std::io::Result<()> {
     let hub = Data::new(WsHub::new(Arc::clone(&data), pool.clone()));
     let jwt_secret = JwtSecret::new(config.jwt_secret);
     let jwt_key = Data::new(jwt_secret);
+
+    // Notification dispatcher init. The FCM backend reads
+    // GOOGLE_APPLICATION_CREDENTIALS for the service-account JSON; missing
+    // / empty / unreadable -> WARN and continue without FCM. APNs is None
+    // during the iOS pause. The dispatcher is a tokio task; trigger sites
+    // call `crate::notifications::notify(Event::…)` to enqueue.
+    //
+    // All branches log at WARN so they're visible under the default Warn
+    // logger initialised above — push state is operationally important
+    // enough that the operator should always see which path was taken.
+    // All `notifications` references use `crate::` rather than `apis::`
+    // here. The shared source files in this project are compiled into both
+    // the bin and the lib, producing two separate type universes with two
+    // separate `NOTIFIER` statics. Trigger sites (e.g. turn_handler.rs)
+    // import via `crate::notifications::…`, which resolves to bin-when-bin
+    // and lib-when-lib — and the WS chain runs through the bin's path at
+    // runtime. So we initialise the bin's NOTIFIER here to match.
+    let fcm = match std::env::var("GOOGLE_APPLICATION_CREDENTIALS")
+        .ok()
+        .filter(|s| !s.is_empty())
+    {
+        Some(path) => match crate::notifications::FcmNotifier::from_credentials_path(&path) {
+            Ok(n) => {
+                log::warn!("FCM notifier initialised from {path}");
+                Some(n)
+            }
+            Err(err) => {
+                log::warn!("FCM notifier disabled (could not load {path}): {err}");
+                None
+            }
+        },
+        None => {
+            log::warn!(
+                "FCM notifier disabled: GOOGLE_APPLICATION_CREDENTIALS is not set or empty"
+            );
+            None
+        }
+    };
+    let push_backends = crate::notifications::PushBackends { fcm, apns: None };
+    crate::notifications::init(crate::notifications::Notifier::spawn(
+        pool.clone(),
+        push_backends,
+    ));
 
     // Telemetry: enabled by default in release with a 30s interval and a
     // default CSV path. Debug builds are opt-in. Both env vars override:
@@ -125,6 +179,8 @@ async fn main() -> std::io::Result<()> {
             .service(favicon)
             .service(start_connection)
             .service(functions::pwa::cache)
+            .service(functions::well_known::apple_app_site_association)
+            .service(functions::well_known::assetlinks)
             .service(functions::oauth::callback)
             .service(get_token)
             .service(get_identity)
@@ -177,17 +233,47 @@ async fn main() -> std::io::Result<()> {
             })
             .wrap(Compress::default())
             // CORS for cross-origin clients: the trunk dev server during
-            // CSR work, and Tauri webviews (Apiary mobile app) once we bundle
+            // CSR work, and Tauri webviews (HiveGame mobile app) once we bundle
             // the CSR build. supports_credentials() so session cookies flow.
             // Note: same-origin SSR + hydrate is unaffected — browsers don't
             // run CORS checks against same-origin requests.
+            //
+            // `allowed_origin_fn` accepts any RFC1918 LAN-IP on :8080 so the
+            // mobile dev flow (trunk-mobile binds 0.0.0.0:8080 and the
+            // emulator/device hits the host's LAN IP) doesn't need its IP
+            // hardcoded. The explicit allow-list above covers loopback +
+            // bundled-Tauri origins, where the origin host isn't an IP.
             .wrap(
                 Cors::default()
                     .allowed_origin("http://127.0.0.1:8080")
                     .allowed_origin("http://localhost:8080")
-                    .allowed_origin("http://10.0.2.2:8080")
                     .allowed_origin("tauri://localhost")
                     .allowed_origin("http://tauri.localhost")
+                    .allowed_origin_fn(|origin, _req_head| {
+                        let Some(host_port) = origin
+                            .to_str()
+                            .ok()
+                            .and_then(|s| s.strip_prefix("http://"))
+                        else {
+                            return false;
+                        };
+                        let Some(host) = host_port.strip_suffix(":8080") else {
+                            return false;
+                        };
+                        let octets: Vec<u8> = host
+                            .split('.')
+                            .filter_map(|o| o.parse::<u8>().ok())
+                            .collect();
+                        if octets.len() != 4 {
+                            return false;
+                        }
+                        match (octets[0], octets[1]) {
+                            (10, _) => true,
+                            (192, 168) => true,
+                            (172, b) if (16..=31).contains(&b) => true,
+                            _ => false,
+                        }
+                    })
                     .allow_any_method()
                     .allow_any_header()
                     .supports_credentials()

@@ -29,8 +29,10 @@ use crate::{
     providers::{
         challenges::provide_challenges,
         chat::provide_chat,
+        deep_link::DeepLinkListener,
         games::provide_games,
         online_users::provide_users,
+        push_registration::PushRegistrationListener,
         provide_alerts,
         provide_api_requests,
         provide_auth,
@@ -79,7 +81,7 @@ pub fn App() -> impl IntoView {
     provide_users();
     provide_challenges();
     // WebSocket URL: same-origin "/ws/" for SSR/hydrate (the backend serves
-    // the page AND the WS); absolute for CSR (Apiary / standalone WASM)
+    // the page AND the WS); absolute for CSR (HiveGame mobile / standalone WASM)
     // because the WS lives on a different origin than the bundled assets.
     // LEPTOS_WS_URL overrides at build time (e.g. wss://hivegame.com/ws/).
     #[cfg(feature = "csr")]
@@ -111,6 +113,8 @@ pub fn App() -> impl IntoView {
             .same_site(SameSite::Lax)
             .path("/")>
             <Router>
+                <DeepLinkListener />
+                <PushRegistrationListener />
                 <Routes fallback=|| "404 Not Found">
                     <ParentRoute
                         path=path!("")

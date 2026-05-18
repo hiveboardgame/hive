@@ -1,0 +1,11 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. windowBackground is the cold-start splash
+         (rendered before the WebView mounts); status bar matches so there's
+         no color flash on launch. windowLightStatusBar=false → white icons
+         on the dark navy bar. -->
+    <style name="Theme.culex" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/ic_launcher_background</item>
+        <item name="android:statusBarColor">@color/ic_launcher_background</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

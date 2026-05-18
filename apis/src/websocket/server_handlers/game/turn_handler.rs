@@ -1,7 +1,8 @@
-use crate::websocket::{busybee::Busybee, WebsocketData, WsHub};
+use crate::websocket::{WebsocketData, WsHub};
 
 use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
+    notifications::{notify, Event},
     websocket::messages::{
         GameFinalize,
         HandlerOutput,
@@ -13,13 +14,13 @@ use crate::{
 use anyhow::Result;
 use db_lib::{
     get_conn,
-    models::{Game, Tournament, User},
+    models::{Game, User},
     DbPool,
 };
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
 use hive_lib::{GameError, State, Turn};
 use shared_types::{GameId, TimeMode};
-use std::{str::FromStr, sync::Arc};
+use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct TurnHandler {
@@ -91,29 +92,31 @@ impl TurnHandler {
             })
             .await?;
 
-        match TimeMode::from_str(&game.time_mode) {
-            Ok(TimeMode::RealTime) | Err(_) => {}
-            _ => {
-                let opponent_id = game.not_current_player_id();
-                let opponent = User::find_by_uuid(&opponent_id, &mut conn).await?;
-                let tournament_name = if let Some(id) = game.tournament_id {
-                    let tournament = Tournament::find_by_uuid(id, &mut conn).await?;
-                    format!(" (Tournament: {})", tournament.name)
-                } else {
-                    String::new()
-                };
-
-                let msg = format!("[Your turn](<https://hivegame.com/game/{}>) in your game vs {}{}.\nYou have {} to play.",
-                    game.nanoid,
-                    opponent.username,
-                    tournament_name,
-                    game.str_time_left_for_player(game.current_player_id),
-                );
-
-                if let Err(e) = Busybee::msg(game.current_player_id, msg).await {
-                    println!("{e}");
-                };
-            }
+        // Notify the player whose turn it now is — unless this move ended
+        // the game, in which case there's no "your turn" left. (GameEnded
+        // will be a separate event in a later slice.)
+        //
+        // The unified dispatcher honours
+        // `notification_preferences.your_turn`: typically `{push, discord}`
+        // for users carried over from the pre-dispatcher era (the
+        // 2026-05-18 backfill migration added 'discord' for all existing
+        // users to preserve the legacy correspondence-game behaviour),
+        // `{push}` for new users.
+        //
+        // Fan-out across realtime + correspondence: the legacy code only
+        // fired Busybee for non-realtime games on the assumption realtime
+        // players are at the screen. The new dispatcher relies on the
+        // (already-correct) per-channel filtering instead — push only
+        // goes to offline players, discord goes to whoever has it in
+        // prefs.
+        if !game.finished {
+            let opponent_id = game.not_current_player_id();
+            let opponent = User::find_by_uuid(&opponent_id, &mut conn).await?;
+            notify(Event::YourTurn {
+                recipient: game.current_player_id,
+                opponent: opponent.username,
+                game_nanoid: game.nanoid.clone(),
+            });
         }
 
         let mut messages = Vec::new();

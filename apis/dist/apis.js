@@ -110,10 +110,10 @@ export class IntoUnderlyingSource {
 if (Symbol.dispose) IntoUnderlyingSource.prototype[Symbol.dispose] = IntoUnderlyingSource.prototype.free;
 
 /**
- * r" CSR-only entry point used by the Apiary mobile shell (and any other
- * r" bundled-WASM consumer). Points server functions at the backend URL
+ * r" CSR-only entry point used by the HiveGame mobile shell (culex) and any
+ * r" other bundled-WASM consumer. Points server functions at the backend URL
  * r" chosen at build time via `LEPTOS_SERVER_URL` (default: local dev
- * r" server). For prod Apiary bundles, build with
+ * r" server). For prod HiveGame mobile bundles, build with
  * r" `LEPTOS_SERVER_URL=https://hivegame.com trunk build`.
  * r" SSR/hydrate paths use the `hydrate()` fn above instead.
  */

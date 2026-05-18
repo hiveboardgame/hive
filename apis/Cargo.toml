@@ -31,6 +31,7 @@ bytes = { workspace = true }
 cfg-if = { workspace = true }
 dashmap = { workspace = true, optional = true }
 futures-util = { workspace = true }
+gcp_auth = { workspace = true, optional = true }
 chrono.workspace = true
 codee = { workspace = true }
 console_error_panic_hook = { workspace = true }
@@ -71,6 +72,7 @@ log = { workspace = true }
 markdown = { workspace = true }
 rand = { workspace = true, optional = true }
 reqwest = { workspace = true }
+rustls = { workspace = true, optional = true }
 reactive_stores = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
@@ -112,6 +114,8 @@ ssr = [
   "dep:leptos_actix",
   "dep:rand",
   "dep:jsonwebtoken",
+  "dep:gcp_auth",
+  "dep:rustls",
   "leptos/ssr",
   "leptos-use/ssr",
   "leptos-use/actix",

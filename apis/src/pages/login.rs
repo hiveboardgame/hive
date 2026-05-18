@@ -37,11 +37,11 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
             };
             // Capture the bearer token before auth refresh fires —
             // get_account() needs it on the next request in cross-origin
-            // (Apiary mobile) contexts.
+            // (HiveGame mobile) contexts.
             crate::client::set_token(Some(response.token.clone()));
             auth_context.refresh(true);
-            // SSR follows the server-issued redirect for us; CSR (Apiary)
-            // doesn't, so push the route client-side too. Idempotent on SSR
+            // SSR follows the server-issued redirect for us; CSR (HiveGame
+            // mobile) doesn't, so push the route client-side too. Idempotent on SSR
             // since we land on the same path either way.
             let target = pathname.get_value();
             let target = if target.is_empty() || target == "/login" {

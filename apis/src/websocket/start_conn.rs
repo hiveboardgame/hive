@@ -94,7 +94,7 @@ async fn resolve_identity(
     };
 
     // Identity cookie (SSR + hydrate same-origin path). Cross-origin
-    // clients (Apiary mobile) start anonymous and upgrade via a
+    // clients (HiveGame mobile) start anonymous and upgrade via a
     // `ClientRequest::Auth(token)` frame sent immediately after open.
     let Some(id) = identity else {
         log::debug!("WS connect (anonymous): no identity cookie");

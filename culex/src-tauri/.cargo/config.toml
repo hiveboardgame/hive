@@ -1,0 +1,42 @@
+# HiveGame mobile (culex) cargo overrides for iOS Tauri builds.
+#
+# Why this file exists:
+# When `tauri-ios dev` runs, the actual `cargo build --target aarch64-apple-ios-sim`
+# is launched by xcodebuild's "Build Rust Code" script phase. xcodebuild filters
+# the parent shell's environment to a whitelist before invoking the script, so
+# CC_<target> exports from our `tauri-ios` wrapper don't reach cc-rs.
+#
+# Cargo's `[env]` block applies env vars directly to every subprocess cargo
+# spawns — including build scripts — so it survives the xcodebuild filter.
+#
+# /usr/bin/clang is a stub that dispatches to the active Xcode toolchain via
+# DEVELOPER_DIR (which xcodebuild sets for us). It is NOT nix's wrapper, so it
+# accepts iOS target flags cleanly.
+
+[env]
+# iOS cross-compile (see header comment)
+CC_aarch64_apple_ios_sim = { value = "/usr/bin/clang", force = true }
+CC_aarch64_apple_ios = { value = "/usr/bin/clang", force = true }
+CXX_aarch64_apple_ios_sim = { value = "/usr/bin/clang++", force = true }
+CXX_aarch64_apple_ios = { value = "/usr/bin/clang++", force = true }
+
+# Host (macOS) — also point at Xcode's clang so proc-macros and host build
+# scripts (tauri-macros, tauri-plugin-deep-link build.rs, …) don't go through
+# nix's cc-wrapper, which fails to find -liconv etc. when DEVELOPER_DIR is
+# set to Xcode (which `tauri-ios` does for the iOS xcodebuild integration).
+CC_aarch64_apple_darwin = { value = "/usr/bin/clang", force = true }
+CC_x86_64_apple_darwin = { value = "/usr/bin/clang", force = true }
+CXX_aarch64_apple_darwin = { value = "/usr/bin/clang++", force = true }
+CXX_x86_64_apple_darwin = { value = "/usr/bin/clang++", force = true }
+
+[target.aarch64-apple-ios-sim]
+linker = "/usr/bin/clang"
+
+[target.aarch64-apple-ios]
+linker = "/usr/bin/clang"
+
+[target.aarch64-apple-darwin]
+linker = "/usr/bin/clang"
+
+[target.x86_64-apple-darwin]
+linker = "/usr/bin/clang"

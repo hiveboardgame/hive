@@ -1,7 +1,7 @@
 use super::rating::Rating;
 use crate::{
     db_error::DbError,
-    models::{Game, GameUser, NewRating},
+    models::{Game, GameUser, NewRating, NotificationPreferences},
     schema::{
         games::{self, current_player_id, finished, game_status, tournament_id},
         ratings::{self, rating},
@@ -171,6 +171,7 @@ impl User {
                 .execute(conn)
                 .await?;
         }
+        NotificationPreferences::create_for_user(user.id, conn).await?;
         Ok(user)
     }
 

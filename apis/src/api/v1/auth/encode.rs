@@ -30,7 +30,7 @@ pub fn jwt_encode(bot: Bot, key: &EncodingKey) -> Result<String> {
     Ok(token)
 }
 
-/// Encode a JWT for a regular user (Apiary mobile app, future native clients).
+/// Encode a JWT for a regular user (HiveGame mobile app, future native clients).
 /// `sub` is the user's UUID — `identity::uuid()` matches against this on the
 /// backend. Longer expiry than bot tokens (30 days) so mobile users don't
 /// re-login constantly; JWTs are stateless so revocation waits for expiry.

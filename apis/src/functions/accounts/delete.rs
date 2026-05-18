@@ -13,5 +13,6 @@ pub async fn delete_account() -> Result<(), ServerFnError> {
     let mut conn = get_conn(&pool).await?;
     let user = User::find_by_uuid(&uuid, &mut conn).await?;
     user.delete(&mut conn).await?;
-    logout().await
+    // user.delete cascades to push_devices via the FK, so no device_id needed.
+    logout(None).await
 }
