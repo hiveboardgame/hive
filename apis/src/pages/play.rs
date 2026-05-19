@@ -37,6 +37,7 @@ use leptos_router::hooks::{use_params_map, use_query_map};
 use leptos_use::{use_event_listener, use_window};
 use shared_types::{GameId, GameStart};
 use uuid::Uuid;
+use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
 
 #[derive(Clone)]
