@@ -33,9 +33,11 @@ cargo install cargo-leptos
 #### 3. Install and Setup PostgreSQL
 - Follow the installation instructions for your OS ([example for Arch Linux](https://wiki.archlinux.org/title/PostgreSQL)).
 - Edit `hba.conf` to `host   all   all  local 127.0.0.1/32 trust` (to allow passwordless login).
-- With PostgreSQL running, create a database `hive-local` and a user `hive-dev` as the owner:
+- With PostgreSQL running, create the development and test databases with `hive-dev` as the owner:
 ```sh
-sudo -u postgres createuser hive-dev && sudo -u postgres createdb -O hive-dev hive-local
+sudo -u postgres createuser hive-dev
+sudo -u postgres createdb -O hive-dev hive-local
+sudo -u postgres createdb -O hive-dev hive-test
 ```
 
 ### Manual Setup (Without Nix)
@@ -83,6 +85,7 @@ nix develop -c $SHELL
 ``` sh
 pg-start
 ```
+This creates both `hive-local` and `hive-test`.
 
 4. Now start the server
 ```sh
@@ -127,7 +130,8 @@ docker compose down
 docker compose up -d
 ```
 
-This will create a database, apply migrations and run the app on localhost:3000.
+This will create `hive-local` and `hive-test`, apply migrations and run the app on localhost:3000.
+If you already have an older `hive-dev` Docker volume, create the test database with `docker compose exec postgres createdb -U hive-dev -O hive-dev hive-test`, or recreate the volume with `docker compose down -v` if you do not need the existing local data.
 
 Once the containers are up, follow the app logs to watch cargo-leptos compile and see when the server is actually serving:
 

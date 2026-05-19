@@ -63,8 +63,18 @@
               initdb -D ".pg/data"
               mkdir ".pg/run"
               pg_ctl -D ".pg/data" -l ".pg/postgresql.log" -o "-k $PWD/.pg/run" start
-              createuser -h localhost hive-dev && createdb -h localhost -O hive-dev hive-local
             fi
+
+            if ! psql -h localhost -d postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname='hive-dev'" | grep -q 1; then
+              createuser -h localhost hive-dev
+            fi
+
+            for db in hive-local hive-test; do
+              if ! psql -h localhost -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$db'" | grep -q 1; then
+                createdb -h localhost -O hive-dev "$db"
+              fi
+            done
+
             echo "PotgreSQL started (log: .pg/postgresql.log)"
           '')
           (pkgs.writeShellScriptBin "pg-stop" ''
