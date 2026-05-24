@@ -386,7 +386,7 @@ impl GameState {
         let moves = self.state.board.moves(self.state.turn_color);
         if let Some(positions) = moves.get(&(piece, position)) {
             positions.clone_into(&mut self.move_info.target_positions);
-            self.move_info.active = Some((piece, PieceType::Reserve));
+            self.move_info.active = Some((piece, PieceType::Board));
         }
     }
 
@@ -481,5 +481,70 @@ impl GameState {
         } else {
             false
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hive_lib::Direction as BoardDirection;
+
+    fn piece(piece: &str) -> Piece {
+        piece.parse().expect("test piece parses")
+    }
+
+    #[test]
+    fn show_moves_marks_selected_piece_as_board_piece() {
+        let origin = Position::new(0, 0);
+        let mut game_state = GameState::new_with_game_type(GameType::MLP);
+        game_state.state.game_status = GameStatus::InProgress;
+        game_state.state.turn_color = Color::White;
+        game_state.state.board.insert(origin, piece("wQ"), true);
+        game_state
+            .state
+            .board
+            .insert(origin.to(BoardDirection::E), piece("bQ"), true);
+        game_state.state.board.insert(origin, piece("wB1"), true);
+        game_state.state.board.last_moved = None;
+
+        assert!(game_state
+            .state
+            .board
+            .moves(Color::White)
+            .contains_key(&(piece("wB1"), origin)));
+
+        game_state.show_moves(piece("wB1"), origin);
+
+        assert_eq!(
+            game_state.move_info.active,
+            Some((piece("wB1"), PieceType::Board))
+        );
+        assert_eq!(game_state.move_info.current_position, Some(origin));
+        assert!(!game_state.move_info.target_positions.is_empty());
+        assert_eq!(game_state.move_info.reserve_position, None);
+    }
+
+    #[test]
+    fn show_spawns_marks_selected_piece_as_reserve_piece() {
+        let reserve_position = Position::new(0, 0);
+        let mut game_state = GameState::new_with_game_type(GameType::Base);
+        game_state.state.game_status = GameStatus::InProgress;
+        game_state.state.turn_color = Color::White;
+
+        game_state.show_spawns(piece("wA1"), reserve_position);
+
+        assert_eq!(
+            game_state.move_info.active,
+            Some((piece("wA1"), PieceType::Reserve))
+        );
+        assert_eq!(game_state.move_info.current_position, None);
+        assert_eq!(
+            game_state.move_info.reserve_position,
+            Some(reserve_position)
+        );
+        assert!(game_state
+            .move_info
+            .target_positions
+            .contains(&Position::initial_spawn_position()));
     }
 }

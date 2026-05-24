@@ -1,5 +1,9 @@
+use leptos::prelude::Memo;
 use serde::{Deserialize, Serialize};
 use std::{fmt, str::FromStr};
+
+#[derive(Clone)]
+pub struct CurrentConfirm(pub Memo<MoveConfirm>);
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 pub enum MoveConfirm {

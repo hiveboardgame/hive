@@ -4,13 +4,14 @@ use crate::{
         layouts::base_layout::OrientationSignal,
         molecules::{board_pieces::BoardPieces, history_pieces::HistoryPieces},
     },
+    hiveground::HivegroundInteraction,
     providers::{
         analysis::AnalysisSignal,
-        game_state::{GameStateSignal, View},
+        game_state::{GameState, GameStateSignal, View},
         Config,
     },
 };
-use hive_lib::GameStatus;
+use hive_lib::{GameStatus, Position, State};
 use leptos::{
     either::Either,
     ev::{
@@ -19,6 +20,8 @@ use leptos::{
         pointerleave,
         pointermove,
         pointerup,
+        touchcancel,
+        touchend,
         touchmove,
         touchstart,
         wheel,
@@ -34,11 +37,17 @@ use leptos_use::{
     use_intersection_observer_with_options,
     use_raf_fn,
     use_resize_observer,
+    use_timeout_fn,
+    use_window,
     UseEventListenerOptions,
     UseIntersectionObserverOptions,
+    UseTimeoutFnReturn,
 };
 use wasm_bindgen::JsCast;
-use web_sys::{TouchEvent, WheelEvent};
+use web_sys::{Element, EventTarget, TouchEvent, WheelEvent};
+
+const STACK_LONG_PRESS_DELAY_MS: f64 = 500.0;
+const STACK_TOUCH_MOVE_CANCEL_THRESHOLD_PX: f64 = 8.0;
 
 #[derive(Debug, Clone)]
 enum ViewBoxUpdateType {
@@ -121,12 +130,23 @@ impl ViewBoxState {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum StackExpansionResetKey {
+    CurrentTurn {
+        turn: usize,
+        hash: Option<u64>,
+    },
+    HistoryTurn {
+        turn: Option<usize>,
+        hash: Option<u64>,
+    },
+}
+
 #[component]
-pub fn Board() -> impl IntoView {
-    let mut game_state = expect_context::<GameStateSignal>();
+pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> impl IntoView {
+    let game_state = expect_context::<GameStateSignal>();
     let analysis = use_context::<AnalysisSignal>();
     let orientation_signal = expect_context::<OrientationSignal>();
-    let target_stack = RwSignal::new(None);
     let config = expect_context::<Config>().0;
     let viewbox_state = ViewBoxState::new();
     let viewbox_signal = RwSignal::new(ViewBoxControls::new());
@@ -137,6 +157,10 @@ pub fn Board() -> impl IntoView {
     let div_ref = NodeRef::<html::Div>::new();
     let last_turn = game_state.is_last_turn_as_signal();
     let board_view = create_read_slice(game_state.signal, |gs| gs.view.clone());
+    let in_analysis = analysis.is_some();
+    let stack_expansion_reset_key = create_read_slice(game_state.signal, move |gs| {
+        stack_expansion_reset_key(gs, in_analysis)
+    });
     let game_status = create_read_slice(game_state.signal, |gs| gs.state.game_status.clone());
     let board_style = move || {
         if orientation_signal.orientation_vertical.get() {
@@ -178,6 +202,8 @@ pub fn Board() -> impl IntoView {
         format!("background-color: {bg}")
     });
 
+    setup_stack_expansion_events(viewbox_ref, interaction, stack_expansion_reset_key);
+
     // Unified RAF-based viewbox update system
     let update_viewbox_size = move |width: f32, height: f32, respect_zoom: bool| {
         let svg_pos = SvgPos::center_for_level(current_center, 0, straight);
@@ -213,7 +239,7 @@ pub fn Board() -> impl IntoView {
                 }
                 ViewBoxUpdateType::Pan { delta_x, delta_y } => {
                     if viewbox_state.is_panning.get_untracked()
-                        && target_stack.with_untracked(|v| v.is_none())
+                        && interaction.is_viewport_pan_allowed()
                     {
                         let future_viewbox = viewbox_signal
                             .get_untracked()
@@ -305,8 +331,7 @@ pub fn Board() -> impl IntoView {
 
     //Keep panning while user drags around
     _ = use_event_listener(viewbox_ref, pointermove, move |evt| {
-        if viewbox_state.is_panning.get_untracked() && target_stack.with_untracked(|v| v.is_none())
-        {
+        if viewbox_state.is_panning.get_untracked() && interaction.is_viewport_pan_allowed() {
             let (x, y) = screen_to_svg_coordinates(viewbox_ref, evt.x() as f32, evt.y() as f32);
             let current_viewbox = viewbox_signal.get_untracked();
             let delta_x = x - current_viewbox.drag_start_x;
@@ -334,7 +359,6 @@ pub fn Board() -> impl IntoView {
         UseEventListenerOptions::default().passive(true),
     );
 
-    //Zoom on pinch
     _ = use_event_listener_with_options(
         viewbox_ref,
         touchstart,
@@ -377,11 +401,6 @@ pub fn Board() -> impl IntoView {
         viewbox_state.is_panning.update_untracked(|b| *b = false);
     });
 
-    //Prevent right click/context menu on board
-    _ = use_event_listener(viewbox_ref, contextmenu, move |evt| {
-        evt.prevent_default();
-    });
-
     _ = on_click_outside(g_ref, move |event| {
         let clicked_timer = event
             .target()
@@ -389,7 +408,7 @@ pub fn Board() -> impl IntoView {
             .and_then(|el| el.closest("#timer").ok().flatten())
             .is_some();
         if !clicked_timer {
-            game_state.reset();
+            interaction.cancel_selection();
         }
     });
     view! {
@@ -405,19 +424,151 @@ pub fn Board() -> impl IntoView {
             >
                 <g transform=transform node_ref=g_ref>
                     {move || {
-                        if board_view() == View::History && !last_turn() && analysis.is_none() {
+                        if board_view() == View::History && !last_turn() && !in_analysis {
                             Either::Left(
-                                view! { <HistoryPieces tile_opts=tile_opts() target_stack /> },
+                                view! { <HistoryPieces tile_opts interaction history_state /> },
                             )
                         } else {
-                            Either::Right(
-                                view! { <BoardPieces tile_opts=tile_opts() target_stack /> },
-                            )
+                            Either::Right(view! { <BoardPieces tile_opts interaction /> })
                         }
                     }}
                 </g>
             </svg>
         </div>
+    }
+}
+
+fn setup_stack_expansion_events(
+    viewbox_ref: NodeRef<svg::Svg>,
+    interaction: HivegroundInteraction,
+    reset_key: Signal<StackExpansionResetKey>,
+) {
+    let stack_touch_start = RwSignal::new(None::<(i32, i32)>);
+
+    // Stack expansion stores only a position. Collapse it when the board content
+    // behind that position changes, such as after a move or history navigation.
+    Effect::watch(
+        move || reset_key.get(),
+        move |_, _, _| {
+            interaction.collapse_stack();
+        },
+        false,
+    );
+
+    _ = use_event_listener(viewbox_ref, pointerdown, move |evt| {
+        if evt.button() == 2 {
+            if let Some(position) = stack_position_from_event_target(evt.target()) {
+                evt.prevent_default();
+                interaction.expand_stack(position);
+            }
+        }
+    });
+
+    let UseTimeoutFnReturn {
+        start: start_stack_long_press,
+        stop: stop_stack_long_press,
+        ..
+    } = use_timeout_fn(
+        move |position: Position| {
+            interaction.expand_stack(position);
+        },
+        STACK_LONG_PRESS_DELAY_MS,
+    );
+    let cancel_stack_long_press = StoredValue::new({
+        let stop_stack_long_press = stop_stack_long_press.clone();
+        move || {
+            stack_touch_start.set(None);
+            stop_stack_long_press();
+        }
+    });
+    _ = use_event_listener_with_options(
+        viewbox_ref,
+        touchstart,
+        move |evt: TouchEvent| match evt.touches().length() {
+            1 => {
+                let Some(position) = stack_position_from_event_target(evt.target()) else {
+                    cancel_stack_long_press.with_value(|cancel| cancel());
+                    return;
+                };
+                let Some(touch) = evt.touches().get(0) else {
+                    cancel_stack_long_press.with_value(|cancel| cancel());
+                    return;
+                };
+                stack_touch_start.set(Some((touch.client_x(), touch.client_y())));
+                start_stack_long_press(position);
+            }
+            _ => {
+                cancel_stack_long_press.with_value(|cancel| cancel());
+            }
+        },
+        UseEventListenerOptions::default().passive(true),
+    );
+
+    _ = use_event_listener_with_options(
+        viewbox_ref,
+        touchmove,
+        move |evt: TouchEvent| match evt.touches().length() {
+            1 => {
+                let Some((start_x, start_y)) = stack_touch_start.get_untracked() else {
+                    return;
+                };
+                let Some(touch) = evt.touches().get(0) else {
+                    cancel_stack_long_press.with_value(|cancel| cancel());
+                    return;
+                };
+                let delta_x = (touch.client_x() - start_x) as f64;
+                let delta_y = (touch.client_y() - start_y) as f64;
+                if delta_x.hypot(delta_y) > STACK_TOUCH_MOVE_CANCEL_THRESHOLD_PX {
+                    cancel_stack_long_press.with_value(|cancel| cancel());
+                }
+            }
+            _ => {
+                cancel_stack_long_press.with_value(|cancel| cancel());
+            }
+        },
+        UseEventListenerOptions::default().passive(true),
+    );
+
+    let window = use_window();
+    _ = use_event_listener(window.clone(), pointerup, move |evt| {
+        if evt.button() == 2 {
+            interaction.collapse_stack();
+        }
+    });
+    _ = use_event_listener_with_options(
+        window.clone(),
+        touchend,
+        move |_| {
+            cancel_stack_long_press.with_value(|cancel| cancel());
+            interaction.collapse_stack();
+        },
+        UseEventListenerOptions::default().passive(true),
+    );
+    _ = use_event_listener_with_options(
+        window,
+        touchcancel,
+        move |_| {
+            cancel_stack_long_press.with_value(|cancel| cancel());
+            interaction.collapse_stack();
+        },
+        UseEventListenerOptions::default().passive(true),
+    );
+
+    _ = use_event_listener(viewbox_ref, contextmenu, move |evt| {
+        evt.prevent_default();
+    });
+}
+
+fn stack_expansion_reset_key(game_state: &GameState, in_analysis: bool) -> StackExpansionResetKey {
+    if game_state.view == View::History && !game_state.is_last_turn() && !in_analysis {
+        let turn = game_state.history_turn;
+        let hash = turn.and_then(|turn| game_state.state.history.hashes.get(turn).copied());
+        return StackExpansionResetKey::HistoryTurn { turn, hash };
+    }
+
+    StackExpansionResetKey::CurrentTurn {
+        turn: game_state.state.turn,
+        hash: game_state.state.hashes.last().copied(),
     }
 }
 
@@ -438,6 +589,25 @@ fn touch_distance_and_center(svg: NodeRef<svg::Svg>, evt: &TouchEvent) -> (f32, 
     let center = ((point_0.0 + point_1.0) / 2.0, (point_0.1 + point_1.1) / 2.0);
 
     (distance, center)
+}
+
+fn stack_position_from_event_target(target: Option<EventTarget>) -> Option<Position> {
+    target
+        .and_then(|target| target.dyn_into::<Element>().ok())
+        .and_then(stack_position_from_element)
+}
+
+fn stack_position_from_element(element: Element) -> Option<Position> {
+    let stack = element
+        .closest("[data-hg-stack-q][data-hg-stack-r]")
+        .ok()
+        .flatten()?;
+    if stack.get_attribute("data-hg-stack-expandable").as_deref() != Some("true") {
+        return None;
+    }
+    let q = stack.get_attribute("data-hg-stack-q")?.parse().ok()?;
+    let r = stack.get_attribute("data-hg-stack-r")?.parse().ok()?;
+    Some(Position::new(q, r))
 }
 
 fn screen_to_svg_coordinates(svg: NodeRef<svg::Svg>, x: f32, y: f32) -> (f32, f32) {

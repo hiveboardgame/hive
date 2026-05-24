@@ -3,9 +3,10 @@ use crate::{
         molecules::history_controls::HistoryControls,
         organisms::side_board::move_query_signal,
     },
+    hiveground::HivegroundInteraction,
     providers::game_state::{self, GameStateSignal},
 };
-use hive_lib::GameStatus;
+use hive_lib::{GameStatus, State};
 use leptos::{html, prelude::*};
 use leptos_icons::*;
 use leptos_router::hooks::{use_params_map, use_query_map};
@@ -83,7 +84,11 @@ pub fn HistoryMove(
 }
 
 #[component]
-pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
+pub fn History(
+    interaction: HivegroundInteraction,
+    history_state: Memo<State>,
+    #[prop(optional)] extend_tw_classes: &'static str,
+) -> impl IntoView {
     let game_state = expect_context::<game_state::GameStateSignal>();
     let params = use_params_map();
     let queries = use_query_map();
@@ -139,7 +144,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
     view! {
         <div class=format!("h-full flex flex-col pb-4 {extend_tw_classes}")>
 
-            <HistoryControls parent=parent.into() />
+            <HistoryControls parent=parent.into() interaction history_state />
             <div node_ref=parent class="grid overflow-auto grid-cols-4 gap-1 mb-8 max-h-full h-fit">
                 <For each=history_moves key=|history_move| history_move.0 let:history_move>
 

@@ -1,9 +1,15 @@
 use crate::{
-    common::{Hex, HexStack, HexType, PieceType},
     components::molecules::{
         analysis_and_download::AnalysisAndDownload,
         control_buttons::ControlButtons,
-        hex_stack::HexStack,
+        hiveground_stacks::HivegroundStacks,
+    },
+    hiveground::{
+        build_reserve_render_model,
+        HivegroundInteraction,
+        HivegroundPaint,
+        ReserveInteractivity,
+        ReserveRenderOptions,
     },
     providers::{
         analysis::AnalysisSignal,
@@ -12,69 +18,28 @@ use crate::{
         Config,
     },
 };
-use hive_lib::{Bug, BugStack, Color, GameStatus, History, Piece, Position, State};
+use hive_lib::{Color, GameStatus, State};
 use leptos::prelude::*;
-use std::str::FromStr;
 
-fn piece_active(
-    game_status: GameStatus,
-    state: &State,
-    viewing: &View,
-    piece: &Piece,
-    tournament: bool,
-    is_last_turn: bool,
-    analysis: bool,
-) -> bool {
-    //viewing history
-    if viewing == &View::History && !is_last_turn {
-        return false;
-    }
-    // tournament game not started
-    if tournament && matches!(game_status, GameStatus::NotStarted) {
-        return false;
-    }
-    // #TODO make this come from global state
-    if !piece.is_color(state.turn_color) {
-        return false;
-    };
-    // first and second turn
-    // -> disable queen
-    if state.tournament && piece.bug() == Bug::Queen && state.turn < 2 {
-        return false;
-    };
-    // if queen_required
-    // -> disable all but queen
-    if state.board.queen_required(state.turn, state.turn_color) && piece.bug() != Bug::Queen {
-        return false;
-    };
-    // game is over and not in analysis
-    if matches!(
-        game_status,
-        GameStatus::Finished(_) | GameStatus::Adjudicated
-    ) {
-        return analysis;
-    }
-    true
-}
-
-#[derive(PartialEq, Eq, Debug)]
-pub enum Alignment {
-    SingleRow,
-    DoubleRow,
-}
+pub use crate::hiveground::ReserveLayout as Alignment;
 
 #[component]
 pub fn Reserve(
+    // Analysis/history pass fixed colors; live play passes player-color signals.
     #[prop(into)] color: Signal<Color>,
     alignment: Alignment,
+    interaction: HivegroundInteraction,
+    history_state: Memo<State>,
     #[prop(optional)] extend_tw_classes: &'static str,
     #[prop(optional)] viewbox_str: Option<&'static str>,
 ) -> impl IntoView {
+    let interaction = interaction.disable_stack_inspection();
     let analysis = use_context::<AnalysisSignal>().is_some();
     let game_state = expect_context::<GameStateSignal>();
     let auth_context = expect_context::<AuthContext>();
     let config = expect_context::<Config>().0;
     let tile_opts = Signal::derive(move || config().tile);
+    let paint = Memo::new(move |_| tile_opts.with(HivegroundPaint::new));
     let (viewbox_str, viewbox_styles) = match alignment {
         Alignment::SingleRow => ("-40 -55 450 100", "inline max-h-[inherit] h-full w-fit"),
         Alignment::DoubleRow => {
@@ -88,7 +53,6 @@ pub fn Reserve(
     // TODO: Should be a Store, this is hacky
     let board_view = create_read_slice(game_state.signal, |gs| gs.view.clone());
     let move_info = create_read_slice(game_state.signal, |gs| gs.move_info.clone());
-    let history_turn = create_read_slice(game_state.signal, |gs| gs.history_turn);
     let state = create_read_slice(game_state.signal, |gs| gs.state.clone());
     let last_turn = game_state.is_last_turn_as_signal();
     let status = create_read_slice(game_state.signal, |gs| {
@@ -116,99 +80,40 @@ pub fn Reserve(
         }
         ""
     };
-    let stacked_pieces = move || {
+    let stacked_pieces = Memo::new(move |_| {
         let reserve_color = color();
-        let tournament = tournament.get_untracked();
-        let last_turn = last_turn.get_untracked();
+        let tournament = tournament();
         let board_view = board_view();
         let status = status();
-        let history_turn = history_turn();
+        let viewing_past_turn = board_view == View::History && !last_turn();
 
         move_info.with(|move_info| {
             state.with(|state| {
-                let reserve = match board_view {
-                    View::Game => state.board.reserve(reserve_color, state.game_type),
+                let reserve_board = match board_view {
+                    View::Game => state.board.clone(),
                     View::History => {
-                        let mut history = History::new();
-                        if let Some(turn) = history_turn {
-                            if turn < state.history.moves.len() {
-                                history.moves = state.history.moves[0..=turn].into();
-                            }
-                        }
-                        let history_state =
-                            State::new_from_history(&history).expect("Got state from history");
-                        history_state.board.reserve(reserve_color, state.game_type)
+                        history_state.with(|history_state| history_state.board.clone())
                     }
                 };
-
-                let mut clicked_position = None;
-                let active_color = move_info.active.as_ref().map(|(piece, _)| piece.color());
-                if active_color == Some(reserve_color)
-                    || (!analysis && user_color() == Some(reserve_color))
-                {
-                    clicked_position = move_info.reserve_position;
-                }
-
-                let mut seen = -1;
-                let mut res = Vec::new();
-                for bug in Bug::all().into_iter() {
-                    if let Some(piece_strings) = reserve.get(&bug) {
-                        seen += 1;
-                        let position = if alignment == Alignment::SingleRow {
-                            Position::new(seen, 0)
-                        } else {
-                            Position::new(seen % 4, seen / 4)
-                        };
-                        let bs = BugStack::new();
-                        let mut hs = HexStack::new(&bs, position);
-                        for (i, piece_str) in piece_strings.iter().rev().enumerate() {
-                            let piece = Piece::from_str(piece_str).expect("Parsed piece");
-                            let piece_type = if piece_active(
-                                status.clone(),
-                                state,
-                                &board_view,
-                                &piece,
-                                tournament,
-                                last_turn,
-                                analysis,
-                            ) {
-                                PieceType::Reserve
-                            } else {
-                                PieceType::Inactive
-                            };
-                            hs.hexes.push(Hex {
-                                kind: HexType::Tile(piece, piece_type),
-                                position,
-                                level: i,
-                            });
-                        }
-                        if let Some(click) = clicked_position {
-                            if click == position {
-                                if move_info.target_position.is_some() {
-                                    hs.add_active(true);
-                                } else {
-                                    hs.add_active(false);
-                                }
-                            }
-                        }
-                        res.push(hs);
-                    } else if alignment == Alignment::DoubleRow {
-                        seen += 1;
-                    }
-                }
-                res
+                build_reserve_render_model(
+                    state,
+                    &reserve_board,
+                    move_info,
+                    ReserveRenderOptions {
+                        reserve_color,
+                        alignment,
+                        interactivity: ReserveInteractivity {
+                            viewing_past_turn,
+                            status,
+                            user_color: user_color(),
+                            tournament,
+                            analysis,
+                        },
+                    },
+                )
             })
         })
-    };
-
-    let pieces_view = move || {
-        stacked_pieces()
-            .into_iter()
-            .map(|hex_stack| {
-                view! { <HexStack hex_stack=hex_stack tile_opts=tile_opts() target_stack=RwSignal::new(None) /> }
-            })
-            .collect_view()
-    };
+    });
 
     view! {
         <svg
@@ -223,24 +128,29 @@ pub fn Reserve(
             viewBox=viewbox_str
             xmlns="http://www.w3.org/2000/svg"
         >
-            {pieces_view}
+            <HivegroundStacks model=stacked_pieces paint interaction />
         </svg>
     }
 }
 
 #[component]
-pub fn ReserveContent(player_color: Memo<Color>, show_buttons: Signal<bool>) -> impl IntoView {
+pub fn ReserveContent(
+    player_color: Memo<Color>,
+    show_buttons: Signal<bool>,
+    interaction: HivegroundInteraction,
+    history_state: Memo<State>,
+) -> impl IntoView {
     let top_color = Signal::derive(move || player_color().opposite_color());
     let bottom_color = Signal::derive(player_color);
 
     view! {
-        <Reserve color=top_color alignment=Alignment::DoubleRow />
+        <Reserve color=top_color alignment=Alignment::DoubleRow interaction history_state />
         <div class="flex flex-row-reverse justify-center items-center">
             <AnalysisAndDownload />
             <Show when=show_buttons>
                 <ControlButtons />
             </Show>
         </div>
-        <Reserve color=bottom_color alignment=Alignment::DoubleRow />
+        <Reserve color=bottom_color alignment=Alignment::DoubleRow interaction history_state />
     }
 }

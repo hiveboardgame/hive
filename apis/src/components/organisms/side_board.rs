@@ -3,13 +3,14 @@ use crate::{
         molecules::history_controls::HistoryControls,
         organisms::{chat::ChatWindow, history::History, reserve::ReserveContent},
     },
+    hiveground::HivegroundInteraction,
     providers::{
         chat::Chat,
         game_state::{GameStateSignal, View},
         AuthContext,
     },
 };
-use hive_lib::Color;
+use hive_lib::{Color, State as HiveState};
 use leptos::{prelude::*, reactive::wrappers::write::SignalSetter};
 use leptos_router::{
     hooks::{query_signal_with_options, use_params_map},
@@ -85,6 +86,8 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
 pub fn SideboardTabs(
     player_color: Memo<Color>,
     tab: RwSignal<TabView>,
+    interaction: HivegroundInteraction,
+    history_state: Memo<HiveState>,
     #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
@@ -110,17 +113,17 @@ pub fn SideboardTabs(
                 </div>
             </div>
             <TabsContent value=TabView::Reserve class="flex flex-col h-full" tab>
-                <ReserveContent player_color show_buttons />
+                <ReserveContent player_color show_buttons interaction history_state />
             </TabsContent>
             <TabsContent value=TabView::History class="h-full" tab>
-                <History />
+                <History interaction history_state />
             </TabsContent>
             <TabsContent
                 tab
                 value=TabView::Chat
                 class="flex flex-col flex-grow h-full max-h-full justify-beetween"
             >
-                <HistoryControls />
+                <HistoryControls interaction history_state />
                 <ChatWindow destination=SimpleDestination::Game />
             </TabsContent>
         </div>
