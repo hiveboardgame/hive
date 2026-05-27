@@ -751,8 +751,7 @@ impl Game {
         };
 
         let new_move_times = self.get_move_times(&time_info, state);
-        let new_hashes: Vec<Option<i64>> =
-            state.hashes.iter().map(|h| Some(*h as i64)).collect();
+        let new_hashes: Vec<Option<i64>> = state.hashes.iter().map(|h| Some(*h as i64)).collect();
 
         if time_info.timed_out {
             // Timeout supersedes the in-flight move and any implicit control rejection it carried.
@@ -1077,7 +1076,11 @@ impl Game {
             updated_at.eq(Utc::now()),
             last_interaction.eq(Utc::now()),
             move_times.eq(new_move_times),
-            hashes.eq(state.hashes.iter().map(|h| Some(*h as i64)).collect::<Vec<Option<i64>>>()),
+            hashes.eq(state
+                .hashes
+                .iter()
+                .map(|h| Some(*h as i64))
+                .collect::<Vec<Option<i64>>>()),
             white_time_left.eq(white_time),
             black_time_left.eq(black_time),
         ))
