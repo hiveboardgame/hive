@@ -1,3 +1,4 @@
+use super::game::Game;
 use crate::{db_error::DbError, schema::game_hashes, DbConn};
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
@@ -26,6 +27,20 @@ pub struct GameFinishContext {
     pub game_type: String,
     pub rated: bool,
     pub played_at: DateTime<Utc>,
+}
+
+impl GameFinishContext {
+    pub fn from_finished_game(game: &Game) -> Self {
+        Self {
+            white_rating: game.white_rating.zip(game.white_rating_change).map(|(r, c)| r + c),
+            black_rating: game.black_rating.zip(game.black_rating_change).map(|(r, c)| r + c),
+            result: game.game_status.clone(),
+            speed: game.speed.clone(),
+            game_type: game.game_type.clone(),
+            rated: game.rated,
+            played_at: game.updated_at,
+        }
+    }
 }
 
 impl GameHash {
@@ -61,6 +76,16 @@ impl GameHash {
             .execute(conn)
             .await?;
         Ok(())
+    }
+
+    pub async fn insert_for_game(
+        game_id: Uuid,
+        hashes: &[u64],
+        ctx: &GameFinishContext,
+        conn: &mut DbConn<'_>,
+    ) -> Result<(), DbError> {
+        let entries = Self::from_engine_hashes(game_id, hashes, ctx);
+        Self::insert_batch(&entries, conn).await
     }
 
     pub async fn find_by_hash(
