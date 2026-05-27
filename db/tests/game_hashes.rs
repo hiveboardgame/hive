@@ -124,7 +124,9 @@ async fn same_hash_across_multiple_games() {
     GameHash::insert_batch(&entries_a, &mut conn).await.unwrap();
     GameHash::insert_batch(&entries_b, &mut conn).await.unwrap();
 
-    let found = GameHash::find_by_hash(shared_hash, &mut conn).await.unwrap();
+    let found = GameHash::find_by_hash(shared_hash, &mut conn)
+        .await
+        .unwrap();
     assert_eq!(found.len(), 2);
 
     let game_ids: Vec<uuid::Uuid> = found.iter().map(|e| e.game_id).collect();
@@ -171,8 +173,14 @@ async fn cascade_delete_removes_hash_entries_when_game_deleted() {
 
     game.delete(&mut conn).await.unwrap();
 
-    assert!(GameHash::find_by_hash(777, &mut conn).await.unwrap().is_empty());
-    assert!(GameHash::find_by_hash(888, &mut conn).await.unwrap().is_empty());
+    assert!(GameHash::find_by_hash(777, &mut conn)
+        .await
+        .unwrap()
+        .is_empty());
+    assert!(GameHash::find_by_hash(888, &mut conn)
+        .await
+        .unwrap()
+        .is_empty());
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -180,7 +188,9 @@ async fn find_nonexistent_hash_returns_empty() {
     let db = common::db::test_db().await;
     let mut conn = get_conn(&db.pool).await.unwrap();
 
-    let found = GameHash::find_by_hash(0xDEAD_BEEF, &mut conn).await.unwrap();
+    let found = GameHash::find_by_hash(0xDEAD_BEEF, &mut conn)
+        .await
+        .unwrap();
     assert!(found.is_empty());
 }
 
@@ -262,8 +272,12 @@ async fn best_defaults_to_10() {
 
     let hash = 0xDEF_u64;
     for i in 0..15 {
-        let (g, _, _) =
-            setup_game_named(&format!("d{}", i * 2), &format!("d{}", i * 2 + 1), &mut conn).await;
+        let (g, _, _) = setup_game_named(
+            &format!("d{}", i * 2),
+            &format!("d{}", i * 2 + 1),
+            &mut conn,
+        )
+        .await;
         let ctx = test_ctx(Some(1000.0 + i as f64), None);
         let entries = GameHash::from_engine_hashes(g.id, &[hash], &ctx);
         GameHash::insert_batch(&entries, &mut conn).await.unwrap();
@@ -335,7 +349,9 @@ async fn game_hashes_accessor_roundtrips_through_set_hashes() {
 
     let original: Vec<u64> = vec![0, 1, u64::MAX, 0xDEAD_BEEF_CAFE_BABE];
     let db_hashes: Vec<Option<i64>> = original.iter().map(|h| Some(*h as i64)).collect();
-    Game::set_hashes(game.id, db_hashes, &mut conn).await.unwrap();
+    Game::set_hashes(game.id, db_hashes, &mut conn)
+        .await
+        .unwrap();
 
     let reloaded: Game = games::table.find(game.id).first(&mut conn).await.unwrap();
     assert_eq!(reloaded.hashes(), original);
@@ -430,17 +446,15 @@ async fn backfill_cursor_pagination_works() {
         .unwrap();
     assert_eq!(first_batch.len(), 1);
 
-    let second_batch =
-        Game::find_needing_hash_backfill(Some(first_batch[0].id), 1, &mut conn)
-            .await
-            .unwrap();
+    let second_batch = Game::find_needing_hash_backfill(Some(first_batch[0].id), 1, &mut conn)
+        .await
+        .unwrap();
     assert_eq!(second_batch.len(), 1);
     assert_ne!(first_batch[0].id, second_batch[0].id);
 
-    let third_batch =
-        Game::find_needing_hash_backfill(Some(second_batch[0].id), 1, &mut conn)
-            .await
-            .unwrap();
+    let third_batch = Game::find_needing_hash_backfill(Some(second_batch[0].id), 1, &mut conn)
+        .await
+        .unwrap();
     assert!(third_batch.is_empty());
 }
 
@@ -465,11 +479,15 @@ async fn backfill_replays_history_and_populates_both_tables() {
     assert!(!state.hashes.is_empty());
 
     let db_hashes: Vec<Option<i64>> = state.hashes.iter().map(|h| Some(*h as i64)).collect();
-    Game::set_hashes(game.id, db_hashes, &mut conn).await.unwrap();
+    Game::set_hashes(game.id, db_hashes, &mut conn)
+        .await
+        .unwrap();
 
     let ctx = test_ctx(None, None);
     let hash_entries = GameHash::from_engine_hashes(game.id, &state.hashes, &ctx);
-    GameHash::insert_batch(&hash_entries, &mut conn).await.unwrap();
+    GameHash::insert_batch(&hash_entries, &mut conn)
+        .await
+        .unwrap();
 
     let reloaded: Game = games::table.find(game.id).first(&mut conn).await.unwrap();
     assert_eq!(reloaded.hashes(), state.hashes);
@@ -491,11 +509,7 @@ async fn setup_game(conn: &mut db_lib::DbConn<'_>) -> (Game, User, User) {
     setup_game_with_history("alice", "bob", "", conn).await
 }
 
-async fn setup_game_named(
-    w: &str,
-    b: &str,
-    conn: &mut db_lib::DbConn<'_>,
-) -> (Game, User, User) {
+async fn setup_game_named(w: &str, b: &str, conn: &mut db_lib::DbConn<'_>) -> (Game, User, User) {
     setup_game_with_history(w, b, "", conn).await
 }
 

@@ -1,6 +1,7 @@
 use db_lib::{
     config::DbConfig,
-    get_conn, get_pool,
+    get_conn,
+    get_pool,
     models::{Game, GameFinishContext, GameHash},
 };
 
@@ -67,7 +68,8 @@ async fn main() {
             }
 
             let ctx = GameFinishContext::from_finished_game(game);
-            if let Err(e) = GameHash::insert_for_game(game.id, &state.hashes, &ctx, &mut conn).await {
+            if let Err(e) = GameHash::insert_for_game(game.id, &state.hashes, &ctx, &mut conn).await
+            {
                 eprintln!(
                     "Warning: game {} (id {}): failed to insert game_hashes: {e}",
                     game.nanoid, game.id

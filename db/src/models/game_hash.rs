@@ -32,8 +32,14 @@ pub struct GameFinishContext {
 impl GameFinishContext {
     pub fn from_finished_game(game: &Game) -> Self {
         Self {
-            white_rating: game.white_rating.zip(game.white_rating_change).map(|(r, c)| r + c),
-            black_rating: game.black_rating.zip(game.black_rating_change).map(|(r, c)| r + c),
+            white_rating: game
+                .white_rating
+                .zip(game.white_rating_change)
+                .map(|(r, c)| r + c),
+            black_rating: game
+                .black_rating
+                .zip(game.black_rating_change)
+                .map(|(r, c)| r + c),
             result: game.game_status.clone(),
             speed: game.speed.clone(),
             game_type: game.game_type.clone(),
@@ -88,10 +94,7 @@ impl GameHash {
         Self::insert_batch(&entries, conn).await
     }
 
-    pub async fn find_by_hash(
-        hash: u64,
-        conn: &mut DbConn<'_>,
-    ) -> Result<Vec<GameHash>, DbError> {
+    pub async fn find_by_hash(hash: u64, conn: &mut DbConn<'_>) -> Result<Vec<GameHash>, DbError> {
         Ok(game_hashes::table
             .filter(game_hashes::hash.eq(hash as i64))
             .load(conn)
