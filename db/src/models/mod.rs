@@ -1,5 +1,6 @@
 mod challenge;
 mod game;
+mod game_hash;
 mod game_user;
 mod home_banner;
 mod rating;
@@ -13,6 +14,7 @@ mod tournament_user;
 mod user;
 pub use challenge::{Challenge, NewChallenge};
 pub use game::{Game, NewGame};
+pub use game_hash::{GameFinishContext, GameHash};
 pub use game_user::GameUser;
 pub use home_banner::HomeBanner;
 pub use rating::{NewRating, Rating};
