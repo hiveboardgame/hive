@@ -3,6 +3,7 @@ use db_lib::{
     get_conn, get_pool,
     models::{Game, GameFinishContext, GameHash},
 };
+
 use hive_lib::State;
 use uuid::Uuid;
 
@@ -65,23 +66,8 @@ async fn main() {
                 continue;
             }
 
-            let ctx = GameFinishContext {
-                white_rating: game
-                    .white_rating
-                    .zip(game.white_rating_change)
-                    .map(|(r, c)| r + c),
-                black_rating: game
-                    .black_rating
-                    .zip(game.black_rating_change)
-                    .map(|(r, c)| r + c),
-                result: game.game_status.clone(),
-                speed: game.speed.clone(),
-                game_type: game.game_type.clone(),
-                rated: game.rated,
-                played_at: game.updated_at,
-            };
-            let hash_entries = GameHash::from_engine_hashes(game.id, &state.hashes, &ctx);
-            if let Err(e) = GameHash::insert_batch(&hash_entries, &mut conn).await {
+            let ctx = GameFinishContext::from_finished_game(game);
+            if let Err(e) = GameHash::insert_for_game(game.id, &state.hashes, &ctx, &mut conn).await {
                 eprintln!(
                     "Warning: game {} (id {}): failed to insert game_hashes: {e}",
                     game.nanoid, game.id

@@ -449,17 +449,8 @@ impl Game {
             ))
             .get_result(conn)
             .await?;
-        let ctx = GameFinishContext {
-            white_rating: new_white_rating_change.map(|c| white_rating_before + c),
-            black_rating: new_black_rating_change.map(|c| black_rating_before + c),
-            result: new_game_status.to_string(),
-            speed: self.speed.clone(),
-            game_type: self.game_type.clone(),
-            rated: self.rated,
-            played_at: Utc::now(),
-        };
-        let hash_entries = GameHash::from_engine_hashes(game.id, &self.hashes(), &ctx);
-        GameHash::insert_batch(&hash_entries, conn).await?;
+        let ctx = GameFinishContext::from_finished_game(&game);
+        GameHash::insert_for_game(game.id, &game.hashes(), &ctx, conn).await?;
         Ok(game)
     }
 
@@ -516,17 +507,8 @@ impl Game {
             ))
             .get_result(conn)
             .await?;
-        let ctx = GameFinishContext {
-            white_rating: new_white_rating_change.map(|c| white_rating_before + c),
-            black_rating: new_black_rating_change.map(|c| black_rating_before + c),
-            result: new_game_status.to_string(),
-            speed: self.speed.clone(),
-            game_type: self.game_type.clone(),
-            rated: self.rated,
-            played_at: Utc::now(),
-        };
-        let hash_entries = GameHash::from_engine_hashes(game.id, &self.hashes(), &ctx);
-        GameHash::insert_batch(&hash_entries, conn).await?;
+        let ctx = GameFinishContext::from_finished_game(&game);
+        GameHash::insert_for_game(game.id, &game.hashes(), &ctx, conn).await?;
         Ok(game)
     }
 
@@ -834,23 +816,14 @@ impl Game {
                             ))
                             .get_result(tc)
                             .await?;
-                        let ctx = GameFinishContext {
-                            white_rating: new_white_rating_change
-                                .map(|c| white_rating_before + c),
-                            black_rating: new_black_rating_change
-                                .map(|c| black_rating_before + c),
-                            result: new_game_status.to_string(),
-                            speed: game.speed.clone(),
-                            game_type: game.game_type.clone(),
-                            rated: game.rated,
-                            played_at: Utc::now(),
-                        };
-                        let hash_entries = GameHash::from_engine_hashes(
-                            game.id,
+                        let ctx = GameFinishContext::from_finished_game(&updated_game);
+                        GameHash::insert_for_game(
+                            updated_game.id,
                             &updated_game.hashes(),
                             &ctx,
-                        );
-                        GameHash::insert_batch(&hash_entries, tc).await?;
+                            tc,
+                        )
+                        .await?;
                         Ok(updated_game)
                     }
                     .scope_boxed()
