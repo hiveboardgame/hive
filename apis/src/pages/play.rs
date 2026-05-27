@@ -1,19 +1,20 @@
 use crate::{
     common::{GameReaction, MoveConfirm, PieceType},
     components::{
-        atoms::history_button::{HistoryButton, HistoryNavigation},
+        atoms::history_button::{sync_play_move_query, HistoryButton, HistoryNavigation},
         layouts::base_layout::{ControlsSignal, OrientationSignal},
         molecules::{
             analysis_and_download::AnalysisAndDownload,
             control_buttons::ControlButtons,
             game_info::GameInfo,
+            history_controls::scroll_active_history_move_into_view,
             user_with_rating::UserWithRating,
         },
         organisms::{
             board::Board,
             display_timer::{DisplayTimer, Placement},
             reserve::{Alignment, Reserve},
-            side_board::{SideboardTabs, TabView},
+            side_board::{move_query_signal, SideboardTabs, TabView},
             unstarted::Unstarted,
         },
     },
@@ -59,6 +60,7 @@ pub fn Play() -> impl IntoView {
     let ws_ready = ws.ready_state;
     let params = use_params_map();
     let queries = use_query_map();
+    let (_move, set_move) = move_query_signal();
     let move_number = Signal::derive(move || {
         queries
             .get()
@@ -251,6 +253,7 @@ pub fn Play() -> impl IntoView {
                                         game_state.play_turn(piece, position);
                                         if was_at_live_edge {
                                             game_state.view_game();
+                                            sync_play_move_query(game_state, &set_move);
                                         }
                                         if let Some((piece, piece_type)) = active {
                                             match piece_type {
@@ -330,6 +333,9 @@ pub fn Play() -> impl IntoView {
         if key != "ArrowLeft" && key != "ArrowRight" {
             return;
         }
+        if evt.alt_key() || evt.ctrl_key() || evt.meta_key() || evt.shift_key() {
+            return;
+        }
         // Don't steal arrow keys from text inputs (chat, search fields, etc.).
         if let Some(target) = evt.target() {
             let tag = target
@@ -355,12 +361,22 @@ pub fn Play() -> impl IntoView {
                 .with_untracked(|gs| matches!(gs.view, View::Game));
             if entering {
                 game_state.signal.update(|gs| {
+                    gs.view_history();
                     gs.history_turn = gs.state.turn.checked_sub(1);
                 });
             }
-            game_state.previous_history_turn();
+            let can_step_back = game_state
+                .signal
+                .with_untracked(|gs| matches!(gs.history_turn, Some(turn) if turn > 0));
+            if can_step_back {
+                game_state.previous_history_turn();
+            } else if !entering {
+                return;
+            }
             tab.set(TabView::History);
             controls_signal.hidden.set(false);
+            sync_play_move_query(game_state, &set_move);
+            scroll_active_history_move_into_view();
         } else {
             // ArrowRight: navigate forward only when already browsing history.
             let in_history = game_state
@@ -368,6 +384,11 @@ pub fn Play() -> impl IntoView {
                 .with_untracked(|gs| matches!(gs.view, View::History));
             if in_history {
                 game_state.next_history_turn();
+                if game_state.signal.with_untracked(|gs| gs.is_last_turn()) {
+                    game_state.view_game();
+                }
+                sync_play_move_query(game_state, &set_move);
+                scroll_active_history_move_into_view();
             }
         }
     });
