@@ -1,8 +1,10 @@
 use crate::{
     components::organisms::side_board::move_query_signal,
-    providers::game_state::GameStateSignal,
+    providers::game_state::{GameStateSignal, View},
 };
-use leptos::{html, leptos_dom::helpers::debounce, prelude::*};
+use leptos::{
+    html, leptos_dom::helpers::debounce, prelude::*, reactive::wrappers::write::SignalSetter,
+};
 use leptos_icons::*;
 
 #[derive(Clone)]
@@ -12,6 +14,20 @@ pub enum HistoryNavigation {
     Next,
     Previous,
     MobileLast,
+}
+
+pub fn sync_play_move_query(
+    game_state_signal: GameStateSignal,
+    set_move: &SignalSetter<Option<usize>>,
+) {
+    game_state_signal.signal.with_untracked(|gs| {
+        let move_param = match gs.view {
+            View::Game => None,
+            View::History => gs.history_turn.map(|turn| turn + 1),
+        };
+
+        set_move.set(move_param);
+    });
 }
 
 #[component]
@@ -45,12 +61,7 @@ pub fn HistoryButton(
         if let Some(post_action) = post_action {
             post_action.run(())
         }
-        let turn = game_state_signal.signal.with_untracked(|gs| match action {
-            HistoryNavigation::Last => Some(gs.state.turn),
-            HistoryNavigation::MobileLast => None,
-            _ => gs.history_turn.map(|v| v + 1),
-        });
-        set_move.set(turn);
+        sync_play_move_query(game_state_signal, &set_move);
     });
     let _definite_node_ref = node_ref.unwrap_or_default();
 

@@ -9,22 +9,22 @@ use hive_lib::Color;
 use leptos::{html, prelude::*};
 use leptos_use::use_window;
 
+pub fn scroll_active_history_move_into_view() {
+    let active = use_window()
+        .as_ref()
+        .and_then(|w| w.document())
+        .and_then(|d| d.query_selector(".bg-orange-twilight").ok())
+        .flatten();
+    if let Some(elem) = active {
+        elem.scroll_into_view_with_bool(false);
+    }
+}
+
 #[component]
 pub fn HistoryControls(#[prop(optional)] parent: MaybeProp<NodeRef<html::Div>>) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
-    let window = use_window();
-    let active = Signal::derive_local(move || {
-        window.as_ref().and_then(|w| {
-            w.document()
-                .expect("window to have a document")
-                .query_selector(".bg-orange-twilight")
-                .expect("to have an Element")
-        })
-    });
     let focus = Callback::new(move |()| {
-        if let Some(elem) = active.get_untracked() {
-            elem.scroll_into_view_with_bool(false);
-        }
+        scroll_active_history_move_into_view();
     });
 
     let scroll_to_end = Callback::new(move |()| {
