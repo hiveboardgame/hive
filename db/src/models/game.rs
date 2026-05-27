@@ -1,7 +1,7 @@
 use crate::{
     db_error::DbError,
     helpers::GameQueryBuilder,
-    models::{Challenge, GameUser, Rating, Tournament},
+    models::{Challenge, GameFinishContext, GameHash, GameUser, Rating, Tournament},
     schema::{
         challenges::{self, nanoid as nanoid_field},
         games::{self, dsl::*, tournament_game_result},
@@ -256,9 +256,10 @@ pub struct Game {
 
 impl Game {
     pub fn hashes(&self) -> Vec<u64> {
-        // WARN: @leex reimplement this
-        //self.hashes.iter().map(|i| *i as u64).collect::<Vec<u64>>()
-        vec![]
+        self.hashes
+            .iter()
+            .filter_map(|o| o.map(|i| i as u64))
+            .collect()
     }
 
     pub async fn create(new_game: NewGame, conn: &mut DbConn<'_>) -> Result<Game, DbError> {
@@ -432,7 +433,7 @@ impl Game {
             conn,
         )
         .await?;
-        Ok(diesel::update(games::table.find(self.id))
+        let game: Game = diesel::update(games::table.find(self.id))
             .set((
                 games::finished.eq(true),
                 games::tournament_game_result.eq(tgr.to_string()),
@@ -447,7 +448,19 @@ impl Game {
                 games::conclusion.eq(Conclusion::Timeout.to_string()),
             ))
             .get_result(conn)
-            .await?)
+            .await?;
+        let ctx = GameFinishContext {
+            white_rating: new_white_rating_change.map(|c| white_rating_before + c),
+            black_rating: new_black_rating_change.map(|c| black_rating_before + c),
+            result: new_game_status.to_string(),
+            speed: self.speed.clone(),
+            game_type: self.game_type.clone(),
+            rated: self.rated,
+            played_at: Utc::now(),
+        };
+        let hash_entries = GameHash::from_engine_hashes(game.id, &self.hashes(), &ctx);
+        GameHash::insert_batch(&hash_entries, conn).await?;
+        Ok(game)
     }
 
     async fn finish_game_control(
@@ -485,7 +498,7 @@ impl Game {
             conn,
         )
         .await?;
-        Ok(diesel::update(games::table.find(self.id))
+        let game: Game = diesel::update(games::table.find(self.id))
             .set((
                 games::finished.eq(true),
                 games::tournament_game_result.eq(tgr.to_string()),
@@ -502,7 +515,19 @@ impl Game {
                 games::conclusion.eq(final_conclusion.to_string()),
             ))
             .get_result(conn)
-            .await?)
+            .await?;
+        let ctx = GameFinishContext {
+            white_rating: new_white_rating_change.map(|c| white_rating_before + c),
+            black_rating: new_black_rating_change.map(|c| black_rating_before + c),
+            result: new_game_status.to_string(),
+            speed: self.speed.clone(),
+            game_type: self.game_type.clone(),
+            rated: self.rated,
+            played_at: Utc::now(),
+        };
+        let hash_entries = GameHash::from_engine_hashes(game.id, &self.hashes(), &ctx);
+        GameHash::insert_batch(&hash_entries, conn).await?;
+        Ok(game)
     }
 
     fn time_left_duration(&self, color: Color) -> Result<Duration, DbError> {
@@ -741,6 +766,8 @@ impl Game {
         };
 
         let new_move_times = self.get_move_times(&time_info, state);
+        let new_hashes: Vec<Option<i64>> =
+            state.hashes.iter().map(|h| Some(*h as i64)).collect();
 
         if time_info.timed_out {
             // Timeout supersedes the in-flight move and any implicit control rejection it carried.
@@ -783,7 +810,7 @@ impl Game {
                             tc,
                         )
                         .await?;
-                        Ok(diesel::update(games::table.find(game.id))
+                        let updated_game: Game = diesel::update(games::table.find(game.id))
                             .set((
                                 games::history.eq(new_history),
                                 games::current_player_id.eq(next_player),
@@ -802,10 +829,29 @@ impl Game {
                                 games::black_time_left.eq(new_black_time_left),
                                 games::last_interaction.eq(Some(Utc::now())),
                                 games::move_times.eq(new_move_times),
+                                games::hashes.eq(&new_hashes),
                                 games::conclusion.eq(new_conclusion.to_string()),
                             ))
                             .get_result(tc)
-                            .await?)
+                            .await?;
+                        let ctx = GameFinishContext {
+                            white_rating: new_white_rating_change
+                                .map(|c| white_rating_before + c),
+                            black_rating: new_black_rating_change
+                                .map(|c| black_rating_before + c),
+                            result: new_game_status.to_string(),
+                            speed: game.speed.clone(),
+                            game_type: game.game_type.clone(),
+                            rated: game.rated,
+                            played_at: Utc::now(),
+                        };
+                        let hash_entries = GameHash::from_engine_hashes(
+                            game.id,
+                            &updated_game.hashes(),
+                            &ctx,
+                        );
+                        GameHash::insert_batch(&hash_entries, tc).await?;
+                        Ok(updated_game)
                     }
                     .scope_boxed()
                 })
@@ -831,6 +877,7 @@ impl Game {
             white_time_left.eq(time_info.white_time_left),
             black_time_left.eq(time_info.black_time_left),
             move_times.eq(new_move_times),
+            hashes.eq(new_hashes),
             last_interaction.eq(Some(Utc::now())),
         ))
         .get_result(conn)
@@ -1054,6 +1101,7 @@ impl Game {
             updated_at.eq(Utc::now()),
             last_interaction.eq(Utc::now()),
             move_times.eq(new_move_times),
+            hashes.eq(state.hashes.iter().map(|h| Some(*h as i64)).collect::<Vec<Option<i64>>>()),
             white_time_left.eq(white_time),
             black_time_left.eq(black_time),
         ))
@@ -1428,5 +1476,45 @@ impl Game {
                 })
             })
             .collect())
+    }
+
+    pub async fn count_needing_hash_backfill(conn: &mut DbConn<'_>) -> Result<i64, DbError> {
+        Ok(games::table
+            .filter(games::history.ne(""))
+            .filter(games::finished.eq(true))
+            .filter(games::hashes.eq(Vec::<Option<i64>>::new()))
+            .count()
+            .get_result(conn)
+            .await?)
+    }
+
+    pub async fn find_needing_hash_backfill(
+        after_id: Option<Uuid>,
+        limit: i64,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Game>, DbError> {
+        let mut query = games::table
+            .filter(games::history.ne(""))
+            .filter(games::finished.eq(true))
+            .filter(games::hashes.eq(Vec::<Option<i64>>::new()))
+            .order(games::id.asc())
+            .limit(limit)
+            .into_boxed();
+        if let Some(after) = after_id {
+            query = query.filter(games::id.gt(after));
+        }
+        Ok(query.load(conn).await?)
+    }
+
+    pub async fn set_hashes(
+        game_id: Uuid,
+        new_hashes: Vec<Option<i64>>,
+        conn: &mut DbConn<'_>,
+    ) -> Result<(), DbError> {
+        diesel::update(games::table.find(game_id))
+            .set(games::hashes.eq(new_hashes))
+            .execute(conn)
+            .await?;
+        Ok(())
     }
 }

@@ -11,6 +11,10 @@ path = "src/lib.rs"
 name = "db_bin"
 path = "src/main.rs"
 
+[[bin]]
+name = "backfill_hashes"
+path = "src/backfill_hashes.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
