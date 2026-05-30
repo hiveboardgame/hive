@@ -1,96 +1,141 @@
 use std::sync::Arc;
 
+use anyhow::{Context, Result};
+
+use super::{metrics, persist::PersistableChatMessage};
 use crate::{
+    chat::access::ResolvedChatChannel,
     common::ServerMessage,
     websocket::{
-        chat::UserToUser,
         messages::{InternalServerMessage, MessageDestination},
         WebsocketData,
     },
 };
+use db_lib::{helpers::insert_chat_message, DbConn};
 use shared_types::{ChatDestination, ChatMessageContainer};
-
-/// Per-channel chat history cap. The chat panel paginates client-side from
-/// what the server sends on join, so older messages aren't user-visible —
-/// but the server retains every message ever sent until a process restart.
-const MAX_PER_CHANNEL: usize = 200;
-
-fn push_capped(v: &mut Vec<ChatMessageContainer>, msg: ChatMessageContainer) {
-    v.push(msg);
-    if v.len() > MAX_PER_CHANNEL {
-        let drop = v.len() - MAX_PER_CHANNEL;
-        v.drain(..drop);
-    }
-}
 
 pub struct ChatHandler {
     container: ChatMessageContainer,
+    resolved_channel: ResolvedChatChannel,
     data: Arc<WebsocketData>,
 }
 
 impl ChatHandler {
-    pub fn new(mut container: ChatMessageContainer, data: Arc<WebsocketData>) -> Self {
+    pub fn new(
+        mut container: ChatMessageContainer,
+        resolved_channel: ResolvedChatChannel,
+        data: Arc<WebsocketData>,
+    ) -> Self {
         container.time();
-        Self { container, data }
+        let original_body = container.message.message.clone();
+        container.message.normalize();
+        if container.message.message != original_body {
+            metrics::record_message_normalization();
+        }
+        Self {
+            container,
+            resolved_channel,
+            data,
+        }
     }
 
-    pub fn handle(&self) -> Vec<InternalServerMessage> {
+    pub async fn handle(&self, conn: &mut DbConn<'_>) -> Result<Vec<InternalServerMessage>> {
         let mut messages = Vec::new();
         match &self.container.destination {
             ChatDestination::TournamentLobby(tournament_id) => {
-                let mut tournament_lobby = self.data.chat_storage.tournament.write().unwrap();
-                let entry = tournament_lobby.entry(tournament_id.clone()).or_default();
-                push_capped(entry, self.container.clone());
                 messages.push(InternalServerMessage {
-                    destination: MessageDestination::Tournament(tournament_id.clone()),
-                    message: ServerMessage::Chat(vec![self.container.to_owned()]),
-                })
-            }
-            ChatDestination::GamePlayers(game_id, white_id, black_id) => {
-                let mut games_private = self.data.chat_storage.games_private.write().unwrap();
-                let entry = games_private.entry(game_id.clone()).or_default();
-                push_capped(entry, self.container.clone());
-                messages.push(InternalServerMessage {
-                    destination: MessageDestination::User(*white_id),
-                    message: ServerMessage::Chat(vec![self.container.to_owned()]),
-                });
-                messages.push(InternalServerMessage {
-                    destination: MessageDestination::User(*black_id),
-                    message: ServerMessage::Chat(vec![self.container.to_owned()]),
-                });
-            }
-            ChatDestination::GameSpectators(game, white_id, black_id) => {
-                let mut games_public = self.data.chat_storage.games_public.write().unwrap();
-                let entry = games_public.entry(game.clone()).or_default();
-                push_capped(entry, self.container.clone());
-                messages.push(InternalServerMessage {
-                    destination: MessageDestination::GameSpectators(
-                        game.clone(),
-                        *white_id,
-                        *black_id,
+                    destination: MessageDestination::Tournament(
+                        tournament_id.clone(),
+                        Some(self.container.message.user_id),
                     ),
                     message: ServerMessage::Chat(vec![self.container.to_owned()]),
                 })
             }
-            ChatDestination::User((id, _username)) => {
-                let sender = self.container.message.user_id;
-                self.data
-                    .chat_storage
-                    .insert_or_update_direct_lookup(sender, *id);
-                let user_to_user = UserToUser::new(*id, sender);
-                let mut direct = self.data.chat_storage.direct.write().unwrap();
-                let entry = direct.entry(user_to_user).or_default();
-                push_capped(entry, self.container.clone());
+            ChatDestination::GamePlayers(_) => {
+                let game = self
+                    .resolved_channel
+                    .game
+                    .as_ref()
+                    .context("missing players chat fanout metadata")?;
                 messages.push(InternalServerMessage {
-                    destination: MessageDestination::User(*id),
+                    destination: MessageDestination::User(game.white_id),
+                    message: ServerMessage::Chat(vec![self.container.to_owned()]),
+                });
+                messages.push(InternalServerMessage {
+                    destination: MessageDestination::User(game.black_id),
+                    message: ServerMessage::Chat(vec![self.container.to_owned()]),
+                });
+            }
+            ChatDestination::GameSpectators(game_id) => {
+                let game = self
+                    .resolved_channel
+                    .game
+                    .as_ref()
+                    .context("missing spectators chat fanout metadata")?;
+                if game.finished {
+                    messages.push(InternalServerMessage {
+                        destination: MessageDestination::User(game.white_id),
+                        message: ServerMessage::Chat(vec![self.container.to_owned()]),
+                    });
+                    messages.push(InternalServerMessage {
+                        destination: MessageDestination::User(game.black_id),
+                        message: ServerMessage::Chat(vec![self.container.to_owned()]),
+                    });
+                }
+                messages.push(InternalServerMessage {
+                    destination: MessageDestination::GameSpectators(
+                        game_id.clone(),
+                        game.white_id,
+                        game.black_id,
+                    ),
                     message: ServerMessage::Chat(vec![self.container.to_owned()]),
                 })
+            }
+            ChatDestination::User((other_id, _username)) => {
+                // Recipient
+                messages.push(InternalServerMessage {
+                    destination: MessageDestination::User(*other_id),
+                    message: ServerMessage::Chat(vec![self.container.to_owned()]),
+                });
+                // Sender (echo so their thread updates immediately)
+                messages.push(InternalServerMessage {
+                    destination: MessageDestination::User(self.container.message.user_id),
+                    message: ServerMessage::Chat(vec![self.container.to_owned()]),
+                });
             }
             ChatDestination::Global => messages.push(InternalServerMessage {
                 destination: MessageDestination::Global,
                 message: ServerMessage::Chat(vec![self.container.to_owned()]),
             }),
         };
-        messages
+
+        let persistable = PersistableChatMessage::from_container(
+            &self.container,
+            &self.resolved_channel.channel_key,
+            self.resolved_channel.game.as_ref().map(|game| game.id),
+        );
+        metrics::record_persist_attempt();
+        if let Err(error) = insert_chat_message(conn, persistable.as_new()).await {
+            metrics::record_persist_failure();
+            let snapshot = metrics::snapshot();
+            log::error!(
+                "chat persist failed (attempts_total={}, successes_total={}, failures_total={}, normalizations_total={}): {}",
+                snapshot.persist_attempts_total,
+                snapshot.persist_successes_total,
+                snapshot.persist_failures_total,
+                snapshot.message_normalizations_total,
+                error
+            );
+            return Err(error.into());
+        }
+        metrics::record_persist_success();
+
+        // Update the in-memory recent cache only after persistence succeeds.
+        self.data.chat_storage.push_recent(
+            self.resolved_channel.channel_key.channel_type.as_str(),
+            &self.resolved_channel.channel_key.channel_id,
+        );
+
+        Ok(messages)
     }
 }

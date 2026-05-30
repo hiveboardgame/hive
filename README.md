@@ -150,7 +150,7 @@ CSV file path is configured, appended as one row to that file.
 **Defaults**
 
 - **Release builds**: telemetry is on. Default interval `30s`. Default CSV
-  path `./ws_metrics.csv` (relative to the server's working directory).
+  path `./ws_metrics_v2.csv` (relative to the server's working directory).
 - **Debug builds**: opt-in. The job only runs if `WS_TELEMETRY_INTERVAL_SECS`
   is set; the CSV is only written if `WS_METRICS_LOG_FILE` is set.
 
@@ -164,6 +164,8 @@ CSV file path is configured, appended as one row to that file.
 - `WS_METRICS_LOG_FILE`
   - Set to an empty string to keep snapshots running but skip CSV writing.
   - Set to a path to override the default CSV location.
+  - If this is set in prod, point it at a v2 file. The previous
+    `ws_metrics.csv` can be left in place as an archive.
 
 **Admin dashboard**
 

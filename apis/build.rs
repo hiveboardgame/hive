@@ -26,6 +26,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             "game",
             "tournaments",
             "donate",
+            "messages",
         ])?
         .parse_options(options);
 

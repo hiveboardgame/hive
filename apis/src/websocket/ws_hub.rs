@@ -89,7 +89,7 @@ const FINISHED_GAME_GRACE: Duration = Duration::from_secs(5);
 /// player returns).
 const GAME_RESPONSE_CACHE_MAX_AGE: Duration = Duration::from_secs(300);
 
-/// WsHub — concurrent, non-actor replacement for `WsServer`.
+/// WsHub — concurrent, non-actor websocket hub.
 ///
 /// Shutdown: there is currently no graceful-shutdown signal; sessions are dropped
 /// when the process exits. Revisit if/when we add `CancellationToken` plumbing.
@@ -449,25 +449,15 @@ impl WsHub {
         }
 
         // chat
-        if let Ok(t) = self.data.chat_storage.tournament.read() {
-            snap.chat_tournament_channels = t.len() as u64;
-            snap.chat_tournament_msgs = t.values().map(|v| v.len() as u64).sum();
-        }
-        if let Ok(t) = self.data.chat_storage.games_public.read() {
-            snap.chat_games_public_channels = t.len() as u64;
-            snap.chat_games_public_msgs = t.values().map(|v| v.len() as u64).sum();
-        }
-        if let Ok(t) = self.data.chat_storage.games_private.read() {
-            snap.chat_games_private_channels = t.len() as u64;
-            snap.chat_games_private_msgs = t.values().map(|v| v.len() as u64).sum();
-        }
-        if let Ok(t) = self.data.chat_storage.direct.read() {
-            snap.chat_direct_pairs = t.len() as u64;
-            snap.chat_direct_msgs = t.values().map(|v| v.len() as u64).sum();
-        }
-        if let Ok(t) = self.data.chat_storage.direct_lookup.read() {
-            snap.chat_direct_lookup_users = t.len() as u64;
-        }
+        let chat = self.data.chat_storage.snapshot_counts();
+        snap.chat_recent_tournament_channels = chat.tournament_channels;
+        snap.chat_recent_tournament_msgs = chat.tournament_messages;
+        snap.chat_recent_game_spectator_channels = chat.game_spectator_channels;
+        snap.chat_recent_game_spectator_msgs = chat.game_spectator_messages;
+        snap.chat_recent_game_player_channels = chat.game_player_channels;
+        snap.chat_recent_game_player_msgs = chat.game_player_messages;
+        snap.chat_recent_direct_channels = chat.direct_channels;
+        snap.chat_recent_direct_msgs = chat.direct_messages;
 
         // caches
         snap.game_response_cache_len = self.data.game_response_cache.len() as u64;
@@ -552,11 +542,17 @@ impl WsHub {
                     self.send_to_socket(&uid, &sid, DestKind::GameSpectators, &bytes);
                 }
             }
-            MessageDestination::Tournament(tournament_id) => {
-                let user_ids = match self.tournament_members_cached(tournament_id).await {
+            MessageDestination::Tournament(tournament_id, echo_user_id) => {
+                let mut user_ids = match self.tournament_members_cached(tournament_id).await {
                     Some(ids) => ids,
+                    None if echo_user_id.is_some() => Vec::new(),
                     None => return,
                 };
+                if let Some(echo_user_id) = echo_user_id {
+                    user_ids.push(*echo_user_id);
+                    user_ids.sort_unstable();
+                    user_ids.dedup();
+                }
                 for uid in user_ids {
                     self.send_to_user(&uid, DestKind::Tournament, &bytes);
                 }
@@ -985,7 +981,8 @@ impl WsHub {
 
         // Game chat is preserved intentionally: post-game chat history must
         // remain accessible after finalization (e.g. post-mortem discussion).
-        // Memory is bounded by MAX_PER_CHANNEL in the chat handler.
+        // Durable history is in Postgres; the recent-message cache is bounded
+        // in the chat storage layer.
 
         if let Ok(mut games_date) = self.data.game_start.games_date.write() {
             games_date.remove(game_id);
@@ -1297,6 +1294,7 @@ mod tests {
         *,
     };
     use crate::websocket::WsTelemetry;
+    use shared_types::{CHANNEL_TYPE_GAME_PLAYERS, CHANNEL_TYPE_GAME_SPECTATORS};
 
     async fn make_hub() -> Arc<WsHub> {
         // bb8 builds the pool struct without making DB connections (min_idle = 0 by default).
@@ -1442,6 +1440,49 @@ mod tests {
 
         assert_eq!(rx_a.try_recv().unwrap(), Bytes::from_static(b"broadcast"));
         assert_eq!(rx_b.try_recv().unwrap(), Bytes::from_static(b"broadcast"));
+    }
+
+    #[tokio::test]
+    async fn dispatch_tournament_echo_reaches_non_member_sender() {
+        let hub = make_hub().await;
+        let sender_id = Uuid::new_v4();
+        let sender_sid = Uuid::new_v4();
+        let tournament_id = TournamentId("admin-echo".to_string());
+        let mut sender_rx = hub.register_socket(sender_id, sender_sid);
+
+        hub.tournament_members
+            .insert(tournament_id.clone(), (Instant::now(), Vec::new()));
+
+        hub.dispatch(
+            &MessageDestination::Tournament(tournament_id, Some(sender_id)),
+            Bytes::from_static(b"chat"),
+            None,
+        )
+        .await;
+
+        assert_eq!(sender_rx.try_recv().unwrap(), Bytes::from_static(b"chat"));
+    }
+
+    #[tokio::test]
+    async fn dispatch_tournament_echo_dedupes_member_sender() {
+        let hub = make_hub().await;
+        let sender_id = Uuid::new_v4();
+        let sender_sid = Uuid::new_v4();
+        let tournament_id = TournamentId("member-echo".to_string());
+        let mut sender_rx = hub.register_socket(sender_id, sender_sid);
+
+        hub.tournament_members
+            .insert(tournament_id.clone(), (Instant::now(), vec![sender_id]));
+
+        hub.dispatch(
+            &MessageDestination::Tournament(tournament_id, Some(sender_id)),
+            Bytes::from_static(b"chat"),
+            None,
+        )
+        .await;
+
+        assert_eq!(sender_rx.try_recv().unwrap(), Bytes::from_static(b"chat"));
+        assert!(sender_rx.try_recv().is_err());
     }
 
     #[tokio::test]
@@ -1759,35 +1800,20 @@ mod tests {
 
         hub.data
             .chat_storage
-            .games_public
-            .write()
-            .unwrap()
-            .insert(game_id.clone(), vec![]);
+            .push_recent(CHANNEL_TYPE_GAME_SPECTATORS, &game_id.0);
         hub.data
             .chat_storage
-            .games_private
-            .write()
-            .unwrap()
-            .insert(game_id.clone(), vec![]);
+            .push_recent(CHANNEL_TYPE_GAME_PLAYERS, &game_id.0);
 
         hub.on_game_finished(&game_id, white_id, black_id);
 
-        assert!(
-            hub.data
-                .chat_storage
-                .games_public
-                .read()
-                .unwrap()
-                .contains_key(&game_id),
+        let snapshot = hub.data.chat_storage.snapshot_counts();
+        assert_eq!(
+            snapshot.game_spectator_messages, 1,
             "public game chat must be preserved after finalization",
         );
-        assert!(
-            hub.data
-                .chat_storage
-                .games_private
-                .read()
-                .unwrap()
-                .contains_key(&game_id),
+        assert_eq!(
+            snapshot.game_player_messages, 1,
             "private game chat must be preserved after finalization",
         );
     }

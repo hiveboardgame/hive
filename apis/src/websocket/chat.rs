@@ -1,58 +1,89 @@
-use std::{
-    collections::{HashMap, HashSet},
-    sync::RwLock,
+//! In-memory recent-chat counters only. All durable chat state is in Postgres.
+//!
+//! These counters track up to CHAT_RECENT_CACHE_MAX messages per (channel_type, channel_id).
+
+use std::{collections::HashMap, sync::RwLock};
+
+#[cfg(feature = "ssr")]
+use shared_types::{
+    CHANNEL_TYPE_DIRECT,
+    CHANNEL_TYPE_GAME_PLAYERS,
+    CHANNEL_TYPE_GAME_SPECTATORS,
+    CHANNEL_TYPE_TOURNAMENT_LOBBY,
 };
 
-use shared_types::{ChatMessageContainer, GameId, TournamentId};
-use uuid::Uuid;
+/// Max messages kept per channel in the recent cache.
+pub const CHAT_RECENT_CACHE_MAX: usize = 50;
 
-#[derive(Debug, Eq, Hash, PartialEq)]
-pub struct UserToUser {
-    pub id: (Uuid, Uuid),
+/// Key for the recent-messages cache: (channel_type, channel_id).
+pub type ChatChannelKey = (String, String);
+
+#[cfg(feature = "ssr")]
+#[derive(Debug, Default)]
+pub(crate) struct ChatCacheSnapshot {
+    pub tournament_channels: u64,
+    pub tournament_messages: u64,
+    pub game_spectator_channels: u64,
+    pub game_spectator_messages: u64,
+    pub game_player_channels: u64,
+    pub game_player_messages: u64,
+    pub direct_channels: u64,
+    pub direct_messages: u64,
 }
 
-impl UserToUser {
-    pub fn new(user_1: Uuid, user_2: Uuid) -> Self {
-        if user_1 < user_2 {
-            Self {
-                id: (user_1, user_2),
-            }
-        } else {
-            Self {
-                id: (user_2, user_1),
-            }
-        }
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Chats {
-    pub tournament: RwLock<HashMap<TournamentId, Vec<ChatMessageContainer>>>,
-    pub games_public: RwLock<HashMap<GameId, Vec<ChatMessageContainer>>>,
-    pub games_private: RwLock<HashMap<GameId, Vec<ChatMessageContainer>>>,
-    pub direct: RwLock<HashMap<UserToUser, Vec<ChatMessageContainer>>>,
-    pub direct_lookup: RwLock<HashMap<Uuid, HashSet<Uuid>>>,
-}
-impl Default for Chats {
-    fn default() -> Self {
-        Self::new()
-    }
+    /// Recent message counts per (channel_type, channel_id), capped at CHAT_RECENT_CACHE_MAX.
+    recent_counts: RwLock<HashMap<ChatChannelKey, usize>>,
 }
 
 impl Chats {
     pub fn new() -> Self {
         Self {
-            tournament: RwLock::new(HashMap::new()),
-            games_public: RwLock::new(HashMap::new()),
-            games_private: RwLock::new(HashMap::new()),
-            direct: RwLock::new(HashMap::new()),
-            direct_lookup: RwLock::new(HashMap::new()),
+            recent_counts: RwLock::new(HashMap::new()),
         }
     }
 
-    pub fn insert_or_update_direct_lookup(&self, id1: Uuid, id2: Uuid) {
-        let mut direct_lookup = self.direct_lookup.write().unwrap();
-        direct_lookup.entry(id1).or_default().insert(id2);
-        direct_lookup.entry(id2).or_default().insert(id1);
+    /// Records one recent message for a channel, keeping at most CHAT_RECENT_CACHE_MAX.
+    pub fn push_recent(&self, channel_type: &str, channel_id: &str) {
+        let key = (channel_type.to_string(), channel_id.to_string());
+        let mut counts = self
+            .recent_counts
+            .write()
+            .unwrap_or_else(|error| error.into_inner());
+        let count = counts.entry(key).or_default();
+        *count = (*count + 1).min(CHAT_RECENT_CACHE_MAX);
+    }
+
+    #[cfg(feature = "ssr")]
+    pub(crate) fn snapshot_counts(&self) -> ChatCacheSnapshot {
+        let counts = self
+            .recent_counts
+            .read()
+            .unwrap_or_else(|error| error.into_inner());
+        let mut snapshot = ChatCacheSnapshot::default();
+        for ((channel_type, _), message_count) in counts.iter() {
+            let message_count = *message_count as u64;
+            match channel_type.as_str() {
+                CHANNEL_TYPE_TOURNAMENT_LOBBY => {
+                    snapshot.tournament_channels += 1;
+                    snapshot.tournament_messages += message_count;
+                }
+                CHANNEL_TYPE_GAME_SPECTATORS => {
+                    snapshot.game_spectator_channels += 1;
+                    snapshot.game_spectator_messages += message_count;
+                }
+                CHANNEL_TYPE_GAME_PLAYERS => {
+                    snapshot.game_player_channels += 1;
+                    snapshot.game_player_messages += message_count;
+                }
+                CHANNEL_TYPE_DIRECT => {
+                    snapshot.direct_channels += 1;
+                    snapshot.direct_messages += message_count;
+                }
+                _ => {}
+            }
+        }
+        snapshot
     }
 }

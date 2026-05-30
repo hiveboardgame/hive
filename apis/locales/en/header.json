@@ -23,6 +23,7 @@
     "login": "Login",
     "user_menu": {
         "profile": "Profile",
+        "messages": "Messages",
         "edit_account": "Edit Account",
         "config": "Config",
         "logout": "Logout",
