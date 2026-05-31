@@ -89,7 +89,7 @@ const FINISHED_GAME_GRACE: Duration = Duration::from_secs(5);
 /// player returns).
 const GAME_RESPONSE_CACHE_MAX_AGE: Duration = Duration::from_secs(300);
 
-/// WsHub — concurrent, non-actor replacement for `WsServer`.
+/// WsHub — concurrent, non-actor websocket hub.
 ///
 /// Shutdown: there is currently no graceful-shutdown signal; sessions are dropped
 /// when the process exits. Revisit if/when we add `CancellationToken` plumbing.
@@ -448,27 +448,6 @@ impl WsHub {
             snap.game_start_games_date_len = games_date.len() as u64;
         }
 
-        // chat
-        if let Ok(t) = self.data.chat_storage.tournament.read() {
-            snap.chat_tournament_channels = t.len() as u64;
-            snap.chat_tournament_msgs = t.values().map(|v| v.len() as u64).sum();
-        }
-        if let Ok(t) = self.data.chat_storage.games_public.read() {
-            snap.chat_games_public_channels = t.len() as u64;
-            snap.chat_games_public_msgs = t.values().map(|v| v.len() as u64).sum();
-        }
-        if let Ok(t) = self.data.chat_storage.games_private.read() {
-            snap.chat_games_private_channels = t.len() as u64;
-            snap.chat_games_private_msgs = t.values().map(|v| v.len() as u64).sum();
-        }
-        if let Ok(t) = self.data.chat_storage.direct.read() {
-            snap.chat_direct_pairs = t.len() as u64;
-            snap.chat_direct_msgs = t.values().map(|v| v.len() as u64).sum();
-        }
-        if let Ok(t) = self.data.chat_storage.direct_lookup.read() {
-            snap.chat_direct_lookup_users = t.len() as u64;
-        }
-
         // caches
         snap.game_response_cache_len = self.data.game_response_cache.len() as u64;
         snap.last_tv_broadcast_len = self.last_tv_broadcast.len() as u64;
@@ -552,11 +531,17 @@ impl WsHub {
                     self.send_to_socket(&uid, &sid, DestKind::GameSpectators, &bytes);
                 }
             }
-            MessageDestination::Tournament(tournament_id) => {
-                let user_ids = match self.tournament_members_cached(tournament_id).await {
+            MessageDestination::Tournament(tournament_id, echo_user_id) => {
+                let mut user_ids = match self.tournament_members_cached(tournament_id).await {
                     Some(ids) => ids,
+                    None if echo_user_id.is_some() => Vec::new(),
                     None => return,
                 };
+                if let Some(echo_user_id) = echo_user_id {
+                    if !user_ids.contains(echo_user_id) {
+                        user_ids.push(*echo_user_id);
+                    }
+                }
                 for uid in user_ids {
                     self.send_to_user(&uid, DestKind::Tournament, &bytes);
                 }
@@ -985,7 +970,8 @@ impl WsHub {
 
         // Game chat is preserved intentionally: post-game chat history must
         // remain accessible after finalization (e.g. post-mortem discussion).
-        // Memory is bounded by MAX_PER_CHANNEL in the chat handler.
+        // Durable history is in Postgres; the recent-message cache is bounded
+        // in the chat storage layer.
 
         if let Ok(mut games_date) = self.data.game_start.games_date.write() {
             games_date.remove(game_id);
@@ -1445,6 +1431,49 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn dispatch_tournament_echo_reaches_non_member_sender() {
+        let hub = make_hub().await;
+        let sender_id = Uuid::new_v4();
+        let sender_sid = Uuid::new_v4();
+        let tournament_id = TournamentId("admin-echo".to_string());
+        let mut sender_rx = hub.register_socket(sender_id, sender_sid);
+
+        hub.tournament_members
+            .insert(tournament_id.clone(), (Instant::now(), Vec::new()));
+
+        hub.dispatch(
+            &MessageDestination::Tournament(tournament_id, Some(sender_id)),
+            Bytes::from_static(b"chat"),
+            None,
+        )
+        .await;
+
+        assert_eq!(sender_rx.try_recv().unwrap(), Bytes::from_static(b"chat"));
+    }
+
+    #[tokio::test]
+    async fn dispatch_tournament_echo_dedupes_member_sender() {
+        let hub = make_hub().await;
+        let sender_id = Uuid::new_v4();
+        let sender_sid = Uuid::new_v4();
+        let tournament_id = TournamentId("member-echo".to_string());
+        let mut sender_rx = hub.register_socket(sender_id, sender_sid);
+
+        hub.tournament_members
+            .insert(tournament_id.clone(), (Instant::now(), vec![sender_id]));
+
+        hub.dispatch(
+            &MessageDestination::Tournament(tournament_id, Some(sender_id)),
+            Bytes::from_static(b"chat"),
+            None,
+        )
+        .await;
+
+        assert_eq!(sender_rx.try_recv().unwrap(), Bytes::from_static(b"chat"));
+        assert!(sender_rx.try_recv().is_err());
+    }
+
+    #[tokio::test]
     async fn dispatch_game_spectators_excludes_players() {
         let hub = make_hub().await;
         let white_id = Uuid::new_v4();
@@ -1747,50 +1776,6 @@ mod tests {
     // user-derived fields (ratings, profile) after a player completes another
     // game without the current game row changing. TTL bounds that window.
     // Tests live in websocket::cache_tests (pure-logic, no DB needed).
-
-    // Regression (#2): on_game_finished must NOT delete game chat — post-game
-    // chat history must survive finalization.
-    #[tokio::test]
-    async fn game_chat_preserved_after_on_game_finished() {
-        let hub = make_hub().await;
-        let white_id = Uuid::new_v4();
-        let black_id = Uuid::new_v4();
-        let game_id = GameId("chat-preserve".to_string());
-
-        hub.data
-            .chat_storage
-            .games_public
-            .write()
-            .unwrap()
-            .insert(game_id.clone(), vec![]);
-        hub.data
-            .chat_storage
-            .games_private
-            .write()
-            .unwrap()
-            .insert(game_id.clone(), vec![]);
-
-        hub.on_game_finished(&game_id, white_id, black_id);
-
-        assert!(
-            hub.data
-                .chat_storage
-                .games_public
-                .read()
-                .unwrap()
-                .contains_key(&game_id),
-            "public game chat must be preserved after finalization",
-        );
-        assert!(
-            hub.data
-                .chat_storage
-                .games_private
-                .read()
-                .unwrap()
-                .contains_key(&game_id),
-            "private game chat must be preserved after finalization",
-        );
-    }
 
     // Regression (#3): QueuedGuard tracks loader tasks waiting for a semaphore
     // permit, giving telemetry visibility into the queued-vs-active split.

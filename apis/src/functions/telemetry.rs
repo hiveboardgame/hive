@@ -2,14 +2,14 @@ use leptos::prelude::*;
 use shared_types::{TelemetryRange, TelemetryRow};
 
 /// Resolve the CSV path used by both the snapshot writer and the admin
-/// dashboard reader. In release the default is `./ws_metrics.csv`; in debug
+/// dashboard reader. In release the default is `./ws_metrics_v2.csv`; in debug
 /// it's unset. `WS_METRICS_LOG_FILE` overrides; an empty value disables CSV.
 pub fn resolve_csv_path() -> Option<String> {
     let in_release = !cfg!(debug_assertions);
     match std::env::var("WS_METRICS_LOG_FILE") {
         Ok(s) if s.is_empty() => None,
         Ok(s) => Some(s),
-        Err(_) if in_release => Some("./ws_metrics.csv".to_string()),
+        Err(_) if in_release => Some("./ws_metrics_v2.csv".to_string()),
         Err(_) => None,
     }
 }

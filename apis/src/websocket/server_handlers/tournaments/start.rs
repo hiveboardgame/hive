@@ -64,7 +64,7 @@ impl StartHandler {
         }
 
         messages.push(InternalServerMessage {
-            destination: MessageDestination::Tournament(self.tournament_id.clone()),
+            destination: MessageDestination::Tournament(self.tournament_id.clone(), None),
             message: ServerMessage::Tournament(TournamentUpdate::Started(TournamentId(
                 tournament.nanoid.clone(),
             ))),

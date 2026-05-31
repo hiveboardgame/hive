@@ -21,6 +21,45 @@ diesel::table! {
 }
 
 diesel::table! {
+    chat_messages (id) {
+        id -> Int8,
+        channel_type -> Text,
+        channel_id -> Text,
+        sender_id -> Uuid,
+        recipient_id -> Nullable<Uuid>,
+        username -> Text,
+        body -> Text,
+        turn -> Nullable<Int4>,
+        created_at -> Timestamptz,
+        game_id -> Nullable<Uuid>,
+    }
+}
+
+diesel::table! {
+    chat_read_receipts (user_id, channel_type, channel_id) {
+        user_id -> Uuid,
+        channel_type -> Text,
+        channel_id -> Text,
+        last_read_at -> Timestamptz,
+        game_id -> Nullable<Uuid>,
+    }
+}
+
+diesel::table! {
+    game_hashes (game_id, turn) {
+        hash -> Int8,
+        game_id -> Uuid,
+        turn -> Int4,
+        rating -> Nullable<Float8>,
+        result -> Text,
+        speed -> Text,
+        game_type -> Text,
+        rated -> Bool,
+        played_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     games (id) {
         id -> Uuid,
         nanoid -> Text,
@@ -174,6 +213,22 @@ diesel::table! {
 }
 
 diesel::table! {
+    user_blocks (blocker_id, blocked_id) {
+        blocker_id -> Uuid,
+        blocked_id -> Uuid,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    user_tournament_chat_mutes (user_id, tournament_id) {
+        user_id -> Uuid,
+        tournament_id -> Uuid,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     users (id) {
         id -> Uuid,
         username -> Text,
@@ -189,6 +244,10 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(chat_messages -> games (game_id));
+diesel::joinable!(chat_read_receipts -> games (game_id));
+diesel::joinable!(chat_read_receipts -> users (user_id));
+diesel::joinable!(game_hashes -> games (game_id));
 diesel::joinable!(games_users -> games (game_id));
 diesel::joinable!(games_users -> users (user_id));
 diesel::joinable!(ratings -> users (user_uid));
@@ -203,9 +262,14 @@ diesel::joinable!(tournaments_organizers -> tournaments (tournament_id));
 diesel::joinable!(tournaments_organizers -> users (organizer_id));
 diesel::joinable!(tournaments_users -> tournaments (tournament_id));
 diesel::joinable!(tournaments_users -> users (user_id));
+diesel::joinable!(user_tournament_chat_mutes -> tournaments (tournament_id));
+diesel::joinable!(user_tournament_chat_mutes -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     challenges,
+    chat_messages,
+    chat_read_receipts,
+    game_hashes,
     games,
     games_users,
     home_banner,
@@ -217,5 +281,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     tournaments_invitations,
     tournaments_organizers,
     tournaments_users,
+    user_blocks,
+    user_tournament_chat_mutes,
     users,
 );

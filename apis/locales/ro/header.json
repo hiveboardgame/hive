@@ -23,6 +23,7 @@
     "login": "Autentificare",
     "user_menu": {
         "profile": "Profil",
+        "messages": "Mesaje",
         "edit_account": "Editează contul",
         "config": "Configurare",
         "logout": "Deconectare",

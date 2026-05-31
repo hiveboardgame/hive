@@ -3,16 +3,17 @@ use leptos::prelude::*;
 use server_fn::codec;
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
-pub async fn get_account() -> Result<AccountResponse, ServerFnError> {
-    use crate::functions::{auth::identity::uuid, db::pool};
+pub async fn get_account() -> Result<Option<AccountResponse>, ServerFnError> {
+    use crate::functions::{auth::identity::optional_uuid, db::pool};
     use db_lib::get_conn;
 
-    let uuid = match uuid().await {
-        Ok(uuid) => uuid,
-        Err(e) => return Err(e),
+    // Anonymous sessions are expected: return None without treating this as a server failure.
+    let Some(uuid) = optional_uuid().await? else {
+        return Ok(None);
     };
+
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
     let account_response = AccountResponse::from_uuid(&uuid, &mut conn).await?;
-    Ok(account_response)
+    Ok(Some(account_response))
 }
