@@ -19,6 +19,11 @@ pub fn OnlineUsers() -> impl IntoView {
     });
 
     view! {
-        <UserSearch fallback_users=fallback_users show_count actions=vec![UserAction::Challenge] />
+        <UserSearch
+            fallback_users=fallback_users
+            show_count
+            container_class="flex relative flex-col my-2 mr-2 ml-2 w-64 lg:mr-0 2xl:mr-2 shrink-0"
+            actions=vec![UserAction::Challenge]
+        />
     }
 }

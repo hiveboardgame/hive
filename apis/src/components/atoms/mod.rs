@@ -1,4 +1,5 @@
 pub mod active;
+pub mod color_hex;
 pub mod create_challenge_button;
 pub mod date_time_picker;
 pub mod direct_challenge_button;

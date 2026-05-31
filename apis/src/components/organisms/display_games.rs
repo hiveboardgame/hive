@@ -11,7 +11,7 @@ use leptos_use::{
     UseInfiniteScrollOptions,
     WatchThrottledOptions,
 };
-use shared_types::{BatchInfo, GameProgress};
+use shared_types::GameProgress;
 
 #[derive(Params, PartialEq, Eq)]
 struct UsernameParams {
@@ -29,8 +29,6 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
     Effect::watch(
         move || (),
         move |_, _, _| {
-            //TODO: figure out a less hacky way
-            // Uses requestAnimationFrame twice to ensure the element is fully rendered and measured
             request_animation_frame(move || {
                 request_animation_frame(move || {
                     if tab_view != GameProgress::Finished {
@@ -59,6 +57,7 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
 
                     ctx.has_more.set_value(true);
                     ctx.is_first_batch.set_value(true);
+                    ctx.next_batch_token.set(None);
                     ctx.games.set(vec![]);
 
                     load_games(
@@ -93,18 +92,13 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
                 if current_games_count < needed_games {
                     let filters = ctx.filters.get_untracked();
                     let username = username.get_untracked();
-                    let batch_info = ctx.games.with_untracked(|g| {
-                        g.last().map(|game| BatchInfo {
-                            id: game.uuid,
-                            timestamp: game.updated_at,
-                        })
-                    });
+                    let batch_token = ctx.next_batch_token.get_untracked();
                     ctx.is_first_batch.set_value(false);
                     load_games(
                         filters,
                         tab_view,
                         username,
-                        batch_info,
+                        batch_token,
                         ctx.next_batch,
                         ctx.infinite_scroll_batch_size.get_untracked(),
                     );
@@ -122,13 +116,8 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
         move |_| {
             let filters = ctx.filters.get();
             let username = username();
-            let batch_info = ctx.games.with(|g| {
-                g.last().map(|game| BatchInfo {
-                    id: game.uuid,
-                    timestamp: game.updated_at,
-                })
-            });
-            ctx.is_first_batch.set_value(batch_info.is_none());
+            let batch_token = ctx.next_batch_token.get();
+            ctx.is_first_batch.set_value(batch_token.is_none());
             async move {
                 if !ctx.has_more.get_value() || ctx.next_batch.pending().get() {
                     return;
@@ -137,7 +126,7 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
                     filters,
                     tab_view,
                     username,
-                    batch_info,
+                    batch_token,
                     ctx.next_batch,
                     ctx.infinite_scroll_batch_size.get(),
                 );

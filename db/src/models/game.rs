@@ -17,12 +17,15 @@ use hive_lib::{Color, GameControl, GameResult, GameStatus, GameType, History, St
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use shared_types::{
+    BatchToken,
     ChallengeId,
     Conclusion,
     GameId,
+    GameSortKey,
     GameSpeed,
     GameStart,
     GamesQueryOptions,
+    SortValue,
     TimeMode,
     TournamentGameResult,
 };
@@ -1242,24 +1245,64 @@ impl Game {
             .await?)
     }
 
+    fn validate_options(options: &GamesQueryOptions) -> Result<GamesQueryOptions, DbError> {
+        options
+            .clone()
+            .validate_all()
+            .map_err(|errs| DbError::InvalidInput {
+                info: errs
+                    .into_iter()
+                    .map(|e| e.to_string())
+                    .collect::<Vec<_>>()
+                    .join("; "),
+                error: String::new(),
+            })
+    }
+
     pub async fn get_rows_from_options(
         options: &GamesQueryOptions,
         conn: &mut DbConn<'_>,
-    ) -> Result<Vec<Game>, DbError> {
-        let query = GameQueryBuilder::new()
-            .player_filters(
-                options.player1.as_ref(),
-                options.player2.as_ref(),
-                options.exclude_bots,
+    ) -> Result<(Vec<Game>, Option<BatchToken>, Option<i64>), DbError> {
+        let prepared = Self::validate_options(options)?;
+        let query = GameQueryBuilder::batch_query(&prepared).build();
+        let records: Vec<Game> = query.select(games::all_columns).get_results(conn).await?;
+        let total = if prepared.include_total {
+            Some(
+                GameQueryBuilder::count_query(&prepared)
+                    .build()
+                    .count()
+                    .get_result(conn)
+                    .await?,
             )
-            .progress(&options.game_progress)
-            .speeds(&options.speeds)
-            .expansions(options.expansions)
-            .rated_filter(options.rated)
-            .paginate(options.current_batch.as_ref(), options.batch_size)
-            .build();
+        } else {
+            None
+        };
+        let next = Self::next_batch_token(&records, &prepared);
+        Ok((records, next, total))
+    }
 
-        Ok(query.select(games::all_columns).get_results(conn).await?)
+    fn next_batch_token(rows: &[Game], options: &GamesQueryOptions) -> Option<BatchToken> {
+        if rows.len() < options.batch_size {
+            return None;
+        }
+        let last = rows.last()?;
+        let primary_value = match options.sort.key {
+            GameSortKey::Date => SortValue::UpdatedAt(last.updated_at),
+            GameSortKey::Turns => SortValue::Turns(last.turn),
+            GameSortKey::RatingAvg => {
+                let (Some(white), Some(black)) = (last.white_rating, last.black_rating) else {
+                    return None;
+                };
+                SortValue::RatingAvg((white + black) / 2.0)
+            }
+        };
+
+        Some(BatchToken {
+            sort: options.sort.clone(),
+            primary_value,
+            updated_at: last.updated_at,
+            id: last.id,
+        })
     }
 
     pub async fn adjudicate_tournament_result(

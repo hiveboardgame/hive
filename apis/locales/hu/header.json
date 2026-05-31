@@ -11,7 +11,8 @@
         "rules": "Szabályok",
         "analysis": "Elemzés",
         "title": "Tanulás",
-        "rules_summary": "Szabályok összefoglalója"
+        "rules_summary": "Szabályok összefoglalója",
+        "archive": "Archívum"
     },
     "home": "Főoldal",
     "login": "Bejelentkezés",

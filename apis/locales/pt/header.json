@@ -10,7 +10,8 @@
         "title": "Aprender",
         "rules": "Regras",
         "rules_summary": "Resumo das regras",
-        "analysis": "Análise"
+        "analysis": "Análise",
+        "archive": "Arquivo"
     },
     "user_menu": {
         "login": "Login",

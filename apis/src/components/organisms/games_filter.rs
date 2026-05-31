@@ -2,7 +2,7 @@ use crate::{
     components::atoms::rating::icon_for_speed,
     i18n::*,
     pages::profile_view::tab_from_path,
-    providers::{load_games, FilterState, GamesSearchContext},
+    providers::{load_games, FilterState, GamesSearchContext, ResultType},
 };
 use hive_lib::Color;
 use leptos::{html, prelude::*};
@@ -10,7 +10,7 @@ use leptos_i18n::I18nContext;
 use leptos_icons::*;
 use leptos_router::hooks::use_location;
 use leptos_use::{on_click_outside_with_options, OnClickOutsideOptions};
-use shared_types::{GameProgress, GameSpeed, ResultType};
+use shared_types::{GameProgress, GameSpeed};
 
 #[derive(Clone, Copy)]
 pub enum TriStateType {
@@ -80,6 +80,7 @@ pub fn GamesFilter(username: String, ctx: GamesSearchContext) -> impl IntoView {
         ctx.filters.set(new_filters);
         ctx.has_more.set_value(true);
         ctx.is_first_batch.set_value(true);
+        ctx.next_batch_token.set(None);
         let batch_size = ctx.initial_batch_size.get();
         load_games(
             ctx.filters.get(),
