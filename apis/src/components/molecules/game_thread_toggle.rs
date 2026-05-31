@@ -9,6 +9,7 @@ use shared_types::{GameChatCapabilities, GameThread};
 pub enum GameThreadToggleSize {
     Compact,
     Roomy,
+    Route,
 }
 
 #[derive(Copy, Clone)]
@@ -60,6 +61,9 @@ impl GameThreadToggleSize {
             Self::Roomy => {
                 "flex gap-0.5 p-1 mb-1 bg-gray-100 rounded-t border-b border-gray-300 dark:border-gray-600 shrink-0 dark:bg-gray-800/50"
             }
+            Self::Route => {
+                "flex p-0.5 bg-gray-100 rounded-lg border border-gray-300 dark:bg-gray-800 dark:border-gray-600"
+            }
         }
     }
 
@@ -71,34 +75,57 @@ impl GameThreadToggleSize {
             Self::Roomy => {
                 "flex-1 px-3 py-2 text-sm font-medium rounded border border-transparent transition-colors"
             }
+            Self::Route => {
+                "no-link-style flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-center"
+            }
         }
     }
+}
+
+fn segment_class(
+    size: GameThreadToggleSize,
+    selected: GameThread,
+    thread: GameThread,
+    enabled: bool,
+) -> String {
+    let state_class = if selected == thread {
+        "bg-slate-400 dark:bg-button-twilight text-gray-900 dark:text-gray-100"
+    } else if enabled {
+        "bg-transparent text-gray-700 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/5"
+    } else {
+        "bg-transparent text-gray-500 dark:text-gray-500 cursor-not-allowed"
+    };
+    format!("{} {}", size.button_base_class(), state_class)
 }
 
 #[component]
 pub fn GameThreadToggle(
     selected: RwSignal<GameThread>,
+    #[prop(optional, into)] players_enabled: Option<Signal<bool>>,
     spectators_enabled: Signal<bool>,
     size: GameThreadToggleSize,
+    #[prop(optional)] on_select: Option<Callback<GameThread>>,
 ) -> impl IntoView {
     let i18n = use_i18n();
+    let players_enabled = players_enabled.unwrap_or_else(|| Signal::derive(|| true));
+    let on_select = StoredValue::new(on_select);
+    let select_thread = move |thread| {
+        if let Some(on_select) = on_select.get_value() {
+            on_select.run(thread);
+        } else {
+            selected.set(thread);
+        }
+    };
 
     view! {
         <div class=size.container_class()>
             <button
                 type="button"
+                disabled=move || !players_enabled.get()
                 class=move || {
-                    format!(
-                        "{} {}",
-                        size.button_base_class(),
-                        if selected.get() == GameThread::Players {
-                            "bg-slate-400 dark:bg-button-twilight text-gray-900 dark:text-gray-100"
-                        } else {
-                            "bg-transparent text-gray-700 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/5"
-                        },
-                    )
+                    segment_class(size, selected.get(), GameThread::Players, players_enabled.get())
                 }
-                on:click=move |_| selected.set(GameThread::Players)
+                on:click=move |_| select_thread(GameThread::Players)
             >
                 {t!(i18n, messages.chat.players)}
             </button>
@@ -106,19 +133,14 @@ pub fn GameThreadToggle(
                 type="button"
                 disabled=move || !spectators_enabled.get()
                 class=move || {
-                    format!(
-                        "{} {}",
-                        size.button_base_class(),
-                        if selected.get() == GameThread::Spectators {
-                            "bg-slate-400 dark:bg-button-twilight text-gray-900 dark:text-gray-100"
-                        } else if spectators_enabled.get() {
-                            "bg-transparent text-gray-700 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/5"
-                        } else {
-                            "bg-transparent text-gray-500 dark:text-gray-500 cursor-not-allowed"
-                        },
+                    segment_class(
+                        size,
+                        selected.get(),
+                        GameThread::Spectators,
+                        spectators_enabled.get(),
                     )
                 }
-                on:click=move |_| selected.set(GameThread::Spectators)
+                on:click=move |_| select_thread(GameThread::Spectators)
             >
                 {t!(i18n, messages.chat.spectators)}
             </button>

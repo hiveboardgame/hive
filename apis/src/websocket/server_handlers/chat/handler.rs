@@ -15,10 +15,7 @@ pub struct ChatHandler {
 }
 
 impl ChatHandler {
-    pub fn new(
-        mut container: ChatMessageContainer,
-        resolved_channel: ResolvedChatChannel,
-    ) -> Self {
+    pub fn new(mut container: ChatMessageContainer, resolved_channel: ResolvedChatChannel) -> Self {
         container.time();
         let original_body = container.message.message.clone();
         container.message.normalize();
@@ -55,7 +52,7 @@ impl ChatHandler {
         }
         metrics::record_persist_success();
 
-        let message = ServerMessage::Chat(vec![self.container.to_owned()]);
+        let message = ServerMessage::Chat(self.container.to_owned());
         Ok(destinations
             .into_iter()
             .map(|destination| InternalServerMessage {

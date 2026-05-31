@@ -2,9 +2,9 @@
 //! Canonical routes under /message are the source of truth for the open thread.
 
 use crate::{
-    chat::ConversationKey,
     components::{
         atoms::{block_toggle_button::BlockToggleButton, unread_badge::UnreadBadge},
+        molecules::game_thread_toggle::{GameThreadToggle, GameThreadToggleSize},
         organisms::chat::ResolvedChatWindow,
     },
     functions::{
@@ -17,18 +17,15 @@ use crate::{
 };
 use leptos::{
     either::{Either, EitherOf3},
-    logging::log,
     prelude::*,
-    task::spawn_local,
 };
 use leptos_router::{
     components::{Outlet, Redirect, A},
-    hooks::{use_location, use_params_map},
+    hooks::{use_location, use_navigate, use_params_map},
     NavigateOptions,
 };
 use shared_types::{
     ChatDestination,
-    ChatHistoryResponse,
     DmConversation,
     GameChannel,
     GameChatCapabilities,
@@ -43,21 +40,14 @@ use uuid::Uuid;
 
 // 1. Shared domain types and truly global helpers
 
-#[derive(Clone, PartialEq, Eq)]
-enum MessageRoute {
-    Root,
-    Global,
-    Dm { username: String },
-    Tournament { nanoid: String },
-    Game { id: GameId, thread: GameThread },
-}
-
 #[derive(Clone)]
 enum ResolveState<K, V> {
     Missing(Option<K>),
     Ready(K, V),
 }
 
+const MESSAGE_ROOT_PATH: &str = "/message";
+const MESSAGE_GLOBAL_PATH: &str = "/message/global";
 const SELF_DM_UNSUPPORTED_MESSAGE: &str = "Direct messages to yourself are not supported";
 const PLAYERS_CHAT_ONLY_MESSAGE: &str = "Only players can view the players chat.";
 const HEADER_ACTION_BUTTON_PRIMARY: &str =
@@ -65,85 +55,35 @@ const HEADER_ACTION_BUTTON_PRIMARY: &str =
     text-pillbug-teal rounded-lg border border-pillbug-teal/30 bg-pillbug-teal/10 shadow-sm \
     transition-colors hover:bg-pillbug-teal/15 dark:border-pillbug-teal/40 dark:bg-pillbug-teal/20 \
     dark:text-pillbug-teal dark:hover:bg-pillbug-teal/25";
-const GAME_CHAT_TOGGLE_CONTAINER_CLASS: &str =
-    "flex p-0.5 bg-gray-100 rounded-lg border border-gray-300 dark:bg-gray-800 dark:border-gray-600";
-
-fn game_chat_toggle_segment_class(selected: bool, disabled: bool) -> String {
-    let state_classes = if selected {
-        "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
-    } else if disabled {
-        "text-gray-400 dark:text-gray-500 cursor-not-allowed"
-    } else {
-        "text-gray-600 dark:text-gray-400 hover:text-gray-900 hover:bg-white/70 dark:hover:text-gray-100 dark:hover:bg-gray-700/70"
-    };
-
-    format!(
-        "no-link-style flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-center {}",
-        state_classes,
-    )
+fn normalized_message_path(path: &str) -> &str {
+    match path.trim_end_matches('/') {
+        "" => MESSAGE_ROOT_PATH,
+        path => path,
+    }
 }
 
-impl MessageRoute {
-    fn parse(path: &str) -> Self {
-        let path = path.trim_end_matches('/');
+fn message_path_is(path: &str, href: &str) -> bool {
+    normalized_message_path(path) == href
+}
 
-        if path == "/message" || path.is_empty() {
-            return Self::Root;
-        }
-        if path == "/message/global" {
-            return Self::Global;
-        }
-        if let Some(username) = path.strip_prefix("/message/dm/") {
-            return Self::Dm {
-                username: username.to_string(),
-            };
-        }
-        if let Some(nanoid) = path.strip_prefix("/message/tournament/") {
-            return Self::Tournament {
-                nanoid: nanoid.to_string(),
-            };
-        }
-        let Some(rest) = path.strip_prefix("/message/game/") else {
-            return Self::Root;
-        };
-        let mut parts = rest.split('/');
-        match (parts.next(), parts.next(), parts.next()) {
-            (Some(id), Some(thread), None) => {
-                GameThread::parse_slug(thread).map_or(Self::Root, |thread| Self::Game {
-                    id: GameId(id.to_string()),
-                    thread,
-                })
-            }
-            _ => Self::Root,
-        }
-    }
+fn message_dm_href(username: &str) -> String {
+    format!("/message/dm/{username}")
+}
 
-    fn href(&self) -> String {
-        match self {
-            Self::Root => "/message".to_string(),
-            Self::Global => "/message/global".to_string(),
-            Self::Dm { username } => format!("/message/dm/{username}"),
-            Self::Tournament { nanoid } => format!("/message/tournament/{nanoid}"),
-            Self::Game { id, thread } => format!("/message/game/{}/{}", id.0, thread.slug()),
-        }
-    }
+fn message_tournament_href(tournament_id: &TournamentId) -> String {
+    format!("/message/tournament/{}", tournament_id.0)
+}
 
-    fn matches_dm(&self, username: &str) -> bool {
-        matches!(self, Self::Dm { username: current } if current == username)
-    }
+fn message_game_href(id: &GameId, thread: GameThread) -> String {
+    format!("/message/game/{}/{}", id.0, thread.slug())
+}
 
-    fn matches_tournament(&self, nanoid: &str) -> bool {
-        matches!(self, Self::Tournament { nanoid: current } if current == nanoid)
-    }
-
-    fn matches_game(&self, id: &GameId, thread: GameThread, finished: bool) -> bool {
-        match self {
-            Self::Game {
-                id: current_id,
-                thread: current_thread,
-            } => current_id == id && (finished || *current_thread == thread),
-            _ => false,
-        }
+fn message_path_matches_game(path: &str, id: &GameId, thread: GameThread, finished: bool) -> bool {
+    if finished {
+        message_path_is(path, &message_game_href(id, GameThread::Players))
+            || message_path_is(path, &message_game_href(id, GameThread::Spectators))
+    } else {
+        message_path_is(path, &message_game_href(id, thread))
     }
 }
 
@@ -255,30 +195,17 @@ fn find_game_channel(hub_data: &MessagesHubData, game_id: &GameId) -> Option<Gam
         .cloned()
 }
 
-fn refresh_open_dm_thread(chat: Chat, other_id: Uuid) {
-    let key = ConversationKey::direct(other_id);
-    spawn_local(async move {
-        match chat.fetch_channel_history(&key).await {
-            Ok(ChatHistoryResponse::Messages(messages)) => chat.replace_history(&key, messages),
-            Ok(ChatHistoryResponse::AccessDenied) => {
-                log!("Failed to refresh DM history for {other_id}: access denied")
-            }
-            Err(error) => log!("Failed to refresh DM history for {other_id}: {error}"),
-        }
-    });
-}
-
 // 2. Top-level page shell
 
 #[component]
 pub fn MessagesLayout() -> impl IntoView {
     let i18n = use_i18n();
     let location = use_location();
-    let current_route = Signal::derive(move || MessageRoute::parse(&location.pathname.get()));
+    let current_path = Signal::derive(move || location.pathname.get());
     let mobile_list_visible =
-        Signal::derive(move || matches!(current_route.get(), MessageRoute::Root));
+        Signal::derive(move || message_path_is(&current_path.get(), MESSAGE_ROOT_PATH));
     let mobile_thread_visible =
-        Signal::derive(move || !matches!(current_route.get(), MessageRoute::Root));
+        Signal::derive(move || !message_path_is(&current_path.get(), MESSAGE_ROOT_PATH));
 
     view! {
         <div class="flex overflow-hidden fixed right-0 bottom-0 left-0 top-12 z-0 flex-col bg-gray-100 sm:flex-row dark:bg-gray-950">
@@ -294,7 +221,7 @@ pub fn MessagesLayout() -> impl IntoView {
                     </h1>
                 </div>
                 <div class="overflow-y-auto flex-1 p-2 pb-6 min-h-0 sm:pb-2">
-                    <MessagesSidebar current_route />
+                    <MessagesSidebar current_path />
                 </div>
             </aside>
             <main class=move || {
@@ -310,7 +237,7 @@ pub fn MessagesLayout() -> impl IntoView {
 }
 
 #[component]
-fn MessagesSidebar(current_route: Signal<MessageRoute>) -> impl IntoView {
+fn MessagesSidebar(current_path: Signal<String>) -> impl IntoView {
     let chat = expect_context::<Chat>();
     let i18n = use_i18n();
 
@@ -330,7 +257,7 @@ fn MessagesSidebar(current_route: Signal<MessageRoute>) -> impl IntoView {
                             })
                             items=dms
                             render_item=move |dm| {
-                                view! { <DmChannelItem dm current_route=current_route /> }
+                                view! { <DmChannelItem dm current_path /> }
                             }
                         />
                         <ChannelListSection
@@ -342,9 +269,7 @@ fn MessagesSidebar(current_route: Signal<MessageRoute>) -> impl IntoView {
                             })
                             items=tournaments
                             render_item=move |tournament| {
-                                view! {
-                                    <TournamentChannelItem tournament current_route=current_route />
-                                }
+                                view! { <TournamentChannelItem tournament current_path /> }
                             }
                         />
                         <ChannelListSection
@@ -356,10 +281,10 @@ fn MessagesSidebar(current_route: Signal<MessageRoute>) -> impl IntoView {
                             })
                             items=games
                             render_item=move |game| {
-                                view! { <GameChannelItem game current_route=current_route /> }
+                                view! { <GameChannelItem game current_path /> }
                             }
                         />
-                        <GlobalChannelSection current_route=current_route />
+                        <GlobalChannelSection current_path />
                     },
                 )
             }
@@ -526,9 +451,6 @@ fn DmChannelActions(other_id: Uuid, username: StoredValue<String>) -> impl IntoV
     let i18n = use_i18n();
     let is_blocked =
         Signal::derive(move || chat.blocked_user_ids.with(|ids| ids.contains(&other_id)));
-    let on_block_toggle_success = Callback::new(move |_| {
-        refresh_open_dm_thread(chat, other_id);
-    });
 
     view! {
         <ChannelHeaderBar>
@@ -539,11 +461,7 @@ fn DmChannelActions(other_id: Uuid, username: StoredValue<String>) -> impl IntoV
                 >
                     {t!(i18n, messages.page.view_profile)}
                 </A>
-                <BlockToggleButton
-                    blocked_user_id=other_id
-                    is_blocked
-                    on_success=on_block_toggle_success
-                />
+                <BlockToggleButton blocked_user_id=other_id is_blocked />
             </div>
         </ChannelHeaderBar>
     }
@@ -566,9 +484,11 @@ pub fn MessagesTournamentThread() -> impl IntoView {
         route_tournament_id,
         move |route_tournament_id| {
             chat.messages_hub_data.with_untracked(|hub| {
-                hub.as_ref()
-                    .and_then(|hub| find_tournament_channel(hub, route_tournament_id))
-                    .map(|channel| (channel.name, channel.muted, channel.access))
+                hub.as_ref().and_then(|hub| {
+                    let muted = hub.muted_tournament_ids.contains(route_tournament_id);
+                    find_tournament_channel(hub, route_tournament_id)
+                        .map(|channel| (channel.name, muted, channel.access))
+                })
             })
         },
         move |route_tournament_id| async move {
@@ -706,9 +626,7 @@ fn TournamentRouteActions(tournament_id: TournamentId) -> impl IntoView {
                     </button>
                 </div>
                 <ShowLet some=move || mute_error.get() let:error>
-                    <p class="text-xs text-red-600 dark:text-red-400">
-                        {error}
-                    </p>
+                    <p class="text-xs text-red-600 dark:text-red-400">{error}</p>
                 </ShowLet>
             </div>
         </ChannelHeaderBar>
@@ -759,11 +677,7 @@ pub fn MessagesGameThread(thread: GameThread) -> impl IntoView {
                 && !resolved_game.can_read(GameThread::Players)
                 && resolved_game.can_read(GameThread::Spectators)
             {
-                let spectators_href = MessageRoute::Game {
-                    id: game_id.clone(),
-                    thread: GameThread::Spectators,
-                }
-                .href();
+                let spectators_href = message_game_href(&game_id, GameThread::Spectators);
 
                 Either::Left(view! {
                     <Redirect
@@ -841,6 +755,24 @@ fn GameChatHeader(
     access: GameChatCapabilities,
 ) -> impl IntoView {
     let i18n = use_i18n();
+    let navigate = use_navigate();
+    let selected_thread = RwSignal::new(current_thread);
+    let players_href = StoredValue::new(message_game_href(&game_id, GameThread::Players));
+    let spectators_href = StoredValue::new(message_game_href(&game_id, GameThread::Spectators));
+    let on_select_thread = Callback::new(move |thread| {
+        let href = match thread {
+            GameThread::Players => players_href.get_value(),
+            GameThread::Spectators => spectators_href.get_value(),
+        };
+        navigate(
+            &href,
+            NavigateOptions {
+                replace: true,
+                scroll: false,
+                ..Default::default()
+            },
+        );
+    });
     let spectator_unlock_needed =
         access.can_toggle_embedded_threads() && !access.can_read(GameThread::Spectators);
 
@@ -853,7 +785,17 @@ fn GameChatHeader(
                     </A>
                 </div>
                 <div class="flex flex-col gap-1.5">
-                    <GameChatToggle game_id=game_id.clone() current_thread access />
+                    <GameThreadToggle
+                        selected=selected_thread
+                        players_enabled=Signal::derive(move || {
+                            access.can_read(GameThread::Players)
+                        })
+                        spectators_enabled=Signal::derive(move || {
+                            access.can_read(GameThread::Spectators)
+                        })
+                        size=GameThreadToggleSize::Route
+                        on_select=on_select_thread
+                    />
                     {spectator_unlock_needed
                         .then(|| {
                             view! {
@@ -865,73 +807,6 @@ fn GameChatHeader(
                 </div>
             </div>
         </ChannelHeaderBar>
-    }
-}
-
-#[component]
-fn GameChatToggleSegment(
-    href: String,
-    selected: bool,
-    disabled: bool,
-    children: Children,
-) -> impl IntoView {
-    if disabled {
-        Either::Left(
-            view! { <span class=game_chat_toggle_segment_class(selected, true)>{children()}</span> },
-        )
-    } else {
-        Either::Right(view! {
-            <A
-                href=href
-                prop:replace=true
-                scroll=false
-                attr:class=game_chat_toggle_segment_class(selected, false)
-            >
-                {children()}
-            </A>
-        })
-    }
-}
-
-#[component]
-fn GameChatToggle(
-    game_id: GameId,
-    current_thread: GameThread,
-    access: GameChatCapabilities,
-) -> impl IntoView {
-    let i18n = use_i18n();
-    let players_href = MessageRoute::Game {
-        id: game_id.clone(),
-        thread: GameThread::Players,
-    }
-    .href();
-    let spectators_href = MessageRoute::Game {
-        id: game_id.clone(),
-        thread: GameThread::Spectators,
-    }
-    .href();
-    let can_read_players = access.can_read(GameThread::Players);
-    let can_read_spectators = access.can_read(GameThread::Spectators);
-    let viewing_players = current_thread == GameThread::Players;
-    let viewing_spectators = current_thread == GameThread::Spectators;
-
-    view! {
-        <div class=GAME_CHAT_TOGGLE_CONTAINER_CLASS>
-            <GameChatToggleSegment
-                href=players_href
-                selected=viewing_players
-                disabled=!can_read_players
-            >
-                {t!(i18n, messages.chat.players)}
-            </GameChatToggleSegment>
-            <GameChatToggleSegment
-                href=spectators_href
-                selected=viewing_spectators
-                disabled=!can_read_spectators
-            >
-                {t!(i18n, messages.chat.spectators)}
-            </GameChatToggleSegment>
-        </div>
     }
 }
 
@@ -966,7 +841,7 @@ fn channel_button_class(is_selected: bool) -> String {
 }
 
 #[component]
-fn DmChannelItem(dm: DmConversation, current_route: Signal<MessageRoute>) -> impl IntoView {
+fn DmChannelItem(dm: DmConversation, current_path: Signal<String>) -> impl IntoView {
     let chat = expect_context::<Chat>();
     let DmConversation {
         other_user_id,
@@ -975,13 +850,9 @@ fn DmChannelItem(dm: DmConversation, current_route: Signal<MessageRoute>) -> imp
     } = dm;
     let unread = Signal::derive(move || chat.unread_count_for_dm(other_user_id));
     let username = StoredValue::new(username);
-    let href = {
-        MessageRoute::Dm {
-            username: username.get_value(),
-        }
-        .href()
-    };
-    let is_selected = Signal::derive(move || current_route.get().matches_dm(&username.get_value()));
+    let href = message_dm_href(&username.get_value());
+    let selected_href = href.clone();
+    let is_selected = Signal::derive(move || message_path_is(&current_path.get(), &selected_href));
 
     view! {
         <MessagesChannelLink href is_selected=is_selected>
@@ -994,45 +865,34 @@ fn DmChannelItem(dm: DmConversation, current_route: Signal<MessageRoute>) -> imp
 #[component]
 fn TournamentChannelItem(
     tournament: TournamentChannel,
-    current_route: Signal<MessageRoute>,
+    current_path: Signal<String>,
 ) -> impl IntoView {
     let chat = expect_context::<Chat>();
     let i18n = use_i18n();
     let TournamentChannel {
         tournament_id,
         name,
-        muted,
         ..
     } = tournament;
-    let route_nanoid = tournament_id.0.clone();
     let tournament_id = StoredValue::new(tournament_id);
+    let muted = chat.tournament_muted_signal(tournament_id.get_value());
     let unread =
         Signal::derive(move || chat.unread_count_for_tournament(&tournament_id.get_value()));
-    let href = {
-        MessageRoute::Tournament {
-            nanoid: route_nanoid.clone(),
-        }
-        .href()
-    };
-    let is_selected_nanoid = route_nanoid;
-    let is_selected =
-        Signal::derive(move || current_route.get().matches_tournament(&is_selected_nanoid));
+    let href = message_tournament_href(&tournament_id.get_value());
+    let selected_href = href.clone();
+    let is_selected = Signal::derive(move || message_path_is(&current_path.get(), &selected_href));
 
     view! {
         <MessagesChannelLink href is_selected=is_selected>
             <span class="flex gap-1 items-center truncate">
-                {name}
-                {muted
-                    .then(|| {
-                        view! {
-                            <span
-                                class="text-gray-400 uppercase dark:text-gray-500 shrink-0 text-[0.65rem]"
-                                title=move || t_string!(i18n, messages.sections.muted)
-                            >
-                                {t!(i18n, messages.sections.muted)}
-                            </span>
-                        }
-                    })}
+                {name} <Show when=muted>
+                    <span
+                        class="text-gray-400 uppercase dark:text-gray-500 shrink-0 text-[0.65rem]"
+                        title=move || t_string!(i18n, messages.sections.muted)
+                    >
+                        {t!(i18n, messages.sections.muted)}
+                    </span>
+                </Show>
             </span>
             <UnreadBadge count=unread />
         </MessagesChannelLink>
@@ -1040,7 +900,7 @@ fn TournamentChannelItem(
 }
 
 #[component]
-fn GameChannelItem(game: GameChannel, current_route: Signal<MessageRoute>) -> impl IntoView {
+fn GameChannelItem(game: GameChannel, current_path: Signal<String>) -> impl IntoView {
     let chat = expect_context::<Chat>();
     let GameChannel {
         game_id,
@@ -1050,11 +910,7 @@ fn GameChannelItem(game: GameChannel, current_route: Signal<MessageRoute>) -> im
         ..
     } = game;
     let game_id = StoredValue::new(game_id);
-    let href = MessageRoute::Game {
-        id: game_id.get_value(),
-        thread,
-    }
-    .href();
+    let href = message_game_href(&game_id.get_value(), thread);
     let display_label_with_nanoid =
         StoredValue::new(format!("{} ({})", label, game_id.get_value().0));
     let unread = Signal::derive(move || match thread {
@@ -1062,9 +918,12 @@ fn GameChannelItem(game: GameChannel, current_route: Signal<MessageRoute>) -> im
         GameThread::Spectators => 0,
     });
     let is_selected = Signal::derive(move || {
-        current_route
-            .get()
-            .matches_game(&game_id.get_value(), thread, access.finished)
+        message_path_matches_game(
+            &current_path.get(),
+            &game_id.get_value(),
+            thread,
+            access.finished,
+        )
     });
 
     view! {
@@ -1078,10 +937,11 @@ fn GameChannelItem(game: GameChannel, current_route: Signal<MessageRoute>) -> im
 }
 
 #[component]
-fn GlobalChannelSection(current_route: Signal<MessageRoute>) -> impl IntoView {
+fn GlobalChannelSection(current_path: Signal<String>) -> impl IntoView {
     let i18n = use_i18n();
     let open = RwSignal::new(true);
-    let is_selected = Signal::derive(move || current_route.get() == MessageRoute::Global);
+    let is_selected =
+        Signal::derive(move || message_path_is(&current_path.get(), MESSAGE_GLOBAL_PATH));
 
     view! {
         <ChannelSection
@@ -1090,7 +950,7 @@ fn GlobalChannelSection(current_route: Signal<MessageRoute>) -> impl IntoView {
             })
             open=open
         >
-            <MessagesChannelLink href=MessageRoute::Global.href() is_selected=is_selected>
+            <MessagesChannelLink href=MESSAGE_GLOBAL_PATH.to_string() is_selected=is_selected>
                 {t!(i18n, messages.sections.recent_announcements)}
             </MessagesChannelLink>
         </ChannelSection>
@@ -1107,7 +967,7 @@ fn MessagesThreadFrame(title: Signal<String>, children: Children) -> impl IntoVi
         <div class="flex overflow-hidden flex-col flex-1 min-h-0 bg-white border-r border-gray-200 shadow-inner sm:rounded-l-xl dark:bg-gray-900 dark:border-gray-700">
             <div class="flex gap-2 items-center py-3 px-2 bg-gray-50 border-b border-gray-200 sm:px-4 dark:border-gray-700 shrink-0 min-h-[2.75rem] dark:bg-gray-800/50">
                 <A
-                    href=MessageRoute::Root.href()
+                    href=MESSAGE_ROOT_PATH
                     prop:replace=true
                     scroll=false
                     attr:class="no-link-style inline-flex flex-shrink-0 gap-1.5 justify-center items-center px-3 py-1.5 text-sm font-medium text-gray-700 rounded-lg border border-gray-300 bg-white shadow-sm transition-colors sm:hidden dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-gray-100"
@@ -1200,10 +1060,13 @@ fn ChannelSection(
                     {if is_empty {
                         Either::Left(
                             view! {
-                                <ShowLet some=move || {
-                                    let empty_label = empty_label.get();
-                                    (!empty_label.is_empty()).then_some(empty_label)
-                                } let:empty_label>
+                                <ShowLet
+                                    some=move || {
+                                        let empty_label = empty_label.get();
+                                        (!empty_label.is_empty()).then_some(empty_label)
+                                    }
+                                    let:empty_label
+                                >
                                     <p class=EMPTY_HINT_CLASS>{empty_label}</p>
                                 </ShowLet>
                             },

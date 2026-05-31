@@ -31,6 +31,7 @@ use shared_types::{
     PersistentChannelKey,
     TournamentChannel,
     TournamentChatCapabilities,
+    TournamentId,
     UnreadCount,
     CHANNEL_TYPE_DIRECT,
     CHANNEL_TYPE_GAME_PLAYERS,
@@ -51,7 +52,6 @@ diesel::allow_columns_to_appear_in_same_group_by_clause!(
     tournaments::id,
     tournaments::nanoid,
     tournaments::name,
-    user_tournament_chat_mutes::user_id,
 );
 
 pub async fn get_game_chat_participants_and_finished(
@@ -348,11 +348,6 @@ pub async fn get_tournament_channels_for_user(
     let is_site_admin = User::is_admin(&user_id, conn).await?;
     let mut result = chat_messages::table
         .inner_join(tournaments::table.on(chat_messages::channel_id.eq(tournaments::nanoid)))
-        .left_join(
-            user_tournament_chat_mutes::table.on(user_tournament_chat_mutes::tournament_id
-                .eq(tournaments::id)
-                .and(user_tournament_chat_mutes::user_id.eq(user_id))),
-        )
         .filter(chat_messages::channel_type.eq(shared_types::CHANNEL_TYPE_TOURNAMENT_LOBBY))
         .filter(
             exists(
@@ -366,16 +361,10 @@ pub async fn get_tournament_channels_for_user(
                     .filter(tournaments_organizers::tournament_id.eq(tournaments::id)),
             )),
         )
-        .group_by((
-            tournaments::id,
-            tournaments::nanoid,
-            tournaments::name,
-            user_tournament_chat_mutes::user_id,
-        ))
+        .group_by((tournaments::id, tournaments::nanoid, tournaments::name))
         .select((
             tournaments::nanoid,
             tournaments::name,
-            user_tournament_chat_mutes::user_id.nullable().is_not_null(),
             exists(
                 tournaments_organizers::table
                     .filter(tournaments_organizers::organizer_id.eq(user_id))
@@ -388,15 +377,14 @@ pub async fn get_tournament_channels_for_user(
             ),
             max(chat_messages::created_at),
         ))
-        .load::<(String, String, bool, bool, bool, Option<DateTime<Utc>>)>(conn)
+        .load::<(String, String, bool, bool, Option<DateTime<Utc>>)>(conn)
         .await
         .map_err(DbError::from)?
         .into_iter()
         .filter_map(
-            |(nanoid, name, muted, is_organizer, is_participant, last_message_at)| {
+            |(nanoid, name, is_organizer, is_participant, last_message_at)| {
                 last_message_at.map(|last_message_at| TournamentChannel {
-                    muted,
-                    tournament_id: shared_types::TournamentId(nanoid),
+                    tournament_id: TournamentId(nanoid),
                     name,
                     access: TournamentChatCapabilities::new(
                         is_site_admin,
@@ -425,39 +413,20 @@ async fn unread_counts_for_channel_ids(
     }
 
     chat_messages::table
-        .filter(chat_messages::channel_type.eq(channel_type))
-        .filter(chat_messages::channel_id.eq_any(channel_ids))
-        .filter(chat_messages::sender_id.ne(user_id))
-        .group_by(chat_messages::channel_id)
-        .select((chat_messages::channel_id, count_star()))
-        .load(conn)
-        .await
-        .map_err(DbError::from)
-}
-
-async fn unread_counts_for_receipt_channel_ids(
-    conn: &mut DbConn<'_>,
-    channel_type: &str,
-    channel_ids: &[String],
-    user_id: Uuid,
-) -> Result<Vec<(String, i64)>, DbError> {
-    use diesel::dsl::count_star;
-
-    if channel_ids.is_empty() {
-        return Ok(Vec::new());
-    }
-
-    chat_messages::table
-        .inner_join(
+        .left_join(
             chat_read_receipts::table.on(chat_messages::channel_type
                 .eq(chat_read_receipts::channel_type)
-                .and(chat_messages::channel_id.eq(chat_read_receipts::channel_id))),
+                .and(chat_messages::channel_id.eq(chat_read_receipts::channel_id))
+                .and(chat_read_receipts::user_id.eq(user_id))),
         )
-        .filter(chat_read_receipts::user_id.eq(user_id))
         .filter(chat_messages::channel_type.eq(channel_type))
         .filter(chat_messages::channel_id.eq_any(channel_ids))
-        .filter(chat_messages::created_at.gt(chat_read_receipts::last_read_at))
         .filter(chat_messages::sender_id.ne(user_id))
+        .filter(
+            chat_read_receipts::last_read_at
+                .is_null()
+                .or(chat_messages::created_at.gt(chat_read_receipts::last_read_at)),
+        )
         .group_by(chat_messages::channel_id)
         .select((chat_messages::channel_id, count_star()))
         .load(conn)
@@ -654,24 +623,10 @@ pub async fn get_unread_counts_for_messages_hub_channels(
     dms: &[DmConversation],
     tournaments: &[TournamentChannel],
     games: &[GameChannel],
+    muted_tournament_ids: &[TournamentId],
 ) -> Result<Vec<UnreadCount>, DbError> {
-    let receipt_channels: HashSet<PersistentChannelKey> = chat_read_receipts::table
-        .filter(chat_read_receipts::user_id.eq(user_id))
-        .select((
-            chat_read_receipts::channel_type,
-            chat_read_receipts::channel_id,
-        ))
-        .load::<(String, String)>(conn)
-        .await
-        .map_err(DbError::from)?
-        .into_iter()
-        .filter_map(|(channel_type, channel_id)| {
-            PersistentChannelKey::from_raw(&channel_type, channel_id)
-        })
-        .collect();
-    let has_receipt = |key: &PersistentChannelKey| receipt_channels.contains(key);
-
     let mut result = Vec::new();
+    let muted_tournament_ids = muted_tournament_ids.iter().collect::<HashSet<_>>();
     // Global announcements stay readable in /messages, but they do not participate in unread badges.
     let channel_groups = [
         (
@@ -688,7 +643,7 @@ pub async fn get_unread_counts_for_messages_hub_channels(
             CHANNEL_TYPE_TOURNAMENT_LOBBY,
             tournaments
                 .iter()
-                .filter(|row| !row.muted)
+                .filter(|row| !muted_tournament_ids.contains(&row.tournament_id))
                 .map(|row| {
                     let key = ConversationKey::tournament(&row.tournament_id);
                     let persistent_key = PersistentChannelKey::tournament(&row.tournament_id);
@@ -715,25 +670,14 @@ pub async fn get_unread_counts_for_messages_hub_channels(
             .iter()
             .map(|(key, persistent_key)| (persistent_key.channel_id.clone(), key.clone()))
             .collect();
-        let with_receipt = channels
-            .iter()
-            .filter(|(_, persistent_key)| has_receipt(persistent_key))
-            .map(|(_, persistent_key)| persistent_key.channel_id.clone())
-            .collect::<Vec<_>>();
-        let without_receipt = channels
+        let channel_ids = channels
             .into_iter()
-            .filter(|(_, persistent_key)| !has_receipt(persistent_key))
             .map(|(_, persistent_key)| persistent_key.channel_id)
             .collect::<Vec<_>>();
 
-        let receipt_counts =
-            unread_counts_for_receipt_channel_ids(conn, channel_type, &with_receipt, user_id)
-                .await?;
-        extend_unread_counts(&mut result, &channel_map, receipt_counts);
-
-        let missing_counts =
-            unread_counts_for_channel_ids(conn, channel_type, &without_receipt, user_id).await?;
-        extend_unread_counts(&mut result, &channel_map, missing_counts);
+        let unread_counts =
+            unread_counts_for_channel_ids(conn, channel_type, &channel_ids, user_id).await?;
+        extend_unread_counts(&mut result, &channel_map, unread_counts);
     }
     Ok(result)
 }

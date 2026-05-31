@@ -13,15 +13,10 @@ enum BlockOperation {
 }
 
 #[component]
-pub fn BlockToggleButton(
-    blocked_user_id: Uuid,
-    is_blocked: Signal<bool>,
-    #[prop(optional)] on_success: Option<Callback<bool>>,
-) -> impl IntoView {
+pub fn BlockToggleButton(blocked_user_id: Uuid, is_blocked: Signal<bool>) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     let chat = use_context::<Chat>();
     let i18n = use_i18n();
-    let on_success = StoredValue::new(on_success);
     let show_confirm = RwSignal::new(false);
     let error = RwSignal::new(None::<String>);
 
@@ -54,12 +49,6 @@ pub fn BlockToggleButton(
                     error.set(None);
                     if let Some(chat) = chat {
                         chat.set_blocked_user(blocked_user_id, is_now_blocked);
-                        chat.invalidate_block_list();
-                        chat.refresh_messages_hub();
-                        chat.refresh_unread_counts();
-                    }
-                    if let Some(cb) = on_success.get_value() {
-                        cb.run(is_now_blocked);
                     }
                 }
                 Err(e) => error.set(Some(e.to_string())),

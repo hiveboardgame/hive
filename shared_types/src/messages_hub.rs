@@ -22,9 +22,6 @@ pub struct DmConversation {
 pub struct TournamentChannel {
     pub tournament_id: TournamentId,
     pub name: String,
-    /// Muting tournament chat suppresses unread badges and notifications.
-    /// It does not prevent websocket delivery of tournament messages.
-    pub muted: bool,
     pub access: TournamentChatCapabilities,
     pub last_message_at: DateTime<Utc>,
 }
@@ -43,6 +40,8 @@ pub struct MessagesHubData {
     pub dms: Vec<DmConversation>,
     pub tournaments: Vec<TournamentChannel>,
     pub games: Vec<GameChannel>,
+    /// Muting tournament chat suppresses unread badges and notifications.
+    /// It does not prevent websocket delivery of tournament messages.
     pub muted_tournament_ids: Vec<TournamentId>,
     pub unread_counts: Vec<UnreadCount>,
 }

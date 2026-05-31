@@ -238,9 +238,19 @@ pub async fn get_chat_unread_counts() -> Result<Vec<UnreadCount>, ServerFnError>
         .await
         .map_err(|err| generic_chat_server_error("getting a database connection", err))?;
     let (dms, tournaments, games) = load_messages_hub_channels(&mut conn, user_id).await?;
-    get_unread_counts_for_messages_hub_channels(&mut conn, user_id, &dms, &tournaments, &games)
+    let muted_tournament_ids = get_muted_tournament_ids_for_user(&mut conn, user_id)
         .await
-        .map_err(|err| generic_chat_server_error("loading unread chat counts", err))
+        .map_err(|err| generic_chat_server_error("loading muted tournament chat ids", err))?;
+    get_unread_counts_for_messages_hub_channels(
+        &mut conn,
+        user_id,
+        &dms,
+        &tournaments,
+        &games,
+        &muted_tournament_ids,
+    )
+    .await
+    .map_err(|err| generic_chat_server_error("loading unread chat counts", err))
 }
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
@@ -254,10 +264,16 @@ pub async fn get_messages_hub_data() -> Result<MessagesHubData, ServerFnError> {
     let muted_tournament_ids = get_muted_tournament_ids_for_user(&mut conn, user_id)
         .await
         .map_err(|err| generic_chat_server_error("loading muted tournament chat ids", err))?;
-    let unread_counts =
-        get_unread_counts_for_messages_hub_channels(&mut conn, user_id, &dms, &tournaments, &games)
-            .await
-            .map_err(|err| generic_chat_server_error("loading messages hub unread counts", err))?;
+    let unread_counts = get_unread_counts_for_messages_hub_channels(
+        &mut conn,
+        user_id,
+        &dms,
+        &tournaments,
+        &games,
+        &muted_tournament_ids,
+    )
+    .await
+    .map_err(|err| generic_chat_server_error("loading messages hub unread counts", err))?;
     Ok(build_messages_hub_data(
         dms,
         tournaments,

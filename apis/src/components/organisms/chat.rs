@@ -677,7 +677,11 @@ pub fn ResolvedChatWindow(
                                     } else {
                                         Either::Right(())
                                     }}
-                                    <For each=move || rows.get_value() key=|row| row.id.clone() let:row>
+                                    <For
+                                        each=move || rows.get_value()
+                                        key=|row| row.id.clone()
+                                        let:row
+                                    >
                                         <MessageRowView
                                             row
                                             expanded_hidden_messages=thread_ui.expanded_hidden_messages
@@ -727,8 +731,7 @@ pub fn ResolvedChatWindow(
                                         </div>
                                     }
                                 })
-                        }}
-                        <ChatInput destination disabled=input_disabled />
+                        }} <ChatInput destination disabled=input_disabled />
                     </div>
                 </Show>
             </div>

@@ -144,11 +144,14 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                                                         .then(|| {
                                                             view! {
                                                                 <Show when=move || {
-                                                                    auth_user.with(|viewer| {
-                                                                        viewer.as_ref().is_some_and(|viewer| {
-                                                                            viewer.user.uid != profile_user_id
+                                                                    auth_user
+                                                                        .with(|viewer| {
+                                                                            viewer
+                                                                                .as_ref()
+                                                                                .is_some_and(|viewer| {
+                                                                                    viewer.user.uid != profile_user_id
+                                                                                })
                                                                         })
-                                                                    })
                                                                 }>
                                                                     <MessageButton username=username.get_value() />
                                                                     <BlockToggleButton
