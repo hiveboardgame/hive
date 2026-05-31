@@ -48,6 +48,8 @@ use web_sys::{Element, EventTarget, TouchEvent, WheelEvent};
 
 const STACK_LONG_PRESS_DELAY_MS: f64 = 500.0;
 const STACK_TOUCH_MOVE_CANCEL_THRESHOLD_PX: f64 = 8.0;
+const ZOOM_WHEEL_SENSITIVITY: f32 = 0.002; // per-unit deltaY -> scale fraction
+const ZOOM_WHEEL_MAX_STEP: f32 = 0.10; // cap one event at ~10% zoom
 
 #[derive(Debug, Clone)]
 enum ViewBoxUpdateType {
@@ -345,8 +347,15 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
         wheel,
         move |evt: WheelEvent| {
             if !viewbox_state.is_panning.get_untracked() {
+                evt.prevent_default();
                 let (x, y) = screen_to_svg_coordinates(viewbox_ref, evt.x() as f32, evt.y() as f32);
-                let scale: f32 = if evt.delta_y() > 0.0 { 0.91 } else { 1.09 };
+                let delta = evt.delta_y() as f32;
+                let magnitude = (delta.abs() * ZOOM_WHEEL_SENSITIVITY).min(ZOOM_WHEEL_MAX_STEP);
+                let scale = if delta > 0.0 {
+                    1.0 - magnitude
+                } else {
+                    1.0 + magnitude
+                };
                 queue_update.with_value(|f| {
                     f(ViewBoxUpdateType::Zoom {
                         center_x: x,
@@ -356,7 +365,7 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
                 });
             }
         },
-        UseEventListenerOptions::default().passive(true),
+        UseEventListenerOptions::default().passive(false),
     );
 
     _ = use_event_listener_with_options(
@@ -364,12 +373,13 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
         touchstart,
         move |evt: TouchEvent| {
             if evt.touches().length() == 2 {
+                evt.prevent_default();
                 viewbox_state.is_panning.update_untracked(|b| *b = false);
                 initial_touch_distance
                     .update(move |v| *v = touch_distance_and_center(viewbox_ref, &evt).0);
             }
         },
-        UseEventListenerOptions::default().passive(true),
+        UseEventListenerOptions::default().passive(false),
     );
 
     _ = use_event_listener_with_options(
@@ -377,18 +387,23 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
         touchmove,
         move |evt: TouchEvent| {
             if evt.touches().length() == 2 {
+                evt.prevent_default();
                 let (current_distance, center) = touch_distance_and_center(viewbox_ref, &evt);
-                let scale = current_distance / initial_touch_distance();
-                queue_update.with_value(|f| {
-                    f(ViewBoxUpdateType::Zoom {
-                        center_x: center.0,
-                        center_y: center.1,
-                        scale,
-                    })
-                });
+                let prev = initial_touch_distance.get_untracked();
+                if prev > 0.0 {
+                    let scale = current_distance / prev;
+                    queue_update.with_value(|f| {
+                        f(ViewBoxUpdateType::Zoom {
+                            center_x: center.0,
+                            center_y: center.1,
+                            scale,
+                        })
+                    });
+                }
+                initial_touch_distance.set(current_distance);
             }
         },
-        UseEventListenerOptions::default().passive(true),
+        UseEventListenerOptions::default().passive(false),
     );
 
     //Stop panning when user releases touch/click
@@ -422,6 +437,14 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
                 node_ref=viewbox_ref
                 xmlns="http://www.w3.org/2000/svg"
             >
+                <rect
+                    x=move || viewbox_signal.with(|vb| vb.x)
+                    y=move || viewbox_signal.with(|vb| vb.y)
+                    width=move || viewbox_signal.with(|vb| vb.width)
+                    height=move || viewbox_signal.with(|vb| vb.height)
+                    fill="transparent"
+                    pointer-events="all"
+                />
                 <g transform=transform node_ref=g_ref>
                     {move || {
                         if board_view() == View::History && !last_turn() && !in_analysis {
@@ -577,15 +600,17 @@ fn touch_distance_and_center(svg: NodeRef<svg::Svg>, evt: &TouchEvent) -> (f32, 
     let touch_0 = touches.get(0).expect("Should have first touch");
     let touch_1 = touches.get(1).expect("Should have second touch");
 
+    // Distance in client pixels: a stable basis that does not shift as the viewBox
+    // zooms, avoiding the compounding feedback loop of measuring in SVG coordinates.
+    let dx = (touch_0.client_x() - touch_1.client_x()) as f32;
+    let dy = (touch_0.client_y() - touch_1.client_y()) as f32;
+    let distance = dx.hypot(dy);
+
+    // Center stays in SVG coordinates: it is the zoom anchor for calculate_zoom.
     let point_0 =
         screen_to_svg_coordinates(svg, touch_0.client_x() as f32, touch_0.client_y() as f32);
     let point_1 =
         screen_to_svg_coordinates(svg, touch_1.client_x() as f32, touch_1.client_y() as f32);
-
-    let distance_x = point_0.0 - point_1.0;
-    let distance_y = point_0.1 - point_1.1;
-    let distance = distance_x.hypot(distance_y);
-
     let center = ((point_0.0 + point_1.0) / 2.0, (point_0.1 + point_1.1) / 2.0);
 
     (distance, center)
