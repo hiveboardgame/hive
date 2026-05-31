@@ -120,14 +120,6 @@ pub struct TelemetrySnapshot {
     // Computed from external state at snapshot time.
     pub lags_trackers_len: u64,
     pub game_start_games_date_len: u64,
-    pub chat_recent_tournament_channels: u64,
-    pub chat_recent_tournament_msgs: u64,
-    pub chat_recent_game_spectator_channels: u64,
-    pub chat_recent_game_spectator_msgs: u64,
-    pub chat_recent_game_player_channels: u64,
-    pub chat_recent_game_player_msgs: u64,
-    pub chat_recent_direct_channels: u64,
-    pub chat_recent_direct_msgs: u64,
     pub chat_persist_attempts_total: u64,
     pub chat_persist_successes_total: u64,
     pub chat_persist_failures_total: u64,
@@ -409,7 +401,6 @@ pub fn diff_and_format(
          lags_trackers:    {}\n  \
          game_start_dates: {}\n  \
          chat_persistence: attempts={} successes={} failures={} normalizations={}\n  \
-         chat_recent:      tournament=({} ch, {} msg) game_spectators=({} ch, {} msg) game_players=({} ch, {} msg) direct=({} ch, {} msg)\n  \
          sessions:         outer={} inner_total={}\n  \
          membership:       games_sockets={} sockets_games={}\n  \
          caches:           game_response={} last_tv={}\n  \
@@ -479,14 +470,6 @@ pub fn diff_and_format(
             curr.chat_message_normalizations_total,
             prev.chat_message_normalizations_total,
         ),
-        curr.chat_recent_tournament_channels,
-        curr.chat_recent_tournament_msgs,
-        curr.chat_recent_game_spectator_channels,
-        curr.chat_recent_game_spectator_msgs,
-        curr.chat_recent_game_player_channels,
-        curr.chat_recent_game_player_msgs,
-        curr.chat_recent_direct_channels,
-        curr.chat_recent_direct_msgs,
         curr.sessions_outer_len,
         curr.sessions_inner_total,
         curr.membership_games_sockets_len,

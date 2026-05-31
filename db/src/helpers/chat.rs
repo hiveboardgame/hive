@@ -25,6 +25,7 @@ use shared_types::{
     ConversationKey,
     DmConversation,
     GameChannel,
+    GameChatCapabilities,
     GameId,
     GameThread,
     PersistentChannelKey,
@@ -395,7 +396,7 @@ pub async fn get_tournament_channels_for_user(
             |(nanoid, name, muted, is_organizer, is_participant, last_message_at)| {
                 last_message_at.map(|last_message_at| TournamentChannel {
                     muted,
-                    nanoid,
+                    tournament_id: shared_types::TournamentId(nanoid),
                     name,
                     access: TournamentChatCapabilities::new(
                         is_site_admin,
@@ -557,8 +558,7 @@ pub async fn get_game_channels_for_user(
             game_id: GameId(channel_id),
             thread: GameThread::Players,
             label: game_channel_label(&username_map, white_id, black_id),
-            is_player: white_id == user_id || black_id == user_id,
-            finished,
+            access: GameChatCapabilities::new(white_id == user_id || black_id == user_id, finished),
             last_message_at,
         });
     }
@@ -568,8 +568,7 @@ pub async fn get_game_channels_for_user(
             game_id: GameId(channel_id),
             thread: GameThread::Players,
             label: game_channel_label(&username_map, white_id, black_id),
-            is_player: white_id == user_id || black_id == user_id,
-            finished,
+            access: GameChatCapabilities::new(white_id == user_id || black_id == user_id, finished),
             last_message_at,
         });
     }
@@ -582,8 +581,7 @@ pub async fn get_game_channels_for_user(
             game_id: GameId(channel_id),
             thread: GameThread::Spectators,
             label: game_channel_label(&username_map, white_id, black_id),
-            is_player: white_id == user_id || black_id == user_id,
-            finished,
+            access: GameChatCapabilities::new(white_id == user_id || black_id == user_id, finished),
             last_message_at,
         });
     }
@@ -692,9 +690,8 @@ pub async fn get_unread_counts_for_messages_hub_channels(
                 .iter()
                 .filter(|row| !row.muted)
                 .map(|row| {
-                    let tournament_id = shared_types::TournamentId(row.nanoid.clone());
-                    let key = ConversationKey::tournament(&tournament_id);
-                    let persistent_key = PersistentChannelKey::tournament(&tournament_id);
+                    let key = ConversationKey::tournament(&row.tournament_id);
+                    let persistent_key = PersistentChannelKey::tournament(&row.tournament_id);
                     (key, persistent_key)
                 })
                 .collect::<Vec<_>>(),

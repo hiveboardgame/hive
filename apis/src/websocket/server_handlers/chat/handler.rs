@@ -1,15 +1,10 @@
-use std::sync::Arc;
-
 use anyhow::{Context, Result};
 
 use super::{metrics, persist::PersistableChatMessage};
 use crate::{
     chat::access::ResolvedChatChannel,
     common::ServerMessage,
-    websocket::{
-        messages::{InternalServerMessage, MessageDestination},
-        WebsocketData,
-    },
+    websocket::messages::{InternalServerMessage, MessageDestination},
 };
 use db_lib::{helpers::insert_chat_message, DbConn};
 use shared_types::{ChatDestination, ChatMessageContainer};
@@ -17,14 +12,12 @@ use shared_types::{ChatDestination, ChatMessageContainer};
 pub struct ChatHandler {
     container: ChatMessageContainer,
     resolved_channel: ResolvedChatChannel,
-    data: Arc<WebsocketData>,
 }
 
 impl ChatHandler {
     pub fn new(
         mut container: ChatMessageContainer,
         resolved_channel: ResolvedChatChannel,
-        data: Arc<WebsocketData>,
     ) -> Self {
         container.time();
         let original_body = container.message.message.clone();
@@ -35,79 +28,11 @@ impl ChatHandler {
         Self {
             container,
             resolved_channel,
-            data,
         }
     }
 
     pub async fn handle(&self, conn: &mut DbConn<'_>) -> Result<Vec<InternalServerMessage>> {
-        let mut messages = Vec::new();
-        match &self.container.destination {
-            ChatDestination::TournamentLobby(tournament_id) => {
-                messages.push(InternalServerMessage {
-                    destination: MessageDestination::Tournament(
-                        tournament_id.clone(),
-                        Some(self.container.message.user_id),
-                    ),
-                    message: ServerMessage::Chat(vec![self.container.to_owned()]),
-                })
-            }
-            ChatDestination::GamePlayers(_) => {
-                let game = self
-                    .resolved_channel
-                    .game
-                    .as_ref()
-                    .context("missing players chat fanout metadata")?;
-                messages.push(InternalServerMessage {
-                    destination: MessageDestination::User(game.white_id),
-                    message: ServerMessage::Chat(vec![self.container.to_owned()]),
-                });
-                messages.push(InternalServerMessage {
-                    destination: MessageDestination::User(game.black_id),
-                    message: ServerMessage::Chat(vec![self.container.to_owned()]),
-                });
-            }
-            ChatDestination::GameSpectators(game_id) => {
-                let game = self
-                    .resolved_channel
-                    .game
-                    .as_ref()
-                    .context("missing spectators chat fanout metadata")?;
-                if game.finished {
-                    messages.push(InternalServerMessage {
-                        destination: MessageDestination::User(game.white_id),
-                        message: ServerMessage::Chat(vec![self.container.to_owned()]),
-                    });
-                    messages.push(InternalServerMessage {
-                        destination: MessageDestination::User(game.black_id),
-                        message: ServerMessage::Chat(vec![self.container.to_owned()]),
-                    });
-                }
-                messages.push(InternalServerMessage {
-                    destination: MessageDestination::GameSpectators(
-                        game_id.clone(),
-                        game.white_id,
-                        game.black_id,
-                    ),
-                    message: ServerMessage::Chat(vec![self.container.to_owned()]),
-                })
-            }
-            ChatDestination::User((other_id, _username)) => {
-                // Recipient
-                messages.push(InternalServerMessage {
-                    destination: MessageDestination::User(*other_id),
-                    message: ServerMessage::Chat(vec![self.container.to_owned()]),
-                });
-                // Sender (echo so their thread updates immediately)
-                messages.push(InternalServerMessage {
-                    destination: MessageDestination::User(self.container.message.user_id),
-                    message: ServerMessage::Chat(vec![self.container.to_owned()]),
-                });
-            }
-            ChatDestination::Global => messages.push(InternalServerMessage {
-                destination: MessageDestination::Global,
-                message: ServerMessage::Chat(vec![self.container.to_owned()]),
-            }),
-        };
+        let destinations = self.destinations()?;
 
         let persistable = PersistableChatMessage::from_container(
             &self.container,
@@ -130,12 +55,58 @@ impl ChatHandler {
         }
         metrics::record_persist_success();
 
-        // Update the in-memory recent cache only after persistence succeeds.
-        self.data.chat_storage.push_recent(
-            self.resolved_channel.channel_key.channel_type.as_str(),
-            &self.resolved_channel.channel_key.channel_id,
-        );
+        let message = ServerMessage::Chat(vec![self.container.to_owned()]);
+        Ok(destinations
+            .into_iter()
+            .map(|destination| InternalServerMessage {
+                destination,
+                message: message.clone(),
+            })
+            .collect())
+    }
 
-        Ok(messages)
+    fn destinations(&self) -> Result<Vec<MessageDestination>> {
+        Ok(match &self.container.destination {
+            ChatDestination::TournamentLobby(tournament_id) => {
+                vec![MessageDestination::Tournament(
+                    tournament_id.clone(),
+                    Some(self.container.message.user_id),
+                )]
+            }
+            ChatDestination::GamePlayers(_) => {
+                let game = self
+                    .resolved_channel
+                    .game
+                    .as_ref()
+                    .context("missing players chat fanout metadata")?;
+                vec![
+                    MessageDestination::User(game.white_id),
+                    MessageDestination::User(game.black_id),
+                ]
+            }
+            ChatDestination::GameSpectators(game_id) => {
+                let game = self
+                    .resolved_channel
+                    .game
+                    .as_ref()
+                    .context("missing spectators chat fanout metadata")?;
+                let mut destinations = Vec::new();
+                if game.finished {
+                    destinations.push(MessageDestination::User(game.white_id));
+                    destinations.push(MessageDestination::User(game.black_id));
+                }
+                destinations.push(MessageDestination::GameSpectators(
+                    game_id.clone(),
+                    game.white_id,
+                    game.black_id,
+                ));
+                destinations
+            }
+            ChatDestination::User((other_id, _username)) => vec![
+                MessageDestination::User(*other_id),
+                MessageDestination::User(self.container.message.user_id),
+            ],
+            ChatDestination::Global => vec![MessageDestination::Global],
+        })
     }
 }

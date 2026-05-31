@@ -448,17 +448,6 @@ impl WsHub {
             snap.game_start_games_date_len = games_date.len() as u64;
         }
 
-        // chat
-        let chat = self.data.chat_storage.snapshot_counts();
-        snap.chat_recent_tournament_channels = chat.tournament_channels;
-        snap.chat_recent_tournament_msgs = chat.tournament_messages;
-        snap.chat_recent_game_spectator_channels = chat.game_spectator_channels;
-        snap.chat_recent_game_spectator_msgs = chat.game_spectator_messages;
-        snap.chat_recent_game_player_channels = chat.game_player_channels;
-        snap.chat_recent_game_player_msgs = chat.game_player_messages;
-        snap.chat_recent_direct_channels = chat.direct_channels;
-        snap.chat_recent_direct_msgs = chat.direct_messages;
-
         // caches
         snap.game_response_cache_len = self.data.game_response_cache.len() as u64;
         snap.last_tv_broadcast_len = self.last_tv_broadcast.len() as u64;
@@ -549,9 +538,9 @@ impl WsHub {
                     None => return,
                 };
                 if let Some(echo_user_id) = echo_user_id {
-                    user_ids.push(*echo_user_id);
-                    user_ids.sort_unstable();
-                    user_ids.dedup();
+                    if !user_ids.contains(echo_user_id) {
+                        user_ids.push(*echo_user_id);
+                    }
                 }
                 for uid in user_ids {
                     self.send_to_user(&uid, DestKind::Tournament, &bytes);
@@ -1294,7 +1283,6 @@ mod tests {
         *,
     };
     use crate::websocket::WsTelemetry;
-    use shared_types::{CHANNEL_TYPE_GAME_PLAYERS, CHANNEL_TYPE_GAME_SPECTATORS};
 
     async fn make_hub() -> Arc<WsHub> {
         // bb8 builds the pool struct without making DB connections (min_idle = 0 by default).
@@ -1788,35 +1776,6 @@ mod tests {
     // user-derived fields (ratings, profile) after a player completes another
     // game without the current game row changing. TTL bounds that window.
     // Tests live in websocket::cache_tests (pure-logic, no DB needed).
-
-    // Regression (#2): on_game_finished must NOT delete game chat — post-game
-    // chat history must survive finalization.
-    #[tokio::test]
-    async fn game_chat_preserved_after_on_game_finished() {
-        let hub = make_hub().await;
-        let white_id = Uuid::new_v4();
-        let black_id = Uuid::new_v4();
-        let game_id = GameId("chat-preserve".to_string());
-
-        hub.data
-            .chat_storage
-            .push_recent(CHANNEL_TYPE_GAME_SPECTATORS, &game_id.0);
-        hub.data
-            .chat_storage
-            .push_recent(CHANNEL_TYPE_GAME_PLAYERS, &game_id.0);
-
-        hub.on_game_finished(&game_id, white_id, black_id);
-
-        let snapshot = hub.data.chat_storage.snapshot_counts();
-        assert_eq!(
-            snapshot.game_spectator_messages, 1,
-            "public game chat must be preserved after finalization",
-        );
-        assert_eq!(
-            snapshot.game_player_messages, 1,
-            "private game chat must be preserved after finalization",
-        );
-    }
 
     // Regression (#3): QueuedGuard tracks loader tasks waiting for a semaphore
     // permit, giving telemetry visibility into the queued-vs-active split.

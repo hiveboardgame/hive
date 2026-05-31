@@ -47,14 +47,6 @@ pub struct TelemetryRow {
     pub own_state_drops: u64,
     pub lags_trackers: u64,
     pub game_start_games_date: u64,
-    pub chat_recent_tournament_channels: u64,
-    pub chat_recent_tournament_msgs: u64,
-    pub chat_recent_game_spectator_channels: u64,
-    pub chat_recent_game_spectator_msgs: u64,
-    pub chat_recent_game_player_channels: u64,
-    pub chat_recent_game_player_msgs: u64,
-    pub chat_recent_direct_channels: u64,
-    pub chat_recent_direct_msgs: u64,
     pub chat_persist_attempts: u64,
     pub chat_persist_successes: u64,
     pub chat_persist_failures: u64,
@@ -71,7 +63,7 @@ pub struct TelemetryRow {
     pub load_user_state_permit_max: u64,
 }
 
-pub const TELEMETRY_COLUMN_COUNT: usize = 48;
+pub const TELEMETRY_COLUMN_COUNT: usize = 40;
 
 impl TelemetryRow {
     /// Parse a single CSV row. Returns None if the row has the wrong number of
@@ -109,28 +101,20 @@ impl TelemetryRow {
             own_state_drops: p(23)?,
             lags_trackers: p(24)?,
             game_start_games_date: p(25)?,
-            chat_recent_tournament_channels: p(26)?,
-            chat_recent_tournament_msgs: p(27)?,
-            chat_recent_game_spectator_channels: p(28)?,
-            chat_recent_game_spectator_msgs: p(29)?,
-            chat_recent_game_player_channels: p(30)?,
-            chat_recent_game_player_msgs: p(31)?,
-            chat_recent_direct_channels: p(32)?,
-            chat_recent_direct_msgs: p(33)?,
-            chat_persist_attempts: p(34)?,
-            chat_persist_successes: p(35)?,
-            chat_persist_failures: p(36)?,
-            chat_message_normalizations: p(37)?,
-            sessions_outer: p(38)?,
-            sessions_inner_total: p(39)?,
-            membership_games_sockets: p(40)?,
-            membership_sockets_games: p(41)?,
-            game_response_cache: p(42)?,
-            last_tv_broadcast: p(43)?,
-            process_vm_rss_bytes: p(44)?,
-            process_vm_hwm_bytes: p(45)?,
-            db_pool_max_size: p(46)?,
-            load_user_state_permit_max: p(47)?,
+            chat_persist_attempts: p(26)?,
+            chat_persist_successes: p(27)?,
+            chat_persist_failures: p(28)?,
+            chat_message_normalizations: p(29)?,
+            sessions_outer: p(30)?,
+            sessions_inner_total: p(31)?,
+            membership_games_sockets: p(32)?,
+            membership_sockets_games: p(33)?,
+            game_response_cache: p(34)?,
+            last_tv_broadcast: p(35)?,
+            process_vm_rss_bytes: p(36)?,
+            process_vm_hwm_bytes: p(37)?,
+            db_pool_max_size: p(38)?,
+            load_user_state_permit_max: p(39)?,
         })
     }
 }

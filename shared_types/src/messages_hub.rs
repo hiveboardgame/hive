@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 use crate::{
     chat_message::UnreadCount,
+    GameChatCapabilities,
     GameId,
     GameThread,
     TournamentChatCapabilities,
@@ -19,7 +20,7 @@ pub struct DmConversation {
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TournamentChannel {
-    pub nanoid: String,
+    pub tournament_id: TournamentId,
     pub name: String,
     /// Muting tournament chat suppresses unread badges and notifications.
     /// It does not prevent websocket delivery of tournament messages.
@@ -33,8 +34,7 @@ pub struct GameChannel {
     pub game_id: GameId,
     pub thread: GameThread,
     pub label: String,
-    pub is_player: bool,
-    pub finished: bool,
+    pub access: GameChatCapabilities,
     pub last_message_at: DateTime<Utc>,
 }
 

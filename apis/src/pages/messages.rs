@@ -243,7 +243,7 @@ fn find_tournament_channel(
     hub_data
         .tournaments
         .iter()
-        .find(|channel| channel.nanoid == tournament_id.0)
+        .find(|channel| &channel.tournament_id == tournament_id)
         .cloned()
 }
 
@@ -749,7 +749,7 @@ pub fn MessagesGameThread(thread: GameThread) -> impl IntoView {
             chat.messages_hub_data.with_untracked(|hub| {
                 hub.as_ref()
                     .and_then(|hub| find_game_channel(hub, route_game_id))
-                    .map(|channel| GameChatCapabilities::new(channel.is_player, channel.finished))
+                    .map(|channel| channel.access)
             })
         },
         move |route_game_id| async move { get_game_chat_route_data(route_game_id).await.ok() },
@@ -1007,22 +1007,24 @@ fn TournamentChannelItem(
     let chat = expect_context::<Chat>();
     let i18n = use_i18n();
     let TournamentChannel {
-        nanoid,
+        tournament_id,
         name,
         muted,
         ..
     } = tournament;
-    let nanoid = StoredValue::new(nanoid);
-    let tournament_id = TournamentId(nanoid.get_value());
-    let unread = Signal::derive(move || chat.unread_count_for_tournament(&tournament_id));
+    let route_nanoid = tournament_id.0.clone();
+    let tournament_id = StoredValue::new(tournament_id);
+    let unread =
+        Signal::derive(move || chat.unread_count_for_tournament(&tournament_id.get_value()));
     let href = {
         MessageRoute::Tournament {
-            nanoid: nanoid.get_value(),
+            nanoid: route_nanoid.clone(),
         }
         .href()
     };
+    let is_selected_nanoid = route_nanoid;
     let is_selected =
-        Signal::derive(move || current_route.get().matches_tournament(&nanoid.get_value()));
+        Signal::derive(move || current_route.get().matches_tournament(&is_selected_nanoid));
 
     view! {
         <MessagesChannelLink href is_selected=is_selected>
@@ -1052,7 +1054,7 @@ fn GameChannelItem(game: GameChannel, current_route: Signal<MessageRoute>) -> im
         game_id,
         thread,
         label,
-        finished,
+        access,
         ..
     } = game;
     let game_id = StoredValue::new(game_id);
@@ -1070,7 +1072,7 @@ fn GameChannelItem(game: GameChannel, current_route: Signal<MessageRoute>) -> im
     let is_selected = Signal::derive(move || {
         current_route
             .get()
-            .matches_game(&game_id.get_value(), thread, finished)
+            .matches_game(&game_id.get_value(), thread, access.finished)
     });
 
     view! {

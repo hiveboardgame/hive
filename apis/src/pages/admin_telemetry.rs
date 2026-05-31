@@ -154,12 +154,6 @@ fn AllPanels(rows: Vec<TelemetryRow>) -> impl IntoView {
             <Panel title="Chat persistence (per interval)">
                 <ChartChatPersistence data=data />
             </Panel>
-            <Panel title="Chat recent cache — message counts">
-                <ChartChatMsgs data=data />
-            </Panel>
-            <Panel title="Chat recent cache — channel counts">
-                <ChartChatChannels data=data />
-            </Panel>
             <Panel title="Sessions">
                 <ChartSessions data=data />
             </Panel>
@@ -296,29 +290,6 @@ fn ChartActivity(data: ReadSignal<Vec<TelemetryRow>>) -> impl IntoView {
         .line(tline!("from_model", from_model_calls))
         .line(tline!("tv broadcasts", tv_broadcasts))
         .line(tline!("games finalized", games_finalized));
-    base_chart(series, data)
-}
-
-#[component]
-fn ChartChatMsgs(data: ReadSignal<Vec<TelemetryRow>>) -> impl IntoView {
-    let series = Series::new(ts)
-        .line(tline!("tournament", chat_recent_tournament_msgs))
-        .line(tline!("game spectators", chat_recent_game_spectator_msgs))
-        .line(tline!("game players", chat_recent_game_player_msgs))
-        .line(tline!("direct", chat_recent_direct_msgs));
-    base_chart(series, data)
-}
-
-#[component]
-fn ChartChatChannels(data: ReadSignal<Vec<TelemetryRow>>) -> impl IntoView {
-    let series = Series::new(ts)
-        .line(tline!("tournament ch", chat_recent_tournament_channels))
-        .line(tline!(
-            "game spectator ch",
-            chat_recent_game_spectator_channels
-        ))
-        .line(tline!("game player ch", chat_recent_game_player_channels))
-        .line(tline!("direct ch", chat_recent_direct_channels));
     base_chart(series, data)
 }
 

@@ -14,10 +14,6 @@ const CSV_HEADER: &str = "timestamp,interval_secs,\
     drops_closed_user,drops_closed_game,drops_closed_gamespec,drops_closed_global,drops_closed_tour,drops_closed_direct,\
     from_model_calls,tv_broadcasts,games_finalized,load_user_state_queued,load_user_state_in_flight,own_state_drops,\
     lags_trackers,game_start_games_date,\
-    chat_recent_tournament_channels,chat_recent_tournament_msgs,\
-    chat_recent_game_spectator_channels,chat_recent_game_spectator_msgs,\
-    chat_recent_game_player_channels,chat_recent_game_player_msgs,\
-    chat_recent_direct_channels,chat_recent_direct_msgs,\
     chat_persist_attempts,chat_persist_successes,chat_persist_failures,chat_message_normalizations,\
     sessions_outer,sessions_inner_total,membership_games_sockets,membership_sockets_games,\
     game_response_cache,last_tv_broadcast,process_vm_rss_bytes,process_vm_hwm_bytes,\
@@ -26,10 +22,9 @@ const CSV_HEADER: &str = "timestamp,interval_secs,\
 /// Spawn the periodic WS telemetry snapshot task.
 ///
 /// Each tick reads websocket gauges/counters and samples bounded in-memory
-/// state including lags, game-start dates, sessions, membership, and the
-/// recent-chat cache. Cost is O(active session entries + cached chat channels)
-/// per tick, with short read-only lock acquisitions. Recommended minimum
-/// interval: **30 s**; do not run sub-second.
+/// state including lags, game-start dates, sessions, and membership. Cost is
+/// O(active session entries) per tick, with short read-only lock acquisitions.
+/// Recommended minimum interval: **30 s**; do not run sub-second.
 ///
 /// `csv_path` controls CSV writing: `Some(path)` writes one row per tick,
 /// `None` skips CSV and only emits the periodic log line.
@@ -110,14 +105,6 @@ fn csv_row(
         d(curr.own_state_drops_total, prev.own_state_drops_total),
         curr.lags_trackers_len,
         curr.game_start_games_date_len,
-        curr.chat_recent_tournament_channels,
-        curr.chat_recent_tournament_msgs,
-        curr.chat_recent_game_spectator_channels,
-        curr.chat_recent_game_spectator_msgs,
-        curr.chat_recent_game_player_channels,
-        curr.chat_recent_game_player_msgs,
-        curr.chat_recent_direct_channels,
-        curr.chat_recent_direct_msgs,
         d(
             curr.chat_persist_attempts_total,
             prev.chat_persist_attempts_total,

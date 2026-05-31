@@ -135,7 +135,7 @@ impl RequestHandler {
                 )
                 .await
                 .map_err(Self::map_chat_send_access_error)?;
-                ChatHandler::new(message_container, resolved_channel, self.data.clone())
+                ChatHandler::new(message_container, resolved_channel)
                     .handle(&mut conn)
                     .await?
                     .into()

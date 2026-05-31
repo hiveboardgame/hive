@@ -102,7 +102,7 @@ fn update_tournament_catalog_row_if_present(
     let Some(channel) = hub
         .tournaments
         .iter_mut()
-        .find(|channel| channel.nanoid == tournament_id.0)
+        .find(|channel| &channel.tournament_id == tournament_id)
     else {
         return false;
     };
@@ -337,6 +337,10 @@ impl Chat {
         self.session_epoch.get()
     }
 
+    pub fn session_epoch_untracked(&self) -> u64 {
+        self.session_epoch.get_untracked()
+    }
+
     pub fn current_user_id_untracked(&self) -> Option<Uuid> {
         self.user.get_untracked().as_ref().map(|a| a.user.uid)
     }
@@ -416,7 +420,7 @@ impl Chat {
             if let Some(channel) = hub
                 .tournaments
                 .iter_mut()
-                .find(|channel| channel.nanoid == tournament_nanoid)
+                .find(|channel| channel.tournament_id == tournament_id)
             {
                 channel.muted = muted;
             }
@@ -1445,7 +1449,7 @@ mod tests {
         MessagesHubData {
             dms: Vec::new(),
             tournaments: vec![TournamentChannel {
-                nanoid: tournament_id.0.clone(),
+                tournament_id: tournament_id.clone(),
                 name: "Test Tournament".to_string(),
                 muted,
                 access: TournamentChatCapabilities::default(),

@@ -111,7 +111,7 @@ fn build_messages_hub_data(
         section_limit,
         &unread_count_map,
         recent_cutoff,
-        |row| ConversationKey::tournament(&TournamentId(row.nanoid.clone())),
+        |row| ConversationKey::tournament(&row.tournament_id),
         |row| row.last_message_at,
     );
     let games = prioritize_recent_or_unread_channels(

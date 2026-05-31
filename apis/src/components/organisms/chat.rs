@@ -206,7 +206,7 @@ fn use_thread_history(
             history.begin_loading(&key);
             spawn_local(async move {
                 let result = chat.fetch_channel_history(&key).await;
-                if chat.session_epoch() != request_session_epoch
+                if chat.session_epoch_untracked() != request_session_epoch
                     || chat.current_user_id_untracked() != request_user_id
                 {
                     return;

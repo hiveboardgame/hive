@@ -165,19 +165,3 @@ pub async fn unmute_tournament_chat(
     .map_err(DbError::from)?;
     Ok(())
 }
-
-/// User IDs who have muted this tournament (by tournament UUID).
-/// Live tournament chat delivery intentionally does not use this list; mute is a client
-/// unread-badge and notification preference, not websocket access control.
-pub async fn get_user_ids_who_muted_tournament(
-    conn: &mut DbConn<'_>,
-    tournament_id: Uuid,
-) -> Result<std::collections::HashSet<Uuid>, DbError> {
-    let ids: Vec<Uuid> = user_tournament_chat_mutes::table
-        .filter(user_tournament_chat_mutes::tournament_id.eq(tournament_id))
-        .select(user_tournament_chat_mutes::user_id)
-        .load(conn)
-        .await
-        .map_err(DbError::from)?;
-    Ok(ids.into_iter().collect())
-}
