@@ -598,14 +598,18 @@ fn MessagesResolvedTournamentView(
     muted: bool,
     access: TournamentChatCapabilities,
 ) -> impl IntoView {
+    let chat = expect_context::<Chat>();
     let title = StoredValue::new(title);
     let tournament_id = StoredValue::new(tournament_id);
     let destination =
         Signal::derive(move || ChatDestination::TournamentLobby(tournament_id.get_value()));
+    Effect::new(move |_| {
+        chat.set_tournament_muted(&tournament_id.get_value(), muted);
+    });
 
     view! {
         <MessagesThreadFrame title=Signal::derive(move || title.get_value())>
-            <TournamentRouteActions tournament_id=tournament_id.get_value() muted />
+            <TournamentRouteActions tournament_id=tournament_id.get_value() />
             {if access.can_read() {
                 Either::Left(
                     view! {
@@ -622,14 +626,13 @@ fn MessagesResolvedTournamentView(
 }
 
 #[component]
-fn TournamentRouteActions(tournament_id: TournamentId, muted: bool) -> impl IntoView {
+fn TournamentRouteActions(tournament_id: TournamentId) -> impl IntoView {
     let chat = expect_context::<Chat>();
     let i18n = use_i18n();
     let tournament_id = StoredValue::new(tournament_id);
     let tournament_href = StoredValue::new(format!("/tournament/{}", tournament_id.get_value()));
-    let muted_override = RwSignal::new(None::<bool>);
     let mute_error = RwSignal::new(None::<String>);
-    let resolved_muted = Signal::derive(move || muted_override.get().unwrap_or(muted));
+    let tournament_muted = chat.tournament_muted_signal(tournament_id.get_value());
     let toggle_mute = Action::new(move |currently_muted: &bool| {
         let currently_muted = *currently_muted;
         async move {
@@ -649,7 +652,7 @@ fn TournamentRouteActions(tournament_id: TournamentId, muted: bool) -> impl Into
     let mute_button_label = Signal::derive(move || {
         if toggle_mute.pending().get() {
             t_string!(i18n, messages.page.loading)
-        } else if resolved_muted.get() {
+        } else if tournament_muted.get() {
             t_string!(i18n, messages.page.unmute_tournament_chat)
         } else {
             t_string!(i18n, messages.page.mute_tournament_chat)
@@ -664,8 +667,7 @@ fn TournamentRouteActions(tournament_id: TournamentId, muted: bool) -> impl Into
             match result {
                 Ok(new_muted) => {
                     mute_error.set(None);
-                    muted_override.set(Some(new_muted));
-                    chat.set_tournament_muted(&tournament_id.get_value().0, new_muted);
+                    chat.set_tournament_muted(&tournament_id.get_value(), new_muted);
                     chat.refresh_unread_counts();
                 }
                 Err(error) => mute_error.set(Some(error)),
@@ -684,11 +686,11 @@ fn TournamentRouteActions(tournament_id: TournamentId, muted: bool) -> impl Into
                     <button
                         type="button"
                         disabled=toggle_mute.pending()
-                        title=move || mute_button_label.get()
+                        title=mute_button_label
                         class=move || {
                             format!(
                                 "inline-flex items-center justify-center px-3 py-1.5 text-sm font-semibold rounded-lg text-white whitespace-nowrap transition-colors duration-300 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed {}",
-                                if resolved_muted.get() {
+                                if tournament_muted.get() {
                                     "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal"
                                 } else {
                                     "bg-ladybug-red dark:bg-ladybug-red hover:bg-red-500 dark:hover:bg-red-500"
@@ -697,33 +699,20 @@ fn TournamentRouteActions(tournament_id: TournamentId, muted: bool) -> impl Into
                         }
                         on:click=move |_| {
                             mute_error.set(None);
-                            toggle_mute.dispatch(resolved_muted.get_untracked());
+                            toggle_mute.dispatch(tournament_muted.get_untracked());
                         }
                     >
-                        {move || mute_button_label.get()}
+                        {mute_button_label}
                     </button>
                 </div>
-                {move || {
-                    mute_error
-                        .get()
-                        .map(|error| {
-                            view! { <p class="text-xs text-red-600 dark:text-red-400">{error}</p> }
-                        })
-                }}
+                <ShowLet some=move || mute_error.get() let:error>
+                    <p class="text-xs text-red-600 dark:text-red-400">
+                        {error}
+                    </p>
+                </ShowLet>
             </div>
         </ChannelHeaderBar>
     }
-}
-
-fn game_thread_title_signal(
-    thread: GameThread,
-    players_title: Signal<String>,
-    spectators_title: Signal<String>,
-) -> Signal<String> {
-    Signal::derive(move || match thread {
-        GameThread::Players => players_title.get(),
-        GameThread::Spectators => spectators_title.get(),
-    })
 }
 
 #[component]
@@ -742,7 +731,10 @@ pub fn MessagesGameThread(thread: GameThread) -> impl IntoView {
         Signal::derive(move || t_string!(i18n, messages.chat.spectator_chat).to_string());
     let spectator_unlock_message =
         Signal::derive(move || t_string!(i18n, messages.chat.spectator_unlock).to_string());
-    let title = game_thread_title_signal(thread, players_title, spectators_title);
+    let title = Signal::derive(move || match thread {
+        GameThread::Players => players_title.get(),
+        GameThread::Spectators => spectators_title.get(),
+    });
     let route_resolution = resolve_from_hub_or_fetch(
         route_game_id,
         move |route_game_id| {
@@ -1208,9 +1200,12 @@ fn ChannelSection(
                     {if is_empty {
                         Either::Left(
                             view! {
-                                <Show when=move || !empty_label.get().is_empty()>
-                                    <p class=EMPTY_HINT_CLASS>{move || empty_label.get()}</p>
-                                </Show>
+                                <ShowLet some=move || {
+                                    let empty_label = empty_label.get();
+                                    (!empty_label.is_empty()).then_some(empty_label)
+                                } let:empty_label>
+                                    <p class=EMPTY_HINT_CLASS>{empty_label}</p>
+                                </ShowLet>
                             },
                         )
                     } else {

@@ -25,37 +25,6 @@ use leptos_router::{
 };
 use leptos_use::use_element_bounding;
 use shared_types::GameProgress;
-use uuid::Uuid;
-
-#[component]
-fn ProfileBlockUnblock(profile_user_id: Uuid) -> impl IntoView {
-    let blocked_user_ids = expect_context::<Chat>().blocked_user_ids;
-    let is_blocked =
-        Signal::derive(move || blocked_user_ids.with(|blocked| blocked.contains(&profile_user_id)));
-    view! { <BlockToggleButton blocked_user_id=profile_user_id is_blocked /> }
-}
-
-#[component]
-fn ProfileHeaderActions(
-    profile_user_id: Uuid,
-    profile_username: String,
-    profile_is_bot: bool,
-    viewer_id: Signal<Option<Uuid>>,
-) -> impl IntoView {
-    let profile_username = StoredValue::new(profile_username);
-    let show_actions =
-        Signal::derive(move || viewer_id.get().is_some_and(|vid| vid != profile_user_id));
-    let show_message = Signal::derive(move || show_actions.get() && !profile_is_bot);
-
-    view! {
-        <Show when=move || show_actions.get()>
-            <Show when=move || show_message.get()>
-                <MessageButton username=profile_username.get_value() />
-            </Show>
-            <ProfileBlockUnblock profile_user_id />
-        </Show>
-    }
-}
 
 pub fn tab_from_path(path: &str) -> GameProgress {
     if path.ends_with("/unstarted") {
@@ -108,8 +77,8 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     let location = use_location();
     let current_tab = Signal::derive(move || tab_from_path(&location.pathname.get()));
     let i18n = use_i18n();
-    let auth_context = expect_context::<AuthContext>();
-    let viewer_id = Memo::new(move |_| auth_context.user.with(|u| u.as_ref().map(|a| a.user.uid)));
+    let auth_user = expect_context::<AuthContext>().user;
+    let blocked_user_ids = expect_context::<Chat>().blocked_user_ids;
     let radio_classes = |active| {
         format!("no-link-style py-1 px-2 text-sm font-semibold rounded-lg border-2 transition-all duration-200 transform hover:scale-[1.02] cursor-pointer shadow-sm hover:shadow-md {}", 
             if active {
@@ -151,8 +120,12 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                         .map(|user| {
                             if let Ok(user) = user {
                                 let username = StoredValue::new(user.username.clone());
-                                let msg_uid = user.uid;
-                                let msg_username = user.username.clone();
+                                let profile_user_id = user.uid;
+                                let profile_is_bot = user.bot;
+                                let is_profile_blocked = Signal::derive(move || {
+                                    blocked_user_ids
+                                        .with(|blocked| blocked.contains(&profile_user_id))
+                                });
                                 Either::Left(
                                     view! {
                                         <div class="flex-shrink-0">
@@ -167,12 +140,24 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                                                         username=username.get_value()
                                                         extend_tw_classes="truncate max-w-[125px]"
                                                     />
-                                                    <ProfileHeaderActions
-                                                        profile_user_id=msg_uid
-                                                        profile_username=msg_username.clone()
-                                                        profile_is_bot=user.bot
-                                                        viewer_id=Signal::derive(move || viewer_id.get())
-                                                    />
+                                                    {(!profile_is_bot)
+                                                        .then(|| {
+                                                            view! {
+                                                                <Show when=move || {
+                                                                    auth_user.with(|viewer| {
+                                                                        viewer.as_ref().is_some_and(|viewer| {
+                                                                            viewer.user.uid != profile_user_id
+                                                                        })
+                                                                    })
+                                                                }>
+                                                                    <MessageButton username=username.get_value() />
+                                                                    <BlockToggleButton
+                                                                        blocked_user_id=profile_user_id
+                                                                        is_blocked=is_profile_blocked
+                                                                    />
+                                                                </Show>
+                                                            }
+                                                        })}
                                                 </div>
                                             </div>
 

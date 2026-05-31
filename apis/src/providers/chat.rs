@@ -397,13 +397,12 @@ impl Chat {
         self.block_list_version.update(|v| *v += 1);
     }
 
-    pub fn set_tournament_muted(&self, tournament_nanoid: &str, muted: bool) {
-        let tournament_id = TournamentId(tournament_nanoid.to_string());
+    pub fn set_tournament_muted(&self, tournament_id: &TournamentId, muted: bool) {
         self.muted_tournament_ids.update(|ids| {
             if muted {
                 ids.insert(tournament_id.clone());
             } else {
-                ids.remove(&tournament_id);
+                ids.remove(tournament_id);
             }
         });
         self.messages_hub_data.update(|hub| {
@@ -411,23 +410,30 @@ impl Chat {
                 return;
             };
             if muted {
-                if !hub.muted_tournament_ids.contains(&tournament_id) {
+                if !hub.muted_tournament_ids.contains(tournament_id) {
                     hub.muted_tournament_ids.push(tournament_id.clone());
                 }
             } else {
-                hub.muted_tournament_ids.retain(|id| id != &tournament_id);
+                hub.muted_tournament_ids.retain(|id| id != tournament_id);
             }
             if let Some(channel) = hub
                 .tournaments
                 .iter_mut()
-                .find(|channel| channel.tournament_id == tournament_id)
+                .find(|channel| &channel.tournament_id == tournament_id)
             {
                 channel.muted = muted;
             }
         });
         if muted {
-            self.clear_tournament_unread_state(&tournament_id);
+            self.clear_tournament_unread_state(tournament_id);
         }
+    }
+
+    pub fn tournament_muted_signal(self, tournament_id: TournamentId) -> Signal<bool> {
+        Signal::derive(move || {
+            self.muted_tournament_ids
+                .with(|ids| ids.contains(&tournament_id))
+        })
     }
 
     fn is_tournament_muted(&self, tournament_id: &TournamentId) -> bool {
@@ -1809,7 +1815,7 @@ mod tests {
         chat.recv(&[container]);
         assert_eq!(chat.unread_count_for_tournament(&tournament_id), 1);
 
-        chat.set_tournament_muted(&tournament_id.0, true);
+        chat.set_tournament_muted(&tournament_id, true);
 
         assert_eq!(chat.unread_count_for_tournament(&tournament_id), 0);
         assert_eq!(chat.total_unread_count(), 0);

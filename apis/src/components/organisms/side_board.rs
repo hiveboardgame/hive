@@ -120,7 +120,7 @@ pub fn SideboardTabs(
                 class="flex overflow-hidden flex-col flex-1 min-h-0"
             >
                 <HistoryControls />
-                <Show when=move || show_buttons()>
+                <Show when=show_buttons>
                     <GameThreadToggle
                         selected=game_chat.selected_thread
                         spectators_enabled=Signal::derive(move || {

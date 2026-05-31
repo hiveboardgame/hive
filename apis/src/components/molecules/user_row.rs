@@ -36,7 +36,7 @@ pub fn UserRow(
     } else {
         "dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light"
     };
-    let auth = expect_context::<AuthContext>();
+    let auth_user = expect_context::<AuthContext>().user;
 
     let display_actions = {
         actions
@@ -57,11 +57,12 @@ pub fn UserRow(
                 UserAction::Kick(tournament) => Some(
                     view! { <KickButton user_id tournament=(**tournament).clone() /> }.into_any(),
                 ),
+                UserAction::Message if user.bot => None,
                 UserAction::Message => Some(
                     view! {
                         <Show when=move || {
-                            !user.bot
-                                && auth.user.get().as_ref().is_some_and(|me| me.user.uid != user_id)
+                            auth_user
+                                .with(|me| me.as_ref().is_some_and(|me| me.user.uid != user_id))
                         }>
                             <MessageButton username=username.get_value() compact=true />
                         </Show>

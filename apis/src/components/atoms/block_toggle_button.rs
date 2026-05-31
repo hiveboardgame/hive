@@ -106,7 +106,7 @@ pub fn BlockToggleButton(
         <Show when=logged_in_and_not_self>
             <button
                 type="button"
-                title=move || button_label.get()
+                title=button_label
                 on:click=on_toggle_click
                 disabled=pending
                 class=move || {
@@ -120,11 +120,11 @@ pub fn BlockToggleButton(
                     )
                 }
             >
-                {move || button_label.get()}
+                {button_label}
             </button>
-            <Show when=move || error.get().is_some()>
-                <span class="text-xs text-red-500">{move || error.get().unwrap_or_default()}</span>
-            </Show>
+            <ShowLet some=move || error.get() let:error>
+                <span class="text-xs text-red-500">{error}</span>
+            </ShowLet>
             <Show when=move || show_confirm.get() && !is_blocked.get()>
                 <div
                     class="flex fixed inset-0 justify-center items-center p-4 z-[100] bg-black/50 dark:bg-black/60"

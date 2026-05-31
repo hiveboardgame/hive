@@ -174,12 +174,6 @@ enum ThreadBodyState {
     },
 }
 
-#[derive(Clone, PartialEq)]
-enum ThreadFooterState {
-    Composer,
-    Notice(String),
-}
-
 fn use_thread_history(
     chat: Chat,
     active_channel_key: Signal<ConversationKey>,
@@ -295,7 +289,6 @@ fn Message(
         ..
     } = message;
 
-    let is_expanded = move || expanded_signal.get();
     let on_expand = move |_| on_click_expand.run(());
 
     let margin = if show_header { "mb-3" } else { "mb-1" };
@@ -322,7 +315,7 @@ fn Message(
 
     view! {
         <div class=outer_class>
-            <Show when=move || sender_blocked.get() && !is_expanded()>
+            <Show when=move || sender_blocked.get() && !expanded_signal.get()>
                 <button
                     type="button"
                     class="py-2 px-3 mb-1 text-sm text-left text-gray-500 bg-gray-100 rounded-lg border border-gray-200 transition-colors dark:text-gray-400 dark:bg-gray-800 dark:border-gray-600 hover:bg-gray-200 max-w-[85%] sm:max-w-[75%] dark:hover:bg-gray-700"
@@ -332,7 +325,7 @@ fn Message(
                 </button>
             </Show>
             <Show when=move || {
-                !sender_blocked.get() || is_expanded()
+                !sender_blocked.get() || expanded_signal.get()
             }>
                 {if show_header {
                     Either::Left(
@@ -378,18 +371,18 @@ fn MessageRowView(
         show_unread_divider_before,
         ..
     } = row;
-    let expanded_key = id.clone();
-    let expand_callback_key = id.clone();
+    let expanded_key = StoredValue::new(id);
     let blocked_user_id = message.user_id;
     let sender_blocked = Signal::derive(move || {
         chat.blocked_user_ids
             .with(|blocked| blocked.contains(&blocked_user_id))
     });
-    let expanded_signal =
-        Signal::derive(move || expanded_hidden_messages.with(|set| set.contains(&expanded_key)));
+    let expanded_signal = Signal::derive(move || {
+        expanded_hidden_messages.with(|set| set.contains(&expanded_key.get_value()))
+    });
     let on_expand = Callback::new(move |()| {
         expanded_hidden_messages.update(|set| {
-            set.insert(expand_callback_key.clone());
+            set.insert(expanded_key.get_value());
         });
     });
 
@@ -413,34 +406,6 @@ fn MessageRowView(
             expanded_signal
             on_click_expand=on_expand
         />
-    }
-}
-
-#[component]
-fn MessageRows(
-    rows: Vec<MessageRow>,
-    banner_error: Option<String>,
-    expanded_hidden_messages: RwSignal<HashSet<MessageId>>,
-    unread_at_open: RwSignal<Option<i64>>,
-    first_unread_ref: NodeRef<html::Div>,
-) -> impl IntoView {
-    let rows = StoredValue::new(rows);
-
-    view! {
-        {if let Some(error) = banner_error {
-            Either::Left(
-                view! {
-                    <div class="py-2 px-3 mb-4 text-sm text-amber-900 bg-amber-100 rounded-lg border border-amber-200 dark:text-amber-100 dark:border-amber-800 dark:bg-amber-950/40">
-                        {error}
-                    </div>
-                },
-            )
-        } else {
-            Either::Right(())
-        }}
-        <For each=move || rows.get_value() key=|row| row.id.clone() let:row>
-            <MessageRowView row expanded_hidden_messages unread_at_open first_unread_ref />
-        </For>
     }
 }
 
@@ -593,14 +558,6 @@ pub fn ResolvedChatWindow(
             }
         }
     });
-    let thread_footer_state = Memo::new(move |_| {
-        if visible_history_error.get() == Some(ThreadHistoryError::AccessDenied) {
-            ThreadFooterState::Notice(visible_thread_error.get().unwrap_or_default())
-        } else {
-            ThreadFooterState::Composer
-        }
-    });
-
     Effect::watch(
         move || (active_channel_key.get(), merged_messages.get().len()),
         move |(channel_key, count), prev, _| {
@@ -706,15 +663,28 @@ pub fn ResolvedChatWindow(
                             )
                         }
                         ThreadBodyState::Rows { rows, banner_error } => {
+                            let rows = StoredValue::new(rows);
                             EitherOf4::D(
                                 view! {
-                                    <MessageRows
-                                        rows
-                                        banner_error=banner_error
-                                        expanded_hidden_messages=thread_ui.expanded_hidden_messages
-                                        unread_at_open=thread_ui.unread_at_open
-                                        first_unread_ref
-                                    />
+                                    {if let Some(error) = banner_error {
+                                        Either::Left(
+                                            view! {
+                                                <div class="py-2 px-3 mb-4 text-sm text-amber-900 bg-amber-100 rounded-lg border border-amber-200 dark:text-amber-100 dark:border-amber-800 dark:bg-amber-950/40">
+                                                    {error}
+                                                </div>
+                                            },
+                                        )
+                                    } else {
+                                        Either::Right(())
+                                    }}
+                                    <For each=move || rows.get_value() key=|row| row.id.clone() let:row>
+                                        <MessageRowView
+                                            row
+                                            expanded_hidden_messages=thread_ui.expanded_hidden_messages
+                                            unread_at_open=thread_ui.unread_at_open
+                                            first_unread_ref
+                                        />
+                                    </For>
                                 },
                             )
                         }
@@ -732,36 +702,35 @@ pub fn ResolvedChatWindow(
                 </Show>
             </div>
             <div class="border-t border-gray-200 dark:border-gray-700 shrink-0">
-                {move || match thread_footer_state.get() {
-                    ThreadFooterState::Composer => {
-                        Either::Left(
-                            view! {
-                                <div class="flex flex-col gap-2 p-4">
-                                    {move || {
-                                        visible_send_error
-                                            .get()
-                                            .map(|error| {
-                                                view! {
-                                                    <div class="py-2 px-3 text-sm text-red-700 bg-red-50 rounded-lg border border-red-200 dark:text-red-200 dark:border-red-800 dark:bg-red-950/40">
-                                                        {error}
-                                                    </div>
-                                                }
-                                            })
-                                    }} <ChatInput destination disabled=input_disabled />
-                                </div>
-                            },
-                        )
+                <Show
+                    when=move || {
+                        visible_history_error.get() != Some(ThreadHistoryError::AccessDenied)
                     }
-                    ThreadFooterState::Notice(error) => {
-                        Either::Right(
-                            view! {
+                    fallback=move || {
+                        view! {
+                            <ShowLet some=move || visible_thread_error.get() let:error>
                                 <div class="py-3 px-4 text-sm text-amber-900 bg-amber-100 dark:text-amber-100 dark:bg-amber-950/40">
                                     {error}
                                 </div>
-                            },
-                        )
+                            </ShowLet>
+                        }
                     }
-                }}
+                >
+                    <div class="flex flex-col gap-2 p-4">
+                        {move || {
+                            visible_send_error
+                                .get()
+                                .map(|error| {
+                                    view! {
+                                        <div class="py-2 px-3 text-sm text-red-700 bg-red-50 rounded-lg border border-red-200 dark:text-red-200 dark:border-red-800 dark:bg-red-950/40">
+                                            {error}
+                                        </div>
+                                    }
+                                })
+                        }}
+                        <ChatInput destination disabled=input_disabled />
+                    </div>
+                </Show>
             </div>
         </div>
     }
