@@ -330,7 +330,6 @@ pub struct ChatMessage {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ChatMessageContainer {
     pub destination: ChatDestination,
-    // TODO: @ion maybe even better to change this to messages: Vec<ChatMessage>
     pub message: ChatMessage,
 }
 

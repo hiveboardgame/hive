@@ -3,6 +3,6 @@ use leptos::prelude::*;
 use shared_types::ChatMessageContainer;
 
 pub fn handle_chat(container: ChatMessageContainer) {
-    let mut chat = expect_context::<Chat>();
+    let chat = expect_context::<Chat>();
     chat.recv(container);
 }

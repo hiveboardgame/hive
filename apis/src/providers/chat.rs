@@ -634,22 +634,24 @@ impl Chat {
     fn prune_threads_matching(&self, belongs_to_section: impl Fn(&ConversationKey) -> bool) {
         let mut removed_keys = Vec::new();
         self.messages.update(|messages| {
-            while messages
-                .keys()
-                .filter(|key| belongs_to_section(key))
-                .count()
-                > MAX_STORED_CHANNELS_PER_SECTION
-            {
-                let Some(oldest_key) = messages
-                    .iter()
-                    .filter(|(key, _)| belongs_to_section(key))
-                    .min_by_key(|(_, stored_messages)| last_message_timestamp(stored_messages))
-                    .map(|(key, _)| key.clone())
-                else {
-                    break;
-                };
-                messages.remove(&oldest_key);
-                removed_keys.push(oldest_key);
+            let mut matching = messages
+                .iter()
+                .filter(|(key, _)| belongs_to_section(key))
+                .map(|(key, stored_messages)| {
+                    (key.clone(), last_message_timestamp(stored_messages))
+                })
+                .collect::<Vec<_>>();
+            let overflow_count = matching
+                .len()
+                .saturating_sub(MAX_STORED_CHANNELS_PER_SECTION);
+            if overflow_count == 0 {
+                return;
+            }
+
+            matching.sort_by_key(|(_, timestamp)| *timestamp);
+            for (key, _) in matching.into_iter().take(overflow_count) {
+                messages.remove(&key);
+                removed_keys.push(key);
             }
         });
         if !removed_keys.is_empty() {
@@ -1186,7 +1188,7 @@ impl Chat {
         });
     }
 
-    pub fn recv(&mut self, container: ChatMessageContainer) {
+    pub fn recv(&self, container: ChatMessageContainer) {
         self.acknowledge_outgoing_message(&container);
         let from_self = self
             .user
@@ -1474,7 +1476,7 @@ mod tests {
         let current_user_id = Uuid::new_v4();
         let sender_id = Uuid::new_v4();
         let account = account(current_user_id);
-        let mut chat = Chat::new(
+        let chat = Chat::new(
             Signal::derive(move || Some(account.clone())),
             Signal::derive(|| panic!("api is not used in this test")),
         );
@@ -1622,7 +1624,7 @@ mod tests {
         let current_user_id = Uuid::new_v4();
         let sender_id = Uuid::new_v4();
         let account = account(current_user_id);
-        let mut chat = Chat::new(
+        let chat = Chat::new(
             Signal::derive(move || Some(account.clone())),
             Signal::derive(|| panic!("api is not used in this test")),
         );
@@ -1651,7 +1653,7 @@ mod tests {
         let current_user_id = Uuid::new_v4();
         let sender_id = Uuid::new_v4();
         let account = account(current_user_id);
-        let mut chat = Chat::new(
+        let chat = Chat::new(
             Signal::derive(move || Some(account.clone())),
             Signal::derive(|| panic!("api is not used in this test")),
         );
@@ -1699,7 +1701,7 @@ mod tests {
         let current_user_id = Uuid::new_v4();
         let sender_id = Uuid::new_v4();
         let account = account(current_user_id);
-        let mut chat = Chat::new(
+        let chat = Chat::new(
             Signal::derive(move || Some(account.clone())),
             Signal::derive(|| panic!("api is not used in this test")),
         );
@@ -1729,7 +1731,7 @@ mod tests {
         let current_user_id = Uuid::new_v4();
         let sender_id = Uuid::new_v4();
         let account = account(current_user_id);
-        let mut chat = Chat::new(
+        let chat = Chat::new(
             Signal::derive(move || Some(account.clone())),
             Signal::derive(|| panic!("api is not used in this test")),
         );
@@ -1755,7 +1757,7 @@ mod tests {
         owner.set();
 
         let sender_id = Uuid::new_v4();
-        let mut chat = Chat::new(
+        let chat = Chat::new(
             Signal::derive(|| None),
             Signal::derive(|| panic!("api is not used in this test")),
         );
@@ -1782,7 +1784,7 @@ mod tests {
         let current_user_id = Uuid::new_v4();
         let sender_id = Uuid::new_v4();
         let account = account(current_user_id);
-        let mut chat = Chat::new(
+        let chat = Chat::new(
             Signal::derive(move || Some(account.clone())),
             Signal::derive(|| panic!("api is not used in this test")),
         );

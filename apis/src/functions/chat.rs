@@ -64,17 +64,41 @@ fn generic_chat_server_error(context: &'static str, err: impl std::fmt::Display)
 }
 
 #[cfg(feature = "ssr")]
-async fn load_messages_hub_channels(
+struct MessagesHubSnapshot {
+    dms: Vec<DmConversation>,
+    tournaments: Vec<TournamentChannel>,
+    games: Vec<GameChannel>,
+    muted_tournament_ids: Vec<TournamentId>,
+    unread_counts: Vec<UnreadCount>,
+}
+
+#[cfg(feature = "ssr")]
+struct ChatServerContext {
+    user_id: uuid::Uuid,
+    pool: db_lib::DbPool,
+}
+
+#[cfg(feature = "ssr")]
+impl ChatServerContext {
+    async fn new() -> Result<Self, ServerFnError> {
+        Ok(Self {
+            user_id: uuid().await?,
+            pool: pool().await?,
+        })
+    }
+
+    async fn conn(&self) -> Result<db_lib::DbConn<'_>, ServerFnError> {
+        get_conn(&self.pool)
+            .await
+            .map_err(|err| generic_chat_server_error("getting a database connection", err))
+    }
+}
+
+#[cfg(feature = "ssr")]
+async fn load_messages_hub_snapshot(
     conn: &mut db_lib::DbConn<'_>,
     user_id: uuid::Uuid,
-) -> Result<
-    (
-        Vec<DmConversation>,
-        Vec<TournamentChannel>,
-        Vec<GameChannel>,
-    ),
-    ServerFnError,
-> {
+) -> Result<MessagesHubSnapshot, ServerFnError> {
     let dms = get_dm_conversations_for_user(conn, user_id)
         .await
         .map_err(|err| generic_chat_server_error("loading direct message conversations", err))?;
@@ -84,7 +108,27 @@ async fn load_messages_hub_channels(
     let games = get_game_channels_for_user(conn, user_id)
         .await
         .map_err(|err| generic_chat_server_error("loading game channels", err))?;
-    Ok((dms, tournaments, games))
+    let muted_tournament_ids = get_muted_tournament_ids_for_user(conn, user_id)
+        .await
+        .map_err(|err| generic_chat_server_error("loading muted tournament chat ids", err))?;
+    let unread_counts = get_unread_counts_for_messages_hub_channels(
+        conn,
+        user_id,
+        &dms,
+        &tournaments,
+        &games,
+        &muted_tournament_ids,
+    )
+    .await
+    .map_err(|err| generic_chat_server_error("loading messages hub unread counts", err))?;
+
+    Ok(MessagesHubSnapshot {
+        dms,
+        tournaments,
+        games,
+        muted_tournament_ids,
+        unread_counts,
+    })
 }
 
 #[cfg(feature = "ssr")]
@@ -141,7 +185,7 @@ fn prioritize_recent_or_unread_channels<T>(
     key_for_row: impl Fn(&T) -> ConversationKey,
     last_message_at: impl Fn(&T) -> DateTime<Utc>,
 ) -> Vec<T> {
-    prioritize_unread_then_limit(
+    prioritize_all_unread_then_limit_read(
         rows.into_iter()
             .map(|row| {
                 let key = key_for_row(&row);
@@ -185,11 +229,12 @@ fn channel_unread_count(
 }
 
 #[cfg(feature = "ssr")]
-fn prioritize_unread_then_limit<T>(
+fn prioritize_all_unread_then_limit_read<T>(
     rows: impl IntoIterator<Item = T>,
     limit: usize,
     has_unread: impl Fn(&T) -> bool,
 ) -> Vec<T> {
+    // Unread rows are intentionally never capped; the limit only bounds read rows.
     let (unread, read): (Vec<_>, Vec<_>) = rows.into_iter().partition(|row| has_unread(row));
     let read_limit = limit.saturating_sub(unread.len());
     unread
@@ -209,77 +254,49 @@ fn persistent_channel_key(
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn mark_chat_read(channel_key: ConversationKey) -> Result<(), ServerFnError> {
-    let user_id: uuid::Uuid = uuid().await?;
-    let persistent_key = persistent_channel_key(&channel_key, user_id)?;
-    let pool = pool().await?;
-    let mut conn = get_conn(&pool)
-        .await
-        .map_err(|err| generic_chat_server_error("getting a database connection", err))?;
+    let context = ChatServerContext::new().await?;
+    let mut conn = context.conn().await?;
+    let persistent_key = persistent_channel_key(&channel_key, context.user_id)?;
 
     // Verify user can access this channel before creating a read receipt
-    let allowed = can_user_read_chat(&mut conn, user_id, &channel_key)
+    let allowed = can_user_read_chat(&mut conn, context.user_id, &channel_key)
         .await
         .map_err(|err| generic_chat_server_error("checking chat access", err))?;
     if !allowed {
         return Err(ServerFnError::new("Access denied"));
     }
 
-    upsert_chat_read_receipt(&mut conn, user_id, &persistent_key, chrono::Utc::now())
-        .await
-        .map_err(|err| generic_chat_server_error("marking chat as read", err))?;
+    upsert_chat_read_receipt(
+        &mut conn,
+        context.user_id,
+        &persistent_key,
+        chrono::Utc::now(),
+    )
+    .await
+    .map_err(|err| generic_chat_server_error("marking chat as read", err))?;
     Ok(())
 }
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_chat_unread_counts() -> Result<Vec<UnreadCount>, ServerFnError> {
-    let user_id: uuid::Uuid = uuid().await?;
-    let pool = pool().await?;
-    let mut conn = get_conn(&pool)
-        .await
-        .map_err(|err| generic_chat_server_error("getting a database connection", err))?;
-    let (dms, tournaments, games) = load_messages_hub_channels(&mut conn, user_id).await?;
-    let muted_tournament_ids = get_muted_tournament_ids_for_user(&mut conn, user_id)
-        .await
-        .map_err(|err| generic_chat_server_error("loading muted tournament chat ids", err))?;
-    get_unread_counts_for_messages_hub_channels(
-        &mut conn,
-        user_id,
-        &dms,
-        &tournaments,
-        &games,
-        &muted_tournament_ids,
-    )
-    .await
-    .map_err(|err| generic_chat_server_error("loading unread chat counts", err))
+    let context = ChatServerContext::new().await?;
+    let mut conn = context.conn().await?;
+    Ok(load_messages_hub_snapshot(&mut conn, context.user_id)
+        .await?
+        .unread_counts)
 }
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_messages_hub_data() -> Result<MessagesHubData, ServerFnError> {
-    let user_id: uuid::Uuid = uuid().await?;
-    let pool = pool().await?;
-    let mut conn = get_conn(&pool)
-        .await
-        .map_err(|err| generic_chat_server_error("getting a database connection", err))?;
-    let (dms, tournaments, games) = load_messages_hub_channels(&mut conn, user_id).await?;
-    let muted_tournament_ids = get_muted_tournament_ids_for_user(&mut conn, user_id)
-        .await
-        .map_err(|err| generic_chat_server_error("loading muted tournament chat ids", err))?;
-    let unread_counts = get_unread_counts_for_messages_hub_channels(
-        &mut conn,
-        user_id,
-        &dms,
-        &tournaments,
-        &games,
-        &muted_tournament_ids,
-    )
-    .await
-    .map_err(|err| generic_chat_server_error("loading messages hub unread counts", err))?;
+    let context = ChatServerContext::new().await?;
+    let mut conn = context.conn().await?;
+    let snapshot = load_messages_hub_snapshot(&mut conn, context.user_id).await?;
     Ok(build_messages_hub_data(
-        dms,
-        tournaments,
-        games,
-        muted_tournament_ids,
-        unread_counts,
+        snapshot.dms,
+        snapshot.tournaments,
+        snapshot.games,
+        snapshot.muted_tournament_ids,
+        snapshot.unread_counts,
         chrono::Utc::now() - chrono::Duration::days(MESSAGES_HUB_RECENT_DAYS),
         MESSAGES_HUB_SECTION_LIMIT,
     ))
@@ -290,12 +307,9 @@ pub async fn get_chat_history(
     channel_key: ConversationKey,
     limit: Option<i64>,
 ) -> Result<ChatHistoryResponse, ServerFnError> {
-    let user_id: uuid::Uuid = uuid().await?;
-    let persistent_key = persistent_channel_key(&channel_key, user_id)?;
-    let pool = pool().await?;
-    let mut conn = get_conn(&pool)
-        .await
-        .map_err(|err| generic_chat_server_error("getting a database connection", err))?;
+    let context = ChatServerContext::new().await?;
+    let mut conn = context.conn().await?;
+    let persistent_key = persistent_channel_key(&channel_key, context.user_id)?;
 
     let requested_limit = limit.unwrap_or(DEFAULT_HISTORY_LIMIT);
     let capped_limit = requested_limit.clamp(1, MAX_HISTORY_LIMIT);
@@ -305,7 +319,7 @@ pub async fn get_chat_history(
         capped_limit
     };
 
-    let allowed = can_user_read_chat(&mut conn, user_id, &channel_key)
+    let allowed = can_user_read_chat(&mut conn, context.user_id, &channel_key)
         .await
         .map_err(|err| generic_chat_server_error("checking chat access", err))?;
     if !allowed {
@@ -335,12 +349,9 @@ pub async fn get_tournament_route_data(
     tournament_id: String,
 ) -> Result<(String, bool, TournamentChatCapabilities), ServerFnError> {
     let tournament_id = tournament_id.trim().to_string();
-    let user_id: uuid::Uuid = uuid().await?;
-    let pool = pool().await?;
-    let mut conn = get_conn(&pool)
-        .await
-        .map_err(|err| generic_chat_server_error("getting a database connection", err))?;
-    get_tournament_thread_data(&mut conn, user_id, &tournament_id)
+    let context = ChatServerContext::new().await?;
+    let mut conn = context.conn().await?;
+    get_tournament_thread_data(&mut conn, context.user_id, &tournament_id)
         .await
         .map_err(|err| generic_chat_server_error("loading tournament route data", err))
 }
@@ -349,12 +360,9 @@ pub async fn get_tournament_route_data(
 pub async fn get_game_chat_route_data(
     game_id: GameId,
 ) -> Result<GameChatCapabilities, ServerFnError> {
-    let user_id: uuid::Uuid = uuid().await?;
-    let pool = pool().await?;
-    let mut conn = get_conn(&pool)
-        .await
-        .map_err(|err| generic_chat_server_error("getting a database connection", err))?;
-    load_game_chat_capabilities(&mut conn, user_id, &game_id)
+    let context = ChatServerContext::new().await?;
+    let mut conn = context.conn().await?;
+    load_game_chat_capabilities(&mut conn, context.user_id, &game_id)
         .await
         .map_err(|err| generic_chat_server_error("loading game chat route data", err))?
         .ok_or_else(|| ServerFnError::new("Game not found"))

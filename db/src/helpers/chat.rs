@@ -447,22 +447,6 @@ fn extend_unread_counts(
     }));
 }
 
-fn game_channel_label(
-    username_map: &HashMap<Uuid, String>,
-    white_id: Uuid,
-    black_id: Uuid,
-) -> String {
-    let white_name = username_map
-        .get(&white_id)
-        .cloned()
-        .unwrap_or_else(|| "?".to_string());
-    let black_name = username_map
-        .get(&black_id)
-        .cloned()
-        .unwrap_or_else(|| "?".to_string());
-    format!("{white_name} vs {black_name}")
-}
-
 /// Game channels (players or spectators) the user has.
 /// Intentionally includes only channels with persisted game-chat activity.
 /// This keeps the Messages hub scoped to active conversations instead of all game memberships.
@@ -498,24 +482,46 @@ pub async fn get_game_channels_for_user(
         .map_err(DbError::from)?;
     let username_map: HashMap<Uuid, String> = usernames.into_iter().collect();
 
+    let username = |id| {
+        username_map
+            .get(&id)
+            .cloned()
+            .unwrap_or_else(|| "?".to_string())
+    };
+    let build_game_channel = |channel_id: String,
+                              thread: GameThread,
+                              activity: (Uuid, Uuid, DateTime<Utc>),
+                              finished| {
+        let (white_id, black_id, last_message_at) = activity;
+
+        GameChannel {
+            game_id: GameId(channel_id),
+            thread,
+            label: format!("{} vs {}", username(white_id), username(black_id)),
+            access: GameChatCapabilities::new(white_id == user_id || black_id == user_id, finished),
+            last_message_at,
+        }
+    };
+
     let mut result = Vec::new();
-    let mut finished_player_activity = HashMap::<String, (Uuid, Uuid, bool, DateTime<Utc>)>::new();
+    let mut finished_player_activity = HashMap::<String, (Uuid, Uuid, DateTime<Utc>)>::new();
     for (channel_type, channel_id, white_id, black_id, finished, last_message_at) in
         player_activity_rows
     {
         let Some(last_message_at) = last_message_at else {
             continue;
         };
+        let activity = (white_id, black_id, last_message_at);
 
         if finished {
             finished_player_activity
                 .entry(channel_id)
                 .and_modify(|existing| {
-                    if last_message_at > existing.3 {
-                        *existing = (white_id, black_id, finished, last_message_at);
+                    if activity.2 > existing.2 {
+                        *existing = activity;
                     }
                 })
-                .or_insert((white_id, black_id, finished, last_message_at));
+                .or_insert(activity);
             continue;
         }
 
@@ -523,36 +529,34 @@ pub async fn get_game_channels_for_user(
             continue;
         }
 
-        result.push(GameChannel {
-            game_id: GameId(channel_id),
-            thread: GameThread::Players,
-            label: game_channel_label(&username_map, white_id, black_id),
-            access: GameChatCapabilities::new(white_id == user_id || black_id == user_id, finished),
-            last_message_at,
-        });
+        result.push(build_game_channel(
+            channel_id,
+            GameThread::Players,
+            activity,
+            false,
+        ));
     }
 
-    for (channel_id, (white_id, black_id, finished, last_message_at)) in finished_player_activity {
-        result.push(GameChannel {
-            game_id: GameId(channel_id),
-            thread: GameThread::Players,
-            label: game_channel_label(&username_map, white_id, black_id),
-            access: GameChatCapabilities::new(white_id == user_id || black_id == user_id, finished),
-            last_message_at,
-        });
+    for (channel_id, activity) in finished_player_activity {
+        result.push(build_game_channel(
+            channel_id,
+            GameThread::Players,
+            activity,
+            true,
+        ));
     }
 
     for (channel_id, white_id, black_id, finished, last_message_at) in spectator_activity_rows {
         let Some(last_message_at) = last_message_at else {
             continue;
         };
-        result.push(GameChannel {
-            game_id: GameId(channel_id),
-            thread: GameThread::Spectators,
-            label: game_channel_label(&username_map, white_id, black_id),
-            access: GameChatCapabilities::new(white_id == user_id || black_id == user_id, finished),
-            last_message_at,
-        });
+        let activity = (white_id, black_id, last_message_at);
+        result.push(build_game_channel(
+            channel_id,
+            GameThread::Spectators,
+            activity,
+            finished,
+        ));
     }
     result.sort_by_key(|row| std::cmp::Reverse(row.last_message_at));
     Ok(result)

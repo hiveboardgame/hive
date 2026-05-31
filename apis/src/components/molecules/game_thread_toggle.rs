@@ -110,10 +110,9 @@ pub fn GameThreadToggle(
     let players_enabled = players_enabled.unwrap_or_else(|| Signal::derive(|| true));
     let on_select = StoredValue::new(on_select);
     let select_thread = move |thread| {
+        selected.set(thread);
         if let Some(on_select) = on_select.get_value() {
             on_select.run(thread);
-        } else {
-            selected.set(thread);
         }
     };
 
