@@ -67,6 +67,17 @@ enum ViewBoxUpdateType {
         center_y: f32,
         scale: f32,
     },
+    // Pinch zoom is absolute: `scale` is the cumulative ratio since the gesture
+    // started, applied to `base` (the viewbox snapshotted at touchstart). Because
+    // every frame recomputes from the fixed snapshot, the RAF queue coalescing
+    // away intermediate touchmove events is harmless — the latest event still
+    // lands on the correct zoom.
+    PinchZoom {
+        base: ViewBoxControls,
+        center_x: f32,
+        center_y: f32,
+        scale: f32,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -154,6 +165,8 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
     let viewbox_state = ViewBoxState::new();
     let viewbox_signal = RwSignal::new(ViewBoxControls::new());
     let initial_touch_distance = RwSignal::<f32>::new(0.0);
+    // Snapshot taken at the start of a pinch: (viewbox, anchor_x, anchor_y).
+    let pinch_base = RwSignal::<Option<(ViewBoxControls, f32, f32)>>::new(None);
     let pending_update = RwSignal::new(None::<ViewBoxUpdateType>);
     let viewbox_ref = NodeRef::<svg::Svg>::new();
     let g_ref = NodeRef::<svg::G>::new();
@@ -278,6 +291,26 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
                         viewbox_state.has_zoomed.set(true);
                     }
                 }
+                ViewBoxUpdateType::PinchZoom {
+                    base,
+                    center_x,
+                    center_y,
+                    scale,
+                } => {
+                    let future_viewbox = base.calculate_zoom(center_x, center_y, scale);
+                    let intermediate_height = future_viewbox.height;
+
+                    if (intermediate_height >= viewbox_state.zoom_in_limit
+                        && intermediate_height <= viewbox_state.zoom_out_limit)
+                        && (viewbox_state.is_visible.get()
+                            || will_svg_be_visible(g_ref, &future_viewbox))
+                    {
+                        viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                            *viewbox_controls = future_viewbox;
+                        });
+                        viewbox_state.has_zoomed.set(true);
+                    }
+                }
             }
         }
     });
@@ -383,8 +416,11 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
             if evt.touches().length() == 2 {
                 evt.prevent_default();
                 viewbox_state.is_panning.update_untracked(|b| *b = false);
-                initial_touch_distance
-                    .update(move |v| *v = touch_distance_and_center(viewbox_ref, &evt).0);
+                // Snapshot the gesture start: finger spread (client px) plus the
+                // current viewbox and the anchor point under the finger centroid.
+                let (distance, center) = touch_distance_and_center(viewbox_ref, &evt);
+                initial_touch_distance.set(distance);
+                pinch_base.set(Some((viewbox_signal.get_untracked(), center.0, center.1)));
             }
         },
         UseEventListenerOptions::default().passive(false),
@@ -396,19 +432,25 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
         move |evt: TouchEvent| {
             if evt.touches().length() == 2 {
                 evt.prevent_default();
-                let (current_distance, center) = touch_distance_and_center(viewbox_ref, &evt);
-                let prev = initial_touch_distance.get_untracked();
-                if prev > 0.0 {
-                    let scale = current_distance / prev;
-                    queue_update.with_value(|f| {
-                        f(ViewBoxUpdateType::Zoom {
-                            center_x: center.0,
-                            center_y: center.1,
-                            scale,
-                        })
-                    });
+                let Some((base, center_x, center_y)) = pinch_base.get_untracked() else {
+                    return;
+                };
+                let initial = initial_touch_distance.get_untracked();
+                if initial <= 0.0 {
+                    return;
                 }
-                initial_touch_distance.set(current_distance);
+                // Cumulative ratio since gesture start; spreading fingers (current
+                // > initial) yields scale > 1, which calculate_zoom maps to zoom-in.
+                let (current_distance, _) = touch_distance_and_center(viewbox_ref, &evt);
+                let scale = current_distance / initial;
+                queue_update.with_value(|f| {
+                    f(ViewBoxUpdateType::PinchZoom {
+                        base: base.clone(),
+                        center_x,
+                        center_y,
+                        scale,
+                    })
+                });
             }
         },
         UseEventListenerOptions::default().passive(false),
