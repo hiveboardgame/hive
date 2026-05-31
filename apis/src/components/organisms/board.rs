@@ -48,7 +48,8 @@ use web_sys::{Element, EventTarget, TouchEvent, WheelEvent};
 
 const STACK_LONG_PRESS_DELAY_MS: f64 = 500.0;
 const STACK_TOUCH_MOVE_CANCEL_THRESHOLD_PX: f64 = 8.0;
-const ZOOM_WHEEL_SENSITIVITY: f32 = 0.002; // per-unit deltaY -> scale fraction
+const ZOOM_WHEEL_SENSITIVITY: f32 = 0.002; // scroll-wheel: per-unit deltaY -> scale fraction
+const ZOOM_PINCH_SENSITIVITY: f32 = 0.005; // trackpad pinch (ctrlKey wheel): faster than scroll
 const ZOOM_WHEEL_MAX_STEP: f32 = 0.10; // cap one event at ~10% zoom
 
 #[derive(Debug, Clone)]
@@ -350,7 +351,14 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
                 evt.prevent_default();
                 let (x, y) = screen_to_svg_coordinates(viewbox_ref, evt.x() as f32, evt.y() as f32);
                 let delta = evt.delta_y() as f32;
-                let magnitude = (delta.abs() * ZOOM_WHEEL_SENSITIVITY).min(ZOOM_WHEEL_MAX_STEP);
+                // A trackpad pinch arrives as a wheel event with ctrlKey set; give it
+                // its own (faster) sensitivity so it doesn't feel sluggish vs. scroll.
+                let sensitivity = if evt.ctrl_key() {
+                    ZOOM_PINCH_SENSITIVITY
+                } else {
+                    ZOOM_WHEEL_SENSITIVITY
+                };
+                let magnitude = (delta.abs() * sensitivity).min(ZOOM_WHEEL_MAX_STEP);
                 let scale = if delta > 0.0 {
                     1.0 - magnitude
                 } else {
