@@ -1,5 +1,5 @@
 use super::Config;
-use leptos::prelude::*;
+use leptos::{ev, leptos_dom::helpers::window_event_listener, prelude::*};
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{
@@ -76,7 +76,29 @@ async fn load_client_data() -> Result<ClientData, JsValue> {
 }
 
 pub fn provide_sounds() {
-    provide_context(Sounds {
-        client_data: LocalResource::new(load_client_data),
+    // Browsers block (and log a warning about) an AudioContext created before
+    // the user interacts with the page. Defer creation until the first user
+    // gesture so we don't trip the autoplay policy.
+    let activated = RwSignal::new(false);
+    window_event_listener(ev::pointerdown, move |_| {
+        if !activated.get_untracked() {
+            activated.set(true);
+        }
     });
+    window_event_listener(ev::keydown, move |_| {
+        if !activated.get_untracked() {
+            activated.set(true);
+        }
+    });
+
+    let client_data = LocalResource::new(move || {
+        let activated = activated.get();
+        async move {
+            if !activated {
+                return Err(JsValue::from_str("audio not activated yet"));
+            }
+            load_client_data().await
+        }
+    });
+    provide_context(Sounds { client_data });
 }

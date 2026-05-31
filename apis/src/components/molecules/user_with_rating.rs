@@ -4,7 +4,12 @@ use shared_types::GameSpeed;
 
 use crate::{
     components::{
-        atoms::{profile_link::ProfileLink, rating::Rating, status_indicator::StatusIndicator},
+        atoms::{
+            color_hex::ColorHex,
+            profile_link::ProfileLink,
+            rating::Rating,
+            status_indicator::StatusIndicator,
+        },
         molecules::rating_and_change::RatingAndChangeDynamic,
     },
     providers::game_state::GameStateSignal,
@@ -35,21 +40,6 @@ pub fn UserWithRating(
     });
     let patreon = move || player.with(|p| p.as_ref().is_some_and(|p| p.patreon));
     let bot = move || player.with(|p| p.as_ref().is_some_and(|p| p.bot));
-    let hex_src = move || match side() {
-        Color::White => "/assets/tiles/flat/white.svg",
-        Color::Black => "/assets/tiles/flat/black.svg",
-    };
-    let hex_alt = move || match side() {
-        Color::White => "White",
-        Color::Black => "Black",
-    };
-    let hex_style = move || {
-        if side() == Color::White {
-            "filter: drop-shadow(0 0 1px #3a3a3a) drop-shadow(0 0 1px #3a3a3a);"
-        } else {
-            "filter: drop-shadow(0 0 1px #f0ead6) drop-shadow(0 0 1px #f0ead6);"
-        }
-    };
     let rating = move || {
         player.with(|p| {
             p.as_ref().and_then(|player| {
@@ -68,12 +58,7 @@ pub fn UserWithRating(
                 view! {
                     <div class="flex items-center">
                         <Show when=move || vertical>
-                            <img
-                                src=hex_src
-                                alt=hex_alt
-                                class="mr-1 size-3 shrink-0"
-                                style=hex_style
-                            />
+                            <ColorHex color=side extend_tw_classes="mr-1" />
                         </Show>
                         <StatusIndicator username=username() />
                         <ProfileLink

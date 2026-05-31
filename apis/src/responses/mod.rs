@@ -12,7 +12,7 @@ mod tournament_series;
 mod user;
 pub use account::AccountResponse;
 pub use challenge::{create_challenge_handler, ChallengeResponse};
-pub use game::GameResponse;
+pub use game::{GameBatchResponse, GameResponse};
 pub use heartbeat::HeartbeatResponse;
 pub use home_banner::HomeBanner;
 pub use invitation::InvitationResponse;
