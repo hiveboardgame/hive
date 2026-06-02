@@ -4,26 +4,38 @@ use crate::{
     websocket::{
         busybee::Busybee,
         messages::{InternalServerMessage, MessageDestination},
+        REALTIME_DISABLED_MSG,
     },
 };
-use anyhow::Result;
+use anyhow::{bail, Result};
 use db_lib::{db_error::DbError, get_conn, models::Tournament, DbPool};
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
-use shared_types::TournamentId;
+use shared_types::{TimeMode, TournamentId};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 use uuid::Uuid;
 
 pub struct StartHandler {
     tournament_id: TournamentId,
     user_id: Uuid,
     pool: DbPool,
+    realtime_games_enabled: Arc<AtomicBool>,
 }
 
 impl StartHandler {
-    pub async fn new(tournament_id: TournamentId, user_id: Uuid, pool: &DbPool) -> Result<Self> {
+    pub async fn new(
+        tournament_id: TournamentId,
+        user_id: Uuid,
+        pool: &DbPool,
+        realtime_games_enabled: Arc<AtomicBool>,
+    ) -> Result<Self> {
         Ok(Self {
             tournament_id,
             user_id,
             pool: pool.clone(),
+            realtime_games_enabled,
         })
     }
 
@@ -31,6 +43,11 @@ impl StartHandler {
         let mut conn = get_conn(&self.pool).await?;
         let mut messages = Vec::new();
         let tournament = Tournament::find_by_tournament_id(&self.tournament_id, &mut conn).await?;
+        if tournament.time_mode == TimeMode::RealTime.to_string()
+            && !self.realtime_games_enabled.load(Ordering::Relaxed)
+        {
+            bail!(REALTIME_DISABLED_MSG);
+        }
 
         // Get all players before starting the tournament
         let players = tournament.players(&mut conn).await?;

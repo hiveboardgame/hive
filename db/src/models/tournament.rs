@@ -1052,10 +1052,14 @@ impl Tournament {
     }
 
     pub async fn automatic_start(
+        realtime_enabled: bool,
         conn: &mut DbConn<'_>,
     ) -> Result<Vec<(Tournament, Vec<Game>, Vec<Uuid>)>, DbError> {
         let mut started_tournaments = Vec::new();
         for tournament in Tournament::unstarted(conn).await? {
+            if !realtime_enabled && tournament.time_mode == TimeMode::RealTime.to_string() {
+                continue;
+            }
             started_tournaments.push(tournament.start(conn).await?);
         }
         Ok(started_tournaments)

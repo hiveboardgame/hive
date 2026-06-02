@@ -16,7 +16,7 @@ use hive_lib::ColorChoice;
 use leptos::{either::Either, prelude::*};
 use leptos_icons::*;
 use leptos_use::{use_interval_fn_with_options, use_window, UseIntervalFnOptions};
-use shared_types::{ChallengeId, ChallengeVisibility, TimeInfo};
+use shared_types::{ChallengeId, ChallengeVisibility, TimeInfo, TimeMode};
 
 const BUTTON_BASE_CLASSES: &str = "px-1 py-1 m-1 text-white rounded transition-transform duration-300 transform active:scale-95 focus:outline-none focus:shadow-outline font-bold";
 
@@ -26,6 +26,7 @@ pub fn ChallengeRow(
     single: bool,
     #[prop(default = 1)] count: usize,
     #[prop(default = Vec::new())] challenge_ids: Vec<ChallengeId>,
+    #[prop(optional)] realtime_disabled: Signal<bool>,
 ) -> impl IntoView {
     let ChallengeResponse {
         challenge_id,
@@ -128,8 +129,16 @@ pub fn ChallengeRow(
         }
     };
 
+    let is_realtime = time_mode == TimeMode::RealTime;
+    let accept_disabled = Signal::derive(move || realtime_disabled() && is_realtime);
     let td_class = "xs:py-1 xs:px-1 sm:py-2 sm:px-2";
-    let accept_button_classes = StoredValue::new(format!("{BUTTON_BASE_CLASSES} bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal"));
+    let accept_button_class = move || {
+        if accept_disabled() {
+            format!("{BUTTON_BASE_CLASSES} bg-button-dawn dark:bg-button-twilight opacity-40 cursor-not-allowed")
+        } else {
+            format!("{BUTTON_BASE_CLASSES} bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal")
+        }
+    };
     let cancel_button_classes = StoredValue::new(format!(
         "{BUTTON_BASE_CLASSES} bg-ladybug-red hover:bg-red-400"
     ));
@@ -268,9 +277,12 @@ pub fn ChallengeRow(
 
                         <button
                             on:click=move |_| {
-                                api.get().challenge_accept(challenge_id.get_value());
+                                if !accept_disabled() {
+                                    api.get().challenge_accept(challenge_id.get_value());
+                                }
                             }
-                            class=accept_button_classes.get_value()
+                            prop:disabled=accept_disabled
+                            class=accept_button_class
                         >
                             <Icon icon=icondata_ai::AiCheckOutlined attr:class="size-6" />
 

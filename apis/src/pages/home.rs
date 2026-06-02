@@ -11,12 +11,14 @@ use crate::{
         },
     },
     functions::home_banner,
+    providers::RealtimeEnabledContext,
 };
 use leptos::prelude::*;
 
 #[component]
 pub fn Home() -> impl IntoView {
     let banner = OnceResource::new(async move { home_banner::get().await.ok().flatten() });
+    let realtime_ctx = expect_context::<RealtimeEnabledContext>();
     view! {
         <div class="flex overflow-x-hidden flex-col justify-start items-center pt-20 w-full md:justify-center">
             <Transition>
@@ -47,10 +49,10 @@ pub fn Home() -> impl IntoView {
                         <FeaturedVideo />
                     </div>
                     <div class="order-1 w-full lg:order-2">
-                        <QuickPlay />
+                        <QuickPlay realtime_enabled=Signal::derive(move || realtime_ctx.0.get()) />
                     </div>
                     <div class="order-3 w-full">
-                        <Challenges />
+                        <Challenges realtime_disabled=Signal::derive(move || !realtime_ctx.0.get()) />
                     </div>
                     <div class="order-4 w-full lg:flex lg:justify-end 2xl:justify-center">
                         <div class="w-full lg:max-w-screen-md">

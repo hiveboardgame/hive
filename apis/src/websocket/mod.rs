@@ -27,6 +27,13 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     use std::time::{Duration, Instant};
     use tokio::sync::Notify;
 
+    /// User-facing error returned by every code path that refuses to start a
+    /// realtime game while `WebsocketData.realtime_games_enabled` is `false`.
+    /// Single source of truth so the wording stays consistent across challenge
+    /// handlers, tournament start, and the bot HTTP API.
+    pub const REALTIME_DISABLED_MSG: &str =
+        "Realtime games are currently disabled for maintenance.";
+
     /// Cached responses older than this are rebuilt regardless of `updated_at`
     /// to prevent serving stale user-derived fields (ratings, profile data) that
     /// can change independently of the game row.
@@ -55,6 +62,7 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
         /// dog-piling the DB. The builder removes its own entry and calls
         /// `notify_waiters` so parked tasks re-read the cache.
         game_response_inflight: DashMap<GameId, Arc<Notify>>,
+        pub realtime_games_enabled: std::sync::Arc<std::sync::atomic::AtomicBool>,
     }
 
     impl Default for WebsocketData {
@@ -67,6 +75,7 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
                 telemetry: Arc::new(WsTelemetry::default()),
                 game_response_cache: DashMap::new(),
                 game_response_inflight: DashMap::new(),
+                realtime_games_enabled: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true)),
             }
         }
     }
