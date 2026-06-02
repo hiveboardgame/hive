@@ -9,8 +9,6 @@ RUN wget --progress=dot:giga https://github.com/cargo-bins/cargo-binstall/releas
     cp cargo-binstall /usr/local/cargo/bin && \
     # Install cargo-leptos
     cargo binstall cargo-leptos -y && \
-    # Add the WASM target
-    rustup target add wasm32-unknown-unknown && \
     # Make an /app dir, which everything will eventually live in
     mkdir -p /app
 
@@ -18,6 +16,8 @@ WORKDIR /app
 
 # Copy the application source code
 COPY . .
+
+RUN rustup show && rustup target add wasm32-unknown-unknown
 
 # Build the app
 RUN LEPTOS_HASH_FILES=true cargo leptos build -r -P -vv

@@ -48,6 +48,9 @@ use web_sys::{Element, EventTarget, TouchEvent, WheelEvent};
 
 const STACK_LONG_PRESS_DELAY_MS: f64 = 500.0;
 const STACK_TOUCH_MOVE_CANCEL_THRESHOLD_PX: f64 = 8.0;
+const ZOOM_WHEEL_SENSITIVITY: f32 = 0.002; // scroll-wheel: per-unit deltaY -> scale fraction
+const ZOOM_PINCH_SENSITIVITY: f32 = 0.005; // trackpad pinch (ctrlKey wheel): faster than scroll
+const ZOOM_WHEEL_MAX_STEP: f32 = 0.10; // cap one event at ~10% zoom
 
 #[derive(Debug, Clone)]
 enum ViewBoxUpdateType {
@@ -60,6 +63,17 @@ enum ViewBoxUpdateType {
         delta_y: f32,
     },
     Zoom {
+        center_x: f32,
+        center_y: f32,
+        scale: f32,
+    },
+    // Pinch zoom is absolute: `scale` is the cumulative ratio since the gesture
+    // started, applied to `base` (the viewbox snapshotted at touchstart). Because
+    // every frame recomputes from the fixed snapshot, the RAF queue coalescing
+    // away intermediate touchmove events is harmless — the latest event still
+    // lands on the correct zoom.
+    PinchZoom {
+        base: ViewBoxControls,
         center_x: f32,
         center_y: f32,
         scale: f32,
@@ -151,6 +165,8 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
     let viewbox_state = ViewBoxState::new();
     let viewbox_signal = RwSignal::new(ViewBoxControls::new());
     let initial_touch_distance = RwSignal::<f32>::new(0.0);
+    // Snapshot taken at the start of a pinch: (viewbox, anchor_x, anchor_y).
+    let pinch_base = RwSignal::<Option<(ViewBoxControls, f32, f32)>>::new(None);
     let pending_update = RwSignal::new(None::<ViewBoxUpdateType>);
     let viewbox_ref = NodeRef::<svg::Svg>::new();
     let g_ref = NodeRef::<svg::G>::new();
@@ -275,6 +291,26 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
                         viewbox_state.has_zoomed.set(true);
                     }
                 }
+                ViewBoxUpdateType::PinchZoom {
+                    base,
+                    center_x,
+                    center_y,
+                    scale,
+                } => {
+                    let future_viewbox = base.calculate_zoom(center_x, center_y, scale);
+                    let intermediate_height = future_viewbox.height;
+
+                    if (intermediate_height >= viewbox_state.zoom_in_limit
+                        && intermediate_height <= viewbox_state.zoom_out_limit)
+                        && (viewbox_state.is_visible.get()
+                            || will_svg_be_visible(g_ref, &future_viewbox))
+                    {
+                        viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                            *viewbox_controls = future_viewbox;
+                        });
+                        viewbox_state.has_zoomed.set(true);
+                    }
+                }
             }
         }
     });
@@ -345,8 +381,22 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
         wheel,
         move |evt: WheelEvent| {
             if !viewbox_state.is_panning.get_untracked() {
+                evt.prevent_default();
                 let (x, y) = screen_to_svg_coordinates(viewbox_ref, evt.x() as f32, evt.y() as f32);
-                let scale: f32 = if evt.delta_y() > 0.0 { 0.91 } else { 1.09 };
+                let delta = evt.delta_y() as f32;
+                // A trackpad pinch arrives as a wheel event with ctrlKey set; give it
+                // its own (faster) sensitivity so it doesn't feel sluggish vs. scroll.
+                let sensitivity = if evt.ctrl_key() {
+                    ZOOM_PINCH_SENSITIVITY
+                } else {
+                    ZOOM_WHEEL_SENSITIVITY
+                };
+                let magnitude = (delta.abs() * sensitivity).min(ZOOM_WHEEL_MAX_STEP);
+                let scale = if delta > 0.0 {
+                    1.0 - magnitude
+                } else {
+                    1.0 + magnitude
+                };
                 queue_update.with_value(|f| {
                     f(ViewBoxUpdateType::Zoom {
                         center_x: x,
@@ -356,7 +406,7 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
                 });
             }
         },
-        UseEventListenerOptions::default().passive(true),
+        UseEventListenerOptions::default().passive(false),
     );
 
     _ = use_event_listener_with_options(
@@ -364,12 +414,16 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
         touchstart,
         move |evt: TouchEvent| {
             if evt.touches().length() == 2 {
+                evt.prevent_default();
                 viewbox_state.is_panning.update_untracked(|b| *b = false);
-                initial_touch_distance
-                    .update(move |v| *v = touch_distance_and_center(viewbox_ref, &evt).0);
+                // Snapshot the gesture start: finger spread (client px) plus the
+                // current viewbox and the anchor point under the finger centroid.
+                let (distance, center) = touch_distance_and_center(viewbox_ref, &evt);
+                initial_touch_distance.set(distance);
+                pinch_base.set(Some((viewbox_signal.get_untracked(), center.0, center.1)));
             }
         },
-        UseEventListenerOptions::default().passive(true),
+        UseEventListenerOptions::default().passive(false),
     );
 
     _ = use_event_listener_with_options(
@@ -377,18 +431,29 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
         touchmove,
         move |evt: TouchEvent| {
             if evt.touches().length() == 2 {
-                let (current_distance, center) = touch_distance_and_center(viewbox_ref, &evt);
-                let scale = current_distance / initial_touch_distance();
+                evt.prevent_default();
+                let Some((base, center_x, center_y)) = pinch_base.get_untracked() else {
+                    return;
+                };
+                let initial = initial_touch_distance.get_untracked();
+                if initial <= 0.0 {
+                    return;
+                }
+                // Cumulative ratio since gesture start; spreading fingers (current
+                // > initial) yields scale > 1, which calculate_zoom maps to zoom-in.
+                let (current_distance, _) = touch_distance_and_center(viewbox_ref, &evt);
+                let scale = current_distance / initial;
                 queue_update.with_value(|f| {
-                    f(ViewBoxUpdateType::Zoom {
-                        center_x: center.0,
-                        center_y: center.1,
+                    f(ViewBoxUpdateType::PinchZoom {
+                        base: base.clone(),
+                        center_x,
+                        center_y,
                         scale,
                     })
                 });
             }
         },
-        UseEventListenerOptions::default().passive(true),
+        UseEventListenerOptions::default().passive(false),
     );
 
     //Stop panning when user releases touch/click
@@ -422,6 +487,14 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
                 node_ref=viewbox_ref
                 xmlns="http://www.w3.org/2000/svg"
             >
+                <rect
+                    x=move || viewbox_signal.with(|vb| vb.x)
+                    y=move || viewbox_signal.with(|vb| vb.y)
+                    width=move || viewbox_signal.with(|vb| vb.width)
+                    height=move || viewbox_signal.with(|vb| vb.height)
+                    fill="transparent"
+                    pointer-events="all"
+                />
                 <g transform=transform node_ref=g_ref>
                     {move || {
                         if board_view() == View::History && !last_turn() && !in_analysis {
@@ -577,15 +650,17 @@ fn touch_distance_and_center(svg: NodeRef<svg::Svg>, evt: &TouchEvent) -> (f32, 
     let touch_0 = touches.get(0).expect("Should have first touch");
     let touch_1 = touches.get(1).expect("Should have second touch");
 
+    // Distance in client pixels: a stable basis that does not shift as the viewBox
+    // zooms, avoiding the compounding feedback loop of measuring in SVG coordinates.
+    let dx = (touch_0.client_x() - touch_1.client_x()) as f32;
+    let dy = (touch_0.client_y() - touch_1.client_y()) as f32;
+    let distance = dx.hypot(dy);
+
+    // Center stays in SVG coordinates: it is the zoom anchor for calculate_zoom.
     let point_0 =
         screen_to_svg_coordinates(svg, touch_0.client_x() as f32, touch_0.client_y() as f32);
     let point_1 =
         screen_to_svg_coordinates(svg, touch_1.client_x() as f32, touch_1.client_y() as f32);
-
-    let distance_x = point_0.0 - point_1.0;
-    let distance_y = point_0.1 - point_1.1;
-    let distance = distance_x.hypot(distance_y);
-
     let center = ((point_0.0 + point_1.0) / 2.0, (point_0.1 + point_1.1) / 2.0);
 
     (distance, center)
