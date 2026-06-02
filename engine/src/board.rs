@@ -1179,7 +1179,13 @@ impl Board {
         }
 
         let (top_left, bottom_right) = self.all_taken_positions().fold(
-            (Position::new(BOARD_SIZE, BOARD_SIZE), Position::new(0, 0)),
+            (
+                Position {
+                    q: BOARD_SIZE,
+                    r: BOARD_SIZE,
+                },
+                Position::new(0, 0),
+            ),
             |(top_left, bottom_right), pos| {
                 (
                     Position {
@@ -1320,6 +1326,28 @@ mod tests {
             .positions_taken_around(Position::new(0, 0))
             .collect::<Vec<_>>();
         assert_eq!(pos, vec![Position::new(1, 0)]);
+    }
+
+    #[test]
+    fn bounds_do_not_include_origin_when_all_pieces_are_offset() {
+        let mut board = Board::new();
+        board.insert(
+            Position::new(4, 5),
+            Piece::new_from(Bug::Queen, Color::White, 0),
+            true,
+        );
+        board.insert(
+            Position::new(6, 7),
+            Piece::new_from(Bug::Queen, Color::Black, 0),
+            true,
+        );
+
+        let bounds = board.bounds().expect("occupied board has bounds");
+
+        assert_eq!(bounds.left(), 4);
+        assert_eq!(bounds.top(), 5);
+        assert_eq!(bounds.right(), 6);
+        assert_eq!(bounds.bottom(), 7);
     }
 
     #[test]

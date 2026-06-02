@@ -16,6 +16,7 @@ hive-hydra/.cargo/
 # node e2e test tools and outputs
 node_modules/
 test-results/
+.playwright-mcp/
 apis/end2end/playwright-report/
 apis/playwright/.cache/
 engine/flamegraph.svg

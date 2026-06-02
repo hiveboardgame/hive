@@ -1,5 +1,5 @@
 use crate::{
-    common::{GameReaction, MoveConfirm, PieceType},
+    common::{CurrentConfirm, GameReaction, PieceType},
     components::{
         atoms::history_button::{sync_play_move_query, HistoryButton, HistoryNavigation},
         layouts::base_layout::{ControlsSignal, OrientationSignal},
@@ -19,6 +19,7 @@ use crate::{
         },
     },
     functions::games::get::get_game_from_nanoid,
+    hiveground::{live_hiveground_interaction, selected_history_state, HivegroundInteraction},
     providers::{
         config::Config,
         game_state::{GameStateSignal, View},
@@ -32,7 +33,7 @@ use crate::{
     },
     websocket::client_handlers::game::{reset_game_state, reset_game_state_for_takeback},
 };
-use hive_lib::{Color, GameControl, GameResult, GameStatus, Turn};
+use hive_lib::{Color, GameControl, GameResult, GameStatus, State as HiveState, Turn};
 use leptos::{ev::keydown, prelude::*};
 use leptos_router::hooks::{use_params_map, use_query_map};
 use leptos_use::{use_event_listener, use_window};
@@ -40,9 +41,6 @@ use shared_types::{GameId, GameStart};
 use uuid::Uuid;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
-
-#[derive(Clone)]
-pub struct CurrentConfirm(pub Memo<MoveConfirm>);
 
 #[component]
 pub fn Play() -> impl IntoView {
@@ -86,6 +84,8 @@ pub fn Play() -> impl IntoView {
         })
     });
     provide_context(CurrentConfirm(current_confirm));
+    let hiveground_interaction = live_hiveground_interaction();
+    let history_state = selected_history_state(game_state);
     let user = auth_context.user;
     let white_and_black_ids = create_read_slice(game_state.signal, |gs| (gs.white_id, gs.black_id));
     let user_is_player = Signal::derive(move || {
@@ -410,7 +410,9 @@ pub fn Play() -> impl IntoView {
                             user_is_player
                             game_id
                             white_and_black_ids
+                            interaction=hiveground_interaction
                             tab
+                            history_state
                         />
                     }
                 }
@@ -421,6 +423,8 @@ pub fn Play() -> impl IntoView {
                     user_is_player
                     game_id
                     white_and_black_ids
+                    interaction=hiveground_interaction
+                    history_state
                 />
 
             </Show>
@@ -434,6 +438,8 @@ fn BoardOrUnstarted(
     user_is_player: Signal<bool>,
     white_and_black_ids: Signal<(Option<Uuid>, Option<Uuid>)>,
     game_id: Memo<GameId>,
+    interaction: HivegroundInteraction,
+    history_state: Memo<HiveState>,
 ) -> impl IntoView {
     let game_updater = expect_context::<UpdateNotifier>();
     view! {
@@ -450,7 +456,7 @@ fn BoardOrUnstarted(
                 }
             }
         >
-            <Board />
+            <Board interaction history_state />
         </Show>
     }
 }
@@ -462,7 +468,9 @@ fn HorizontalLayout(
     user_is_player: Signal<bool>,
     white_and_black_ids: Signal<(Option<Uuid>, Option<Uuid>)>,
     game_id: Memo<GameId>,
+    interaction: HivegroundInteraction,
     tab: RwSignal<TabView>,
+    history_state: Memo<HiveState>,
 ) -> impl IntoView {
     let vertical = false;
     let config = expect_context::<Config>().0;
@@ -472,13 +480,20 @@ fn HorizontalLayout(
     });
     view! {
         <GameInfo extend_tw_classes="absolute pl-4 pt-2 bg-transparent" />
-        <BoardOrUnstarted show_board user_is_player game_id white_and_black_ids />
+        <BoardOrUnstarted
+            show_board
+            user_is_player
+            game_id
+            white_and_black_ids
+            interaction
+            history_state
+        />
         <div
             class="grid grid-cols-2 col-span-2 col-start-9 grid-rows-6 row-span-full"
             style=background_style
         >
             <DisplayTimer placement=Placement::Top vertical />
-            <SideboardTabs player_color tab />
+            <SideboardTabs player_color tab interaction history_state />
             <DisplayTimer placement=Placement::Bottom vertical />
         </div>
     }
@@ -491,6 +506,8 @@ fn VerticalLayout(
     user_is_player: Signal<bool>,
     white_and_black_ids: Signal<(Option<Uuid>, Option<Uuid>)>,
     game_id: Memo<GameId>,
+    interaction: HivegroundInteraction,
+    history_state: Memo<HiveState>,
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let controls_signal = expect_context::<ControlsSignal>();
@@ -516,7 +533,12 @@ fn VerticalLayout(
                 </Show>
 
                 <div class="flex justify-between ml-1 h-full max-h-16">
-                    <Reserve alignment=Alignment::SingleRow color=top_color />
+                    <Reserve
+                        alignment=Alignment::SingleRow
+                        color=top_color
+                        interaction
+                        history_state
+                    />
                     <DisplayTimer vertical=true placement=Placement::Top />
                 </div>
                 <div class="flex gap-1 justify-between px-1 border-gray-500 border-dashed border-b-[1px] bg-inherit">
@@ -525,13 +547,25 @@ fn VerticalLayout(
                 </div>
 
             </div>
-            <BoardOrUnstarted show_board user_is_player game_id white_and_black_ids />
+            <BoardOrUnstarted
+                show_board
+                user_is_player
+                game_id
+                white_and_black_ids
+                interaction
+                history_state
+            />
             <div class="flex flex-col shrink bg-board-dawn dark:bg-reserve-twilight">
                 <div class="flex gap-1 border-gray-500 border-dashed border-t-[1px]">
                     <UserWithRating side=player_color vertical />
                 </div>
                 <div class="flex justify-between mb-2 ml-1 h-full max-h-16">
-                    <Reserve alignment=Alignment::SingleRow color=player_color />
+                    <Reserve
+                        alignment=Alignment::SingleRow
+                        color=player_color
+                        interaction
+                        history_state
+                    />
                     <DisplayTimer vertical=true placement=Placement::Bottom />
                 </div>
                 <Show when=show_controls>

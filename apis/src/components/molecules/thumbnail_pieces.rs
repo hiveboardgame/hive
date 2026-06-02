@@ -1,31 +1,20 @@
 use crate::{
-    common::{HexStack, SvgPos, TileDesign},
-    components::molecules::simple_hex_stack::SimpleHexStack,
+    common::{SvgPos, TileDesign},
+    components::molecules::hiveground_stacks::HivegroundStacks,
+    hiveground::{build_static_render_model, HivegroundInteraction, HivegroundPaint},
     providers::Config,
 };
-use hive_lib::{Board, Position};
+use hive_lib::Board;
 use leptos::prelude::*;
 
 #[component]
 pub fn ThumbnailPieces(board: StoredValue<Board>) -> impl IntoView {
-    let thumbnail_pieces = move || {
-        board.with_value(|board| {
-            let mut pieces = Vec::new();
-            for r in 0..32 {
-                for q in 0..32 {
-                    let position = Position::new(q, r);
-                    let bug_stack = board.board.get(position);
-                    if !bug_stack.is_empty() {
-                        pieces.push(HexStack::new_history(bug_stack, position));
-                    }
-                }
-            }
-            pieces
-        })
-    };
-
     let config = expect_context::<Config>().0;
     let tile_opts = Signal::derive(move || config.with(|c| c.tile.clone()));
+    let paint = Memo::new(move |_| tile_opts.with(HivegroundPaint::new));
+    let interaction = HivegroundInteraction::static_view();
+    let thumbnail_pieces = Memo::new(move |_| board.with_value(build_static_render_model));
+
     let straight = move || config.with(|c| c.tile.design == TileDesign::ThreeD);
 
     let (width, height) = (400.0_f32, 510.0_f32);
@@ -45,14 +34,7 @@ pub fn ThumbnailPieces(board: StoredValue<Board>) -> impl IntoView {
             xmlns="http://www.w3.org/2000/svg"
         >
             <g transform=transform>
-                {move || {
-                    thumbnail_pieces()
-                        .into_iter()
-                        .map(|hs| {
-                            view! { <SimpleHexStack hex_stack=hs tile_opts=tile_opts() /> }
-                        })
-                        .collect_view()
-                }}
+                <HivegroundStacks model=thumbnail_pieces paint interaction />
 
             </g>
         </svg>

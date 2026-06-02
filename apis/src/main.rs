@@ -2,6 +2,7 @@
 pub mod api;
 pub mod common;
 pub mod functions;
+pub mod hiveground;
 pub mod jobs;
 pub mod providers;
 pub mod responses;

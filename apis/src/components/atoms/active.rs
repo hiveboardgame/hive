@@ -1,47 +1,27 @@
 use crate::{
-    common::{ActiveState, SvgPos},
-    providers::game_state::GameStateSignal,
+    common::OverlayPaint,
+    components::atoms::overlay::OverlayGlyph,
+    hiveground::{ActiveMarkerState, HivegroundInteraction},
 };
 use hive_lib::Position;
-use leptos::{either::Either, prelude::*, text_prop::TextProp};
+use leptos::{either::Either, prelude::*};
 
 #[component]
 pub fn Active(
     position: Position,
-    level: usize,
-    #[prop(optional)] extend_tw_classes: &'static str,
-    active_state: ActiveState,
-    straight: bool,
+    level: Signal<usize>,
+    active_state: ActiveMarkerState,
+    paint: Memo<OverlayPaint>,
+    interaction: HivegroundInteraction,
 ) -> impl IntoView {
-    let mut game_signal = expect_context::<GameStateSignal>();
-    let center = move || SvgPos::center_for_level(position, level, straight);
-    let transform = TextProp::from(move || format!("translate({},{})", center().0, center().1));
     match active_state {
-        ActiveState::None | ActiveState::Board => Either::Left(view! {
-            <g
-                class=format!("{extend_tw_classes}")
-                on:click=move |_| {
-                    game_signal.reset();
-                }
-            >
-                <Inner transform />
+        ActiveMarkerState::None | ActiveMarkerState::Board => Either::Left(view! {
+            <g on:click=move |evt| interaction.click_active(evt)>
+                <OverlayGlyph position level paint />
             </g>
         }),
-        ActiveState::Reserve => Either::Right(view! {
-            <g class=format!("{extend_tw_classes}")>
-                <Inner transform />
-            </g>
-        }),
-    }
-}
-
-#[component]
-fn Inner(transform: TextProp) -> impl IntoView {
-    let href = || "/assets/tiles/common/all.svg#active";
-
-    view! {
-        <g id="Active" transform=transform>
-            <use_ href=href transform="scale(0.56, 0.56) translate(-46.608, -52.083)"></use_>
-        </g>
+        ActiveMarkerState::Reserve => {
+            Either::Right(view! { <OverlayGlyph position level paint /> })
+        }
     }
 }

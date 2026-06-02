@@ -3,9 +3,10 @@ use crate::{
         atoms::history_button::{HistoryButton, HistoryNavigation},
         organisms::reserve::{Alignment, Reserve},
     },
+    hiveground::HivegroundInteraction,
     providers::game_state::GameStateSignal,
 };
-use hive_lib::Color;
+use hive_lib::{Color, State};
 use leptos::{html, prelude::*};
 use leptos_use::use_window;
 
@@ -21,7 +22,11 @@ pub fn scroll_active_history_move_into_view() {
 }
 
 #[component]
-pub fn HistoryControls(#[prop(optional)] parent: MaybeProp<NodeRef<html::Div>>) -> impl IntoView {
+pub fn HistoryControls(
+    interaction: HivegroundInteraction,
+    history_state: Memo<State>,
+    #[prop(optional)] parent: MaybeProp<NodeRef<html::Div>>,
+) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let focus = Callback::new(move |()| {
         scroll_active_history_move_into_view();
@@ -48,8 +53,18 @@ pub fn HistoryControls(#[prop(optional)] parent: MaybeProp<NodeRef<html::Div>>) 
                 <HistoryButton action=HistoryNavigation::Last post_action=scroll_to_end />
             </div>
             <div class="flex p-2">
-                <Reserve alignment=Alignment::DoubleRow color=Color::White />
-                <Reserve alignment=Alignment::DoubleRow color=Color::Black />
+                <Reserve
+                    alignment=Alignment::DoubleRow
+                    color=Color::White
+                    interaction
+                    history_state
+                />
+                <Reserve
+                    alignment=Alignment::DoubleRow
+                    color=Color::Black
+                    interaction
+                    history_state
+                />
             </div>
         </div>
     }

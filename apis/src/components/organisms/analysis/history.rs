@@ -8,9 +8,10 @@ use crate::{
         },
         reserve::{Alignment, Reserve},
     },
+    hiveground::HivegroundInteraction,
     providers::analysis::{AnalysisSignal, AnalysisTree, TreeNode},
 };
-use hive_lib::Color;
+use hive_lib::{Color, State};
 use leptos::{ev::keydown, html, prelude::*};
 use leptos_use::{use_event_listener, use_window};
 use std::{cmp::Ordering, collections::HashMap};
@@ -147,7 +148,11 @@ fn render_history_items(
 }
 
 #[component]
-pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
+pub fn History(
+    interaction: HivegroundInteraction,
+    history_state: Memo<State>,
+    #[prop(optional)] mobile: bool,
+) -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>().0;
     let current_path = Memo::new(move |_| {
         analysis.with(|a| {
@@ -262,8 +267,20 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
             </div>
             <Show when=move || !mobile>
                 <div class="flex flex-col p-4">
-                    <Reserve alignment=Alignment::DoubleRow color=Color::White viewbox_str />
-                    <Reserve alignment=Alignment::DoubleRow color=Color::Black viewbox_str />
+                    <Reserve
+                        alignment=Alignment::DoubleRow
+                        color=Color::White
+                        viewbox_str
+                        interaction
+                        history_state
+                    />
+                    <Reserve
+                        alignment=Alignment::DoubleRow
+                        color=Color::Black
+                        viewbox_str
+                        interaction
+                        history_state
+                    />
 
                 </div>
             </Show>

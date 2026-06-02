@@ -1,5 +1,5 @@
 use crate::{
-    common::MoveConfirm,
+    common::{CurrentConfirm, MoveConfirm},
     components::{
         layouts::base_layout::OrientationSignal,
         organisms::{
@@ -9,7 +9,7 @@ use crate::{
         },
     },
     functions::games::get::get_game_from_nanoid,
-    pages::play::CurrentConfirm,
+    hiveground::{analysis_hiveground_interaction, selected_history_state},
     providers::{
         analysis::{AnalysisSignal, AnalysisTree, TreeNode},
         game_state::GameStateSignal,
@@ -30,6 +30,7 @@ pub struct ToggleStates(pub RwSignal<HashSet<i32>>);
 pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let auth_context = expect_context::<AuthContext>();
+    let history_state = selected_history_state(game_state);
     let params = use_params_map();
     let queries = use_query_map();
     let game_id = Memo::new(move |_| params().get("nanoid").map(|s| GameId(s.to_owned())));
@@ -106,6 +107,7 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                             AnalysisSignal(RwSignal::new(analysis_tree))
                         });
                     provide_context(analysis_signal);
+                    let hiveground_interaction = analysis_hiveground_interaction();
 
                     view! {
                         <Show
@@ -113,9 +115,9 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                             fallback=move || {
                                 view! {
                                     <AnalysisInfo extend_tw_classes="absolute pl-4 pt-2 bg-transparent" />
-                                    <Board />
+                                    <Board interaction=hiveground_interaction history_state />
                                     <div class="flex flex-col col-span-2 row-span-6 p-1 h-full border-2 border-black select-none dark:border-white">
-                                        <History />
+                                        <History interaction=hiveground_interaction history_state />
                                     </div>
                                 }
                             }
@@ -126,22 +128,26 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                                         <Reserve
                                             alignment=Alignment::SingleRow
                                             color=Color::White
+                                            interaction=hiveground_interaction
+                                            history_state
                                         />
                                     </div>
                                 </div>
                                 <AnalysisInfo extend_tw_classes="border-gray-500 border-dashed border-b-[1px]" />
-                                <Board />
+                                <Board interaction=hiveground_interaction history_state />
                                 <div class="border-gray-500 border-dashed border-t-[1px]"></div>
                                 <div class="flex flex-col flex-grow shrink">
                                     <div class="flex justify-between h-full max-h-16">
                                         <Reserve
                                             alignment=Alignment::SingleRow
                                             color=Color::Black
+                                            interaction=hiveground_interaction
+                                            history_state
                                         />
                                     </div>
                                 </div>
                             </div>
-                            <History mobile=true />
+                            <History mobile=true interaction=hiveground_interaction history_state />
                         </Show>
                     }
                 }}
