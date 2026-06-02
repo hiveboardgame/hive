@@ -10,6 +10,7 @@ use std::{
     collections::{BTreeMap, HashSet},
     time::Duration,
 };
+use wasm_bindgen::JsCast;
 
 const MIN_SEARCH_LENGTH: usize = 2;
 const MAX_SUGGESTIONS: usize = 10;
@@ -282,7 +283,16 @@ pub fn UserSearch(
                                             "overflow-y-auto overflow-x-hidden mt-1 max-h-60 bg-white rounded-lg border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700"
                                         }
                                     }
-                                    on:mousedown=|ev| ev.prevent_default()
+                                    on:mousedown=|ev| {
+                                        let in_dialog = ev
+                                            .target()
+                                            .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
+                                            .and_then(|el| el.closest("dialog").ok().flatten())
+                                            .is_some();
+                                        if !in_dialog {
+                                            ev.prevent_default();
+                                        }
+                                    }
                                 >
                                     <For each=users key=move |(_, user)| user.uid let:user>
                                         <UserRow
