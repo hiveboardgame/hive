@@ -43,5 +43,8 @@
   "permalink": "Permalink",
   "copied": "Copied!",
   "no_games_found": "No games found.",
-  "loading_games": "Loading games..."
+  "loading_games": "Loading games...",
+  "position_filter": "Position",
+  "position_filter_active": "Filtering by board position",
+  "clear_position": "Clear position filter"
 }

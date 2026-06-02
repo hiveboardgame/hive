@@ -49,6 +49,44 @@ pub fn DownloadTree() -> impl IntoView {
     }
 }
 
+/// Links to the archive's global game search, pre-filtered to games that
+/// contain the position currently shown in the analysis. Disabled at the empty
+/// start position (no move played yet, so no hash). Opens in a new tab so the
+/// analysis is not lost.
+#[component]
+pub fn FindPositionButton() -> impl IntoView {
+    let analysis = expect_context::<AnalysisSignal>().0;
+    // Hash of the position at the current node (None before the first move).
+    let current_hash = Memo::new(move |_| {
+        analysis.with(|a| {
+            a.current_node
+                .as_ref()
+                .and_then(|n| n.get_node_id().ok())
+                .and_then(|id| a.hashes.get_by_right(&id).copied())
+        })
+    });
+
+    move || match current_hash.get() {
+        Some(hash) => view! {
+            <a
+                class=format!("{BTN_CLASS} no-link-style")
+                href=format!("/archive?hash={}", hash as i64)
+                target="_blank"
+                rel="noopener"
+            >
+                "Find in archive"
+            </a>
+        }
+        .into_any(),
+        None => view! {
+            <button class=format!("{BTN_CLASS} opacity-50 cursor-not-allowed") disabled=true>
+                "Find in archive"
+            </button>
+        }
+        .into_any(),
+    }
+}
+
 fn blob_and_filename(tree: String) -> (Blob, String) {
     let file = Array::from(&JsValue::from(tree));
     let date = chrono::offset::Local::now()

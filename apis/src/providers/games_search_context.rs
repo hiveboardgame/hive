@@ -150,6 +150,7 @@ pub fn build_profile_query_options(
         sort,
         game_progress: tab,
         include_total: false,
+        position_hash: None,
     }
 }
 

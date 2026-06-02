@@ -464,6 +464,34 @@ fn ArchiveAdvancedFilters(
     }
 }
 
+/// Active "search by board position" chip. Only shown when a position hash is
+/// set (it arrives via the `/archive?hash=...` link from the analysis page or a
+/// permalink). The × clears the filter.
+#[component]
+fn PositionFilterChip(draft_options: RwSignal<GamesQueryOptions>) -> impl IntoView {
+    let i18n = use_i18n();
+    let active = Signal::derive(move || draft_options.with(|o| o.position_hash.is_some()));
+
+    view! {
+        <Show when=move || active.get()>
+            <div class=FIELD_BLOCK_CLASS>
+                <label class=LABEL_CLASS>{t!(i18n, archive.position_filter)}</label>
+                <div class="inline-flex gap-2 items-center px-3 text-sm rounded-lg border-2 shadow-sm min-h-10 border-pillbug-teal bg-pillbug-teal/10 text-pillbug-teal">
+                    <span>{t!(i18n, archive.position_filter_active)}</span>
+                    <button
+                        type="button"
+                        class="inline-flex justify-center items-center ml-1 text-base leading-none rounded-full transition-colors cursor-pointer size-5 hover:bg-pillbug-teal/20"
+                        aria-label=move || t_string!(i18n, archive.clear_position).to_string()
+                        on:click=move |_| draft_options.update(|o| o.position_hash = None)
+                    >
+                        "✕"
+                    </button>
+                </div>
+            </div>
+        </Show>
+    }
+}
+
 #[component]
 pub fn ArchiveSearchForm(
     draft_options: RwSignal<GamesQueryOptions>,
@@ -481,6 +509,7 @@ pub fn ArchiveSearchForm(
             <div class="p-4 mx-auto space-y-4 max-w-5xl sm:p-6">
                 <div class="grid grid-cols-1 gap-4 items-start sm:gap-6 md:grid-cols-2">
                     <div class="space-y-3">
+                        <PositionFilterChip draft_options=draft_options />
                         <div class="space-y-2">
                             <div class="grid grid-cols-1 gap-y-2 gap-x-3 sm:grid-cols-2">
                                 <ArchivePlayerField

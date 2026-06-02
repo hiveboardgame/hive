@@ -3,6 +3,7 @@ use crate::{
         analysis::{
             atoms::{CollapsibleMove, HistoryButton, HistoryMove, HistoryNavigation},
             DownloadTree,
+            FindPositionButton,
             LoadTree,
             UndoButton,
         },
@@ -289,6 +290,9 @@ pub fn History(
                     <DownloadTree />
                 </Show>
                 <LoadTree />
+            </div>
+            <div class="flex justify-center w-full">
+                <FindPositionButton />
             </div>
             <div class="flex justify-between w-full">
                 <button on:click=move |_| promote_variation(true) class=BTN_CLASS>

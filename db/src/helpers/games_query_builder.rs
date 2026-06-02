@@ -1,4 +1,4 @@
-use crate::schema::{games, users};
+use crate::schema::{game_hashes, games, users};
 use chrono::{DateTime, Utc};
 use diesel::{
     dsl::sql,
@@ -92,7 +92,22 @@ impl GameQueryBuilder {
             .rating_range(options.rating_min, options.rating_max)
             .turn_range(options.turn_min, options.turn_max)
             .date_range(options.date_start, options.date_end)
-            .tournament_filter(options.only_tournament);
+            .tournament_filter(options.only_tournament)
+            .position_filter(options.position_hash);
+        self
+    }
+
+    /// Restrict to games that contain a board position with this hash:
+    /// `games.id IN (SELECT game_id FROM game_hashes WHERE hash = ?)`. The
+    /// subquery uses the indexed `game_hashes.hash` column and the `IN` filter
+    /// does not change cardinality, so sorting/pagination/count are unaffected.
+    pub fn position_filter(mut self, hash: Option<i64>) -> Self {
+        if let Some(hash) = hash {
+            let subquery = game_hashes::table
+                .filter(game_hashes::hash.eq(hash))
+                .select(game_hashes::game_id);
+            self.query = self.query.filter(games::id.eq_any(subquery));
+        }
         self
     }
 

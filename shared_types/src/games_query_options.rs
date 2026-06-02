@@ -178,6 +178,9 @@ pub struct GamesQueryOptions {
     pub sort: GameSort,
     pub game_progress: GameProgress,
     pub include_total: bool,
+    /// Filter to games that contain this board-position hash (from analysis).
+    /// Stored as i64 to match the `game_hashes.hash` column.
+    pub position_hash: Option<i64>,
 }
 
 impl Default for GamesQueryOptions {
@@ -204,6 +207,7 @@ impl Default for GamesQueryOptions {
             sort: GameSort::default(),
             game_progress: GameProgress::All,
             include_total: true,
+            position_hash: None,
         }
     }
 }
@@ -246,6 +250,8 @@ pub enum GamesQueryParseError {
     InvalidRating { field: &'static str, error: String },
     #[error("invalid turn filter {field}: {error}")]
     InvalidTurn { field: &'static str, error: String },
+    #[error("invalid position hash: {0}")]
+    InvalidHash(String),
     #[error("invalid date {field}: {error}")]
     InvalidDate { field: &'static str, error: String },
     #[error("invalid result filter")]
@@ -450,6 +456,9 @@ impl std::fmt::Display for GamesQueryOptions {
         }
         if self.batch_size != 10 {
             push("batch_size", self.batch_size.to_string());
+        }
+        if let Some(hash) = self.position_hash {
+            push("hash", hash.to_string());
         }
 
         if parts.is_empty() {
@@ -688,6 +697,13 @@ impl GamesQueryOptions {
                     }
                     _ => Some(GamesQueryParseError::InvalidBatchSize),
                 },
+                "hash" => match parse_i64_hash(&value) {
+                    Ok(v) => {
+                        opts.position_hash = v;
+                        None
+                    }
+                    Err(e) => Some(e),
+                },
                 _ => None,
             };
 
@@ -736,6 +752,17 @@ fn parse_i32(input: &str, field: &'static str) -> Result<Option<i32>, GamesQuery
             field,
             error: e.to_string(),
         })
+}
+
+fn parse_i64_hash(input: &str) -> Result<Option<i64>, GamesQueryParseError> {
+    if input.trim().is_empty() {
+        return Ok(None);
+    }
+    input
+        .trim()
+        .parse::<i64>()
+        .map(Some)
+        .map_err(|e| GamesQueryParseError::InvalidHash(e.to_string()))
 }
 
 fn parse_date(
