@@ -43,7 +43,7 @@ use db_lib::{
 use hive_lib::GameStatus;
 use log::error;
 use rand::Rng;
-use shared_types::{GameId, TimeMode, TournamentId};
+use shared_types::{GameId, SimpleUser, TimeMode, TournamentId};
 use std::{
     collections::{HashMap, HashSet},
     str::FromStr,
@@ -278,13 +278,8 @@ impl WsHub {
 
     /// Synchronously register a new socket and trigger the async user-state load.
     /// Consumes a clone of the Arc so the spawned load task can keep `self` alive.
-    pub fn on_connect(
-        self: Arc<Self>,
-        socket_id: Uuid,
-        user_id: Uuid,
-        username: String,
-        tx: mpsc::Sender<Bytes>,
-    ) {
+    pub fn on_connect(self: Arc<Self>, socket_id: Uuid, tx: mpsc::Sender<Bytes>, user: SimpleUser) {
+        let user_id = user.user_id;
         let lobby = Self::lobby();
         // Lock order: membership write → outer DashMap shard. on_disconnect uses
         // the same order so the two operations can't deadlock and a fast
@@ -314,6 +309,7 @@ impl WsHub {
         if is_first_socket {
             self.data.telemetry.inc_active_user();
         }
+        let broadcast_online = user.authed && is_first_socket;
         self.refresh_membership_gauges();
 
         // Async state load spawned independently so readers and dispatches
@@ -345,7 +341,8 @@ impl WsHub {
                 return;
             };
             let _guard = InFlightGuard::new(self.data.telemetry.clone());
-            self.load_user_state(socket_id, user_id, username, tx).await;
+            self.load_user_state(socket_id, user, tx, broadcast_online)
+                .await;
             drop(permit);
         });
     }
@@ -353,7 +350,8 @@ impl WsHub {
     /// Drops a socket, cleaning up its per-socket game subscriptions immediately.
     /// If it was the user's last socket, also cleans up user-level state and
     /// broadcasts Offline to the lobby.
-    pub fn on_disconnect(&self, socket_id: Uuid, user_id: Uuid, username: String) {
+    pub fn on_disconnect(&self, socket_id: Uuid, user: SimpleUser) {
+        let user_id = user.user_id;
         // Lock order matches on_connect (membership → sessions): a racing
         // on_connect observing was_empty=true while we're partway through
         // would otherwise leave the active_users gauge overcounted.
@@ -403,11 +401,11 @@ impl WsHub {
         // same fast-reconnect reason: on_connect was queued behind our lock,
         // may now have run and broadcast Online — we suppress our Offline so the
         // reconnect's Online is the final word.
-        if removed_user && !self.sessions.contains_key(&user_id) {
+        if user.authed && removed_user && !self.sessions.contains_key(&user_id) {
             let message = ServerResult::Ok(Box::new(ServerMessage::UserStatus(UserUpdate {
                 status: UserStatus::Offline,
                 user: None,
-                username,
+                username: user.username,
             })));
             if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
                 self.fanout_lobby(&Bytes::from(serialized), DestKind::Global);
@@ -1071,7 +1069,7 @@ impl WsHub {
         let mut m = self.membership.write().unwrap_or_else(|p| p.into_inner());
         self.sessions
             .entry(user_id)
-            .or_insert_with(DashMap::new)
+            .or_default()
             .insert(socket_id, tx);
         m.fanout
             .games_sockets
@@ -1120,10 +1118,11 @@ impl WsHub {
     async fn load_user_state(
         &self,
         socket_id: Uuid,
-        user_id: Uuid,
-        username: String,
+        user: SimpleUser,
         tx: mpsc::Sender<Bytes>,
+        broadcast_online: bool,
     ) {
+        let user_id = user.user_id;
         let Ok(mut conn) = get_conn(&self.pool).await else {
             return;
         };
@@ -1140,37 +1139,46 @@ impl WsHub {
         // Own-state messages are sent before the online roster so they always
         // arrive even when the 128-message queue would otherwise fill with
         // roster entries in a large lobby.
-        if let Ok(user) = User::find_by_uuid(&user_id, &mut conn).await {
-            // Re-check before the Online broadcast: the slow DB lookup gives
-            // plenty of time for a disconnect to race in. If it has, our Online
-            // would override the Offline that on_disconnect already sent and
-            // leave the lobby ghosting a user that's actually gone.
-            if !self.is_socket_connected(user_id, socket_id) {
-                return;
-            }
-            // Announce the new user's Online status to lobby.
-            if let Ok(user_response) = UserResponse::from_model(&user, &mut conn).await {
-                // Re-check after the await: from_model is a DB round-trip during
-                // which on_disconnect may have run and broadcast Offline. Without
-                // this guard, fanout_lobby would overwrite that Offline with a
-                // stale Online.
+        let user_model = if user.authed {
+            User::find_by_uuid(&user_id, &mut conn).await.ok()
+        } else {
+            None
+        };
+
+        if let Some(user_model) = user_model {
+            if broadcast_online {
+                // Re-check before the Online broadcast: the slow DB lookup gives
+                // plenty of time for a disconnect to race in. If it has, our Online
+                // would override the Offline that on_disconnect already sent and
+                // leave the lobby ghosting a user that's actually gone.
                 if !self.is_socket_connected(user_id, socket_id) {
                     return;
                 }
-                let message = ServerResult::Ok(Box::new(ServerMessage::UserStatus(UserUpdate {
-                    status: UserStatus::Online,
-                    user: Some(user_response),
-                    username: username.clone(),
-                })));
-                if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                    self.fanout_lobby(&Bytes::from(serialized), DestKind::Global);
+                // Announce the new user's Online status to lobby.
+                if let Ok(user_response) = UserResponse::from_model(&user_model, &mut conn).await {
+                    // Re-check after the await: from_model is a DB round-trip during
+                    // which on_disconnect may have run and broadcast Offline. Without
+                    // this guard, fanout_lobby would overwrite that Offline with a
+                    // stale Online.
+                    if !self.is_socket_connected(user_id, socket_id) {
+                        return;
+                    }
+                    let message =
+                        ServerResult::Ok(Box::new(ServerMessage::UserStatus(UserUpdate {
+                            status: UserStatus::Online,
+                            user: Some(user_response),
+                            username: user.username.clone(),
+                        })));
+                    if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
+                        self.fanout_lobby(&Bytes::from(serialized), DestKind::Global);
+                    }
                 }
             }
 
             // Urgent games. get_games_with_notifications already filters
             // finished=false; from_games_batch coalesces user/tournament
             // lookups into ~2 queries instead of 3 per game.
-            let urgent = match user.get_games_with_notifications(&mut conn).await {
+            let urgent = match user_model.get_games_with_notifications(&mut conn).await {
                 Ok(v) => v,
                 Err(e) => {
                     error!("Failed to get urgent games for user {user_id}: {e}");
@@ -1189,7 +1197,9 @@ impl WsHub {
             }
 
             // Tournament invitations.
-            if let Ok(invitations) = TournamentInvitation::find_by_user(&user.id, &mut conn).await {
+            if let Ok(invitations) =
+                TournamentInvitation::find_by_user(&user_model.id, &mut conn).await
+            {
                 for invitation in invitations {
                     if let Ok(response) =
                         TournamentResponse::from_uuid(&invitation.tournament_id, &mut conn).await
@@ -1205,9 +1215,10 @@ impl WsHub {
             }
 
             // Schedule notifications.
-            if let Ok(schedules) = Schedule::find_user_notifications(user.id, &mut conn).await {
+            if let Ok(schedules) = Schedule::find_user_notifications(user_model.id, &mut conn).await
+            {
                 for schedule in schedules {
-                    let is_opponent = schedule.opponent_id == user.id;
+                    let is_opponent = schedule.opponent_id == user_model.id;
                     if let Ok(response) = ScheduleResponse::from_model(schedule, &mut conn).await {
                         let schedule_update = if is_opponent {
                             ScheduleUpdate::Proposed(response)
@@ -1225,7 +1236,9 @@ impl WsHub {
 
             // Challenges (public excluding self + own + direct).
             let mut responses = Vec::new();
-            if let Ok(challenges) = Challenge::get_public_exclude_user(user.id, &mut conn).await {
+            if let Ok(challenges) =
+                Challenge::get_public_exclude_user(user_model.id, &mut conn).await
+            {
                 for challenge in challenges {
                     if let Ok(response) = ChallengeResponse::from_model(&challenge, &mut conn).await
                     {
@@ -1233,7 +1246,7 @@ impl WsHub {
                     }
                 }
             }
-            if let Ok(challenges) = Challenge::get_own(user.id, &mut conn).await {
+            if let Ok(challenges) = Challenge::get_own(user_model.id, &mut conn).await {
                 for challenge in challenges {
                     if let Ok(response) = ChallengeResponse::from_model(&challenge, &mut conn).await
                     {
@@ -1241,7 +1254,7 @@ impl WsHub {
                     }
                 }
             }
-            if let Ok(challenges) = Challenge::direct_challenges(user.id, &mut conn).await {
+            if let Ok(challenges) = Challenge::direct_challenges(user_model.id, &mut conn).await {
                 for challenge in challenges {
                     if let Ok(response) = ChallengeResponse::from_model(&challenge, &mut conn).await
                     {

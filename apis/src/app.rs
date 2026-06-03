@@ -1,5 +1,8 @@
 use crate::{
-    components::{layouts::base_layout::BaseLayout, organisms::display_games::DisplayGames},
+    components::{
+        layouts::base_layout::BaseLayout,
+        organisms::{direct_challenge_modal::DirectChallengeModal, display_games::DisplayGames},
+    },
     i18n::I18nContextProvider,
     pages::{
         account::Account,
@@ -37,6 +40,7 @@ use crate::{
         provide_auth,
         provide_challenge_params,
         provide_config,
+        provide_direct_challenge,
         provide_notifications,
         provide_ping,
         provide_referer,
@@ -92,6 +96,7 @@ pub fn App() -> impl IntoView {
 
     //expects auth, api_requests, gameStateSignal
     provide_chat();
+    let direct_challenge = provide_direct_challenge();
     let auth = expect_context::<AuthContext>();
     let is_logged_in = move || auth.logged_in.get();
     let is_admin = move || auth.admin.get();
@@ -250,6 +255,7 @@ pub fn App() -> impl IntoView {
                     </ParentRoute>
                 </Routes>
             </Router>
+            <DirectChallengeModal state=direct_challenge />
         </I18nContextProvider>
     }
 }

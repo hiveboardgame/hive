@@ -14,15 +14,15 @@ use reactive_stores::Store;
 use shared_types::{ChallengeDetails, ChallengeVisibility, GameSpeed, TimeMode};
 
 #[component]
-pub fn ChallengeCreate(#[prop(optional)] opponent: Option<String>) -> impl IntoView {
+pub fn ChallengeCreate(#[prop(optional, into)] opponent: Signal<Option<String>>) -> impl IntoView {
     let i18n = use_i18n();
     let params = expect_context::<Store<ChallengeParams>>();
     let api = expect_context::<ApiRequestsProvider>().0;
     let auth_context = expect_context::<AuthContext>();
-    let opponent = StoredValue::new(opponent);
-    let opponent_exists = opponent.with_value(|o| o.is_some());
     let create_challenge = Callback::new(move |color_choice| {
         let api = api.get();
+        let direct_opponent = opponent.get_untracked();
+        let opponent_exists = direct_opponent.is_some();
 
         let (upper_rating, lower_rating) = auth_context.user.with(|acc_opt| {
             if let Some(account) = acc_opt {
@@ -68,7 +68,7 @@ pub fn ChallengeCreate(#[prop(optional)] opponent: Option<String>) -> impl IntoV
             } else {
                 ChallengeVisibility::Direct
             },
-            opponent: opponent.get_value(),
+            opponent: direct_opponent,
             color_choice,
             time_mode: params.time_signals().time_mode().get_untracked(),
             time_base: params.time_signals().with(|ts| ts.base()),
@@ -135,8 +135,8 @@ pub fn ChallengeCreate(#[prop(optional)] opponent: Option<String>) -> impl IntoV
     });
     view! {
         <div class="flex flex-col items-center w-72 sm:w-96 xs:m-2 xs:w-80">
-            <Show when=move || opponent_exists>
-                <div class="block">"Opponent: " {opponent.get_value()}</div>
+            <Show when=move || opponent.get().is_some()>
+                <div class="block">"Opponent: " {move || opponent.get().unwrap_or_default()}</div>
             </Show>
             <div class="flex flex-col items-center">
                 <TimeSelect is_tournament=false params on_value_change=time_change allowed_values />
@@ -157,7 +157,7 @@ pub fn ChallengeCreate(#[prop(optional)] opponent: Option<String>) -> impl IntoV
                 />Full
             </div>
 
-            <Show when=move || !opponent_exists>
+            <Show when=move || opponent.get().is_none()>
                 <div class="flex gap-1 p-1">
                     {t!(i18n, home.custom_game.private)}
                     <SimpleSwitchWithCallback

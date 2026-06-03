@@ -32,8 +32,7 @@ struct DisconnectGuard {
     hub: Arc<WsHub>,
     telemetry: Arc<WsTelemetry>,
     socket_id: Uuid,
-    user_uid: Uuid,
-    username: String,
+    user: SimpleUser,
     reason: Cell<DisconnectReason>,
 }
 
@@ -46,11 +45,7 @@ impl DisconnectGuard {
 impl Drop for DisconnectGuard {
     fn drop(&mut self) {
         self.telemetry.record_disconnect(self.reason.get());
-        self.hub.on_disconnect(
-            self.socket_id,
-            self.user_uid,
-            std::mem::take(&mut self.username),
-        );
+        self.hub.on_disconnect(self.socket_id, self.user.clone());
     }
 }
 
@@ -61,24 +56,15 @@ pub async fn reader_task(
     hub: Arc<WsHub>,
     data: Arc<WebsocketData>,
     pool: DbPool,
-    user_uid: Uuid,
-    username: String,
-    admin: bool,
-    authed: bool,
+    user: SimpleUser,
 ) {
-    Arc::clone(&hub).on_connect(
-        socket.socket_id,
-        user_uid,
-        username.clone(),
-        socket.tx.clone(),
-    );
+    Arc::clone(&hub).on_connect(socket.socket_id, socket.tx.clone(), user.clone());
 
     let guard = DisconnectGuard {
         hub: Arc::clone(&hub),
         telemetry: data.telemetry.clone(),
         socket_id: socket.socket_id,
-        user_uid,
-        username: username.clone(),
+        user: user.clone(),
         reason: Cell::new(DisconnectReason::Close),
     };
 
@@ -111,18 +97,7 @@ pub async fn reader_task(
                 }
                 Some(Ok(AggregatedMessage::Binary(bytes))) => {
                     last_hb = Instant::now();
-                    handle_binary(
-                        &bytes,
-                        &hub,
-                        &socket,
-                        &data,
-                        &pool,
-                        user_uid,
-                        &username,
-                        admin,
-                        authed,
-                    )
-                    .await;
+                    handle_binary(&bytes, &hub, &socket, &data, &pool, &user).await;
                 }
                 Some(Ok(AggregatedMessage::Close(_))) => break,
                 None => {
@@ -148,10 +123,7 @@ async fn handle_binary(
     socket: &SocketTx,
     data: &Arc<WebsocketData>,
     pool: &DbPool,
-    user_id: Uuid,
-    username: &str,
-    admin: bool,
-    authed: bool,
+    user: &SimpleUser,
 ) {
     data.telemetry.record_message_received(bytes.len());
 
@@ -166,35 +138,29 @@ async fn handle_binary(
         action: GameAction::Unwatch,
     } = request
     {
-        hub.unsubscribe_game(user_id, socket.socket_id, game_id);
+        hub.unsubscribe_game(user.user_id, socket.socket_id, game_id);
         return;
     }
 
-    let user = SimpleUser {
-        user_id,
-        username: username.to_owned(),
-        authed,
-        admin,
-    };
     let handler = RequestHandler::new(
         request.clone(),
         data.clone(),
         hub.clone(),
         socket.clone(),
-        user,
+        user.clone(),
         pool.clone(),
     );
 
     match handler.handle().await {
         Ok(output) => {
-            let from = Some((user_id, socket.socket_id));
+            let from = Some((user.user_id, socket.socket_id));
             for subscription in output.subscriptions {
                 match subscription {
                     GameSubscription::Fanout(game_id) => {
-                        hub.subscribe_game_fanout(user_id, socket.socket_id, &game_id);
+                        hub.subscribe_game_fanout(user.user_id, socket.socket_id, &game_id);
                     }
                     GameSubscription::Heartbeat(game_id) => {
-                        hub.subscribe_game_heartbeat(user_id, socket.socket_id, &game_id);
+                        hub.subscribe_game_heartbeat(user.user_id, socket.socket_id, &game_id);
                     }
                 }
             }
@@ -229,19 +195,19 @@ async fn handle_binary(
                   User:    {} {}
                 ------------------END------------------
                 "#,
-                request, err, username, user_id
+                request, err, user.username, user.user_id
             };
             let message = ServerResult::Err(ExternalServerError {
-                user_id,
+                user_id: user.user_id,
                 field: "foo".to_string(),
                 reason: format!("{err}"),
                 status_code,
             });
             if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
                 hub.dispatch(
-                    &MessageDestination::User(user_id),
+                    &MessageDestination::User(user.user_id),
                     Bytes::from(serialized),
-                    Some((user_id, socket.socket_id)),
+                    Some((user.user_id, socket.socket_id)),
                 )
                 .await;
             }

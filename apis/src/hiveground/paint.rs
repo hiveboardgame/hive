@@ -69,8 +69,10 @@ mod tests {
 
     #[test]
     fn palette_paints_three_d_shadow_for_three_d_designs() {
-        let mut tile_options = TileOptions::default();
-        tile_options.design = TileDesign::Carbon3D;
+        let tile_options = TileOptions {
+            design: TileDesign::Carbon3D,
+            ..TileOptions::default()
+        };
 
         let paint = HivegroundPaint::new(&tile_options).piece(piece("wQ"), PieceShadow::Design);
 

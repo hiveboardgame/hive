@@ -11,7 +11,7 @@ use crate::{
     },
     responses::UserResponse,
 };
-use leptos::{either::EitherOf5, prelude::*};
+use leptos::{either::EitherOf4, prelude::*};
 use shared_types::GameSpeed;
 
 #[component]
@@ -51,25 +51,27 @@ pub fn UserRow(
         let display: Vec<_> = actions
             .into_iter()
             .filter_map(|action| match action {
-                UserAction::Challenge => Some(if user.bot {
+                UserAction::Challenge => {
+                    let opponent = username.get_value();
+                    let disabled = user.bot;
                     // TODO: Allow users to direct challenge the bot once it can manage its own time
-                    EitherOf5::A(view! { <DirectChallengeButton user_id opponent=username.get_value() disabled=true /> })
-                } else {
-                    EitherOf5::B(
-                        view! { <DirectChallengeButton user_id opponent=username.get_value() /> },
-                    )
-                }),
-                UserAction::Invite(tournament_id) => Some(EitherOf5::C(
+                    Some(EitherOf4::A(
+                        view! { <DirectChallengeButton user_id opponent disabled /> },
+                    ))
+                }
+                UserAction::Invite(tournament_id) => Some(EitherOf4::B(
                     view! { <InviteButton user_id tournament_id /> },
                 )),
-                UserAction::Uninvite(tournament_id) => Some(EitherOf5::D(
+                UserAction::Uninvite(tournament_id) => Some(EitherOf4::C(
                     view! { <UninviteButton user_id tournament_id /> },
                 )),
-                UserAction::Kick(tournament) => Some(EitherOf5::E(
+                UserAction::Kick(tournament) => Some(EitherOf4::D(
                     view! { <KickButton user_id tournament=*tournament /> },
                 )),
                 UserAction::Select(cb) => {
-                    select_cb = Some(Callback::new(move |username: String| cb.run(Some(username))));
+                    select_cb = Some(Callback::new(move |username: String| {
+                        cb.run(Some(username))
+                    }));
                     None
                 }
                 _ => None,
