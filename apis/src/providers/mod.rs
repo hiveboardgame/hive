@@ -6,6 +6,7 @@ mod challenge_params;
 pub mod challenges;
 pub mod chat;
 pub mod config;
+mod direct_challenge;
 pub mod game_state;
 mod game_updater;
 pub mod games;
@@ -29,6 +30,7 @@ pub use challenge_params::{
     ChallengeParamsStoreFields,
 };
 pub use config::{provide_config, Config};
+pub use direct_challenge::{provide_direct_challenge, DirectChallengeOpener, DirectChallengeState};
 pub use game_updater::{provide_server_updates, UpdateNotifier};
 pub use games_search_context::{
     calculate_initial_batch_size,

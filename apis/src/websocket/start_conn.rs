@@ -16,6 +16,7 @@ use actix_web::{
 };
 use bytes::Bytes;
 use db_lib::{get_conn, models::User, DbPool};
+use shared_types::SimpleUser;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
@@ -28,7 +29,7 @@ pub async fn start_connection(
     identity: Option<Identity>,
     data: Data<WebsocketData>,
 ) -> Result<HttpResponse, Error> {
-    let (user_uid, username, admin, authed) = resolve_identity(identity, &pool).await;
+    let user = resolve_identity(identity, &pool).await;
 
     let ws_result = actix_ws::handle(&req, body);
     if ws_result.is_err() {
@@ -65,16 +66,21 @@ pub async fn start_connection(
     let data = Arc::clone(&data);
     let pool = pool.get_ref().clone();
     actix_web::rt::spawn(reader_task(
-        session, msg_stream, socket, hub, data, pool, user_uid, username, admin, authed,
+        session, msg_stream, socket, hub, data, pool, user,
     ));
 
     Ok(response)
 }
 
-async fn resolve_identity(identity: Option<Identity>, pool: &DbPool) -> (Uuid, String, bool, bool) {
+async fn resolve_identity(identity: Option<Identity>, pool: &DbPool) -> SimpleUser {
     let anonymous = || {
         let id = Uuid::new_v4();
-        (id, id.to_string(), false, false)
+        SimpleUser {
+            user_id: id,
+            username: id.to_string(),
+            admin: false,
+            authed: false,
+        }
     };
 
     let Some(id) = identity else {
@@ -96,7 +102,12 @@ async fn resolve_identity(identity: Option<Identity>, pool: &DbPool) -> (Uuid, S
         Ok(mut conn) => match User::find_by_uuid(&uuid, &mut conn).await {
             Ok(user) => {
                 log::debug!("WS connect: user {} authed", user.username);
-                (uuid, user.username, user.admin, true)
+                SimpleUser {
+                    user_id: uuid,
+                    username: user.username,
+                    admin: user.admin,
+                    authed: true,
+                }
             }
             Err(_) => anonymous(),
         },

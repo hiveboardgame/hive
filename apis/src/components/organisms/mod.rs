@@ -6,6 +6,7 @@ pub mod challenges;
 pub mod chat;
 pub mod confirm_mode_toggle;
 pub mod darkmode_toggle;
+pub mod direct_challenge_modal;
 pub mod display_games;
 pub mod display_timer;
 pub mod dropdowns;

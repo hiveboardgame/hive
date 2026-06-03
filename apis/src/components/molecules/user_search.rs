@@ -50,9 +50,7 @@ pub fn UserSearch(
     let pattern_len = Signal::derive(move || pattern().len());
     let focused = RwSignal::new(false);
     // Root of the component; used by the input's blur handler to tell whether
-    // focus left the component entirely (collapse the list) or just moved into
-    // our own subtree — e.g. the challenge `<dialog>` opening from a found row,
-    // which must not tear the list (and that dialog) down with it.
+    // focus left the component entirely or moved into one of its own controls.
     let root_ref = NodeRef::<html::Div>::new();
 
     let excluded_users = move || {
@@ -194,7 +192,6 @@ pub fn UserSearch(
                     }
                     on:focus=move |_| focused.set(true)
                     on:blur=move |ev: leptos::ev::FocusEvent| {
-                        use wasm_bindgen::JsCast;
                         if let (Some(root), Some(target)) = (root_ref.get(), ev.related_target()) {
                             if let Some(node) = target.dyn_ref::<web_sys::Node>() {
                                 if root.contains(Some(node)) {
@@ -268,44 +265,29 @@ pub fn UserSearch(
                     }
                 })}
             <Transition>
-                {move || {
-                    show_suggestions
-                        .get()
-                        .then(|| {
-                            view! {
-                                // Keep input focus on suggestion click so blur
-                                // doesn't hide the list before the click lands.
-                                <div
-                                    class=move || {
-                                        if as_dropdown.get() {
-                                            "overflow-y-auto overflow-x-hidden absolute right-0 left-0 top-full z-50 mt-1 max-h-60 bg-white rounded-lg border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700"
-                                        } else {
-                                            "overflow-y-auto overflow-x-hidden mt-1 max-h-60 bg-white rounded-lg border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700"
-                                        }
-                                    }
-                                    on:mousedown=|ev| {
-                                        let in_dialog = ev
-                                            .target()
-                                            .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
-                                            .and_then(|el| el.closest("dialog").ok().flatten())
-                                            .is_some();
-                                        if !in_dialog {
-                                            ev.prevent_default();
-                                        }
-                                    }
-                                >
-                                    <For each=users key=move |(_, user)| user.uid let:user>
-                                        <UserRow
-                                            actions=wrapped_actions_stored.get_value()
-                                            user=user.1
-                                            selection_mode=has_select
-                                            full_width=true
-                                        />
-                                    </For>
-                                </div>
+                <Show when=show_suggestions>
+                    // Keep input focus on suggestion click so blur
+                    // doesn't hide the list before the click lands.
+                    <div
+                        class=move || {
+                            if as_dropdown.get() {
+                                "overflow-y-auto overflow-x-hidden absolute right-0 left-0 top-full z-50 mt-1 max-h-60 bg-white rounded-lg border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700"
+                            } else {
+                                "overflow-y-auto overflow-x-hidden mt-1 max-h-96 bg-white rounded-lg border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700"
                             }
-                        })
-                }}
+                        }
+                        on:mousedown=|ev| ev.prevent_default()
+                    >
+                        <For each=users key=move |(_, user)| user.uid let:user>
+                            <UserRow
+                                actions=wrapped_actions_stored.get_value()
+                                user=user.1
+                                selection_mode=has_select
+                                full_width=true
+                            />
+                        </For>
+                    </div>
+                </Show>
             </Transition>
         </div>
     }

@@ -21,6 +21,13 @@ impl OnlineUsersSignal {
     }
 
     pub fn remove(&mut self, username: String) {
+        let user_exists = self.signal.with_untracked(|s| {
+            s.username_user.contains_key(&username) || s.username_status.contains_key(&username)
+        });
+        if !user_exists {
+            return;
+        }
+
         self.signal.update(|s| {
             s.username_user.remove(&username);
             s.username_status.remove(&username);
@@ -28,10 +35,18 @@ impl OnlineUsersSignal {
     }
 
     pub fn add(&mut self, user_response: UserResponse, status: UserStatus) {
+        let username = user_response.username.clone();
+        let should_update = self.signal.with_untracked(|s| {
+            s.username_user.get(&username) != Some(&user_response)
+                || s.username_status.get(&username) != Some(&status)
+        });
+        if !should_update {
+            return;
+        }
+
         self.signal.update(|s| {
-            s.username_user
-                .insert(user_response.username.clone(), user_response.clone());
-            s.username_status.insert(user_response.username, status);
+            s.username_user.insert(username.clone(), user_response);
+            s.username_status.insert(username, status);
         })
     }
 }
