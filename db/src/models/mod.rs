@@ -23,4 +23,4 @@ pub use tournament_organizer::TournamentOrganizer;
 pub use tournament_series::{NewTournamentSeries, TournamentSeries};
 pub use tournament_series_organizer::TournamentSeriesOrganizer;
 pub use tournament_user::TournamentUser;
-pub use user::{NewUser, User};
+pub use user::{NewUser, SoftDeleteReport, User};

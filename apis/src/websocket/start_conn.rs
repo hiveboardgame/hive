@@ -99,7 +99,7 @@ async fn resolve_identity(identity: Option<Identity>, pool: &DbPool) -> SimpleUs
     };
 
     match get_conn(pool).await {
-        Ok(mut conn) => match User::find_by_uuid(&uuid, &mut conn).await {
+        Ok(mut conn) => match User::find_active_by_uuid(&uuid, &mut conn).await {
             Ok(user) => {
                 log::debug!("WS connect: user {} authed", user.username);
                 SimpleUser {

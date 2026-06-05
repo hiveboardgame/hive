@@ -29,6 +29,8 @@ pub fn UpcomingGameRow(
 
     let white_username = StoredValue::new(game.white_player.username.clone());
     let black_username = StoredValue::new(game.black_player.username.clone());
+    let white_deleted = game.white_player.deleted;
+    let black_deleted = game.black_player.deleted;
     let tournament_name = StoredValue::new(
         game.tournament
             .as_ref()
@@ -79,6 +81,7 @@ pub fn UpcomingGameRow(
                         username=white_username.get_value()
                         patreon=game.white_player.patreon
                         bot=game.white_player.bot
+                        deleted=white_deleted
                         extend_tw_classes="font-semibold"
                     />
                     <span class="text-sm opacity-75">vs</span>
@@ -86,6 +89,7 @@ pub fn UpcomingGameRow(
                         username=black_username.get_value()
                         patreon=game.black_player.patreon
                         bot=game.black_player.bot
+                        deleted=black_deleted
                         extend_tw_classes="font-semibold"
                     />
                 </div>

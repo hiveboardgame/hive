@@ -187,6 +187,7 @@ diesel::table! {
         admin -> Bool,
         takeback -> Text,
         bot -> Bool,
+        deleted -> Bool,
     }
 }
 

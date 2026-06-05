@@ -40,6 +40,7 @@ pub fn UserWithRating(
     });
     let patreon = move || player.with(|p| p.as_ref().is_some_and(|p| p.patreon));
     let bot = move || player.with(|p| p.as_ref().is_some_and(|p| p.bot));
+    let deleted = move || player.with(|p| p.as_ref().is_some_and(|p| p.deleted));
     let rating = move || {
         player.with(|p| {
             p.as_ref().and_then(|player| {
@@ -60,11 +61,12 @@ pub fn UserWithRating(
                         <Show when=move || vertical>
                             <ColorHex color=side extend_tw_classes="mr-1" />
                         </Show>
-                        <StatusIndicator username=username() />
+                        <StatusIndicator username=username() deleted=deleted() />
                         <ProfileLink
                             patreon=patreon()
                             username=username()
                             bot=bot()
+                            deleted=deleted()
                             extend_tw_classes=text_color
                         />
                     </div>

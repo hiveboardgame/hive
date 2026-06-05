@@ -87,6 +87,8 @@ fn MySchedulesInner(
                     let black_patreon = gr.black_player.patreon;
                     let white_bot = gr.white_player.bot;
                     let black_bot = gr.black_player.bot;
+                    let white_deleted = gr.white_player.deleted;
+                    let black_deleted = gr.black_player.deleted;
                     view! {
                         <div class="flex flex-col justify-between p-3 w-full h-fit dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light">
                             <div class="flex justify-center mb-4">
@@ -95,6 +97,7 @@ fn MySchedulesInner(
                                         patreon=white_patreon
                                         bot=white_bot
                                         username=white_username
+                                        deleted=white_deleted
                                         extend_tw_classes="truncate max-w-[120px] "
                                     />
                                     vs.
@@ -102,6 +105,7 @@ fn MySchedulesInner(
                                         patreon=black_patreon
                                         bot=black_bot
                                         username=black_username
+                                        deleted=black_deleted
                                         extend_tw_classes=" truncate max-w-[120px]"
                                     />
                                 </div>

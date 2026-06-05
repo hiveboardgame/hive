@@ -72,7 +72,7 @@ impl RequestHandler {
     }
 
     fn ensure_auth(&self) -> Result<()> {
-        if !self.authed {
+        if !self.authed || self.hub.is_user_revoked(self.user_id) {
             Err(AuthError::Unauthorized)?
         }
         Ok(())
@@ -87,7 +87,10 @@ impl RequestHandler {
 
     pub async fn handle(&self) -> Result<HandlerOutput> {
         let output: HandlerOutput = match self.command.clone() {
-            ClientRequest::LinkDiscord => OauthHandler::new(self.user_id).handle().await?.into(),
+            ClientRequest::LinkDiscord => {
+                self.ensure_auth()?;
+                OauthHandler::new(self.user_id).handle().await?.into()
+            }
             ClientRequest::Chat(message_container) => {
                 self.ensure_auth()?;
                 if self.user_id != message_container.message.user_id {
@@ -101,6 +104,7 @@ impl RequestHandler {
                     .into()
             }
             ClientRequest::Tournament(tournament_action) => {
+                self.ensure_auth()?;
                 TournamentHandler::new(
                     tournament_action,
                     &self.username,

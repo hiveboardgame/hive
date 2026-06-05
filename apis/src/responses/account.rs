@@ -20,7 +20,7 @@ use leptos::prelude::*;
 
 impl AccountResponse {
     pub async fn from_uuid(id: &Uuid, conn: &mut DbConn<'_>) -> Result<Self, ServerFnError> {
-        let user = User::find_by_uuid(id, conn).await?;
+        let user = User::find_active_by_uuid(id, conn).await?;
         let response = UserResponse::from_model(&user, conn).await.map_err(ServerFnError::new)?;
         Ok(Self {
             username: user.username,

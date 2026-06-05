@@ -122,6 +122,7 @@ mod tests {
             patreon: false,
             bot: false,
             admin: false,
+            deleted: false,
             ratings: HashMap::new(),
             takeback: Takeback::default(),
         }

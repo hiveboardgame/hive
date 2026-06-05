@@ -15,7 +15,7 @@ pub async fn uuid() -> Result<Uuid, ServerFnError> {
 #[cfg(feature = "ssr")]
 pub async fn ensure_admin(conn: &mut db_lib::DbConn<'_>) -> Result<(), ServerFnError> {
     use db_lib::models::User;
-    let user = User::find_by_uuid(&uuid().await?, conn).await?;
+    let user = User::find_active_by_uuid(&uuid().await?, conn).await?;
     if !user.admin {
         Err(ServerFnError::new("You are not an admin"))
     } else {

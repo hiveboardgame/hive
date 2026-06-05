@@ -52,7 +52,7 @@ impl ResyncHandler {
             return Ok(HandlerOutput::empty());
         }
         let user = if self.authed {
-            match User::find_by_uuid(&self.user_id, &mut conn).await {
+            match User::find_active_by_uuid(&self.user_id, &mut conn).await {
                 Ok(user) => Some(user),
                 Err(e) => {
                     error!(

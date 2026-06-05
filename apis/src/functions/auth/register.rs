@@ -1,26 +1,5 @@
 use leptos::prelude::*;
 
-const MIN_PASSWORD_LENGTH: usize = 8;
-const MAX_PASSWORD_LENGTH: usize = 128;
-
-pub fn validate_password(password: &str, password_confirmation: &str) -> Result<(), String> {
-    if password != password_confirmation {
-        return Err("Passwords don't match.".to_string());
-    }
-    let password_length = password.len();
-    if password_length < MIN_PASSWORD_LENGTH {
-        return Err(format!(
-            "Password is too short, it must be at least {MIN_PASSWORD_LENGTH}"
-        ));
-    }
-    if password_length > MAX_PASSWORD_LENGTH {
-        return Err(format!(
-            "Password is too long it must not exceed {MAX_PASSWORD_LENGTH}"
-        ));
-    }
-    Ok(())
-}
-
 #[server]
 pub async fn register(
     username: String,
@@ -29,13 +8,12 @@ pub async fn register(
     password_confirmation: String,
     pathname: String,
 ) -> Result<(), ServerFnError> {
-    use crate::functions::db::pool;
+    use crate::functions::{
+        auth::password::{hash_password, validate_password},
+        db::pool,
+    };
     use actix_identity::Identity;
     use actix_web::HttpMessage;
-    use argon2::{
-        password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
-        Argon2,
-    };
     use db_lib::{
         db_error::DbError,
         get_conn,
@@ -47,12 +25,7 @@ pub async fn register(
 
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
-    let argon2 = Argon2::default();
-    let salt = SaltString::generate(&mut OsRng);
-    let password = argon2
-        .hash_password(password.as_bytes(), &salt)
-        .map_err(ServerFnError::new)?
-        .to_string();
+    let password = hash_password(&password)?;
     let email = email.to_lowercase();
     let new_user = NewUser::new(&username, &password, &email)?;
 

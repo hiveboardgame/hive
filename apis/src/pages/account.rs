@@ -1,18 +1,26 @@
 use crate::{
     components::update_from_event::update_from_input,
-    functions::{accounts::edit::EditAccount, oauth::get_discord_handle},
-    providers::{ApiRequestsProvider, RefererContext},
+    functions::{
+        accounts::{delete::DeleteAccount, edit::EditAccount},
+        oauth::get_discord_handle,
+    },
+    i18n::*,
+    providers::{ApiRequestsProvider, AuthContext, RefererContext},
 };
 use leptos::{form::ActionForm, leptos_dom::helpers::debounce, prelude::*};
 use std::time::Duration;
 
 #[component]
 pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
+    let i18n = use_i18n();
     let account_action = ServerAction::<EditAccount>::new();
+    let delete_action = ServerAction::<DeleteAccount>::new();
+    let auth_context = expect_context::<AuthContext>();
     let pathname = expect_context::<RefererContext>().pathname;
     let current_password = RwSignal::new(String::new());
     let new_password = RwSignal::new(String::new());
     let confirm_password = RwSignal::new(String::new());
+    let delete_password = RwSignal::new(String::new());
 
     let password_invalid = move || {
         let new_pw = new_password();
@@ -27,6 +35,12 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
             .value()
             .with(|a| a.as_ref().is_some_and(|v| v.is_err()))
     };
+    let display_delete_error = move || {
+        delete_action
+            .value()
+            .with(|a| a.as_ref().is_some_and(|v| v.is_err()))
+    };
+    let delete_form_invalid = move || delete_password.with(|p| p.len() < 8);
     let api = expect_context::<ApiRequestsProvider>();
 
     let oauth = move |_: leptos::ev::MouseEvent| {
@@ -36,6 +50,19 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
     Effect::new(move |_| {
         discord_name.dispatch(());
     });
+    Effect::watch(
+        delete_action.version(),
+        move |_, _, _| {
+            if delete_action
+                .value()
+                .get_untracked()
+                .is_some_and(|result| result.is_ok())
+            {
+                auth_context.refresh(true);
+            }
+        },
+        false,
+    );
 
     view! {
         <div class=format!(
@@ -213,6 +240,47 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                     <Show when=display_account_error>
                         <small class="block mt-2 text-ladybug-red">
                             "Error updating password. Please check your current password and try again."
+                        </small>
+                    </Show>
+                </ActionForm>
+            </div>
+
+            <div class="px-8 pt-6 pb-8 mb-4 rounded-lg border shadow-lg bg-stone-300 border-stone-400 dark:bg-slate-800 dark:border-slate-600">
+                <h2 class="mb-4 text-xl font-bold text-center text-ladybug-red">
+                    {t!(i18n, user_config.delete_account.title)}
+                </h2>
+                <p class="mb-4 text-sm text-gray-700 dark:text-gray-300">
+                    {t!(i18n, user_config.delete_account.description)}
+                </p>
+                <ActionForm action=delete_action>
+                    <label
+                        class="block mb-2 font-semibold text-gray-700 dark:text-gray-300"
+                        for="delete_password"
+                    >
+                        {t!(i18n, user_config.delete_account.password)}
+                    </label>
+                    <input
+                        on:input=debounce(
+                            Duration::from_millis(350),
+                            update_from_input(delete_password),
+                        )
+                        class="py-2 px-3 mb-3 w-full leading-tight rounded-lg border shadow appearance-none dark:text-white dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:outline-none focus:ring-ladybug-red"
+                        id="delete_password"
+                        name="password"
+                        type="password"
+                        prop:value=delete_password
+                        autocomplete="current-password"
+                        placeholder=move || { t_string!(i18n, user_config.delete_account.password) }
+                    />
+                    <input
+                        type="submit"
+                        disabled=delete_form_invalid
+                        class="py-3 px-4 w-full font-bold text-white rounded-lg transition-all duration-300 cursor-pointer hover:bg-red-700 focus:ring-2 focus:ring-offset-2 focus:outline-none active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed bg-ladybug-red focus:ring-ladybug-red"
+                        value=move || t_string!(i18n, user_config.delete_account.button)
+                    />
+                    <Show when=display_delete_error>
+                        <small class="block mt-2 text-ladybug-red">
+                            {t!(i18n, user_config.delete_account.error)}
                         </small>
                     </Show>
                 </ActionForm>

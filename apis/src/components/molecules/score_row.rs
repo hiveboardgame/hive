@@ -20,6 +20,7 @@ pub fn ScoreRow(
                 patreon=user.with_value(|u| u.patreon)
                 bot=user.with_value(|u| u.bot)
                 username=user.with_value(|u| u.username.clone())
+                deleted=user.with_value(|u| u.deleted)
                 extend_tw_classes="truncate max-w-[120px]"
                 user_is_hoverable=user.get_value().into()
             />
@@ -45,7 +46,10 @@ pub fn ScoreRow(
             </td>
             <td class=td_class>
                 <div class="flex items-center">
-                    <StatusIndicator username=user.with_value(|u| u.username.clone()) />
+                    <StatusIndicator
+                        username=user.with_value(|u| u.username.clone())
+                        deleted=user.with_value(|u| u.deleted)
+                    />
                     {profile_link()}
                 </div>
             </td>

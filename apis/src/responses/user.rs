@@ -11,6 +11,7 @@ pub struct UserResponse {
     pub patreon: bool,
     pub bot: bool,
     pub admin: bool,
+    pub deleted: bool,
     pub ratings: HashMap<GameSpeed, RatingResponse>,
     pub takeback: Takeback,
 }
@@ -129,6 +130,7 @@ impl UserResponse {
             patreon: user.patreon,
             bot: user.bot,
             admin: user.admin,
+            deleted: user.deleted,
             takeback: Takeback::from_str_or_default(&user.takeback),
             ratings,
         })
@@ -151,6 +153,7 @@ impl UserResponse {
             patreon: user.patreon,
             bot: user.bot,
             admin: user.admin,
+            deleted: user.deleted,
             takeback: Takeback::from_str_or_default(&user.takeback),
             ratings,
         };

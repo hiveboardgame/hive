@@ -141,6 +141,7 @@ pub fn ChallengeRow(
                     opponent.username.clone(),
                     opponent.patreon,
                     opponent.bot,
+                    opponent.deleted,
                     opponent.rating_for_speed(&speed),
                 );
             }
@@ -150,6 +151,7 @@ pub fn ChallengeRow(
             challenger.username.clone(),
             challenger.patreon,
             challenger.bot,
+            challenger.deleted,
             challenger_rating,
         )
     });
@@ -188,14 +190,18 @@ pub fn ChallengeRow(
                 <div class="flex justify-center items-center">
                     {move || {
                         displayed_user
-                            .with(|(username, patreon, bot, _)| {
+                            .with(|(username, patreon, bot, deleted, _)| {
                                 view! {
                                     <div class="flex items-center">
-                                        <StatusIndicator username=username.clone() />
+                                        <StatusIndicator
+                                            username=username.clone()
+                                            deleted=*deleted
+                                        />
                                         <ProfileLink
                                             username=username.clone()
                                             patreon=*patreon
                                             bot=*bot
+                                            deleted=*deleted
                                             extend_tw_classes="truncate max-w-[60px] xs:max-w-[80px] sm:max-w-[120px] md:max-w-[140px] lg:max-w-[160px]"
                                         />
                                         {if group_count > 1 {
@@ -217,7 +223,7 @@ pub fn ChallengeRow(
             </td>
             <td class=td_class>
                 <div class="flex justify-center items-center">
-                    <p>{move || displayed_user.with(|(_, _, _, rating)| *rating)}</p>
+                    <p>{move || displayed_user.with(|(_, _, _, _, rating)| *rating)}</p>
                 </div>
             </td>
             <td class=td_class>

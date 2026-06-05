@@ -7,32 +7,18 @@ pub async fn login(
     password: String,
     pathname: String,
 ) -> Result<AccountResponse, ServerFnError> {
-    use crate::functions::db::pool;
+    use crate::functions::{auth::password::verify_password, db::pool};
     use actix_identity::Identity;
     use actix_web::HttpMessage;
-    use argon2::{password_hash::PasswordHash, Argon2, PasswordVerifier};
     use db_lib::{get_conn, models::User};
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
-    let user_result = User::find_by_email(&email, &mut conn)
+    let user = User::find_for_login(&email, &mut conn)
         .await
-        .map_err(ServerFnError::new);
-    let user = if let Ok(user) = user_result {
-        user
-    } else {
-        User::find_by_username(&email, &mut conn)
-            .await
-            .map_err(ServerFnError::new)?
-    };
-    let argon2 = Argon2::default();
-    let parsed_hash = PasswordHash::new(&user.password).map_err(ServerFnError::new)?;
-    match argon2.verify_password(password.as_bytes(), &parsed_hash) {
-        Ok(_) => {
-            let req: actix_web::HttpRequest = leptos_actix::extract().await?;
-            Identity::login(&req.extensions(), user.id.to_string())?;
-            leptos_actix::redirect(&pathname);
-            AccountResponse::from_uuid(&user.id, &mut conn).await
-        }
-        Err(_) => Err(ServerFnError::new("Password does not match.")),
-    }
+        .map_err(ServerFnError::new)?;
+    verify_password(&password, &user.password)?;
+    let req: actix_web::HttpRequest = leptos_actix::extract().await?;
+    Identity::login(&req.extensions(), user.id.to_string())?;
+    leptos_actix::redirect(&pathname);
+    AccountResponse::from_uuid(&user.id, &mut conn).await
 }

@@ -173,11 +173,15 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
                     <div class="flex overflow-hidden gap-1 justify-between items-center mb-2">
                         <div class="flex overflow-hidden flex-col items-center min-w-0 w-[45%]">
                             <div class=player_class(Color::White)>
-                                <StatusIndicator username=white_player.username.clone() />
+                                <StatusIndicator
+                                    username=white_player.username.clone()
+                                    deleted=white_player.deleted
+                                />
                                 <ProfileLink
                                     patreon=white_player.patreon
-                                    username=white_player.username
+                                    username=white_player.username.clone()
                                     bot=white_player.bot
+                                    deleted=white_player.deleted
                                     attr:class="truncate z-30 mr-1 max-w-full"
                                 />
                             </div>
@@ -197,9 +201,13 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
                                     username=black_player.username.clone()
                                     patreon=black_player.patreon
                                     bot=black_player.bot
+                                    deleted=black_player.deleted
                                     attr:class="truncate z-30 ml-1 max-w-full"
                                 />
-                                <StatusIndicator username=black_player.username />
+                                <StatusIndicator
+                                    username=black_player.username.clone()
+                                    deleted=black_player.deleted
+                                />
                             </div>
                             <Show when=move || finished fallback=move || black_rating>
                                 <RatingAndChange ratings side=Color::Black />

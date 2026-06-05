@@ -32,16 +32,16 @@ pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
     let game_conclusion = create_read_slice(game_state.signal, |gs| {
         gs.game_response.as_ref().map(|gr| gr.conclusion.clone())
     });
-    let white_username = create_read_slice(game_state.signal, |gs| {
+    let white_player = create_read_slice(game_state.signal, |gs| {
         gs.game_response
             .as_ref()
-            .map(|gr| gr.white_player.username.clone())
+            .map(|gr| (gr.white_player.username.clone(), gr.white_player.deleted))
             .unwrap_or_default()
     });
-    let black_username = create_read_slice(game_state.signal, |gs| {
+    let black_player = create_read_slice(game_state.signal, |gs| {
         gs.game_response
             .as_ref()
-            .map(|gr| gr.black_player.username.clone())
+            .map(|gr| (gr.black_player.username.clone(), gr.black_player.deleted))
             .unwrap_or_default()
     });
     let tournament_info = create_read_slice(game_state.signal, |gs| {
@@ -54,9 +54,14 @@ pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
         })
     });
     let winner_str = move |color: Color, conclusion: Conclusion| {
-        let winner_username = match color {
-            Color::White => white_username(),
-            Color::Black => black_username(),
+        let (winner_username, winner_deleted) = match color {
+            Color::White => white_player(),
+            Color::Black => black_player(),
+        };
+        let winner_username = if winner_deleted {
+            t_string!(i18n, profile.deleted_user).to_string()
+        } else {
+            winner_username
         };
 
         let additional_info = match conclusion {
