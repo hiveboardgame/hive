@@ -2,16 +2,13 @@ use super::{
     encode::{jwt_encode, Bot},
     jwt_secret::JwtSecret,
 };
+use crate::functions::auth::password::verify_password;
 use actix_web::{
     post,
     web::{Data, Json},
     HttpResponse,
 };
 use anyhow::{anyhow, Result};
-use argon2::{
-    password_hash::{PasswordHash, PasswordVerifier},
-    Argon2,
-};
 use db_lib::{get_conn, models::User, DbPool};
 use serde_json::json;
 
@@ -44,24 +41,11 @@ async fn get_token_helper(
 ) -> Result<String> {
     let mut conn = get_conn(&pool).await?;
 
-    let user_result = User::find_by_email(&bot.email, &mut conn).await;
-    let user = if let Ok(user) = user_result {
-        user
-    } else {
-        User::find_by_username(&bot.email, &mut conn).await?
-    };
+    let user = User::find_for_login(&bot.email, &mut conn).await?;
 
     if !user.bot {
         return Err(anyhow!("Not a bot"));
     }
-    let argon2 = Argon2::default();
-    let stored_pw = PasswordHash::new(&user.password).map_err(|e| anyhow!(e.to_string()))?;
-
-    if argon2
-        .verify_password(bot.password.as_bytes(), &stored_pw)
-        .is_err()
-    {
-        return Err(anyhow!("Password does not match"));
-    }
+    verify_password(&bot.password, &user.password).map_err(|e| anyhow!(e.to_string()))?;
     jwt_encode(bot, &jwt_secret.encoding)
 }

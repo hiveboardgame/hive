@@ -79,6 +79,7 @@ pub fn UnplayedGameRow(
                                         patreon=game.white_player.patreon
                                         bot=game.white_player.bot
                                         username=game.white_player.username.clone()
+                                        deleted=game.white_player.deleted
                                         extend_tw_classes="truncate max-w-[120px]"
                                     />
                                     {format!("({})", game.white_rating())}
@@ -94,6 +95,7 @@ pub fn UnplayedGameRow(
                                         patreon=game.black_player.patreon
                                         bot=game.black_player.bot
                                         username=game.black_player.username.clone()
+                                        deleted=game.black_player.deleted
                                         extend_tw_classes="truncate max-w-[120px]"
                                     />
                                     {format!("({})", game.black_rating())}

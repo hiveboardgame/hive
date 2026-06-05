@@ -5,6 +5,7 @@ use crate::{
         thumbnail_pieces::ThumbnailPieces,
         time_row::TimeRow,
     },
+    i18n::*,
     responses::{GameResponse, UserResponse},
 };
 use hive_lib::{Color, GameStatus};
@@ -16,13 +17,19 @@ pub fn GamePreviews(
     games: Callback<(), Vec<GameResponse>>,
     #[prop(optional)] show_time: bool,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let unfinished_ratings_view = move |wp: StoredValue<UserResponse>,
                                         bp: StoredValue<UserResponse>,
                                         base: Option<i32>,
                                         inc: Option<i32>| {
         let (white_username, white_rating) = wp.with_value(|u| {
+            let username = if u.deleted {
+                t_string!(i18n, profile.deleted_user).to_string()
+            } else {
+                u.username.clone()
+            };
             (
-                u.username.clone(),
+                username,
                 u.ratings
                     .get(&GameSpeed::from_base_increment(base, inc))
                     .expect("Has a rating")
@@ -30,8 +37,13 @@ pub fn GamePreviews(
             )
         });
         let (black_username, black_rating) = bp.with_value(|u| {
+            let username = if u.deleted {
+                t_string!(i18n, profile.deleted_user).to_string()
+            } else {
+                u.username.clone()
+            };
             (
-                u.username.clone(),
+                username,
                 u.ratings
                     .get(&GameSpeed::from_base_increment(base, inc))
                     .expect("Has a rating")
@@ -92,8 +104,20 @@ pub fn GamePreviews(
                     let ratings = StoredValue::new(RatingChangeInfo::from_game_response(&game));
                     let gs = StoredValue::new(game.game_status.clone());
                     let conclusion = StoredValue::new(game.conclusion.clone());
-                    let w_username = StoredValue::new(game.white_player.username.clone());
-                    let b_username = StoredValue::new(game.black_player.username.clone());
+                    let w_username = StoredValue::new(
+                        if game.white_player.deleted {
+                            t_string!(i18n, profile.deleted_user).to_string()
+                        } else {
+                            game.white_player.username.clone()
+                        },
+                    );
+                    let b_username = StoredValue::new(
+                        if game.black_player.deleted {
+                            t_string!(i18n, profile.deleted_user).to_string()
+                        } else {
+                            game.black_player.username.clone()
+                        },
+                    );
                     let white_player = StoredValue::new(game.white_player.clone());
                     let black_player = StoredValue::new(game.black_player.clone());
                     view! {

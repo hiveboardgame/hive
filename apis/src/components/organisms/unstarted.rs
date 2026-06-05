@@ -21,15 +21,23 @@ pub fn Unstarted(
     let api = expect_context::<ApiRequestsProvider>().0;
     let game_state = expect_context::<GameStateSignal>();
     let orientation_signal = expect_context::<OrientationSignal>();
-    let white = create_read_slice(game_state.signal, |gs| {
-        (gs.game_response
-            .as_ref()
-            .map(|gr| gr.white_player.username.clone()),)
+    let white = create_read_slice(game_state.signal, move |gs| {
+        (gs.game_response.as_ref().map(|gr| {
+            if gr.white_player.deleted {
+                t_string!(i18n, profile.deleted_user).to_string()
+            } else {
+                gr.white_player.username.clone()
+            }
+        }),)
     });
-    let black = create_read_slice(game_state.signal, |gs| {
-        (gs.game_response
-            .as_ref()
-            .map(|gr| gr.black_player.username.clone()),)
+    let black = create_read_slice(game_state.signal, move |gs| {
+        (gs.game_response.as_ref().map(|gr| {
+            if gr.black_player.deleted {
+                t_string!(i18n, profile.deleted_user).to_string()
+            } else {
+                gr.black_player.username.clone()
+            }
+        }),)
     });
     let icon_for_color = move |id: Option<Uuid>| {
         let ready_map = ready.get();

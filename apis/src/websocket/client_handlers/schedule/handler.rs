@@ -57,11 +57,11 @@ pub fn handle_schedule_notification_snapshot(snapshot: Vec<ScheduleResponse>) {
                 proposal_ids.insert(response.id);
                 update_schedules(ctx.own, &response, false);
             }
-        } else if response.proposer_id == user.id {
-            if !ctx.is_own_acceptance_snapshot_dirty(&response) {
-                acceptance_ids.insert(response.id);
-                update_schedules(ctx.own, &response, true);
-            }
+        } else if response.proposer_id == user.id
+            && !ctx.is_own_acceptance_snapshot_dirty(&response)
+        {
+            acceptance_ids.insert(response.id);
+            update_schedules(ctx.own, &response, true);
         }
     }
 

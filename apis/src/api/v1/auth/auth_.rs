@@ -61,14 +61,9 @@ impl FromRequest for Auth {
                 .await
                 .map_err(|_| create_error_response(500, "Database connection error"))?;
 
-            let user_result = User::find_by_email(&email, &mut conn).await;
-            let user = if let Ok(user) = user_result {
-                user
-            } else {
-                User::find_by_username(&email, &mut conn)
-                    .await
-                    .map_err(|_| create_error_response(400, "User not found"))?
-            };
+            let user = User::find_for_login(&email, &mut conn)
+                .await
+                .map_err(|_| create_error_response(400, "User not found"))?;
 
             if !user.bot {
                 return Err(create_error_response(401, "Not a bot"));

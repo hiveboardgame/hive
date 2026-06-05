@@ -28,6 +28,7 @@ pub fn UserRow(
     full_width: bool,
 ) -> impl IntoView {
     let username = StoredValue::new(user.username.clone());
+    let deleted = StoredValue::new(user.deleted);
     let user_is_hoverable = StoredValue::new(if on_profile || selection_mode {
         None
     } else {
@@ -99,7 +100,7 @@ pub fn UserRow(
         <div class=row_class on:click=click_handler>
             <div class="flex justify-between mr-2 w-48">
                 <div class="flex items-center">
-                    <StatusIndicator username=username.get_value() />
+                    <StatusIndicator username=username.get_value() deleted=deleted.get_value() />
                     <Show
                         when=move || !selection_mode
                         fallback=move || {
@@ -116,6 +117,7 @@ pub fn UserRow(
                             patreon=user.patreon
                             bot=user.bot
                             username=username.get_value()
+                            deleted=deleted.get_value()
                             extend_tw_classes="truncate max-w-[120px]"
                             user_is_hoverable=user_is_hoverable.get_value().into()
                         />

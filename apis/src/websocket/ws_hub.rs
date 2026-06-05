@@ -17,7 +17,7 @@ use crate::{
 use bytes::Bytes;
 use chrono::Utc;
 use codee::{binary::MsgpackSerdeCodec, Encoder};
-use dashmap::DashMap;
+use dashmap::{DashMap, DashSet};
 use db_lib::{
     get_conn,
     models::{Game, Tournament, User},
@@ -111,6 +111,10 @@ pub struct WsHub {
     /// Per-socket timestamp of the last accepted Resync. Used to enforce
     /// `RESYNC_COOLDOWN`. Entries are evicted on `on_disconnect`.
     last_resync: DashMap<Uuid, Instant>,
+    /// Users whose accounts were deleted while websocket sessions were already
+    /// open. Authentication is cached on each socket, so central auth checks
+    /// consult this process-local set before accepting user actions.
+    revoked_users: DashSet<Uuid>,
 }
 
 #[derive(Default)]
@@ -264,6 +268,7 @@ impl WsHub {
             tournament_members: DashMap::new(),
             pending_deleted_games: DashMap::new(),
             last_resync: DashMap::new(),
+            revoked_users: DashSet::new(),
         })
     }
 
@@ -292,6 +297,14 @@ impl WsHub {
 
     fn lobby() -> GameId {
         GameId(LOBBY_GAME_ID.to_string())
+    }
+
+    pub fn revoke_user(&self, user_id: Uuid) {
+        self.revoked_users.insert(user_id);
+    }
+
+    pub fn is_user_revoked(&self, user_id: Uuid) -> bool {
+        self.revoked_users.contains(&user_id)
     }
 
     // ─── connect / disconnect ─────────────────────────────────────────────────
@@ -1213,7 +1226,7 @@ impl WsHub {
         // snapshot is the Online broadcast — the snapshot owns everything
         // else (invitations, schedules, urgent games, challenges, TV, roster).
         let user_model = if user.authed {
-            match User::find_by_uuid(&user_id, &mut conn).await {
+            match User::find_active_by_uuid(&user_id, &mut conn).await {
                 Ok(user_model) => {
                     if broadcast_online {
                         // Re-check before the Online broadcast: the slow DB lookup gives
@@ -1307,6 +1320,19 @@ mod tests {
             None,
         )
         .await;
+    }
+
+    #[tokio::test]
+    async fn revoke_user_marks_user_revoked() {
+        let hub = make_hub().await;
+        let uid = Uuid::new_v4();
+        let other = Uuid::new_v4();
+
+        assert!(!hub.is_user_revoked(uid));
+        hub.revoke_user(uid);
+
+        assert!(hub.is_user_revoked(uid));
+        assert!(!hub.is_user_revoked(other));
     }
 
     #[tokio::test]

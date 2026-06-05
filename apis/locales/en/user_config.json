@@ -31,6 +31,13 @@
         "confirm_password_placeholder": "New password (again)",
         "save_button": "Save"
     },
+    "delete_account": {
+        "title": "Delete Account",
+        "description": "Deleting your account logs you out, anonymizes the account, and resigns or aborts unfinished games.",
+        "password": "Current password",
+        "button": "Delete Account",
+        "error": "Could not delete account. Please check your password and try again."
+    },
     "create_account": {
         "username": {
             "title": "Username",

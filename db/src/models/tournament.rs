@@ -19,6 +19,7 @@ use crate::{
             updated_at,
         },
         tournaments_organizers,
+        tournaments_users,
         users,
     },
     DbConn,
@@ -43,7 +44,10 @@ use shared_types::{
     TournamentSortOrder,
     TournamentStatus,
 };
-use std::{collections::VecDeque, str::FromStr};
+use std::{
+    collections::{HashSet, VecDeque},
+    str::FromStr,
+};
 use uuid::Uuid;
 
 #[derive(Insertable, Debug)]
@@ -982,12 +986,34 @@ impl Tournament {
         }
         standings.enforce_tiebreakers();
 
-        let flattened_players_standing: Vec<Uuid> = standings
+        let bye_player = User::find_by_username("SwissByePlayer", conn).await?;
+        let mut active_player_ids: HashSet<Uuid> = tournaments_users::table
+            .inner_join(users::table)
+            .filter(tournaments_users::tournament_id.eq(self.id))
+            .filter(users::deleted.eq(false))
+            .select(tournaments_users::user_id)
+            .load::<Uuid>(conn)
+            .await?
+            .into_iter()
+            .collect();
+        let bye_player_joined = active_player_ids.remove(&bye_player.id);
+
+        let mut flattened_players_standing: Vec<Uuid> = standings
             .players_standings
             .iter()
             .flatten()
-            .cloned()
+            .copied()
+            .filter(|id| active_player_ids.contains(id))
             .collect();
+
+        if !flattened_players_standing.len().is_multiple_of(2) {
+            if !bye_player_joined {
+                TournamentUser::new(self.id, bye_player.id)
+                    .insert(conn)
+                    .await?;
+            }
+            flattened_players_standing.push(bye_player.id);
+        }
         let mut used_pairs = Vec::new();
 
         // first try backtracking to find a solution without repeats
@@ -1000,7 +1026,6 @@ impl Tournament {
             // and then fall back to greedy brute force (may repeat)
             Tournament::brute_force_pairings(&flattened_players_standing, &standings, 0, 5)
         });
-        let bye_player = User::find_by_username("SwissByePlayer", conn).await?;
         for (a, b) in pairings {
             for (white, black) in [(a, b), (b, a)] {
                 let game =

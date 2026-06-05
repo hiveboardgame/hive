@@ -17,6 +17,4 @@ async fn main() {
         .await
         .expect("Failed to create user");
     println!("User {user:?}");
-    let deleted = user.delete(&mut conn).await.expect("Failed to delete user");
-    println!("Deleted {deleted:?}");
 }

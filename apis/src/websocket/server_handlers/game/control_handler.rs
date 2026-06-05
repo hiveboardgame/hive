@@ -22,7 +22,7 @@ use db_lib::{
 };
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
 use hive_lib::{GameControl, GameError};
-use shared_types::{GameId, TimeMode};
+use shared_types::{Conclusion, GameId, TimeMode};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -73,6 +73,7 @@ impl GameControlHandler {
             })
             .await?;
         let game_response = self.game_response_for_control(&game, &mut conn).await?;
+        let game_action = Self::reaction_for_control_result(&game, self.control);
 
         let reactions = vec![Reaction {
             game_id: GameId(self.game.nanoid.clone()),
@@ -81,7 +82,7 @@ impl GameControlHandler {
             gar: GameActionResponse {
                 game_id: GameId(self.game.nanoid.to_owned()),
                 game: (*game_response).clone(),
-                game_action: GameReaction::Control(self.control),
+                game_action,
                 user_id: self.user_id.to_owned(),
                 username: self.username.to_owned(),
             },
@@ -128,6 +129,13 @@ impl GameControlHandler {
             finalize_games,
             subscriptions: Vec::new(),
         })
+    }
+
+    fn reaction_for_control_result(game: &Game, control: GameControl) -> GameReaction {
+        if game.finished && game.conclusion == Conclusion::Timeout.to_string() {
+            return GameReaction::TimedOut;
+        }
+        GameReaction::Control(control)
     }
 
     fn ensure_fresh_game_control(&self) -> Result<()> {

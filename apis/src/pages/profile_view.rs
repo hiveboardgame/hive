@@ -104,69 +104,83 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                 {move || {
                     user.get()
                         .map(|user| {
-                            if let Ok(user) = user {
-                                let username = StoredValue::new(user.username.clone());
-                                Either::Left(
-                                    view! {
-                                        <div class="flex-shrink-0">
-                                            <div class="flex flex-row flex-wrap justify-center mx-1 w-full text-lg sm:text-xl">
-                                                <div class="flex items-center">
-                                                    <StatusIndicator username=username.get_value() />
-                                                    <ProfileLink
-                                                        patreon=user.patreon
-                                                        bot=user.bot
-                                                        username=username.get_value()
-                                                        extend_tw_classes="truncate max-w-[125px]"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div class="lg:flex lg:flex-col lg:items-center lg:mx-auto lg:max-w-4xl">
-                                                <Stats user />
-
-                                                <div class="grid gap-1 items-start m-1 lg:flex lg:gap-4 lg:items-center lg:mt-4 grid-cols-[1fr_auto]">
-                                                    <div class="flex flex-wrap gap-1 min-w-0">
-                                                        <a
-                                                            href=format!("/@/{}/unstarted", username.get_value())
-                                                            class=move || radio_classes(
-                                                                current_tab() == GameProgress::Unstarted,
-                                                            )
-                                                        >
-                                                            {t!(i18n, profile.game_buttons.pending)}
-                                                        </a>
-                                                        <a
-                                                            href=format!("/@/{}/playing", username.get_value())
-                                                            class=move || radio_classes(
-                                                                current_tab() == GameProgress::Playing,
-                                                            )
-                                                        >
-                                                            {t!(i18n, profile.game_buttons.playing)}
-                                                        </a>
-                                                        <a
-                                                            href=format!("/@/{}/finished", username.get_value())
-                                                            class=move || radio_classes(
-                                                                current_tab() == GameProgress::Finished,
-                                                            )
-                                                        >
-                                                            {t!(i18n, profile.game_buttons.finished)}
-                                                        </a>
+                            match user {
+                                Ok(user) => {
+                                    let username = StoredValue::new(user.username.clone());
+                                    let deleted = user.deleted;
+                                    Either::Left(
+                                        view! {
+                                            <div class="flex-shrink-0">
+                                                <div class="flex flex-row flex-wrap justify-center mx-1 w-full text-lg sm:text-xl">
+                                                    <div class="flex items-center">
+                                                        <StatusIndicator
+                                                            username=username.get_value()
+                                                            deleted=deleted
+                                                        />
+                                                        <ProfileLink
+                                                            patreon=user.patreon
+                                                            bot=user.bot
+                                                            username=username.get_value()
+                                                            deleted=deleted
+                                                            extend_tw_classes="truncate max-w-[125px]"
+                                                        />
                                                     </div>
+                                                </div>
 
-                                                    <GamesFilter
-                                                        username=username.get_value()
-                                                        ctx=ctx.clone()
-                                                    />
+                                                <div class="lg:flex lg:flex-col lg:items-center lg:mx-auto lg:max-w-4xl">
+                                                    <Stats user />
+
+                                                    <div class="grid gap-1 items-start m-1 lg:flex lg:gap-4 lg:items-center lg:mt-4 grid-cols-[1fr_auto]">
+                                                        <div class="flex flex-wrap gap-1 min-w-0">
+                                                            <a
+                                                                href=format!("/@/{}/unstarted", username.get_value())
+                                                                class=move || radio_classes(
+                                                                    current_tab() == GameProgress::Unstarted,
+                                                                )
+                                                            >
+                                                                {t!(i18n, profile.game_buttons.pending)}
+                                                            </a>
+                                                            <a
+                                                                href=format!("/@/{}/playing", username.get_value())
+                                                                class=move || radio_classes(
+                                                                    current_tab() == GameProgress::Playing,
+                                                                )
+                                                            >
+                                                                {t!(i18n, profile.game_buttons.playing)}
+                                                            </a>
+                                                            <a
+                                                                href=format!("/@/{}/finished", username.get_value())
+                                                                class=move || radio_classes(
+                                                                    current_tab() == GameProgress::Finished,
+                                                                )
+                                                            >
+                                                                {t!(i18n, profile.game_buttons.finished)}
+                                                            </a>
+                                                        </div>
+
+                                                        <GamesFilter
+                                                            username=username.get_value()
+                                                            ctx=ctx.clone()
+                                                        />
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
 
-                                        <div class="flex flex-col flex-1 gap-1 m-1 min-h-0">
-                                            {children()}
-                                        </div>
-                                    },
-                                )
-                            } else {
-                                Either::Right(view! { <p>"User not found"</p> })
+                                            <div class="flex flex-col flex-1 gap-1 m-1 min-h-0">
+                                                {children()}
+                                            </div>
+                                        },
+                                    )
+                                }
+                                Err(_) => {
+                                    Either::Right(
+                                        view! {
+                                            <div class="flex flex-1 justify-center items-center">
+                                                <p>"User not found"</p>
+                                            </div>
+                                        },
+                                    )
+                                }
                             }
                         })
                 }}
