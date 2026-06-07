@@ -18,7 +18,11 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
     Effect::watch(
         login.version(),
         move |_, _, _| {
-            if login.value().get().is_some_and(|result| result.is_ok()) {
+            if login
+                .value()
+                .get_untracked()
+                .is_some_and(|result| result.is_ok())
+            {
                 auth_context.refresh(true);
             }
         },

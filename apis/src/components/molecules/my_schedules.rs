@@ -24,7 +24,7 @@ pub fn MySchedules(
             games_hashmap.with(|games| {
                 games.iter().any(|(_game_id, game)| {
                     game.game_status == GameStatus::NotStarted
-                        && (game.white_player.uid == user_id || game.black_player.uid == user_id)
+                        && game.user_is_player(Some(user_id))
                         && game.conclusion == Conclusion::Unknown
                 })
             })
@@ -65,7 +65,7 @@ fn MySchedulesInner(
         ctx.own.with(|own| {
             own.iter().for_each(|(key, value)| {
                 if let Some(game) = get_game(key.clone()) {
-                    if game.white_player.uid == user_id || game.black_player.uid == user_id {
+                    if game.user_is_player(Some(user_id)) {
                         ret.push((game, value.len()))
                     }
                 }

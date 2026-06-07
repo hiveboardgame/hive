@@ -1,7 +1,7 @@
 use crate::{
     components::molecules::time_row::TimeRow,
     i18n::*,
-    providers::game_state::GameStateSignal,
+    providers::game_state::{GameStateStore, GameStateStoreFields},
 };
 use hive_lib::{Color, GameResult, GameStatus};
 use leptos::{either::Either, prelude::*};
@@ -10,47 +10,60 @@ use shared_types::{Conclusion, PrettyString, TimeInfo, TournamentGameResult, Tou
 #[component]
 pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let i18n = use_i18n();
-    let game_state = expect_context::<GameStateSignal>();
-    let game_info = create_read_slice(game_state.signal, |gs| {
-        gs.game_response.as_ref().map(|gr| {
-            (
-                TimeInfo {
-                    mode: gr.time_mode,
-                    base: gr.time_base,
-                    increment: gr.time_increment,
-                },
-                gr.rated,
-            )
+    let game_state = expect_context::<GameStateStore>();
+    let game_response = game_state.game_response();
+    let game_info = Memo::new(move |_| {
+        game_response.with(|game_response| {
+            game_response.as_ref().map(|game| {
+                (
+                    TimeInfo {
+                        mode: game.time_mode,
+                        base: game.time_base,
+                        increment: game.time_increment,
+                    },
+                    game.rated,
+                )
+            })
         })
     });
-    let game_status = create_read_slice(game_state.signal, |gs| gs.state.game_status.clone());
-    let tournament_game_result = create_read_slice(game_state.signal, |gs| {
-        gs.game_response
-            .as_ref()
-            .map(|gr| gr.tournament_game_result.clone())
+    let game_status =
+        Memo::new(move |_| game_state.state().with(|state| state.game_status.clone()));
+    let tournament_game_result = Memo::new(move |_| {
+        game_response.with(|game_response| {
+            game_response
+                .as_ref()
+                .map(|game| game.tournament_game_result.clone())
+        })
     });
-    let game_conclusion = create_read_slice(game_state.signal, |gs| {
-        gs.game_response.as_ref().map(|gr| gr.conclusion.clone())
+    let game_conclusion = Memo::new(move |_| {
+        game_response
+            .with(|game_response| game_response.as_ref().map(|game| game.conclusion.clone()))
     });
-    let white_username = create_read_slice(game_state.signal, |gs| {
-        gs.game_response
-            .as_ref()
-            .map(|gr| gr.white_player.username.clone())
-            .unwrap_or_default()
+    let white_username = Memo::new(move |_| {
+        game_response.with(|game_response| {
+            game_response
+                .as_ref()
+                .map(|game| game.white_player.username.clone())
+                .unwrap_or_default()
+        })
     });
-    let black_username = create_read_slice(game_state.signal, |gs| {
-        gs.game_response
-            .as_ref()
-            .map(|gr| gr.black_player.username.clone())
-            .unwrap_or_default()
+    let black_username = Memo::new(move |_| {
+        game_response.with(|game_response| {
+            game_response
+                .as_ref()
+                .map(|game| game.black_player.username.clone())
+                .unwrap_or_default()
+        })
     });
-    let tournament_info = create_read_slice(game_state.signal, |gs| {
-        gs.game_response.as_ref().map(|gr| {
-            (
-                gr.tournament.is_some(),
-                gr.tournament.as_ref().map(|t| t.name.clone()),
-                gr.tournament.as_ref().map(|t| t.tournament_id.clone()),
-            )
+    let tournament_info = Memo::new(move |_| {
+        game_response.with(|game_response| {
+            game_response.as_ref().map(|game| {
+                (
+                    game.tournament.is_some(),
+                    game.tournament.as_ref().map(|t| t.name.clone()),
+                    game.tournament.as_ref().map(|t| t.tournament_id.clone()),
+                )
+            })
         })
     });
     let winner_str = move |color: Color, conclusion: Conclusion| {

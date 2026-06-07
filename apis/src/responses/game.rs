@@ -1,7 +1,18 @@
 use crate::responses::user::UserResponse;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
-use hive_lib::{Bug, GameControl, GameResult, GameStatus, GameType, History, Position, State};
+use hive_lib::{
+    Bug,
+    Color,
+    GameControl,
+    GameResult,
+    GameStatus,
+    GameType,
+    History,
+    Position,
+    State,
+};
+use reactive_stores::Store;
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "ssr")]
 use shared_types::GamesQueryOptions;
@@ -34,7 +45,7 @@ pub struct GameAbstractResponse {
     pub conclusion: Conclusion,
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug, Store)]
 pub struct GameResponse {
     pub uuid: Uuid,
     pub game_id: GameId,
@@ -107,6 +118,21 @@ impl PartialOrd for GameResponse {
 impl Eq for GameResponse {}
 
 impl GameResponse {
+    pub fn color_for_user(&self, user_id: Option<Uuid>) -> Option<Color> {
+        let user_id = user_id?;
+        if user_id == self.black_player.uid {
+            Some(Color::Black)
+        } else if user_id == self.white_player.uid {
+            Some(Color::White)
+        } else {
+            None
+        }
+    }
+
+    pub fn user_is_player(&self, user_id: Option<Uuid>) -> bool {
+        self.color_for_user(user_id).is_some()
+    }
+
     pub fn recorded_time_left(&self, turn: usize) -> Option<Duration> {
         self.move_times
             .get(turn)
@@ -196,9 +222,7 @@ use db_lib::{
     models::Game,
     DbConn,
 };
-use hive_lib::{
-    Color, GameStatus::Finished, Piece,
-};
+use hive_lib::{GameStatus::Finished, Piece};
 use std::{str::FromStr, collections::HashSet};
 
 impl GameResponse {

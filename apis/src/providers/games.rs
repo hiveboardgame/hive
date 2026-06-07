@@ -133,8 +133,8 @@ impl GamesSignal {
                 if game.current_player_id == user.id {
                     next_required = true;
                 }
-                if game.black_player.uid == user.id {
-                    player_color = Color::Black;
+                if let Some(color) = game.color_for_user(Some(user.id)) {
+                    player_color = color;
                 }
             }
         });

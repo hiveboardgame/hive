@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{ops::Deref, str::FromStr};
 
 use crate::{
     common::{MoveInfo, PieceType},
@@ -6,6 +6,7 @@ use crate::{
 };
 use hive_lib::{Color, GameControl, GameStatus, GameType, Piece, Position, State, Turn};
 use leptos::{logging::log, prelude::*};
+use reactive_stores::Store;
 use shared_types::{GameId, GameSpeed, Takeback};
 use uuid::Uuid;
 
@@ -16,27 +17,68 @@ use super::{
     ApiRequestsProvider,
 };
 
-#[derive(Clone, Debug, Copy)]
-pub struct GameStateSignal {
-    pub signal: RwSignal<GameState>,
-}
+#[derive(Clone, Copy)]
+pub struct GameStateStore(pub Store<GameState>);
 
-impl Default for GameStateSignal {
-    fn default() -> Self {
-        Self::new()
+impl Deref for GameStateStore {
+    type Target = Store<GameState>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
-impl GameStateSignal {
-    pub fn new() -> Self {
-        Self {
-            signal: RwSignal::new(GameState::new()),
+impl GameStateStore {
+    pub fn player_ids(&self) -> Signal<(Option<Uuid>, Option<Uuid>)> {
+        let white_id = self.white_id();
+        let black_id = self.black_id();
+        Signal::derive(move || (white_id.get(), black_id.get()))
+    }
+
+    pub fn game_status(&self) -> Signal<GameStatus> {
+        let state = self.state();
+        Signal::derive(move || state.with(|state| state.game_status.clone()))
+    }
+
+    pub fn is_last_turn_untracked(&self) -> bool {
+        let state_turn = self.state().with_untracked(|state| state.turn);
+        if state_turn == 0 {
+            return true;
         }
+        self.history_turn()
+            .with_untracked(|history_turn| *history_turn == Some(state_turn - 1))
     }
 
-    pub fn full_reset(&mut self) {
+    pub fn view_history_at_last_turn(&self) {
+        let turn = self
+            .state()
+            .with_untracked(|state| state.turn.checked_sub(1));
+        self.0.update(|s| {
+            s.view = View::History;
+            s.history_turn = turn;
+        });
+    }
+
+    pub fn takeback_allowed(&self) -> bool {
+        let color_allowed = |color: &Color, game_response: &GameResponse| {
+            let rated = game_response.rated;
+            let takeback = match color {
+                Color::Black => &game_response.black_player.takeback,
+                Color::White => &game_response.white_player.takeback,
+            };
+            takeback == &Takeback::Always || takeback == &Takeback::CasualOnly && !rated
+        };
+        self.game_response().with(|game_response| {
+            game_response.as_ref().is_some_and(|game_response| {
+                color_allowed(&Color::Black, game_response)
+                    && color_allowed(&Color::White, game_response)
+            })
+        })
+    }
+
+    pub fn full_reset(&self) {
         let state = State::new(GameType::MLP, false);
-        self.signal.update(|s| {
+        self.0.update(|s| {
             s.game_id = None;
             s.state = state;
             s.black_id = None;
@@ -45,30 +87,33 @@ impl GameStateSignal {
             s.history_turn = None;
             s.view = View::Game;
             s.game_control_pending = None;
-        })
+        });
     }
 
-    // No longer access the whole signal when getting user_color
-    pub fn user_color_as_signal(&self, user_id: Signal<Option<Uuid>>) -> Signal<Option<Color>> {
-        create_read_slice(self.signal, move |gamestate| {
-            match (gamestate.white_id, gamestate.black_id) {
-                (Some(w), Some(b)) => {
-                    let current_user_id = user_id();
-                    if current_user_id == Some(b) {
-                        Some(Color::Black)
-                    } else if current_user_id == Some(w) {
-                        Some(Color::White)
-                    } else {
-                        None
-                    }
-                }
-                _ => None,
+    pub fn color_for_user_signal(&self, user_id: Signal<Option<Uuid>>) -> Signal<Option<Color>> {
+        let white_id = self.white_id();
+        let black_id = self.black_id();
+        Signal::derive(move || {
+            let white = white_id.get();
+            let black = black_id.get();
+            let current_user_id = user_id()?;
+            if Some(current_user_id) == black {
+                Some(Color::Black)
+            } else if Some(current_user_id) == white {
+                Some(Color::White)
+            } else {
+                None
             }
         })
     }
 
-    pub fn undo_move(&mut self) {
-        self.signal.update(|s| {
+    pub fn user_is_player_signal(&self, user_id: Signal<Option<Uuid>>) -> Signal<bool> {
+        let user_color = self.color_for_user_signal(user_id);
+        Signal::derive(move || user_color().is_some())
+    }
+
+    pub fn undo_move(&self) {
+        self.0.update(|s| {
             if let Some(turn) = s.history_turn {
                 s.state.undo();
                 if turn > 0 {
@@ -81,27 +126,23 @@ impl GameStateSignal {
     }
 
     pub fn set_game_status(&self, status: GameStatus) {
-        self.signal.update(|s| {
-            s.state.game_status = status;
+        self.state().update(|state| {
+            state.game_status = status;
         })
     }
 
     pub fn set_pending_gc(&self, gc: GameControl) {
-        self.signal.update(|s| {
-            s.game_control_pending = Some(gc);
-        })
+        self.game_control_pending().set(Some(gc))
     }
 
     pub fn clear_gc(&self) {
-        self.signal.update(|s| {
-            s.game_control_pending = None;
-        })
+        self.game_control_pending().set(None)
     }
 
     pub fn send_game_control(&self, game_control: GameControl, user: Uuid) {
         let api = expect_context::<ApiRequestsProvider>().0;
-        self.signal.with_untracked(|gs| {
-            if let Some(color) = gs.user_color(user) {
+        self.0.with_untracked(|gs| {
+            if let Some(color) = gs.user_color(Some(user)) {
                 if color != game_control.color() {
                     log!("This is a bug, you should only send GCs of your own color, user id color is {color} and gc color is {}", game_control.color());
                 } else if let Some(ref game_id) = gs.game_id {
@@ -113,66 +154,100 @@ impl GameStateSignal {
         })
     }
 
-    pub fn set_state(&mut self, state: State, black_id: Uuid, white_id: Uuid) {
-        self.reset();
+    pub fn set_state(&self, state: State, black_id: Uuid, white_id: Uuid) {
         let turn = if state.turn != 0 {
             Some(state.turn - 1)
         } else {
             None
         };
-        self.signal.update(|s| {
+        self.0.update(|s| {
+            s.move_info.reset();
             s.history_turn = turn;
             s.state = state;
             s.black_id = Some(black_id);
             s.white_id = Some(white_id);
+        });
+    }
+
+    pub fn set_game_id(&self, game_id: GameId) {
+        self.game_id().set(Some(game_id))
+    }
+
+    pub fn play_turn(&self, piece: Piece, position: Position) {
+        self.state().update(|state| {
+            if let Err(e) = state.play_turn_from_position(piece, position) {
+                log!("Could not play turn: {} {} {}", piece, position, e);
+            }
         })
     }
 
-    pub fn set_game_id(&mut self, game_id: GameId) {
-        self.signal.update_untracked(|s| s.game_id = Some(game_id))
+    pub fn reset(&self) {
+        self.move_info().update(|move_info| move_info.reset())
     }
 
-    pub fn play_turn(&mut self, piece: Piece, position: Position) {
-        self.signal.update(|s| {
-            s.play_turn(piece, position);
-        })
-    }
-
-    pub fn reset(&mut self) {
-        self.signal.update(|s| s.move_info.reset())
-    }
-
-    pub fn move_active(&mut self, analysis: Option<AnalysisSignal>, api: ApiRequests) {
-        self.signal.update(|s| s.move_active(analysis, api))
+    pub fn move_active(&self, analysis: Option<AnalysisSignal>, api: ApiRequests) {
+        self.0.update(|s| s.move_active(analysis, api))
     }
 
     pub fn is_move_allowed(&self, in_analysis: bool) -> bool {
-        self.signal
-            .with_untracked(|gs| gs.is_move_allowed(in_analysis))
+        self.0.with_untracked(|gs| gs.is_move_allowed(in_analysis))
     }
 
-    pub fn show_moves(&mut self, piece: Piece, position: Position) {
-        self.signal.update(|s| s.show_moves(piece, position))
+    pub fn show_moves(&self, piece: Piece, position: Position) {
+        let target_positions = self.state().with_untracked(|state| {
+            let moves = state.board.moves(state.turn_color);
+            moves.get(&(piece, position)).cloned()
+        });
+        self.move_info().update(|move_info| {
+            move_info.reset();
+            move_info.current_position = Some(position);
+            if let Some(target_positions) = target_positions {
+                move_info.target_positions = target_positions;
+                move_info.active = Some((piece, PieceType::Board));
+            }
+        });
     }
 
-    pub fn show_spawns(&mut self, piece: Piece, position: Position) {
-        self.signal.update(|s| s.show_spawns(piece, position))
+    pub fn show_spawns(&self, piece: Piece, position: Position) {
+        let (target_positions, active) = self.state().with_untracked(|state| {
+            let turn_color = state.turn_color;
+            let board = &state.board;
+            let game_type = state.game_type;
+            let target_positions = board
+                .spawnable_positions(turn_color)
+                .collect::<Vec<Position>>();
+            let active = board
+                .reserve(turn_color, game_type)
+                .get(&piece.bug())
+                .and_then(|pieces| pieces.first())
+                .and_then(|piece| Piece::from_str(piece).ok());
+            (target_positions, active)
+        });
+        self.move_info().update(|move_info| {
+            move_info.reset();
+            move_info.target_positions = target_positions;
+            if let Some(piece) = active {
+                move_info.active = Some((piece, PieceType::Reserve));
+                move_info.reserve_position = Some(position);
+            }
+        });
     }
 
-    pub fn set_target(&mut self, position: Position) {
-        self.signal.update(|s| s.set_target(position))
+    pub fn set_target(&self, position: Position) {
+        self.move_info()
+            .update(|move_info| move_info.target_position = Some(position))
     }
 
     pub fn show_history_turn(&self, turn: usize) {
-        self.signal.update(|s| s.show_history_turn(turn))
+        self.history_turn().set(Some(turn))
     }
 
-    pub fn first_history_turn(&mut self) {
-        self.signal.update(|s| s.first_history_turn())
+    pub fn first_history_turn(&self) {
+        self.0.update(|s| s.first_history_turn())
     }
 
-    pub fn next_history_turn(&mut self) {
-        self.signal.update(|s| {
+    pub fn next_history_turn(&self) {
+        self.0.update(|s| {
             s.next_history_turn();
             if let Some(turn) = s.history_turn {
                 if s.state.history.move_is_pass(turn) {
@@ -182,8 +257,8 @@ impl GameStateSignal {
         });
     }
 
-    pub fn previous_history_turn(&mut self) {
-        self.signal.update(|s| {
+    pub fn previous_history_turn(&self) {
+        self.0.update(|s| {
             s.previous_history_turn();
             if let Some(turn) = s.history_turn {
                 if s.state.history.move_is_pass(turn) {
@@ -194,47 +269,54 @@ impl GameStateSignal {
     }
 
     pub fn view_game(&self) {
-        self.signal.update(|s| s.view_game())
+        self.0.update(|s| s.view_game())
     }
 
-    pub fn view_history(&mut self) {
-        self.signal.update(|s| s.view_history())
+    pub fn view_history(&self) {
+        self.view().set(View::History)
     }
 
-    pub fn set_game_response(&mut self, game_response: GameResponse) {
-        self.signal
-            .update(|s| s.game_response = Some(game_response));
+    pub fn set_game_response(&self, game_response: GameResponse) {
+        self.game_response().set(Some(game_response));
     }
 
     pub fn is_finished(&self) -> Memo<bool> {
-        let game_status_finished = create_read_slice(self.signal, |game_state| {
-            matches!(
-                game_state.state.game_status,
-                GameStatus::Finished(_) | GameStatus::Adjudicated
-            )
+        let state = self.state();
+        let game_status_finished = Signal::derive(move || {
+            state.with(|state| {
+                matches!(
+                    state.game_status,
+                    GameStatus::Finished(_) | GameStatus::Adjudicated
+                )
+            })
         });
-        let game_response_finished = create_read_slice(self.signal, |game_state| {
-            game_state
-                .game_response
-                .as_ref()
-                .is_some_and(|gr| gr.finished)
+        let game_response = self.game_response();
+        let game_response_finished = Signal::derive(move || {
+            game_response.with(|game_response| {
+                game_response
+                    .as_ref()
+                    .is_some_and(|game_response| game_response.finished)
+            })
         });
         Memo::new(move |_| game_status_finished() || game_response_finished())
     }
 
     pub fn is_last_turn_as_signal(&self) -> Signal<bool> {
-        create_read_slice(self.signal, |gs| {
-            if gs.state.turn == 0 {
-                true
-            } else {
-                gs.history_turn == Some(gs.state.turn - 1)
+        let state = self.state();
+        let history_turn = self.history_turn();
+        Signal::derive(move || {
+            let state_turn = state.with(|state| state.turn);
+            if state_turn == 0 {
+                return true;
             }
+            history_turn.with(|history_turn| *history_turn == Some(state_turn - 1))
         })
     }
 
     pub fn is_first_turn_as_signal(&self) -> Signal<bool> {
-        create_read_slice(self.signal, |gs| {
-            gs.history_turn.is_none() || gs.history_turn == Some(0)
+        let history_turn = self.history_turn();
+        Signal::derive(move || {
+            history_turn.with(|history_turn| history_turn.is_none() || *history_turn == Some(0))
         })
     }
 }
@@ -245,7 +327,7 @@ pub enum View {
     Game,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Store)]
 pub struct GameState {
     // game_id is the nanoid of the game
     pub game_id: Option<GameId>,
@@ -302,11 +384,12 @@ impl GameState {
     }
 
     // Still needed because send_game_control uses it, maybe this should be moved out of the gamestate?
-    fn user_color(&self, user_id: Uuid) -> Option<Color> {
-        if Some(user_id) == self.black_id {
+    pub fn user_color(&self, user_id: Option<Uuid>) -> Option<Color> {
+        user_id?;
+        if user_id == self.black_id {
             return Some(Color::Black);
         }
-        if Some(user_id) == self.white_id {
+        if user_id == self.white_id {
             return Some(Color::White);
         }
         None
@@ -464,24 +547,6 @@ impl GameState {
     pub fn get_game_speed(&self) -> Option<GameSpeed> {
         self.game_response.as_ref().map(|gr| gr.speed)
     }
-
-    pub fn takeback_allowed(&self) -> bool {
-        let color_allowed = |color: &Color, game_response: &GameResponse| {
-            let rated = game_response.rated;
-            let takeback = match color {
-                Color::Black => &game_response.black_player.takeback,
-                Color::White => &game_response.white_player.takeback,
-            };
-            takeback == &Takeback::Always || takeback == &Takeback::CasualOnly && !rated
-        };
-        if let Some(game_response) = self.game_response.as_ref() {
-            let white = color_allowed(&Color::Black, game_response);
-            let black = color_allowed(&Color::White, game_response);
-            white && black
-        } else {
-            false
-        }
-    }
 }
 
 #[cfg(test)]
@@ -546,5 +611,19 @@ mod tests {
             .move_info
             .target_positions
             .contains(&Position::initial_spawn_position()));
+    }
+
+    #[test]
+    fn user_color_returns_none_when_user_or_players_are_unloaded() {
+        let user_id = Uuid::new_v4();
+        let mut game_state = GameState::new();
+
+        assert_eq!(game_state.user_color(None), None);
+        assert_eq!(game_state.user_color(Some(user_id)), None);
+
+        game_state.black_id = Some(user_id);
+
+        assert_eq!(game_state.user_color(None), None);
+        assert_eq!(game_state.user_color(Some(user_id)), Some(Color::Black));
     }
 }

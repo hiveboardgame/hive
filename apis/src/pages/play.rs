@@ -22,7 +22,7 @@ use crate::{
     hiveground::{live_hiveground_interaction, selected_history_state, HivegroundInteraction},
     providers::{
         config::Config,
-        game_state::{GameStateSignal, View},
+        game_state::{GameStateStore, GameStateStoreFields, View},
         timer::TimerSignal,
         websocket::WebsocketContext,
         ApiRequestsProvider,
@@ -46,7 +46,7 @@ use wasm_bindgen_futures::spawn_local;
 pub fn Play() -> impl IntoView {
     provide_context(TimerSignal::new());
     let timer = expect_context::<TimerSignal>();
-    let mut game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let orientation_signal = expect_context::<OrientationSignal>();
     let auth_context = expect_context::<AuthContext>();
     let config = expect_context::<Config>().0;
@@ -73,12 +73,12 @@ pub fn Play() -> impl IntoView {
             .unwrap_or_default()
     });
     let tab = RwSignal::new(TabView::Reserve);
+    let game_response = game_state.game_response();
     let current_confirm = Memo::new(move |_| {
         config.with(|cfg| {
             let preferred_confirms = &cfg.confirm_mode;
-            game_state
-                .signal
-                .with(|gs| gs.get_game_speed())
+            game_response
+                .with(|game_response| game_response.as_ref().map(|game| game.speed))
                 .and_then(|game_speed| preferred_confirms.get(&game_speed).cloned())
                 .unwrap_or_default()
         })
@@ -87,28 +87,11 @@ pub fn Play() -> impl IntoView {
     let hiveground_interaction = live_hiveground_interaction();
     let history_state = selected_history_state(game_state);
     let user = auth_context.user;
-    let white_and_black_ids = create_read_slice(game_state.signal, |gs| (gs.white_id, gs.black_id));
-    let user_is_player = Signal::derive(move || {
-        user.with(|a| {
-            if let Some(user) = a {
-                let (white_id, black_id) = white_and_black_ids();
-                Some(user.id) == white_id || Some(user.id) == black_id
-            } else {
-                false
-            }
-        })
-    });
-    let player_color = Memo::new(move |_| {
-        user.with(|a| {
-            a.as_ref().map_or(Color::White, |user| {
-                let black_id = white_and_black_ids().1;
-                match Some(user.id) == black_id {
-                    true => Color::Black,
-                    false => Color::White,
-                }
-            })
-        })
-    });
+    let white_and_black_ids = game_state.player_ids();
+    let user_id = Signal::derive(move || user.with(|a| a.as_ref().map(|user| user.id)));
+    let user_color = game_state.color_for_user_signal(user_id);
+    let user_is_player = Signal::derive(move || user_color().is_some());
+    let player_color = Memo::new(move |_| user_color().unwrap_or(Color::White));
     let parent_container_style = move || {
         if orientation_signal.orientation_vertical.get() {
             "flex flex-col"
@@ -117,9 +100,13 @@ pub fn Play() -> impl IntoView {
         }
     };
 
-    let show_board = create_read_slice(game_state.signal, |gs| {
-        !gs.game_response.as_ref().is_some_and(|gr| {
-            gr.game_start == GameStart::Ready && matches!(gr.game_status, GameStatus::NotStarted)
+    let game_response = game_state.game_response();
+    let show_board = Signal::derive(move || {
+        !game_response.with(|game_response| {
+            game_response.as_ref().is_some_and(|game| {
+                game.game_start == GameStart::Ready
+                    && matches!(game.game_status, GameStatus::NotStarted)
+            })
         })
     });
 
@@ -132,25 +119,28 @@ pub fn Play() -> impl IntoView {
         false,
     );
 
-    let timer_display_key = create_read_slice(game_state.signal, |gs| {
-        let history_turn = gs.history_turn;
-        let gs_view = gs.view.clone();
-        let response = gs.game_response.as_ref().map(|response| {
-            (
-                response.game_id.clone(),
-                response.updated_at,
-                response.conclusion.clone(),
-                response.game_status.clone(),
-                response.time_mode,
-            )
+    let view = game_state.view();
+    let history_turn = game_state.history_turn();
+    let game_response = game_state.game_response();
+    let timer_display_key = Signal::derive(move || {
+        let response = game_response.with(|game_response| {
+            game_response.as_ref().map(|response| {
+                (
+                    response.game_id.clone(),
+                    response.updated_at,
+                    response.conclusion.clone(),
+                    response.game_status.clone(),
+                    response.time_mode,
+                )
+            })
         });
-        (gs_view, history_turn, response)
+        (view.get(), history_turn.get(), response)
     });
 
     Effect::watch(
         timer_display_key,
         move |_, _, _| {
-            game_state.signal.with_untracked(|gs| {
+            game_state.with_untracked(|gs| {
                 if !matches!(
                     gs.state.game_status,
                     GameStatus::Finished(_) | GameStatus::Adjudicated
@@ -208,13 +198,14 @@ pub fn Play() -> impl IntoView {
                     }
                     let url_number = move_number.get_untracked();
                     if url_number.is_some_and(|v| {
-                        game_state
-                            .signal
-                            .with_untracked(|gs| v < gs.state.turn.saturating_sub(1))
+                        v < game_state
+                            .state()
+                            .with_untracked(|state| state.turn)
+                            .saturating_sub(1)
                     }) {
-                        game_state.signal.update(|s| {
-                            s.history_turn = url_number;
+                        game_state.update(|s| {
                             s.view = View::History;
+                            s.history_turn = url_number;
                         });
                         controls_signal.hidden.set(false);
                         tab.set(TabView::History);
@@ -238,7 +229,7 @@ pub fn Play() -> impl IntoView {
                             game_state.set_game_response(gar.game.clone());
                             sounds.play_sound(SoundType::Turn);
                             let (pos, reserve_pos, history_moves, active, was_at_live_edge) =
-                                game_state.signal.with_untracked(|gs| {
+                                game_state.with_untracked(|gs| {
                                     (
                                         gs.move_info.current_position,
                                         gs.move_info.reserve_position,
@@ -294,7 +285,7 @@ pub fn Play() -> impl IntoView {
                                 }
                                 GameControl::TakebackAccept(_) => {
                                     timer.update_from(&gar.game);
-                                    reset_game_state_for_takeback(&gar.game, &mut game_state);
+                                    reset_game_state_for_takeback(&gar.game, &game_state);
                                 }
                                 GameControl::TakebackRequest(_)
                                 | GameControl::DrawOffer(_)
@@ -348,8 +339,7 @@ pub fn Play() -> impl IntoView {
         }
         evt.prevent_default();
         if key == "ArrowLeft" {
-            let has_turns = game_state.signal.with_untracked(|gs| gs.state.turn > 0);
-            if !has_turns {
+            if !game_state.state().with_untracked(|state| state.turn > 0) {
                 return;
             }
             // When entering from live game view, position to the last turn first so
@@ -357,17 +347,13 @@ pub fn Play() -> impl IntoView {
             // Don't re-trigger this if already in History view — that would teleport
             // the user back to the end when they've navigated to the beginning.
             let entering = game_state
-                .signal
-                .with_untracked(|gs| matches!(gs.view, View::Game));
+                .view()
+                .with_untracked(|view| matches!(view, View::Game));
             if entering {
-                game_state.signal.update(|gs| {
-                    gs.view_history();
-                    gs.history_turn = gs.state.turn.checked_sub(1);
-                });
+                game_state.view_history_at_last_turn();
             }
-            let can_step_back = game_state
-                .signal
-                .with_untracked(|gs| matches!(gs.history_turn, Some(turn) if turn > 0));
+            let can_step_back =
+                matches!(game_state.history_turn().get_untracked(), Some(turn) if turn > 0);
             if can_step_back {
                 game_state.previous_history_turn();
             } else if !entering {
@@ -379,12 +365,12 @@ pub fn Play() -> impl IntoView {
             scroll_active_history_move_into_view();
         } else {
             // ArrowRight: navigate forward only when already browsing history.
-            let in_history = game_state
-                .signal
-                .with_untracked(|gs| matches!(gs.view, View::History));
-            if in_history {
+            if game_state
+                .view()
+                .with_untracked(|view| matches!(view, View::History))
+            {
                 game_state.next_history_turn();
-                if game_state.signal.with_untracked(|gs| gs.is_last_turn()) {
+                if game_state.is_last_turn_untracked() {
                     game_state.view_game();
                 }
                 sync_play_move_query(game_state, &set_move);
@@ -509,17 +495,17 @@ fn VerticalLayout(
     interaction: HivegroundInteraction,
     history_state: Memo<HiveState>,
 ) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let controls_signal = expect_context::<ControlsSignal>();
     let vertical = true;
     let go_to_game = Callback::new(move |()| {
-        if game_state.signal.with_untracked(|gs| gs.is_last_turn()) {
+        if game_state.is_last_turn_untracked() {
             game_state.view_game();
         }
     });
     let top_color = Signal::derive(move || player_color().opposite_color());
-    let show_controls =
-        Signal::derive(move || !controls_signal.hidden.get() || game_state.is_finished()());
+    let is_finished = game_state.is_finished();
+    let show_controls = Signal::derive(move || !controls_signal.hidden.get() || is_finished());
     view! {
         <div class="flex flex-col flex-grow h-full min-h-0">
             <div class="flex flex-col shrink bg-board-dawn dark:bg-reserve-twilight">
