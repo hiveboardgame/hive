@@ -367,6 +367,7 @@ impl Tournament {
                         .eq(TournamentGameResult::DoubeForfeit.to_string()),
                     games::updated_at.eq(Utc::now()),
                     games::last_interaction.eq(Utc::now()),
+                    games::timeout_at.eq(crate::models::game::CLEAR_TIMEOUT_AT),
                 ))
                 .execute(conn)
                 .await?;
@@ -403,6 +404,7 @@ impl Tournament {
                     games::updated_at.eq(Utc::now()),
                     games::last_interaction.eq::<Option<DateTime<Utc>>>(None),
                     games::turn.eq(0),
+                    games::timeout_at.eq(crate::models::game::CLEAR_TIMEOUT_AT),
                 ))
                 .execute(conn)
                 .await?;

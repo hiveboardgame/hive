@@ -88,9 +88,22 @@ pub async fn api_get_pending_games(Auth(bot): Auth, pool: Data<DbPool>) -> HttpR
 
 async fn get_games(bot: User, selector: GameSelector, pool: Data<DbPool>) -> Result<Vec<Game>> {
     let mut conn = get_conn(&pool).await?;
-    Ok(match selector {
+    // Specific lookups self-finalize via find_by_game_id, so return directly.
+    let raw = match selector {
+        GameSelector::Specific(id) => {
+            return Ok(vec![Game::find_by_game_id(&id, &mut conn).await?]);
+        }
         GameSelector::Ongoing => bot.get_ongoing_games(&mut conn).await?,
-        GameSelector::Specific(id) => [Game::find_by_game_id(&id, &mut conn).await?].to_vec(),
         GameSelector::Pending => bot.get_games_with_notifications(&mut conn).await?,
-    })
+    };
+    // Between sweep ticks a row can be past timeout but not yet finalized;
+    // check_time settles it so the bot never sees a stale ongoing/pending game.
+    let mut out = Vec::with_capacity(raw.len());
+    for game in raw {
+        let g = game.check_time(&mut conn).await?;
+        if !g.finished {
+            out.push(g);
+        }
+    }
+    Ok(out)
 }

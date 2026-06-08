@@ -34,6 +34,35 @@ use uuid::Uuid;
 
 pub static NANOS_IN_SECOND: u64 = 1000000000_u64;
 
+/// Named None for clearing timeout_at at terminal transitions; avoids
+/// repeating the type ascription diesel's set-tuple inference needs.
+pub(crate) const CLEAR_TIMEOUT_AT: Option<DateTime<Utc>> = None;
+
+/// Single source of truth for timeout_at, so every site that mutates
+/// clock/turn/status derives it consistently.
+fn compute_timeout_at(
+    interaction_at: Option<DateTime<Utc>>,
+    white_left_nanos: Option<i64>,
+    black_left_nanos: Option<i64>,
+    new_turn: i32,
+    mode_str: &str,
+    status_str: &str,
+) -> Option<DateTime<Utc>> {
+    if status_str == GameStatus::NotStarted.to_string() {
+        return None;
+    }
+    if matches!(TimeMode::from_str(mode_str), Ok(TimeMode::Untimed)) {
+        return None;
+    }
+    let last = interaction_at?;
+    let running_nanos = if new_turn % 2 == 0 {
+        white_left_nanos?
+    } else {
+        black_left_nanos?
+    };
+    Some(last + chrono::Duration::nanoseconds(running_nanos))
+}
+
 #[derive(Debug)]
 struct TimeInfo {
     white_time_left: Option<i64>,
@@ -97,6 +126,7 @@ pub struct NewGame {
     pub tournament_game_result: String,
     pub game_start: String,
     pub move_times: Vec<Option<i64>>,
+    pub timeout_at: Option<DateTime<Utc>>,
 }
 
 impl NewGame {
@@ -123,6 +153,14 @@ impl NewGame {
                     Some(Utc::now()),
                 ),
             };
+        let initial_timeout_at = compute_timeout_at(
+            interaction,
+            time_left,
+            time_left,
+            0,
+            &tournament.time_mode,
+            &status,
+        );
 
         Self {
             nanoid: nanoid!(12),
@@ -157,6 +195,7 @@ impl NewGame {
             tournament_game_result: TournamentGameResult::Unknown.to_string(),
             game_start: start,
             move_times: vec![],
+            timeout_at: initial_timeout_at,
         }
     }
 
@@ -213,6 +252,7 @@ impl NewGame {
             tournament_game_result: TournamentGameResult::Unknown.to_string(),
             game_start: GameStart::Moves.to_string(),
             move_times: vec![],
+            timeout_at: None,
         })
     }
 }
@@ -255,6 +295,7 @@ pub struct Game {
     pub tournament_game_result: String,
     pub game_start: String,
     pub move_times: Vec<Option<i64>>,
+    pub timeout_at: Option<DateTime<Utc>>,
 }
 
 impl Game {
@@ -448,6 +489,7 @@ impl Game {
                 games::white_time_left.eq(new_white_time_left),
                 games::black_time_left.eq(new_black_time_left),
                 games::conclusion.eq(Conclusion::Timeout.to_string()),
+                games::timeout_at.eq(CLEAR_TIMEOUT_AT),
             ))
             .get_result(conn)
             .await?)
@@ -503,6 +545,7 @@ impl Game {
                 games::white_time_left.eq(new_white_time_left),
                 games::black_time_left.eq(new_black_time_left),
                 games::conclusion.eq(final_conclusion.to_string()),
+                games::timeout_at.eq(CLEAR_TIMEOUT_AT),
             ))
             .get_result(conn)
             .await?)
@@ -806,6 +849,7 @@ impl Game {
                                 games::last_interaction.eq(Some(Utc::now())),
                                 games::move_times.eq(new_move_times),
                                 games::conclusion.eq(new_conclusion.to_string()),
+                                games::timeout_at.eq(CLEAR_TIMEOUT_AT),
                             ))
                             .get_result(tc)
                             .await?)
@@ -817,6 +861,17 @@ impl Game {
 
         // Moves intentionally guard board progress only. Concurrent control-log
         // writes survive, and a move must not reject an offer the mover did not see.
+        let now = Utc::now();
+        let new_turn = state.turn as i32;
+        let new_status_str = time_info.new_game_status.to_string();
+        let new_timeout_at = compute_timeout_at(
+            Some(now),
+            time_info.white_time_left,
+            time_info.black_time_left,
+            new_turn,
+            &self.time_mode,
+            &new_status_str,
+        );
         let update = diesel::update(
             games::table
                 .find(self.id)
@@ -827,14 +882,15 @@ impl Game {
         .set((
             history.eq(new_history),
             current_player_id.eq(next_player),
-            turn.eq(state.turn as i32),
-            game_status.eq(time_info.new_game_status.to_string()),
+            turn.eq(new_turn),
+            game_status.eq(new_status_str),
             game_control_history.eq(game_control_history.concat(game_control_string)),
-            updated_at.eq(Utc::now()),
+            updated_at.eq(now),
             white_time_left.eq(time_info.white_time_left),
             black_time_left.eq(time_info.black_time_left),
             move_times.eq(new_move_times),
-            last_interaction.eq(Some(Utc::now())),
+            last_interaction.eq(Some(now)),
+            timeout_at.eq(new_timeout_at),
         ))
         .get_result(conn)
         .await;
@@ -1039,6 +1095,17 @@ impl Game {
         } else {
             self.black_id
         };
+        let new_turn = self.turn - popped;
+        let now = Utc::now();
+        // None on takeback to turn 0, since the rebuilt status is NotStarted.
+        let new_timeout_at = compute_timeout_at(
+            Some(now),
+            white_time,
+            black_time,
+            new_turn,
+            &self.time_mode,
+            &new_game_status,
+        );
 
         let update = diesel::update(
             games::table
@@ -1051,14 +1118,15 @@ impl Game {
         .set((
             current_player_id.eq(next_player),
             history.eq(new_history),
-            turn.eq(turn - popped),
+            turn.eq(new_turn),
             game_status.eq(new_game_status),
             game_control_history.eq(game_control_history.concat(game_control_string)),
-            updated_at.eq(Utc::now()),
-            last_interaction.eq(Utc::now()),
+            updated_at.eq(now),
+            last_interaction.eq(now),
             move_times.eq(new_move_times),
             white_time_left.eq(white_time),
             black_time_left.eq(black_time),
+            timeout_at.eq(new_timeout_at),
         ))
         .get_result(conn)
         .await;
@@ -1187,6 +1255,23 @@ impl Game {
             }
         }
         Ok(checked_games)
+    }
+
+    /// In-flight games past their `timeout_at`. Uses the partial index, so
+    /// near-free when none are due.
+    pub async fn find_expired_by_timeout_at(
+        as_of: DateTime<Utc>,
+        limit: i64,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Game>, DbError> {
+        Ok(games::table
+            .filter(games::finished.eq(false))
+            .filter(games::timeout_at.is_not_null())
+            .filter(games::timeout_at.le(as_of))
+            .order(games::timeout_at.asc())
+            .limit(limit)
+            .load(conn)
+            .await?)
     }
 
     pub async fn delete(&self, conn: &mut DbConn<'_>) -> Result<(), DbError> {
@@ -1373,6 +1458,7 @@ impl Game {
                 Some(Utc::now()),
             ),
         };
+        // Every branch ends in a no-clock status, so timeout_at is None.
         let game = diesel::update(games::table.find(self.id))
             .set((
                 finished.eq(fin),
@@ -1381,6 +1467,7 @@ impl Game {
                 tournament_game_result.eq(new_result.to_string()),
                 updated_at.eq(Utc::now()),
                 last_interaction.eq(new_last_interaction),
+                timeout_at.eq(CLEAR_TIMEOUT_AT),
             ))
             .get_result(conn)
             .await?;
@@ -1394,11 +1481,21 @@ impl Game {
                 info: String::from("Cannot start this game"),
             });
         }
+        let now = Utc::now();
+        let new_timeout_at = compute_timeout_at(
+            Some(now),
+            self.white_time_left,
+            self.black_time_left,
+            0,
+            &self.time_mode,
+            &GameStatus::InProgress.to_string(),
+        );
         Ok(diesel::update(games::table.find(self.id))
             .set((
                 game_status.eq(GameStatus::InProgress.to_string()),
-                updated_at.eq(Utc::now()),
-                last_interaction.eq(Utc::now()),
+                updated_at.eq(now),
+                last_interaction.eq(now),
+                timeout_at.eq(new_timeout_at),
             ))
             .get_result(conn)
             .await?)
