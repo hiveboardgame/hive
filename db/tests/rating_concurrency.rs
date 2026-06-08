@@ -189,6 +189,7 @@ async fn create_bullet_game(
 ) -> Game {
     let now = Utc::now();
     let time_left = Some(60 * 1_000_000_000_i64);
+    let timeout_at = time_left.map(|nanos| now + chrono::Duration::nanoseconds(nanos));
     Game::create(
         NewGame {
             nanoid: nanoid::nanoid!(12),
@@ -222,6 +223,7 @@ async fn create_bullet_game(
             tournament_game_result: TournamentGameResult::Unknown.to_string(),
             game_start: GameStart::Moves.to_string(),
             move_times: Vec::new(),
+            timeout_at,
         },
         conn,
     )

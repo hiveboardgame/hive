@@ -21,13 +21,14 @@ use dashmap::DashMap;
 use db_lib::{
     get_conn,
     models::{Game, Tournament, User},
+    DbConn,
     DbPool,
     DB_POOL_MAX_SIZE,
 };
 use hive_lib::GameStatus;
 use log::error;
 use rand::Rng;
-use shared_types::{GameId, SimpleUser, TimeMode, TournamentId};
+use shared_types::{Conclusion, GameId, SimpleUser, TimeMode, TournamentId};
 use std::{
     collections::{HashMap, HashSet},
     str::FromStr,
@@ -619,6 +620,43 @@ impl WsHub {
         .await;
     }
 
+    /// Broadcasts TimedOut and finalizes a timed-out game. Shared by the sweeper
+    /// (no-viewer) and heartbeat (active-viewer) paths so neither duplicates it.
+    /// Loser is `current_player_id` — the side whose clock ran out.
+    pub async fn broadcast_timeout_finalize(
+        &self,
+        conn: &mut DbConn<'_>,
+        finalized: &Game,
+    ) -> anyhow::Result<()> {
+        let game_id = GameId(finalized.nanoid.clone());
+        let game_response = self.data.get_or_build_response(finalized, conn).await?;
+        let loser = User::find_by_uuid(&finalized.current_player_id, conn).await?;
+        let reaction = super::messages::Reaction {
+            game_id: game_id.clone(),
+            white_id: finalized.white_id,
+            black_id: finalized.black_id,
+            gar: crate::common::GameActionResponse {
+                game_action: crate::common::GameReaction::TimedOut,
+                game: (*game_response).clone(),
+                game_id: game_id.clone(),
+                user_id: finalized.current_player_id,
+                username: loser.username,
+            },
+        };
+        self.dispatch_reaction(reaction, None).await;
+        if game_response.time_mode == TimeMode::RealTime && self.should_send_tv(&game_id, true) {
+            self.data.telemetry.inc_tv_broadcast();
+            let payload = ServerMessage::Game(Box::new(GameUpdate::Tv((*game_response).clone())));
+            let result = ServerResult::Ok(Box::new(payload));
+            if let Ok(serialized) = MsgpackSerdeCodec::encode(&result) {
+                self.dispatch(&MessageDestination::Global, Bytes::from(serialized), None)
+                    .await;
+            }
+        }
+        self.finalize_game(&game_id, finalized.white_id, finalized.black_id);
+        Ok(())
+    }
+
     /// Drop a cached tournament-members entry. Call from join/leave/start/
     /// finish handlers when membership has changed — otherwise stale entries
     /// can serve up to `TOURNAMENT_MEMBERS_TTL` of incorrect fanout (e.g., a
@@ -772,6 +810,17 @@ impl WsHub {
                     // Re-checking membership prevents the double-count race
                     // where the dispatcher's hook ran between our snapshot
                     // and this iteration's `finalize_game` call.
+                    //
+                    // If the heartbeat itself finalized this timeout, no
+                    // dispatcher hook will broadcast it — players and spectators
+                    // would see a frozen clock. Broadcast it here instead.
+                    if game.conclusion == Conclusion::Timeout.to_string() {
+                        if let Err(e) = self.broadcast_timeout_finalize(&mut conn, &game).await {
+                            error!("game_heartbeat timeout broadcast {}: {e}", game.nanoid);
+                        }
+                        // Already finalized above; skip the finalize_game below.
+                        continue;
+                    }
                     self.finalize_game(&game_id, game.white_id, game.black_id);
                 }
                 continue;
