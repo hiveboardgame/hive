@@ -1,11 +1,4 @@
-use super::{
-    accept::AcceptHandler,
-    create::CreateHandler,
-    delete::DeleteHandler,
-    get::GetHandler,
-    get_own::GetOwnHandler,
-    get_public::GetPublicHandler,
-};
+use super::{accept::AcceptHandler, create::CreateHandler, delete::DeleteHandler};
 use crate::{common::ChallengeAction, websocket::messages::InternalServerMessage};
 use anyhow::Result;
 use db_lib::DbPool;
@@ -68,31 +61,6 @@ impl ChallengeHandler {
                 }
                 messages
             }
-            ChallengeAction::Decline(challenge_id) => {
-                DeleteHandler::new(challenge_id, self.user_id, self.admin, &self.pool)
-                    .await?
-                    .handle()
-                    .await?
-            }
-            ChallengeAction::Get(challenge_id) => {
-                GetHandler::new(challenge_id, self.user_id, &self.pool)
-                    .await?
-                    .handle()
-                    .await?
-            }
-            ChallengeAction::GetPublic => {
-                GetPublicHandler::new(self.user_id, &self.pool)
-                    .await?
-                    .handle()
-                    .await?
-            }
-            ChallengeAction::GetOwn => {
-                GetOwnHandler::new(self.user_id, &self.pool)
-                    .await?
-                    .handle()
-                    .await?
-            }
-            _ => unimplemented!(),
         };
         Ok(messages)
     }

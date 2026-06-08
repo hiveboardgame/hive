@@ -4,7 +4,7 @@ use crate::{
     websocket::messages::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
-use db_lib::{get_conn, models::Challenge, DbPool};
+use db_lib::{db_error::DbError, get_conn, models::Challenge, DbPool};
 use shared_types::{ChallengeError, ChallengeId, ChallengeVisibility};
 use uuid::Uuid;
 
@@ -32,7 +32,18 @@ impl DeleteHandler {
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let mut conn = get_conn(&self.pool).await?;
-        let challenge = Challenge::find_by_challenge_id(&self.challenge_id, &mut conn).await?;
+        let challenge = match Challenge::find_by_challenge_id(&self.challenge_id, &mut conn).await {
+            Ok(challenge) => challenge,
+            Err(DbError::NotFound { .. }) => {
+                return Ok(vec![InternalServerMessage {
+                    destination: MessageDestination::User(self.user_id),
+                    message: ServerMessage::Challenge(ChallengeUpdate::Removed(
+                        self.challenge_id.clone(),
+                    )),
+                }]);
+            }
+            Err(err) => return Err(err.into()),
+        };
         if !self.admin
             && challenge.challenger_id != self.user_id
             && challenge.opponent_id != Some(self.user_id)

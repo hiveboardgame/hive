@@ -29,23 +29,17 @@ pub fn ProposalNotification(
     let accept = move |_| {
         let api = api.get();
         api.schedule_action(ScheduleAction::Accept(schedule_id.get_value()));
-        notifications.schedule_proposals.update(|proposals| {
-            proposals.remove(&schedule_id.get_value());
-        });
+        notifications.schedule_notification_remove(schedule_id.get_value());
     };
 
     let decline = move |_| {
         let api = api.get();
         api.schedule_action(ScheduleAction::Cancel(schedule_id.get_value()));
-        notifications.schedule_proposals.update(|proposals| {
-            proposals.remove(&schedule_id.get_value());
-        });
+        notifications.schedule_notification_remove(schedule_id.get_value());
     };
 
     let dismiss = move |_| {
-        notifications.schedule_proposals.update(|proposals| {
-            proposals.remove(&schedule_id.get_value());
-        });
+        notifications.schedule_notification_remove(schedule_id.get_value());
     };
 
     view! {
@@ -108,9 +102,7 @@ pub fn AcceptanceNotification(
     let mark_seen_action = ServerAction::<MarkScheduleSeen>::new();
 
     let dismiss = move |_| {
-        notifications.schedule_acceptances.update(|acceptances| {
-            acceptances.remove(&schedule_id.get_value());
-        });
+        notifications.schedule_notification_remove(schedule_id.get_value());
     };
 
     view! {

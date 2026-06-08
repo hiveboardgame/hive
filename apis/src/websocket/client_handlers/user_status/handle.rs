@@ -4,12 +4,10 @@ use crate::{
     responses::UserResponse,
 };
 
-//use leptos::logging::log;
 use leptos::prelude::*;
 
 pub fn handle_user_status(user_update: UserUpdate) {
     let mut online_users = expect_context::<OnlineUsersSignal>();
-    //log!("{:?}", user_update);
     match user_update.status {
         UserStatus::Online => online_users.add(
             user_update.user.expect("User is online"),
@@ -20,9 +18,10 @@ pub fn handle_user_status(user_update: UserUpdate) {
     }
 }
 
-pub fn handle_user_status_batch(users: Vec<UserResponse>) {
+/// Applies an authoritative roster snapshot. The signal preserves IDs touched
+/// by `add`/`remove` since the matching `begin_resync` so a user who came online
+/// after the server began building the snapshot isn't dropped on apply.
+pub fn handle_user_status_snapshot(users: Vec<UserResponse>) {
     let mut online_users = expect_context::<OnlineUsersSignal>();
-    for user in users {
-        online_users.add(user, UserStatus::Online);
-    }
+    online_users.snapshot_apply(users);
 }

@@ -30,6 +30,16 @@ pub fn handle_game(game_update: GameUpdate) {
     }
 }
 
+pub fn handle_tv_snapshot(games: Vec<GameResponse>) {
+    let mut games_signal = expect_context::<GamesSignal>();
+    games_signal.live_snapshot_apply(games);
+}
+
+pub fn handle_urgent_games_snapshot(games: Vec<GameResponse>) {
+    let mut games_signal = expect_context::<GamesSignal>();
+    games_signal.urgent_snapshot_apply(games);
+}
+
 fn handle_reaction(gar: GameActionResponse) {
     let mut games = expect_context::<GamesSignal>();
     let update_notifier = expect_context::<UpdateNotifier>();

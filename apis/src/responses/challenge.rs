@@ -29,38 +29,84 @@ pub struct ChallengeResponse {
 use cfg_if::cfg_if;
 cfg_if! { if #[cfg(feature = "ssr")] {
 use db_lib::{
-    models::{Challenge, Rating, User},
+    models::Challenge,
     DbConn,
 };
 use anyhow::Result;
+use std::collections::HashSet;
 impl ChallengeResponse {
     pub async fn from_model(challenge: &Challenge, conn: &mut DbConn<'_>) -> Result<Self> {
-        let challenger = challenge.get_challenger(conn).await?;
-        ChallengeResponse::from_model_with_user(challenge, challenger, conn).await
+        let challenger = UserResponse::from_uuid(&challenge.challenger_id, conn).await?;
+        let opponent = match challenge.opponent_id {
+            Some(opponent_id) => Some(UserResponse::from_uuid(&opponent_id, conn).await?),
+            None => None,
+        };
+        Self::from_model_parts(challenge, challenger, opponent)
     }
 
-    pub async fn from_model_with_user(
-        challenge: &Challenge,
-        challenger: User,
+    pub async fn from_models_batch(
+        challenges: Vec<Challenge>,
         conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Self>> {
+        if challenges.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let mut user_ids = HashSet::new();
+        for challenge in &challenges {
+            user_ids.insert(challenge.challenger_id);
+            if let Some(opponent_id) = challenge.opponent_id {
+                user_ids.insert(opponent_id);
+            }
+        }
+
+        let user_ids: Vec<Uuid> = user_ids.into_iter().collect();
+        let users = UserResponse::from_uuids(&user_ids, conn).await?;
+
+        let mut responses = Vec::with_capacity(challenges.len());
+        for challenge in challenges {
+            let challenger = users.get(&challenge.challenger_id).cloned().ok_or_else(|| {
+                anyhow::anyhow!(
+                    "Challenger {} not found for challenge {}",
+                    challenge.challenger_id,
+                    challenge.id
+                )
+            })?;
+            let opponent = match challenge.opponent_id {
+                Some(opponent_id) => Some(users.get(&opponent_id).cloned().ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "Opponent {} not found for challenge {}",
+                        opponent_id,
+                        challenge.id
+                    )
+                })?),
+                None => None,
+            };
+            responses.push(Self::from_model_parts(&challenge, challenger, opponent)?);
+        }
+
+        Ok(responses)
+    }
+
+    fn from_model_parts(
+        challenge: &Challenge,
+        challenger: UserResponse,
+        opponent: Option<UserResponse>,
     ) -> Result<Self> {
-        let game_speed = GameSpeed::from_base_increment(challenge.time_base, challenge.time_increment);
-        let challenger_rating = Rating::for_uuid(&challenger.id, &game_speed, conn).await?;
-        let opponent = match challenge.opponent_id {
-            None => None,
-            Some(id) => Some(UserResponse::from_uuid(&id, conn).await?),
-        };
+        let game_speed =
+            GameSpeed::from_base_increment(challenge.time_base, challenge.time_increment);
+        let challenger_rating = challenger.rating_for_speed(&game_speed);
         Ok(ChallengeResponse {
             id: challenge.id,
             challenge_id: ChallengeId(challenge.nanoid.clone()),
-            challenger: UserResponse::from_uuid(&challenger.id, conn).await?,
+            challenger,
             opponent,
             game_type: challenge.game_type.clone(),
             rated: challenge.rated,
             visibility: ChallengeVisibility::from_str(&challenge.visibility)?,
             color_choice: ColorChoice::from_str(&challenge.color_choice)?,
             created_at: challenge.created_at,
-            challenger_rating: challenger_rating.rating as u64,
+            challenger_rating,
             time_mode: TimeMode::from_str(&challenge.time_mode)?,
             time_base: challenge.time_base,
             time_increment: challenge.time_increment,

@@ -46,12 +46,27 @@ pub enum ServerMessage {
     Game(Box<GameUpdate>),
     // sent to everyone in the game when a user joins the game
     Join(Uuid),
-    Ping { nonce: u64, value: f64 },
+    /// Authoritative lobby state sent on connect and Resync.
+    LobbySnapshot(Box<LobbySnapshot>),
+    Ping {
+        nonce: u64,
+        value: f64,
+    },
     Schedule(ScheduleUpdate),
     Tournament(TournamentUpdate),
     UserStatus(UserUpdate),
-    UserStatusBatch(Vec<UserResponse>),
     RedirectLink(String),
+}
+
+/// Authoritative best-effort lobby state sent on connect and Resync.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LobbySnapshot {
+    pub tournament_invitations: Vec<TournamentId>,
+    pub schedule_notifications: Vec<ScheduleResponse>,
+    pub urgent_games: Vec<GameResponse>,
+    pub challenges: Vec<ChallengeResponse>,
+    pub tv_games: Vec<GameResponse>,
+    pub online_users: Vec<UserResponse>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -72,6 +87,8 @@ pub enum TournamentUpdate {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum GameUpdate {
     Reaction(GameActionResponse),
+    /// Additive: server-pushed when a game becomes urgent (e.g. opponent moved,
+    /// draw offered). Client merges into the local `own` map.
     Urgent(Vec<GameResponse>),
     OwnGameRemoved(GameId),
     Tv(GameResponse),
@@ -89,10 +106,9 @@ pub struct GameActionResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ChallengeUpdate {
-    Created(ChallengeResponse),         // A new challenge was created
-    Removed(ChallengeId),               // A challenge was removed
-    Direct(ChallengeResponse),          // Player got directly invited to a game
-    Challenges(Vec<ChallengeResponse>), //
+    Created(ChallengeResponse), // A new challenge was created
+    Removed(ChallengeId),       // A challenge was removed
+    Direct(ChallengeResponse),  // Player got directly invited to a game
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

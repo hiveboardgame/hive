@@ -114,6 +114,13 @@ impl Rating {
             .await?)
     }
 
+    pub async fn for_uuids(uuids: &[Uuid], conn: &mut DbConn<'_>) -> Result<Vec<Self>, DbError> {
+        Ok(ratings_table
+            .filter(user_uid.eq_any(uuids))
+            .load(conn)
+            .await?)
+    }
+
     // Must be called inside the game-finalization transaction so these row locks
     // are held until the derived rating writes are complete.
     pub(crate) async fn update(

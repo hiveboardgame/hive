@@ -109,6 +109,10 @@ mod platform {
     const INITIAL_RECONNECT_DELAY_MS: u64 = 2_000;
     const MAX_RECONNECT_DELAY_MS: u64 = 30_000;
     const CONNECT_TIMEOUT_MS: u64 = 10_000;
+    /// Window in which a second wake event (visibilitychange + pageshow on
+    /// the same focus) is suppressed. Matches the server-side `RESYNC_COOLDOWN`
+    /// in `ws_hub.rs` so a duplicate that slips through is still cheap.
+    const RESYNC_DEBOUNCE_MS: u64 = 500;
 
     pub(super) fn connect(
         url: String,
@@ -153,19 +157,52 @@ mod platform {
         handle_response(m.clone());
     }
 
+    /// Clear each REPLACE-style signal's `resync_dirty` window. Must run
+    /// before sending `ClientRequest::Resync` so any incremental update that
+    /// arrives while the server is building the snapshot is correctly
+    /// flagged as "happened during resync" and preserved by `snapshot_apply`.
+    /// Caller must be inside the websocket owner scope.
+    fn begin_resync_all() {
+        use crate::providers::{
+            challenges::ChallengeStateSignal,
+            games::GamesSignal,
+            online_users::OnlineUsersSignal,
+            NotificationContext,
+            SchedulesContext,
+        };
+        if let Some(c) = use_context::<ChallengeStateSignal>() {
+            c.begin_resync();
+        }
+        if let Some(g) = use_context::<GamesSignal>() {
+            g.begin_resync();
+        }
+        if let Some(u) = use_context::<OnlineUsersSignal>() {
+            u.begin_resync();
+        }
+        if let Some(n) = use_context::<NotificationContext>() {
+            n.begin_resync();
+        }
+        if let Some(s) = use_context::<SchedulesContext>() {
+            s.begin_resync();
+        }
+    }
+
     fn install_wake_listeners(controls: &SocketControls) {
         let _ = use_event_listener(use_document(), visibilitychange, {
             let controls = controls.clone();
             move |_| {
                 if !document().hidden() {
-                    controls.reconnect_now();
+                    controls.refresh_on_wake();
                 }
             }
         });
         let _ = use_event_listener(use_window(), pageshow, {
             let controls = controls.clone();
-            move |_| controls.reconnect_now()
+            move |_| controls.refresh_on_wake()
         });
+        // `online` (network came back) almost always implies the WS is dead,
+        // so go straight to reconnect rather than issuing a Resync that would
+        // never reach the server.
         let _ = use_event_listener(use_window(), online, {
             let controls = controls.clone();
             move |_| controls.reconnect_now()
@@ -201,6 +238,11 @@ mod platform {
         reconnect_timer: StoredValue<Option<TimeoutHandle>>,
         connect_timeout: StoredValue<Option<TimeoutHandle>>,
         manually_closed: StoredValue<bool>,
+        /// `Some(handle)` while a recently-sent Resync still suppresses
+        /// follow-ups. Set on send, cleared after `RESYNC_DEBOUNCE_MS`. Also
+        /// dropped on close. Suppresses `visibilitychange`+`pageshow`
+        /// double-fire on wake; the server also enforces a matching cooldown.
+        resync_debounce_timer: StoredValue<Option<TimeoutHandle>>,
         ready_state: RwSignal<ConnectionReadyState>,
         message: RwSignal<Option<ServerResult>>,
         owner: Owner,
@@ -221,6 +263,7 @@ mod platform {
                 reconnect_timer: StoredValue::new(None),
                 connect_timeout: StoredValue::new(None),
                 manually_closed: StoredValue::new(false),
+                resync_debounce_timer: StoredValue::new(None),
                 ready_state,
                 message,
                 owner,
@@ -237,6 +280,17 @@ mod platform {
             self.clear_reconnect_timer();
             self.clear_connect_timeout();
             self.disconnect_current_socket();
+            // Every new socket gets a connect-time lobby snapshot from the
+            // server, so clear each REPLACE-style signal's dirty window here.
+            // Without this, an `add`/`remove` from the previous session would
+            // leak into the new session's `snapshot_apply` and preserve a
+            // stale ID forever. This covers every reconnect path: explicit
+            // `reconnect_now`, the `online` listener, `schedule_reconnect`'s
+            // backoff timer, and the connect-timeout retry — all funnel
+            // through this method.
+            self.owner.with(|| {
+                begin_resync_all();
+            });
             self.generation.update_value(|generation| *generation += 1);
             let generation = self.generation.get_value();
 
@@ -340,9 +394,18 @@ mod platform {
             self.manually_closed.set_value(true);
             self.clear_reconnect_timer();
             self.clear_connect_timeout();
+            self.clear_resync_debounce();
             self.reconnect_attempts.set_value(0);
             self.disconnect_current_socket();
             self.ready_state.set(ConnectionReadyState::Closed);
+        }
+
+        fn clear_resync_debounce(&self) {
+            self.resync_debounce_timer.update_value(|timer| {
+                if let Some(timer) = timer.take() {
+                    timer.clear();
+                }
+            });
         }
 
         fn reconnect_now(&self) {
@@ -359,6 +422,49 @@ mod platform {
                 return;
             }
             self.connect();
+        }
+
+        /// On tab focus: Resync if the socket is open, otherwise hard
+        /// reconnect (whose connect path sends the same snapshot).
+        ///
+        /// `visibilitychange` and `pageshow` often fire in quick succession on
+        /// wake (especially BFCache restores on iOS). The `resync_debounce_timer`
+        /// suppresses the second one so we don't pay for two full lobby
+        /// snapshots per focus.
+        fn refresh_on_wake(&self) {
+            if self.manually_closed.get_value() {
+                return;
+            }
+            if self.resync_debounce_timer.with_value(|t| t.is_some()) {
+                return;
+            }
+            if self.socket_is_open() {
+                // Open socket: server replies to Resync without going through
+                // `connect()`, so reset the dirty windows here so an
+                // incremental update arriving during the snapshot is
+                // preserved by `snapshot_apply`.
+                self.owner.with(|| {
+                    begin_resync_all();
+                });
+                self.send(&ClientRequest::Resync);
+            } else {
+                // Closed: `reconnect_now` → `connect()` will call
+                // `begin_resync_all` itself, so don't double-call here.
+                self.reconnect_now();
+            }
+            self.arm_resync_debounce();
+        }
+
+        fn arm_resync_debounce(&self) {
+            let controls = self.clone();
+            if let Ok(handle) = set_timeout_with_handle(
+                move || {
+                    controls.resync_debounce_timer.set_value(None);
+                },
+                Duration::from_millis(RESYNC_DEBOUNCE_MS),
+            ) {
+                self.resync_debounce_timer.set_value(Some(handle));
+            }
         }
 
         fn disconnect_current_socket(&self) {

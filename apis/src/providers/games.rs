@@ -1,4 +1,7 @@
-use super::AuthContext;
+use super::{
+    snapshot::{apply_snapshot_hash_map, retain_snapshot_hash_map, snapshot_keeps},
+    AuthContext,
+};
 use crate::responses::{AccountResponse, GameResponse};
 use chrono::{DateTime, Utc};
 use hive_lib::{Color, GameControl};
@@ -6,7 +9,7 @@ use leptos::prelude::*;
 use shared_types::{GameId, TimeMode};
 use std::{
     cmp::Ordering,
-    collections::{BinaryHeap, HashMap},
+    collections::{BinaryHeap, HashMap, HashSet},
 };
 
 #[derive(Clone, Debug, Copy)]
@@ -14,6 +17,13 @@ pub struct GamesSignal {
     pub own: RwSignal<OwnGames>,
     pub live: RwSignal<LiveGames>,
     user: Signal<Option<AccountResponse>>,
+    /// Live (TV) game IDs touched since the last `begin_resync`. Consulted by
+    /// `live_snapshot_apply` so a TV game that arrived during the resync
+    /// window isn't dropped by an older snapshot.
+    live_resync_dirty: StoredValue<HashSet<GameId>>,
+    /// Own/urgent game IDs touched since the last `begin_resync`. Same role
+    /// for `urgent_snapshot_apply`.
+    own_resync_dirty: StoredValue<HashSet<GameId>>,
 }
 
 impl GamesSignal {
@@ -22,7 +32,14 @@ impl GamesSignal {
             own: RwSignal::new(OwnGames::new()),
             live: RwSignal::new(LiveGames::new()),
             user,
+            live_resync_dirty: StoredValue::new(HashSet::new()),
+            own_resync_dirty: StoredValue::new(HashSet::new()),
         }
+    }
+
+    pub fn begin_resync(&self) {
+        self.live_resync_dirty.update_value(|d| d.clear());
+        self.own_resync_dirty.update_value(|d| d.clear());
     }
 
     pub fn visit(&mut self, time_mode: TimeMode, game_id: GameId) -> Option<GameId> {
@@ -100,6 +117,15 @@ impl GamesSignal {
     }
 
     pub fn own_games_add(&mut self, game: GameResponse) {
+        self.own_games_insert(game, true);
+    }
+
+    fn own_games_insert(&mut self, game: GameResponse, mark_dirty: bool) {
+        if mark_dirty {
+            self.own_resync_dirty.update_value(|d| {
+                d.insert(game.game_id.clone());
+            });
+        }
         let mut next_required = false;
         let mut player_color = Color::White;
         self.user.with_untracked(|a| {
@@ -195,6 +221,9 @@ impl GamesSignal {
     }
 
     pub fn own_games_remove(&mut self, game_id: &GameId) {
+        self.own_resync_dirty.update_value(|d| {
+            d.insert(game_id.clone());
+        });
         self.own.update(|s| {
             s.realtime.remove(game_id);
             s.next_realtime.retain(|gp| gp.game_id != *game_id);
@@ -211,18 +240,27 @@ impl GamesSignal {
         }
     }
 
+    fn should_show_on_live_tv(&self, game: &GameResponse) -> bool {
+        let viewer = self.user.with_untracked(|a| a.as_ref().map(|u| u.id));
+        tv_visible_to(
+            game.finished,
+            game.white_player.uid,
+            game.black_player.uid,
+            viewer,
+        )
+    }
+
     pub fn live_games_add(&mut self, game: GameResponse) {
-        let mut should_show = true;
-        self.user.with_untracked(|a| {
-            if let Some(user) = a {
-                if game.black_player.uid == user.id || game.white_player.uid == user.id {
-                    should_show = false;
-                }
-            }
+        self.live_resync_dirty.update_value(|d| {
+            d.insert(game.game_id.clone());
         });
         if game.finished {
-            self.live_games_remove(&game.game_id);
-        } else if should_show {
+            self.live.update(|s| {
+                s.live_games.remove(&game.game_id);
+            });
+            return;
+        }
+        if self.should_show_on_live_tv(&game) {
             self.live.update(|s| {
                 s.live_games.insert(game.game_id.to_owned(), game);
             });
@@ -230,9 +268,80 @@ impl GamesSignal {
     }
 
     pub fn live_games_remove(&mut self, game_id: &GameId) {
+        self.live_resync_dirty.update_value(|d| {
+            d.insert(game_id.clone());
+        });
         self.live.update(|s| {
             s.live_games.remove(game_id);
         });
+    }
+
+    /// Race-safe replace of the TV set. Local entries touched by `live_games_add`
+    /// or `live_games_remove` since the last `begin_resync` are preserved even
+    /// if absent from the snapshot — those incremental updates ran AFTER the
+    /// server's snapshot was collected, so they're newer.
+    pub fn live_snapshot_apply(&mut self, games: Vec<GameResponse>) {
+        let viewer_uid = self.user.with_untracked(|a| a.as_ref().map(|u| u.id));
+        let to_insert: Vec<GameResponse> = games
+            .into_iter()
+            .filter(|game| {
+                tv_visible_to(
+                    game.finished,
+                    game.white_player.uid,
+                    game.black_player.uid,
+                    viewer_uid,
+                )
+            })
+            .collect();
+        let dirty: HashSet<GameId> = self.live_resync_dirty.with_value(|d| d.clone());
+        let snapshot_ids: HashSet<GameId> = to_insert.iter().map(|g| g.game_id.clone()).collect();
+        self.live.update(|s| {
+            apply_snapshot_hash_map(
+                &mut s.live_games,
+                &snapshot_ids,
+                &dirty,
+                to_insert,
+                |game| game.game_id.clone(),
+            );
+        });
+        self.live_resync_dirty.update_value(|d| d.clear());
+    }
+
+    /// Race-safe replace of the user's urgent games. Same shape as
+    /// `live_snapshot_apply`, but spans the three time-mode buckets and the
+    /// matching priority heaps inside `OwnGames`.
+    pub fn urgent_snapshot_apply(&mut self, games: Vec<GameResponse>) {
+        let dirty: HashSet<GameId> = self.own_resync_dirty.with_value(|d| d.clone());
+        let snapshot_ids: HashSet<GameId> = games.iter().map(|g| g.game_id.clone()).collect();
+        self.own.update(|s| {
+            retain_snapshot_hash_map(&mut s.realtime, &snapshot_ids, &dirty);
+            retain_snapshot_hash_map(&mut s.untimed, &snapshot_ids, &dirty);
+            retain_snapshot_hash_map(&mut s.correspondence, &snapshot_ids, &dirty);
+            s.next_realtime = s
+                .next_realtime
+                .drain()
+                .filter(|gp| snapshot_keeps(&gp.game_id, &snapshot_ids, &dirty))
+                .collect();
+            s.next_untimed = s
+                .next_untimed
+                .drain()
+                .filter(|gp| snapshot_keeps(&gp.game_id, &snapshot_ids, &dirty))
+                .collect();
+            s.next_correspondence = s
+                .next_correspondence
+                .drain()
+                .filter(|gp| snapshot_keeps(&gp.game_id, &snapshot_ids, &dirty))
+                .collect();
+        });
+        for game in games {
+            if dirty.contains(&game.game_id) {
+                continue;
+            }
+            self.own_games_insert(game, false);
+        }
+        // End this resync window after the authoritative snapshot has been
+        // merged with locally dirty updates.
+        self.own_resync_dirty.update_value(|d| d.clear());
     }
 }
 
@@ -310,4 +419,60 @@ impl Default for LiveGames {
 pub fn provide_games() {
     let auth_context = expect_context::<AuthContext>();
     provide_context(GamesSignal::new(auth_context.user))
+}
+
+/// A game is shown on TV unless it's finished or the viewer is one of the
+/// players (their own game is rendered elsewhere). Pulled out as a free
+/// function so the predicate can be unit-tested without a Leptos runtime.
+fn tv_visible_to(
+    finished: bool,
+    white_uid: uuid::Uuid,
+    black_uid: uuid::Uuid,
+    viewer_uid: Option<uuid::Uuid>,
+) -> bool {
+    if finished {
+        return false;
+    }
+    match viewer_uid {
+        Some(uid) => white_uid != uid && black_uid != uid,
+        None => true,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::tv_visible_to;
+    use uuid::Uuid;
+
+    #[test]
+    fn anonymous_viewer_sees_any_ongoing_game() {
+        let white = Uuid::new_v4();
+        let black = Uuid::new_v4();
+        assert!(tv_visible_to(false, white, black, None));
+    }
+
+    #[test]
+    fn finished_games_are_hidden_even_from_strangers() {
+        let white = Uuid::new_v4();
+        let black = Uuid::new_v4();
+        let stranger = Uuid::new_v4();
+        assert!(!tv_visible_to(true, white, black, None));
+        assert!(!tv_visible_to(true, white, black, Some(stranger)));
+    }
+
+    #[test]
+    fn players_dont_see_their_own_game_on_tv() {
+        let white = Uuid::new_v4();
+        let black = Uuid::new_v4();
+        assert!(!tv_visible_to(false, white, black, Some(white)));
+        assert!(!tv_visible_to(false, white, black, Some(black)));
+    }
+
+    #[test]
+    fn third_party_sees_the_game() {
+        let white = Uuid::new_v4();
+        let black = Uuid::new_v4();
+        let stranger = Uuid::new_v4();
+        assert!(tv_visible_to(false, white, black, Some(stranger)));
+    }
 }
