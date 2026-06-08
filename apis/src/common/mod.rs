@@ -32,6 +32,7 @@ pub use server_result::{
     ExternalServerError,
     GameActionResponse,
     GameUpdate,
+    LobbySnapshot,
     ScheduleUpdate,
     ServerMessage,
     ServerResult,

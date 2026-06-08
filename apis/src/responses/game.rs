@@ -260,10 +260,10 @@ impl GameResponse {
 
         let mut result = Vec::new();
         for game in games {
-            let white_player = users_map.get(&game.white_id).ok_or_else(|| {
+            let white_player = users_map.get(&game.white_id).cloned().ok_or_else(|| {
                 anyhow::anyhow!("White player not found for game {}", game.id)
             })?;
-            let black_player = users_map.get(&game.black_id).ok_or_else(|| {
+            let black_player = users_map.get(&game.black_id).cloned().ok_or_else(|| {
                 anyhow::anyhow!("Black player not found for game {}", game.id)
             })?;
 
@@ -272,7 +272,7 @@ impl GameResponse {
             let history = Box::new(History::new_from_str(&game.history)?);
             let state = Box::new(State::new_from_history(&history)?);
 
-            result.push(Self::new_from_batch(&game, state, white_player.clone(), black_player.clone(), tournament.cloned()).await?);
+            result.push(Self::new_from_batch(&game, state, white_player, black_player, tournament.cloned()).await?);
         }
 
         Ok(result)
@@ -302,7 +302,7 @@ impl GameResponse {
         tournament: Option<TournamentAbstractResponse>,
     ) -> Result<Self> {
         let (white_rating, black_rating, white_rating_change, black_rating_change) = {
-            if let Finished(_) = GameStatus::from_str(&game.game_status).expect("GameStatus parsed") {
+            if let Finished(_) = GameStatus::from_str(&game.game_status)? {
                 (
                     game.white_rating,
                     game.black_rating,

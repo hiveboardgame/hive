@@ -4,6 +4,12 @@ use crate::{
 };
 use leptos::prelude::*;
 use leptos_router::hooks::{use_location, use_navigate};
+use shared_types::TournamentId;
+
+pub fn handle_tournament_invitation_snapshot(invitations: Vec<TournamentId>) {
+    let notifications = expect_context::<NotificationContext>();
+    notifications.tournament_invitations_snapshot_apply(invitations);
+}
 
 pub fn handle_tournament(tournament: TournamentUpdate) {
     let notify_update = expect_context::<UpdateNotifier>().tournament_update;
@@ -20,21 +26,15 @@ pub fn handle_tournament(tournament: TournamentUpdate) {
         TournamentUpdate::Declined(tournament_id)
         | TournamentUpdate::Joined(tournament_id)
         | TournamentUpdate::Uninvited(tournament_id) => {
-            notifications.tournament_invitations.update(|invitations| {
-                invitations.remove(&tournament_id);
-            });
+            notifications.tournament_invitation_remove(&tournament_id);
         }
         TournamentUpdate::Invited(tournament_id) => {
             notify_update.set(tournament_id.clone());
-            notifications.tournament_invitations.update(|invitations| {
-                invitations.insert(tournament_id.clone());
-            });
+            notifications.tournament_invitation_insert(tournament_id);
         }
         TournamentUpdate::Deleted(t_id) => {
             notify_update.set(t_id.clone());
-            notifications.tournament_invitations.update(|t| {
-                t.remove(&t_id);
-            });
+            notifications.tournament_invitation_remove(&t_id);
             let location = use_location();
             let current_path = location.pathname.get();
             let tournament_path = format!("/tournament/{t_id}");
@@ -46,9 +46,7 @@ pub fn handle_tournament(tournament: TournamentUpdate) {
         }
         TournamentUpdate::Started(tournament_id) => {
             notify_update.set(tournament_id.clone());
-            notifications.tournament_invitations.update(|invitations| {
-                invitations.remove(&tournament_id);
-            });
+            notifications.tournament_invitation_remove(&tournament_id);
             notifications.tournament_started.update(|tournaments| {
                 tournaments.insert(tournament_id.clone());
             });

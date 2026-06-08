@@ -1,5 +1,5 @@
 use super::{
-    messages::MessageDestination,
+    messages::{MessageDestination, SocketTx},
     telemetry::{
         read_proc_vm_bytes,
         DestKind,
@@ -11,24 +11,8 @@ use super::{
     WebsocketData,
 };
 use crate::{
-    common::{
-        ChallengeUpdate,
-        GameUpdate,
-        ScheduleUpdate,
-        ServerMessage,
-        ServerResult,
-        TournamentUpdate,
-        UserStatus,
-        UserUpdate,
-    },
-    responses::{
-        ChallengeResponse,
-        GameResponse,
-        HeartbeatResponse,
-        ScheduleResponse,
-        TournamentResponse,
-        UserResponse,
-    },
+    common::{GameUpdate, ServerMessage, ServerResult, UserStatus, UserUpdate},
+    responses::{HeartbeatResponse, UserResponse},
 };
 use bytes::Bytes;
 use chrono::Utc;
@@ -36,7 +20,7 @@ use codee::{binary::MsgpackSerdeCodec, Encoder};
 use dashmap::DashMap;
 use db_lib::{
     get_conn,
-    models::{Challenge, Game, Schedule, Tournament, TournamentInvitation, User},
+    models::{Game, Tournament, User},
     DbPool,
     DB_POOL_MAX_SIZE,
 };
@@ -89,6 +73,13 @@ const FINISHED_GAME_GRACE: Duration = Duration::from_secs(5);
 /// player returns).
 const GAME_RESPONSE_CACHE_MAX_AGE: Duration = Duration::from_secs(300);
 
+/// Per-socket minimum gap between accepted `ClientRequest::Resync` requests.
+/// Browsers fire `visibilitychange` + `pageshow` in quick succession on wake;
+/// without this each tab would do the full snapshot work twice. The client
+/// also debounces, but a misbehaving or modified client must not be able to
+/// drain the pool by spamming Resync.
+const RESYNC_COOLDOWN: Duration = Duration::from_millis(500);
+
 /// WsHub — concurrent, non-actor replacement for `WsServer`.
 ///
 /// Shutdown: there is currently no graceful-shutdown signal; sessions are dropped
@@ -97,16 +88,17 @@ pub struct WsHub {
     /// `user_id → (socket_id → Sender)`. Outer DashMap shards on user_id;
     /// inner DashMap shards on socket_id. We never hold outer write while holding
     /// any inner lock, which keeps the two-level locking deadlock-free.
-    sessions: DashMap<Uuid, DashMap<Uuid, mpsc::Sender<Bytes>>>,
+    pub(in crate::websocket) sessions: DashMap<Uuid, DashMap<Uuid, mpsc::Sender<Bytes>>>,
     membership: RwLock<Membership>,
     pub(crate) data: Arc<WebsocketData>,
-    pool: DbPool,
+    pub(in crate::websocket) pool: DbPool,
     /// Bounds the number of concurrent `load_user_state` tasks so connect-burst
     /// can't blow up pool-connection usage or transient loader retention.
     loader_permits: Arc<Semaphore>,
     /// Last TV broadcast timestamp per game. Used by `should_send_tv` to
-    /// coalesce per-move global fanout. Evicted on game finalization.
-    last_tv_broadcast: DashMap<GameId, Instant>,
+    /// coalesce per-move global fanout. Evicted on game finalization. Also
+    /// doubles as the "currently on TV" set consumed by `send_lobby_snapshot`.
+    pub(in crate::websocket) last_tv_broadcast: DashMap<GameId, Instant>,
     /// Cached tournament membership (players ∪ organizers). Refreshed lazily
     /// on dispatch when older than `TOURNAMENT_MEMBERS_TTL`. Bounds DB load
     /// from chatty tournament lobbies.
@@ -115,6 +107,9 @@ pub struct WsHub {
     /// their final websocket fanout has completed. Heartbeat treats these like
     /// finished rows and gives the dispatcher grace to send the abort message.
     pending_deleted_games: DashMap<GameId, PendingDeletedGame>,
+    /// Per-socket timestamp of the last accepted Resync. Used to enforce
+    /// `RESYNC_COOLDOWN`. Entries are evicted on `on_disconnect`.
+    last_resync: DashMap<Uuid, Instant>,
 }
 
 #[derive(Default)]
@@ -267,7 +262,31 @@ impl WsHub {
             last_tv_broadcast: DashMap::new(),
             tournament_members: DashMap::new(),
             pending_deleted_games: DashMap::new(),
+            last_resync: DashMap::new(),
         })
+    }
+
+    /// Atomically check the resync cooldown and stamp `now` on success. Returns
+    /// true if the caller should proceed with a snapshot, false if the socket
+    /// is within `RESYNC_COOLDOWN` of its last accepted resync. Used by
+    /// `ResyncHandler`.
+    pub(in crate::websocket) fn allow_resync(&self, socket_id: Uuid) -> bool {
+        use dashmap::mapref::entry::Entry;
+        let now = Instant::now();
+        match self.last_resync.entry(socket_id) {
+            Entry::Vacant(e) => {
+                e.insert(now);
+                true
+            }
+            Entry::Occupied(mut e) => {
+                if now.duration_since(*e.get()) >= RESYNC_COOLDOWN {
+                    *e.get_mut() = now;
+                    true
+                } else {
+                    false
+                }
+            }
+        }
     }
 
     fn lobby() -> GameId {
@@ -372,6 +391,8 @@ impl WsHub {
             if socket_was_present {
                 self.data.telemetry.dec_active_socket();
             }
+
+            self.last_resync.remove(&socket_id);
 
             let socket_pair = (user_id, socket_id);
             m.fanout.unsubscribe_socket(socket_pair);
@@ -813,7 +834,11 @@ impl WsHub {
         outcome
     }
 
-    fn send_own_state_via_tx(&self, tx: &mpsc::Sender<Bytes>, bytes: &Bytes) {
+    pub(in crate::websocket) fn send_own_state_via_tx(
+        &self,
+        tx: &mpsc::Sender<Bytes>,
+        bytes: &Bytes,
+    ) {
         if !matches!(self.send_via_tx(tx, DestKind::User, bytes), SendOutcome::Ok) {
             self.data.telemetry.inc_own_state_drop();
         }
@@ -1028,7 +1053,6 @@ impl WsHub {
     /// Otherwise coalesces to at most once per `TV_THROTTLE`.
     pub fn should_send_tv(&self, game_id: &GameId, is_final: bool) -> bool {
         if is_final {
-            // Clear the throttle entry so any post-finish call starts fresh.
             self.last_tv_broadcast.remove(game_id);
             return true;
         }
@@ -1052,7 +1076,7 @@ impl WsHub {
     /// Returns true iff the specific socket we were spawned for is still in
     /// `sessions`. Used by `load_user_state` to bail when a fast disconnect
     /// (or disconnect+reconnect with a different socket_id) raced our DB load.
-    fn is_socket_connected(&self, user_id: Uuid, socket_id: Uuid) -> bool {
+    pub(in crate::websocket) fn is_socket_connected(&self, user_id: Uuid, socket_id: Uuid) -> bool {
         self.sessions
             .get(&user_id)
             .is_some_and(|sockets| sockets.contains_key(&socket_id))
@@ -1136,170 +1160,55 @@ impl WsHub {
             return;
         }
 
-        // Own-state messages are sent before the online roster so they always
-        // arrive even when the 128-message queue would otherwise fill with
-        // roster entries in a large lobby.
+        // The only connect-time side effect that doesn't belong in the resync
+        // snapshot is the Online broadcast — the snapshot owns everything
+        // else (invitations, schedules, urgent games, challenges, TV, roster).
         let user_model = if user.authed {
-            User::find_by_uuid(&user_id, &mut conn).await.ok()
+            match User::find_by_uuid(&user_id, &mut conn).await {
+                Ok(user_model) => {
+                    if broadcast_online {
+                        // Re-check before the Online broadcast: the slow DB lookup gives
+                        // plenty of time for a disconnect to race in. If it has, our Online
+                        // would override the Offline that on_disconnect already sent and
+                        // leave the lobby ghosting a user that's actually gone.
+                        if !self.is_socket_connected(user_id, socket_id) {
+                            return;
+                        }
+                        if let Ok(user_response) =
+                            UserResponse::from_model(&user_model, &mut conn).await
+                        {
+                            // Re-check after the await: from_model is a DB round-trip during
+                            // which on_disconnect may have run and broadcast Offline. Without
+                            // this guard, fanout_lobby would overwrite that Offline with a
+                            // stale Online.
+                            if !self.is_socket_connected(user_id, socket_id) {
+                                return;
+                            }
+                            let message =
+                                ServerResult::Ok(Box::new(ServerMessage::UserStatus(UserUpdate {
+                                    status: UserStatus::Online,
+                                    user: Some(user_response),
+                                    username: user.username.clone(),
+                                })));
+                            if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
+                                self.fanout_lobby(&Bytes::from(serialized), DestKind::Global);
+                            }
+                        }
+                    }
+                    Some(user_model)
+                }
+                Err(e) => {
+                    error!("Failed to load authenticated websocket user {user_id}: {e}");
+                    return;
+                }
+            }
         } else {
             None
         };
 
-        if let Some(user_model) = user_model {
-            if broadcast_online {
-                // Re-check before the Online broadcast: the slow DB lookup gives
-                // plenty of time for a disconnect to race in. If it has, our Online
-                // would override the Offline that on_disconnect already sent and
-                // leave the lobby ghosting a user that's actually gone.
-                if !self.is_socket_connected(user_id, socket_id) {
-                    return;
-                }
-                // Announce the new user's Online status to lobby.
-                if let Ok(user_response) = UserResponse::from_model(&user_model, &mut conn).await {
-                    // Re-check after the await: from_model is a DB round-trip during
-                    // which on_disconnect may have run and broadcast Offline. Without
-                    // this guard, fanout_lobby would overwrite that Offline with a
-                    // stale Online.
-                    if !self.is_socket_connected(user_id, socket_id) {
-                        return;
-                    }
-                    let message =
-                        ServerResult::Ok(Box::new(ServerMessage::UserStatus(UserUpdate {
-                            status: UserStatus::Online,
-                            user: Some(user_response),
-                            username: user.username.clone(),
-                        })));
-                    if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                        self.fanout_lobby(&Bytes::from(serialized), DestKind::Global);
-                    }
-                }
-            }
-
-            // Urgent games. get_games_with_notifications already filters
-            // finished=false; from_games_batch coalesces user/tournament
-            // lookups into ~2 queries instead of 3 per game.
-            let urgent = match user_model.get_games_with_notifications(&mut conn).await {
-                Ok(v) => v,
-                Err(e) => {
-                    error!("Failed to get urgent games for user {user_id}: {e}");
-                    Vec::new()
-                }
-            };
-            if !urgent.is_empty() {
-                if let Ok(games) = GameResponse::from_games_batch(urgent, &mut conn).await {
-                    let message = ServerResult::Ok(Box::new(ServerMessage::Game(Box::new(
-                        GameUpdate::Urgent(games),
-                    ))));
-                    if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                        self.send_own_state_via_tx(&tx, &Bytes::from(serialized));
-                    }
-                }
-            }
-
-            // Tournament invitations.
-            if let Ok(invitations) =
-                TournamentInvitation::find_by_user(&user_model.id, &mut conn).await
-            {
-                for invitation in invitations {
-                    if let Ok(response) =
-                        TournamentResponse::from_uuid(&invitation.tournament_id, &mut conn).await
-                    {
-                        let message = ServerResult::Ok(Box::new(ServerMessage::Tournament(
-                            TournamentUpdate::Invited(response.tournament_id.clone()),
-                        )));
-                        if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                            self.send_own_state_via_tx(&tx, &Bytes::from(serialized));
-                        }
-                    }
-                }
-            }
-
-            // Schedule notifications.
-            if let Ok(schedules) = Schedule::find_user_notifications(user_model.id, &mut conn).await
-            {
-                for schedule in schedules {
-                    let is_opponent = schedule.opponent_id == user_model.id;
-                    if let Ok(response) = ScheduleResponse::from_model(schedule, &mut conn).await {
-                        let schedule_update = if is_opponent {
-                            ScheduleUpdate::Proposed(response)
-                        } else {
-                            ScheduleUpdate::Accepted(response)
-                        };
-                        let message =
-                            ServerResult::Ok(Box::new(ServerMessage::Schedule(schedule_update)));
-                        if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                            self.send_own_state_via_tx(&tx, &Bytes::from(serialized));
-                        }
-                    }
-                }
-            }
-
-            // Challenges (public excluding self + own + direct).
-            let mut responses = Vec::new();
-            if let Ok(challenges) =
-                Challenge::get_public_exclude_user(user_model.id, &mut conn).await
-            {
-                for challenge in challenges {
-                    if let Ok(response) = ChallengeResponse::from_model(&challenge, &mut conn).await
-                    {
-                        responses.push(response);
-                    }
-                }
-            }
-            if let Ok(challenges) = Challenge::get_own(user_model.id, &mut conn).await {
-                for challenge in challenges {
-                    if let Ok(response) = ChallengeResponse::from_model(&challenge, &mut conn).await
-                    {
-                        responses.push(response);
-                    }
-                }
-            }
-            if let Ok(challenges) = Challenge::direct_challenges(user_model.id, &mut conn).await {
-                for challenge in challenges {
-                    if let Ok(response) = ChallengeResponse::from_model(&challenge, &mut conn).await
-                    {
-                        responses.push(response);
-                    }
-                }
-            }
-            let message = ServerResult::Ok(Box::new(ServerMessage::Challenge(
-                ChallengeUpdate::Challenges(responses),
-            )));
-            if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                self.send_own_state_via_tx(&tx, &Bytes::from(serialized));
-            }
-        } else {
-            // Anonymous: only public challenges.
-            let mut responses = Vec::new();
-            if let Ok(challenges) = Challenge::get_public(&mut conn).await {
-                for challenge in challenges {
-                    if let Ok(response) = ChallengeResponse::from_model(&challenge, &mut conn).await
-                    {
-                        responses.push(response);
-                    }
-                }
-            }
-            let message = ServerResult::Ok(Box::new(ServerMessage::Challenge(
-                ChallengeUpdate::Challenges(responses),
-            )));
-            if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                self.send_own_state_via_tx(&tx, &Bytes::from(serialized));
-            }
-        }
-
-        // Online roster: send last so own-state messages above are never
-        // crowded out in a large lobby. One batched query + one channel send,
-        // so a 150-user lobby doesn't overflow the 128-slot socket buffer.
-        let existing_user_ids: Vec<Uuid> = self.sessions.iter().map(|e| *e.key()).collect();
-        if !existing_user_ids.is_empty() {
-            if let Ok(map) = UserResponse::from_uuids(&existing_user_ids, &mut conn).await {
-                let users: Vec<UserResponse> = map.into_values().collect();
-                let message = ServerResult::Ok(Box::new(ServerMessage::UserStatusBatch(users)));
-                if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                    self.send_own_state_via_tx(&tx, &Bytes::from(serialized));
-                }
-            }
-        }
+        let socket = SocketTx { socket_id, tx };
+        self.send_lobby_snapshot(&mut conn, user_id, &socket, user_model.as_ref())
+            .await;
     }
 }
 
@@ -1754,6 +1663,48 @@ mod tests {
         assert!(hub.should_send_tv(&game_id, false));
         assert!(!hub.should_send_tv(&game_id, false));
         assert!(!hub.should_send_tv(&game_id, false));
+    }
+
+    /// `visibilitychange` + `pageshow` fire in close succession on wake; the
+    /// server-side cooldown stops a second snapshot from running for the same
+    /// socket. Per-socket so multi-tab users still get fresh data for the tab
+    /// that actually woke.
+    #[tokio::test]
+    async fn allow_resync_rate_limits_per_socket() {
+        let hub = make_hub().await;
+        let sid_a = Uuid::new_v4();
+        let sid_b = Uuid::new_v4();
+
+        assert!(hub.allow_resync(sid_a), "first resync for socket A allowed");
+        assert!(
+            !hub.allow_resync(sid_a),
+            "second resync within cooldown blocked"
+        );
+        assert!(
+            hub.allow_resync(sid_b),
+            "different socket not rate-limited by socket A"
+        );
+    }
+
+    /// Disconnect must evict the socket's resync stamp so a fast disconnect
+    /// then reconnect with the same socket_id (extremely unlikely but legal)
+    /// doesn't carry over a stale cooldown.
+    #[tokio::test]
+    async fn allow_resync_evicts_on_disconnect() {
+        let hub = make_hub().await;
+        let uid = Uuid::new_v4();
+        let sid = Uuid::new_v4();
+        let _rx = hub.register_socket(uid, sid);
+
+        assert!(hub.allow_resync(sid));
+        assert!(!hub.allow_resync(sid));
+
+        hub.on_disconnect(sid, uid, "anon".to_string());
+
+        assert!(
+            hub.allow_resync(sid),
+            "disconnect must clear the per-socket cooldown stamp"
+        );
     }
 
     // Regression (#1): cache keyed only on updated_at would serve stale

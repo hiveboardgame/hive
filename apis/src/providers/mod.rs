@@ -17,6 +17,7 @@ mod ping;
 mod referer;
 pub mod refocus;
 pub mod schedules;
+mod snapshot;
 mod sounds;
 pub mod timer;
 pub mod websocket;
@@ -40,7 +41,7 @@ pub use games_search_context::{
     GamesSearchContext,
     ResultType,
 };
-pub use notifications::{provide_notifications, NotificationContext};
+pub use notifications::{provide_notifications, NotificationContext, ScheduleNotificationKind};
 pub use ping::{provide_ping, PingContext, FRESH_WINDOW_SECS};
 pub use referer::{provide_referer, RefererContext};
 pub use schedules::{provide_schedules, SchedulesContext};

@@ -6,6 +6,7 @@ pub mod busybee;
 pub mod client_handlers;
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
+    mod lobby_snapshot;
     mod messages;
     mod start_conn;
     mod telemetry;
