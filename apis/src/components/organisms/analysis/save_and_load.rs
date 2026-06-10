@@ -1,6 +1,6 @@
 use crate::providers::{
     analysis::{AnalysisSignal, AnalysisTree},
-    game_state::GameStateSignal,
+    game_state::{GameStateStore, View},
 };
 use hive_lib::History;
 use leptos::{html, logging, prelude::*};
@@ -63,7 +63,7 @@ fn blob_and_filename(tree: String) -> (Blob, String) {
 #[component]
 pub fn LoadTree() -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>().0;
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let input_ref = NodeRef::<html::Input>::new();
 
     let from_pgn = move |string: JsValue| {
@@ -72,8 +72,11 @@ pub fn LoadTree() -> impl IntoView {
             .and_then(|string| History::from_pgn_str(string).ok())
             .and_then(|history| hive_lib::State::new_from_history(&history).ok())
             .map(|state| {
-                game_state.signal.update(|gs| gs.state = state.clone());
-                let tree = AnalysisTree::from_loaded_state(game_state, &state);
+                let tree = AnalysisTree::from_loaded_state(&state);
+                game_state.update(|gs| {
+                    gs.state = state;
+                    gs.view = View::Game;
+                });
                 analysis.set(tree);
             })
     };
@@ -81,15 +84,15 @@ pub fn LoadTree() -> impl IntoView {
         string
             .as_string()
             .and_then(|string| serde_json::from_str::<AnalysisTree>(&string).ok())
-            .map(|tree| {
-                analysis.set(tree.clone());
-                if let Some(node) = tree.current_node {
-                    if let Ok(node_id) = node.get_node_id() {
-                        analysis.update(|a| {
-                            a.update_node(node_id, Some(game_state));
-                        });
-                    }
+            .map(|mut tree| {
+                if let Some(node_id) = tree
+                    .current_node
+                    .as_ref()
+                    .and_then(|node| node.get_node_id().ok())
+                {
+                    tree.update_node(node_id, Some(game_state));
                 }
+                analysis.set(tree);
             })
     };
     let oninput = move |_| {

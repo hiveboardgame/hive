@@ -1,4 +1,4 @@
-use crate::providers::game_state::GameStateSignal;
+use crate::providers::game_state::{GameStateStore, GameStateStoreFields};
 use hive_lib::{History, State};
 use leptos::prelude::*;
 
@@ -12,9 +12,10 @@ fn build_history_state(history_moves: &[(String, String)], history_turn: Option<
     State::new_from_history(&history).expect("Got state from history")
 }
 
-pub fn selected_history_state(game_state: GameStateSignal) -> Memo<State> {
-    let history_turn = create_read_slice(game_state.signal, |gs| gs.history_turn);
-    let history_moves = create_read_slice(game_state.signal, |gs| gs.state.history.moves.clone());
+pub fn selected_history_state(game_state: GameStateStore) -> Memo<State> {
+    let history_turn = game_state.history_turn();
+    let state = game_state.state();
+    let history_moves = Memo::new(move |_| state.with(|state| state.history.moves.clone()));
 
-    Memo::new(move |_| history_moves.with(|moves| build_history_state(moves, history_turn())))
+    Memo::new(move |_| history_moves.with(|moves| build_history_state(moves, history_turn.get())))
 }

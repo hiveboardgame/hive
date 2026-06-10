@@ -12,7 +12,7 @@ use crate::{
     hiveground::{analysis_hiveground_interaction, selected_history_state},
     providers::{
         analysis::{AnalysisSignal, AnalysisTree, TreeNode},
-        game_state::GameStateSignal,
+        game_state::GameStateStore,
         AuthContext,
     },
     responses::GameResponse,
@@ -28,7 +28,7 @@ pub struct ToggleStates(pub RwSignal<HashSet<i32>>);
 
 #[component]
 pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let auth_context = expect_context::<AuthContext>();
     let history_state = selected_history_state(game_state);
     let params = use_params_map();
@@ -55,8 +55,7 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
         game_response.rated
             && matches!(game_response.game_status, GameStatus::InProgress)
             && game_response.time_mode == TimeMode::RealTime
-            && (Some(user_id) == Some(game_response.white_player.uid)
-                || Some(user_id) == Some(game_response.black_player.uid))
+            && game_response.user_is_player(Some(user_id))
     };
 
     let game_resource = Resource::new(game_id, move |game_id| async move {
@@ -159,7 +158,7 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
 #[component]
 fn AnalysisInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>().0;
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let moves = move || {
         analysis.with(|a| {
             let tree = &a.tree;

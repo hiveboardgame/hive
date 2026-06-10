@@ -1,7 +1,7 @@
 use super::reaction::{handle_control, handle_new_game};
 use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate},
-    providers::{game_state::GameStateSignal, games::GamesSignal, UpdateNotifier},
+    providers::{game_state::GameStateStore, games::GamesSignal, UpdateNotifier},
     responses::GameResponse,
 };
 use hive_lib::{GameStatus, History, State};
@@ -114,7 +114,7 @@ fn handle_reaction(gar: GameActionResponse) {
     };
 }
 
-pub fn reset_game_state_for_takeback(game: &GameResponse, game_state: &mut GameStateSignal) {
+pub fn reset_game_state_for_takeback(game: &GameResponse, game_state: &GameStateStore) {
     game_state.view_game();
     game_state.set_game_response(game.clone());
     let mut history = History::new();
@@ -125,11 +125,9 @@ pub fn reset_game_state_for_takeback(game: &GameResponse, game_state: &mut GameS
     };
 }
 
-pub fn reset_game_state(game: &GameResponse, mut game_state: GameStateSignal) {
+pub fn reset_game_state(game: &GameResponse, game_state: GameStateStore) {
     game_state.full_reset();
-    game_state
-        .signal
-        .update_untracked(|gs| gs.game_id = Some(game.game_id.clone()));
+    game_state.set_game_id(game.game_id.clone());
     game_state.set_game_response(game.clone());
     let mut history = History::new();
     game.history.clone_into(&mut history.moves);

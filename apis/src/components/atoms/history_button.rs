@@ -1,6 +1,6 @@
 use crate::{
     components::organisms::side_board::move_query_signal,
-    providers::game_state::{GameStateSignal, View},
+    providers::game_state::{GameStateStore, GameStateStoreFields, View},
 };
 use leptos::{
     html,
@@ -19,18 +19,15 @@ pub enum HistoryNavigation {
     MobileLast,
 }
 
-pub fn sync_play_move_query(
-    game_state_signal: GameStateSignal,
-    set_move: &SignalSetter<Option<usize>>,
-) {
-    game_state_signal.signal.with_untracked(|gs| {
-        let move_param = match gs.view {
-            View::Game => None,
-            View::History => gs.history_turn.map(|turn| turn + 1),
-        };
-
-        set_move.set(move_param);
-    });
+pub fn sync_play_move_query(game_state: GameStateStore, set_move: &SignalSetter<Option<usize>>) {
+    let move_param = match game_state.view().get_untracked() {
+        View::Game => None,
+        View::History => game_state
+            .history_turn()
+            .get_untracked()
+            .map(|turn| turn + 1),
+    };
+    set_move.set(move_param);
 }
 
 #[component]
@@ -39,10 +36,10 @@ pub fn HistoryButton(
     #[prop(optional)] post_action: Option<Callback<()>>,
     #[prop(optional)] node_ref: Option<NodeRef<html::Button>>,
 ) -> impl IntoView {
-    let game_state_signal = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let (_move, set_move) = move_query_signal();
-    let is_last_turn = game_state_signal.is_last_turn_as_signal();
-    let is_first_turn = game_state_signal.is_first_turn_as_signal();
+    let is_last_turn = game_state.is_last_turn_as_signal();
+    let is_first_turn = game_state.is_first_turn_as_signal();
     let cloned_action = action.clone();
     let nav_buttons_style = "flex place-items-center justify-center hover:bg-pillbug-teal dark:hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 m-1 h-7 rounded-md border-cyan-500 dark:border-button-twilight border-2 drop-shadow-lg disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
     let icon = match action {
@@ -60,11 +57,11 @@ pub fn HistoryButton(
         HistoryNavigation::Previous | HistoryNavigation::First => is_first_turn(),
     };
     let debounced_action = debounce(std::time::Duration::from_millis(10), move |_| {
-        send_action(&action, game_state_signal);
+        send_action(&action, game_state);
         if let Some(post_action) = post_action {
             post_action.run(())
         }
-        sync_play_move_query(game_state_signal, &set_move);
+        sync_play_move_query(game_state, &set_move);
     });
     let _definite_node_ref = node_ref.unwrap_or_default();
 
@@ -81,17 +78,14 @@ pub fn HistoryButton(
     }
 }
 
-fn send_action(action: &HistoryNavigation, mut game_state_signal: GameStateSignal) {
+fn send_action(action: &HistoryNavigation, game_state: GameStateStore) {
     match action {
-        HistoryNavigation::First => game_state_signal.first_history_turn(),
+        HistoryNavigation::First => game_state.first_history_turn(),
         HistoryNavigation::Last => {
-            game_state_signal.signal.update(|game_state| {
-                game_state.view_history();
-                game_state.history_turn = game_state.state.turn.checked_sub(1);
-            });
+            game_state.view_history_at_last_turn();
         }
-        HistoryNavigation::Next => game_state_signal.next_history_turn(),
-        HistoryNavigation::Previous => game_state_signal.previous_history_turn(),
-        HistoryNavigation::MobileLast => game_state_signal.view_game(),
+        HistoryNavigation::Next => game_state.next_history_turn(),
+        HistoryNavigation::Previous => game_state.previous_history_turn(),
+        HistoryNavigation::MobileLast => game_state.view_game(),
     }
 }

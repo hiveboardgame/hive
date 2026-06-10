@@ -9,7 +9,7 @@ use crate::{
     providers::{
         analysis::AnalysisSignal,
         config::ConfigOpts,
-        game_state::GameStateSignal,
+        game_state::{GameStateStore, GameStateStoreFields},
         ApiRequestsProvider,
         AuthContext,
         Config,
@@ -21,7 +21,7 @@ use leptos::prelude::*;
 use uuid::Uuid;
 
 pub fn live_hiveground_interaction() -> HivegroundInteraction {
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let auth_context = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>();
     let current_confirm = expect_context::<CurrentConfirm>().0;
@@ -42,7 +42,7 @@ pub fn live_hiveground_interaction() -> HivegroundInteraction {
 
 pub fn analysis_hiveground_interaction() -> HivegroundInteraction {
     let analysis = expect_context::<AnalysisSignal>();
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let api = expect_context::<ApiRequestsProvider>();
     let current_confirm = expect_context::<CurrentConfirm>().0;
     let config = expect_context::<Config>().0;
@@ -63,7 +63,7 @@ pub fn analysis_hiveground_interaction() -> HivegroundInteraction {
 }
 
 struct HivegroundActionHandler {
-    game_state: GameStateSignal,
+    game_state: GameStateStore,
     analysis: Option<AnalysisSignal>,
     api: ApiRequestsProvider,
     current_confirm: Memo<MoveConfirm>,
@@ -105,25 +105,25 @@ impl HivegroundActionHandler {
     }
 
     fn select_board_piece(&self, piece: Piece, position: Position) {
-        let mut game_state = self.game_state;
+        let game_state = self.game_state;
         if game_state.is_move_allowed(self.analysis.is_some()) {
             game_state.show_moves(piece, position);
         }
     }
 
     fn select_reserve_piece(&self, piece: Piece, position: Position) {
-        let mut game_state = self.game_state;
+        let game_state = self.game_state;
         if game_state.is_move_allowed(self.analysis.is_some()) {
             game_state.show_spawns(piece, position);
         }
     }
 
     fn select_target(&self, position: Position) {
-        let mut game_state = self.game_state;
+        let game_state = self.game_state;
         if game_state.is_move_allowed(self.analysis.is_some()) {
             let was_selected = game_state
-                .signal
-                .with_untracked(|gs| gs.move_info.target_position == Some(position));
+                .move_info()
+                .with_untracked(|move_info| move_info.target_position == Some(position));
             game_state.set_target(position);
             let confirm = self.current_confirm.get_untracked();
             if confirm == MoveConfirm::Single || (confirm == MoveConfirm::Double && was_selected) {
@@ -133,7 +133,7 @@ impl HivegroundActionHandler {
     }
 
     fn reset_selection(&self) {
-        let mut game_state = self.game_state;
+        let game_state = self.game_state;
         game_state.reset();
     }
 
@@ -152,20 +152,16 @@ impl HivegroundActionHandler {
 }
 
 fn live_capabilities(
-    game_state: GameStateSignal,
+    game_state: GameStateStore,
     user: Signal<Option<AccountResponse>>,
     config: Signal<ConfigOpts>,
 ) -> HivegroundCapabilities {
     let user_id = user.with(|user| user.as_ref().map(|user| user.id));
     let allow_preselect = config.with(|config| config.allow_preselect);
-    let (white_id, black_id, turn_color, game_status) = game_state.signal.with(|gs| {
-        (
-            gs.white_id,
-            gs.black_id,
-            gs.state.turn_color,
-            gs.state.game_status.clone(),
-        )
-    });
+    let white_id = game_state.white_id().get();
+    let black_id = game_state.black_id().get();
+    let turn_color = game_state.state().with(|state| state.turn_color);
+    let game_status = game_state.state().with(|state| state.game_status.clone());
     let is_player = user_is_player(user_id, white_id, black_id);
     let current_player_id = match turn_color {
         Color::White => white_id,
@@ -193,7 +189,7 @@ fn live_capabilities(
 }
 
 fn preselect_piece(
-    game_state: GameStateSignal,
+    game_state: GameStateStore,
     config: Signal<ConfigOpts>,
     user: Signal<Option<AccountResponse>>,
     piece: Piece,
@@ -201,10 +197,11 @@ fn preselect_piece(
     piece_type: PieceType,
 ) {
     let allow_preselect = config.with_untracked(|config| config.allow_preselect);
-    let (is_player, current_turn_color) = game_state.signal.with_untracked(|gs| {
-        let user_id = user.with_untracked(|user| user.as_ref().map(|user| user.id));
-        (gs.uid_is_player(user_id), gs.state.turn_color)
-    });
+    let user_id = user.with_untracked(|user| user.as_ref().map(|user| user.id));
+    let white_id = game_state.white_id().get_untracked();
+    let black_id = game_state.black_id().get_untracked();
+    let is_player = user_is_player(user_id, white_id, black_id);
+    let current_turn_color = game_state.state().with_untracked(|state| state.turn_color);
     let is_selectable_piece = allow_preselect
         && match piece_type {
             PieceType::Board => true,
@@ -216,12 +213,12 @@ fn preselect_piece(
         return;
     }
 
-    game_state.signal.update(|game_state| {
-        game_state.move_info.active = Some((piece, piece_type));
+    game_state.move_info().update(|move_info| {
+        move_info.active = Some((piece, piece_type));
         if piece_type == PieceType::Board {
-            game_state.move_info.current_position = Some(position);
+            move_info.current_position = Some(position);
         } else {
-            game_state.move_info.reserve_position = Some(position);
+            move_info.reserve_position = Some(position);
         }
     });
 }

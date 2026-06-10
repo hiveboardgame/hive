@@ -61,9 +61,10 @@ pub fn UserSearch(
             .unwrap_or_default()
     };
 
-    let user_search = Resource::new(
-        move || (pattern(), excluded_users()),
-        async move |(pattern, filtered_users)| {
+    let user_search = LocalResource::new(move || {
+        let pattern = pattern();
+        let filtered_users = excluded_users();
+        async move {
             if pattern.len() < MIN_SEARCH_LENGTH {
                 None
             } else {
@@ -76,8 +77,8 @@ pub fn UserSearch(
                     .collect();
                 Some(btree)
             }
-        },
-    );
+        }
+    });
 
     let mut clear_callback: Option<Callback<()>> = None;
     let wrapped_actions: Vec<UserAction> = actions

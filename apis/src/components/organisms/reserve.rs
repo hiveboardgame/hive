@@ -13,7 +13,7 @@ use crate::{
     },
     providers::{
         analysis::AnalysisSignal,
-        game_state::{GameStateSignal, View},
+        game_state::{GameStateStore, GameStateStoreFields, View},
         AuthContext,
         Config,
     },
@@ -35,7 +35,7 @@ pub fn Reserve(
 ) -> impl IntoView {
     let interaction = interaction.disable_stack_inspection();
     let analysis = use_context::<AnalysisSignal>().is_some();
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let auth_context = expect_context::<AuthContext>();
     let config = expect_context::<Config>().0;
     let tile_opts = Signal::derive(move || config().tile);
@@ -50,32 +50,36 @@ pub fn Reserve(
             }
         }
     };
-    // TODO: Should be a Store, this is hacky
-    let board_view = create_read_slice(game_state.signal, |gs| gs.view.clone());
-    let move_info = create_read_slice(game_state.signal, |gs| gs.move_info.clone());
-    let state = create_read_slice(game_state.signal, |gs| gs.state.clone());
+    let board_view = Signal::derive(move || game_state.view().get());
+    let move_info = game_state.move_info();
+    let state = game_state.state();
     let last_turn = game_state.is_last_turn_as_signal();
-    let status = create_read_slice(game_state.signal, |gs| {
-        gs.game_response
-            .as_ref()
-            .map_or(GameStatus::NotStarted, |g| g.game_status.clone())
+    let game_response = game_state.game_response();
+    let status = Signal::derive(move || {
+        game_response.with(|game_response| {
+            game_response
+                .as_ref()
+                .map_or(GameStatus::NotStarted, |game| game.game_status.clone())
+        })
     });
     let user_id = Signal::derive(move || {
         auth_context
             .user
             .with_untracked(|a| a.as_ref().map(|user| user.id))
     });
-    let user_color = game_state.user_color_as_signal(user_id);
-    let tournament = create_read_slice(game_state.signal, |gs| {
-        gs.game_response
-            .as_ref()
-            .is_some_and(|gr| gr.tournament.is_some())
+    let user_color = game_state.color_for_user_signal(user_id);
+    let tournament = Signal::derive(move || {
+        game_response.with(|game_response| {
+            game_response
+                .as_ref()
+                .is_some_and(|game| game.tournament.is_some())
+        })
     });
     let reserve_sepia_class = move || {
         if !analysis {
             return "";
         }
-        if color() != state.with(|s| s.turn_color) {
+        if color() != state.with(|state| state.turn_color) {
             return "sepia-[.75]";
         }
         ""

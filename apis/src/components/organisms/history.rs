@@ -4,7 +4,7 @@ use crate::{
         organisms::side_board::move_query_signal,
     },
     hiveground::HivegroundInteraction,
-    providers::game_state::{self, GameStateSignal},
+    providers::game_state::{GameStateStore, GameStateStoreFields},
 };
 use hive_lib::{GameStatus, State};
 use leptos::{html, prelude::*};
@@ -21,22 +21,21 @@ pub fn HistoryMove(
     repetition: bool,
     parent_div: NodeRef<html::Div>,
 ) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let div_ref = NodeRef::<html::Div>::new();
     let (_move, set_move) = move_query_signal();
     let onclick = move |_| {
         game_state.show_history_turn(turn);
-        set_move.set(
-            game_state
-                .signal
-                .with_untracked(|gs| gs.history_turn.map(|v| v + 1)),
-        );
+        set_move.set(Some(turn + 1));
     };
-    let history_turn = create_read_slice(game_state.signal, |gs| gs.history_turn);
-    let is_realtime = create_read_slice(game_state.signal, |gs| {
-        gs.game_response
-            .as_ref()
-            .is_some_and(|gr| gr.time_mode == TimeMode::RealTime)
+    let history_turn = Signal::derive(move || game_state.history_turn().get());
+    let game_response = game_state.game_response();
+    let is_realtime = Signal::derive(move || {
+        game_response.with(|game_response| {
+            game_response
+                .as_ref()
+                .is_some_and(|game| game.time_mode == TimeMode::RealTime)
+        })
     });
     let get_class = move || {
         let base_class = "col-span-2 p-1 h-auto max-h-6 leading-6 transition-transform duration-300 transform odd:ml-1 odd:justify-self-start even:mr-1 even:justify-self-end hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95";
@@ -64,11 +63,13 @@ pub fn HistoryMove(
         if turn < 2 {
             return None;
         }
-        let response = game_state.signal.with(|gs| gs.game_response.clone())?;
-        let increment = Duration::from_secs(u64::try_from(response.time_increment?).ok()?);
-        let time_left = response.recorded_time_left(turn)?;
-        let prev_time = response.recorded_time_left(turn - 2)?;
-        let seconds = prev_time.checked_add(increment)?.as_secs_f64() - time_left.as_secs_f64();
+        let seconds = game_response.with(|game_response| {
+            let response = game_response.as_ref()?;
+            let increment = Duration::from_secs(u64::try_from(response.time_increment?).ok()?);
+            let time_left = response.recorded_time_left(turn)?;
+            let prev_time = response.recorded_time_left(turn - 2)?;
+            Some(prev_time.checked_add(increment)?.as_secs_f64() - time_left.as_secs_f64())
+        })?;
         if seconds > 60.0 {
             Some(format!(" ({:.1} m)", seconds / 60.0))
         } else {
@@ -89,35 +90,40 @@ pub fn History(
     history_state: Memo<State>,
     #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
-    let game_state = expect_context::<game_state::GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let params = use_params_map();
     let queries = use_query_map();
-    let state = create_read_slice(game_state.signal, |gs| gs.state.clone());
-    let repetitions = create_read_slice(game_state.signal, |gs| {
-        gs.game_response.as_ref().map(|gr| gr.repetitions.clone())
+    let state = game_state.state();
+    let game_response = game_state.game_response();
+    let repetitions = Memo::new(move |_| {
+        game_response.with(|game_response| game_response.as_ref().map(|gr| gr.repetitions.clone()))
     });
-    let history_moves = move || {
-        state()
-            .history
-            .moves
-            .into_iter()
-            .enumerate()
-            .map(|(i, (piece, pos))| (i, piece, pos))
-            .collect::<Vec<(usize, String, String)>>()
-    };
+    let history_moves = Memo::new(move |_| {
+        state.with(|state| {
+            state
+                .history
+                .moves
+                .iter()
+                .cloned()
+                .enumerate()
+                .map(|(i, (piece, pos))| (i, piece, pos))
+                .collect::<Vec<(usize, String, String)>>()
+        })
+    });
 
     let parent = NodeRef::<html::Div>::new();
-    let game_result = move || match state().game_status {
+    let game_result = move || match state.with(|state| state.game_status.clone()) {
         GameStatus::Finished(result) => result.to_string(),
         _ => "".to_string(),
     };
 
-    let conclusion = create_read_slice(game_state.signal, |gs| {
-        if let Some(game) = &gs.game_response {
-            game.conclusion.pretty_string()
-        } else {
-            String::from("No data")
-        }
+    let conclusion = Signal::derive(move || {
+        game_response.with(|game_response| {
+            game_response
+                .as_ref()
+                .map(|game| game.conclusion.pretty_string())
+                .unwrap_or_else(|| String::from("No data"))
+        })
     });
 
     let is_repetition = move |turn: usize| {

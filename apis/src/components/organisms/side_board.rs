@@ -6,7 +6,7 @@ use crate::{
     hiveground::HivegroundInteraction,
     providers::{
         chat::Chat,
-        game_state::{GameStateSignal, View},
+        game_state::{GameStateStore, GameStateStoreFields, View},
         AuthContext,
     },
 };
@@ -42,21 +42,19 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
         TabView::History => "History".to_string(),
         TabView::Chat => "Chat".to_string(),
     };
-    let mut game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     view! {
         <div
             on:click=move |_| {
                 if tab() == TabView::Chat {
                     chat.seen_messages(game_id());
-                    let is_game_view = game_state.signal.with_untracked(|gs| gs.view == View::Game);
-                    if is_game_view {
+                    if game_state.view().with_untracked(|view| matches!(view, View::Game)) {
                         set_move.set(None);
                     }
                 }
                 if name == TabView::History {
                     game_state.view_history();
-                    let history_turn = game_state.signal.with_untracked(|gs| gs.history_turn);
-                    set_move.set(history_turn.map(|v| v + 1));
+                    set_move.set(game_state.history_turn().get_untracked().map(|v| v + 1));
                 } else if name == TabView::Reserve {
                     game_state.view_game();
                     set_move.set(None);
@@ -90,16 +88,11 @@ pub fn SideboardTabs(
     history_state: Memo<HiveState>,
     #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let auth_context = expect_context::<AuthContext>();
     let user = auth_context.user;
-    let white_and_black = create_read_slice(game_state.signal, |gs| (gs.white_id, gs.black_id));
-    let show_buttons = Signal::derive(move || {
-        user().is_some_and(|user| {
-            let (white_id, black_id) = white_and_black();
-            Some(user.id) == black_id || Some(user.id) == white_id
-        })
-    });
+    let user_id = Signal::derive(move || user.with(|user| user.as_ref().map(|user| user.id)));
+    let show_buttons = game_state.user_is_player_signal(user_id);
     view! {
         <div class=format!(
             "bg-reserve-dawn dark:bg-reserve-twilight h-full flex flex-col select-none col-span-2 border-x-2 border-black dark:border-white row-span-4 row-start-2 relative {extend_tw_classes}",

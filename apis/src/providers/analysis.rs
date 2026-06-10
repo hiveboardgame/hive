@@ -1,5 +1,5 @@
 use crate::{
-    providers::game_state::{GameState, GameStateSignal},
+    providers::game_state::{GameState, GameStateStore},
     responses::GameResponse,
 };
 use bimap::BiMap;
@@ -28,10 +28,10 @@ pub struct AnalysisTree {
 }
 
 impl AnalysisTree {
-    pub fn new_blank_analysis(game_state: GameStateSignal, game_type: GameType) -> Self {
+    pub fn new_blank_analysis(game_state: GameStateStore, game_type: GameType) -> Self {
         let tree = Tree::new(Some("analysis"));
         let hashes = BiMap::new();
-        game_state.signal.update(|gs| {
+        game_state.0.try_update_untracked(|gs| {
             *gs = GameState::new_with_game_type(game_type);
             gs.view = game_state::View::Game;
         });
@@ -44,7 +44,7 @@ impl AnalysisTree {
         }
     }
 
-    pub fn from_loaded_state(game_state: GameStateSignal, state: &State) -> Self {
+    pub fn from_loaded_state(state: &State) -> Self {
         let mut tree = Tree::new(Some("analysis"));
         let mut hashes = BiMap::new();
         let mut previous = None;
@@ -68,10 +68,6 @@ impl AnalysisTree {
 
         let current_node = previous.and_then(|p| tree.get_node_by_id(&p));
 
-        game_state.signal.update(|gs| {
-            gs.view = game_state::View::Game;
-        });
-
         Self {
             current_node,
             tree,
@@ -82,7 +78,7 @@ impl AnalysisTree {
 
     pub fn from_game_response(
         game_response: &GameResponse,
-        game_state: GameStateSignal,
+        game_state: GameStateStore,
         move_number: Option<usize>,
     ) -> Option<Self> {
         let state = game_response.create_state();
@@ -116,7 +112,7 @@ impl AnalysisTree {
 
         let move_count = state.history.moves.len();
 
-        game_state.signal.update(|gs| {
+        game_state.update(|gs| {
             gs.view = game_state::View::Game;
             gs.game_id = Some(game_response.game_id.clone());
             gs.state = state;
@@ -131,7 +127,7 @@ impl AnalysisTree {
     }
 
     pub fn from_uhp(
-        game_state: GameStateSignal,
+        game_state: GameStateStore,
         uhp_string: impl Into<String>,
     ) -> Result<Self, GameError> {
         let normalized_uhp = normalize_uhp_metadata(uhp_string);
@@ -142,15 +138,16 @@ impl AnalysisTree {
         };
         let state = State::new_from_history(&history)?;
 
-        game_state.signal.update(|gs| {
-            gs.state = state.clone();
+        let tree = Self::from_loaded_state(&state);
+        game_state.update(|gs| {
+            gs.state = state;
             gs.view = game_state::View::Game;
         });
 
-        Ok(Self::from_loaded_state(game_state, &state))
+        Ok(tree)
     }
 
-    pub fn update_node(&mut self, node_id: i32, game: Option<GameStateSignal>) -> Option<()> {
+    pub fn update_node(&mut self, node_id: i32, game: Option<GameStateStore>) -> Option<()> {
         let moves = self
             .tree
             .get_ancestor_ids(&node_id)
@@ -183,7 +180,7 @@ impl AnalysisTree {
             .map(|v| v.turn);
 
         if let Some(g) = game {
-            g.signal.update(|gs| {
+            g.update(|gs| {
                 gs.state = state;
                 gs.history_turn = history_turn;
                 gs.move_info.reset();
@@ -239,11 +236,11 @@ impl AnalysisTree {
         self.current_node = self.tree.get_node_by_id(&new_id);
     }
 
-    pub fn reset(&mut self, game_state: GameStateSignal) {
+    pub fn reset(&mut self, game_state: GameStateStore) {
         self.current_node = None;
         self.tree = Tree::new(Some("analysis"));
         self.hashes.clear();
-        game_state.signal.update(|gs| {
+        game_state.update(|gs| {
             *gs = GameState::new_with_game_type(self.game_type);
             gs.view = game_state::View::Game;
         });

@@ -1,4 +1,4 @@
-use std::{fs, path::PathBuf};
+use std::{fmt::Write, fs, path::PathBuf};
 
 use actix_web::{get, http::header, web, HttpResponse, Responder};
 
@@ -137,10 +137,14 @@ fn cache_version(asset_entries: &[(String, PathBuf)]) -> String {
         hasher.update([0xff]);
     }
 
-    format!("{:x}", hasher.finalize())
-        .chars()
-        .take(16)
-        .collect()
+    hasher
+        .finalize()
+        .iter()
+        .take(8)
+        .fold(String::with_capacity(16), |mut version, byte| {
+            let _ = write!(&mut version, "{byte:02x}");
+            version
+        })
 }
 
 fn path_to_uri(site_root: &str, path: &str) -> String {

@@ -2,7 +2,7 @@ use crate::{
     common::{CurrentConfirm, MoveConfirm},
     components::molecules::{live_timer::LiveTimer, user_with_rating::UserWithRating},
     providers::{
-        game_state::GameStateSignal,
+        game_state::{GameStateStore, GameStateStoreFields},
         timer::TimerSignal,
         ApiRequestsProvider,
         AuthContext,
@@ -21,12 +21,12 @@ pub enum Placement {
 
 #[component]
 pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
-    let mut game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let auth_context = expect_context::<AuthContext>();
     let current_confirm = expect_context::<CurrentConfirm>().0;
     let user = auth_context.user;
 
-    let black_id = create_read_slice(game_state.signal, |gs| gs.black_id);
+    let black_id = Signal::derive(move || game_state.black_id().get());
     let player_is_black =
         Memo::new(move |_| user().is_some_and(|user| Some(user.id) == black_id()));
     let side = Signal::derive(move || match (player_is_black(), placement) {

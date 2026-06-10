@@ -7,7 +7,7 @@ use crate::{
     hiveground::HivegroundInteraction,
     providers::{
         analysis::AnalysisSignal,
-        game_state::{GameState, GameStateSignal, View},
+        game_state::{GameStateStore, GameStateStoreFields, View},
         Config,
     },
 };
@@ -158,7 +158,7 @@ enum StackExpansionResetKey {
 
 #[component]
 pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let analysis = use_context::<AnalysisSignal>();
     let orientation_signal = expect_context::<OrientationSignal>();
     let config = expect_context::<Config>().0;
@@ -172,12 +172,11 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
     let g_ref = NodeRef::<svg::G>::new();
     let div_ref = NodeRef::<html::Div>::new();
     let last_turn = game_state.is_last_turn_as_signal();
-    let board_view = create_read_slice(game_state.signal, |gs| gs.view.clone());
     let in_analysis = analysis.is_some();
-    let stack_expansion_reset_key = create_read_slice(game_state.signal, move |gs| {
-        stack_expansion_reset_key(gs, in_analysis)
-    });
-    let game_status = create_read_slice(game_state.signal, |gs| gs.state.game_status.clone());
+    let board_view = Signal::derive(move || game_state.view().get());
+    let stack_expansion_reset_key =
+        Memo::new(move |_| stack_expansion_reset_key(game_state, in_analysis));
+    let game_status = game_state.game_status();
     let board_style = move || {
         if orientation_signal.orientation_vertical.get() {
             "flex grow min-h-0"
@@ -207,8 +206,8 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
     };
 
     let current_center = game_state
-        .signal
-        .with_untracked(|gs| gs.state.board.center_coordinates());
+        .state()
+        .with_untracked(|state| state.board.center_coordinates());
 
     let straight = config.with_untracked(|c| c.tile.design == TileDesign::ThreeD);
     let tile_opts = Signal::derive(move || config.with(|c| c.tile.clone()));
@@ -514,7 +513,7 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
 fn setup_stack_expansion_events(
     viewbox_ref: NodeRef<svg::Svg>,
     interaction: HivegroundInteraction,
-    reset_key: Signal<StackExpansionResetKey>,
+    reset_key: Memo<StackExpansionResetKey>,
 ) {
     let stack_touch_start = RwSignal::new(None::<(i32, i32)>);
 
@@ -632,16 +631,29 @@ fn setup_stack_expansion_events(
     });
 }
 
-fn stack_expansion_reset_key(game_state: &GameState, in_analysis: bool) -> StackExpansionResetKey {
-    if game_state.view == View::History && !game_state.is_last_turn() && !in_analysis {
-        let turn = game_state.history_turn;
-        let hash = turn.and_then(|turn| game_state.state.history.hashes.get(turn).copied());
+fn stack_expansion_reset_key(
+    game_state: GameStateStore,
+    in_analysis: bool,
+) -> StackExpansionResetKey {
+    let view = game_state.view().get();
+    let history_turn = game_state.history_turn().get();
+    let (state_turn, current_hash, history_hash) = game_state.state().with(|state| {
+        (
+            state.turn,
+            state.hashes.last().copied(),
+            history_turn.and_then(|turn| state.history.hashes.get(turn).copied()),
+        )
+    });
+
+    if view == View::History && history_turn != state_turn.checked_sub(1) && !in_analysis {
+        let turn = history_turn;
+        let hash = history_hash;
         return StackExpansionResetKey::HistoryTurn { turn, hash };
     }
 
     StackExpansionResetKey::CurrentTurn {
-        turn: game_state.state.turn,
-        hash: game_state.state.hashes.last().copied(),
+        turn: state_turn,
+        hash: current_hash,
     }
 }
 

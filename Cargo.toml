@@ -70,7 +70,7 @@ markdown = "1.0.0"
 nanoid = "0.4"
 rand = "0.9"
 regex = "1.11"
-reactive_stores = { version = "0.3" }
+reactive_stores = { version = "0.4" }
 reqwest = { version = "0.13.1", features = ["json"] }
 serde = { version = "1" }
 serde_json = { version = "1" }
@@ -101,6 +101,7 @@ web-sys = { version = "0.3.85", features = [
     "Event",
     "HtmlDocument",
     "MessageEvent",
+    "Navigator",
     "SvgPoint",
     "SvgsvgElement",
     "SvgGraphicsElement",

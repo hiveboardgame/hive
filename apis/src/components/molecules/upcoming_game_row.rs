@@ -53,13 +53,14 @@ pub fn UpcomingGameRow(
         })
     };
 
-    let user_is_player = move || {
+    let white_id = game.white_player.uid;
+    let black_id = game.black_player.uid;
+    let user_is_player = Signal::derive(move || {
         auth_context.user.with(|user| {
-            user.as_ref().is_some_and(|u| {
-                u.username == white_username.get_value() || u.username == black_username.get_value()
-            })
+            user.as_ref()
+                .is_some_and(|user| user.id == white_id || user.id == black_id)
         })
-    };
+    });
 
     view! {
         <div class="flex flex-col p-4 w-full rounded-lg duration-300 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
