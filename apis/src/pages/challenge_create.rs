@@ -18,13 +18,16 @@ pub fn ChallengeCreate(#[prop(optional, into)] opponent: Signal<Option<String>>)
     let i18n = use_i18n();
     let params = expect_context::<Store<ChallengeParams>>();
     let api = expect_context::<ApiRequestsProvider>().0;
-    let auth_context = expect_context::<AuthContext>();
+    let user = expect_context::<AuthContext>().user;
+    let is_guest = move || user.with(|a| a.as_ref().is_some_and(|account| account.user.guest));
     let create_challenge = Callback::new(move |color_choice| {
         let api = api.get();
         let direct_opponent = opponent.get_untracked();
         let opponent_exists = direct_opponent.is_some();
+        // Guests play casual only, and via shareable links (never the public lobby).
+        let guest = is_guest();
 
-        let (upper_rating, lower_rating) = auth_context.user.with(|acc_opt| {
+        let (upper_rating, lower_rating) = user.with(|acc_opt| {
             if let Some(account) = acc_opt {
                 let time_data = params.time_signals().get();
                 let game_speed =
@@ -53,20 +56,18 @@ pub fn ChallengeCreate(#[prop(optional, into)] opponent: Signal<Option<String>>)
             }
         });
         let details = ChallengeDetails {
-            rated: params.rated().get_untracked(),
+            rated: !guest && params.rated().get_untracked(),
             game_type: if params.with_expansions().get_untracked() {
                 GameType::MLP
             } else {
                 GameType::Base
             },
-            visibility: if !opponent_exists {
-                if params.is_public().get_untracked() {
-                    ChallengeVisibility::Public
-                } else {
-                    ChallengeVisibility::Private
-                }
-            } else {
+            visibility: if opponent_exists {
                 ChallengeVisibility::Direct
+            } else if !guest && params.is_public().get_untracked() {
+                ChallengeVisibility::Public
+            } else {
+                ChallengeVisibility::Private
             },
             opponent: direct_opponent,
             color_choice,
@@ -141,14 +142,16 @@ pub fn ChallengeCreate(#[prop(optional, into)] opponent: Signal<Option<String>>)
             <div class="flex flex-col items-center">
                 <TimeSelect is_tournament=false params on_value_change=time_change allowed_values />
             </div>
-            <div class="flex gap-1 p-1">
-                {t!(i18n, home.custom_game.casual)}
-                <SimpleSwitchWithCallback
-                    checked=params.rated().into()
-                    action=rated_callback
-                    disabled=untimed_no_rated
-                /> {t!(i18n, home.custom_game.rated)}
-            </div>
+            <Show when=move || !is_guest()>
+                <div class="flex gap-1 p-1">
+                    {t!(i18n, home.custom_game.casual)}
+                    <SimpleSwitchWithCallback
+                        checked=params.rated().into()
+                        action=rated_callback
+                        disabled=untimed_no_rated
+                    /> {t!(i18n, home.custom_game.rated)}
+                </div>
+            </Show>
             <div class="flex gap-1 p-1">
                 Basic
                 <SimpleSwitchWithCallback
@@ -157,7 +160,7 @@ pub fn ChallengeCreate(#[prop(optional, into)] opponent: Signal<Option<String>>)
                 />Full
             </div>
 
-            <Show when=move || opponent.get().is_none()>
+            <Show when=move || opponent.get().is_none() && !is_guest()>
                 <div class="flex gap-1 p-1">
                     {t!(i18n, home.custom_game.private)}
                     <SimpleSwitchWithCallback

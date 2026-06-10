@@ -29,7 +29,7 @@ pub async fn register(
     password_confirmation: String,
     pathname: String,
 ) -> Result<(), ServerFnError> {
-    use crate::functions::db::pool;
+    use crate::functions::{auth::identity::uuid, db::pool};
     use actix_identity::Identity;
     use actix_web::HttpMessage;
     use argon2::{
@@ -54,13 +54,30 @@ pub async fn register(
         .map_err(ServerFnError::new)?
         .to_string();
     let email = email.to_lowercase();
-    let new_user = NewUser::new(&username, &password, &email)?;
 
-    let user = conn
-        .transaction::<_, DbError, _>(move |tc| {
+    // If the visitor is currently a guest, claim that row in place so their
+    // guest games carry over to the new account (same id → all FKs preserved).
+    let guest = match uuid().await {
+        Ok(id) => User::find_by_uuid(&id, &mut conn)
+            .await
+            .ok()
+            .filter(|u| u.guest),
+        Err(_) => None,
+    };
+
+    let user = if let Some(guest) = guest {
+        let (username, email) = (username.clone(), email.clone());
+        conn.transaction::<_, DbError, _>(move |tc| {
+            async move { guest.upgrade_guest(&username, &password, &email, tc).await }.scope_boxed()
+        })
+        .await?
+    } else {
+        let new_user = NewUser::new(&username, &password, &email)?;
+        conn.transaction::<_, DbError, _>(move |tc| {
             async move { User::create(new_user, tc).await }.scope_boxed()
         })
-        .await?;
+        .await?
+    };
 
     let req: actix_web::HttpRequest = leptos_actix::extract().await?;
 

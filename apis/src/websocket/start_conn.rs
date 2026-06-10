@@ -80,6 +80,7 @@ async fn resolve_identity(identity: Option<Identity>, pool: &DbPool) -> SimpleUs
             username: id.to_string(),
             admin: false,
             authed: false,
+            guest: false,
         }
     };
 
@@ -107,6 +108,7 @@ async fn resolve_identity(identity: Option<Identity>, pool: &DbPool) -> SimpleUs
                     username: user.username,
                     admin: user.admin,
                     authed: true,
+                    guest: user.guest,
                 }
             }
             Err(_) => anonymous(),

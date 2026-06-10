@@ -95,6 +95,7 @@ async fn main() -> std::io::Result<()> {
     jobs::ping(Data::clone(&hub));
     jobs::game_cleanup(pool.clone());
     jobs::challenge_cleanup(pool.clone());
+    jobs::guest_cleanup(pool.clone());
     jobs::tournament_cleanup(pool.clone());
     jobs::timeout_sweeper(pool.clone(), Data::clone(&hub));
     let pwa_manifest = PwaManifest::from_site_root(&conf.leptos_options.site_root);

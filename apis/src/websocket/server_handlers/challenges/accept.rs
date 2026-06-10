@@ -20,6 +20,7 @@ pub struct AcceptHandler {
     challenge_id: ChallengeId,
     user_id: Uuid,
     username: String,
+    guest: bool,
     pool: DbPool,
 }
 
@@ -28,12 +29,14 @@ impl AcceptHandler {
         challenge_id: ChallengeId,
         username: &str,
         user_id: Uuid,
+        guest: bool,
         pool: &DbPool,
     ) -> Result<Self> {
         Ok(Self {
             challenge_id,
             user_id,
             username: username.to_owned(),
+            guest,
             pool: pool.clone(),
         })
     }
@@ -42,6 +45,15 @@ impl AcceptHandler {
         let mut conn = get_conn(&self.pool).await?;
         let mut messages = Vec::new();
         let challenge = Challenge::find_by_challenge_id(&self.challenge_id, &mut conn).await?;
+        if self.guest && challenge.rated {
+            messages.push(InternalServerMessage {
+                destination: MessageDestination::User(self.user_id),
+                message: ServerMessage::Error(
+                    "Guests can only play casual games. Register to play rated.".to_string(),
+                ),
+            });
+            return Ok(messages);
+        }
         let speed = GameSpeed::from_base_increment(challenge.time_base, challenge.time_increment);
         let rating = Rating::for_uuid(&self.user_id, &speed, &mut conn)
             .await?

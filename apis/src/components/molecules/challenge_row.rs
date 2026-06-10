@@ -7,14 +7,20 @@ use crate::{
         },
         molecules::{modal::Modal, time_row::TimeRow},
     },
-    functions::hostname::hostname_and_port,
+    functions::{auth::guest::guest_login, hostname::hostname_and_port},
     i18n::*,
-    providers::{ApiRequestsProvider, AuthContext, Config},
+    providers::{
+        websocket::{ConnectionReadyState, WebsocketContext},
+        ApiRequestsProvider,
+        AuthContext,
+        Config,
+    },
     responses::ChallengeResponse,
 };
 use hive_lib::ColorChoice;
 use leptos::{either::Either, html::Dialog, prelude::*};
 use leptos_icons::*;
+use leptos_router::hooks::use_navigate;
 use leptos_use::{use_interval_fn_with_options, use_window, UseIntervalFnOptions};
 use shared_types::{ChallengeId, ChallengeVisibility, TimeInfo};
 
@@ -54,6 +60,45 @@ pub fn ChallengeRow(
     let all_challenge_ids = StoredValue::new(challenge_ids);
     let group_count = count;
     let color_choice = StoredValue::new(color_choice);
+
+    // Accepting while logged out provisions a guest, then sends the accept once
+    // the websocket has reconnected as that guest (send() drops messages while
+    // the socket is mid-reconnect). Rated challenges aren't open to guests, so
+    // send those visitors to login instead.
+    let auth_context = expect_context::<AuthContext>();
+    let ready_state = expect_context::<WebsocketContext>().ready_state;
+    let guest_action = Action::new(|_: &()| async { guest_login().await });
+    let pending_accept = RwSignal::new(false);
+    Effect::watch(
+        move || guest_action.value().get(),
+        move |val, _, _| {
+            if let Some(Ok(_)) = val {
+                auth_context.refresh(true);
+            }
+        },
+        false,
+    );
+    Effect::watch(
+        move || (ready_state.get(), user.with(|u| u.is_some())),
+        move |(rs, has_user), _, _| {
+            if pending_accept.get_untracked() && *rs == ConnectionReadyState::Open && *has_user {
+                api.get().challenge_accept(challenge_id.get_value());
+                pending_accept.set(false);
+            }
+        },
+        false,
+    );
+    let accept = move || {
+        if user.with(|a| a.is_some()) {
+            api.get().challenge_accept(challenge_id.get_value());
+        } else if rated {
+            use_navigate()("/login", Default::default());
+        } else {
+            pending_accept.set(true);
+            guest_action.dispatch(());
+        }
+    };
+
     let icon = move || {
         let prefers_dark = config.with(|c| c.prefers_dark);
         match color_choice.get_value() {
@@ -338,12 +383,7 @@ pub fn ChallengeRow(
                         }
                     >
 
-                        <button
-                            on:click=move |_| {
-                                api.get().challenge_accept(challenge_id.get_value());
-                            }
-                            class=accept_button_classes.get_value()
-                        >
+                        <button on:click=move |_| accept() class=accept_button_classes.get_value()>
                             <Icon icon=icondata_ai::AiCheckOutlined attr:class="size-6" />
 
                         </button>

@@ -107,6 +107,7 @@ pub struct NewUser {
     pub normalized_username: String,
     pub patreon: bool,
     pub bot: bool,
+    pub guest: bool,
 }
 
 impl NewUser {
@@ -122,7 +123,30 @@ impl NewUser {
             normalized_username: username.to_lowercase(),
             patreon: false,
             bot: false,
+            guest: false,
         })
+    }
+
+    /// Builds an ephemeral guest user. Skips the signup validation: the
+    /// username/email are synthetic, unique placeholders the player never
+    /// chose. The empty password can never verify against Argon2, so a guest
+    /// row can't be logged into via the password form — only via its session
+    /// cookie (or claimed by registering, see `User::upgrade_guest`).
+    /// Lowercase-hex slug avoids `normalized_username` case collisions.
+    pub fn new_guest() -> Self {
+        let slug = Uuid::new_v4().simple().to_string();
+        let username = format!("guest-{}", &slug[..8]);
+        Self {
+            normalized_username: username.to_lowercase(),
+            username,
+            password: String::new(),
+            email: format!("{}@guest.invalid", Uuid::new_v4()),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            patreon: false,
+            bot: false,
+            guest: true,
+        }
     }
 }
 
@@ -140,6 +164,7 @@ pub struct User {
     pub admin: bool,
     pub takeback: String,
     pub bot: bool,
+    pub guest: bool,
 }
 
 impl User {
@@ -205,6 +230,32 @@ impl User {
                     .await?
             }
         })
+    }
+
+    /// Claims a guest row by turning it into a full account in place. Keeping
+    /// the same `id` means every FK already pointing here (games, games_users,
+    /// ratings) is carried over to the new account with no data migration.
+    /// The per-`GameSpeed` rating rows created at guest provisioning are kept.
+    pub async fn upgrade_guest(
+        &self,
+        username: &str,
+        hashed_password: &str,
+        email: &str,
+        conn: &mut DbConn<'_>,
+    ) -> Result<User, DbError> {
+        validate_email(email)?;
+        validate_username(username)?;
+        Ok(diesel::update(self)
+            .set((
+                users::username.eq(username),
+                normalized_username.eq(username.to_lowercase()),
+                email_field.eq(email),
+                password_field.eq(hashed_password),
+                users::guest.eq(false),
+                updated_at.eq(Utc::now()),
+            ))
+            .get_result(conn)
+            .await?)
     }
 
     pub async fn set_takeback(&self, tb: Takeback, conn: &mut DbConn<'_>) -> Result<(), DbError> {
@@ -367,6 +418,49 @@ impl User {
         }
 
         Ok(top)
+    }
+
+    /// Removes abandoned guest accounts: guests older than `cutoff` that never
+    /// played a game (no `games_users` row). A guest who actually played keeps
+    /// their row so their finished games stay viewable. Returns rows deleted.
+    pub async fn delete_abandoned_guests(
+        cutoff: DateTime<Utc>,
+        conn: &mut DbConn<'_>,
+    ) -> Result<usize, DbError> {
+        use crate::schema::{challenges, games_users};
+        use diesel::dsl::not;
+        use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
+
+        let ids: Vec<Uuid> = users_table
+            .filter(users::guest.eq(true))
+            .filter(users::created_at.lt(cutoff))
+            .filter(not(exists(
+                games_users::table.filter(games_users::user_id.eq(users::id)),
+            )))
+            .select(users::id)
+            .load(conn)
+            .await?;
+        if ids.is_empty() {
+            return Ok(0);
+        }
+        // A guest only ever authors challenges (never an opponent), so clearing
+        // challenger_id rows frees the FK before the user is removed.
+        conn.transaction::<usize, DbError, _>(|tc| {
+            async move {
+                diesel::delete(challenges::table.filter(challenges::challenger_id.eq_any(&ids)))
+                    .execute(tc)
+                    .await?;
+                diesel::delete(ratings::table.filter(ratings::user_uid.eq_any(&ids)))
+                    .execute(tc)
+                    .await?;
+                let deleted = diesel::delete(users_table.filter(users::id.eq_any(&ids)))
+                    .execute(tc)
+                    .await?;
+                Ok(deleted)
+            }
+            .scope_boxed()
+        })
+        .await
     }
 
     pub async fn get_username_by_id(uuid: &Uuid, conn: &mut DbConn<'_>) -> Result<String, DbError> {

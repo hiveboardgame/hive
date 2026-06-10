@@ -1,5 +1,6 @@
 pub mod challenge_cleanup;
 pub mod game_cleanup;
+pub mod guest_cleanup;
 pub mod heartbeat;
 pub mod ping;
 pub mod timeout_sweeper;
@@ -8,6 +9,7 @@ pub mod tournament_start;
 pub mod ws_telemetry;
 pub use challenge_cleanup::run as challenge_cleanup;
 pub use game_cleanup::run as game_cleanup;
+pub use guest_cleanup::run as guest_cleanup;
 pub use heartbeat::run as heartbeat;
 pub use ping::run as ping;
 pub use timeout_sweeper::run as timeout_sweeper;

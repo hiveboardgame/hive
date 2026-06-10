@@ -6,4 +6,5 @@ pub struct SimpleUser {
     pub username: String,
     pub authed: bool,
     pub admin: bool,
+    pub guest: bool,
 }

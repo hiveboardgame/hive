@@ -47,6 +47,7 @@ pub struct RequestHandler {
     username: String,
     authed: bool,
     admin: bool,
+    guest: bool,
 }
 type Result<T> = std::result::Result<T, RequestHandlerError>;
 impl RequestHandler {
@@ -68,6 +69,7 @@ impl RequestHandler {
             username: user.username,
             authed: user.authed,
             admin: user.admin,
+            guest: user.guest,
         }
     }
 
@@ -80,6 +82,15 @@ impl RequestHandler {
 
     fn ensure_admin(&self) -> Result<()> {
         if !self.admin {
+            Err(AuthError::Unauthorized)?
+        }
+        Ok(())
+    }
+
+    /// Requires a registered account — rejects anonymous spectators and guests.
+    /// Used for features guests don't get (tournaments, scheduling).
+    fn ensure_full_user(&self) -> Result<()> {
+        if !self.authed || self.guest {
             Err(AuthError::Unauthorized)?
         }
         Ok(())
@@ -101,6 +112,7 @@ impl RequestHandler {
                     .into()
             }
             ClientRequest::Tournament(tournament_action) => {
+                self.ensure_full_user()?;
                 TournamentHandler::new(
                     tournament_action,
                     &self.username,
@@ -156,6 +168,7 @@ impl RequestHandler {
                     &self.username,
                     self.user_id,
                     self.admin,
+                    self.guest,
                     &self.pool,
                 )
                 .await?
@@ -167,7 +180,7 @@ impl RequestHandler {
             ClientRequest::Schedule(action) => {
                 match action {
                     crate::common::ScheduleAction::TournamentPublic(_) => {}
-                    _ => self.ensure_auth()?,
+                    _ => self.ensure_full_user()?,
                 }
                 ScheduleHandler::new(self.user_id, action, &self.pool)
                     .await?

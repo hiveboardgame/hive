@@ -1,7 +1,7 @@
 use crate::{
     components::molecules::time_row::TimeRow,
     i18n::*,
-    providers::game_state::GameStateSignal,
+    providers::{game_state::GameStateSignal, AuthContext},
 };
 use hive_lib::{Color, GameResult, GameStatus};
 use leptos::{either::Either, prelude::*};
@@ -11,6 +11,20 @@ use shared_types::{Conclusion, PrettyString, TimeInfo, TournamentGameResult, Tou
 pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let i18n = use_i18n();
     let game_state = expect_context::<GameStateSignal>();
+    let user = expect_context::<AuthContext>().user;
+    let player_ids = create_read_slice(game_state.signal, |gs| {
+        gs.game_response
+            .as_ref()
+            .map(|gr| (gr.white_player.uid, gr.black_player.uid))
+    });
+    // A guest who just finished their own game has something worth keeping —
+    // nudge them to register here, at the end, not before they've played.
+    let show_guest_save = move || {
+        let Some((uid, is_guest)) = user.with(|u| u.as_ref().map(|a| (a.id, a.user.guest))) else {
+            return false;
+        };
+        is_guest && player_ids().is_some_and(|(w, b)| uid == w || uid == b)
+    };
     let game_info = create_read_slice(game_state.signal, |gs| {
         gs.game_response.as_ref().map(|gr| {
             (
@@ -143,6 +157,13 @@ pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                             <div>{game_result_str}</div>
                         </Show>
                     </div>
+                    <Show when=move || {
+                        show_guest_save() && matches!(game_status(), GameStatus::Finished(_))
+                    }>
+                        <a href="/register" class="font-semibold hover:underline text-pillbug-teal">
+                            "Register to keep this game →"
+                        </a>
+                    </Show>
                 </div>
             })
         } else {
