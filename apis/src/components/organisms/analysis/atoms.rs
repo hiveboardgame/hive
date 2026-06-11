@@ -13,7 +13,7 @@ use tree_ds::prelude::Node;
 pub fn UndoButton() -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>();
     let game_state = expect_context::<GameStateSignal>();
-    let analysis = StoredValue::new(analysis.clone());
+    let analysis = StoredValue::new(analysis);
     let is_disabled = move || {
         analysis
             .get_value()
@@ -72,7 +72,7 @@ pub fn HistoryButton(
 ) -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>().0;
     let game_state = expect_context::<GameStateSignal>();
-    let cloned_action = action.clone();
+    let cloned_action = action;
     let nav_buttons_style = "flex place-items-center justify-center hover:bg-pillbug-teal dark:hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 m-1 h-7 rounded-md border-cyan-500 dark:border-button-twilight border-2 drop-shadow-lg disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
     let icon = match action {
         HistoryNavigation::First => icondata_ai::AiFastBackwardFilled,

@@ -48,3 +48,26 @@ impl SvgPos {
         (center.0 + center_offset.0, center.1 + center_offset.1)
     }
 }
+
+/// Hex size for the level-0 layout; must match `center_for_level`.
+pub const HEX_SIZE: f32 = 30.0;
+
+pub fn hex_width() -> f32 {
+    3.0_f32.sqrt() * HEX_SIZE
+}
+
+pub fn hex_height() -> f32 {
+    2.0 * HEX_SIZE
+}
+
+/// Inverse of `center` at level 0 (screen point → hex), for click hit-testing.
+/// Mirrors `center`'s row parity and truncating `r / 2` so it round-trips; stack
+/// offsets only apply above level 0, so `straight` doesn't matter here.
+pub fn position_from_svg(x: f32, y: f32) -> Position {
+    let w = hex_width();
+    let row_height = 0.75 * hex_height(); // vertical spacing between rows
+    let r = (y / row_height).round() as i32;
+    let base = if r.rem_euclid(2) == 0 { 0.0 } else { 0.5 * w };
+    let q = ((x - base) / w).round() as i32 - (r / 2);
+    Position::new(q, r)
+}

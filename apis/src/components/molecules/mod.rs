@@ -1,5 +1,7 @@
 pub mod alert;
 pub mod analysis_and_download;
+pub mod annotation_toolbar;
+pub mod annotations_layer;
 pub mod banner;
 pub mod board_pieces;
 pub mod challenge_buttons_trio;

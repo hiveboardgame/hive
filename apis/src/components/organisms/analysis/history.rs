@@ -1,12 +1,15 @@
 use crate::{
-    components::organisms::{
-        analysis::{
-            atoms::{CollapsibleMove, HistoryButton, HistoryMove, HistoryNavigation},
-            DownloadTree,
-            LoadTree,
-            UndoButton,
+    components::{
+        molecules::annotation_toolbar::AnnotationToggle,
+        organisms::{
+            analysis::{
+                atoms::{CollapsibleMove, HistoryButton, HistoryMove, HistoryNavigation},
+                DownloadTree,
+                LoadTree,
+                UndoButton,
+            },
+            reserve::{Alignment, Reserve},
         },
-        reserve::{Alignment, Reserve},
     },
     hiveground::HivegroundInteraction,
     providers::analysis::{AnalysisSignal, AnalysisTree, TreeNode},
@@ -290,11 +293,12 @@ pub fn History(
 
                 </div>
             </Show>
-            <div class="flex justify-between w-full">
+            <div class="flex justify-between items-center w-full">
                 <Show when=has_history>
                     <DownloadTree />
                 </Show>
                 <LoadTree />
+                <AnnotationToggle />
             </div>
             <div class="flex justify-between w-full">
                 <button on:click=move |_| promote_variation(true) class=BTN_CLASS>

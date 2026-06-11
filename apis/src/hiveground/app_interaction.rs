@@ -8,6 +8,7 @@ use crate::{
     common::{CurrentConfirm, MoveConfirm, PieceType},
     providers::{
         analysis::AnalysisSignal,
+        annotations::AnnotationsSignal,
         config::ConfigOpts,
         game_state::GameStateSignal,
         ApiRequestsProvider,
@@ -27,7 +28,15 @@ pub fn live_hiveground_interaction() -> HivegroundInteraction {
     let current_confirm = expect_context::<CurrentConfirm>().0;
     let config = expect_context::<Config>().0;
     let user = auth_context.user;
-    let capabilities = Signal::derive(move || live_capabilities(game_state, user, config));
+    // Annotate mode suppresses piece selection so board taps annotate.
+    let annotations = use_context::<AnnotationsSignal>();
+    let capabilities = Signal::derive(move || {
+        if annotations.is_some_and(|a| a.mode.get()) {
+            HivegroundCapabilities::none()
+        } else {
+            live_capabilities(game_state, user, config)
+        }
+    });
     let handler = HivegroundActionHandler {
         game_state,
         analysis: None,
@@ -56,10 +65,16 @@ pub fn analysis_hiveground_interaction() -> HivegroundInteraction {
         user,
     };
 
-    HivegroundInteraction::new(
-        HivegroundCapabilities::analysis_selection(),
-        hiveground_actions(handler),
-    )
+    let annotations = use_context::<AnnotationsSignal>();
+    let capabilities = Signal::derive(move || {
+        if annotations.is_some_and(|a| a.mode.get()) {
+            HivegroundCapabilities::none()
+        } else {
+            HivegroundCapabilities::analysis_selection()
+        }
+    });
+
+    HivegroundInteraction::new(capabilities, hiveground_actions(handler))
 }
 
 struct HivegroundActionHandler {
@@ -127,7 +142,7 @@ impl HivegroundActionHandler {
             game_state.set_target(position);
             let confirm = self.current_confirm.get_untracked();
             if confirm == MoveConfirm::Single || (confirm == MoveConfirm::Double && was_selected) {
-                game_state.move_active(self.analysis.clone(), self.api.0.get_untracked());
+                game_state.move_active(self.analysis, self.api.0.get_untracked());
             }
         }
     }
