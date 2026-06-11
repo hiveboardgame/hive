@@ -3,10 +3,13 @@ pub mod api;
 pub mod common;
 pub mod functions;
 pub mod hiveground;
+#[cfg(feature = "ssr")]
 pub mod jobs;
 pub mod providers;
 pub mod responses;
 pub mod websocket;
+
+cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 use std::sync::Arc;
 
 use actix_session::config::PersistentSession;
@@ -15,8 +18,6 @@ use actix_web::{
     middleware::Compress,
 };
 use websocket::WebsocketData;
-
-cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

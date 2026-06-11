@@ -35,7 +35,7 @@ pub async fn opening_explorer(
             stats.position = position;
             moves.push(stats);
         }
-        moves.sort_by(|a, b| b.total.cmp(&a.total));
+        moves.sort_by_key(|b| std::cmp::Reverse(b.total));
 
         // Header for the empty board: summed stats over all roots.
         let position_total = ExplorerMove {

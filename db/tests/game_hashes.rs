@@ -508,7 +508,7 @@ async fn backfill_replays_history_and_populates_both_tables() {
 fn nm_filters() -> shared_types::ExplorerFilters {
     shared_types::ExplorerFilters {
         game_type: GameType::MLP,
-        speed: None,
+        speeds: Vec::new(),
         rated: None,
         min_game_length: None,
     }
@@ -714,6 +714,11 @@ async fn setup_game_with_history(
     let now = Utc::now();
     let time_left = Some(60_000_000_000_i64);
     let turn = history.split_terminator(';').count() as i32;
+    let timeout_at = if turn > 0 {
+        time_left.map(|nanos| now + chrono::Duration::nanoseconds(nanos))
+    } else {
+        None
+    };
 
     let game = Game::create(
         NewGame {
@@ -752,6 +757,7 @@ async fn setup_game_with_history(
             tournament_game_result: TournamentGameResult::Unknown.to_string(),
             game_start: GameStart::Moves.to_string(),
             move_times: Vec::new(),
+            timeout_at,
         },
         conn,
     )
