@@ -1,6 +1,7 @@
 use crate::{
     components::molecules::{
         analysis_and_download::AnalysisAndDownload,
+        annotation_toolbar::AnnotationToggle,
         control_buttons::ControlButtons,
         hiveground_stacks::HivegroundStacks,
     },
@@ -147,6 +148,7 @@ pub fn ReserveContent(
         <Reserve color=top_color alignment=Alignment::DoubleRow interaction history_state />
         <div class="flex flex-row-reverse justify-center items-center">
             <AnalysisAndDownload />
+            <AnnotationToggle extend_tw_classes="place-self-start" />
             <Show when=show_buttons>
                 <ControlButtons />
             </Show>
