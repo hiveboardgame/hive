@@ -113,6 +113,20 @@ impl GameControlHandler {
         // Signal the dispatcher to run finalization after dispatch — see the
         // matching comment in turn_handler.rs for the race we're avoiding.
         let finalize_games = if game.finished {
+            // Map the finishing GameControl to a GameEnded reason. Abort
+            // is intentionally None: the row was deleted in handle_abort,
+            // and aborts are mutual cancellations — not a Won/Lost/Drew
+            // outcome we'd want to push. Other non-finishing controls
+            // shouldn't reach this branch (their handlers don't set
+            // game.finished), but match exhaustively for safety.
+            let end_reason = match self.control {
+                GameControl::Resign(_) => Some(crate::notifications::GameEndReason::Resignation),
+                GameControl::DrawAccept(_) => Some(crate::notifications::GameEndReason::Agreement),
+                _ => None,
+            };
+            if let Some(reason) = end_reason {
+                crate::notifications::notify_game_ended(&game, reason, &mut conn).await?;
+            }
             let finalize = GameFinalize {
                 game_id: GameId(self.game.nanoid.clone()),
                 white_id: self.game.white_id,

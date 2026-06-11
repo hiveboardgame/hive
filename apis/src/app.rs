@@ -16,6 +16,7 @@ use crate::{
         game_search::GameSearch,
         home::Home,
         login::Login,
+        notifications::Notifications,
         play::Play,
         profile_view::ProfileView,
         puzzles::Puzzles,
@@ -33,7 +34,9 @@ use crate::{
     providers::{
         challenges::provide_challenges,
         chat::provide_chat,
+        deep_link::DeepLinkListener,
         games::provide_games,
+        launch_router::LaunchRouter,
         online_users::provide_users,
         provide_alerts,
         provide_api_requests,
@@ -46,6 +49,7 @@ use crate::{
         provide_referer,
         provide_server_updates,
         provide_sounds,
+        push_registration::PushRegistrationListener,
         refocus::provide_refocus,
         schedules::provide_schedules,
         websocket::provide_websocket,
@@ -83,7 +87,18 @@ pub fn App() -> impl IntoView {
     provide_config();
     provide_users();
     provide_challenges();
-    provide_websocket("/ws/");
+    // WebSocket URL: same-origin "/ws/" for SSR/hydrate (the backend serves
+    // the page AND the WS); absolute for CSR (HiveGame mobile / standalone WASM)
+    // because the WS lives on a different origin than the bundled assets.
+    // LEPTOS_WS_URL overrides at build time (e.g. wss://hivegame.com/ws/).
+    #[cfg(feature = "csr")]
+    const WS_URL: &str = match option_env!("LEPTOS_WS_URL") {
+        Some(url) => url,
+        None => "ws://localhost:3000/ws/",
+    };
+    #[cfg(not(feature = "csr"))]
+    const WS_URL: &str = "/ws/";
+    provide_websocket(WS_URL);
 
     //expects websocket
     provide_auth();
@@ -106,6 +121,9 @@ pub fn App() -> impl IntoView {
             .same_site(SameSite::Lax)
             .path("/")>
             <Router>
+                <DeepLinkListener />
+                <PushRegistrationListener />
+                <LaunchRouter />
                 <Routes fallback=|| "404 Not Found">
                     <ParentRoute
                         path=path!("")
@@ -168,6 +186,12 @@ pub fn App() -> impl IntoView {
                             path=path!("/config")
                             redirect_path=|| "/login"
                             view=|| view! { <Config /> }
+                        />
+                        <ProtectedRoute
+                            condition=is_logged_in
+                            path=path!("/notifications")
+                            redirect_path=|| "/login"
+                            view=|| view! { <Notifications /> }
                         />
                         <Route path=path!("/tournament/:nanoid") view=|| view! { <Tournament /> } />
                         <ProtectedRoute

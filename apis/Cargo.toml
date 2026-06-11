@@ -6,7 +6,18 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+# Make the SSR binary opt-in. Without this, `cargo build` for CSR/hydrate
+# (browser WASM) targets tries to compile main.rs and explodes on missing
+# actix/db crates. With `required-features = ["ssr"]`, cargo silently skips
+# the bin when ssr isn't on. cargo-leptos enables `bin-features = ["ssr"]`
+# already, so the SSR build path is unaffected.
+[[bin]]
+name = "apis"
+path = "src/main.rs"
+required-features = ["ssr"]
+
 [dependencies]
+actix-cors = { workspace = true, optional = true }
 actix-files = { workspace = true, optional = true }
 actix-identity = { workspace = true, optional = true }
 actix-rt = { workspace = true, optional = true }
@@ -16,10 +27,11 @@ actix-ws = { workspace = true, optional = true }
 anyhow = { workspace = true }
 argon2 = { workspace = true, optional = true }
 bimap = { workspace = true }
-bytes = { workspace = true, optional = true }
+bytes = { workspace = true }
 cfg-if = { workspace = true }
 dashmap = { workspace = true, optional = true }
-futures-util = { workspace = true, optional = true }
+futures-util = { workspace = true }
+gcp_auth = { workspace = true, optional = true }
 chrono.workspace = true
 codee = { workspace = true }
 console_error_panic_hook = { workspace = true }
@@ -62,10 +74,11 @@ markdown = { workspace = true }
 rand = { workspace = true, optional = true }
 reqwest = { workspace = true }
 resvg = { version = "0.46", optional = true }
+rustls = { workspace = true, optional = true }
 reactive_stores = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
-server_fn = { workspace = true }
+server_fn = { workspace = true, features = ["browser"] }
 send_wrapper = { workspace = true }
 sha2 = { workspace = true }
 shared_types = { path = "../shared_types" }
@@ -86,6 +99,7 @@ leptos_i18n_build = { workspace = true }
 hydrate = ["leptos/hydrate", "leptos_i18n/hydrate", "leptos_i18n_build/hydrate"]
 csr = ["leptos/csr", "leptos_i18n/csr", "leptos_i18n_build/csr"]
 ssr = [
+  "dep:actix-cors",
   "dep:actix-files",
   "dep:actix-rt",
   "dep:actix-identity",
@@ -93,9 +107,7 @@ ssr = [
   "dep:actix-web",
   "dep:actix-ws",
   "dep:argon2",
-  "dep:bytes",
   "dep:dashmap",
-  "dep:futures-util",
   "dep:tokio",
   "dep:db",
   "dep:diesel",
@@ -106,6 +118,8 @@ ssr = [
   "dep:rand",
   "dep:resvg",
   "dep:jsonwebtoken",
+  "dep:gcp_auth",
+  "dep:rustls",
   "leptos/ssr",
   "leptos-use/ssr",
   "leptos-use/actix",

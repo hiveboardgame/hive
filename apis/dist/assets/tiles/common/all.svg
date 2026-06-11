@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="93.231" height="104.182">
+    <path id="active" fill="none" d="m153.018 136.805-40.722 23.511c-2.812 1.623-7.37 1.623-10.181 0l-40.723-23.51c-2.81-1.624-5.09-5.571-5.09-8.817V80.966c0-3.246 2.28-7.193 5.09-8.816l40.723-23.512c2.811-1.623 7.37-1.623 10.18 0l40.723 23.512c2.811 1.623 5.09 5.57 5.09 8.816v47.023c0 3.246-2.279 7.193-5.09 8.816z" style="fill:#3a3a3a;fill-opacity:0;stroke:#b58900;stroke-width:4.58225;stroke-dasharray:none;stroke-opacity:1" transform="translate(-47.331 -39.465)scale(.87633)"/>
+    <g id="drop_shadow">
+        <filter id="a" width="1.051" height="1.057" x="-.026" y="-.029" style="color-interpolation-filters:sRGB">
+            <feGaussianBlur stdDeviation=".636"/>
+        </filter>
+        <path d="M0 0a6.9 6.9 0 0 1 3.592 1.708 7 7 0 0 1 1.342 1.671c.326.572 11.761 19.972 12.074 20.942a6.85 6.85 0 0 1 .105 3.877 7 7 0 0 1-.674 1.657c-.283.496-11.474 20.355-12.078 21.052a6.87 6.87 0 0 1-5.197 2.385c-.607 0-23.293.147-24.033.032a6.88 6.88 0 0 1-4.918-3.376c-.324-.569-11.76-19.973-12.072-20.929a6.9 6.9 0 0 1 .564-5.557c.285-.498 11.469-20.347 12.078-21.05a6.87 6.87 0 0 1 3.274-2.1 6.8 6.8 0 0 1 1.916-.278C-23.422.034-.73-.112 0 0" style="opacity:.549569;fill:#999;fill-opacity:1;fill-rule:nonzero;stroke:none;filter:url(#a)" transform="scale(1.67927 -1.67927)rotate(30 138.975 93.394)"/>
+    </g>
+    <path id="last_move_from" d="m28.707 65.695-1.195.69-1.196-.69m-2.164-1.249-2.39-1.38m-2.164-1.25-2.392-1.38m-2.163-1.249-2.391-1.38m-2.164-1.25-1.196-.69v-1.38m0-2.499v-2.761m0-2.498v-2.761m0-2.499v-2.76m0-2.5v-1.38l1.196-.69m2.164-1.25 2.39-1.38m2.164-1.249 2.392-1.38m2.163-1.25 2.391-1.38M26.316 25l1.196-.69 1.195.69m2.164 1.25 2.391 1.38m2.163 1.25 2.392 1.38m2.163 1.25 2.392 1.38m2.163 1.249 1.196.69v1.38m0 2.5v2.76m0 2.499v2.76m0 2.499v2.761m0 2.498v1.38l-1.196.691m-2.163 1.25-2.392 1.38m-2.163 1.25-2.392 1.38m-2.163 1.249-2.391 1.38m-2.164 1.25-1.195.69" style="opacity:1;fill:none;stroke:#d33682;stroke-width:1.10471;stroke-linecap:round;stroke-linejoin:bevel;stroke-miterlimit:0;stroke-dasharray:none;stroke-opacity:1" transform="translate(-20.932 -57.076)scale(2.3949)"/>
+    <path id="last_move_to" d="m153.018 136.805-40.722 23.511c-2.812 1.623-7.37 1.623-10.181 0l-40.723-23.51c-2.81-1.624-5.09-5.571-5.09-8.817V80.966c0-3.246 2.28-7.193 5.09-8.816l40.723-23.512c2.811-1.623 7.37-1.623 10.18 0l40.723 23.512c2.811 1.623 5.09 5.57 5.09 8.816v47.023c0 3.246-2.279 7.193-5.09 8.816z" style="fill:none;stroke:#d33682;stroke-width:6;stroke-dasharray:none;stroke-opacity:1" transform="translate(-46.71 -38.818)scale(.87633)"/>
+    <path id="target" fill="none" d="m153.018 136.805-40.722 23.511c-2.812 1.623-7.37 1.623-10.181 0l-40.723-23.51c-2.81-1.624-5.09-5.571-5.09-8.817V80.966c0-3.246 2.28-7.193 5.09-8.816l40.723-23.512c2.811-1.623 7.37-1.623 10.18 0l40.723 23.512c2.811 1.623 5.09 5.57 5.09 8.816v47.023c0 3.246-2.279 7.193-5.09 8.816z" style="fill:#3a3a3a;fill-opacity:0;stroke:#268bd2;stroke-width:2.28225;stroke-dasharray:none;stroke-opacity:1" transform="translate(-48.34 -40.515)scale(.87633)"/>
+    <circle id="a1" cx="85.183" cy="50" r="2.536" transform="translate(-9.49 -17.954)"/>
+    <g id="a2" transform="rotate(-30 39.903 60.617)">
+        <circle cx="85.183" cy="57.536" r="2.536"/>
+        <circle cx="85.183" cy="50" r="2.536"/>
+    </g>
+    <g id="a3" transform="rotate(-30 49.294 55.988)">
+        <circle cx="84.127" cy="55.988" r="2.536"/>
+        <circle cx="84.127" cy="40.916" r="2.536"/>
+        <circle cx="84.127" cy="48.452" r="2.536"/>
+    </g>
+    <circle id="v1" cx="83" cy="48.452" r="2.5" transform="translate(1.056 1.548)"/>
+    <g id="v2" transform="translate(1.056 -3.768)">
+        <circle id="circle1" cx="83" cy="57.535" r="2.5"/>
+        <circle id="circle2" cx="83" cy="50" r="2.5"/>
+    </g>
+    <g id="v3" transform="translate(1.056 1.548)">
+        <circle id="circle3" cx="83" cy="55.988" r="2.5"/>
+        <circle id="circle4" cx="83" cy="40.916" r="2.5"/>
+        <circle id="circle5" cx="83" cy="48.452" r="2.5"/>
+    </g>
+</svg>

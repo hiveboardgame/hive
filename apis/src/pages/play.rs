@@ -396,7 +396,7 @@ pub fn Play() -> impl IntoView {
     view! {
         <div class=move || {
             format!(
-                "h-[100dvh] pt-10 standalone:h-[var(--app-height)] select-none bg-board-dawn dark:bg-board-twilight {}",
+                "h-[100dvh] pt-header standalone:h-[var(--app-height)] select-none bg-board-dawn dark:bg-board-twilight {}",
                 parent_container_style(),
             )
         }>

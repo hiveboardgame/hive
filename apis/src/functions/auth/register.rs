@@ -1,6 +1,6 @@
 use leptos::prelude::*;
 
-#[server]
+#[server(client = crate::client::ApiClient)]
 pub async fn register(
     username: String,
     email: String,

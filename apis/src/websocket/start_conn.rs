@@ -1,10 +1,13 @@
 use std::sync::Arc;
 
-use crate::websocket::{
-    messages::SocketTx,
-    ws_connection::reader_task,
-    ws_hub::{WsHub, SOCKET_BUFFER_CAPACITY},
-    WebsocketData,
+use crate::{
+    api::v1::auth::jwt_secret::JwtSecret,
+    websocket::{
+        messages::SocketTx,
+        ws_connection::reader_task,
+        ws_hub::{WsHub, SOCKET_BUFFER_CAPACITY},
+        WebsocketData,
+    },
 };
 use actix_identity::Identity;
 use actix_web::{
@@ -28,6 +31,7 @@ pub async fn start_connection(
     pool: Data<DbPool>,
     identity: Option<Identity>,
     data: Data<WebsocketData>,
+    jwt_secret: Data<JwtSecret>,
 ) -> Result<HttpResponse, Error> {
     let user = resolve_identity(identity, &pool).await;
 
@@ -65,8 +69,9 @@ pub async fn start_connection(
     let hub = hub.get_ref().clone();
     let data = Arc::clone(&data);
     let pool = pool.get_ref().clone();
+    let jwt_secret = jwt_secret.into_inner();
     actix_web::rt::spawn(reader_task(
-        session, msg_stream, socket, hub, data, pool, user,
+        session, msg_stream, socket, hub, data, pool, jwt_secret, user,
     ));
 
     Ok(response)
@@ -83,6 +88,9 @@ async fn resolve_identity(identity: Option<Identity>, pool: &DbPool) -> SimpleUs
         }
     };
 
+    // Identity cookie (SSR + hydrate same-origin path). Cross-origin
+    // clients (HiveGame mobile) start anonymous and upgrade via a
+    // `ClientRequest::Auth(token)` frame sent immediately after open.
     let Some(id) = identity else {
         log::debug!("WS connect (anonymous): no identity cookie");
         return anonymous();
@@ -98,22 +106,28 @@ async fn resolve_identity(identity: Option<Identity>, pool: &DbPool) -> SimpleUs
         return anonymous();
     };
 
+    load_user(uuid, pool, "cookie")
+        .await
+        .unwrap_or_else(anonymous)
+}
+
+async fn load_user(uuid: Uuid, pool: &DbPool, source: &str) -> Option<SimpleUser> {
     match get_conn(pool).await {
         Ok(mut conn) => match User::find_active_by_uuid(&uuid, &mut conn).await {
             Ok(user) => {
-                log::debug!("WS connect: user {} authed", user.username);
-                SimpleUser {
+                log::debug!("WS connect ({source}): user {} authed", user.username);
+                Some(SimpleUser {
                     user_id: uuid,
                     username: user.username,
                     admin: user.admin,
                     authed: true,
-                }
+                })
             }
-            Err(_) => anonymous(),
+            Err(_) => None,
         },
         Err(err) => {
-            log::warn!("WS connect: DB pool unavailable, falling back to anonymous: {err}");
-            anonymous()
+            log::warn!("WS connect ({source}): DB pool unavailable: {err}");
+            None
         }
     }
 }

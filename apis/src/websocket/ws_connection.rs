@@ -5,17 +5,20 @@ use super::{
     ws_hub::WsHub,
     WebsocketData,
 };
-use crate::common::{ClientRequest, ExternalServerError, GameAction, ServerResult};
+use crate::{
+    api::v1::auth::{decode::jwt_decode, jwt_secret::JwtSecret},
+    common::{ClientRequest, ExternalServerError, GameAction, ServerResult},
+};
 use actix_ws::{AggregatedMessage, AggregatedMessageStream, Session};
 use bytes::Bytes;
 use codee::{binary::MsgpackSerdeCodec, Decoder, Encoder};
-use db_lib::DbPool;
+use db_lib::{get_conn, models::User, DbPool};
 use futures_util::StreamExt;
 use indoc::printdoc;
 use shared_types::SimpleUser;
 use std::{
     cell::Cell,
-    sync::Arc,
+    sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
 use uuid::Uuid;
@@ -28,11 +31,15 @@ const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 /// lock, a handler `.unwrap()`) skips `on_disconnect` and leaks the user in
 /// `sessions`/membership, leaving `active_sockets`/`active_users` overcounted
 /// for the lifetime of the process.
+///
+/// Holds the per-connection identity behind a `Mutex` so a `ClientRequest::Auth`
+/// frame can swap it in place (anon → real user). The guard reads it on drop
+/// so cleanup uses the post-auth identity, not the anon stub we started with.
 struct DisconnectGuard {
     hub: Arc<WsHub>,
     telemetry: Arc<WsTelemetry>,
     socket_id: Uuid,
-    user: SimpleUser,
+    identity: Arc<Mutex<SimpleUser>>,
     reason: Cell<DisconnectReason>,
 }
 
@@ -45,7 +52,21 @@ impl DisconnectGuard {
 impl Drop for DisconnectGuard {
     fn drop(&mut self) {
         self.telemetry.record_disconnect(self.reason.get());
-        self.hub.on_disconnect(self.socket_id, self.user.clone());
+        // Swap an anon stub in so the guard hands ownership of the live
+        // identity to on_disconnect without holding the lock across the call.
+        let user = {
+            let mut guard = self.identity.lock().expect("identity mutex poisoned");
+            std::mem::replace(
+                &mut *guard,
+                SimpleUser {
+                    user_id: Uuid::nil(),
+                    username: String::new(),
+                    admin: false,
+                    authed: false,
+                },
+            )
+        };
+        self.hub.on_disconnect(self.socket_id, user);
     }
 }
 
@@ -56,15 +77,18 @@ pub async fn reader_task(
     hub: Arc<WsHub>,
     data: Arc<WebsocketData>,
     pool: DbPool,
+    jwt_secret: Arc<JwtSecret>,
     user: SimpleUser,
 ) {
     Arc::clone(&hub).on_connect(socket.socket_id, socket.tx.clone(), user.clone());
+
+    let identity = Arc::new(Mutex::new(user));
 
     let guard = DisconnectGuard {
         hub: Arc::clone(&hub),
         telemetry: data.telemetry.clone(),
         socket_id: socket.socket_id,
-        user: user.clone(),
+        identity: Arc::clone(&identity),
         reason: Cell::new(DisconnectReason::Close),
     };
 
@@ -97,7 +121,16 @@ pub async fn reader_task(
                 }
                 Some(Ok(AggregatedMessage::Binary(bytes))) => {
                     last_hb = Instant::now();
-                    handle_binary(&bytes, &hub, &socket, &data, &pool, &user).await;
+                    handle_binary(
+                        &bytes,
+                        &hub,
+                        &socket,
+                        &data,
+                        &pool,
+                        &jwt_secret,
+                        &identity,
+                    )
+                    .await;
                 }
                 Some(Ok(AggregatedMessage::Close(_))) => break,
                 None => {
@@ -123,7 +156,8 @@ async fn handle_binary(
     socket: &SocketTx,
     data: &Arc<WebsocketData>,
     pool: &DbPool,
-    user: &SimpleUser,
+    jwt_secret: &Arc<JwtSecret>,
+    identity: &Arc<Mutex<SimpleUser>>,
 ) {
     data.telemetry.record_message_received(bytes.len());
 
@@ -131,6 +165,13 @@ async fn handle_binary(
     let Ok(request) = request else {
         return;
     };
+
+    if let ClientRequest::Auth(token) = request {
+        handle_auth(token, hub, socket, pool, jwt_secret.as_ref(), identity).await;
+        return;
+    }
+
+    let user = identity.lock().expect("identity mutex poisoned").clone();
 
     // Unwatch needs hub access and no DB — handle it here before RequestHandler.
     if let ClientRequest::Game {
@@ -213,4 +254,58 @@ async fn handle_binary(
             }
         }
     }
+}
+
+/// Process an `Auth(token)` frame. Decodes the JWT, looks up the user,
+/// re-binds the socket from its anonymous identity to the real user in
+/// the hub, and updates the shared `ConnIdentity`. Bad/expired tokens are
+/// logged and dropped — the connection stays anonymous rather than
+/// closing, so a stale token in localStorage doesn't kill the socket.
+async fn handle_auth(
+    token: String,
+    hub: &Arc<WsHub>,
+    socket: &SocketTx,
+    pool: &DbPool,
+    jwt_secret: &JwtSecret,
+    identity: &Arc<Mutex<SimpleUser>>,
+) {
+    let Ok(sub) = jwt_decode(&token, &jwt_secret.decoding) else {
+        log::debug!("WS auth: token decode failed");
+        return;
+    };
+    let Ok(new_uid) = Uuid::parse_str(&sub) else {
+        log::debug!("WS auth: sub is not a valid UUID");
+        return;
+    };
+    let mut conn = match get_conn(pool).await {
+        Ok(c) => c,
+        Err(err) => {
+            log::warn!("WS auth: DB pool unavailable: {err}");
+            return;
+        }
+    };
+    let Ok(user) = User::find_by_uuid(&new_uid, &mut conn).await else {
+        log::debug!("WS auth: no user for uid {new_uid}");
+        return;
+    };
+
+    let new_identity = SimpleUser {
+        user_id: new_uid,
+        username: user.username,
+        admin: user.admin,
+        authed: true,
+    };
+
+    // Snapshot+swap under the mutex so the disconnect guard can never
+    // observe a partially-mutated identity.
+    let old_identity = {
+        let mut guard = identity.lock().expect("identity mutex poisoned");
+        std::mem::replace(&mut *guard, new_identity.clone())
+    };
+
+    // Re-bind in the hub: drop the anon membership, register under the
+    // real user with the same socket_id + tx so existing fanouts that
+    // route by socket_id keep working.
+    hub.on_disconnect(socket.socket_id, old_identity);
+    Arc::clone(hub).on_connect(socket.socket_id, socket.tx.clone(), new_identity);
 }

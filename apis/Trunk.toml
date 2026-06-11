@@ -1,0 +1,30 @@
+# Trunk config for the CSR build of the apis crate. Sits alongside the
+# existing cargo-leptos SSR config in [package.metadata.leptos] in Cargo.toml
+# — they don't conflict (different output dirs, different feature sets).
+#
+# Run from apis/:
+#   trunk serve        # dev server with watch + reload at http://127.0.0.1:8080
+#   trunk build        # produces dist/ for bundling into culex/
+
+[build]
+target = "index.html"
+# Output into culex/dist/ so Tauri's `frontendDist: "../dist"` picks it up
+# for production bundles. trunk serve also reads from here when consumed by
+# `cargo tauri ios dev` via devUrl.
+dist = "../culex/dist"
+# Filename hashing is annoying for Tauri (paths in index.html change every
+# build); turn it off until we have a real release pipeline.
+filehash = false
+
+[serve]
+# Bind to all interfaces so emulator/simulator clients can reach the dev
+# server via the host's LAN IP (see the `trunk-mobile` nix alias). Same URL
+# works for iOS sim, Android emulator, and physical devices on the same Wi-Fi.
+address = "0.0.0.0"
+port = 8080
+# Reload on Rust changes.
+open = false
+
+[tools]
+# Pin tailwind to whatever's on PATH (the nix flake provides tailwindcss_4).
+# Leave empty so trunk auto-detects rather than downloading its own copy.

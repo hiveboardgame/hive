@@ -9,6 +9,7 @@ lto = true
 opt-level = 'z'
 
 [workspace.dependencies]
+actix-cors = "0.7"
 actix-files = { version = "0.6" }
 actix-identity = { version = "0.9" }
 actix-rt = "2.10.0"
@@ -38,6 +39,7 @@ diesel-async = { version = "0.7", features = ["postgres", "bb8"] }
 diesel_migrations = { version = "2.3", features = ["postgres"] }
 dotenvy = "0.15"
 futures-util = "0.3"
+gcp_auth = "0.12"
 http = "1.4.0"
 http-serde = { version = "2" }
 icondata_core = "0.1"
@@ -72,6 +74,7 @@ rand = "0.9"
 regex = "1.11"
 reactive_stores = { version = "0.3" }
 reqwest = { version = "0.13.1", features = ["json"] }
+rustls = { version = "0.23" }
 serde = { version = "1" }
 serde_json = { version = "1" }
 serde_with = { version = "3.14" }
@@ -99,8 +102,10 @@ web-sys = { version = "0.3.85", features = [
     "Clipboard",
     "CloseEvent",
     "Event",
+    "Headers",
     "HtmlDocument",
     "MessageEvent",
+    "Storage",
     "SvgPoint",
     "SvgsvgElement",
     "SvgGraphicsElement",

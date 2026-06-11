@@ -68,6 +68,11 @@ pub fn provide_auth() {
     Effect::watch(
         ctx.logout.version(),
         move |_, _, _| {
+            // Clear any client-side bearer token (HiveGame mobile / cross-origin
+            // clients). The backend's Identity cookie is wiped by the logout
+            // server fn separately. For same-origin SSR + hydrate this is a
+            // no-op since no token was ever stored.
+            crate::client::set_token(None);
             ctx.refresh(true);
         },
         false,

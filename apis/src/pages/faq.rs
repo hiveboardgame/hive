@@ -9,7 +9,7 @@ pub fn Faq() -> impl IntoView {
     let link_class = "text-blue-500 hover:underline";
 
     view! {
-        <div class="pt-20 pb-20">
+        <div class="pt-page pb-20">
             <div class="px-4 mx-auto w-full max-w-4xl sm:px-6 lg:px-8">
                 <Banner title=t!(i18n, faq.title) />
 

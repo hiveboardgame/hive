@@ -70,7 +70,7 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
     view! {
         <div class=move || {
             format!(
-                "pt-10 bg-board-dawn dark:bg-board-twilight {} {extend_tw_classes}",
+                "pt-header bg-board-dawn dark:bg-board-twilight {} {extend_tw_classes}",
                 if vertical() {
                     "flex flex-col h-full standalone:min-h-[var(--app-height)]"
                 } else {

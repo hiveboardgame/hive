@@ -314,6 +314,14 @@ mod platform {
                         controls.clear_reconnect_timer();
                         controls.clear_connect_timeout();
                         controls.reconnect_attempts.set_value(0);
+                        // First frame: if a bearer token is in memory, send
+                        // an Auth request so the backend re-binds the socket
+                        // from anonymous to the real user. Done before the
+                        // ready_state transition so consumers reacting to
+                        // Open never get to send anything ahead of Auth.
+                        if let Some(token) = crate::client::get_token() {
+                            controls.send(&ClientRequest::Auth(token));
+                        }
                         controls.ready_state.set(ConnectionReadyState::Open);
                     }
                 })
@@ -613,6 +621,10 @@ mod platform {
 }
 
 fn fix_wss(url: &str) -> String {
+    // Already-absolute (CSR build pointing at a remote backend): pass through.
+    if url.starts_with("ws://") || url.starts_with("wss://") {
+        return url.to_string();
+    }
     let Address { hostname, port } = hostname_and_port();
     match port {
         None => format!("wss://{}{url}", hostname),

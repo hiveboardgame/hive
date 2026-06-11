@@ -26,7 +26,7 @@ pub async fn callback(params: web::Query<OAuthParams>) -> impl Responder {
 }
 }}
 
-#[server]
+#[server(client = crate::client::ApiClient)]
 pub async fn get_discord_handle() -> Result<String, ServerFnError> {
     use crate::functions::auth::identity::uuid;
 

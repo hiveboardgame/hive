@@ -179,6 +179,13 @@ impl RequestHandler {
                     .await?
                     .into()
             }
+            // Auth is intercepted in `ws_connection::handle_binary` before
+            // a RequestHandler is ever constructed — it mutates the
+            // socket's identity rather than producing a HandlerOutput. If
+            // we reach here something has bypassed that intercept.
+            ClientRequest::Auth(_) => {
+                unreachable!("Auth is handled by ws_connection, not RequestHandler")
+            }
         };
         Ok(output)
     }

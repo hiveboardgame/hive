@@ -1,0 +1,54 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "HiveGame",
+  "version": "0.1.0",
+  "identifier": "com.hivegame.culex",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://127.0.0.1:8080"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "HiveGame",
+        "label": "main",
+        "width": 420,
+        "height": 800
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "Game",
+    "shortDescription": "Play Hive on the go",
+    "longDescription": "HiveGame is the official mobile companion for hivegame.com — play live games of Hive against players worldwide."
+  },
+  "plugins": {
+    "deep-link": {
+      "mobile": [
+        {
+          "host": "hivegame.com",
+          "pathPrefix": ["/game/", "/challenge/", "/tournament/"]
+        },
+        {
+          "scheme": ["hive"]
+        }
+      ],
+      "desktop": {
+        "schemes": ["hive"]
+      }
+    }
+  }
+}

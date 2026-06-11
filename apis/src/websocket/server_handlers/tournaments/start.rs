@@ -1,10 +1,8 @@
 use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage, TournamentUpdate},
+    notifications::{notify, Event},
     responses::GameResponse,
-    websocket::{
-        busybee::Busybee,
-        messages::{InternalServerMessage, MessageDestination},
-    },
+    websocket::messages::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
 use db_lib::{db_error::DbError, get_conn, models::Tournament, DbPool};
@@ -41,17 +39,12 @@ impl StartHandler {
             })
             .await?;
 
-        // Send busybee messages to all tournament participants
         for player in players {
-            let msg = format!(
-                "[Tournament Started](<https://hivegame.com/tournament/{}>) - {} has begun! Your games are ready.",
-                tournament.nanoid,
-                tournament.name
-            );
-
-            if let Err(e) = Busybee::msg(player.id, msg).await {
-                println!("Failed to send Busybee message to {}: {e}", player.username);
-            }
+            notify(Event::TournamentStarted {
+                recipient: player.id,
+                tournament_name: tournament.name.clone(),
+                tournament_nanoid: tournament.nanoid.clone(),
+            });
         }
 
         for uuid in deleted_invitations {

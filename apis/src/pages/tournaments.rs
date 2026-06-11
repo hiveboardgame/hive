@@ -27,7 +27,7 @@ pub fn Tournaments(children: Children) -> impl IntoView {
     let logged_in = move || auth_context.user.with(|a| a.is_some());
 
     view! {
-        <div class="pt-10">
+        <div class="pt-header">
             <div class="container flex flex-col items-center px-4 mx-auto">
                 <div class="flex flex-wrap gap-1 justify-center content-center m-4 w-full">
                     <a

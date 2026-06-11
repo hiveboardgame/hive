@@ -4,7 +4,7 @@ use server_fn::codec;
 use shared_types::ChallengeId;
 use uuid::Uuid;
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(input = codec::Cbor, output = codec::Cbor, client = crate::client::ApiClient)]
 pub async fn get_challenge_by_uuid(id: Uuid) -> Result<ChallengeResponse, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::{get_conn, models::Challenge};
@@ -16,7 +16,7 @@ pub async fn get_challenge_by_uuid(id: Uuid) -> Result<ChallengeResponse, Server
         .map_err(ServerFnError::new)
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(input = codec::Cbor, output = codec::Cbor, client = crate::client::ApiClient)]
 pub async fn get_challenge(challenge_id: ChallengeId) -> Result<ChallengeResponse, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::{get_conn, models::Challenge};

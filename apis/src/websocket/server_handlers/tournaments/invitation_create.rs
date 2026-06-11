@@ -1,9 +1,7 @@
 use crate::{
     common::{ServerMessage, TournamentUpdate},
-    websocket::{
-        busybee::Busybee,
-        messages::{InternalServerMessage, MessageDestination},
-    },
+    notifications::{notify, Event},
+    websocket::messages::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
 use db_lib::{db_error::DbError, get_conn, models::Tournament, DbPool};
@@ -47,15 +45,11 @@ impl InvitationCreate {
             })
             .await?;
 
-        let msg = format!(
-            "[Tournament Invitation](<https://hivegame.com/tournament/{}>) - You are invited to join tournament: {}",
-            tournament.nanoid,
-            tournament.name
-        );
-
-        if let Err(e) = Busybee::msg(self.invitee, msg).await {
-            println!("Failed to send tournament invitation notification: {e}");
-        }
+        notify(Event::TournamentInvite {
+            recipient: self.invitee,
+            tournament_name: tournament.name.clone(),
+            tournament_nanoid: tournament.nanoid.clone(),
+        });
 
         let response = TournamentId(tournament.nanoid.clone());
         Ok(vec![

@@ -61,7 +61,13 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         orientation_vertical,
     });
 
-    //Copied from leptos-use https://github.com/Synphonyte/leptos-use/blob/main/src/on_click_outside.rs#L123-#L144
+    // WebKit click-event quirk: on iOS, `click` doesn't bubble to document
+    // from non-clickable elements unless something attaches a click handler
+    // first. leptos-use's on_click_outside relies on this bubble. Adding a
+    // no-op listener to every direct child of <body> primes the bubble.
+    // Applies to both Mobile Safari and Tauri's WKWebView shell (culex iOS) —
+    // do not remove on the assumption it's a Safari-only quirk.
+    // See https://github.com/Synphonyte/leptos-use/blob/main/src/on_click_outside.rs#L123-#L144
     #[cfg(not(feature = "ssr"))]
     {
         if *IS_IOS {

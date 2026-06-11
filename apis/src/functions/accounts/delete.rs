@@ -1,6 +1,6 @@
 use leptos::prelude::*;
 
-#[server]
+#[server(client = crate::client::ApiClient)]
 pub async fn delete_account(password: String) -> Result<(), ServerFnError> {
     use crate::{
         functions::{
@@ -35,7 +35,7 @@ pub async fn delete_account(password: String) -> Result<(), ServerFnError> {
         }
     }
 
-    logout().await?;
+    logout(None).await?;
     leptos_actix::redirect("/");
     Ok(())
 }

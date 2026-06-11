@@ -69,7 +69,7 @@ pub fn Tournament() -> impl IntoView {
         current_tournament.dispatch(());
     });
     view! {
-        <div class="flex flex-col justify-center items-center pt-20 w-full">
+        <div class="flex flex-col justify-center items-center pt-page w-full">
             <div class="container flex flex-col items-center w-full">
                 <Show when=move || current_tournament.value().get().is_some()>
                     <LoadedTournament tournament=current_tournament

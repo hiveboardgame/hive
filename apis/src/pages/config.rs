@@ -32,7 +32,7 @@ pub fn Config() -> impl IntoView {
         view! { <ConfirmModeToggle game_speed /> }
     };
     view! {
-        <div class="pt-20 pb-20 mx-auto max-w-md">
+        <div class="pt-page pb-20 mx-auto max-w-md">
             // Board and Tiles Card
             <div class="px-8 pt-6 pb-8 mb-6 rounded-lg border shadow-lg bg-stone-300 border-stone-400 dark:bg-slate-800 dark:border-slate-600">
                 <h2 class="mb-4 text-xl font-bold text-center text-purple-600 dark:text-purple-400">

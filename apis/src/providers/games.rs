@@ -418,7 +418,62 @@ impl Default for LiveGames {
 
 pub fn provide_games() {
     let auth_context = expect_context::<AuthContext>();
-    provide_context(GamesSignal::new(auth_context.user))
+    let games_signal = GamesSignal::new(auth_context.user);
+    provide_context(games_signal);
+
+    // Re-bind own-games state when the logged-in user identity changes.
+    //
+    // Two bugs collapse into one race here:
+    //
+    //   1. Cold-launch on mobile / CSR: `provide_auth` dispatches an async
+    //      `get_account()` HTTP call, but the WS connects in parallel and the
+    //      backend pushes `GameUpdate::Urgent(games)` as soon as the bearer
+    //      handshake completes. If the WS message wins, `own_games_add` reads
+    //      `self.user = None`, leaves `next_required = false`, and the games
+    //      land in `s.{realtime,untimed,correspondence}` *without* being
+    //      pushed onto the `next_*` priority heaps that NextGameButton
+    //      reads. The button then renders `class="hidden"`.
+    //
+    //   2. Cross-account login: previous-user games were never evicted from
+    //      the HashMaps or the heaps. NextGameButton still shows them after
+    //      switching accounts (mostly invisible to non-dev users).
+    //
+    // Fix: watch `auth.user.id`. On every change, snapshot games whose
+    // players include the now-current uid (drops stale cross-account
+    // entries), wipe the dicts + heaps, and re-add the snapshot through
+    // `own_games_add` — which now sees `user = Some(_)` and routes games
+    // into the heaps. On `None` (logout) we just wipe.
+    let user = auth_context.user;
+    Effect::watch(
+        move || user.get().map(|u| u.id),
+        move |current, _, _| {
+            let mut signal = games_signal;
+            let kept: Vec<GameResponse> = match current {
+                Some(uid) => signal.own.with_untracked(|s| {
+                    s.realtime
+                        .values()
+                        .chain(s.untimed.values())
+                        .chain(s.correspondence.values())
+                        .filter(|g| g.black_player.uid == *uid || g.white_player.uid == *uid)
+                        .cloned()
+                        .collect()
+                }),
+                None => Vec::new(),
+            };
+            signal.own.update(|s| {
+                s.realtime.clear();
+                s.untimed.clear();
+                s.correspondence.clear();
+                s.next_realtime.clear();
+                s.next_untimed.clear();
+                s.next_correspondence.clear();
+            });
+            for game in kept {
+                signal.own_games_add(game);
+            }
+        },
+        false,
+    );
 }
 
 /// A game is shown on TV unless it's finished or the viewer is one of the

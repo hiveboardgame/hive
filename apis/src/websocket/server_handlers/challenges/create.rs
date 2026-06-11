@@ -1,5 +1,6 @@
 use crate::{
     common::{ChallengeUpdate, ServerMessage},
+    notifications::{notify, Event},
     responses::ChallengeResponse,
     websocket::messages::{InternalServerMessage, MessageDestination},
 };
@@ -43,6 +44,15 @@ impl CreateHandler {
         match ChallengeVisibility::from_str(&new_challenge.visibility)? {
             ChallengeVisibility::Direct => {
                 if let Some(ref opponent) = challenge_response.opponent {
+                    // Push / Discord / email fan-out per the opponent's
+                    // `notification_preferences.challenges`. The in-app WS
+                    // path below stays in place for the foreground case;
+                    // the dispatcher covers backgrounded / killed apps.
+                    notify(Event::ChallengeReceived {
+                        recipient: opponent.uid,
+                        challenger: challenge_response.challenger.username.clone(),
+                        challenge_nanoid: challenge_response.challenge_id.0.clone(),
+                    });
                     messages.push(InternalServerMessage {
                         destination: MessageDestination::User(opponent.uid),
                         message: ServerMessage::Challenge(ChallengeUpdate::Direct(

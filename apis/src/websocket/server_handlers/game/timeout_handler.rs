@@ -56,6 +56,12 @@ impl TimeoutHandler {
                     username: self.username.clone(),
                 }))),
             });
+            crate::notifications::notify_game_ended(
+                &self.game,
+                crate::notifications::GameEndReason::Timeout,
+                &mut conn,
+            )
+            .await?;
             let finalize = GameFinalize {
                 game_id: GameId(self.game.nanoid.clone()),
                 white_id: self.game.white_id,

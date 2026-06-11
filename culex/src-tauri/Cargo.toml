@@ -1,0 +1,65 @@
+[workspace]
+
+# TEMPORARY: pin tao to the fork that fixes its Android deep-link panic.
+#
+# tao 0.35.2 (the latest crates.io release) aborts the app process when
+# Android delivers a VIEW intent with no MIME type — which is every
+# `hive://...` and `https://hivegame.com/...` deep link. The crash is in
+# `handle_intent` at ndk_glue.rs:511: `env.get_string(&intent_type).unwrap()`
+# called on a null JString. Because it's inside an `extern "C"` JNI export
+# the panic can't unwind, so Rust calls abort() and the whole app dies.
+#
+# Upstream tracking:
+#   - issue: https://github.com/tauri-apps/tao/issues/1217
+#   - fix:   https://github.com/tauri-apps/tao/pull/1219  (Sumberss/tao, fix-getType-panic)
+#
+# When PR #1219 merges and a new tao release ships on crates.io (likely
+# 0.35.3 or 0.36.x), DELETE this patch block and run `cargo update -p tao`.
+# If the PR stalls or diverges, revisit — issue #1217 lists two further
+# null receivers we don't currently hit but might.
+[patch.crates-io]
+tao = { git = "https://github.com/Sumberss/tao.git", rev = "667c1f70b057547c684dde5d89cfdc9caaf50ab5" }
+
+[package]
+name = "culex"
+version = "0.1.0"
+description = "HiveGame mobile app (Tauri shell)"
+edition = "2021"
+rust-version = "1.77"
+
+[lib]
+name = "culex_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-deep-link = "2"
+# Choochmeque/tauri-plugin-notifications — covers both local notifications
+# AND remote push (APNs/FCM). Replaces the official tauri-plugin-notification.
+# `push-notifications` feature flag pulls in the FCM/APNs token-retrieval code
+# and auto-configures the iOS push entitlement + Android FirebaseMessagingService
+# in the merged manifest. See the rationale in
+# /Users/leex/.claude/plans/if-i-wanted-to-bubbly-cascade.md (Phase 2).
+tauri-plugin-notifications = { version = "0.4", features = ["push-notifications"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+log = "0.4"
+
+# Android-only dep for the `Java_com_hivegame_culex_LaunchExtrasBridge_put`
+# JNI export that Kotlin calls from `MainActivity.onCreate` /
+# `onNewIntent` to push the launch intent's String extras into Rust. We
+# don't use `ndk-context` to *pull* from Rust because Tauri 2 / wry have
+# their own JNI plumbing and never initialise `ndk-context`'s global, so
+# any read panics with "android context was not initialized".
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "0.21"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

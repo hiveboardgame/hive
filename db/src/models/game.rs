@@ -1274,6 +1274,45 @@ impl Game {
             .await?)
     }
 
+    /// Picks the game the user should be looking at if they open the app
+    /// with no other hint (no deep link, no notification with a usable link).
+    /// Definition of "most urgent": of the games where it is the user's turn
+    /// and the game has actually started and isn't finished, the one with the
+    /// least remaining time on the user's clock. Untimed games sort last —
+    /// they are never urgent on a clock basis.
+    ///
+    /// Returns None if the user has no in-progress games on their turn.
+    /// We don't call `check_time` here — this is a routing hint, the game
+    /// page does the authoritative time recompute on load.
+    pub async fn most_urgent_for_user(
+        user_id: Uuid,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Option<Game>, DbError> {
+        let mut candidates: Vec<Game> = games::table
+            .filter(games::finished.eq(false))
+            .filter(games::current_player_id.eq(user_id))
+            .filter(
+                games::game_status
+                    .eq(GameStatus::InProgress.to_string())
+                    .or(games::game_status
+                        .eq(GameStatus::NotStarted.to_string())
+                        .and(games::game_start.ne(GameStart::Ready.to_string()))),
+            )
+            .load(conn)
+            .await?;
+
+        candidates.sort_by_key(|g| {
+            let t = if g.white_id == user_id {
+                g.white_time_left
+            } else {
+                g.black_time_left
+            };
+            t.unwrap_or(i64::MAX)
+        });
+
+        Ok(candidates.into_iter().next())
+    }
+
     pub async fn delete(&self, conn: &mut DbConn<'_>) -> Result<(), DbError> {
         diesel::delete(games::table.find(self.id))
             .execute(conn)

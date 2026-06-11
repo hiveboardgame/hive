@@ -4,7 +4,7 @@ use server_fn::codec;
 use shared_types::{TournamentId, TournamentSortOrder, TournamentStatus};
 use std::collections::HashSet;
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(input = codec::Cbor, output = codec::Cbor, client = crate::client::ApiClient)]
 pub async fn get_all_abstract(
     sort_order: TournamentSortOrder,
 ) -> Result<Vec<TournamentAbstractResponse>, ServerFnError> {
@@ -24,7 +24,7 @@ pub async fn get_all_abstract(
     Ok(result)
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(input = codec::Cbor, output = codec::Cbor, client = crate::client::ApiClient)]
 pub async fn get_complete(
     tournament_id: TournamentId,
 ) -> Result<TournamentResponse, ServerFnError> {
@@ -40,7 +40,7 @@ pub async fn get_complete(
     }
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(input = codec::Cbor, output = codec::Cbor, client = crate::client::ApiClient)]
 pub async fn get_by_status(
     status: TournamentStatus,
     sort_order: TournamentSortOrder,
@@ -61,7 +61,7 @@ pub async fn get_by_status(
     Ok(result)
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(input = codec::Cbor, output = codec::Cbor, client = crate::client::ApiClient)]
 pub async fn get_abstracts_by_ids(
     tournament_ids: HashSet<TournamentId>,
 ) -> Result<Vec<TournamentAbstractResponse>, ServerFnError> {
@@ -83,7 +83,7 @@ pub async fn get_abstracts_by_ids(
     Ok(result)
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(input = codec::Cbor, output = codec::Cbor, client = crate::client::ApiClient)]
 pub async fn get_hosting_tournaments(
     sort_order: TournamentSortOrder,
 ) -> Result<Vec<TournamentAbstractResponse>, ServerFnError> {
@@ -104,7 +104,7 @@ pub async fn get_hosting_tournaments(
     Ok(result)
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(input = codec::Cbor, output = codec::Cbor, client = crate::client::ApiClient)]
 pub async fn get_joined_tournaments(
     sort_order: TournamentSortOrder,
 ) -> Result<Vec<TournamentAbstractResponse>, ServerFnError> {
@@ -125,7 +125,7 @@ pub async fn get_joined_tournaments(
     Ok(result)
 }
 
-#[server]
+#[server(client = crate::client::ApiClient)]
 pub async fn update_description(
     tournament_id: String,
     description: String,

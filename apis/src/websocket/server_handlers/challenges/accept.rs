@@ -1,15 +1,13 @@
 use crate::{
     common::{ChallengeUpdate, GameActionResponse, GameReaction, GameUpdate, ServerMessage},
+    notifications::{notify, Event},
     responses::GameResponse,
-    websocket::{
-        busybee::Busybee,
-        messages::{InternalServerMessage, MessageDestination},
-    },
+    websocket::messages::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
 use db_lib::{
     get_conn,
-    models::{Challenge, Game, NewGame, Rating, User},
+    models::{Challenge, Game, NewGame, Rating},
     DbPool,
 };
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
@@ -68,6 +66,7 @@ impl AcceptHandler {
                 return Ok(messages);
             }
         }
+        let challenger_id = challenge.challenger_id;
         let (white_id, black_id) = match challenge.color_choice.to_lowercase().as_str() {
             "black" => (self.user_id, challenge.challenger_id),
             "white" => (challenge.challenger_id, self.user_id),
@@ -93,26 +92,29 @@ impl AcceptHandler {
             })
             .await?;
 
-        match speed {
-            GameSpeed::Correspondence | GameSpeed::Untimed => {
-                let white_id = game.white_id;
-                let black_id = game.black_id;
-                let black = User::find_by_uuid(&black_id, &mut conn).await?;
-                let white = User::find_by_uuid(&white_id, &mut conn).await?;
-                let msg = format!(
-                    "[Your game](<https://hivegame.com/game/{}>) vs {} started.\nYou have {} time left.",
-                    game.nanoid,
-                    black.username,
-                    game.str_time_left_for_player(white_id),
-                );
-                let _ = Busybee::msg(white_id, msg).await;
-                let msg = format!(
-                    "[Your game](<https://hivegame.com/game/{}>) vs {} started.",
-                    game.nanoid, white.username
-                );
-                let _ = Busybee::msg(black_id, msg).await;
-            }
-            _ => {}
+        // Notify the *challenger* via the unified dispatcher. The acceptor
+        // doesn't get pinged — they just clicked Accept, they know.
+        //
+        // Gate:
+        //   * Realtime (Bullet / Blitz / Rapid / Classic): always. The
+        //     challenger needs to come to the board immediately or their
+        //     clock drains with them not even looking.
+        //   * Correspondence / untimed: only when the challenger is the
+        //     first mover (white in Hive). If the acceptor moves first,
+        //     their move will trigger `YourTurn` for the challenger when
+        //     it lands — pushing `GameStarted` too would be redundant.
+        let challenger_is_white = challenger_id == game.white_id;
+        let is_realtime = matches!(
+            speed,
+            GameSpeed::Bullet | GameSpeed::Blitz | GameSpeed::Rapid | GameSpeed::Classic
+        );
+        let should_notify_challenger = is_realtime || challenger_is_white;
+        if should_notify_challenger {
+            notify(Event::GameStarted {
+                recipient: challenger_id,
+                opponent: self.username.clone(),
+                game_nanoid: game.nanoid.clone(),
+            });
         }
 
         messages.push(InternalServerMessage {
