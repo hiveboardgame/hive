@@ -6,6 +6,7 @@ mod game_speed;
 mod game_start;
 mod games_query_options;
 mod newtypes;
+mod opening_explorer;
 mod pretty_string;
 mod ready_user;
 mod scoring_mode;
@@ -41,6 +42,7 @@ pub use games_query_options::{
     ALLOWED_BATCH_SIZES,
 };
 pub use newtypes::{ApisId, ChallengeId, GameId, Password, TournamentId};
+pub use opening_explorer::{ExplorerFilters, ExplorerMove, MIN_PLIES};
 pub use pretty_string::PrettyString;
 pub use ready_user::ReadyUser;
 pub use scoring_mode::ScoringMode;

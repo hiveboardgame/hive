@@ -90,6 +90,7 @@ async fn main() -> std::io::Result<()> {
         jobs::ws_telemetry(Data::clone(&hub), secs, csv_path);
     }
 
+    jobs::hash_backfill(pool.clone());
     jobs::tournament_start(pool.clone(), Data::clone(&hub));
     jobs::heartbeat(Data::clone(&hub));
     jobs::ping(Data::clone(&hub));

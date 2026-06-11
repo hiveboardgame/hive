@@ -77,43 +77,81 @@ pub fn HistoryButton(
 
     let is_disabled = move || {
         analysis.with(|analysis| {
-            if let Some(n) = &analysis.current_node {
-                match cloned_action {
-                    HistoryNavigation::First => n.get_node_id().map_or(true, |node_id| {
+            if analysis.current_node.is_none() {
+                // At empty board: Next is usable if the tree has moves to step into;
+                // First and Previous have nothing to go back to.
+                return match cloned_action {
+                    HistoryNavigation::Next => analysis.tree.get_nodes().is_empty(),
+                    _ => true,
+                };
+            }
+            match cloned_action {
+                HistoryNavigation::First => analysis.current_node.as_ref().is_none_or(|n| {
+                    n.get_node_id().map_or(true, |id| {
                         analysis
                             .tree
-                            .get_ancestor_ids(&node_id)
+                            .get_ancestor_ids(&id)
                             .map_or(true, |ids| ids.is_empty())
-                    }),
-                    HistoryNavigation::Next => n
-                        .get_children_ids()
-                        .map_or(true, |children| children.is_empty()),
-                    HistoryNavigation::Previous => n.get_parent_id().map_or(true, |p| p.is_none()),
-                }
-            } else {
-                false
+                    })
+                }),
+                HistoryNavigation::Next => analysis
+                    .current_node
+                    .as_ref()
+                    .is_none_or(|n| n.get_children_ids().map_or(true, |ch| ch.is_empty())),
+                // Previous is always enabled when at a node — worst case goes to empty board.
+                HistoryNavigation::Previous => false,
             }
         })
     };
     let debounced_action = debounce(std::time::Duration::from_millis(10), move |_| {
-        let updated_node_id = analysis.with(|a| {
-            a.current_node.as_ref().and_then(|n| match action {
-                HistoryNavigation::First => n
-                    .get_node_id()
-                    .ok()
-                    .and_then(|node_id| a.tree.get_ancestor_ids(&node_id).ok())
-                    .and_then(|ids| ids.last().cloned()),
-                HistoryNavigation::Next => n
-                    .get_children_ids()
-                    .ok()
-                    .and_then(|children| children.first().cloned()),
-                HistoryNavigation::Previous => n.get_parent_id().ok().flatten(),
-            })
+        // Previous at the tree root steps back to the empty board.
+        let go_to_start = analysis.with(|a| {
+            a.current_node.is_some()
+                && matches!(action, HistoryNavigation::Previous)
+                && a.current_node
+                    .as_ref()
+                    .and_then(|n| n.get_parent_id().ok().flatten())
+                    .is_none()
         });
-        if let Some(updated_node_id) = updated_node_id {
-            analysis.update(|a| {
-                a.update_node(updated_node_id, Some(game_state));
+        // Next from the empty board navigates to the first root of the analysis tree.
+        let go_to_root = analysis
+            .with(|a| a.current_node.is_none() && matches!(action, HistoryNavigation::Next));
+
+        if go_to_start {
+            analysis.update(|a| a.go_to_start(game_state));
+        } else if go_to_root {
+            let root_id = analysis.with(|a| {
+                a.tree
+                    .get_nodes()
+                    .iter()
+                    .find(|n| n.get_parent_id().ok().flatten().is_none())
+                    .and_then(|n| n.get_node_id().ok())
             });
+            if let Some(id) = root_id {
+                analysis.update(|a| {
+                    a.update_node(id, Some(game_state));
+                });
+            }
+        } else {
+            let updated_node_id = analysis.with(|a| {
+                a.current_node.as_ref().and_then(|n| match action {
+                    HistoryNavigation::First => n
+                        .get_node_id()
+                        .ok()
+                        .and_then(|node_id| a.tree.get_ancestor_ids(&node_id).ok())
+                        .and_then(|ids| ids.last().cloned()),
+                    HistoryNavigation::Next => n
+                        .get_children_ids()
+                        .ok()
+                        .and_then(|children| children.first().cloned()),
+                    HistoryNavigation::Previous => n.get_parent_id().ok().flatten(),
+                })
+            });
+            if let Some(updated_node_id) = updated_node_id {
+                analysis.update(|a| {
+                    a.update_node(updated_node_id, Some(game_state));
+                });
+            }
         }
         if let Some(post_action) = post_action {
             post_action.run(())

@@ -248,6 +248,18 @@ impl AnalysisTree {
             gs.view = game_state::View::Game;
         });
     }
+
+    // Navigate to the empty board without clearing the analysis tree so the
+    // user can go forward again after pressing back past the first move.
+    pub fn go_to_start(&mut self, game_state: GameStateSignal) {
+        self.current_node = None;
+        let empty_state = State::new(self.game_type, false);
+        game_state.signal.update(|gs| {
+            gs.state = empty_state;
+            gs.history_turn = None;
+            gs.move_info.reset();
+        });
+    }
 }
 
 fn normalize_uhp_metadata(uhp_string: impl Into<String>) -> String {
