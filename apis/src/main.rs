@@ -123,6 +123,7 @@ async fn main() -> std::io::Result<()> {
             .service(start_connection)
             .service(functions::pwa::cache)
             .service(functions::oauth::callback)
+            .service(functions::og::og_game_image)
             .service(get_token)
             .service(get_identity)
             .service(api_play)
