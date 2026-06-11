@@ -1,12 +1,18 @@
 use crate::{
-    common::{SvgPos, TileDesign},
+    common::{position_from_svg, SvgPos, TileDesign},
     components::{
         layouts::base_layout::OrientationSignal,
-        molecules::{board_pieces::BoardPieces, history_pieces::HistoryPieces},
+        molecules::{
+            annotation_toolbar::AnnotationToolbar,
+            annotations_layer::AnnotationsLayer,
+            board_pieces::BoardPieces,
+            history_pieces::HistoryPieces,
+        },
     },
     hiveground::HivegroundInteraction,
     providers::{
         analysis::AnalysisSignal,
+        annotations::{AnnotationColor, AnnotationTool, AnnotationsSignal, MarkerShape},
         game_state::{GameState, GameStateSignal, View},
         Config,
     },
@@ -16,7 +22,10 @@ use leptos::{
     either::Either,
     ev::{
         contextmenu,
+        keydown,
+        keyup,
         pointerdown,
+        pointerenter,
         pointerleave,
         pointermove,
         pointerup,
@@ -44,8 +53,10 @@ use leptos_use::{
     UseTimeoutFnReturn,
 };
 use wasm_bindgen::JsCast;
-use web_sys::{Element, EventTarget, TouchEvent, WheelEvent};
+use web_sys::{Element, EventTarget, KeyboardEvent, PointerEvent, TouchEvent, WheelEvent};
 
+// Movement under this (client px) is a click, not a drag.
+const ANNOTATION_TAP_SLOP_PX: f64 = 8.0;
 const STACK_LONG_PRESS_DELAY_MS: f64 = 500.0;
 const STACK_TOUCH_MOVE_CANCEL_THRESHOLD_PX: f64 = 8.0;
 const ZOOM_WHEEL_SENSITIVITY: f32 = 0.002; // scroll-wheel: per-unit deltaY -> scale fraction
@@ -160,6 +171,11 @@ enum StackExpansionResetKey {
 pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let analysis = use_context::<AnalysisSignal>();
+    let annotations = use_context::<AnnotationsSignal>();
+    // Hex where the current draw gesture started (set on the draw-button press).
+    let annotation_start = RwSignal::new(None::<Position>);
+    // Left-press client point, so a click (no drag) while drawing can clear all.
+    let left_press = RwSignal::new(None::<(i32, i32)>);
     let orientation_signal = expect_context::<OrientationSignal>();
     let config = expect_context::<Config>().0;
     let viewbox_state = ViewBoxState::new();
@@ -180,9 +196,9 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
     let game_status = create_read_slice(game_state.signal, |gs| gs.state.game_status.clone());
     let board_style = move || {
         if orientation_signal.orientation_vertical.get() {
-            "flex grow min-h-0"
+            "flex relative grow min-h-0"
         } else {
-            "col-span-8 row-span-6"
+            "relative col-span-8 row-span-6"
         }
     };
     let history_style = move || match board_view() {
@@ -218,7 +234,12 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
         format!("background-color: {bg}")
     });
 
-    setup_stack_expansion_events(viewbox_ref, interaction, stack_expansion_reset_key);
+    setup_stack_expansion_events(
+        viewbox_ref,
+        interaction,
+        stack_expansion_reset_key,
+        annotations,
+    );
 
     // Unified RAF-based viewbox update system
     let update_viewbox_size = move |width: f32, height: f32, respect_zoom: bool| {
@@ -353,15 +374,100 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
             .thresholds(vec![0.5]),
     );
 
-    //Start panning and record point where it starts for mouse on left mouse button hold and touch
+    // Left-drag pans. Touch in armed mode draws instead (no right button), so it
+    // doesn't pan; the mouse left-drag pans even while armed (right-drag draws).
     _ = use_event_listener(viewbox_ref, pointerdown, move |evt| {
-        if evt.button() == 0 {
-            viewbox_state.is_panning.update_untracked(|b| *b = true);
-            let (x, y) = screen_to_svg_coordinates(viewbox_ref, evt.x() as f32, evt.y() as f32);
-            viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                viewbox_controls.drag_start_x = x;
-                viewbox_controls.drag_start_y = y;
-            });
+        if evt.button() != 0 {
+            return;
+        }
+        if is_touch_like(&evt) && is_drawing_event(annotations, &evt) {
+            return;
+        }
+        viewbox_state.is_panning.update_untracked(|b| *b = true);
+        let (x, y) = screen_to_svg_coordinates(viewbox_ref, evt.x() as f32, evt.y() as f32);
+        viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+            viewbox_controls.drag_start_x = x;
+            viewbox_controls.drag_start_y = y;
+        });
+        // A stationary left-click while drawing clears the position (checked on release).
+        if annotation_drawing_on(annotations) {
+            left_press.set(Some((evt.client_x(), evt.client_y())));
+        }
+    });
+
+    // Sync quick-draw (palette + active color) to the modifiers held over the board.
+    _ = use_event_listener(viewbox_ref, pointerenter, move |evt| {
+        sync_quick_draw(annotations, &evt);
+    });
+    _ = use_event_listener(viewbox_ref, pointermove, move |evt| {
+        sync_quick_draw(annotations, &evt);
+    });
+
+    // Pressing Ctrl/Alt/Meta opens the palette immediately (no pointer needed);
+    // it closes as soon as the modifiers are released.
+    if let Some(annotations) = annotations {
+        _ = use_event_listener(use_window(), keydown, move |evt: KeyboardEvent| {
+            if is_text_input_focused() {
+                return;
+            }
+            apply_draw_modifiers(annotations, evt.ctrl_key(), evt.alt_key(), evt.meta_key());
+            // While the palette is open, Q/W/E pick hexagon / circle / cross.
+            if annotation_drawing_on(Some(annotations)) {
+                match evt.key().as_str() {
+                    "q" | "Q" => annotations.tool.set(AnnotationTool::Highlight),
+                    "w" | "W" => annotations
+                        .tool
+                        .set(AnnotationTool::Marker(MarkerShape::Circle)),
+                    "e" | "E" => annotations
+                        .tool
+                        .set(AnnotationTool::Marker(MarkerShape::Cross)),
+                    _ => {}
+                }
+            }
+        });
+        _ = use_event_listener(use_window(), keyup, move |evt: KeyboardEvent| {
+            apply_draw_modifiers(annotations, evt.ctrl_key(), evt.alt_key(), evt.meta_key());
+        });
+    }
+
+    // The mouse draws with the right button, touch/pen with the primary press.
+    // Release decides: different hex → arrow, same hex → mark.
+    _ = use_event_listener(viewbox_ref, pointerdown, move |evt| {
+        if let Some(annotations) = annotations {
+            sync_quick_draw(Some(annotations), &evt);
+            if is_draw_button(&evt) && is_drawing_event(Some(annotations), &evt) {
+                evt.prevent_default();
+                let position = pointer_hex(viewbox_ref, viewbox_signal, &evt);
+                annotation_start.set(Some(position));
+                // (from == to) previews the mark until the drag leaves the hex.
+                annotations.preview.set(Some((position, position)));
+            }
+        }
+    });
+
+    // Track the live preview to the hex under the pointer during a drag.
+    _ = use_event_listener(viewbox_ref, pointermove, move |evt| {
+        if let Some(annotations) = annotations {
+            if let Some(start) = annotation_start.get_untracked() {
+                let end = pointer_hex(viewbox_ref, viewbox_signal, &evt);
+                annotations.preview.set(Some((start, end)));
+            }
+        }
+    });
+
+    _ = use_event_listener(viewbox_ref, pointerup, move |evt| {
+        if let Some(annotations) = annotations {
+            if let Some(start) = annotation_start.get_untracked() {
+                let point = pointer_point(viewbox_ref, viewbox_signal, &evt);
+                let end = position_from_svg(point.0, point.1);
+                if start != end {
+                    annotations.apply_drag(start, end);
+                } else {
+                    annotations.apply_tap(end);
+                }
+                annotations.preview.set(None);
+                annotation_start.set(None);
+            }
         }
     });
 
@@ -416,6 +522,12 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
             if evt.touches().length() == 2 {
                 evt.prevent_default();
                 viewbox_state.is_panning.update_untracked(|b| *b = false);
+                // A second finger turns the gesture into zoom, so cancel any
+                // mark/arrow started by the first touch.
+                annotation_start.set(None);
+                if let Some(annotations) = annotations {
+                    annotations.preview.set(None);
+                }
                 // Snapshot the gesture start: finger spread (client px) plus the
                 // current viewbox and the anchor point under the finger centroid.
                 let (distance, center) = touch_distance_and_center(viewbox_ref, &evt);
@@ -457,16 +569,40 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
     );
 
     //Stop panning when user releases touch/click
-    _ = use_event_listener(viewbox_ref, pointerup, move |_| {
+    _ = use_event_listener(viewbox_ref, pointerup, move |evt| {
         viewbox_state.is_panning.update_untracked(|b| *b = false);
+        // A stationary left-click while drawing clears this position's annotations.
+        if let Some(annotations) = annotations {
+            if evt.button() == 0 && !is_touch_like(&evt) && annotation_drawing_on(Some(annotations))
+            {
+                if let Some((px, py)) = left_press.get_untracked() {
+                    let moved = ((evt.client_x() - px) as f64).hypot((evt.client_y() - py) as f64);
+                    if moved <= ANNOTATION_TAP_SLOP_PX {
+                        annotations.clear_current();
+                    }
+                }
+            }
+            left_press.set(None);
+        }
     });
 
     //Stop panning when pointer leaves board area
     _ = use_event_listener(viewbox_ref, pointerleave, move |_| {
         viewbox_state.is_panning.update_untracked(|b| *b = false);
+        // Leaving the board ends any in-progress drag. Quick-draw stays open while
+        // the modifier is held (closed on keyup) so the palette can be clicked.
+        if let Some(annotations) = annotations {
+            annotations.preview.set(None);
+        }
+        annotation_start.set(None);
+        left_press.set(None);
     });
 
     _ = on_click_outside(g_ref, move |event| {
+        // While drawing, an off-hive click is an annotation, not a selection to cancel.
+        if annotation_drawing_on(annotations) {
+            return;
+        }
         let clicked_timer = event
             .target()
             .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
@@ -505,16 +641,117 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
                             Either::Right(view! { <BoardPieces tile_opts interaction /> })
                         }
                     }}
+                    {annotations
+                        .map(|annotations| {
+                            view! { <AnnotationsLayer annotations history_state /> }
+                        })}
                 </g>
             </svg>
+            {annotations.map(|annotations| view! { <AnnotationToolbar annotations /> })}
         </div>
     }
+}
+
+/// The quick-draw color for an event's held modifiers, if any (lichess-style).
+fn draw_color_from_evt(evt: &PointerEvent) -> Option<AnnotationColor> {
+    AnnotationColor::from_modifiers(evt.ctrl_key(), evt.alt_key(), evt.meta_key())
+}
+
+/// Touch and pen lack a right button and modifiers, so they draw with the
+/// primary press; the mouse draws with the right button.
+fn is_touch_like(evt: &PointerEvent) -> bool {
+    evt.pointer_type() != "mouse"
+}
+
+/// The button that draws for this pointer: right for the mouse, primary otherwise.
+fn is_draw_button(evt: &PointerEvent) -> bool {
+    if is_touch_like(evt) {
+        evt.button() == 0
+    } else {
+        evt.button() == 2
+    }
+}
+
+/// Whether this event should draw (annotate mode or a held draw-modifier).
+fn is_drawing_event(annotations: Option<AnnotationsSignal>, evt: &PointerEvent) -> bool {
+    annotations.is_some_and(|annotations| {
+        annotations.mode.get_untracked() || draw_color_from_evt(evt).is_some()
+    })
+}
+
+/// Whether drawing is active (sticky mode or a held modifier).
+fn annotation_drawing_on(annotations: Option<AnnotationsSignal>) -> bool {
+    annotations.is_some_and(|annotations| {
+        annotations.mode.get_untracked() || annotations.quick_draw.get_untracked()
+    })
+}
+
+/// Reflect held modifiers into quick-draw state: open the palette and set the
+/// active color, or clear it once the modifiers are released.
+fn apply_draw_modifiers(annotations: AnnotationsSignal, ctrl: bool, alt: bool, meta: bool) {
+    match AnnotationColor::from_modifiers(ctrl, alt, meta) {
+        Some(color) => {
+            if !annotations.quick_draw.get_untracked() {
+                annotations.quick_draw.set(true);
+            }
+            if annotations.color.get_untracked() != color {
+                annotations.color.set(color);
+            }
+        }
+        None => {
+            if annotations.quick_draw.get_untracked() {
+                annotations.quick_draw.set(false);
+            }
+        }
+    }
+}
+
+/// Sync quick-draw to the modifiers held during a pointer event.
+fn sync_quick_draw(annotations: Option<AnnotationsSignal>, evt: &PointerEvent) {
+    if let Some(annotations) = annotations {
+        apply_draw_modifiers(annotations, evt.ctrl_key(), evt.alt_key(), evt.meta_key());
+    }
+}
+
+/// Don't hijack Ctrl/Alt while the user is typing.
+fn is_text_input_focused() -> bool {
+    let Some(element) = web_sys::window()
+        .and_then(|window| window.document())
+        .and_then(|document| document.active_element())
+    else {
+        return false;
+    };
+    let tag = element.tag_name().to_lowercase();
+    tag == "input" || tag == "textarea" || element.has_attribute("contenteditable")
+}
+
+/// Pointer position in the board's g-local space — undoes the pan/centering
+/// translate on the `<g>` that `screen_to_svg_coordinates` doesn't account for.
+fn pointer_point(
+    svg: NodeRef<svg::Svg>,
+    viewbox_signal: RwSignal<ViewBoxControls>,
+    evt: &web_sys::PointerEvent,
+) -> (f32, f32) {
+    let (x, y) = screen_to_svg_coordinates(svg, evt.x() as f32, evt.y() as f32);
+    let (tx, ty) = viewbox_signal.with_untracked(|vb| (vb.x_transform, vb.y_transform));
+    (x - tx, y - ty)
+}
+
+/// The board hex a pointer event lands on.
+fn pointer_hex(
+    svg: NodeRef<svg::Svg>,
+    viewbox_signal: RwSignal<ViewBoxControls>,
+    evt: &web_sys::PointerEvent,
+) -> Position {
+    let (x, y) = pointer_point(svg, viewbox_signal, evt);
+    position_from_svg(x, y)
 }
 
 fn setup_stack_expansion_events(
     viewbox_ref: NodeRef<svg::Svg>,
     interaction: HivegroundInteraction,
     reset_key: Signal<StackExpansionResetKey>,
+    annotations: Option<AnnotationsSignal>,
 ) {
     let stack_touch_start = RwSignal::new(None::<(i32, i32)>);
 
@@ -528,8 +765,10 @@ fn setup_stack_expansion_events(
         false,
     );
 
+    // Right-click inspects stacks only when drawing isn't armed; while armed the
+    // right button draws instead.
     _ = use_event_listener(viewbox_ref, pointerdown, move |evt| {
-        if evt.button() == 2 {
+        if evt.button() == 2 && !is_drawing_event(annotations, &evt) {
             if let Some(position) = stack_position_from_event_target(evt.target()) {
                 evt.prevent_default();
                 interaction.expand_stack(position);
@@ -558,7 +797,8 @@ fn setup_stack_expansion_events(
         viewbox_ref,
         touchstart,
         move |evt: TouchEvent| match evt.touches().length() {
-            1 => {
+            // In edit mode a single finger draws, so don't long-press for stacks.
+            1 if !annotations.is_some_and(|a| a.mode.get_untracked()) => {
                 let Some(position) = stack_position_from_event_target(evt.target()) else {
                     cancel_stack_long_press.with_value(|cancel| cancel());
                     return;

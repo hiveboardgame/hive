@@ -1,4 +1,4 @@
-use crate::common::PieceType;
+use crate::{common::PieceType, providers::annotations::AnnotationColor};
 use hive_lib::{Piece, Position};
 use leptos::prelude::*;
 use web_sys::MouseEvent;
@@ -125,6 +125,11 @@ impl HivegroundInteraction {
         piece_type: PieceType,
     ) {
         evt.stop_propagation();
+        // A draw-modifier click is a quick-draw gesture (board handles it), not a selection.
+        if AnnotationColor::from_modifiers(evt.ctrl_key(), evt.alt_key(), evt.meta_key()).is_some()
+        {
+            return;
+        }
         let capabilities = self.capabilities.get_untracked();
         match piece_type {
             PieceType::Board if capabilities.select_board_piece => {

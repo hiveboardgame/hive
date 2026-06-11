@@ -12,6 +12,7 @@ use crate::{
     hiveground::{analysis_hiveground_interaction, selected_history_state},
     providers::{
         analysis::{AnalysisSignal, AnalysisTree, TreeNode},
+        annotations::AnnotationsSignal,
         game_state::GameStateSignal,
         AuthContext,
     },
@@ -107,6 +108,7 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                             AnalysisSignal(RwSignal::new(analysis_tree))
                         });
                     provide_context(analysis_signal);
+                    provide_context(AnnotationsSignal::analysis(analysis_signal));
                     let hiveground_interaction = analysis_hiveground_interaction();
 
                     view! {
