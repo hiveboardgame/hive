@@ -29,4 +29,6 @@ pub use model::{
     RenderStack,
 };
 pub use paint::HivegroundPaint;
+#[cfg(feature = "ssr")]
+pub use render::{board_to_png, board_to_svg, PreviewOpts};
 pub use render::{layers_by_position, layers_for_position, stack_positions};

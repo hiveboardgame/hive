@@ -8,6 +8,8 @@ pub mod home_banner;
 pub mod hostname;
 pub mod oauth;
 #[cfg(feature = "ssr")]
+pub mod og;
+#[cfg(feature = "ssr")]
 pub mod pwa;
 pub mod schedules;
 pub mod telemetry;

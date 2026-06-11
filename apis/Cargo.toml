@@ -57,9 +57,11 @@ leptos_icons = { workspace = true }
 leptos_meta = { workspace = true }
 leptos_router = { workspace = true }
 log = { workspace = true }
+lru = { version = "0.12", optional = true }
 markdown = { workspace = true }
 rand = { workspace = true, optional = true }
 reqwest = { workspace = true }
+resvg = { version = "0.46", optional = true }
 reactive_stores = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
@@ -100,7 +102,9 @@ ssr = [
   "dep:diesel_migrations",
   "dep:diesel-async",
   "dep:leptos_actix",
+  "dep:lru",
   "dep:rand",
+  "dep:resvg",
   "dep:jsonwebtoken",
   "leptos/ssr",
   "leptos-use/ssr",

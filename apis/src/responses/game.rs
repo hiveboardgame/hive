@@ -140,6 +140,18 @@ impl GameResponse {
         .expect("State to be valid, as game was")
     }
 
+    /// Preview URLs are user-controlled, so clamp before replaying history.
+    pub fn create_state_at_turn(&self, turn: usize) -> State {
+        let turn = turn.min(self.history.len());
+        State::new_from_history(&History::new_from_gamestate(
+            self.history[..turn].to_vec(),
+            &self.hashes[..turn.min(self.hashes.len())],
+            GameResult::Unknown,
+            self.game_type,
+        ))
+        .expect("Partial state to be valid, as the full game was")
+    }
+
     pub fn organizer_can_adjudicate(&self) -> bool {
         matches!(
             self.conclusion,
