@@ -14,7 +14,12 @@ pub fn UndoButton() -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>();
     let game_state = expect_context::<GameStateSignal>();
     let analysis = StoredValue::new(analysis.clone());
-    let is_disabled = move || analysis.get_value().0.with(|a| a.current_node.is_none());
+    let is_disabled = move || {
+        analysis
+            .get_value()
+            .0
+            .with(|a| a.current_node.is_none() || a.is_at_start())
+    };
     let undo = move |_| {
         analysis.get_value().0.update(|a| {
             if let Some(node) = &a.current_node {
@@ -52,7 +57,7 @@ pub fn UndoButton() -> impl IntoView {
 }
 
 use leptos::leptos_dom::helpers::debounce;
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub enum HistoryNavigation {
     First,
     Next,
@@ -78,80 +83,42 @@ pub fn HistoryButton(
     let is_disabled = move || {
         analysis.with(|analysis| {
             if analysis.current_node.is_none() {
-                // At empty board: Next is usable if the tree has moves to step into;
-                // First and Previous have nothing to go back to.
                 return match cloned_action {
-                    HistoryNavigation::Next => analysis.tree.get_nodes().is_empty(),
+                    HistoryNavigation::Next => !analysis.has_real_moves(),
                     _ => true,
                 };
             }
             match cloned_action {
-                HistoryNavigation::First => analysis.current_node.as_ref().is_none_or(|n| {
-                    n.get_node_id().map_or(true, |id| {
-                        analysis
-                            .tree
-                            .get_ancestor_ids(&id)
-                            .map_or(true, |ids| ids.is_empty())
-                    })
-                }),
+                HistoryNavigation::First => analysis
+                    .current_node_id()
+                    .and_then(|node_id| analysis.first_real_ancestor_id(node_id))
+                    .is_none(),
                 HistoryNavigation::Next => analysis
                     .current_node
                     .as_ref()
                     .is_none_or(|n| n.get_children_ids().map_or(true, |ch| ch.is_empty())),
-                // Previous is always enabled when at a node — worst case goes to empty board.
-                HistoryNavigation::Previous => false,
+                HistoryNavigation::Previous => analysis.is_at_start(),
             }
         })
     };
     let debounced_action = debounce(std::time::Duration::from_millis(10), move |_| {
-        // Previous at the tree root steps back to the empty board.
-        let go_to_start = analysis.with(|a| {
-            a.current_node.is_some()
-                && matches!(action, HistoryNavigation::Previous)
-                && a.current_node
-                    .as_ref()
-                    .and_then(|n| n.get_parent_id().ok().flatten())
-                    .is_none()
+        let updated_node_id = analysis.with(|a| {
+            a.current_node.as_ref().and_then(|n| match action {
+                HistoryNavigation::First => n
+                    .get_node_id()
+                    .ok()
+                    .and_then(|node_id| a.first_real_ancestor_id(node_id)),
+                HistoryNavigation::Next => n
+                    .get_children_ids()
+                    .ok()
+                    .and_then(|children| children.first().cloned()),
+                HistoryNavigation::Previous => n.get_parent_id().ok().flatten(),
+            })
         });
-        // Next from the empty board navigates to the first root of the analysis tree.
-        let go_to_root = analysis
-            .with(|a| a.current_node.is_none() && matches!(action, HistoryNavigation::Next));
-
-        if go_to_start {
-            analysis.update(|a| a.go_to_start(game_state));
-        } else if go_to_root {
-            let root_id = analysis.with(|a| {
-                a.tree
-                    .get_nodes()
-                    .iter()
-                    .find(|n| n.get_parent_id().ok().flatten().is_none())
-                    .and_then(|n| n.get_node_id().ok())
+        if let Some(updated_node_id) = updated_node_id {
+            analysis.update(|a| {
+                a.update_node(updated_node_id, Some(game_state));
             });
-            if let Some(id) = root_id {
-                analysis.update(|a| {
-                    a.update_node(id, Some(game_state));
-                });
-            }
-        } else {
-            let updated_node_id = analysis.with(|a| {
-                a.current_node.as_ref().and_then(|n| match action {
-                    HistoryNavigation::First => n
-                        .get_node_id()
-                        .ok()
-                        .and_then(|node_id| a.tree.get_ancestor_ids(&node_id).ok())
-                        .and_then(|ids| ids.last().cloned()),
-                    HistoryNavigation::Next => n
-                        .get_children_ids()
-                        .ok()
-                        .and_then(|children| children.first().cloned()),
-                    HistoryNavigation::Previous => n.get_parent_id().ok().flatten(),
-                })
-            });
-            if let Some(updated_node_id) = updated_node_id {
-                analysis.update(|a| {
-                    a.update_node(updated_node_id, Some(game_state));
-                });
-            }
         }
         if let Some(post_action) = post_action {
             post_action.run(())
@@ -180,7 +147,7 @@ pub fn HistoryMove(
 ) -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>().0;
     let game_state = expect_context::<GameStateSignal>();
-    if let (Ok(Some(value)), Ok(node_id)) = (node.get_value(), node.get_node_id()) {
+    if let Ok(node_id) = node.get_node_id() {
         let class = move || {
             let margin = if has_children { "" } else { "ml-[15px] " };
             let bg_color = if current_path.with(|path| path.first() == Some(&node_id)) {
@@ -195,12 +162,14 @@ pub fn HistoryMove(
                 a.update_node(node_id, Some(game_state));
             });
         };
-        let history_index = value.turn - 1;
+        let value = node.get_value().ok().flatten();
+        let history_index = value.as_ref().map(|value| value.turn - 1);
         let game_state = expect_context::<GameStateSignal>();
         let repetitions =
             create_read_slice(game_state.signal, |gs| gs.state.repeating_moves.clone());
         let rep = move || {
-            if repetitions.with(|r| r.contains(&history_index))
+            if history_index
+                .is_some_and(|history_index| repetitions.with(|r| r.contains(&history_index)))
                 && current_path.with(|p| p.contains(&node_id))
             {
                 String::from(" ↺")
@@ -210,7 +179,14 @@ pub fn HistoryMove(
         };
         view! {
             <div class=class on:click=onclick>
-                {move || format!("{}. {} {} {}", value.turn, value.piece, value.position, rep())}
+                {move || {
+                    value
+                        .as_ref()
+                        .map(|value| {
+                            format!("{}. {} {} {}", value.turn, value.piece, value.position, rep())
+                        })
+                        .unwrap_or_else(|| String::from("0."))
+                }}
             </div>
         }
         .into_any()

@@ -102,16 +102,8 @@ pub fn OpeningExplorer() -> impl IntoView {
     let game_type = analysis.with_untracked(|a| a.game_type);
     let filters = RwSignal::new(ExplorerFilters::new(game_type));
 
-    // Current position hash from the analysis tree (0 = empty board / root node).
-    let current_hash = Signal::derive(move || {
-        analysis.with(|a| {
-            a.current_node
-                .as_ref()
-                .and_then(|n| n.get_node_id().ok())
-                .and_then(|id| a.hashes.get_by_right(&id).copied())
-                .unwrap_or(0)
-        })
-    });
+    // Current position hash from the analysis tree (0 = empty-board start node).
+    let current_hash = Signal::derive(move || analysis.with(|a| a.current_hash()));
 
     let resource = Resource::new(
         move || (current_hash.get(), filters.get()),
