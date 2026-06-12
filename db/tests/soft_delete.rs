@@ -339,6 +339,7 @@ async fn create_abortable_game(
             tournament_game_result: TournamentGameResult::Unknown.to_string(),
             game_start: GameStart::Moves.to_string(),
             move_times: Vec::new(),
+            timeout_at: None,
         },
         conn,
     )

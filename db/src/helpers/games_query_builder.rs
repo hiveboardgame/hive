@@ -1,4 +1,4 @@
-use crate::schema::{games, users};
+use crate::schema::{game_hashes, games, users};
 use chrono::{DateTime, Utc};
 use diesel::{
     dsl::sql,
@@ -92,7 +92,24 @@ impl GameQueryBuilder {
             .rating_range(options.rating_min, options.rating_max)
             .turn_range(options.turn_min, options.turn_max)
             .date_range(options.date_start, options.date_end)
-            .tournament_filter(options.only_tournament);
+            .tournament_filter(options.only_tournament)
+            .position_hash(options.position_hash);
+        self
+    }
+
+    /// Restrict to games that passed through the given canonical position hash, via a subquery
+    /// on `game_hashes` (one row per turn/position, FK `game_id` → `games.id`). Used by the
+    /// opening explorer's "Search this position" link.
+    pub fn position_hash(mut self, hash: Option<i64>) -> Self {
+        if let Some(hash) = hash {
+            self.query = self.query.filter(
+                games::id.eq_any(
+                    game_hashes::table
+                        .filter(game_hashes::hash.eq(hash))
+                        .select(game_hashes::game_id),
+                ),
+            );
+        }
         self
     }
 
@@ -718,6 +735,32 @@ mod tests {
         assert!(sql.contains("finished"));
         assert!(sql.contains("game_status"));
         assert!(sql.contains("conclusion"));
+    }
+
+    #[test]
+    fn position_hash_filters_via_game_hashes_subquery() {
+        let options = GamesQueryOptions {
+            position_hash: Some(123),
+            ..finished_defaults()
+        };
+        let prepared = options.clone().validate_all().unwrap();
+        let query = GameQueryBuilder::base_query(&prepared)
+            .build()
+            .select(games::all_columns);
+
+        let sql = debug_query::<diesel::pg::Pg, _>(&query).to_string();
+        assert!(sql.contains("game_hashes"));
+        assert!(sql.contains("hash"));
+
+        // No subquery when unset.
+        let none = finished_defaults().validate_all().unwrap();
+        let none_sql = debug_query::<diesel::pg::Pg, _>(
+            &GameQueryBuilder::base_query(&none)
+                .build()
+                .select(games::all_columns),
+        )
+        .to_string();
+        assert!(!none_sql.contains("game_hashes"));
     }
 
     #[test]

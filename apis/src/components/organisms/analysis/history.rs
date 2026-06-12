@@ -54,8 +54,14 @@ fn build_history_model(tree: &Tree<i32, TreeNode>) -> Option<Vec<HistoryItem>> {
 
         let parent_degree = siblings_ids.len();
         let is_main_variation = siblings_ids.first().is_some_and(|first| *first == node_id);
+        let is_start_node =
+            AnalysisTree::is_start_node_id(node_id) && node.get_value().ok().flatten().is_none();
 
         content = match children_ids.len() {
+            // The synthetic start node is only useful in the list when it owns
+            // alternate move-1 branches; otherwise keep it out of the rendered history.
+            0 | 1 if is_start_node => content,
+
             // Multiple children: put secondary variations inside a collapsible,
             // then continue the main line inline.
             n if n > 1 => {
@@ -170,7 +176,7 @@ pub fn History(
         })
     });
 
-    let has_history = Memo::new(move |_| analysis.with(|a| a.tree.get_root_node().is_some()));
+    let has_history = Memo::new(move |_| analysis.with(|a| a.has_real_moves()));
     let promote_variation = move |promote_all: bool| {
         analysis.update(|a| {
             let current_path = current_path();
@@ -306,5 +312,76 @@ pub fn History(
 
             </div>
         </div>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn node(turn: usize, piece: &str) -> TreeNode {
+        TreeNode {
+            turn,
+            piece: piece.to_string(),
+            position: String::new(),
+        }
+    }
+
+    #[test]
+    fn empty_start_node_is_not_rendered() {
+        let mut tree = Tree::new(Some("analysis"));
+        tree.add_node(Node::new(-1, None), None).unwrap();
+
+        assert_eq!(build_history_model(&tree).unwrap(), Vec::new());
+    }
+
+    #[test]
+    fn single_line_hides_start_node() {
+        let mut tree = Tree::new(Some("analysis"));
+        let start = tree.add_node(Node::new(-1, None), None).unwrap();
+        let move_1 = tree
+            .add_node(Node::new(0, Some(node(1, "wG1"))), Some(&start))
+            .unwrap();
+        tree.add_node(Node::new(1, Some(node(2, "bG1"))), Some(&move_1))
+            .unwrap();
+
+        assert_eq!(
+            build_history_model(&tree).unwrap(),
+            vec![
+                HistoryItem::Move { node_id: 0 },
+                HistoryItem::Move { node_id: 1 },
+            ]
+        );
+    }
+
+    #[test]
+    fn start_node_variations_are_collapsible_branches() {
+        let mut tree = Tree::new(Some("analysis"));
+        let start = tree.add_node(Node::new(-1, None), None).unwrap();
+        let main_1 = tree
+            .add_node(Node::new(0, Some(node(1, "wG1"))), Some(&start))
+            .unwrap();
+        tree.add_node(Node::new(1, Some(node(2, "bG1"))), Some(&main_1))
+            .unwrap();
+        let variation_1 = tree
+            .add_node(Node::new(2, Some(node(1, "wM"))), Some(&start))
+            .unwrap();
+        tree.add_node(Node::new(3, Some(node(2, "bG1"))), Some(&variation_1))
+            .unwrap();
+
+        assert_eq!(
+            build_history_model(&tree).unwrap(),
+            vec![
+                HistoryItem::Collapsible {
+                    node_id: -1,
+                    inner: vec![
+                        HistoryItem::Move { node_id: 2 },
+                        HistoryItem::Move { node_id: 3 },
+                    ],
+                },
+                HistoryItem::Move { node_id: 0 },
+                HistoryItem::Move { node_id: 1 },
+            ]
+        );
     }
 }

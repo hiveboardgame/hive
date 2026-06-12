@@ -21,6 +21,23 @@ diesel::table! {
 }
 
 diesel::table! {
+    game_hashes (game_id, turn) {
+        hash -> Int8,
+        game_id -> Uuid,
+        turn -> Int4,
+        rating -> Nullable<Float8>,
+        result -> Text,
+        speed -> Text,
+        game_type -> Text,
+        rated -> Bool,
+        played_at -> Timestamptz,
+        move_piece -> Text,
+        move_position -> Text,
+        game_length -> Int4,
+    }
+}
+
+diesel::table! {
     games (id) {
         id -> Uuid,
         nanoid -> Text,
@@ -191,6 +208,7 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(game_hashes -> games (game_id));
 diesel::joinable!(games_users -> games (game_id));
 diesel::joinable!(games_users -> users (user_id));
 diesel::joinable!(ratings -> users (user_uid));
@@ -208,6 +226,7 @@ diesel::joinable!(tournaments_users -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     challenges,
+    game_hashes,
     games,
     games_users,
     home_banner,

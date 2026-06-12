@@ -60,6 +60,30 @@ impl State {
         Ok(state)
     }
 
+    /// The opening "roots" for a game type: one entry per distinct bug White can open with
+    /// (Queen-first allowed, so `tournament` is off), each as `(piece, position, hash)` where
+    /// `hash` is the canonical board hash of the resulting position (matching what is stored in
+    /// `game_hashes`). Used to anchor the opening explorer's empty-board view.
+    pub fn opening_hashes(game_type: GameType) -> Vec<(String, String, u64)> {
+        let mut first_pieces: Vec<String> = State::new(game_type, false)
+            .reserve(Color::White)
+            .into_values()
+            .filter_map(|pieces| pieces.into_iter().min())
+            .collect();
+        first_pieces.sort();
+        first_pieces
+            .into_iter()
+            .filter_map(|piece| {
+                let mut state = State::new(game_type, false);
+                state.play_turn_from_history(&piece, "").ok()?;
+                state
+                    .hashes
+                    .last()
+                    .map(|&hash| (piece, String::new(), hash))
+            })
+            .collect()
+    }
+
     pub fn undo(&mut self) {
         let mut moves = self.history.moves.clone();
         moves.pop();

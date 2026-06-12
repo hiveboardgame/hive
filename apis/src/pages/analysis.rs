@@ -3,13 +3,13 @@ use crate::{
     components::{
         layouts::base_layout::OrientationSignal,
         organisms::{
-            analysis::History,
+            analysis::{History, HistoryButton, HistoryNavigation, OpeningExplorer, UndoButton},
             board::Board,
             reserve::{Alignment, Reserve},
         },
     },
     functions::games::get::get_game_from_nanoid,
-    hiveground::{analysis_hiveground_interaction, selected_history_state},
+    hiveground::{analysis_hiveground_interaction, selected_history_state, HivegroundInteraction},
     providers::{
         analysis::{AnalysisSignal, AnalysisTree, TreeNode},
         game_state::GameStateSignal,
@@ -17,7 +17,7 @@ use crate::{
     },
     responses::GameResponse,
 };
-use hive_lib::{Color, GameStatus, GameType};
+use hive_lib::{Color, GameStatus, GameType, State};
 use leptos::prelude::*;
 use leptos_router::hooks::{use_params_map, use_query_map};
 use shared_types::{GameId, TimeMode};
@@ -116,9 +116,10 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                                 view! {
                                     <AnalysisInfo extend_tw_classes="absolute pl-4 pt-2 bg-transparent" />
                                     <Board interaction=hiveground_interaction history_state />
-                                    <div class="flex flex-col col-span-2 row-span-6 p-1 h-full border-2 border-black select-none dark:border-white">
-                                        <History interaction=hiveground_interaction history_state />
-                                    </div>
+                                    <AnalysisSidebar
+                                        interaction=hiveground_interaction
+                                        history_state
+                                    />
                                 }
                             }
                         >
@@ -148,10 +149,88 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                                 </div>
                             </div>
                             <History mobile=true interaction=hiveground_interaction history_state />
+                            <OpeningExplorer />
                         </Show>
                     }
                 }}
             </Suspense>
+        </div>
+    }
+}
+
+#[derive(Clone, Copy, PartialEq)]
+enum AnalysisTab {
+    History,
+    Explorer,
+}
+
+/// The desktop analysis sidebar: History and Opening Explorer as tabs, so the explorer gets the
+/// full sidebar height instead of sharing it with the move history. The reserve is unaffected
+/// (it lives in the board on desktop / as strips on mobile).
+#[component]
+fn AnalysisSidebar(
+    interaction: HivegroundInteraction,
+    history_state: Memo<State>,
+) -> impl IntoView {
+    let tab = RwSignal::new(AnalysisTab::History);
+    let trigger_class = move |name: AnalysisTab| {
+        move || {
+            format!(
+                "grow py-1 text-center cursor-pointer transform transition-transform duration-300 active:scale-95 hover:bg-pillbug-teal dark:hover:bg-pillbug-teal {}",
+                if tab() == name {
+                    "dark:bg-button-twilight bg-slate-400"
+                } else {
+                    "bg-inherit"
+                },
+            )
+        }
+    };
+    view! {
+        <div class="flex flex-col col-span-2 row-span-6 h-full border-2 border-black select-none dark:border-white">
+            <div class="flex sticky top-0 z-10 justify-between border-b-2 border-black dark:border-white">
+                <div
+                    class=trigger_class(AnalysisTab::History)
+                    on:click=move |_| tab.set(AnalysisTab::History)
+                >
+                    "History"
+                </div>
+                <div
+                    class=trigger_class(AnalysisTab::Explorer)
+                    on:click=move |_| tab.set(AnalysisTab::Explorer)
+                >
+                    "Explorer"
+                </div>
+            </div>
+            <div class="overflow-y-auto flex-grow p-1">
+                <Show when=move || tab() == AnalysisTab::History>
+                    <History interaction history_state />
+                </Show>
+                <Show when=move || tab() == AnalysisTab::Explorer>
+                    <div class="flex gap-1 min-h-0 [&>*]:grow">
+                        <HistoryButton action=HistoryNavigation::First post_action=None />
+                        <HistoryButton action=HistoryNavigation::Previous post_action=None />
+                        <HistoryButton action=HistoryNavigation::Next post_action=None />
+                        <UndoButton />
+                    </div>
+                    <div class="flex flex-col px-4 pt-2">
+                        <Reserve
+                            alignment=Alignment::DoubleRow
+                            color=Color::White
+                            viewbox_str="-32 -40 250 120"
+                            interaction
+                            history_state
+                        />
+                        <Reserve
+                            alignment=Alignment::DoubleRow
+                            color=Color::Black
+                            viewbox_str="-32 -40 250 120"
+                            interaction
+                            history_state
+                        />
+                    </div>
+                    <OpeningExplorer />
+                </Show>
+            </div>
         </div>
     }
 }

@@ -128,7 +128,7 @@ mod preview {
              <rect width=\"{w}\" height=\"{h}\" fill=\"{bg}\"/>\
              {defs}{wrapper}{glyphs}</g></svg>",
             bg = opts.background,
-            defs = &*DEFS,
+            defs = *DEFS,
         )
     }
 

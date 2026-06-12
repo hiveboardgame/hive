@@ -9,6 +9,7 @@ pub mod hostname;
 pub mod oauth;
 #[cfg(feature = "ssr")]
 pub mod og;
+pub mod opening_explorer;
 #[cfg(feature = "ssr")]
 pub mod pwa;
 pub mod schedules;
