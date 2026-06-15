@@ -5,6 +5,7 @@ use crate::{
         layouts::base_layout::{ControlsSignal, OrientationSignal},
         molecules::{
             analysis_and_download::AnalysisAndDownload,
+            annotation_toolbar::AnnotationToggle,
             control_buttons::ControlButtons,
             game_info::GameInfo,
             history_controls::scroll_active_history_move_into_view,
@@ -21,6 +22,7 @@ use crate::{
     functions::games::get::get_game_from_nanoid,
     hiveground::{live_hiveground_interaction, selected_history_state, HivegroundInteraction},
     providers::{
+        annotations::AnnotationsSignal,
         config::Config,
         game_state::{GameStateSignal, View},
         timer::TimerSignal,
@@ -84,6 +86,7 @@ pub fn Play() -> impl IntoView {
         })
     });
     provide_context(CurrentConfirm(current_confirm));
+    provide_context(AnnotationsSignal::play(game_state));
     let hiveground_interaction = live_hiveground_interaction();
     let history_state = selected_history_state(game_state);
     let user = auth_context.user;
@@ -525,7 +528,10 @@ fn VerticalLayout(
             <div class="flex flex-col shrink bg-board-dawn dark:bg-reserve-twilight">
                 <Show when=show_controls>
                     <div class="flex flex-row-reverse justify-between items-center shrink">
-                        <AnalysisAndDownload />
+                        <div class="flex flex-row-reverse items-center">
+                            <AnalysisAndDownload />
+                            <AnnotationToggle extend_tw_classes="place-self-start" />
+                        </div>
                         <Show when=user_is_player>
                             <ControlButtons />
                         </Show>

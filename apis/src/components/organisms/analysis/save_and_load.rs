@@ -22,6 +22,7 @@ pub fn DownloadTree() -> impl IntoView {
                 tree: a.tree.clone(),
                 hashes: a.hashes.clone(),
                 game_type: a.game_type,
+                annotations: a.annotations.clone(),
             };
             serde_json::to_string(&out).unwrap()
         });

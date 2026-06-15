@@ -1,12 +1,15 @@
 use crate::{
-    providers::game_state::{GameState, GameStateSignal},
+    providers::{
+        annotations::AnnotationSet,
+        game_state::{GameState, GameStateSignal},
+    },
     responses::GameResponse,
 };
 use bimap::BiMap;
 use hive_lib::{GameError, GameType, History, State};
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::vec;
+use std::{collections::HashMap, vec};
 use tree_ds::prelude::{Node, TraversalStrategy, Tree};
 
 use super::game_state;
@@ -19,8 +22,11 @@ pub struct TreeNode {
     pub piece: String,
     pub position: String,
 }
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct AnalysisSignal(pub RwSignal<AnalysisTree>);
+
+/// Annotation key for the root (no current node); real node ids are `>= 0`.
+pub const ANALYSIS_ROOT_KEY: i32 = START_NODE_ID;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AnalysisTree {
@@ -28,6 +34,10 @@ pub struct AnalysisTree {
     pub tree: Tree<i32, TreeNode>,
     pub hashes: BiMap<u64, i32>,
     pub game_type: GameType,
+    /// Per-node annotations, keyed by tree node id (or `ANALYSIS_ROOT_KEY`).
+    /// Serialized so they survive save/load.
+    #[serde(default)]
+    pub annotations: HashMap<i32, AnnotationSet>,
 }
 
 impl Default for AnalysisTree {
@@ -56,6 +66,7 @@ impl AnalysisTree {
             tree,
             hashes: BiMap::new(),
             game_type,
+            annotations: HashMap::new(),
         }
     }
 
@@ -204,6 +215,7 @@ impl AnalysisTree {
             tree,
             hashes,
             game_type: state.game_type,
+            annotations: HashMap::new(),
         }
     }
 
@@ -239,6 +251,7 @@ impl AnalysisTree {
             tree,
             hashes,
             game_type: state.game_type,
+            annotations: HashMap::new(),
         };
 
         let move_count = state.history.moves.len();
@@ -382,10 +395,19 @@ impl AnalysisTree {
         self.current_node = self.tree.get_node_by_id(&new_id);
     }
 
+    /// Annotation key for the current node (or `ANALYSIS_ROOT_KEY` at the root).
+    pub fn current_annotation_key(&self) -> i32 {
+        self.current_node
+            .as_ref()
+            .and_then(|node| node.get_node_id().ok())
+            .unwrap_or(ANALYSIS_ROOT_KEY)
+    }
+
     pub fn reset(&mut self, game_state: GameStateSignal) {
         self.tree = Self::tree_with_start();
         self.current_node = self.tree.get_node_by_id(&START_NODE_ID);
         self.hashes.clear();
+        self.annotations.clear();
         game_state.signal.update(|gs| {
             *gs = GameState::new_with_game_type(self.game_type);
             gs.view = game_state::View::Game;
@@ -483,6 +505,7 @@ mod tests {
             tree,
             hashes: BiMap::new(),
             game_type: GameType::Base,
+            annotations: HashMap::new(),
         };
         analysis.hashes.insert(10, 0);
         analysis.hashes.insert(20, 1);

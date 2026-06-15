@@ -40,7 +40,7 @@ pub use server_result::{
     UserStatus,
     UserUpdate,
 };
-pub use svg_pos::SvgPos;
+pub use svg_pos::{position_from_svg, SvgPos};
 pub use time_signals::{TimeParams, TimeParamsStoreFields};
 pub use tournament_action::{TournamentAction, TournamentResponseDepth};
 pub use user_action::UserAction;
