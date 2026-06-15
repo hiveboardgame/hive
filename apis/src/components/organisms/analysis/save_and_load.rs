@@ -81,14 +81,14 @@ pub fn LoadTree() -> impl IntoView {
         string
             .as_string()
             .and_then(|string| serde_json::from_str::<AnalysisTree>(&string).ok())
-            .map(|tree| {
-                analysis.set(tree.clone());
-                if let Some(node) = tree.current_node {
-                    if let Ok(node_id) = node.get_node_id() {
-                        analysis.update(|a| {
-                            a.update_node(node_id, Some(game_state));
-                        });
-                    }
+            .map(|mut tree| {
+                tree.ensure_start_node();
+                let current_node_id = tree.current_node_id();
+                analysis.set(tree);
+                if let Some(node_id) = current_node_id {
+                    analysis.update(|a| {
+                        a.update_node(node_id, Some(game_state));
+                    });
                 }
             })
     };

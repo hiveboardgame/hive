@@ -178,6 +178,9 @@ pub struct GamesQueryOptions {
     pub sort: GameSort,
     pub game_progress: GameProgress,
     pub include_total: bool,
+    /// Canonical position hash (`game_hashes.hash`) to restrict results to games that passed
+    /// through that position. Set by the opening explorer's "Search this position" link.
+    pub position_hash: Option<i64>,
 }
 
 impl Default for GamesQueryOptions {
@@ -204,6 +207,7 @@ impl Default for GamesQueryOptions {
             sort: GameSort::default(),
             game_progress: GameProgress::All,
             include_total: true,
+            position_hash: None,
         }
     }
 }
@@ -444,6 +448,10 @@ impl std::fmt::Display for GamesQueryOptions {
 
         push("sort_key", self.sort.key.to_string());
         push("sort_asc", self.sort.ascending.to_string());
+
+        if let Some(hash) = self.position_hash {
+            push("position_hash", hash.to_string());
+        }
 
         if self.page > 1 {
             push("page", self.page.to_string());
@@ -687,6 +695,15 @@ impl GamesQueryOptions {
                         None
                     }
                     _ => Some(GamesQueryParseError::InvalidBatchSize),
+                },
+                "position_hash" => match value.trim().parse::<i64>() {
+                    Ok(h) => {
+                        opts.position_hash = Some(h);
+                        None
+                    }
+                    Err(e) => Some(GamesQueryParseError::Generic(format!(
+                        "invalid position_hash: {e}"
+                    ))),
                 },
                 _ => None,
             };
@@ -1040,6 +1057,25 @@ mod tests {
         assert!(msg.contains("invalid bool for fixed_colors"));
         assert!(msg.contains("invalid speed hyper"));
         assert!(msg.contains("invalid sort direction"));
+    }
+
+    #[test]
+    fn position_hash_round_trips_in_query_string() {
+        let opts = GamesQueryOptions {
+            position_hash: Some(-42),
+            ..base_options()
+        };
+
+        let query = opts.to_string();
+        assert!(query.contains("position_hash=-42"));
+
+        let parsed = GamesQueryOptions::from_str(&query).unwrap();
+        assert_eq!(parsed.position_hash, Some(-42));
+    }
+
+    #[test]
+    fn position_hash_absent_by_default() {
+        assert!(!base_options().to_string().contains("position_hash"));
     }
 
     #[test]

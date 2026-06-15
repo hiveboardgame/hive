@@ -1774,7 +1774,15 @@ mod tests {
         assert!(hub.allow_resync(sid));
         assert!(!hub.allow_resync(sid));
 
-        hub.on_disconnect(sid, uid, "anon".to_string());
+        hub.on_disconnect(
+            sid,
+            SimpleUser {
+                user_id: uid,
+                username: "anon".to_string(),
+                authed: false,
+                admin: false,
+            },
+        );
 
         assert!(
             hub.allow_resync(sid),
