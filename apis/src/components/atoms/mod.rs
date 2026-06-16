@@ -7,7 +7,7 @@ pub mod direct_challenge_button;
 pub mod download_pgn;
 pub mod game_type;
 pub mod gc_button;
-pub mod history_button;
+pub mod history_nav_button;
 pub mod input_slider;
 pub mod invite_button;
 pub mod kick_button;

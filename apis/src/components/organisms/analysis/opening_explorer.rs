@@ -72,6 +72,36 @@ struct RowHandlers {
     white_to_move: bool,
 }
 
+#[derive(Clone)]
+pub struct AnalysisPreviewSnapshot {
+    node_id: Option<i32>,
+    state: State,
+    history_turn: Option<usize>,
+}
+
+pub fn reset_analysis_preview(
+    preview_snapshot: RwSignal<Option<AnalysisPreviewSnapshot>>,
+    analysis: AnalysisSignal,
+    game_state: GameStateSignal,
+) {
+    let Some(snapshot) = preview_snapshot.get_untracked() else {
+        return;
+    };
+
+    if analysis
+        .0
+        .with_untracked(|analysis| analysis.current_node_id())
+        == snapshot.node_id
+    {
+        game_state.signal.update(|game_state| {
+            game_state.state = snapshot.state;
+            game_state.history_turn = snapshot.history_turn;
+            game_state.move_info.reset();
+        });
+    }
+    preview_snapshot.set(None);
+}
+
 /// White/draw/black result bar for an aggregated position.
 #[component]
 fn ResultBar(white: i64, draws: i64, black: i64, total: i64) -> impl IntoView {
@@ -94,7 +124,9 @@ fn ResultBar(white: i64, draws: i64, black: i64, total: i64) -> impl IntoView {
 }
 
 #[component]
-pub fn OpeningExplorer() -> impl IntoView {
+pub fn OpeningExplorer(
+    preview_snapshot: RwSignal<Option<AnalysisPreviewSnapshot>>,
+) -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>().0;
     let game_state = expect_context::<GameStateSignal>();
     let api = expect_context::<ApiRequestsProvider>().0;
@@ -110,31 +142,24 @@ pub fn OpeningExplorer() -> impl IntoView {
         |(hash, filters)| async move { opening_explorer(hash as i64, filters).await },
     );
 
-    // Snapshot of the real (pre-preview) position, so hovering a suggestion can preview the move
-    // on the board and the mouse leaving can restore the actual game state.
-    let preview_snapshot = RwSignal::new(None::<(State, Option<usize>)>);
-
     let reset_preview = Callback::new(move |_: ()| {
-        if let Some((state, history_turn)) = preview_snapshot.get_untracked() {
-            game_state.signal.update(|gs| {
-                gs.state = state;
-                gs.history_turn = history_turn;
-                gs.move_info.reset();
-            });
-            preview_snapshot.set(None);
-        }
+        reset_analysis_preview(preview_snapshot, AnalysisSignal(analysis), game_state);
     });
 
     // Preview a suggested move: apply it to the real position and show it on the board/reserve.
     let preview_move = Callback::new(move |(piece, position): (Piece, Position)| {
         let base = match preview_snapshot.get_untracked() {
-            Some((state, _)) => state,
+            Some(snapshot) => snapshot.state,
             None => {
                 let snap = game_state
                     .signal
-                    .with_untracked(|gs| (gs.state.clone(), gs.history_turn));
+                    .with_untracked(|game_state| AnalysisPreviewSnapshot {
+                        node_id: analysis.with_untracked(|analysis| analysis.current_node_id()),
+                        state: game_state.state.clone(),
+                        history_turn: game_state.history_turn,
+                    });
                 preview_snapshot.set(Some(snap.clone()));
-                snap.0
+                snap.state
             }
         };
         let mut previewed = base;
@@ -150,13 +175,7 @@ pub fn OpeningExplorer() -> impl IntoView {
     // Play a suggested move. First undo any active preview so we commit from the real position
     // (the board is showing the previewed state while hovered), then play it the normal way.
     let play_move = Callback::new(move |(piece, position): (Piece, Position)| {
-        if let Some((state, history_turn)) = preview_snapshot.get_untracked() {
-            game_state.signal.update(|gs| {
-                gs.state = state;
-                gs.history_turn = history_turn;
-            });
-            preview_snapshot.set(None);
-        }
+        reset_analysis_preview(preview_snapshot, AnalysisSignal(analysis), game_state);
         game_state.signal.update(|gs| {
             gs.move_info.active = Some((piece, PieceType::Move));
             gs.move_info.target_position = Some(position);

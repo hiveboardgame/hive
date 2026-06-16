@@ -38,12 +38,12 @@ pub fn HistoryMove(
             .as_ref()
             .is_some_and(|gr| gr.time_mode == TimeMode::RealTime)
     });
+    let is_current =
+        Signal::derive(move || history_turn().is_some_and(|history_turn| turn == history_turn));
     let get_class = move || {
         let base_class = "col-span-2 p-1 h-auto max-h-6 leading-6 transition-transform duration-300 transform odd:ml-1 odd:justify-self-start even:mr-1 even:justify-self-end hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95";
-        if let Some(history_turn) = history_turn() {
-            if turn == history_turn {
-                return format!("{base_class} bg-orange-twilight");
-            }
+        if is_current.get() {
+            return format!("{base_class} bg-orange-twilight");
         }
         base_class.to_string()
     };
@@ -51,7 +51,7 @@ pub fn HistoryMove(
         if let Some(parent_div) = parent_div.get_untracked() {
             parent_div.set_scroll_top(parent_div.scroll_height())
         }
-        if history_turn().is_some_and(|t| t == turn) {
+        if is_current.get_untracked() {
             elem.scroll_into_view_with_bool(false);
         }
     });
@@ -76,7 +76,12 @@ pub fn HistoryMove(
         }
     };
     view! {
-        <div node_ref=div_ref class=get_class on:click=onclick>
+        <div
+            node_ref=div_ref
+            class=get_class
+            data-history-current=move || is_current.get().to_string()
+            on:click=onclick
+        >
             {format!("{}. {piece} {position}{}", turn + 1, rep)}
             <Show when=is_realtime>{time_took}</Show>
         </div>

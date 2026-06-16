@@ -1,14 +1,13 @@
 use crate::{
     common::{CurrentConfirm, GameReaction, PieceType},
     components::{
-        atoms::history_button::{sync_play_move_query, HistoryButton, HistoryNavigation},
         layouts::base_layout::{ControlsSignal, OrientationSignal},
         molecules::{
             analysis_and_download::AnalysisAndDownload,
             annotation_toolbar::AnnotationToggle,
             control_buttons::ControlButtons,
             game_info::GameInfo,
-            history_controls::scroll_active_history_move_into_view,
+            play_history_button::{HistoryButton, PlayHistoryNavigation as HistoryNavigation},
             user_with_rating::UserWithRating,
         },
         organisms::{
@@ -21,6 +20,11 @@ use crate::{
     },
     functions::games::get::get_game_from_nanoid,
     hiveground::{live_hiveground_interaction, selected_history_state, HivegroundInteraction},
+    hooks::history_nav::{
+        scroll_move_into_view,
+        sync_play_move_query,
+        use_play_history_keyboard_navigation,
+    },
     providers::{
         annotations::AnnotationsSignal,
         config::Config,
@@ -36,12 +40,10 @@ use crate::{
     websocket::client_handlers::game::{reset_game_state, reset_game_state_for_takeback},
 };
 use hive_lib::{Color, GameControl, GameResult, GameStatus, State as HiveState, Turn};
-use leptos::{ev::keydown, prelude::*};
+use leptos::prelude::*;
 use leptos_router::hooks::{use_params_map, use_query_map};
-use leptos_use::{use_event_listener, use_window};
 use shared_types::{GameId, GameStart};
 use uuid::Uuid;
-use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
 
 #[component]
@@ -327,74 +329,16 @@ pub fn Play() -> impl IntoView {
         false,
     );
 
-    // Global keyboard handler: ArrowLeft enters history mode (from anywhere) and steps back;
-    // ArrowRight steps forward when already in history.
-    // use_window() returns None on SSR so use_event_listener becomes a no-op there.
-    let body = use_window().document().body();
-    _ = use_event_listener(body, keydown, move |evt| {
-        let key = evt.key();
-        if key != "ArrowLeft" && key != "ArrowRight" {
-            return;
-        }
-        if evt.alt_key() || evt.ctrl_key() || evt.meta_key() || evt.shift_key() {
-            return;
-        }
-        // Don't steal arrow keys from text inputs (chat, search fields, etc.).
-        if let Some(target) = evt.target() {
-            let tag = target
-                .unchecked_ref::<web_sys::Element>()
-                .tag_name()
-                .to_uppercase();
-            if tag == "INPUT" || tag == "TEXTAREA" || tag == "SELECT" {
-                return;
+    let on_history_key = Callback::new(move |action: HistoryNavigation| {
+        if action == HistoryNavigation::Previous {
+            if tab.get_untracked() != TabView::Chat {
+                tab.set(TabView::History);
             }
-        }
-        evt.prevent_default();
-        if key == "ArrowLeft" {
-            let has_turns = game_state.signal.with_untracked(|gs| gs.state.turn > 0);
-            if !has_turns {
-                return;
-            }
-            // When entering from live game view, position to the last turn first so
-            // previous_history_turn() steps back one from the most-recent move.
-            // Don't re-trigger this if already in History view — that would teleport
-            // the user back to the end when they've navigated to the beginning.
-            let entering = game_state
-                .signal
-                .with_untracked(|gs| matches!(gs.view, View::Game));
-            if entering {
-                game_state.signal.update(|gs| {
-                    gs.view_history();
-                    gs.history_turn = gs.state.turn.checked_sub(1);
-                });
-            }
-            let can_step_back = game_state
-                .signal
-                .with_untracked(|gs| matches!(gs.history_turn, Some(turn) if turn > 0));
-            if can_step_back {
-                game_state.previous_history_turn();
-            } else if !entering {
-                return;
-            }
-            tab.set(TabView::History);
             controls_signal.hidden.set(false);
-            sync_play_move_query(game_state, &set_move);
-            scroll_active_history_move_into_view();
-        } else {
-            // ArrowRight: navigate forward only when already browsing history.
-            let in_history = game_state
-                .signal
-                .with_untracked(|gs| matches!(gs.view, View::History));
-            if in_history {
-                game_state.next_history_turn();
-                if game_state.signal.with_untracked(|gs| gs.is_last_turn()) {
-                    game_state.view_game();
-                }
-                sync_play_move_query(game_state, &set_move);
-                scroll_active_history_move_into_view();
-            }
         }
+        scroll_move_into_view();
     });
+    use_play_history_keyboard_navigation(game_state, set_move, on_history_key);
 
     view! {
         <div class=move || {
@@ -515,11 +459,6 @@ fn VerticalLayout(
     let game_state = expect_context::<GameStateSignal>();
     let controls_signal = expect_context::<ControlsSignal>();
     let vertical = true;
-    let go_to_game = Callback::new(move |()| {
-        if game_state.signal.with_untracked(|gs| gs.is_last_turn()) {
-            game_state.view_game();
-        }
-    });
     let top_color = Signal::derive(move || player_color().opposite_color());
     let show_controls =
         Signal::derive(move || !controls_signal.hidden.get() || game_state.is_finished()());
@@ -578,8 +517,8 @@ fn VerticalLayout(
                     <div class="grid grid-cols-4 gap-8 pb-1">
                         <HistoryButton action=HistoryNavigation::First />
                         <HistoryButton action=HistoryNavigation::Previous />
-                        <HistoryButton action=HistoryNavigation::Next post_action=go_to_game />
-                        <HistoryButton action=HistoryNavigation::MobileLast />
+                        <HistoryButton action=HistoryNavigation::Next />
+                        <HistoryButton action=HistoryNavigation::Last />
                     </div>
                 </Show>
 

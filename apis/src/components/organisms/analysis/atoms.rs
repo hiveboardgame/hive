@@ -1,11 +1,18 @@
 use crate::{
+    components::atoms::history_nav_button::HistoryNavButton,
+    hooks::history_nav::{
+        can_navigate_analysis_history,
+        navigate_analysis_history,
+        scroll_move_into_view,
+        AnalysisHistoryNavigation as HistoryNavigation,
+    },
     pages::analysis::ToggleStates,
     providers::{
         analysis::{AnalysisSignal, TreeNode},
         game_state::GameStateSignal,
     },
 };
-use leptos::{html, prelude::*};
+use leptos::prelude::*;
 use leptos_icons::Icon;
 use tree_ds::prelude::Node;
 
@@ -56,86 +63,32 @@ pub fn UndoButton() -> impl IntoView {
     }
 }
 
-use leptos::leptos_dom::helpers::debounce;
-#[derive(Clone, Copy)]
-pub enum HistoryNavigation {
-    First,
-    Next,
-    Previous,
-}
-
 #[component]
 pub fn HistoryButton(
     action: HistoryNavigation,
-    post_action: Option<Callback<()>>,
-    #[prop(optional)] node_ref: Option<NodeRef<html::Button>>,
+    #[prop(optional)] scroll_on_navigate: bool,
 ) -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>().0;
     let game_state = expect_context::<GameStateSignal>();
     let cloned_action = action;
-    let nav_buttons_style = "flex place-items-center justify-center hover:bg-pillbug-teal dark:hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 m-1 h-7 rounded-md border-cyan-500 dark:border-button-twilight border-2 drop-shadow-lg disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
     let icon = match action {
         HistoryNavigation::First => icondata_ai::AiFastBackwardFilled,
         HistoryNavigation::Next => icondata_ai::AiStepForwardFilled,
         HistoryNavigation::Previous => icondata_ai::AiStepBackwardFilled,
     };
 
-    let is_disabled = move || {
-        analysis.with(|analysis| {
-            if analysis.current_node.is_none() {
-                return match cloned_action {
-                    HistoryNavigation::Next => !analysis.has_real_moves(),
-                    _ => true,
-                };
-            }
-            match cloned_action {
-                HistoryNavigation::First => analysis
-                    .current_node_id()
-                    .and_then(|node_id| analysis.first_real_ancestor_id(node_id))
-                    .is_none(),
-                HistoryNavigation::Next => analysis
-                    .current_node
-                    .as_ref()
-                    .is_none_or(|n| n.get_children_ids().map_or(true, |ch| ch.is_empty())),
-                HistoryNavigation::Previous => analysis.is_at_start(),
-            }
-        })
-    };
-    let debounced_action = debounce(std::time::Duration::from_millis(10), move |_| {
-        let updated_node_id = analysis.with(|a| {
-            a.current_node.as_ref().and_then(|n| match action {
-                HistoryNavigation::First => n
-                    .get_node_id()
-                    .ok()
-                    .and_then(|node_id| a.first_real_ancestor_id(node_id)),
-                HistoryNavigation::Next => n
-                    .get_children_ids()
-                    .ok()
-                    .and_then(|children| children.first().cloned()),
-                HistoryNavigation::Previous => n.get_parent_id().ok().flatten(),
-            })
-        });
-        if let Some(updated_node_id) = updated_node_id {
-            analysis.update(|a| {
-                a.update_node(updated_node_id, Some(game_state));
-            });
-        }
-        if let Some(post_action) = post_action {
-            post_action.run(())
+    let is_disabled =
+        move || analysis.with(|analysis| !can_navigate_analysis_history(analysis, cloned_action));
+    let on_press = Callback::new(move |()| {
+        if navigate_analysis_history(action, analysis, game_state) && scroll_on_navigate {
+            scroll_move_into_view();
         }
     });
-    let _definite_node_ref = node_ref.unwrap_or_default();
 
     view! {
-        <button
-            node_ref=_definite_node_ref
-            class=nav_buttons_style
-            prop:disabled=is_disabled
-            on:click=debounced_action
-        >
-
+        <HistoryNavButton disabled=is_disabled on_press=on_press>
             <Icon icon=icon />
-        </button>
+        </HistoryNavButton>
     }
 }
 
@@ -148,9 +101,11 @@ pub fn HistoryMove(
     let analysis = expect_context::<AnalysisSignal>().0;
     let game_state = expect_context::<GameStateSignal>();
     if let Ok(node_id) = node.get_node_id() {
+        let is_current =
+            Memo::new(move |_| current_path.with(|path| path.first() == Some(&node_id)));
         let class = move || {
             let margin = if has_children { "" } else { "ml-[15px] " };
-            let bg_color = if current_path.with(|path| path.first() == Some(&node_id)) {
+            let bg_color = if is_current.get() {
                 "bg-orange-twilight "
             } else {
                 ""
@@ -164,7 +119,6 @@ pub fn HistoryMove(
         };
         let value = node.get_value().ok().flatten();
         let history_index = value.as_ref().map(|value| value.turn - 1);
-        let game_state = expect_context::<GameStateSignal>();
         let repetitions =
             create_read_slice(game_state.signal, |gs| gs.state.repeating_moves.clone());
         let rep = move || {
@@ -178,7 +132,11 @@ pub fn HistoryMove(
             }
         };
         view! {
-            <div class=class on:click=onclick>
+            <div
+                class=class
+                data-history-current=move || is_current.get().to_string()
+                on:click=onclick
+            >
                 {move || {
                     value
                         .as_ref()

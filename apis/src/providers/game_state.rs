@@ -171,6 +171,10 @@ impl GameStateSignal {
         self.signal.update(|s| s.first_history_turn())
     }
 
+    pub fn last_history_turn(&mut self) {
+        self.signal.update(|s| s.last_history_turn())
+    }
+
     pub fn next_history_turn(&mut self) {
         self.signal.update(|s| {
             s.next_history_turn();
@@ -223,19 +227,7 @@ impl GameStateSignal {
     }
 
     pub fn is_last_turn_as_signal(&self) -> Signal<bool> {
-        create_read_slice(self.signal, |gs| {
-            if gs.state.turn == 0 {
-                true
-            } else {
-                gs.history_turn == Some(gs.state.turn - 1)
-            }
-        })
-    }
-
-    pub fn is_first_turn_as_signal(&self) -> Signal<bool> {
-        create_read_slice(self.signal, |gs| {
-            gs.history_turn.is_none() || gs.history_turn == Some(0)
-        })
+        create_read_slice(self.signal, GameState::is_last_turn)
     }
 }
 
@@ -412,6 +404,7 @@ impl GameState {
 
     pub fn show_history_turn(&mut self, turn: usize) {
         self.history_turn = Some(turn);
+        self.view_history();
     }
 
     pub fn view_history(&mut self) {
@@ -424,6 +417,10 @@ impl GameState {
             return true;
         }
         self.history_turn == Some(self.state.turn - 1)
+    }
+
+    pub fn is_first_history_turn(&self) -> bool {
+        self.history_turn.is_none() || self.history_turn == Some(0)
     }
 
     pub fn view_game(&mut self) {
@@ -459,6 +456,11 @@ impl GameState {
         } else {
             self.history_turn = None;
         }
+    }
+
+    pub fn last_history_turn(&mut self) {
+        self.view_history();
+        self.history_turn = self.state.turn.checked_sub(1);
     }
 
     pub fn get_game_speed(&self) -> Option<GameSpeed> {

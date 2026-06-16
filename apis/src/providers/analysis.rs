@@ -22,6 +22,7 @@ pub struct TreeNode {
     pub piece: String,
     pub position: String,
 }
+
 #[derive(Clone, Copy)]
 pub struct AnalysisSignal(pub RwSignal<AnalysisTree>);
 
@@ -82,6 +83,26 @@ impl AnalysisTree {
 
     pub fn is_at_start(&self) -> bool {
         self.current_node_id().is_some_and(Self::is_start_node_id)
+    }
+
+    pub fn first_history_target_node_id(&self) -> Option<i32> {
+        self.current_node
+            .as_ref()
+            .and_then(|node| node.get_node_id().ok())
+            .and_then(|node_id| self.first_real_ancestor_id(node_id))
+    }
+
+    pub fn next_history_target_node_id(&self) -> Option<i32> {
+        self.current_node
+            .as_ref()
+            .and_then(|node| node.get_children_ids().ok())
+            .and_then(|children| children.first().cloned())
+    }
+
+    pub fn previous_history_target_node_id(&self) -> Option<i32> {
+        self.current_node
+            .as_ref()
+            .and_then(|node| node.get_parent_id().ok().flatten())
     }
 
     pub fn has_real_moves(&self) -> bool {

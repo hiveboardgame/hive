@@ -3,8 +3,9 @@ use crate::{
         molecules::annotation_toolbar::AnnotationToggle,
         organisms::{
             analysis::{
-                atoms::{CollapsibleMove, HistoryButton, HistoryMove, HistoryNavigation},
+                atoms::{CollapsibleMove, HistoryButton, HistoryMove},
                 DownloadTree,
+                HistoryNavigation,
                 LoadTree,
                 UndoButton,
             },
@@ -15,8 +16,7 @@ use crate::{
     providers::analysis::{AnalysisSignal, AnalysisTree, TreeNode},
 };
 use hive_lib::{Color, State};
-use leptos::{ev::keydown, html, prelude::*};
-use leptos_use::{use_event_listener, use_window};
+use leptos::prelude::*;
 use std::{cmp::Ordering, collections::HashMap};
 use tree_ds::prelude::*;
 
@@ -221,39 +221,6 @@ pub fn History(
         });
     };
 
-    let prev_button = NodeRef::<html::Button>::new();
-    let next_button = NodeRef::<html::Button>::new();
-    Effect::new(move |_| {
-        _ = use_event_listener(document().body(), keydown, move |evt| {
-            if evt.key() == "ArrowLeft" {
-                evt.prevent_default();
-                if let Some(prev) = prev_button.get_untracked() {
-                    prev.click()
-                }
-            } else if evt.key() == "ArrowRight" {
-                evt.prevent_default();
-                if let Some(next) = next_button.get_untracked() {
-                    next.click()
-                }
-            }
-        });
-    });
-
-    let focus = if mobile {
-        None
-    } else {
-        Some(Callback::new(move |()| {
-            let active = use_window()
-                .as_ref()
-                .and_then(|w| w.document())
-                .and_then(|d| d.query_selector(".bg-orange-twilight").ok())
-                .flatten();
-            if let Some(elem) = active {
-                elem.scroll_into_view_with_bool(false);
-            }
-        }))
-    };
-
     let history_model =
         Memo::new(move |_| analysis.with(|a| build_history_model(&a.tree).unwrap_or_default()));
 
@@ -261,17 +228,9 @@ pub fn History(
     view! {
         <div class="flex flex-col size-full">
             <div class="flex gap-1 min-h-0 [&>*]:grow">
-                <HistoryButton action=HistoryNavigation::First post_action=focus />
-                <HistoryButton
-                    node_ref=prev_button
-                    action=HistoryNavigation::Previous
-                    post_action=focus
-                />
-                <HistoryButton
-                    node_ref=next_button
-                    action=HistoryNavigation::Next
-                    post_action=focus
-                />
+                <HistoryButton action=HistoryNavigation::First scroll_on_navigate=!mobile />
+                <HistoryButton action=HistoryNavigation::Previous scroll_on_navigate=!mobile />
+                <HistoryButton action=HistoryNavigation::Next scroll_on_navigate=!mobile />
                 <UndoButton />
             </div>
             <Show when=move || !mobile>

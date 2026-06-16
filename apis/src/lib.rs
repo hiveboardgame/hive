@@ -3,6 +3,7 @@ pub mod common;
 pub mod components;
 pub mod functions;
 pub mod hiveground;
+pub mod hooks;
 pub mod pages;
 pub mod providers;
 pub mod responses;
