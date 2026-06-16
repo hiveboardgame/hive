@@ -9,6 +9,7 @@ use db_lib::{
     models::{Challenge, Game, Schedule, Tournament, TournamentInvitation, User},
     DbConn,
 };
+use hive_lib::GameStatus;
 use log::error;
 use shared_types::{GameId, TournamentId};
 use uuid::Uuid;
@@ -310,9 +311,14 @@ impl WsHub {
                 return Ok(Vec::new());
             }
         };
+        let in_progress_status = GameStatus::InProgress.to_string();
         let in_progress: Vec<Game> = games
             .into_iter()
-            .filter(|g| !g.finished && g.white_id != user_id && g.black_id != user_id)
+            .filter(|g| {
+                g.game_status == in_progress_status
+                    && g.white_id != user_id
+                    && g.black_id != user_id
+            })
             .collect();
         let tv_responses = GameResponse::from_games_batch(in_progress, conn).await;
         self.ensure_socket_connected(user_id, socket)?;
