@@ -1,25 +1,17 @@
 use crate::{
     components::{
-        atoms::history_button::{HistoryButton, HistoryNavigation},
+        molecules::play_history_button::{
+            HistoryButton,
+            PlayHistoryNavigation as HistoryNavigation,
+        },
         organisms::reserve::{Alignment, Reserve},
     },
     hiveground::HivegroundInteraction,
+    hooks::history_nav::scroll_move_into_view,
     providers::game_state::GameStateSignal,
 };
 use hive_lib::{Color, State};
 use leptos::{html, prelude::*};
-use leptos_use::use_window;
-
-pub fn scroll_active_history_move_into_view() {
-    let active = use_window()
-        .as_ref()
-        .and_then(|w| w.document())
-        .and_then(|d| d.query_selector(".bg-orange-twilight").ok())
-        .flatten();
-    if let Some(elem) = active {
-        elem.scroll_into_view_with_bool(false);
-    }
-}
 
 #[component]
 pub fn HistoryControls(
@@ -29,7 +21,7 @@ pub fn HistoryControls(
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let focus = Callback::new(move |()| {
-        scroll_active_history_move_into_view();
+        scroll_move_into_view();
     });
 
     let scroll_to_end = Callback::new(move |()| {

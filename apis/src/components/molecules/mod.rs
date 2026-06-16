@@ -23,6 +23,7 @@ pub mod modal;
 pub mod my_schedules;
 pub mod online_users;
 pub mod ping;
+pub mod play_history_button;
 pub mod rating_and_change;
 pub mod rl_banner;
 pub mod schedule_notification;

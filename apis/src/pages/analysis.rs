@@ -3,13 +3,22 @@ use crate::{
     components::{
         layouts::base_layout::OrientationSignal,
         organisms::{
-            analysis::{History, HistoryButton, HistoryNavigation, OpeningExplorer, UndoButton},
+            analysis::{
+                reset_analysis_preview,
+                AnalysisPreviewSnapshot,
+                History,
+                HistoryButton,
+                HistoryNavigation,
+                OpeningExplorer,
+                UndoButton,
+            },
             board::Board,
             reserve::{Alignment, Reserve},
         },
     },
     functions::games::get::get_game_from_nanoid,
     hiveground::{analysis_hiveground_interaction, selected_history_state, HivegroundInteraction},
+    hooks::history_nav::use_analysis_history_keyboard_navigation,
     providers::{
         analysis::{AnalysisSignal, AnalysisTree, TreeNode},
         annotations::AnnotationsSignal,
@@ -43,10 +52,17 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
             .map(|n| n.saturating_sub(1)),
     );
     let uhp_string = StoredValue::new(queries.get_untracked().get("uhp"));
+    let active_analysis = StoredValue::new(None::<AnalysisSignal>);
+    let vertical = expect_context::<OrientationSignal>().orientation_vertical;
+    let preview_snapshot = RwSignal::new(None::<AnalysisPreviewSnapshot>);
 
     provide_context(ToggleStates(RwSignal::new(HashSet::new())));
     provide_context(CurrentConfirm(Memo::new(move |_| MoveConfirm::Single)));
-    let vertical = expect_context::<OrientationSignal>().orientation_vertical;
+    use_analysis_history_keyboard_navigation(
+        move || active_analysis.get_value(),
+        move || !vertical.get_untracked(),
+        move |analysis| reset_analysis_preview(preview_snapshot, analysis, game_state),
+    );
 
     let should_block_analysis = move |game_response: &GameResponse| -> bool {
         let Some(user_id) = auth_context.user.with(|u| u.as_ref().map(|u| u.id)) else {
@@ -109,6 +125,7 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         });
                     provide_context(analysis_signal);
                     provide_context(AnnotationsSignal::analysis(analysis_signal));
+                    active_analysis.set_value(Some(analysis_signal));
                     let hiveground_interaction = analysis_hiveground_interaction();
 
                     view! {
@@ -121,6 +138,7 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                                     <AnalysisSidebar
                                         interaction=hiveground_interaction
                                         history_state
+                                        preview_snapshot
                                     />
                                 }
                             }
@@ -151,7 +169,7 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                                 </div>
                             </div>
                             <History mobile=true interaction=hiveground_interaction history_state />
-                            <OpeningExplorer />
+                            <OpeningExplorer preview_snapshot />
                         </Show>
                     }
                 }}
@@ -173,6 +191,7 @@ enum AnalysisTab {
 fn AnalysisSidebar(
     interaction: HivegroundInteraction,
     history_state: Memo<State>,
+    preview_snapshot: RwSignal<Option<AnalysisPreviewSnapshot>>,
 ) -> impl IntoView {
     let tab = RwSignal::new(AnalysisTab::History);
     let trigger_class = move |name: AnalysisTab| {
@@ -209,9 +228,9 @@ fn AnalysisSidebar(
                 </Show>
                 <Show when=move || tab() == AnalysisTab::Explorer>
                     <div class="flex gap-1 min-h-0 [&>*]:grow">
-                        <HistoryButton action=HistoryNavigation::First post_action=None />
-                        <HistoryButton action=HistoryNavigation::Previous post_action=None />
-                        <HistoryButton action=HistoryNavigation::Next post_action=None />
+                        <HistoryButton action=HistoryNavigation::First />
+                        <HistoryButton action=HistoryNavigation::Previous />
+                        <HistoryButton action=HistoryNavigation::Next />
                         <UndoButton />
                     </div>
                     <div class="flex flex-col px-4 pt-2">
@@ -230,7 +249,7 @@ fn AnalysisSidebar(
                             history_state
                         />
                     </div>
-                    <OpeningExplorer />
+                    <OpeningExplorer preview_snapshot />
                 </Show>
             </div>
         </div>
