@@ -198,7 +198,7 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
         if orientation_signal.orientation_vertical.get() {
             "flex relative grow min-h-0"
         } else {
-            "relative col-span-8 row-span-6"
+            "relative col-start-1 row-start-1 col-span-8 row-span-6"
         }
     };
     let history_style = move || match board_view() {

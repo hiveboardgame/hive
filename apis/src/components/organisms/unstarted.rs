@@ -72,7 +72,7 @@ pub fn Unstarted(
         if orientation_signal.orientation_vertical.get() {
             "flex grow min-h-0 justify-center items-center h-full w-full"
         } else {
-            "col-span-8 row-span-6"
+            "col-start-1 row-start-1 col-span-8 row-span-6"
         }
     };
     view! {

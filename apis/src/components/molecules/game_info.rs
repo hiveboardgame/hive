@@ -139,7 +139,9 @@ pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         <TimeRow time_info extend_tw_classes="whitespace-nowrap" />
                         <div>{move || rated}</div>
                         <Show when=move || is_tournament>
-                            <a href=link>{name()}</a>
+                            <a href=link class="pointer-events-auto">
+                                {name()}
+                            </a>
                         </Show>
                         <Show when=move || {
                             matches!(game_status(), GameStatus::Finished(_))
