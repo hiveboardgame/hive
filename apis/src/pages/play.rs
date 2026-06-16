@@ -482,7 +482,7 @@ fn HorizontalLayout(
         format!("background-color: {bg}")
     });
     view! {
-        <GameInfo extend_tw_classes="absolute pl-4 pt-2 bg-transparent" />
+        <GameInfo extend_tw_classes="relative z-10 col-start-1 row-start-1 col-span-8 self-start overflow-hidden min-w-0 pr-2 pl-4 pt-2 bg-transparent pointer-events-none" />
         <BoardOrUnstarted
             show_board
             user_is_player
@@ -492,7 +492,7 @@ fn HorizontalLayout(
             history_state
         />
         <div
-            class="grid grid-cols-2 col-span-2 col-start-9 grid-rows-6 row-span-full"
+            class="grid grid-cols-2 col-span-2 col-start-9 grid-rows-6 row-span-full row-start-1"
             style=background_style
         >
             <DisplayTimer placement=Placement::Top vertical />
