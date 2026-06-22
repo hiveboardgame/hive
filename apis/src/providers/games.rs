@@ -117,16 +117,16 @@ impl GamesSignal {
     }
 
     pub fn own_games_add(&mut self, game: GameResponse) {
-        self.own_games_insert(game, true);
+        self.own_games_insert(game, true, false);
     }
 
-    fn own_games_insert(&mut self, game: GameResponse, mark_dirty: bool) {
+    fn own_games_insert(&mut self, game: GameResponse, mark_dirty: bool, force_next: bool) {
         if mark_dirty {
             self.own_resync_dirty.update_value(|d| {
                 d.insert(game.game_id.clone());
             });
         }
-        let mut next_required = false;
+        let mut next_required = force_next;
         let mut player_color = Color::White;
         self.user.with_untracked(|a| {
             if let Some(user) = a {
@@ -337,7 +337,7 @@ impl GamesSignal {
             if dirty.contains(&game.game_id) {
                 continue;
             }
-            self.own_games_insert(game, false);
+            self.own_games_insert(game, false, true);
         }
         // End this resync window after the authoritative snapshot has been
         // merged with locally dirty updates.

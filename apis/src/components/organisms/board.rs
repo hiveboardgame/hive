@@ -194,6 +194,7 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
         stack_expansion_reset_key(gs, in_analysis)
     });
     let game_status = create_read_slice(game_state.signal, |gs| gs.state.game_status.clone());
+    let game_id_slice = create_read_slice(game_state.signal, |gs| gs.game_id.clone());
     let board_style = move || {
         if orientation_signal.orientation_vertical.get() {
             "flex relative grow min-h-0"
@@ -222,10 +223,6 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
         viewbox_signal.with(|vb| format!("translate({},{})", vb.x_transform, vb.y_transform))
     };
 
-    let current_center = game_state
-        .signal
-        .with_untracked(|gs| gs.state.board.center_coordinates());
-
     let straight = config.with_untracked(|c| c.tile.design == TileDesign::ThreeD);
     let tile_opts = Signal::derive(move || config.with(|c| c.tile.clone()));
 
@@ -243,6 +240,9 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
 
     // Unified RAF-based viewbox update system
     let update_viewbox_size = move |width: f32, height: f32, respect_zoom: bool| {
+        let current_center = game_state
+            .signal
+            .with_untracked(|gs| gs.state.board.center_coordinates());
         let svg_pos = SvgPos::center_for_level(current_center, 0, straight);
         let (scale_x, scale_y) = if respect_zoom && viewbox_state.has_zoomed.get_untracked() {
             let svg = viewbox_ref.get_untracked().expect("It exists");
@@ -351,6 +351,18 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
             update_viewbox_size(rect.width() as f32, rect.height() as f32, false);
         },
         true,
+    );
+
+    Effect::watch(
+        move || game_id_slice.get(),
+        move |_, _, _| {
+            if let Some(div) = div_ref.get_untracked() {
+                viewbox_state.has_zoomed.set(false);
+                let rect = div.get_bounding_client_rect();
+                update_viewbox_size(rect.width() as f32, rect.height() as f32, false);
+            }
+        },
+        false,
     );
 
     //This handles board resizes
