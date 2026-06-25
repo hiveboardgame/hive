@@ -13,6 +13,9 @@ use leptos::{either::EitherOf3, prelude::*};
 use leptos_router::hooks::use_navigate;
 use shared_types::{ChallengeDetails, ChallengeVisibility};
 
+const FINISHED_GAME_BUTTON_CLASS: &str =
+    "ui-button m-1 h-8 min-h-8 grow rounded px-2 py-1 leading-none";
+
 #[component]
 pub fn ControlButtons() -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
@@ -126,13 +129,13 @@ pub fn ControlButtons() -> impl IntoView {
         false
     };
 
-    let rematch_button_color = move || {
+    let rematch_button_tone = move || {
         if let Some(challenge) = rematch_present() {
             if challenge.challenger.uid != user_id() {
-                return "bg-grasshopper-green hover:bg-green-500";
+                return "ui-button-success";
             }
         }
-        "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal"
+        "ui-button-primary"
     };
 
     let rematch_text = move || {
@@ -187,10 +190,7 @@ pub fn ControlButtons() -> impl IntoView {
                 EitherOf3::A(view! {
                     <button
                         class=move || {
-                            format!(
-                                "h-7 m-1 grow {} transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-2 rounded disabled:opacity-25 disabled:cursor-not-allowed flex-shrink-0",
-                                rematch_button_color(),
-                            )
+                            format!("{} {}", FINISHED_GAME_BUTTON_CLASS, rematch_button_tone())
                         }
 
                         prop:disabled=sent_challenge
@@ -199,7 +199,7 @@ pub fn ControlButtons() -> impl IntoView {
                         {rematch_text}
                     </button>
                     <button
-                        class="flex-shrink-0 py-1 px-2 m-1 h-7 font-bold text-white rounded transition-transform duration-300 active:scale-95 grow bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
+                        class=format!("{FINISHED_GAME_BUTTON_CLASS} ui-button-primary")
                         on:click=new_opponent
                     >
                         New Game
@@ -208,7 +208,7 @@ pub fn ControlButtons() -> impl IntoView {
             } else {
                 EitherOf3::B(view! {
                     <button
-                        class="flex-shrink-0 py-1 px-2 m-1 h-7 font-bold text-white rounded transition-transform duration-300 active:scale-95 grow bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
+                        class=format!("{FINISHED_GAME_BUTTON_CLASS} ui-button-primary")
                         on:click=navigate_to_tournament
                     >
                         View tournament
@@ -218,9 +218,9 @@ pub fn ControlButtons() -> impl IntoView {
         } else {
             EitherOf3::C(view! {
                 <div class="flex flex-col w-full">
-                    <div class="flex justify-around items-center pt-1 grow shrink">
+                    <div class="flex justify-around items-center grow shrink">
                         <Show when=not_tournament>
-                            <div class="relative">
+                            <div class="flex relative items-center">
                                 <ConfirmButton
                                     game_control=GameControl::Abort(color())
                                     user_id=user_id()
@@ -253,7 +253,7 @@ pub fn ControlButtons() -> impl IntoView {
                                 </Show>
                             </div>
                         </Show>
-                        <div class="relative">
+                        <div class="flex relative items-center">
                             <ConfirmButton
                                 game_control=GameControl::DrawOffer(color())
                                 user_id=user_id()

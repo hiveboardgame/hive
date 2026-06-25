@@ -9,11 +9,11 @@ use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::{spawn_local, JsFuture};
 use web_sys::{js_sys::Array, Blob, Url};
 
-const BTN_CLASS: &str = "z-20 content-center text-center m-1 w-1/3 h-7 text-white rounded-sm transition-transform duration-300 transform aspect-square bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95";
+const BUTTON_CLASS: &str = "ui-button ui-button-primary ui-button-sm h-9 flex-1 px-3 text-xs";
 
 #[component]
 pub fn DownloadTree() -> impl IntoView {
-    let analysis = expect_context::<AnalysisSignal>().0;
+    let analysis = expect_context::<AnalysisSignal>().tree;
 
     let download = move |_| {
         let tree_json = analysis.with_untracked(|a| {
@@ -44,7 +44,7 @@ pub fn DownloadTree() -> impl IntoView {
     };
 
     view! {
-        <button on:click=download class=BTN_CLASS>
+        <button on:click=download class=BUTTON_CLASS>
             "Save"
         </button>
     }
@@ -63,7 +63,7 @@ fn blob_and_filename(tree: String) -> (Blob, String) {
 
 #[component]
 pub fn LoadTree() -> impl IntoView {
-    let analysis = expect_context::<AnalysisSignal>().0;
+    let analysis = expect_context::<AnalysisSignal>();
     let game_state = expect_context::<GameStateSignal>();
     let input_ref = NodeRef::<html::Input>::new();
 
@@ -73,9 +73,11 @@ pub fn LoadTree() -> impl IntoView {
             .and_then(|string| History::from_pgn_str(string).ok())
             .and_then(|history| hive_lib::State::new_from_history(&history).ok())
             .map(|state| {
+                game_state.full_reset();
                 game_state.signal.update(|gs| gs.state = state.clone());
                 let tree = AnalysisTree::from_loaded_state(game_state, &state);
-                analysis.set(tree);
+                analysis.tree.set(tree);
+                analysis.sync_reserve.run(state.turn_color);
             })
     };
     let from_json = move |string: JsValue| {
@@ -83,13 +85,15 @@ pub fn LoadTree() -> impl IntoView {
             .as_string()
             .and_then(|string| serde_json::from_str::<AnalysisTree>(&string).ok())
             .map(|mut tree| {
+                game_state.full_reset();
                 tree.ensure_start_node();
                 let current_node_id = tree.current_node_id();
-                analysis.set(tree);
+                analysis.tree.set(tree);
                 if let Some(node_id) = current_node_id {
-                    analysis.update(|a| {
+                    analysis.tree.update(|a| {
                         a.update_node(node_id, Some(game_state));
                     });
+                    analysis.sync_reserve_from_game_state(game_state);
                 }
             })
     };
@@ -123,7 +127,7 @@ pub fn LoadTree() -> impl IntoView {
         );
     };
     view! {
-        <label for="load-analysis" class=BTN_CLASS>
+        <label for="load-analysis" class=format!("{BUTTON_CLASS} cursor-pointer")>
             "Load"
         </label>
         <input

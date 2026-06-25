@@ -1,10 +1,4 @@
-use crate::{
-    components::{
-        layouts::base_layout::{COMMON_LINK_STYLE, DROPDOWN_BUTTON_STYLE, DROPDOWN_MENU_STYLE},
-        molecules::hamburger::Hamburger,
-    },
-    i18n::*,
-};
+use crate::{components::molecules::hamburger::Hamburger, i18n::*};
 use leptos::prelude::*;
 
 #[component]
@@ -16,15 +10,16 @@ pub fn TournamentDropdown() -> impl IntoView {
     view! {
         <Hamburger
             hamburger_show=hamburger_show
-            button_style=DROPDOWN_BUTTON_STYLE
-            dropdown_style=DROPDOWN_MENU_STYLE
+            button_style="ui-header-dropdown-button"
+            extend_tw_classes="h-full"
+            dropdown_style="ui-dropdown-menu ui-dropdown-menu-left ui-header-dropdown-menu"
             content=move || name
             id="Tournaments"
         >
-            <a class=COMMON_LINK_STYLE on:click=onclick_close href="/tournaments">
+            <a class="ui-dropdown-link" on:click=onclick_close href="/tournaments">
                 {t!(i18n, header.tournaments.view)}
             </a>
-            <a class=COMMON_LINK_STYLE on:click=onclick_close href="/tournaments/create">
+            <a class="ui-dropdown-link" on:click=onclick_close href="/tournaments/create">
                 {t!(i18n, header.tournaments.create)}
             </a>
         </Hamburger>

@@ -1,9 +1,17 @@
 use leptos::prelude::*;
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub enum DiscordHandleStatus {
+    Linked(String),
+    NotLinked,
+    NotLoggedIn,
+    Unavailable,
+}
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 
 use actix_web::{get, web::{self, Redirect}, Responder};
-use serde::Deserialize;
 
 #[derive(Deserialize)]
 struct OAuthParams {
@@ -22,12 +30,12 @@ pub async fn callback(params: web::Query<OAuthParams>) -> impl Responder {
         Err(e) => println!("Error creating oauth callback client: {e}"),
     }
 
-    Redirect::to("/account").temporary()
+    Redirect::to("/notifications").temporary()
 }
 }}
 
 #[server]
-pub async fn get_discord_handle() -> Result<String, ServerFnError> {
+pub async fn get_discord_handle() -> Result<DiscordHandleStatus, ServerFnError> {
     use crate::functions::auth::identity::uuid;
 
     use serde_json::Value;
@@ -38,38 +46,34 @@ pub async fn get_discord_handle() -> Result<String, ServerFnError> {
             Ok(client) => client,
             Err(e) => {
                 println!("Error creating discord handle client: {e}");
-                return Ok("Not logged in".to_string());
+                return Ok(DiscordHandleStatus::Unavailable);
             }
         };
         let response = match client.get(url).send().await {
             Ok(response) => response,
             Err(e) => {
                 println!("Error loading discord handle: {e}");
-                return Ok("Not logged in".to_string());
+                return Ok(DiscordHandleStatus::Unavailable);
             }
         };
         let body = match response.text().await {
             Ok(body) => body,
             Err(e) => {
                 println!("Error reading discord handle response: {e}");
-                return Ok("Not logged in".to_string());
+                return Ok(DiscordHandleStatus::Unavailable);
             }
         };
         let data: Value = match serde_json::from_str(&body) {
             Ok(data) => data,
             Err(e) => {
                 println!("Error parsing discord handle response: {e}");
-                return Ok("Not logged in".to_string());
+                return Ok(DiscordHandleStatus::Unavailable);
             }
         };
-        if let Some(username) = data.get("username") {
-            let username = username.to_string().replace("\"", "");
-            return Ok(username);
+        if let Some(username) = data.get("username").and_then(Value::as_str) {
+            return Ok(DiscordHandleStatus::Linked(username.to_string()));
         }
-        if let Some(detail) = data.get("detail") {
-            let detail = detail.to_string().replace("\"", "");
-            return Ok(detail.to_string());
-        }
+        return Ok(DiscordHandleStatus::NotLinked);
     }
-    Ok("Not logged in".to_string())
+    Ok(DiscordHandleStatus::NotLoggedIn)
 }

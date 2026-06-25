@@ -98,7 +98,7 @@ pub fn Unstarted(
                     <button
                         on:click=start
 
-                        class="flex justify-center items-center py-2 px-4 font-bold text-white rounded active:scale-95 bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
+                        class="ui-button ui-button-primary ui-button-md"
                     >
                         Ready
                     </button>

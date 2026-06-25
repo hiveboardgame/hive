@@ -36,8 +36,10 @@ pub use direct_challenge::{provide_direct_challenge, DirectChallengeOpener, Dire
 pub use game_updater::{provide_server_updates, UpdateNotifier};
 pub use games_search_context::{
     calculate_initial_batch_size,
+    initial_profile_filters_for_tab,
     load_games,
     provide_games_search_context,
+    searchable_profile_filters_for_tab,
     FilterState,
     GamesSearchContext,
     ResultType,

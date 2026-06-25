@@ -1,5 +1,8 @@
 use leptos::prelude::*;
 
+const SWITCH_TRACK_CLASS: &str =
+    "h-6 w-11 rounded-full border border-black/10 bg-even-light shadow-sm transition-colors peer peer-checked:bg-pillbug-teal peer-disabled:opacity-50 after:absolute after:start-[2px] after:top-[2px] after:size-5 after:rounded-full after:border after:border-black/10 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white rtl:peer-checked:after:-translate-x-full dark:border-white/10 dark:bg-[#222b35] dark:after:border-white/10";
+
 #[component]
 pub fn SimpleSwitch(
     checked: RwSignal<bool>,
@@ -22,7 +25,7 @@ pub fn SimpleSwitch(
                 class="sr-only peer"
                 prop:checked=checked
             />
-            <div class="w-11 h-6 bg-gray-200 rounded-full dark:bg-gray-700 dark:border-gray-600 peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:size-5 after:transition-all peer-checked:bg-orange-twilight"></div>
+            <div class=SWITCH_TRACK_CLASS></div>
         </label>
     }
 }
@@ -46,7 +49,7 @@ pub fn SimpleSwitchWithCallback(
                 class="sr-only peer"
                 prop:checked=checked
             />
-            <div class="w-11 h-6 bg-gray-200 rounded-full dark:bg-gray-700 dark:border-gray-600 peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:size-5 after:transition-all peer-checked:bg-orange-twilight"></div>
+            <div class=SWITCH_TRACK_CLASS></div>
         </label>
     }
 }

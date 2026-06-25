@@ -1,4 +1,5 @@
 use crate::{
+    common::with_class,
     components::{atoms::profile_link::ProfileLink, molecules::time_row::TimeRow},
     providers::AuthContext,
     responses::GameResponse,
@@ -64,10 +65,13 @@ pub fn UpcomingGameRow(
     };
 
     view! {
-        <div class="flex flex-col p-4 w-full rounded-lg duration-300 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
+        <div class="flex flex-col p-4 w-full ui-card-row">
             <div class="flex mb-3 w-full text-center">
                 <a
-                    class="overflow-hidden w-full text-lg font-bold text-blue-500 break-words hover:underline no-link-style hyphens-auto"
+                    class=with_class(
+                        "ui-text-link",
+                        "overflow-hidden w-full text-lg no-link-style break-words hyphens-auto",
+                    )
                     href=format!("/tournament/{}", tournament_id)
                     title=tournament_name.get_value()
                 >
@@ -98,7 +102,7 @@ pub fn UpcomingGameRow(
 
                 <Show when=show_button>
                     <a
-                        class="flex justify-center items-center py-1 px-3 text-sm font-medium text-white rounded active:scale-95 no-link-style bg-button-dawn min-w-[5rem] dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
+                        class="py-1 px-3 text-sm font-medium ui-button ui-button-primary ui-button-md no-link-style min-w-[5rem]"
                         href=format!("/game/{}", game.game_id)
                     >
                         {move || {

@@ -41,19 +41,16 @@ cfg_if! { if #[cfg(not(feature = "ssr"))] {
     static IOS_WORKAROUND: RwLock<bool> = RwLock::new(false);
 }}
 
-pub const COMMON_LINK_STYLE: &str = "no-link-style bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded";
-pub const DROPDOWN_BUTTON_STYLE: &str= "font-bold h-full p-2 hover:bg-pillbug-teal dark:hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 whitespace-nowrap block";
-pub const DROPDOWN_MENU_STYLE: &str = "flex flex-col items-stretch absolute left-0 top-full mt-1 w-max bg-even-light dark:bg-gray-950 text-black border border-gray-300 rounded-md p-2 z-50";
-
 #[derive(Clone)]
 pub struct ControlsSignal {
     pub hidden: RwSignal<bool>,
     pub notify: Signal<bool>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct OrientationSignal {
     pub orientation_vertical: Signal<bool>,
+    pub height_lock: RwSignal<Option<f64>>,
 }
 
 #[component]
@@ -70,6 +67,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     let orientation_vertical = use_media_query("(orientation: portrait), (max-width: 640px)");
     provide_context(OrientationSignal {
         orientation_vertical,
+        height_lock: RwSignal::new(None),
     });
     use_sync_user_locale();
     use_web_push_nav_listener();
@@ -212,7 +210,8 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         <Body />
         <main class=move || {
             format!(
-                "w-full min-h-screen standalone:min-h-[var(--app-height)] text-xs text-black dark:text-white bg-light dark:bg-gray-950 sm:text-sm touch-manipulation {}",
+                "w-full min-h-screen standalone:min-h-[var(--app-height)] text-xs sm:text-sm touch-manipulation {} {}",
+                "ui-app-background",
                 is_hidden(),
             )
         }>

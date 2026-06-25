@@ -1,6 +1,7 @@
 use crate::{
+    common::with_class,
     components::{
-        atoms::{profile_link::ProfileLink, status_indicator::StatusIndicator},
+        molecules::{empty_state::EmptyState, user_identity::UserIdentity},
         organisms::{games_filter::GamesFilter, stats::Stats},
     },
     functions::users::get_profile,
@@ -60,6 +61,8 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
 
     let games_container_ref = NodeRef::<html::Div>::new();
     let bounding = use_element_bounding(games_container_ref);
+    let location = use_location();
+    let current_tab = Signal::derive(move || tab_from_path(&location.pathname.get()));
 
     let initial_batch_size = Signal::derive(move || {
         calculate_initial_batch_size(bounding.height.get(), bounding.width.get())
@@ -80,18 +83,19 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
         initial_batch_size,
         infinite_scroll_batch_size,
         games_container_ref,
+        current_tab.get_untracked(),
     );
 
-    let location = use_location();
-    let current_tab = Signal::derive(move || tab_from_path(&location.pathname.get()));
     let i18n = use_i18n();
     let radio_classes = |active| {
-        format!("no-link-style py-1 px-2 text-sm font-semibold rounded-lg border-2 transition-all duration-200 transform hover:scale-[1.02] cursor-pointer shadow-sm hover:shadow-md {}", 
+        with_class(
             if active {
-                "bg-pillbug-teal border-pillbug-teal text-white hover:bg-pillbug-teal/90" 
+                "ui-choice ui-choice-sm ui-choice-active cursor-pointer"
             } else {
-                "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:border-gray-500" 
-            })
+                "ui-choice ui-choice-sm ui-choice-inactive cursor-pointer"
+            },
+            "no-link-style",
+        )
     };
 
     Effect::watch(
@@ -116,9 +120,13 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     );
 
     view! {
-        <div class="flex overflow-hidden flex-col px-3 pt-[calc(3rem+env(safe-area-inset-top))] bg-light h-[100vh] dark:bg-gray-950">
+        <div class="flex overflow-hidden flex-col px-3 pt-12 bg-light h-[100vh] dark:bg-app-dark">
             <Transition fallback=move || {
-                view! { <p>"Loading Profile..."</p> }
+                view! {
+                    <div class="flex flex-1 justify-center items-center">
+                        <EmptyState title="Loading Profile..." class="max-w-sm" />
+                    </div>
+                }
             }>
                 {move || {
                     user.get()
@@ -126,24 +134,16 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                             match user {
                                 Ok(user) => {
                                     let username = StoredValue::new(user.username.clone());
-                                    let deleted = user.deleted;
+                                    let profile_user = user.clone();
                                     Either::Left(
                                         view! {
                                             <div class="flex-shrink-0">
                                                 <div class="flex flex-row flex-wrap justify-center mx-1 w-full text-lg sm:text-xl">
-                                                    <div class="flex items-center">
-                                                        <StatusIndicator
-                                                            username=username.get_value()
-                                                            deleted=deleted
-                                                        />
-                                                        <ProfileLink
-                                                            patreon=user.patreon
-                                                            bot=user.bot
-                                                            username=username.get_value()
-                                                            deleted=deleted
-                                                            extend_tw_classes="truncate max-w-[125px]"
-                                                        />
-                                                    </div>
+                                                    <UserIdentity
+                                                        user=profile_user
+                                                        show_hover_ratings=false
+                                                        link_class="truncate max-w-[125px]"
+                                                    />
                                                 </div>
 
                                                 <div class="lg:flex lg:flex-col lg:items-center lg:mx-auto lg:max-w-4xl">
@@ -195,7 +195,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                                     Either::Right(
                                         view! {
                                             <div class="flex flex-1 justify-center items-center">
-                                                <p>"User not found"</p>
+                                                <EmptyState title="User not found" class="max-w-sm" />
                                             </div>
                                         },
                                     )

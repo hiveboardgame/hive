@@ -1,5 +1,5 @@
 use crate::{
-    common::RatingChangeInfo,
+    common::{with_class, RatingChangeInfo},
     components::molecules::{
         rating_and_change::RatingAndChange,
         thumbnail_pieces::ThumbnailPieces,
@@ -14,7 +14,7 @@ use shared_types::{Conclusion, GameSpeed, PrettyString, TimeInfo};
 
 #[component]
 pub fn GamePreviews(
-    games: Callback<(), Vec<GameResponse>>,
+    #[prop(into)] games: Signal<Vec<GameResponse>>,
     #[prop(optional)] show_time: bool,
 ) -> impl IntoView {
     let i18n = use_i18n();
@@ -87,7 +87,7 @@ pub fn GamePreviews(
         };
     view! {
         <div class="flex flex-row flex-wrap justify-center w-full min-w-0 max-w-full lg:block 2xl:flex">
-            <For each=move || games.run(()) key=|g| (g.game_id.clone(), g.turn) let:game>
+            <For each=games key=|g| (g.game_id.clone(), g.turn) let:game>
 
                 {
                     let board = game.create_state().board;
@@ -121,7 +121,10 @@ pub fn GamePreviews(
                     let white_player = StoredValue::new(game.white_player.clone());
                     let black_player = StoredValue::new(game.black_player.clone());
                     view! {
-                        <div class="flex relative flex-col items-center m-2 rounded-lg lg:inline-flex lg:mt-0 lg:mr-4 lg:mb-4 lg:ml-0 lg:align-top 2xl:m-2 size-60 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
+                        <div class=with_class(
+                            "ui-card-row",
+                            "flex relative flex-col items-center m-2 lg:inline-flex lg:mt-0 lg:mr-4 lg:mb-4 lg:ml-0 lg:align-top 2xl:m-2 size-60",
+                        )>
                             <div class="flex flex-col items-center w-full">
                                 <Show
                                     when=finished

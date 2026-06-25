@@ -1,7 +1,9 @@
 use crate::{
+    common::with_class,
     components::{
         atoms::simple_switch::SimpleSwitch,
-        molecules::rl_banner::RlBanner,
+        layouts::{page_header::PageHeader, page_shell::PageShell},
+        molecules::{panel::Panel, rl_banner::RlBanner},
         organisms::chat::ChatWindow,
         update_from_event::update_from_input,
     },
@@ -11,36 +13,35 @@ use crate::{
 use leptos::prelude::*;
 use shared_types::SimpleDestination;
 
-const LINE_CLASS: &str = "flex items-center py-3 text-sm before:flex-1 before:border-t before:border-black before:me-6 after:flex-1 after:border-t after:border-black after:ms-6 dark:text-white dark:before:border-neutral-600 dark:after:border-neutral-600";
-
 #[component]
 pub fn Admin() -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
 
     view! {
-        <div class="pt-page">
+        <PageShell>
+            <PageHeader title="Admin" />
             <Show when=move || {
                 auth_context.user.with(|a| a.as_ref().is_some_and(|v| v.user.admin))
             }>
-                <div class=LINE_CLASS>Send Global Warning</div>
-                <ChatWindow destination=SimpleDestination::Global />
-                <div class=LINE_CLASS>Edit Banner</div>
-                <EditBanner />
-                <div class=LINE_CLASS>Telemetry</div>
-                <a
-                    class="py-2 px-4 mx-4 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
-                    href="/admin/telemetry"
-                >
-                    "Open WS telemetry dashboard"
-                </a>
-                <a
-                    class="py-2 px-4 mx-4 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
-                    href="/admin/push-metrics"
-                >
-                    "Open push notification metrics"
-                </a>
+                <Panel title="Send Global Warning" body_class="space-y-3">
+                    <ChatWindow destination=SimpleDestination::Global />
+                </Panel>
+                <Panel title="Edit Banner" body_class="space-y-4">
+                    <EditBanner />
+                </Panel>
+                <Panel title="Telemetry" body_class="flex flex-wrap gap-2">
+                    <a class="ui-button ui-button-primary ui-button-md" href="/admin/telemetry">
+                        "Open WS telemetry dashboard"
+                    </a>
+                    <a
+                        class="ui-button ui-button-secondary ui-button-md"
+                        href="/admin/push-metrics"
+                    >
+                        "Open push notification metrics"
+                    </a>
+                </Panel>
             </Show>
-        </div>
+        </PageShell>
     }
 }
 
@@ -62,7 +63,7 @@ fn EditBanner() -> impl IntoView {
                         view! {
                             <button
                                 on:click=move |_| show_preview.update(|b| *b = !*b)
-                                class="flex gap-1 justify-center items-center px-4 m-4 h-7 font-bold text-white rounded active:scale-95 bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
+                                class="ui-button ui-button-secondary ui-button-md w-fit"
                             >
                                 {move || {
                                     if !show_preview() { "Preview Banner" } else { "Edit Banner" }
@@ -77,10 +78,12 @@ fn EditBanner() -> impl IntoView {
                                     }}
                                 </div>
                                 <div class=move || if !show_preview() { "" } else { "hidden" }>
-                                    <div class="flex flex-col m-2">
-                                        <label for="title">Title:</label>
+                                    <div class="flex flex-col gap-1.5">
+                                        <label class="ui-field-label" for="title">
+                                            Title
+                                        </label>
                                         <input
-                                            class="py-2 px-3 w-10/12 leading-tight rounded border shadow appearance-none focus:outline-none"
+                                            class="ui-field-input"
                                             name="title"
                                             type="text"
                                             prop:value=title
@@ -90,7 +93,7 @@ fn EditBanner() -> impl IntoView {
                                     </div>
 
                                     <textarea
-                                        class="py-2 px-3 m-2 w-10/12 h-32 leading-tight rounded border shadow appearance-none focus:outline-none"
+                                        class="mt-3 h-32 ui-field-textarea"
                                         name="content"
                                         prop:value=content
                                         on:input=update_from_input(content)
@@ -98,7 +101,7 @@ fn EditBanner() -> impl IntoView {
                                     ></textarea>
                                     <div class="flex flex-row gap-1 p-1">
                                         <a
-                                            class="font-bold text-blue-500 hover:underline"
+                                            class="ui-text-link"
                                             href="https://commonmark.org/help/"
                                             target="_blank"
                                         >
@@ -106,11 +109,13 @@ fn EditBanner() -> impl IntoView {
                                         </a>
                                     </div>
                                 </div>
-                                <div class="m-4">
-
+                                <div class=with_class(
+                                    "ui-setting-group",
+                                    "mt-4 flex flex-wrap items-center gap-3",
+                                )>
                                     <button
                                         type="submit"
-                                        class="flex gap-1 justify-center items-center px-4 h-7 font-bold text-white rounded active:scale-95 bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
+                                        class="ui-button ui-button-primary ui-button-md"
                                     >
                                         "Submit"
                                     </button>

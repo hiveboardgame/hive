@@ -13,7 +13,7 @@ use crate::{
         organisms::{
             board::Board,
             display_timer::{DisplayTimer, Placement},
-            reserve::{Alignment, Reserve},
+            reserve::{Alignment, Reserve, MOBILE_RESERVE_VIEWBOX},
             side_board::{move_query_signal, SideboardTabs, TabView},
             unstarted::Unstarted,
         },
@@ -52,6 +52,8 @@ pub fn Play() -> impl IntoView {
     let timer = expect_context::<TimerSignal>();
     let mut game_state = expect_context::<GameStateSignal>();
     let orientation_signal = expect_context::<OrientationSignal>();
+    let vertical = orientation_signal.orientation_vertical;
+    let height_lock = orientation_signal.height_lock;
     let auth_context = expect_context::<AuthContext>();
     let config = expect_context::<Config>().0;
     let api = expect_context::<ApiRequestsProvider>();
@@ -115,10 +117,28 @@ pub fn Play() -> impl IntoView {
         })
     });
     let parent_container_style = move || {
-        if orientation_signal.orientation_vertical.get() {
+        if vertical.get() {
             "flex flex-col"
         } else {
             "grid grid-cols-board xl:grid-cols-board-xl grid-rows-6 pr-2"
+        }
+    };
+    let page_class = move || {
+        let height_class = if vertical.get() && height_lock.get().is_some() {
+            "h-[var(--locked-app-height)]"
+        } else {
+            "h-[100dvh] standalone:h-[var(--app-height)]"
+        };
+        format!("select-none ui-board-page-surface {height_class}")
+    };
+    let page_height_style = move || {
+        if vertical.get() {
+            height_lock
+                .get()
+                .map(|height| format!("--locked-app-height: {height}px;"))
+                .unwrap_or_default()
+        } else {
+            String::new()
         }
     };
 
@@ -341,40 +361,37 @@ pub fn Play() -> impl IntoView {
     use_play_history_keyboard_navigation(game_state, set_move, on_history_key);
 
     view! {
-        <div class=move || {
-            format!(
-                "h-[100dvh] pt-10 standalone:h-[var(--app-height)] select-none bg-board-dawn dark:bg-board-twilight {}",
-                parent_container_style(),
-            )
-        }>
-            <Show
-                when=orientation_signal.orientation_vertical
-                fallback=move || {
-                    view! {
-                        <HorizontalLayout
-                            show_board
-                            player_color
-                            user_is_player
-                            game_id
-                            white_and_black_ids
-                            interaction=hiveground_interaction
-                            tab
-                            history_state
-                        />
+        <div class=page_class style=page_height_style>
+            <div class=move || format!("h-full {}", parent_container_style())>
+                <Show
+                    when=vertical
+                    fallback=move || {
+                        view! {
+                            <HorizontalLayout
+                                show_board
+                                player_color
+                                user_is_player
+                                game_id
+                                white_and_black_ids
+                                interaction=hiveground_interaction
+                                tab
+                                history_state
+                            />
+                        }
                     }
-                }
-            >
-                <VerticalLayout
-                    show_board
-                    player_color
-                    user_is_player
-                    game_id
-                    white_and_black_ids
-                    interaction=hiveground_interaction
-                    history_state
-                />
+                >
+                    <VerticalLayout
+                        show_board
+                        player_color
+                        user_is_player
+                        game_id
+                        white_and_black_ids
+                        interaction=hiveground_interaction
+                        history_state
+                    />
 
-            </Show>
+                </Show>
+            </div>
         </div>
     }
 }
@@ -436,7 +453,7 @@ fn HorizontalLayout(
             history_state
         />
         <div
-            class="grid grid-cols-2 col-span-2 col-start-9 grid-rows-6 row-span-full row-start-1"
+            class="grid grid-cols-2 col-span-2 col-start-9 grid-rows-6 row-span-full row-start-1 gap-2 p-1"
             style=background_style
         >
             <DisplayTimer placement=Placement::Top vertical />
@@ -462,14 +479,29 @@ fn VerticalLayout(
     let top_color = Signal::derive(move || player_color().opposite_color());
     let show_controls =
         Signal::derive(move || !controls_signal.hidden.get() || game_state.is_finished()());
+    let top_reserve_row_class = move || {
+        let size_class = if user_is_player() {
+            "h-12 max-h-12"
+        } else {
+            "h-16 max-h-16"
+        };
+        format!("flex col-start-1 row-start-1 justify-between ml-1 min-w-0 {size_class}")
+    };
+    let bottom_reserve_row_class = move || {
+        let size_class = if user_is_player() {
+            "h-20 max-h-20"
+        } else {
+            "h-16 max-h-16"
+        };
+        format!("flex col-start-1 row-start-2 justify-between ml-1 min-w-0 {size_class}")
+    };
     view! {
         <div class="flex flex-col flex-grow h-full min-h-0">
-            <div class="flex flex-col shrink bg-board-dawn dark:bg-reserve-twilight">
+            <div class="flex flex-col shrink ui-board-reserve">
                 <Show when=show_controls>
-                    <div class="flex flex-row-reverse justify-between items-center shrink">
+                    <div class="flex flex-row-reverse justify-between items-start min-w-0 shrink">
                         <div class="flex flex-row-reverse items-center">
                             <AnalysisAndDownload />
-                            <AnnotationToggle extend_tw_classes="place-self-start" />
                         </div>
                         <Show when=user_is_player>
                             <ControlButtons />
@@ -477,18 +509,25 @@ fn VerticalLayout(
                     </div>
                 </Show>
 
-                <div class="flex justify-between ml-1 h-full max-h-16">
-                    <Reserve
-                        alignment=Alignment::SingleRow
-                        color=top_color
-                        interaction
-                        history_state
-                    />
-                    <DisplayTimer vertical=true placement=Placement::Top />
+                <div class="grid grid-cols-[minmax(0,1fr)_4rem] bg-inherit">
+                    <div class=top_reserve_row_class>
+                        <Reserve
+                            alignment=Alignment::SingleRow
+                            color=top_color
+                            viewbox_str=MOBILE_RESERVE_VIEWBOX
+                            interaction
+                            history_state
+                        />
+                    </div>
+                    <div class="flex col-start-2 row-start-1 min-h-0">
+                        <DisplayTimer vertical=true placement=Placement::Top />
+                    </div>
                 </div>
-                <div class="flex gap-1 justify-between px-1 border-gray-500 border-dashed border-b-[1px] bg-inherit">
-                    <UserWithRating side=top_color vertical />
-                    <GameInfo />
+                <div class="grid gap-y-0.5 gap-x-1 items-start px-1 min-w-0 grid-cols-[auto_minmax(0,1fr)] bg-inherit ui-board-separator-bottom">
+                    <div class="min-w-0">
+                        <UserWithRating side=top_color vertical />
+                    </div>
+                    <GameInfo compact=true />
                 </div>
 
             </div>
@@ -500,25 +539,34 @@ fn VerticalLayout(
                 interaction
                 history_state
             />
-            <div class="flex flex-col shrink bg-board-dawn dark:bg-reserve-twilight">
-                <div class="flex gap-1 border-gray-500 border-dashed border-t-[1px]">
-                    <UserWithRating side=player_color vertical />
-                </div>
-                <div class="flex justify-between mb-2 ml-1 h-full max-h-16">
-                    <Reserve
-                        alignment=Alignment::SingleRow
-                        color=player_color
-                        interaction
-                        history_state
-                    />
-                    <DisplayTimer vertical=true placement=Placement::Bottom />
+            <div class="flex flex-col shrink ui-board-reserve">
+                <div class="grid grid-cols-[minmax(0,1fr)_4rem] bg-inherit ui-board-separator-top">
+                    <div class="flex col-start-1 row-start-1 gap-1 min-w-0">
+                        <UserWithRating side=player_color vertical />
+                    </div>
+                    <div class=bottom_reserve_row_class>
+                        <Reserve
+                            alignment=Alignment::SingleRow
+                            color=player_color
+                            viewbox_str=MOBILE_RESERVE_VIEWBOX
+                            interaction
+                            history_state
+                        />
+                    </div>
+                    <div class="flex col-start-2 row-span-2 row-start-1 min-h-0">
+                        <DisplayTimer vertical=true placement=Placement::Bottom />
+                    </div>
                 </div>
                 <Show when=show_controls>
-                    <div class="grid grid-cols-4 gap-8 pb-1">
+                    <div class="grid grid-cols-5 gap-1 px-1 pb-1 [&>*]:w-full">
                         <HistoryButton action=HistoryNavigation::First />
                         <HistoryButton action=HistoryNavigation::Previous />
                         <HistoryButton action=HistoryNavigation::Next />
                         <HistoryButton action=HistoryNavigation::Last />
+                        <AnnotationToggle
+                            class="ui-board-nav-button"
+                            active_tw_classes="ui-segmented-active"
+                        />
                     </div>
                 </Show>
 

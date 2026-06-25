@@ -62,6 +62,9 @@ const STACK_TOUCH_MOVE_CANCEL_THRESHOLD_PX: f64 = 8.0;
 const ZOOM_WHEEL_SENSITIVITY: f32 = 0.002; // scroll-wheel: per-unit deltaY -> scale fraction
 const ZOOM_PINCH_SENSITIVITY: f32 = 0.005; // trackpad pinch (ctrlKey wheel): faster than scroll
 const ZOOM_WHEEL_MAX_STEP: f32 = 0.10; // cap one event at ~10% zoom
+const ZOOM_IN_LIMIT: f32 = 150.0;
+const ZOOM_OUT_LIMIT_MIN: f32 = 2500.0;
+const ZOOM_OUT_LIMIT_FACTOR: f32 = 2.5;
 
 #[derive(Debug, Clone)]
 enum ViewBoxUpdateType {
@@ -139,8 +142,6 @@ struct ViewBoxState {
     is_panning: RwSignal<bool>,
     has_zoomed: RwSignal<bool>,
     is_visible: RwSignal<bool>,
-    zoom_in_limit: f32,
-    zoom_out_limit: f32,
 }
 
 impl ViewBoxState {
@@ -149,8 +150,6 @@ impl ViewBoxState {
             is_panning: RwSignal::new(false),
             has_zoomed: RwSignal::new(false),
             is_visible: RwSignal::new(true),
-            zoom_in_limit: 150.0,
-            zoom_out_limit: 2500.0,
         }
     }
 }
@@ -301,8 +300,7 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
                         .calculate_zoom(center_x, center_y, scale);
                     let intermediate_height = future_viewbox.height;
 
-                    if (intermediate_height >= viewbox_state.zoom_in_limit
-                        && intermediate_height <= viewbox_state.zoom_out_limit)
+                    if zoom_height_in_bounds(viewbox_ref, intermediate_height)
                         && (viewbox_state.is_visible.get()
                             || will_svg_be_visible(g_ref, &future_viewbox))
                     {
@@ -321,8 +319,7 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
                     let future_viewbox = base.calculate_zoom(center_x, center_y, scale);
                     let intermediate_height = future_viewbox.height;
 
-                    if (intermediate_height >= viewbox_state.zoom_in_limit
-                        && intermediate_height <= viewbox_state.zoom_out_limit)
+                    if zoom_height_in_bounds(viewbox_ref, intermediate_height)
                         && (viewbox_state.is_visible.get()
                             || will_svg_be_visible(g_ref, &future_viewbox))
                     {
@@ -631,7 +628,7 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
                 width="100%"
                 height="100%"
                 viewBox=viewbox_string
-                class=move || format!("touch-none duration-300 {}", history_style())
+                class=move || format!("touch-none transition-none {}", history_style())
                 node_ref=viewbox_ref
                 xmlns="http://www.w3.org/2000/svg"
             >
@@ -916,6 +913,19 @@ fn touch_distance_and_center(svg: NodeRef<svg::Svg>, evt: &TouchEvent) -> (f32, 
     let center = ((point_0.0 + point_1.0) / 2.0, (point_0.1 + point_1.1) / 2.0);
 
     (distance, center)
+}
+
+fn zoom_height_in_bounds(svg: NodeRef<svg::Svg>, height: f32) -> bool {
+    height >= ZOOM_IN_LIMIT && height <= dynamic_zoom_out_limit(svg, height)
+}
+
+fn dynamic_zoom_out_limit(svg: NodeRef<svg::Svg>, fallback_height: f32) -> f32 {
+    let base_height = svg
+        .get_untracked()
+        .map(|svg| svg.client_height() as f32)
+        .filter(|height| *height > 0.0)
+        .unwrap_or(fallback_height);
+    (base_height * ZOOM_OUT_LIMIT_FACTOR).max(ZOOM_OUT_LIMIT_MIN)
 }
 
 fn stack_position_from_event_target(target: Option<EventTarget>) -> Option<Position> {

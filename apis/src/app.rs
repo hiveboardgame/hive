@@ -67,6 +67,10 @@ use shared_types::{GameProgress, TournamentStatus};
 // 1 year in milliseconds
 const LOCALE_MAX_AGE: i64 = 1000 * 60 * 60 * 24 * 365;
 
+fn auth_pending_fallback() -> impl IntoView {
+    view! { <div aria-hidden="true"></div> }
+}
+
 #[component]
 pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
@@ -158,6 +162,7 @@ pub fn App() -> impl IntoView {
                             condition=is_logged_in
                             path=path!("/account")
                             redirect_path=|| "/login"
+                            fallback=auth_pending_fallback
                             view=|| view! { <Account /> }
                         />
                         <Route
@@ -170,12 +175,14 @@ pub fn App() -> impl IntoView {
                             condition=is_logged_in
                             path=path!("/config")
                             redirect_path=|| "/login"
+                            fallback=auth_pending_fallback
                             view=|| view! { <Config /> }
                         />
                         <ProtectedRoute
                             condition=is_logged_in
                             path=path!("/notifications")
                             redirect_path=|| "/login"
+                            fallback=auth_pending_fallback
                             view=|| view! { <Notifications /> }
                         />
                         <Route path=path!("/tournament/:nanoid") view=|| view! { <Tournament /> } />
@@ -183,6 +190,7 @@ pub fn App() -> impl IntoView {
                             condition=is_logged_in
                             path=path!("/tournaments/create")
                             redirect_path=|| "/login"
+                            fallback=auth_pending_fallback
                             view=|| view! { <TournamentCreate /> }
                         />
                         <ParentRoute
@@ -231,12 +239,14 @@ pub fn App() -> impl IntoView {
                                 condition=is_logged_in
                                 path=path!("joined")
                                 redirect_path=|| "/login"
+                                fallback=auth_pending_fallback
                                 view=|| view! { <JoinedTournaments /> }
                             />
                             <ProtectedRoute
                                 condition=is_logged_in
                                 path=path!("hosting")
                                 redirect_path=|| "/login"
+                                fallback=auth_pending_fallback
                                 view=|| view! { <HostingTournaments /> }
                             />
                         </ParentRoute>
@@ -253,18 +263,21 @@ pub fn App() -> impl IntoView {
                             condition=is_admin
                             path=path!("/admin")
                             redirect_path=|| "/"
+                            fallback=auth_pending_fallback
                             view=|| view! { <Admin /> }
                         />
                         <ProtectedRoute
                             condition=is_admin
                             path=path!("/admin/telemetry")
                             redirect_path=|| "/"
+                            fallback=auth_pending_fallback
                             view=|| view! { <AdminTelemetry /> }
                         />
                         <ProtectedRoute
                             condition=is_admin
                             path=path!("/admin/push-metrics")
                             redirect_path=|| "/"
+                            fallback=auth_pending_fallback
                             view=|| view! { <AdminPushMetrics /> }
                         />
                     </ParentRoute>

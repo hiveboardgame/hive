@@ -1,10 +1,13 @@
-use crate::providers::game_state::GameStateSignal;
+use crate::{common::with_class, providers::game_state::GameStateSignal};
 use hive_lib::GameControl;
 use icondata_core;
 use leptos::prelude::*;
 use leptos_icons::*;
 use leptos_use::{use_timeout_fn, UseTimeoutFnReturn};
 use uuid::Uuid;
+
+const GAME_CONTROL_ICON_BASE_CLASS: &str = "ui-game-control-button";
+const GAME_CONTROL_ACCEPT_CLASS: &str = "bg-grasshopper-green text-white hover:bg-green-500";
 
 #[component]
 pub fn AcceptDenyGc(
@@ -17,9 +20,9 @@ pub fn AcceptDenyGc(
 
     let button_style = move || match game_control {
         GameControl::DrawReject(_) | GameControl::TakebackReject(_) => {
-            "bg-red-700 hover:bg-ladybug-red absolute"
+            "bg-ladybug-red text-white hover:bg-red-500".to_string()
         }
-        _ => "mr-1 bg-grasshopper-green hover:bg-green-500 relative",
+        _ => with_class(GAME_CONTROL_ACCEPT_CLASS, "relative"),
     };
 
     let on_click = move |_| {
@@ -31,11 +34,7 @@ pub fn AcceptDenyGc(
             on:click=on_click
             class=move || {
                 let hidden = if hidden() { "hidden" } else { "" };
-                format!(
-                    "aspect-square rounded-sm transform transition-transform duration-300 active:scale-95 [&>svg]:size-6 lg:[&>svg]:size-8 {} {}",
-                    button_style(),
-                    hidden,
-                )
+                with_class(GAME_CONTROL_ICON_BASE_CLASS, format!("{} {}", button_style(), hidden))
             }
         >
 
@@ -106,20 +105,22 @@ pub fn ConfirmButton(
     };
 
     let class = move || {
-        let base = String::from("aspect-square rounded-sm relative transform transition-transform duration-300 active:scale-95 [&>svg]:size-6 lg:[&>svg]:size-8 ");
-        base + if is_clicked() {
-            "bg-grasshopper-green hover:bg-green-500"
+        let state = if is_clicked() {
+            GAME_CONTROL_ACCEPT_CLASS
         } else if pending(game_control) {
-            "bg-pillbug-teal text-slate-500"
+            "bg-pillbug-teal text-white"
         } else if disabled() {
-            "text-slate-500"
+            "text-gray-500 dark:text-gray-400"
         } else {
-            "hover:bg-grasshopper-green"
-        }
+            "text-gray-800 hover:bg-grasshopper-green hover:text-white dark:text-gray-100"
+        };
+        with_class(GAME_CONTROL_ICON_BASE_CLASS, format!("relative {state}"))
     };
 
     view! {
-        <div class=move || { if hidden() { "relative hidden" } else { "relative" } }>
+        <div class=move || {
+            if hidden() { "relative hidden" } else { "relative inline-flex items-center gap-1" }
+        }>
             <button title=title on:click=onclick_confirm disabled=disabled class=class>
                 <Icon icon />
             </button>
@@ -127,9 +128,9 @@ pub fn ConfirmButton(
                 <button
                     title="Cancel"
                     on:click=cancel
-                    class="absolute ml-1 bg-red-700 rounded-sm duration-300 aspect-square hover:bg-ladybug-red"
+                    class="ui-game-control-button ui-button-danger"
                 >
-                    <Icon icon=icondata_io::IoCloseSharp attr:class="size-6 lg:size-8" />
+                    <Icon icon=icondata_io::IoCloseSharp />
                 </button>
             </Show>
         </div>

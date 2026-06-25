@@ -1,5 +1,8 @@
 use crate::{
-    components::atoms::history_nav_button::HistoryNavButton,
+    components::{
+        atoms::history_nav_button::HistoryNavButton,
+        molecules::annotation_toolbar::AnnotationToggle,
+    },
     hooks::history_nav::{
         can_navigate_analysis_history,
         navigate_analysis_history,
@@ -17,6 +20,31 @@ use leptos_icons::Icon;
 use tree_ds::prelude::Node;
 
 #[component]
+pub fn AnalysisHistoryControls(
+    #[prop(optional)] scroll_on_navigate: bool,
+    #[prop(optional)] compact: bool,
+) -> impl IntoView {
+    let class = if compact {
+        "grid grid-cols-5 gap-1 px-1 pb-1 [&>*]:w-full"
+    } else {
+        "grid grid-cols-5 gap-2 [&>*]:w-full"
+    };
+
+    view! {
+        <div class=class>
+            <HistoryButton action=HistoryNavigation::First scroll_on_navigate=scroll_on_navigate />
+            <HistoryButton
+                action=HistoryNavigation::Previous
+                scroll_on_navigate=scroll_on_navigate
+            />
+            <HistoryButton action=HistoryNavigation::Next scroll_on_navigate=scroll_on_navigate />
+            <UndoButton />
+            <AnnotationToggle class="ui-board-nav-button" active_tw_classes="ui-segmented-active" />
+        </div>
+    }
+}
+
+#[component]
 pub fn UndoButton() -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>();
     let game_state = expect_context::<GameStateSignal>();
@@ -24,11 +52,12 @@ pub fn UndoButton() -> impl IntoView {
     let is_disabled = move || {
         analysis
             .get_value()
-            .0
+            .tree
             .with(|a| a.current_node.is_none() || a.is_at_start())
     };
     let undo = move |_| {
-        analysis.get_value().0.update(|a| {
+        let analysis = analysis.get_value();
+        analysis.tree.update(|a| {
             if let Some(node) = &a.current_node {
                 if let Ok(node_id) = node.get_node_id() {
                     if let Ok(Some(new_current)) = node.get_parent_id() {
@@ -50,14 +79,11 @@ pub fn UndoButton() -> impl IntoView {
                 }
             }
         });
+        analysis.sync_reserve_from_game_state(game_state);
     };
 
     view! {
-        <button
-            class="flex justify-center place-items-center m-1 h-7 rounded-md border-2 border-cyan-500 transition-transform duration-300 active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed drop-shadow-lg dark:hover:bg-pillbug-teal dark:border-button-twilight hover:bg-pillbug-teal disabled:hover:bg-transparent"
-            on:click=undo
-            prop:disabled=is_disabled
-        >
+        <button class="ui-board-nav-button" on:click=undo prop:disabled=is_disabled>
             <Icon icon=icondata_bi::BiUndoRegular attr:class="size-6" />
         </button>
     }
@@ -68,7 +94,7 @@ pub fn HistoryButton(
     action: HistoryNavigation,
     #[prop(optional)] scroll_on_navigate: bool,
 ) -> impl IntoView {
-    let analysis = expect_context::<AnalysisSignal>().0;
+    let analysis = expect_context::<AnalysisSignal>();
     let game_state = expect_context::<GameStateSignal>();
     let cloned_action = action;
     let icon = match action {
@@ -77,16 +103,23 @@ pub fn HistoryButton(
         HistoryNavigation::Previous => icondata_ai::AiStepBackwardFilled,
     };
 
-    let is_disabled =
-        move || analysis.with(|analysis| !can_navigate_analysis_history(analysis, cloned_action));
+    let is_disabled = move || {
+        analysis
+            .tree
+            .with(|analysis| !can_navigate_analysis_history(analysis, cloned_action))
+    };
+    let hold_reserve_sync = analysis.hold_reserve_sync;
     let on_press = Callback::new(move |()| {
-        if navigate_analysis_history(action, analysis, game_state) && scroll_on_navigate {
-            scroll_move_into_view();
+        if navigate_analysis_history(action, analysis.tree, game_state) {
+            analysis.sync_reserve_later_from_game_state(game_state);
+            if scroll_on_navigate {
+                scroll_move_into_view();
+            }
         }
     });
 
     view! {
-        <HistoryNavButton disabled=is_disabled on_press=on_press>
+        <HistoryNavButton disabled=is_disabled on_press=on_press on_pointerdown=hold_reserve_sync>
             <Icon icon=icon />
         </HistoryNavButton>
     }
@@ -98,24 +131,25 @@ pub fn HistoryMove(
     current_path: Memo<Vec<i32>>,
     has_children: bool,
 ) -> impl IntoView {
-    let analysis = expect_context::<AnalysisSignal>().0;
+    let analysis = expect_context::<AnalysisSignal>();
     let game_state = expect_context::<GameStateSignal>();
     if let Ok(node_id) = node.get_node_id() {
         let is_current =
             Memo::new(move |_| current_path.with(|path| path.first() == Some(&node_id)));
         let class = move || {
-            let margin = if has_children { "" } else { "ml-[15px] " };
-            let bg_color = if is_current.get() {
-                "bg-orange-twilight "
+            let margin = if has_children { "" } else { "ml-6 " };
+            let state_class = if is_current.get() {
+                "bg-orange-twilight text-gray-950 "
             } else {
-                ""
+                "text-gray-800 dark:text-gray-100 "
             };
-            format!("{margin}w-fit transition-transform duration-300 transform hover:bg-pillbug-teal dark:hover:bg-pillbug-teal {bg_color}active:scale-95")
+            format!("{margin}w-fit cursor-pointer rounded px-2 py-1 font-mono text-xs transition-colors active:scale-95 hover:bg-blue-light/70 dark:hover:bg-pillbug-teal/15 {state_class}")
         };
         let onclick = move |_| {
-            analysis.update(|a| {
+            analysis.tree.update(|a| {
                 a.update_node(node_id, Some(game_state));
             });
+            analysis.sync_reserve_from_game_state(game_state);
         };
         let value = node.get_value().ok().flatten();
         let history_index = value.as_ref().map(|value| value.turn - 1);
@@ -175,8 +209,11 @@ pub fn CollapsibleMove(
             set_open(s);
         };
         view! {
-            <div class="flex">
-                <button on:click=onclick>
+            <div class="flex gap-1 items-center">
+                <button
+                    class="w-6 h-6 ui-button ui-button-ghost ui-button-tiny shrink-0"
+                    on:click=onclick
+                >
                     <svg
                         width="15"
                         height="15"

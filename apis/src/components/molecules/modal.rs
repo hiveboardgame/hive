@@ -14,10 +14,7 @@ pub fn Modal(children: Children, dialog_el: NodeRef<Dialog>) -> impl IntoView {
         }
     });
     view! {
-        <dialog
-            node_ref=dialog_el
-            class="m-auto rounded-lg border shadow-xl dark:text-white dark:bg-gray-600 dark:border-gray-500 drop-shadow-xl backdrop:backdrop-blur bg-stone-300"
-        >
+        <dialog node_ref=dialog_el class="ui-modal-panel">
             <div
                 node_ref=inner
                 on:mousedown=|ev| ev.stop_propagation()
@@ -26,7 +23,7 @@ pub fn Modal(children: Children, dialog_el: NodeRef<Dialog>) -> impl IntoView {
                 <div class="flex justify-end">
                     <form class="m-2" method="dialog">
                         <button
-                            class="flex justify-center items-center rounded-full duration-300 active:scale-95 size-5 hover:bg-ladybug-red"
+                            class="hover:text-white ui-button ui-button-ghost ui-button-icon-sm hover:bg-ladybug-red"
                             aria-label="Close"
                         >
                             x

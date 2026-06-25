@@ -1,6 +1,9 @@
 use crate::{
     common::UserAction,
-    components::{atoms::rating::icon_for_speed, molecules::user_row::UserRow},
+    components::{
+        atoms::rating::icon_for_speed,
+        molecules::{empty_state::EmptyState, user_row::UserRow},
+    },
     functions::users::get_top_users,
     providers::AuthContext,
 };
@@ -29,45 +32,64 @@ pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
                         Err(e) => {
                             log!("Error is: {:?}", e);
                             Either::Left(
-                                view! { <pre class="m-2 h-6">"Couldn't fetch top users"</pre> },
+                                view! {
+                                    <section class="w-full max-w-xs ui-panel">
+                                        <EmptyState title="Couldn't fetch top users" class="m-2" />
+                                    </section>
+                                },
                             )
                         }
                         Ok(users) => {
                             let is_empty = users.is_empty();
+                            let users = StoredValue::new(users);
                             Either::Right(
                                 view! {
-                                    <div class="flex flex-col m-2 rounded-lg w-fit">
-                                        <div class="flex gap-1 items-center">
-                                            <Icon icon=icon_for_speed(speed()) />
-                                            {speed().to_string()}
-                                            :
+                                    <section class="ui-panel w-full max-w-xs">
+                                        <div class="ui-panel-header py-2">
+                                            <div class="flex min-w-0 items-center gap-2">
+                                                <Icon
+                                                    icon=icon_for_speed(speed())
+                                                    attr:class="size-4 flex-shrink-0 text-pillbug-teal"
+                                                />
+                                                <h2 class="truncate text-sm font-bold text-gray-900 dark:text-gray-100">
+                                                    {speed().to_string()}
+                                                </h2>
+                                            </div>
                                         </div>
-                                        <div class=move || {
-                                            format!(
-                                                "p-1 h-6 {}",
-                                                if !is_empty { "hidden" } else { "flex" },
-                                            )
-                                        }>{move || if is_empty { "No one yet" } else { "" }}</div>
-                                        <div class="overflow-hidden rounded-lg">
-                                            <For
-                                                each=move || { users.clone() }
-
-                                                key=|(_,user)| user.uid
-                                                let:((rank,user))
+                                        <div class="ui-panel-body p-2">
+                                            <Show
+                                                when=move || !is_empty
+                                                fallback=|| {
+                                                    view! {
+                                                        <EmptyState
+                                                            title="No one yet"
+                                                            class="py-4"
+                                                        />
+                                                    }
+                                                }
                                             >
-                                                <div class="flex gap-2 items-center">
-                                                    <span class="w-6 text-sm text-right text-stone-500">
-                                                        {rank}
-                                                    </span>
-                                                    <UserRow
-                                                        actions=vec![UserAction::Challenge]
-                                                        user
-                                                        game_speed=StoredValue::new(speed())
-                                                    />
+                                                <div class="overflow-hidden rounded-lg border border-black/5 dark:border-white/10">
+                                                    <For
+                                                        each=move || users.get_value()
+
+                                                        key=|(_,user)| user.uid
+                                                        let:((rank,user))
+                                                    >
+                                                        <div class="flex items-center gap-2">
+                                                            <span class="w-6 text-right text-xs font-semibold text-gray-500 dark:text-gray-400">
+                                                                {rank}
+                                                            </span>
+                                                            <UserRow
+                                                                actions=vec![UserAction::Challenge]
+                                                                user
+                                                                game_speed=StoredValue::new(speed())
+                                                            />
+                                                        </div>
+                                                    </For>
                                                 </div>
-                                            </For>
+                                            </Show>
                                         </div>
-                                    </div>
+                                    </section>
                                 },
                             )
                         }

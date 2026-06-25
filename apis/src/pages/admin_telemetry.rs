@@ -1,15 +1,19 @@
-use crate::{functions::telemetry::read_telemetry, providers::AuthContext};
+use crate::{
+    components::{
+        layouts::{
+            page_header::PageHeader,
+            page_shell::{PageShell, PageShellVariant},
+        },
+        molecules::{empty_state::EmptyState, panel::Panel},
+    },
+    functions::telemetry::read_telemetry,
+    providers::AuthContext,
+};
 use chrono::{DateTime, Duration, Utc};
 use leptos::prelude::*;
 use leptos_chartistry::*;
 use leptos_use::use_interval_fn;
 use shared_types::{TelemetryRange, TelemetryRow};
-
-const SECTION_TITLE: &str = "py-2 text-lg font-bold dark:text-white";
-const RANGE_BTN_BASE: &str = "px-3 py-1 mx-1 text-sm font-semibold rounded transition-colors";
-const RANGE_BTN_ACTIVE: &str = "bg-button-dawn dark:bg-button-twilight text-white";
-const RANGE_BTN_INACTIVE: &str =
-    "bg-gray-200 dark:bg-gray-700 text-black dark:text-white hover:bg-gray-300";
 
 fn ts(row: &TelemetryRow) -> DateTime<Utc> {
     DateTime::from_timestamp(row.timestamp as i64, 0).unwrap_or_else(Utc::now)
@@ -51,52 +55,69 @@ pub fn AdminTelemetry() -> impl IntoView {
     );
 
     view! {
-        <div class="px-4 pt-page">
-            <Show when=move || {
-                auth_context.user.with(|a| a.as_ref().is_some_and(|v| v.user.admin))
-            }>
-                <h1 class="pb-2 text-2xl font-bold dark:text-white">"WS Telemetry"</h1>
-                <div class="flex flex-wrap gap-2 items-center pb-3">
-                    <RangeButtons range=range />
-                    <button
-                        class="py-1 px-3 mx-2 text-sm font-semibold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
-                        on:click=move |_| refresh_token.update(|n| *n = n.wrapping_add(1))
-                    >
-                        "Refresh"
-                    </button>
-                    <span class="text-xs text-gray-600 dark:text-gray-400">
-                        "Auto-refresh every 30s"
-                    </span>
+        <PageShell variant=PageShellVariant::Dashboard>
+            <Show
+                when=move || {
+                    auth_context.user.with(|a| a.as_ref().is_some_and(|v| v.user.admin))
+                }
+                fallback=|| {
+                    view! {
+                        <EmptyState
+                            title="Telemetry unavailable"
+                            message="This page is only available to administrators."
+                        />
+                    }
+                }
+            >
+                <div class="flex flex-col gap-4 w-full max-w-7xl">
+                    <PageHeader
+                        title="WS Telemetry"
+                        subtitle="Connection, queue, and chat health over time."
+                    />
+                    <div class="flex flex-wrap gap-2 items-center">
+                        <RangeButtons range=range />
+                        <button
+                            class="ui-button ui-button-secondary ui-button-sm"
+                            on:click=move |_| refresh_token.update(|n| *n = n.wrapping_add(1))
+                        >
+                            "Refresh"
+                        </button>
+                        <span class="text-xs text-gray-600 dark:text-gray-400">
+                            "Auto-refresh every 30s"
+                        </span>
+                    </div>
+                    <ChartStyles />
+                    <Suspense fallback=move || {
+                        view! { <EmptyState title="Loading telemetry..." /> }
+                    }>
+                        {move || {
+                            data.get()
+                                .map(|res| match res {
+                                    Ok(rows) if rows.is_empty() => {
+                                        view! {
+                                            <EmptyState
+                                                title="No telemetry rows"
+                                                message="The file is empty or the selected range is too short."
+                                            />
+                                        }
+                                            .into_any()
+                                    }
+                                    Ok(rows) => view! { <AllPanels rows=rows /> }.into_any(),
+                                    Err(e) => {
+                                        view! {
+                                            <EmptyState
+                                                title="Telemetry error"
+                                                message=format!("{e}")
+                                            />
+                                        }
+                                            .into_any()
+                                    }
+                                })
+                        }}
+                    </Suspense>
                 </div>
-                <ChartStyles />
-                <Suspense fallback=move || {
-                    view! { <p class="dark:text-white">"Loading…"</p> }
-                }>
-                    {move || {
-                        data.get()
-                            .map(|res| match res {
-                                Ok(rows) if rows.is_empty() => {
-                                    view! {
-                                        <p class="dark:text-white">
-                                            "No telemetry rows in this range. Either the file is empty or the range is too short."
-                                        </p>
-                                    }
-                                        .into_any()
-                                }
-                                Ok(rows) => view! { <AllPanels rows=rows /> }.into_any(),
-                                Err(e) => {
-                                    view! {
-                                        <p class="text-red-500">
-                                            "Telemetry error: " {format!("{e}")}
-                                        </p>
-                                    }
-                                        .into_any()
-                                }
-                            })
-                    }}
-                </Suspense>
             </Show>
-        </div>
+        </PageShell>
     }
 }
 
@@ -105,14 +126,11 @@ fn RangeButtons(range: RwSignal<TelemetryRange>) -> impl IntoView {
     let btn = move |label: &'static str, value: TelemetryRange| {
         let class = move || {
             let active = range.get() == value;
-            format!(
-                "{RANGE_BTN_BASE} {}",
-                if active {
-                    RANGE_BTN_ACTIVE
-                } else {
-                    RANGE_BTN_INACTIVE
-                }
-            )
+            if active {
+                "ui-button ui-button-primary ui-button-sm"
+            } else {
+                "ui-button ui-button-secondary ui-button-sm"
+            }
         };
         view! {
             <button class=class on:click=move |_| range.set(value)>
@@ -133,52 +151,42 @@ fn AllPanels(rows: Vec<TelemetryRow>) -> impl IntoView {
     let (data, _) = signal(rows);
     view! {
         <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
-            <Panel title="Connections (gauges)">
+            <Panel title="Connections (gauges)" body_class="overflow-x-auto">
                 <ChartConnections data=data />
             </Panel>
-            <Panel title="Memory (MiB)">
+            <Panel title="Memory (MiB)" body_class="overflow-x-auto">
                 <ChartMemory data=data />
             </Panel>
-            <Panel title="Drops — full (per interval)">
+            <Panel title="Drops - full (per interval)" body_class="overflow-x-auto">
                 <ChartDropsFull data=data />
             </Panel>
-            <Panel title="Drops — closed (per interval)">
+            <Panel title="Drops - closed (per interval)" body_class="overflow-x-auto">
                 <ChartDropsClosed data=data />
             </Panel>
-            <Panel title="Queue health">
+            <Panel title="Queue health" body_class="overflow-x-auto">
                 <ChartQueue data=data />
             </Panel>
-            <Panel title="Per-game activity (per interval)">
+            <Panel title="Per-game activity (per interval)" body_class="overflow-x-auto">
                 <ChartActivity data=data />
             </Panel>
-            <Panel title="Chat — message counts">
+            <Panel title="Chat - message counts" body_class="overflow-x-auto">
                 <ChartChatMsgs data=data />
             </Panel>
-            <Panel title="Chat — channel/pair counts">
+            <Panel title="Chat - channel/pair counts" body_class="overflow-x-auto">
                 <ChartChatChannels data=data />
             </Panel>
-            <Panel title="Sessions">
+            <Panel title="Sessions" body_class="overflow-x-auto">
                 <ChartSessions data=data />
             </Panel>
-            <Panel title="Membership">
+            <Panel title="Membership" body_class="overflow-x-auto">
                 <ChartMembership data=data />
             </Panel>
-            <Panel title="Caches">
+            <Panel title="Caches" body_class="overflow-x-auto">
                 <ChartCaches data=data />
             </Panel>
-            <Panel title="Direct chat lookup users">
+            <Panel title="Direct chat lookup users" body_class="overflow-x-auto">
                 <ChartLookupUsers data=data />
             </Panel>
-        </div>
-    }
-}
-
-#[component]
-fn Panel(title: &'static str, children: Children) -> impl IntoView {
-    view! {
-        <div class="p-3 bg-white rounded shadow dark:bg-gray-800 dark:[&_text]:!fill-gray-200">
-            <h2 class=SECTION_TITLE>{title}</h2>
-            {children()}
         </div>
     }
 }
@@ -363,6 +371,8 @@ fn ChartStyles() -> impl IntoView {
             ._chartistry_line_4 { stroke: #db2777; }
             ._chartistry_line_5 { stroke: #0891b2; }
             ._chartistry_line_markers { fill: currentColor; }
+            .dark ._chartistry_y_axis text,
+            .dark ._chartistry_x_axis text { fill: #e5e7eb; }
             .dark ._chartistry_grid_line_x,
             .dark ._chartistry_grid_line_y { stroke: #1a181845; }
             ._chartistry_tooltip {

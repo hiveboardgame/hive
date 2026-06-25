@@ -6,6 +6,7 @@ use crate::{
 };
 use anyhow::Result;
 use db_lib::{
+    db_error::DbError,
     get_conn,
     models::{Challenge, Game, NewGame, Rating},
     DbPool,
@@ -39,7 +40,19 @@ impl AcceptHandler {
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let mut conn = get_conn(&self.pool).await?;
         let mut messages = Vec::new();
-        let challenge = Challenge::find_by_challenge_id(&self.challenge_id, &mut conn).await?;
+        let challenge = match Challenge::find_by_challenge_id(&self.challenge_id, &mut conn).await {
+            Ok(challenge) => challenge,
+            Err(DbError::NotFound { .. }) => {
+                return Ok(vec![InternalServerMessage {
+                    destination: MessageDestination::User(self.user_id),
+                    message: ServerMessage::Challenge(ChallengeUpdate::Removed(
+                        self.challenge_id.clone(),
+                    )),
+                }]);
+            }
+            Err(err) => return Err(err.into()),
+        };
+        challenge.validate_accepting_user(self.user_id)?;
         let speed = GameSpeed::from_base_increment(challenge.time_base, challenge.time_increment);
         let rating = Rating::for_uuid(&self.user_id, &speed, &mut conn)
             .await?

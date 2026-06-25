@@ -1,6 +1,6 @@
 {
     "page": {
-        "heading": "🔔 Notifications",
+        "heading": "Notifications",
         "intro_before_link": "Choose how you want to be notified for each kind of event. Push goes to browsers you enable below. Discord setup is in the ",
         "account_link": "Discord section",
         "intro_after_link": " below.",
@@ -21,7 +21,7 @@
         "dms": "Direct message"
     },
     "browser": {
-        "heading": "🌐 This browser",
+        "heading": "This browser",
         "body": "Receive the push notifications selected above in this browser, even when no HiveGame tab is open. Enable separately on each device you want notified.",
         "enable": "Enable browser notifications",
         "disable": "Disable browser notifications",
@@ -31,11 +31,11 @@
         "test_failed": "Test failed:"
     },
     "ios": {
-        "heading": "📱 On your iPhone or iPad",
+        "heading": "On your iPhone or iPad",
         "body": "To get notifications on iOS, add HiveGame to your Home Screen: tap the Share button, then \"Add to Home Screen\", and open it from there."
     },
     "devices": {
-        "heading": "📡 Your devices",
+        "heading": "Your devices",
         "body": "Every device currently set up to receive push. Remove any you no longer use.",
         "remove": "Remove",
         "this_browser": "(this browser)",
@@ -93,6 +93,6 @@
         "takeback_declined_title": "Takeback declined",
         "takeback_rejected_body": "{{actor}} declined the takeback",
         "test_title": "HiveGame",
-        "test_body": "Test notification — push is working 🐝"
+        "test_body": "Test notification — push is working"
     }
 }

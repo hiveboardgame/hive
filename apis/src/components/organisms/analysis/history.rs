@@ -1,16 +1,12 @@
 use crate::{
-    components::{
-        molecules::annotation_toolbar::AnnotationToggle,
-        organisms::{
-            analysis::{
-                atoms::{CollapsibleMove, HistoryButton, HistoryMove},
-                DownloadTree,
-                HistoryNavigation,
-                LoadTree,
-                UndoButton,
-            },
-            reserve::{Alignment, Reserve},
+    components::organisms::{
+        analysis::{
+            atoms::{CollapsibleMove, HistoryMove},
+            AnalysisHistoryControls,
+            DownloadTree,
+            LoadTree,
         },
+        reserve::{Alignment, Reserve},
     },
     hiveground::HivegroundInteraction,
     providers::analysis::{AnalysisSignal, AnalysisTree, TreeNode},
@@ -20,7 +16,10 @@ use leptos::prelude::*;
 use std::{cmp::Ordering, collections::HashMap};
 use tree_ds::prelude::*;
 
-const BTN_CLASS: &str = "flex z-20 justify-center items-center m-1 w-44 h-10 text-white rounded-sm transition-transform duration-300 aspect-square bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95";
+fn action_button_class() -> String {
+    "ui-button ui-button-secondary ui-button-sm min-h-9 w-full whitespace-normal px-2 py-1 text-center text-xs leading-tight"
+        .to_string()
+}
 
 #[derive(Clone, Debug, PartialEq)]
 enum HistoryItem {
@@ -161,8 +160,11 @@ pub fn History(
     interaction: HivegroundInteraction,
     history_state: Memo<State>,
     #[prop(optional)] mobile: bool,
+    #[prop(optional)] hide_controls: bool,
 ) -> impl IntoView {
-    let analysis = expect_context::<AnalysisSignal>().0;
+    let analysis = expect_context::<AnalysisSignal>().tree;
+    let reserve_class =
+        "flex flex-col py-1 px-2 rounded border border-black/5 bg-odd-light/70 dark:border-white/10 dark:bg-surface-muted";
     let current_path = Memo::new(move |_| {
         analysis.with(|a| {
             a.current_node
@@ -226,22 +228,12 @@ pub fn History(
 
     let viewbox_str = "-32 -40 250 120";
     view! {
-        <div class="flex flex-col size-full">
-            <div class="flex gap-1 min-h-0 [&>*]:grow">
-                <HistoryButton action=HistoryNavigation::First scroll_on_navigate=!mobile />
-                <HistoryButton action=HistoryNavigation::Previous scroll_on_navigate=!mobile />
-                <HistoryButton action=HistoryNavigation::Next scroll_on_navigate=!mobile />
-                <UndoButton />
-            </div>
+        <div class="flex flex-col gap-3 min-h-0 size-full">
+            <Show when=move || !hide_controls>
+                <AnalysisHistoryControls scroll_on_navigate=!mobile />
+            </Show>
             <Show when=move || !mobile>
-                <div class="flex flex-col p-4">
-                    <Reserve
-                        alignment=Alignment::DoubleRow
-                        color=Color::White
-                        viewbox_str
-                        interaction
-                        history_state
-                    />
+                <div class=reserve_class>
                     <Reserve
                         alignment=Alignment::DoubleRow
                         color=Color::Black
@@ -249,25 +241,30 @@ pub fn History(
                         interaction
                         history_state
                     />
-
+                    <Reserve
+                        alignment=Alignment::DoubleRow
+                        color=Color::White
+                        viewbox_str
+                        interaction
+                        history_state
+                    />
                 </div>
             </Show>
-            <div class="flex justify-between items-center w-full">
+            <div class="flex gap-2 items-center w-full">
                 <Show when=has_history>
                     <DownloadTree />
                 </Show>
                 <LoadTree />
-                <AnnotationToggle />
             </div>
-            <div class="flex justify-between w-full">
-                <button on:click=move |_| promote_variation(true) class=BTN_CLASS>
+            <div class="grid gap-2 w-full grid-cols-[repeat(auto-fit,minmax(7rem,1fr))]">
+                <button on:click=move |_| promote_variation(true) class=action_button_class()>
                     "Make main line"
                 </button>
-                <button on:click=move |_| promote_variation(false) class=BTN_CLASS>
+                <button on:click=move |_| promote_variation(false) class=action_button_class()>
                     "Promote variation"
                 </button>
             </div>
-            <div class="overflow-y-auto p-1">
+            <div class="overflow-y-auto flex-grow p-2 min-h-0 text-sm rounded border border-black/5 bg-even-light/70 dark:border-white/10 dark:bg-surface-field">
                 {move || {
                     history_model
                         .with(|items| { render_history_items(items, analysis, current_path) })

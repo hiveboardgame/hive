@@ -34,18 +34,8 @@ impl GameStateSignal {
         }
     }
 
-    pub fn full_reset(&mut self) {
-        let state = State::new(GameType::MLP, false);
-        self.signal.update(|s| {
-            s.game_id = None;
-            s.state = state;
-            s.black_id = None;
-            s.white_id = None;
-            s.move_info.reset();
-            s.history_turn = None;
-            s.view = View::Game;
-            s.game_control_pending = None;
-        })
+    pub fn full_reset(&self) {
+        self.signal.update(|s| *s = GameState::new())
     }
 
     // No longer access the whole signal when getting user_color
@@ -351,7 +341,7 @@ impl GameState {
             if let Err(e) = self.state.play_turn_from_position(active, position) {
                 log!("Could not play turn: {} {} {}", active, position, e);
             } else if let Some(analysis) = analysis {
-                analysis.0.update(|analysis| {
+                analysis.tree.update(|analysis| {
                     let moves = self.state.history.moves.clone();
                     let hashes = self.state.hashes.clone();
                     let last_index = moves.len() - 1;
@@ -362,6 +352,7 @@ impl GameState {
                     analysis.add_node(moves[last_index].clone(), hashes[last_index]);
                     self.move_info.reset();
                 });
+                analysis.sync_reserve.run(self.state.turn_color);
             } else if let Some(ref game_id) = self.game_id {
                 let turn = Turn::Move(active, position);
                 api.turn(game_id.to_owned(), turn);

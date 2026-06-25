@@ -2,7 +2,7 @@ use crate::{
     functions::games::get::get_batch_from_options,
     pages::archive::{form::ArchiveSearchForm, list::ArchiveGameList},
 };
-use leptos::{html, prelude::*, task::spawn_local};
+use leptos::{prelude::*, task::spawn_local};
 use leptos_router::{
     hooks::{use_navigate, use_query_map},
     location::State,
@@ -51,7 +51,6 @@ pub fn GameSearch() -> impl IntoView {
     // being dropped, and ignores out-of-order responses.
     let request_seq = StoredValue::new(0_u64);
 
-    let scroll_ref = NodeRef::<html::Div>::new();
     let is_loading = RwSignal::new(false);
 
     let fetch_page: Arc<dyn Fn(GamesQueryOptions) + Send + Sync> =
@@ -211,13 +210,10 @@ pub fn GameSearch() -> impl IntoView {
     });
 
     view! {
-        <div
-            node_ref=scroll_ref
-            class="flex overflow-y-auto flex-col pt-20 w-full min-h-screen max-h-screen bg-light dark:bg-gray-950"
-        >
+        <div class="flex overflow-y-auto flex-col pt-12 w-full min-h-screen max-h-screen sm:pt-14 bg-light dark:bg-app-dark">
             <ArchiveSearchForm draft_options=draft_options on_search=on_search_cb />
 
-            <div class="flex-1 px-4 pb-8 mx-auto w-full max-w-5xl sm:px-6">
+            <div class="flex-1 px-4 pb-8 mx-auto w-full max-w-screen-2xl sm:px-6">
                 <div class="space-y-4">
                     <ErrorBoundary fallback=move |errors_signal| {
                         let messages = Signal::derive(move || {
@@ -229,8 +225,8 @@ pub fn GameSearch() -> impl IntoView {
                         });
                         view! {
                             <div class="flex flex-col flex-1 min-h-0">
-                                <div class="p-4 space-y-1 text-sm text-red-700 bg-red-50 rounded-xl border-2 border-red-200 shadow-sm dark:text-red-300 dark:border-red-900/50 dark:bg-red-950/30">
-                                    <For each=move || messages.get() key=|msg| msg.clone() let:msg>
+                                <div class="space-y-1 ui-danger-notice">
+                                    <For each=messages key=|msg| msg.clone() let:msg>
                                         <p>{msg}</p>
                                     </For>
                                 </div>

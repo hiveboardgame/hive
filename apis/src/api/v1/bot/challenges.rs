@@ -70,6 +70,11 @@ impl BotChallengeRequest {
                 "Direct challenges require an opponent username"
             ));
         }
+        if self.visibility != ChallengeVisibility::Direct && self.opponent.is_some() {
+            return Err(anyhow::anyhow!(
+                "Only direct challenges can have an opponent username"
+            ));
+        }
 
         //Validate rating bands
         if matches!((self.band_lower, self.band_upper), (Some(lower), Some(upper)) if lower > upper)
@@ -231,7 +236,17 @@ async fn create_challenge(
         (ChallengeVisibility::Direct, Some(username)) => {
             Some(User::find_by_username(username, &mut conn).await?.id)
         }
-        _ => None,
+        (ChallengeVisibility::Direct, None) => {
+            return Err(anyhow::anyhow!(
+                "Direct challenges require an opponent username"
+            ));
+        }
+        (_, Some(_)) => {
+            return Err(anyhow::anyhow!(
+                "Only direct challenges can have an opponent username"
+            ));
+        }
+        (_, None) => None,
     };
 
     let new_challenge = NewChallenge::new(bot_id, opponent_id, &req, &mut conn).await?;
@@ -251,6 +266,7 @@ async fn accept_challenge(
 ) -> Result<GameResponse> {
     let mut conn = get_conn(&pool).await?;
     let challenge = Challenge::find_by_challenge_id(&id, &mut conn).await?;
+    challenge.validate_accepting_user(bot.id)?;
     let (white_id, black_id) = match challenge.color_choice.to_lowercase().as_str() {
         "black" => (bot.id, challenge.challenger_id),
         "white" => (challenge.challenger_id, bot.id),

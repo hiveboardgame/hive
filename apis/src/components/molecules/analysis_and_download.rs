@@ -32,10 +32,10 @@ pub fn AnalysisAndDownload() -> impl IntoView {
 
     view! {
         <Show when=move || is_finished() || correspondence()>
-            <div class="flex justify-center items-center place-self-start">
+            <div class="flex justify-center items-center shrink-0">
                 <a
                     href=analysis_url
-                    class="justify-self-end place-self-center m-1 text-white rounded duration-300 no-link-style bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
+                    class="m-1 rounded-sm ui-button ui-button-primary ui-button-icon no-link-style"
                 >
                     <Icon icon=icondata_tb::TbMicroscopeOutline attr:class="py-1 size-7" />
                 </a>

@@ -21,7 +21,7 @@ use shared_types::GameId;
 use std::time::Duration;
 
 #[component]
-pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
+pub fn LiveTimer(side: Signal<Color>, #[prop(optional)] compact: bool) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let sounds = expect_context::<Sounds>();
     let auth_context = expect_context::<AuthContext>();
@@ -144,10 +144,16 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
         WatchOptions::default().immediate(true),
     );
 
+    let timer_text_class = if compact {
+        "px-1 font-mono text-[0.95rem] leading-none tabular-nums whitespace-nowrap"
+    } else {
+        "text-xl md:text-2xl lg:text-4xl"
+    };
+
     view! {
         <div class=move || {
             format!(
-                "flex resize h-full select-none items-center justify-center text-xl md:text-2xl lg:text-4xl {}",
+                "flex resize h-full min-w-0 select-none items-center justify-center {timer_text_class} {}",
                 if timed_out() { "bg-ladybug-red" } else { "" },
             )
         }>

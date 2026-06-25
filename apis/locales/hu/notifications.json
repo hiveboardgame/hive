@@ -1,6 +1,6 @@
 {
     "page": {
-        "heading": "🔔 Értesítések",
+        "heading": "Értesítések",
         "intro_before_link": "Válaszd ki, hogyan szeretnél értesítést kapni az egyes eseménytípusokról. A push-értesítések az alább engedélyezett böngészőkbe érkeznek. A Discord beállítását lent, a ",
         "account_link": "Discord szakaszban",
         "intro_after_link": " találod.",
@@ -21,7 +21,7 @@
         "dms": "Közvetlen üzenet"
     },
     "browser": {
-        "heading": "🌐 Ez a böngésző",
+        "heading": "Ez a böngésző",
         "body": "Fogadd ebben a böngészőben a fent kiválasztott push-értesítéseket, még akkor is, ha nincs nyitva HiveGame lap. Engedélyezd külön minden eszközön, amelyen értesítést szeretnél kapni.",
         "enable": "Böngészőértesítések engedélyezése",
         "disable": "Böngészőértesítések letiltása",
@@ -31,11 +31,11 @@
         "test_failed": "A teszt sikertelen:"
     },
     "ios": {
-        "heading": "📱 Az iPhone-odon vagy iPadeden",
+        "heading": "Az iPhone-odon vagy iPadeden",
         "body": "Az iOS-en való értesítésekhez add hozzá a HiveGame-et a kezdőképernyőhöz: koppints a Megosztás gombra, majd a „Főképernyőhöz adás” lehetőségre, és onnan nyisd meg."
     },
     "devices": {
-        "heading": "📡 Az eszközeid",
+        "heading": "Az eszközeid",
         "body": "Minden eszköz, amely jelenleg push fogadására van beállítva. Távolítsd el azokat, amelyeket már nem használsz.",
         "remove": "Eltávolítás",
         "this_browser": "(ez a böngésző)",
@@ -93,6 +93,6 @@
         "takeback_declined_title": "Visszavonás elutasítva",
         "takeback_rejected_body": "{{actor}} elutasította a lépésvisszavonást",
         "test_title": "HiveGame",
-        "test_body": "Teszt értesítés — a push működik 🐝"
+        "test_body": "Teszt értesítés — a push működik"
     }
 }

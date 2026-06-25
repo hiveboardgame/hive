@@ -21,7 +21,7 @@ pub fn HivegroundStacks(
     let layers_by_position = layers_by_position(model);
 
     view! {
-        <For each=move || positions() key=|position| *position let(position)>
+        <For each=positions key=|position| *position let(position)>
             {
                 let layers = layers_for_position(layers_by_position, position);
                 view! { <HivegroundStack position layers paint interaction /> }

@@ -1,17 +1,22 @@
 use crate::{
-    common::UserAction,
-    components::atoms::{
-        direct_challenge_button::DirectChallengeButton,
-        invite_button::InviteButton,
-        kick_button::KickButton,
-        profile_link::ProfileLink,
-        rating::Rating,
-        status_indicator::StatusIndicator,
-        uninvite_button::UninviteButton,
+    common::{with_class, UserAction},
+    components::{
+        atoms::{
+            direct_challenge_button::DirectChallengeButton,
+            invite_button::InviteButton,
+            kick_button::KickButton,
+            rating::Rating,
+            status_indicator::StatusIndicator,
+            uninvite_button::UninviteButton,
+        },
+        molecules::user_identity::UserIdentity,
     },
     responses::UserResponse,
 };
-use leptos::{either::EitherOf4, prelude::*};
+use leptos::{
+    either::{Either, EitherOf4},
+    prelude::*,
+};
 use shared_types::GameSpeed;
 
 #[component]
@@ -19,32 +24,14 @@ pub fn UserRow(
     user: UserResponse,
     actions: Vec<UserAction>,
     #[prop(optional)] game_speed: Option<StoredValue<GameSpeed>>,
-    #[prop(optional)] on_profile: bool,
-    #[prop(optional)] selection_mode: bool,
-    /// Stretch the row to fill its container instead of the default fixed
-    /// `w-64`. Used by the full-width search dropdown so rows don't leave an
-    /// empty gap on the right; other callers keep the fixed width.
-    #[prop(optional)]
-    full_width: bool,
 ) -> impl IntoView {
     let username = StoredValue::new(user.username.clone());
-    let deleted = StoredValue::new(user.deleted);
-    let user_is_hoverable = StoredValue::new(if on_profile || selection_mode {
-        None
-    } else {
-        Some(user.clone())
-    });
     let user_id = StoredValue::new(user.uid);
     let rating = StoredValue::new(if let Some(speed) = game_speed {
         user.ratings.get(&speed.get_value()).cloned()
     } else {
         None
     });
-    let color = if on_profile {
-        "bg-light dark:bg-gray-950"
-    } else {
-        "dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light"
-    };
 
     let (display_actions, select_callback): (_, Option<Callback<String>>) = {
         let user_id = user_id.get_value();
@@ -81,54 +68,46 @@ pub fn UserRow(
         (display.into_iter().collect_view(), select_cb)
     };
 
-    let has_select = select_callback.is_some();
-    let width = if full_width { "w-full" } else { "w-64" };
-    let row_class = if has_select {
-        format!("flex p-1 items-center justify-between h-10 {width} {color} cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded")
-    } else {
-        format!("flex p-1 items-center justify-between h-10 {width} {color}")
-    };
+    let row_class = with_class(
+        "ui-dense-table-row",
+        "flex p-1 items-center justify-between h-10 rounded",
+    );
 
-    let username_for_click = user.username.clone();
-    let click_handler = move |_| {
-        if let Some(ref cb) = select_callback {
-            cb.run(username_for_click.clone());
-        }
-    };
+    if let Some(select_callback) = select_callback {
+        let username_for_click = user.username.clone();
+        let user_deleted = user.deleted;
+        let user_bot = user.bot;
 
-    view! {
-        <div class=row_class on:click=click_handler>
-            <div class="flex justify-between mr-2 w-48">
-                <div class="flex items-center">
-                    <StatusIndicator username=username.get_value() deleted=deleted.get_value() />
-                    <Show
-                        when=move || !selection_mode
-                        fallback=move || {
-                            view! {
-                                <span class="text-xs font-bold truncate max-w-[120px]">
-                                    {user.username.clone()} <Show when=move || user.bot>
-                                        <span class="ml-1 text-[80%]">"BOT"</span>
-                                    </Show>
-                                </span>
-                            }
-                        }
-                    >
-                        <ProfileLink
-                            patreon=user.patreon
-                            bot=user.bot
-                            username=username.get_value()
-                            deleted=deleted.get_value()
-                            extend_tw_classes="truncate max-w-[120px]"
-                            user_is_hoverable=user_is_hoverable.get_value().into()
-                        />
-                    </Show>
+        Either::Left(view! {
+            <button
+                type="button"
+                class=with_class(&row_class, "w-full cursor-pointer text-left")
+                on:click=move |_| select_callback.run(username_for_click.clone())
+            >
+                <div class="flex items-center min-w-0">
+                    <StatusIndicator username=username.get_value() deleted=user_deleted />
+                    <span class="text-xs font-bold truncate max-w-[120px]">
+                        {user.username.clone()} <Show when=move || user_bot>
+                            <span class="ml-1 text-[80%]">"BOT"</span>
+                        </Show>
+                    </span>
                 </div>
                 <Show when=move || { rating.with_value(|r| r.is_some()) }>
                     <Rating rating=rating.get_value().expect("Rating is some") />
                 </Show>
-
+            </button>
+        })
+    } else {
+        Either::Right(view! {
+            <div class=row_class>
+                <div class="flex flex-1 justify-between mr-2 min-w-0">
+                    <UserIdentity user=user link_class="truncate max-w-[120px]" />
+                    <Show when=move || { rating.with_value(|r| r.is_some()) }>
+                        <Rating rating=rating.get_value().expect("Rating is some") />
+                    </Show>
+                </div>
+                {display_actions}
             </div>
-            {display_actions}
-        </div>
+        })
     }
 }

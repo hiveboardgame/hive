@@ -89,15 +89,12 @@ pub fn HistoryMove(
 }
 
 #[component]
-pub fn History(
-    interaction: HivegroundInteraction,
-    history_state: Memo<State>,
-    #[prop(optional)] extend_tw_classes: &'static str,
-) -> impl IntoView {
+pub fn History(interaction: HivegroundInteraction, history_state: Memo<State>) -> impl IntoView {
     let game_state = expect_context::<game_state::GameStateSignal>();
     let params = use_params_map();
     let queries = use_query_map();
     let state = create_read_slice(game_state.signal, |gs| gs.state.clone());
+    let is_finished = game_state.is_finished();
     let repetitions = create_read_slice(game_state.signal, |gs| {
         gs.game_response.as_ref().map(|gr| gr.repetitions.clone())
     });
@@ -147,10 +144,30 @@ pub fn History(
         }
     };
     view! {
-        <div class=format!("h-full flex flex-col pb-4 {extend_tw_classes}")>
+        <div class="flex flex-col pb-4 h-full">
 
             <HistoryControls parent=parent.into() interaction history_state />
-            <div node_ref=parent class="grid overflow-auto grid-cols-4 gap-1 mb-8 max-h-full h-fit">
+            <Show when=is_finished>
+                <div class="flex flex-col gap-2 px-2 pb-2">
+                    <div class="flex flex-wrap gap-2 justify-center text-sm font-semibold text-center">
+                        <span>{game_result}</span>
+                        <span>{conclusion}</span>
+                    </div>
+                    <a
+                        href=analysis_url
+                        class="w-full ui-button ui-button-primary ui-button-md no-link-style"
+                    >
+                        <div class="flex gap-1 justify-center items-center">
+                            <Icon icon=icondata_tb::TbMicroscopeOutline attr:class="py-1 size-7" />
+                            "Analyze here"
+                        </div>
+                    </a>
+                </div>
+            </Show>
+            <div
+                node_ref=parent
+                class="grid overflow-auto flex-1 grid-cols-4 gap-1 content-start min-h-0"
+            >
                 <For each=history_moves key=|history_move| history_move.0 let:history_move>
 
                     <HistoryMove
@@ -161,20 +178,6 @@ pub fn History(
                         repetition=is_repetition(history_move.0)
                     />
                 </For>
-
-                <Show when=game_state.is_finished()>
-                    <div class="col-span-4 text-center">{game_result}</div>
-                    <div class="col-span-4 text-center">{conclusion}</div>
-                    <a
-                        href=analysis_url
-                        class="col-span-4 place-self-center w-4/5 text-white rounded duration-300 no-link-style bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
-                    >
-                        <div class="flex gap-1 justify-center items-center">
-                            <Icon icon=icondata_tb::TbMicroscopeOutline attr:class="py-1 size-7" />
-                            "Analyze here"
-                        </div>
-                    </a>
-                </Show>
             </div>
         </div>
     }

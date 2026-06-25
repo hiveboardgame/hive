@@ -1,5 +1,6 @@
 use crate::{
-    components::molecules::upcoming_game_row::UpcomingGameRow,
+    common::with_class,
+    components::molecules::{empty_state::EmptyState, upcoming_game_row::UpcomingGameRow},
     functions::schedules::get_upcoming_tournament_games,
 };
 use chrono::{DateTime, Duration, Local};
@@ -58,8 +59,11 @@ pub fn Calendar() -> impl IntoView {
     });
 
     view! {
-        <div class="pb-4 w-full rounded-lg">
-            <div class="sticky top-0 z-10 mb-4 text-center bg-light dark:bg-gray-950">
+        <div class="overflow-hidden w-full ui-panel">
+            <div class=with_class(
+                "ui-panel-header",
+                "sticky top-0 z-10 flex-col justify-center text-center",
+            )>
                 <h2 class="text-xl font-bold">"Matches"</h2>
                 <div class="text-xs opacity-75">
                     {move || {
@@ -72,65 +76,53 @@ pub fn Calendar() -> impl IntoView {
                     }}
                 </div>
             </div>
+            <div class="pt-3 ui-panel-body">
 
-            <Suspense fallback=move || {
-                view! {
-                    <div class="flex justify-center items-center p-8">
-                        <div class="text-center">
-                            <div class="mb-2 text-lg">"Loading upcoming games..."</div>
-                            <div class="text-sm opacity-75">
-                                "Please wait while we fetch the scheduled games"
-                            </div>
-                        </div>
-                    </div>
-                }
-            }>
-                <ErrorBoundary fallback=|_errors| {
+                <Suspense fallback=move || {
                     view! {
-                        <div class="flex justify-center items-center p-8">
-                            <div class="text-center text-red-500">
-                                <div class="mb-2 text-lg">"Error loading upcoming games"</div>
-                            </div>
-                        </div>
+                        <EmptyState
+                            title="Loading upcoming games..."
+                            message="Please wait while we fetch the scheduled games"
+                        />
                     }
                 }>
-                    {move || {
-                        upcoming_games
-                            .get()
-                            .map(|games_result| {
-                                games_result
-                                    .map(|games| {
-                                        if games.is_empty() {
-                                            view! {
-                                                <div class="flex justify-center items-center p-8">
-                                                    <div class="text-center">
-                                                        <div class="mb-2 text-lg">
-                                                            "No upcoming tournament games"
-                                                        </div>
-                                                        <div class="text-sm opacity-75">
-                                                            "Check back later for scheduled games"
-                                                        </div>
+                    <ErrorBoundary fallback=|_errors| {
+                        view! { <EmptyState title="Error loading upcoming games" /> }
+                    }>
+                        {move || {
+                            upcoming_games
+                                .get()
+                                .map(|games_result| {
+                                    games_result
+                                        .map(|games| {
+                                            if games.is_empty() {
+                                                view! {
+                                                    <EmptyState
+                                                        title="No upcoming tournament games"
+                                                        message="Check back later for scheduled games"
+                                                    />
+                                                }
+                                                    .into_any()
+                                            } else {
+                                                view! {
+                                                    <div class="flex flex-col gap-2 rounded-lg">
+                                                        <For
+                                                            each=move || games.clone()
+                                                            key=|game_data| game_data.1.uuid
+                                                            let:game_data
+                                                        >
+                                                            <UpcomingGameRow game_data current_time />
+                                                        </For>
                                                     </div>
-                                                </div>
+                                                }
+                                                    .into_any()
                                             }
-                                        } else {
-                                            view! {
-                                                <div class="flex flex-col gap-2 rounded-lg">
-                                                    <For
-                                                        each=move || games.clone()
-                                                        key=|game_data| game_data.1.uuid
-                                                        let:game_data
-                                                    >
-                                                        <UpcomingGameRow game_data current_time />
-                                                    </For>
-                                                </div>
-                                            }
-                                        }
-                                    })
-                            })
-                    }}
-                </ErrorBoundary>
-            </Suspense>
+                                        })
+                                })
+                        }}
+                    </ErrorBoundary>
+                </Suspense>
+            </div>
         </div>
     }
 }

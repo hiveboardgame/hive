@@ -13,8 +13,36 @@ use diesel::{dsl::exists, prelude::*, select};
 use diesel_async::RunQueryDsl;
 use nanoid::nanoid;
 use serde::Serialize;
-use shared_types::{ChallengeDetails, ChallengeId, ChallengeVisibility, TimeMode};
+use shared_types::{ChallengeDetails, ChallengeError, ChallengeId, ChallengeVisibility, TimeMode};
 use uuid::Uuid;
+
+fn validate_opponent_visibility(
+    challenger_id: Uuid,
+    opponent_id: Option<Uuid>,
+    visibility: &ChallengeVisibility,
+) -> Result<(), DbError> {
+    if opponent_id == Some(challenger_id) {
+        return Err(DbError::InvalidInput {
+            info: "You can't play here with yourself.".to_string(),
+            error: String::new(),
+        });
+    };
+    if *visibility == ChallengeVisibility::Direct {
+        if opponent_id.is_none() {
+            return Err(DbError::InvalidInput {
+                info: "Direct challenges require an opponent.".to_string(),
+                error: String::new(),
+            });
+        }
+    } else if opponent_id.is_some() {
+        return Err(DbError::InvalidInput {
+            info: "Only direct challenges can have an opponent.".to_string(),
+            error: String::new(),
+        });
+    }
+
+    Ok(())
+}
 
 #[derive(Insertable, Debug)]
 #[diesel(table_name = challenges)]
@@ -81,12 +109,7 @@ impl NewChallenge {
                 }
             }
         }
-        if opponent_id == Some(challenger_id) {
-            return Err(DbError::InvalidInput {
-                info: "You can't play here with yourself.".to_string(),
-                error: String::new(),
-            });
-        };
+        validate_opponent_visibility(challenger_id, opponent_id, &d.visibility)?;
         let mut nanoid: String;
         loop {
             nanoid = nanoid!(12);
@@ -140,6 +163,20 @@ pub struct Challenge {
 }
 
 impl Challenge {
+    pub fn validate_accepting_user(&self, user_id: Uuid) -> Result<(), ChallengeError> {
+        if self.challenger_id == user_id {
+            return Err(ChallengeError::OwnChallenge);
+        }
+
+        match self.opponent_id {
+            Some(opponent_id) if opponent_id != user_id => Err(ChallengeError::NotUserChallenge),
+            None if self.visibility == ChallengeVisibility::Direct.to_string() => {
+                Err(ChallengeError::NotUserChallenge)
+            }
+            _ => Ok(()),
+        }
+    }
+
     pub async fn create(
         new_challenge: &NewChallenge,
         conn: &mut DbConn<'_>,

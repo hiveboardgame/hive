@@ -27,34 +27,36 @@ pub fn TournamentAdminControls(
         }
     };
     view! {
-        <div class="flex flex-col items-center px-1 w-72">
-            <Show when=move || tournament.with_value(|t| !t.players.is_empty())>
-                <p class="font-bold">Players</p>
-                <For
-                    each=move || { tournament.with_value(|t| t.players.clone()) }
+        <div class="grid gap-3 md:grid-cols-2">
+            <div class="space-y-2 ui-setting-group">
+                <Show when=move || tournament.with_value(|t| !t.players.is_empty())>
+                    <p class="font-bold">"Players"</p>
+                    <For
+                        each=move || { tournament.with_value(|t| t.players.clone()) }
 
-                    key=|(id, _)| *id
-                    let:user
-                >
-                    <UserRow actions=user_kick() user=user.1 />
-                </For>
-            </Show>
-        </div>
-        <div class="flex flex-col items-center px-1 w-72">
-            <Show when=move || tournament.with_value(|t| !t.invitees.is_empty())>
-                <p class="font-bold">Invitees</p>
-                <For
-                    each=move || { tournament.with_value(|t| t.invitees.clone()) }
-                    key=|users| users.uid
-                    let:user
-                >
-                    <UserRow actions=user_uninvite() user />
-                </For>
-            </Show>
-            <Show when=move || user_is_organizer>
-                <p class="font-bold">Invite players</p>
-                <InviteUser tournament />
-            </Show>
+                        key=|(id, _)| *id
+                        let:user
+                    >
+                        <UserRow actions=user_kick() user=user.1 />
+                    </For>
+                </Show>
+            </div>
+            <div class="space-y-2 ui-setting-group">
+                <Show when=move || tournament.with_value(|t| !t.invitees.is_empty())>
+                    <p class="font-bold">"Invitees"</p>
+                    <For
+                        each=move || { tournament.with_value(|t| t.invitees.clone()) }
+                        key=|users| users.uid
+                        let:user
+                    >
+                        <UserRow actions=user_uninvite() user />
+                    </For>
+                </Show>
+                <Show when=move || user_is_organizer>
+                    <p class="font-bold">"Invite players"</p>
+                    <InviteUser tournament />
+                </Show>
+            </div>
         </div>
     }
 }

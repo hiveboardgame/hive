@@ -14,9 +14,10 @@ pub fn SoundToggle() -> impl IntoView {
         view! { <Icon icon attr:class="size-4" /> }
     };
     view! {
-        <div class="inline-flex justify-center items-center m-1 rounded">
+        <div class="inline-flex justify-center items-center h-full">
             <button
-                class="flex justify-center items-center py-2 px-1 size-full"
+                type="button"
+                class="ui-header-icon-button"
                 on:click=move |_| {
                     set_cookie
                         .update(|c| {

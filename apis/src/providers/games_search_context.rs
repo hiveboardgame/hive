@@ -48,6 +48,28 @@ impl Default for FilterState {
     }
 }
 
+pub fn initial_profile_filters_for_tab(
+    tab: GameProgress,
+    saved_filters: Option<FilterState>,
+) -> FilterState {
+    if tab == GameProgress::Finished {
+        saved_filters.unwrap_or_default()
+    } else {
+        FilterState::default()
+    }
+}
+
+pub fn searchable_profile_filters_for_tab(filters: FilterState, tab: GameProgress) -> FilterState {
+    if tab == GameProgress::Finished {
+        filters
+    } else {
+        FilterState {
+            result: None,
+            ..filters
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct GamesSearchContext {
     pub games: RwSignal<Vec<GameResponse>>,
@@ -127,6 +149,11 @@ pub fn build_profile_query_options(
         key: GameSortKey::Date,
         ascending: false,
     };
+    let result_filter = if tab == GameProgress::Finished {
+        result_to_filter(filters.result, slot)
+    } else {
+        ResultFilter::Any
+    };
 
     GamesQueryOptions {
         player1,
@@ -143,7 +170,7 @@ pub fn build_profile_query_options(
         turn_max: None,
         date_start: None,
         date_end: None,
-        result_filter: result_to_filter(filters.result, slot),
+        result_filter,
         batch_token,
         batch_size: nearest_allowed_batch_size(batch_size.max(1)),
         page: 1,
@@ -176,7 +203,6 @@ pub fn games_filter_cookie() -> (
             .same_site(SameSite::Lax)
             .secure(true)
             .max_age(CONF_MAX_AGE)
-            .default_value(Some(FilterState::default()))
             .path("/"),
     );
     (cookie, set_cookie)
@@ -186,9 +212,10 @@ pub fn provide_games_search_context(
     initial_batch_size: Signal<usize>,
     infinite_scroll_batch_size: Signal<usize>,
     games_container_ref: NodeRef<html::Div>,
+    current_tab: GameProgress,
 ) -> GamesSearchContext {
     let (cookie, set_cookie) = games_filter_cookie();
-    let saved_filters = cookie.get_untracked().unwrap_or_default();
+    let saved_filters = initial_profile_filters_for_tab(current_tab, cookie.get_untracked());
 
     let context = GamesSearchContext {
         filters: RwSignal::new(saved_filters.clone()),
@@ -207,4 +234,66 @@ pub fn provide_games_search_context(
 
     provide_context(context.clone());
     context
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn saved_default_only_initializes_finished_profile_filters() {
+        let saved_filters = FilterState {
+            color: Some(Color::Black),
+            result: Some(ResultType::Win),
+            speeds: vec![GameSpeed::Blitz],
+            expansions: Some(true),
+            rated: Some(false),
+            exclude_bots: true,
+        };
+
+        assert_eq!(
+            initial_profile_filters_for_tab(GameProgress::Finished, Some(saved_filters.clone())),
+            saved_filters
+        );
+        assert_eq!(
+            initial_profile_filters_for_tab(GameProgress::Playing, Some(saved_filters.clone())),
+            FilterState::default()
+        );
+        assert_eq!(
+            initial_profile_filters_for_tab(GameProgress::Unstarted, Some(saved_filters)),
+            FilterState::default()
+        );
+    }
+
+    #[test]
+    fn non_finished_search_keeps_visible_filters_without_result_filter() {
+        let filters = FilterState {
+            color: Some(Color::Black),
+            result: Some(ResultType::Loss),
+            speeds: vec![GameSpeed::Blitz],
+            expansions: Some(true),
+            rated: Some(false),
+            exclude_bots: true,
+        };
+
+        let searchable = searchable_profile_filters_for_tab(filters.clone(), GameProgress::Playing);
+
+        assert_eq!(searchable.color, filters.color);
+        assert_eq!(searchable.result, None);
+        assert_eq!(searchable.speeds, filters.speeds);
+        assert_eq!(searchable.expansions, filters.expansions);
+        assert_eq!(searchable.rated, filters.rated);
+        assert_eq!(searchable.exclude_bots, filters.exclude_bots);
+
+        let query =
+            build_profile_query_options(&filters, GameProgress::Playing, "player", None, 10);
+
+        assert_eq!(query.player2, Some("player".to_string()));
+        assert!(query.fixed_colors);
+        assert!(query.exclude_bots);
+        assert_eq!(query.rated, Some(false));
+        assert_eq!(query.expansions, Some(true));
+        assert_eq!(query.speeds, vec![GameSpeed::Blitz]);
+        assert_eq!(query.result_filter, ResultFilter::Any);
+    }
 }

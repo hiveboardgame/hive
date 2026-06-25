@@ -19,7 +19,6 @@ pub fn ProposalNotification(
     let notifications = expect_context::<NotificationContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
     let schedule_id = StoredValue::new(schedule_id);
-    let div_class = "xs:py-1 xs:px-1 sm:py-2 sm:px-2";
     let local_time = start_time.with_timezone(&Local);
     let notification_text = format!(
         "{proposer_username} proposed a game time: {}",
@@ -43,14 +42,14 @@ pub fn ProposalNotification(
     };
 
     view! {
-        <div class="flex flex-col p-2 w-full dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light">
-            <div class="flex justify-between items-center mb-2 w-full">
-                <div class=div_class>
-                    <div>{notification_text}</div>
+        <div class="flex-col gap-2 items-stretch ui-notification-item">
+            <div class="flex gap-2 items-start w-full">
+                <div class="ui-notification-item-body">
+                    <div class="whitespace-normal ui-notification-title">{notification_text}</div>
                     <div class="text-sm text-gray-600 dark:text-gray-400">
                         <a
                             href=format!("/tournament/{}", &tournament_id.to_string())
-                            class="text-blue-600 dark:text-blue-400 hover:underline"
+                            class="ui-text-link"
                         >
                             "View Tournament"
                         </a>
@@ -59,22 +58,16 @@ pub fn ProposalNotification(
                 <button
                     title="Dismiss"
                     on:click=dismiss
-                    class="z-20 p-1 mx-2 text-white bg-gray-500 rounded transition-transform duration-300 hover:bg-gray-400 active:scale-95"
+                    class="z-20 ui-button ui-button-ghost ui-button-icon"
                 >
                     <Icon icon=icondata_io::IoCloseSharp attr:class="size-4" />
                 </button>
             </div>
-            <div class="flex gap-2 justify-center">
-                <button
-                    on:click=accept
-                    class="py-1 px-3 text-white bg-green-600 rounded transition-transform duration-300 hover:bg-green-500 active:scale-95"
-                >
+            <div class="flex gap-2 justify-end">
+                <button on:click=accept class="ui-button ui-button-success ui-button-sm">
                     "Accept"
                 </button>
-                <button
-                    on:click=decline
-                    class="py-1 px-3 text-white bg-red-600 rounded transition-transform duration-300 hover:bg-red-500 active:scale-95"
-                >
+                <button on:click=decline class="ui-button ui-button-danger ui-button-sm">
                     "Decline"
                 </button>
             </div>
@@ -92,7 +85,6 @@ pub fn AcceptanceNotification(
 ) -> impl IntoView {
     let notifications = expect_context::<NotificationContext>();
     let schedule_id = StoredValue::new(schedule_id);
-    let div_class = "xs:py-1 xs:px-1 sm:py-2 sm:px-2";
     let local_time = start_time.with_timezone(&Local);
     let notification_text = format!(
         "{accepter_username} accepted your proposed game time: {}",
@@ -106,35 +98,29 @@ pub fn AcceptanceNotification(
     };
 
     view! {
-        <div class="flex flex-col p-2 w-full dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light">
-            <div class="flex justify-between items-center mb-2 w-full">
-                <div class=div_class>
-                    <div>{notification_text}</div>
-                    <div class="text-sm text-gray-600 dark:text-gray-400">
-                        <a
-                            href=format!("/tournament/{}", &tournament_id.to_string())
-                            class="text-blue-600 dark:text-blue-400 hover:underline"
-                        >
-                            "View Tournament:"
-                            {tournament_name}
-                        </a>
-                    </div>
-                </div>
-                <ActionForm action=mark_seen_action on:submit=dismiss>
-                    <input
-                        type="hidden"
-                        name="schedule_id"
-                        value=schedule_id.get_value().to_string()
-                    />
-                    <button
-                        type="submit"
-                        title="Dismiss"
-                        class="z-50 p-1 mx-2 text-white bg-gray-500 rounded transition-transform duration-300 hover:bg-gray-400 active:scale-95"
+        <div class="ui-notification-item">
+            <div class="ui-notification-item-body">
+                <div class="whitespace-normal ui-notification-title">{notification_text}</div>
+                <div class="text-sm text-gray-600 dark:text-gray-400">
+                    <a
+                        href=format!("/tournament/{}", &tournament_id.to_string())
+                        class="ui-text-link"
                     >
-                        <Icon icon=icondata_io::IoCloseSharp attr:class="size-4" />
-                    </button>
-                </ActionForm>
+                        "View Tournament:"
+                        {tournament_name}
+                    </a>
+                </div>
             </div>
+            <ActionForm action=mark_seen_action on:submit=dismiss>
+                <input type="hidden" name="schedule_id" value=schedule_id.get_value().to_string() />
+                <button
+                    type="submit"
+                    title="Dismiss"
+                    class="z-50 ui-button ui-button-ghost ui-button-icon"
+                >
+                    <Icon icon=icondata_io::IoCloseSharp attr:class="size-4" />
+                </button>
+            </ActionForm>
         </div>
     }
 }

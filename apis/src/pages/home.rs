@@ -1,6 +1,7 @@
 use crate::{
     components::{
         atoms::logo::Logo,
+        layouts::page_shell::{PageShell, PageShellVariant},
         molecules::{online_users::OnlineUsers, rl_banner::RlBanner},
         organisms::{
             calendar::Calendar,
@@ -18,7 +19,7 @@ use leptos::prelude::*;
 pub fn Home() -> impl IntoView {
     let banner = OnceResource::new(async move { home_banner::get().await.ok().flatten() });
     view! {
-        <div class="flex overflow-x-hidden flex-col justify-start items-center w-full md:justify-center pt-page">
+        <PageShell variant=PageShellVariant::Dashboard class="overflow-x-hidden">
             <Transition>
                 {move || {
                     banner
@@ -26,14 +27,16 @@ pub fn Home() -> impl IntoView {
                         .flatten()
                         .map(|banner| {
                             view! {
-                                <div>
-                                    <RlBanner title=banner.title content=banner.content />
+                                <div class="w-full lg:px-4">
+                                    <div class="mx-auto w-full max-w-screen-md">
+                                        <RlBanner title=banner.title content=banner.content />
+                                    </div>
                                 </div>
                             }
                         })
                 }}
             </Transition>
-            <div class="grid grid-cols-1 gap-6 items-start px-4 mx-auto w-full max-w-screen-xl 2xl:max-w-screen-2xl lg:grid-cols-[minmax(18rem,20rem)_minmax(0,1fr)] 2xl:grid-cols-[minmax(18rem,20rem)_minmax(0,1fr)_minmax(18rem,20rem)]">
+            <div class="grid grid-cols-1 gap-6 items-start mx-auto w-full max-w-screen-xl lg:px-4 2xl:max-w-screen-2xl lg:grid-cols-[minmax(18rem,20rem)_minmax(0,1fr)] 2xl:grid-cols-[minmax(18rem,20rem)_minmax(0,1fr)_minmax(18rem,20rem)]">
                 <div class="contents lg:flex lg:flex-col lg:col-start-1 lg:row-start-1 lg:items-center lg:space-y-4 lg:min-w-0">
                     <div class="flex flex-col order-1 items-center min-w-0 lg:order-none">
                         <Logo tw_class="flex w-48 lg:w-72" />
@@ -52,8 +55,8 @@ pub fn Home() -> impl IntoView {
                     <div class="order-3 w-full">
                         <Challenges />
                     </div>
-                    <div class="order-4 w-full lg:flex lg:justify-end 2xl:justify-center">
-                        <div class="w-full lg:max-w-screen-md">
+                    <div class="order-4 w-full">
+                        <div class="mx-auto w-full max-w-screen-md">
                             <div class="w-full lg:flow-root">
                                 <div class="hidden float-right lg:block lg:ml-6 2xl:hidden">
                                     <OnlineUsers />
@@ -67,6 +70,6 @@ pub fn Home() -> impl IntoView {
                     <OnlineUsers />
                 </div>
             </div>
-        </div>
+        </PageShell>
     }
 }

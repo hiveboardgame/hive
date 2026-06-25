@@ -5,12 +5,11 @@ use crate::{
 use chrono::Local;
 use leptos::{html, prelude::*};
 use leptos_router::hooks::use_params_map;
-use leptos_use::{use_mutation_observer_with_options, UseMutationObserverOptions};
 use shared_types::{ChatDestination, ChatMessage, GameId, SimpleDestination};
 use uuid::Uuid;
 
 #[component]
-pub fn Message(message: ChatMessage) -> impl IntoView {
+pub fn Message(message: ChatMessage, parent_div: NodeRef<html::Div>) -> impl IntoView {
     let user_local_time = message
         .timestamp
         .unwrap()
@@ -18,9 +17,15 @@ pub fn Message(message: ChatMessage) -> impl IntoView {
         .format(" %d/%m/%Y %H:%M %Z")
         .to_string();
     let turn = message.turn.map(|turn| format!(" on turn {turn}:"));
+    let div = NodeRef::<html::Div>::new();
+    div.on_load(move |_| {
+        if let Some(parent_div) = parent_div.get_untracked() {
+            parent_div.set_scroll_top(parent_div.scroll_height());
+        }
+    });
 
     view! {
-        <div class="flex flex-col items-start mb-1 w-full">
+        <div node_ref=div class="flex flex-col items-start mb-1 w-full">
             <div class="flex gap-1 px-2">
                 <div class="font-bold">{message.username}</div>
                 {user_local_time}
@@ -56,7 +61,7 @@ pub fn ChatInput(destination: Signal<ChatDestination>) -> impl IntoView {
         <input
             node_ref=my_input
             type="text"
-            class="py-4 px-2 w-full rounded-lg resize-none focus:outline-none box-border bg-odd-light shrink-0 dark:bg-odd-dark"
+            class="overscroll-contain py-4 ui-field-input box-border shrink-0 touch-pan-x"
             prop:value=chat.typed_message
             prop:placeholder=placeholder
             on:input=update_from_input(chat.typed_message)
@@ -100,18 +105,6 @@ pub fn ChatWindow(
     let correspondant_id = Signal::derive(move || correspondant_id.map_or(Uuid::new_v4(), |id| id));
     let correspondant_username = Signal::derive(move || correspondant_username.clone());
     let div = NodeRef::<html::Div>::new();
-    let _ = use_mutation_observer_with_options(
-        div,
-        move |mutations, _| {
-            if let Some(_mutation) = mutations.first() {
-                let div = div.get_untracked().expect("div to be loaded");
-                div.set_scroll_top(div.scroll_height())
-            }
-        },
-        UseMutationObserverOptions::default()
-            .child_list(true)
-            .attributes(true),
-    );
 
     let actual_destination = Signal::derive(move || match destination.clone() {
         SimpleDestination::Game => {
@@ -153,11 +146,14 @@ pub fn ChatWindow(
     view! {
         <div
             id="ignoreChat"
-            class="flex flex-col flex-grow justify-between w-full min-w-full max-w-full h-full"
+            class="flex overscroll-contain flex-col flex-grow justify-between w-full min-w-full max-w-full h-full"
         >
-            <div node_ref=div class="overflow-y-auto flex-grow w-full min-w-full h-0">
+            <div
+                node_ref=div
+                class="overflow-y-auto overscroll-contain flex-grow w-full min-w-full h-0"
+            >
                 <For each=messages key=|message| message.timestamp let:message>
-                    <Message message=message />
+                    <Message message=message parent_div=div />
                 </For>
             </div>
             <ChatInput destination=actual_destination />

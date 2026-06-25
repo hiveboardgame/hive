@@ -1,7 +1,10 @@
-use leptos::{prelude::*, text_prop::TextProp};
+use leptos::prelude::*;
 
 use crate::{
-    components::{layouts::base_layout::COMMON_LINK_STYLE, molecules::banner::Banner},
+    components::{
+        layouts::{page_header::PageHeader, page_shell::PageShell},
+        molecules::panel::Panel,
+    },
     i18n::*,
 };
 
@@ -9,38 +12,44 @@ use crate::{
 pub fn Donate() -> impl IntoView {
     let i18n = use_i18n();
     view! {
-        <div class="pt-page">
-            <div class="px-4 mx-auto max-w-4xl sm:px-6 lg:px-8">
-                <Banner
-                    title=t!(i18n, donate.title)
-                    text=TextProp::from(move || t_string!(i18n, donate.subtitle))
-                />
-                <p class="my-4 text-lg text-center">{t!(i18n, donate.about)}</p>
-                <div class="flex justify-center items-center my-4">
-                    {t!(
-                        i18n, donate.kofi_button, < kofi_button > = <a href="https://ko-fi.com/hivedevs" class=COMMON_LINK_STYLE/>
-                    )}
-                    {t!(
-                        i18n, donate.patreon_button, < patreon_button > = <a href="https://www.patreon.com/HiveDevs" class=COMMON_LINK_STYLE/>
-                    )}
-                </div>
-
-                <div class="p-3">
-                    <h3 class="text-lg font-medium leading-6">
-                        {t!(i18n, donate.where_does_money_go.question)}
-                    </h3>
-                    <p class="mt-2 text-base">{t!(i18n, donate.where_does_money_go.answer)}</p>
-                </div>
-
-                <div class="p-3">
-                    <h3 class="text-lg font-medium leading-6">
-                        {t!(i18n, donate.features_for_patrons.question)}
-                    </h3>
-                    <p class="mt-2 text-base">{t!(i18n, donate.features_for_patrons.answer)}</p>
-                </div>
-
-                <div class="mt-4 text-center">{t!(i18n, donate.small_team_blurb)}</div>
+        <PageShell>
+            <PageHeader
+                title=move || { t_string!(i18n, donate.title) }
+                subtitle=move || { t_string!(i18n, donate.subtitle) }
+            />
+            <p class="ui-notice">{t!(i18n, donate.about)}</p>
+            <div class="flex flex-wrap gap-3 justify-center">
+                {t!(
+                    i18n,
+                        donate.kofi_button,
+                        < kofi_button > =
+                        <a href="https://ko-fi.com/hivedevs" class="ui-button ui-button-primary ui-button-md no-link-style"/>
+                )}
+                {t!(
+                    i18n,
+                        donate.patreon_button,
+                        < patreon_button > =
+                        <a href="https://www.patreon.com/HiveDevs" class="ui-button ui-button-secondary ui-button-md no-link-style"/>
+                )}
             </div>
-        </div>
+
+            <div class="grid gap-4 md:grid-cols-2">
+                <Panel title=move || { t_string!(i18n, donate.where_does_money_go.question) }>
+                    <p class="text-sm leading-6 text-gray-700 dark:text-gray-300">
+                        {t!(i18n, donate.where_does_money_go.answer)}
+                    </p>
+                </Panel>
+
+                <Panel title=move || { t_string!(i18n, donate.features_for_patrons.question) }>
+                    <p class="text-sm leading-6 text-gray-700 dark:text-gray-300">
+                        {t!(i18n, donate.features_for_patrons.answer)}
+                    </p>
+                </Panel>
+            </div>
+
+            <p class="text-sm text-center text-gray-600 dark:text-gray-300">
+                {t!(i18n, donate.small_team_blurb)}
+            </p>
+        </PageShell>
     }
 }

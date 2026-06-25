@@ -4,7 +4,7 @@ use leptos::prelude::*;
 pub fn ProgressBar(current: Signal<usize>, total: usize) -> impl IntoView {
     let indicator_style = Signal::derive(move || {
         format!("width: {}%", {
-            let progress = current() as f64 / total as f64;
+            let progress = (current() as f64 / total as f64).clamp(0.0, 1.0);
             progress * 100.0
         })
     });
@@ -17,8 +17,8 @@ pub fn ProgressBar(current: Signal<usize>, total: usize) -> impl IntoView {
                     /
                     {total}
                 </div>
-                <div class="w-4/5 h-5 bg-white rounded-full drop-shadow-md">
-                    <div class="h-5 rounded-full bg-orange-twilight" style=indicator_style></div>
+                <div class="overflow-hidden w-4/5 h-5 rounded-full border shadow-sm border-black/10 bg-odd-light dark:border-white/10 dark:bg-[#171d25]">
+                    <div class="h-full rounded-full bg-orange-twilight" style=indicator_style></div>
                 </div>
             </div>
         </Show>

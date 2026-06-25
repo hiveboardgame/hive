@@ -1,6 +1,6 @@
 {
     "page": {
-        "heading": "🔔 Notifications",
+        "heading": "Notifications",
         "intro_before_link": "Choisissez comment vous souhaitez être notifié pour chaque type d'événement. Les notifications push sont envoyées aux navigateurs que vous activez ci-dessous. La configuration Discord se trouve dans la ",
         "account_link": "section Discord",
         "intro_after_link": " ci-dessous.",
@@ -21,7 +21,7 @@
         "dms": "Message direct"
     },
     "browser": {
-        "heading": "🌐 Ce navigateur",
+        "heading": "Ce navigateur",
         "body": "Recevez dans ce navigateur les notifications push sélectionnées ci-dessus, même lorsqu'aucun onglet HiveGame n'est ouvert. Activez-les séparément sur chaque appareil que vous voulez notifier.",
         "enable": "Activer les notifications du navigateur",
         "disable": "Désactiver les notifications du navigateur",
@@ -31,11 +31,11 @@
         "test_failed": "Échec du test :"
     },
     "ios": {
-        "heading": "📱 Sur votre iPhone ou iPad",
+        "heading": "Sur votre iPhone ou iPad",
         "body": "Pour recevoir des notifications sur iOS, ajoutez HiveGame à votre écran d'accueil : appuyez sur le bouton Partager, puis sur « Sur l'écran d'accueil » et ouvrez-le depuis là."
     },
     "devices": {
-        "heading": "📡 Vos appareils",
+        "heading": "Vos appareils",
         "body": "Tous les appareils actuellement configurés pour recevoir des notifications push. Supprimez ceux que vous n'utilisez plus.",
         "remove": "Supprimer",
         "this_browser": "(ce navigateur)",
@@ -93,6 +93,6 @@
         "takeback_declined_title": "Reprise refusée",
         "takeback_rejected_body": "{{actor}} a refusé la reprise",
         "test_title": "HiveGame",
-        "test_body": "Notification de test — les notifications fonctionnent 🐝"
+        "test_body": "Notification de test — les notifications fonctionnent"
     }
 }

@@ -40,13 +40,11 @@ pub fn TimeSelect(
         view! { <Icon width="50" height="50" attr:class="p-2" icon=icon_for_speed(speed) /> }
     };
     let radio_style = |active| {
-        format!("flex items-center p-1 transform transition-transform duration-300 active:scale-95 hover:shadow-xl dark:hover:shadow dark:hover:shadow-gray-500 drop-shadow-lg dark:shadow-gray-600 rounded {}", 
         if active {
-            "bg-button-dawn dark:bg-button-twilight"
+            "ui-choice ui-choice-compact ui-choice-active cursor-pointer text-sm"
         } else {
-            "dark:bg-gray-700 bg-odd-light "
+            "ui-choice ui-choice-compact ui-choice-inactive cursor-pointer text-sm"
         }
-    )
     };
     let allow_realtime = allowed_values.contains(&TimeMode::RealTime);
     let allow_correspondence = allowed_values.contains(&TimeMode::Correspondence);
@@ -69,34 +67,38 @@ pub fn TimeSelect(
     });
     view! {
         <div class="flex flex-col p-2">
-            <div class="flex items-center">
-                {gamespeed_icon} <p class="text-3xl font-extrabold">{title}</p>
+            <div class="flex gap-2 items-center">
+                {gamespeed_icon}
+                <p class="text-lg font-bold text-gray-900 dark:text-gray-100">{title}</p>
             </div>
 
-            <div class="flex flex-row gap-2 justify-center">
+            <div class="flex flex-row flex-wrap gap-2 justify-center">
                 <Show when=move || allow_realtime>
-                    <div
+                    <button
+                        type="button"
                         on:click=move |_| toggle_time_mode(TimeMode::RealTime)
                         class=move || radio_style(time_mode() == TimeMode::RealTime)
                     >
                         {t!(i18n, home.custom_game.mode.real_time.title)}
-                    </div>
+                    </button>
                 </Show>
                 <Show when=move || allow_correspondence>
-                    <div
+                    <button
+                        type="button"
                         on:click=move |_| toggle_time_mode(TimeMode::Correspondence)
                         class=move || radio_style(time_mode() == TimeMode::Correspondence)
                     >
                         {t!(i18n, home.custom_game.mode.correspondence.title)}
-                    </div>
+                    </button>
                 </Show>
                 <Show when=move || allow_untimed>
-                    <div
+                    <button
+                        type="button"
                         on:click=move |_| toggle_time_mode(TimeMode::Untimed)
                         class=move || radio_style(time_mode() == TimeMode::Untimed)
                     >
                         {t!(i18n, home.custom_game.mode.untimed)}
-                    </div>
+                    </button>
                 </Show>
             </div>
         </div>

@@ -1,4 +1,5 @@
 use crate::{
+    common::with_class,
     i18n::*,
     providers::{ApiRequestsProvider, AuthContext},
 };
@@ -172,9 +173,12 @@ pub fn TournamentReadyPopup(
 
     view! {
         <div class=move || {
-            format!(
-                "fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 rounded-lg shadow-2xl p-6 max-w-md w-full mx-4 {}",
-                if is_visible.get() { "block" } else { "hidden" },
+            with_class(
+                "ui-modal-panel",
+                format!(
+                    "fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 p-6 mx-4 {}",
+                    if is_visible.get() { "block" } else { "hidden" },
+                ),
             )
         }>
             <div class="text-center">
@@ -183,8 +187,8 @@ pub fn TournamentReadyPopup(
                         {t!(i18n, game.tournament_ready_title)}
                     </h2>
                     <p class="text-gray-700 dark:text-gray-300">
-                        {t!(i18n, game.tournament_ready_opponent)} " " {move || opponent_name.get()}
-                        " " {t!(i18n, game.tournament_ready_message)}
+                        {t!(i18n, game.tournament_ready_opponent)} " " {opponent_name} " "
+                        {t!(i18n, game.tournament_ready_message)}
                     </p>
                     <div class="mt-2 text-lg font-bold text-red-600 dark:text-red-400">
                         {move || format!("{}s", countdown.get())}
@@ -192,26 +196,17 @@ pub fn TournamentReadyPopup(
                 </div>
 
                 <div class="flex gap-4 justify-center">
-                    <button
-                        on:click=accept_game
-                        class="py-2 px-4 font-bold text-white bg-green-600 rounded transition-transform duration-300 hover:bg-green-700 active:scale-95"
-                    >
+                    <button on:click=accept_game class="ui-button ui-button-success ui-button-md">
                         {t!(i18n, game.tournament_ready_accept)}
                     </button>
 
                     <Show when=move || !is_on_game_page.get()>
-                        <button
-                            on:click=view_game
-                            class="py-2 px-4 font-bold text-white bg-blue-600 rounded transition-transform duration-300 hover:bg-blue-700 active:scale-95"
-                        >
+                        <button on:click=view_game class="ui-button ui-button-primary ui-button-md">
                             {t!(i18n, game.tournament_ready_view_game)}
                         </button>
                     </Show>
 
-                    <button
-                        on:click=close_popup
-                        class="py-2 px-4 font-bold text-white bg-gray-600 rounded transition-transform duration-300 hover:bg-gray-700 active:scale-95"
-                    >
+                    <button on:click=close_popup class="ui-button ui-button-secondary ui-button-md">
                         {t!(i18n, game.tournament_ready_close)}
                     </button>
                 </div>

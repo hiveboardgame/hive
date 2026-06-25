@@ -4,7 +4,11 @@ use leptos::prelude::*;
 #[component]
 pub fn Tv() -> impl IntoView {
     let games = expect_context::<GamesSignal>();
-    let live_games = Callback::new(move |_| (games.live)().live_games.into_values().collect());
+    let live_games = Signal::derive(move || {
+        games
+            .live
+            .with(|live| live.live_games.values().cloned().collect())
+    });
 
     view! {
         <div class="flex flex-col items-center pt-6 lg:block 2xl:flex 2xl:flex-col 2xl:items-center">

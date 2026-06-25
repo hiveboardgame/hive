@@ -1,8 +1,6 @@
-use crate::{
-    common::{ClientRequest, ServerResult},
-    functions::hostname::{hostname_and_port, Address},
-};
+use crate::common::{ClientRequest, ServerResult};
 use leptos::prelude::*;
+use leptos_use::use_window;
 use std::sync::Arc;
 
 type SendFn = Arc<dyn Fn(&ClientRequest) + Send + Sync>;
@@ -613,11 +611,18 @@ mod platform {
 }
 
 fn fix_wss(url: &str) -> String {
-    let Address { hostname, port } = hostname_and_port();
-    match port {
-        None => format!("wss://{}{url}", hostname),
-        Some(port) => format!("ws://{}:{}{url}", hostname, port),
-    }
+    let window = use_window();
+    let Some(window) = window.as_ref() else {
+        return url.to_string();
+    };
+    let location = window.location();
+    let protocol = match location.protocol().ok().as_deref() {
+        Some("https:") => "wss:",
+        _ => "ws:",
+    };
+    let host = location.host().unwrap_or_default();
+
+    format!("{protocol}//{host}{url}")
 }
 
 pub fn provide_websocket(url: &str) {

@@ -8,9 +8,9 @@ pub fn ToggleControls() -> impl IntoView {
     let toggle_controls = move |_| controls_signal.hidden.update(|b| *b = !*b);
     let icon = move || {
         if controls_signal.hidden.get() {
-            view! { <Icon icon=icondata_bi::BiDownArrowSolid attr:class="size-4" /> }
+            icondata_bi::BiDownArrowSolid
         } else {
-            view! { <Icon icon=icondata_bi::BiUpArrowSolid attr:class="size-4" /> }
+            icondata_bi::BiUpArrowSolid
         }
     };
     let title = move || {
@@ -21,27 +21,23 @@ pub fn ToggleControls() -> impl IntoView {
         }
     };
 
-    let button_color = move || {
-        if controls_signal.notify.get() && controls_signal.hidden.get() {
-            "bg-ladybug-red"
-        } else {
-            "bg-button-dawn dark:bg-button-twilight"
-        }
-    };
+    let has_alert = move || controls_signal.notify.get() && controls_signal.hidden.get();
 
     view! {
         <button
+            type="button"
             title=title
             on:click=toggle_controls
             class=move || {
-                format!(
-                    "{} px-4 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95",
-                    button_color(),
-                )
+                if has_alert() {
+                    "ui-header-icon-button ui-header-action-alert"
+                } else {
+                    "ui-header-icon-button"
+                }
             }
         >
 
-            {icon}
+            <Icon icon=Signal::derive(icon) attr:class="size-4" />
         </button>
     }
 }

@@ -51,26 +51,23 @@ pub fn WebPushNudge(install_nudge_active: RwSignal<bool>) -> impl IntoView {
 
     view! {
         <Show when=show>
-            <div class="flex fixed inset-x-2 bottom-2 z-50 gap-3 items-center py-3 px-4 mx-auto w-auto max-w-md text-sm rounded-lg border shadow sm:right-4 sm:inset-x-auto sm:left-auto bg-stone-300 border-stone-400 dark:bg-slate-800 dark:border-slate-600">
-                <span class="text-xl">"🔔"</span>
+            <div class="flex fixed inset-x-2 bottom-2 z-50 gap-3 items-center p-3 mx-auto w-auto max-w-md text-sm sm:right-4 sm:inset-x-auto sm:left-auto ui-panel">
                 <div class="flex-1 min-w-0">
-                    <p class="font-semibold dark:text-white">
+                    <p class="font-semibold text-gray-900 dark:text-gray-100">
                         {t!(i18n, notifications.nudge.title)}
                     </p>
                     <p class="text-gray-700 dark:text-gray-300">
                         {t!(i18n, notifications.nudge.body_before_link)}
-                        <a href="/notifications" class="underline">
+                        <a href="/notifications" class="ui-text-link">
                             {t!(i18n, notifications.nudge.link)}
                         </a> {t!(i18n, notifications.nudge.body_after_link)}
                     </p>
                     <Show when=move || error.with(Option::is_some)>
-                        <p class="mt-1 text-red-600 dark:text-red-400">
-                            {move || error.get().unwrap_or_default()}
-                        </p>
+                        <p class="mt-1 ui-field-error">{move || error.get().unwrap_or_default()}</p>
                     </Show>
                 </div>
                 <button
-                    class="py-1.5 px-3 font-bold text-white whitespace-nowrap rounded shadow disabled:opacity-50 bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
+                    class="ui-button ui-button-primary ui-button-sm"
                     disabled=busy
                     on:click=enable
                 >
@@ -83,7 +80,7 @@ pub fn WebPushNudge(install_nudge_active: RwSignal<bool>) -> impl IntoView {
                     }}
                 </button>
                 <button
-                    class="px-2 text-xl leading-none text-gray-500 hover:text-gray-800 dark:hover:text-white"
+                    class="ui-button ui-button-ghost ui-button-icon-sm"
                     aria-label=move || t_string!(i18n, notifications.nudge.dismiss).to_string()
                     on:click=dismiss
                 >

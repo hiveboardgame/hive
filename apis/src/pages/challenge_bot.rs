@@ -35,13 +35,11 @@ pub fn ChallengeBot() -> impl IntoView {
     let api = expect_context::<ApiRequestsProvider>().0;
 
     let radio_style = move |active: bool| {
-        format!("flex items-center p-2 transform transition-transform duration-300 active:scale-95 hover:shadow-xl dark:hover:shadow dark:hover:shadow-gray-500 drop-shadow-lg dark:shadow-gray-600 rounded cursor-pointer {}", 
-            if active {
-                "bg-button-dawn dark:bg-button-twilight"
-            } else {
-                "dark:bg-gray-700 bg-odd-light"
-            }
-        )
+        if active {
+            "ui-choice ui-choice-compact ui-choice-active cursor-pointer"
+        } else {
+            "ui-choice ui-choice-compact ui-choice-inactive cursor-pointer"
+        }
     };
 
     let create_challenge = Callback::new(move |color_choice| {
@@ -67,30 +65,41 @@ pub fn ChallengeBot() -> impl IntoView {
     });
 
     view! {
-        <div class="flex flex-col items-center w-72 sm:w-96 xs:m-2 xs:w-80">
-            <div class="flex gap-1 p-1">Play an unrated game vs our bot</div>
-            <div class="flex gap-1 p-1">Base <SimpleSwitch checked=expansions />MLP</div>
+        <div class="flex flex-col gap-4 items-center max-w-sm box-border w-[calc(100vw_-_3rem)] xs:m-2">
+            <div class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Play an unrated game vs our bot
+            </div>
+            <div class="ui-setting-group">
+                <div class="flex gap-2 items-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <span>Base</span>
+                    <SimpleSwitch checked=expansions />
+                    <span>MLP</span>
+                </div>
+            </div>
 
-            <div class="flex flex-col items-center">
-                <div class="flex gap-2 justify-center p-2">
-                    <div
+            <div class="flex flex-col items-center w-full">
+                <div class="flex flex-wrap gap-2 justify-center p-2 w-full">
+                    <button
+                        type="button"
                         class=move || radio_style(matches!(difficulty.get(), BotDifficulty::Easy))
                         on:click=move |_| difficulty.set(BotDifficulty::Easy)
                     >
                         Easy
-                    </div>
-                    <div
+                    </button>
+                    <button
+                        type="button"
                         class=move || radio_style(matches!(difficulty.get(), BotDifficulty::Medium))
                         on:click=move |_| difficulty.set(BotDifficulty::Medium)
                     >
                         Medium
-                    </div>
-                    <div
+                    </button>
+                    <button
+                        type="button"
                         class=move || radio_style(matches!(difficulty.get(), BotDifficulty::Hard))
                         on:click=move |_| difficulty.set(BotDifficulty::Hard)
                     >
                         Hard
-                    </div>
+                    </button>
                 </div>
             </div>
             <ChallengeButtonsTrio create_challenge />

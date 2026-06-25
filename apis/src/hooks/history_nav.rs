@@ -69,13 +69,14 @@ pub(crate) fn use_analysis_history_keyboard_navigation(
                 return;
             };
             if !analysis
-                .0
+                .tree
                 .with_untracked(|analysis| can_navigate_analysis_history(analysis, action))
             {
                 return;
             }
             before_navigate(analysis);
-            if navigate_analysis_history(action, analysis.0, game_state) && scroll_on_navigate() {
+            if navigate_analysis_history(action, analysis.tree, game_state) && scroll_on_navigate()
+            {
                 scroll_move_into_view();
             }
         },

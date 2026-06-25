@@ -5,37 +5,46 @@ use crate::providers::annotations::{
     MarkerShape,
 };
 use leptos::prelude::*;
+use leptos_icons::*;
 
-const BTN: &str = "flex justify-center items-center w-7 h-7 rounded transition-transform duration-200 active:scale-95 hover:bg-pillbug-teal dark:hover:bg-pillbug-teal";
+const BTN: &str = "flex justify-center items-center size-8 overflow-hidden rounded-md transition-colors duration-200 active:scale-95 hover:bg-pillbug-teal dark:hover:bg-pillbug-teal";
+const TOOLBAR_DIVIDER_CLASS: &str = "mx-1 w-px h-5 bg-black/20 dark:bg-white/20";
 
 /// Pencil toggle for sticky annotate mode; lives in the control row. Renders
 /// nothing without an `AnnotationsSignal` in context.
 #[component]
-pub fn AnnotationToggle(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
+pub fn AnnotationToggle(
+    #[prop(optional)] class: Option<&'static str>,
+    #[prop(optional)] active_tw_classes: Option<&'static str>,
+) -> impl IntoView {
     let annotations = use_context::<AnnotationsSignal>();
+    let uses_default_button = class.is_none();
+    let base_class = class.unwrap_or("ui-button ui-button-icon m-1");
+    let active_tw_classes = active_tw_classes.unwrap_or("ui-button-primary");
+    let inactive_tw_classes = if uses_default_button {
+        "ui-button-secondary"
+    } else {
+        ""
+    };
     view! {
         {annotations
             .map(|annotations| {
                 let mode = annotations.mode;
+                let button_class = move || {
+                    format!(
+                        "{} {}",
+                        base_class,
+                        if mode.get() { active_tw_classes } else { inactive_tw_classes },
+                    )
+                };
                 view! {
                     // Match DownloadPgn's box so it lines up with the control icons.
                     <button
                         title="Annotate (markers, arrows, highlights)"
-                        class=move || {
-                            format!(
-                                "flex z-20 justify-center items-center m-1 text-white rounded-sm transition-transform duration-300 active:scale-95 aspect-square dark:hover:bg-pillbug-teal hover:bg-pillbug-teal {extend_tw_classes} {}",
-                                if mode.get() {
-                                    "bg-pillbug-teal"
-                                } else {
-                                    "bg-button-dawn dark:bg-button-twilight"
-                                },
-                            )
-                        }
+                        class=button_class
                         on:click=move |_| annotations.toggle_mode()
                     >
-                        <span class="flex justify-center items-center py-1 text-xl leading-none size-7">
-                            "✎"
-                        </span>
+                        <Icon icon=icondata_bs::BsPencil attr:class="size-5" />
                     </button>
                 }
             })}
@@ -50,17 +59,20 @@ pub fn AnnotationToolbar(annotations: AnnotationsSignal) -> impl IntoView {
     let quick_draw = annotations.quick_draw;
     view! {
         <Show when=move || mode.get() || quick_draw.get()>
-            <div class="flex absolute bottom-2 left-1/2 z-20 gap-1 items-center p-1 rounded-lg shadow -translate-x-1/2 select-none bg-board-dawn/90 dark:bg-reserve-twilight/90">
-                {AnnotationColor::all()
-                    .into_iter()
-                    .map(|color| color_swatch(annotations, color))
-                    .collect_view()} <div class="mx-1 w-px h-5 bg-gray-400"></div>
+            <div class="flex absolute bottom-2 left-1/2 z-20 gap-1 items-center p-1 rounded-lg border ring-1 shadow-lg -translate-x-1/2 select-none border-black/10 bg-even-light/95 ring-black/5 backdrop-blur dark:border-white/10 dark:bg-surface-panel/95 dark:ring-white/10">
+                <div class="flex gap-1 items-center">
+                    {AnnotationColor::all()
+                        .into_iter()
+                        .map(|color| color_swatch(annotations, color))
+                        .collect_view()}
+                </div>
+                <div class=TOOLBAR_DIVIDER_CLASS></div>
                 {tool_button(
                     annotations,
                     AnnotationTool::Highlight,
                     "⬡",
                     "Hexagon (Q)",
-                    "text-3xl -translate-y-[2px]",
+                    "text-2xl",
                 )}
                 {MarkerShape::all()
                     .into_iter()
@@ -73,7 +85,8 @@ pub fn AnnotationToolbar(annotations: AnnotationsSignal) -> impl IntoView {
                             "text-base",
                         )
                     })
-                    .collect_view()} <div class="mx-1 w-px h-5 bg-gray-400"></div>
+                    .collect_view()}
+                <div class=TOOLBAR_DIVIDER_CLASS></div>
                 <button
                     title="Clear annotations on this position"
                     class=format!("{BTN} bg-inherit")
@@ -103,19 +116,23 @@ fn color_swatch(annotations: AnnotationsSignal, color: AnnotationColor) -> impl 
     view! {
         <button
             title=color_hint(color)
-            class=move || {
-                format!(
-                    "w-6 h-6 rounded-full border border-gray-500 transition-transform duration-200 outline-2 {}",
-                    if selected.get() == color {
-                        "scale-110 outline outline-black dark:outline-white"
-                    } else {
-                        "outline-none"
-                    },
-                )
-            }
-            style=style
+            class="flex justify-center items-center size-7"
             on:click=move |_| selected.set(color)
-        ></button>
+        >
+            <span
+                class=move || {
+                    format!(
+                        "block size-5 rounded-full border border-black/30 transition-transform duration-200 outline-2 dark:border-white/30 {}",
+                        if selected.get() == color {
+                            "scale-110 outline outline-black dark:outline-white"
+                        } else {
+                            "outline-none"
+                        },
+                    )
+                }
+                style=style
+            ></span>
+        </button>
     }
 }
 
