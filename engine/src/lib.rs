@@ -12,6 +12,7 @@ mod game_status;
 mod game_type;
 mod hasher;
 mod history;
+pub mod hop;
 mod mid_move_board;
 mod piece;
 mod player;
