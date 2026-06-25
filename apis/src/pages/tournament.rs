@@ -1,13 +1,18 @@
 use crate::{
-    common::{markdown_to_html, ScheduleAction, TournamentAction},
+    common::{markdown_to_html, with_class, ScheduleAction, TournamentAction},
     components::{
         atoms::progress_bar::ProgressBar,
+        layouts::{
+            page_header::PageHeader,
+            page_shell::{PageShell, PageShellVariant},
+        },
         molecules::{
             game_previews::GamePreviews,
             my_schedules::MySchedules,
+            panel::Panel,
             time_row::TimeRow,
             unplayed_game_row::UnplayedGameRow,
-            user_row::UserRow,
+            user_identity::UserIdentity,
         },
         organisms::{
             chat::ChatWindow,
@@ -27,9 +32,11 @@ use crate::{
 };
 use chrono::Local;
 use hive_lib::GameStatus;
-use leptos::prelude::*;
+use leptos::{html, prelude::*};
 use leptos_router::hooks::{use_navigate, use_params_map};
+use leptos_use::use_resize_observer;
 use shared_types::{
+    Conclusion,
     GameSpeed,
     PrettyString,
     TimeInfo,
@@ -40,9 +47,7 @@ use shared_types::{
 };
 use std::collections::HashMap;
 
-const DETAILS_STYLE: &str = "m-2 min-w-[320px]";
-const BUTTON_STYLE: &str = "flex justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed";
-pub const INFO_STYLE: &str = "m-2 h-6 text-lg font-bold sm:place-self-center";
+const DETAILS_STYLE: &str = "w-full min-w-0 h-fit";
 
 #[component]
 pub fn Tournament() -> impl IntoView {
@@ -69,9 +74,20 @@ pub fn Tournament() -> impl IntoView {
         current_tournament.dispatch(());
     });
     view! {
-        <div class="flex flex-col justify-center items-center w-full pt-page">
-            <div class="container flex flex-col items-center w-full">
-                <Show when=move || current_tournament.value().get().is_some()>
+        <PageShell variant=PageShellVariant::Dashboard>
+            <div class="flex flex-col gap-6 w-full max-w-6xl">
+                <Show
+                    when=move || current_tournament.value().get().is_some()
+                    fallback=|| {
+                        view! {
+                            <Panel>
+                                <p class="text-sm text-gray-600 dark:text-gray-300">
+                                    "Loading tournament..."
+                                </p>
+                            </Panel>
+                        }
+                    }
+                >
                     <LoadedTournament tournament=current_tournament
                         .value()
                         .get()
@@ -79,7 +95,7 @@ pub fn Tournament() -> impl IntoView {
                         .expect("Current tournament is some") />
                 </Show>
             </div>
-        </div>
+        </PageShell>
     }
 }
 
@@ -235,9 +251,13 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
     let not_started = tournament.with_value(|t| t.status == TournamentStatus::NotStarted);
     let inprogress = tournament.with_value(|t| t.status == TournamentStatus::InProgress);
     let finished = tournament.with_value(|t| t.status == TournamentStatus::Finished);
-    let tournament_is_swiss = tournament
-        .with_value(|t| t.mode.parse::<TournamentMode>().unwrap() == TournamentMode::DoubleSwiss);
-    let game_previews = Callback::new(move |()| {
+    let tournament_is_swiss = tournament.with_value(|t| {
+        matches!(
+            t.mode.parse::<TournamentMode>().ok(),
+            Some(TournamentMode::DoubleSwiss)
+        )
+    });
+    let game_previews = Memo::new(move |_| {
         games_hashmap.with_value(|hashmap| {
             hashmap
                 .values()
@@ -277,6 +297,28 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
         result.sort();
         result
     });
+    let has_my_schedules = Signal::derive(move || {
+        user_id().is_some_and(|user_id| {
+            games_hashmap.with_value(|games| {
+                games.iter().any(|(_game_id, game)| {
+                    game.game_status == GameStatus::NotStarted
+                        && (game.white_player.uid == user_id || game.black_player.uid == user_id)
+                        && game.conclusion == Conclusion::Unknown
+                })
+            })
+        })
+    });
+    let has_unplayed_games =
+        Signal::derive(move || !unplayed_games.with_value(|games| games.is_empty()));
+    let has_game_previews = Signal::derive(move || game_previews.with(|games| !games.is_empty()));
+    let has_top_game_sections = Signal::derive(move || has_my_schedules() || has_unplayed_games());
+    let top_game_sections_layout = move || {
+        if has_my_schedules() && has_unplayed_games() {
+            "grid w-full gap-4 lg:grid-cols-2 lg:items-start"
+        } else {
+            "grid w-full gap-4"
+        }
+    };
     let tournament_lacks_results = tournament.with_value(|t| {
         t.games
             .iter()
@@ -338,27 +380,28 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
             format!("{nr} unplayed games")
         }
     };
-    let tournament_style = if not_started {
-        "flex flex-col gap-1 w-full items-center justify-center"
-    } else {
-        "flex flex-col gap-1 w-full sm:flex-row sm:flex-wrap justify-center"
-    };
+    let tournament_style =
+        "grid w-full gap-6 lg:grid-cols-[repeat(auto-fit,minmax(min(100%,28rem),1fr))] lg:items-start";
+    let tournament_info_ref = NodeRef::<html::Div>::new();
+    let tournament_info_height = RwSignal::new(None::<f64>);
+    use_resize_observer(tournament_info_ref, move |entries, _observer| {
+        let rect = entries[0].content_rect();
+        tournament_info_height.set(Some(rect.height()));
+    });
     view! {
-        <div class="flex flex-col items-center p-2 w-full">
-            <h1 class="w-full max-w-full text-3xl font-bold text-center whitespace-normal break-words">
-                {tournament.with_value(|t| t.name.clone())}
-            </h1>
+        <PageHeader title=tournament.with_value(|t| t.name.clone()) subtitle=starts.clone() />
+        <Panel body_class="space-y-4">
             <Show
-                when=move || editing_description()
+                when=editing_description
                 fallback=move || {
                     view! {
                         <div
-                            class="p-4 w-full break-words prose dark:prose-invert"
+                            class="w-full max-w-none break-words prose dark:prose-invert"
                             inner_html=markdown_desc
                         />
                         <Show when=user_is_organizer_or_admin>
                             <button
-                                class="py-2 px-4 mb-2 font-bold text-white rounded active:scale-95 bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
+                                class="mb-2 ui-button ui-button-secondary ui-button-md"
                                 on:click=move |_| {
                                     description_text.set(current_description.get_untracked());
                                     editing_description.set(true);
@@ -371,18 +414,18 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                     }
                 }
             >
-                <ActionForm action=update_desc_action>
+                <ActionForm action=update_desc_action attr:class="space-y-3">
                     <input
                         type="hidden"
                         name="tournament_id"
                         value=tournament.with_value(|t| t.tournament_id.0.clone())
                     />
                     <Show
-                        when=move || previewing_description()
+                        when=previewing_description
                         fallback=move || {
                             view! {
                                 <textarea
-                                    class="py-2 px-3 m-2 w-full h-32 leading-tight rounded border shadow appearance-none focus:outline-none"
+                                    class="ui-field-textarea min-h-36"
                                     name="description"
                                     prop:value=description_text
                                     on:input=update_from_input(description_text)
@@ -393,14 +436,17 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                         }
                     >
                         <div
-                            class="p-4 m-2 w-full break-words rounded border prose dark:prose-invert"
+                            class=with_class(
+                                "ui-setting-group",
+                                "min-h-36 w-full max-w-none break-words prose dark:prose-invert",
+                            )
                             inner_html=move || markdown_to_html(&description_text())
                         />
                     </Show>
-                    <div class="flex flex-row gap-2 p-2">
+                    <div class="flex flex-wrap gap-2 items-center">
                         <button
                             type="submit"
-                            class=BUTTON_STYLE
+                            class="ui-button ui-button-primary ui-button-md"
                             prop:disabled=move || {
                                 !(50..=2000).contains(&description_text().len())
                             }
@@ -409,7 +455,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                         </button>
                         <button
                             type="button"
-                            class=BUTTON_STYLE
+                            class="ui-button ui-button-secondary ui-button-md"
                             on:click=move |_| {
                                 editing_description.set(false);
                                 previewing_description.set(false);
@@ -419,263 +465,303 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                         </button>
                         <button
                             type="button"
-                            class=BUTTON_STYLE
+                            class="ui-button ui-button-secondary ui-button-md"
                             on:click=move |_| previewing_description.update(|b| *b = !*b)
                         >
                             {move || if previewing_description() { "Edit" } else { "Preview" }}
                         </button>
                         <a
-                            class="font-bold text-blue-500 hover:underline"
+                            class="ui-button ui-button-ghost ui-button-md no-link-style"
                             href="https://commonmark.org/help/"
                             target="_blank"
+                            rel="noopener noreferrer"
                         >
-                            "Markdown Cheat Sheet"
+                            "Markdown"
                         </a>
                     </div>
                 </ActionForm>
             </Show>
-        </div>
+        </Panel>
         <div class=tournament_style>
-            <div class="m-2 h-fit">
-                <div class=INFO_STYLE>Tournament Info</div>
-                <div class="m-2">
-                    <span class="font-bold">"Type: "</span>
-                    {tournament
-                        .with_value(|t| {
-                            t.mode
-                                .parse::<TournamentMode>()
-                                .map(|m| m.pretty_string())
-                                .unwrap_or_default()
-                        })}
-                </div>
-                <div class="flex gap-1 m-2">
-                    <span class="font-bold">"Time control: "</span>
-                    <TimeRow time_info=time_info />
-                </div>
-                <div class="m-2">
-                    <span class="font-bold">"Players: "</span>
-                    {number_of_players}
-                    /
-                    {tournament.with_value(|t| t.seats)}
-                </div>
-                <Show when=move || not_started>
-                    <div class="m-2">
-                        <span class="font-bold">"Minimum players: "</span>
-                        {tournament.with_value(|t| t.min_seats)}
+            <div node_ref=tournament_info_ref class="min-w-0">
+                <Panel title="Tournament Info" class="min-w-0" body_class="space-y-3 h-fit">
+                    <div>
+                        <span class="font-bold">"Type: "</span>
+                        {tournament
+                            .with_value(|t| {
+                                t.mode
+                                    .parse::<TournamentMode>()
+                                    .map(|m| m.pretty_string())
+                                    .unwrap_or_default()
+                            })}
                     </div>
-                </Show>
-                <div class="m-2 font-bold">{starts}</div>
-                <div class="flex flex-col m-2">
-                    <div class="flex flex-col items-center mb-2">
-                        <p class="font-bold">Organized by:</p>
-                        <For
-                            each=move || { tournament.with_value(|t| t.organizers.clone()) }
-
-                            key=|users| users.uid
-                            let:user
-                        >
-                            <div>
-                                <UserRow actions=vec![] user />
-                            </div>
-                        </For>
+                    <div class="flex flex-wrap gap-1">
+                        <span class="font-bold">"Time control: "</span>
+                        <TimeRow time_info=time_info />
                     </div>
-                </div>
-                <ProgressBar current=finished_games.into() total=total_games />
-                <Show when=move || not_started>
-                    <div class="flex gap-1 justify-center items-center pb-2">
-                        <Show
-                            when=user_joined
-                            fallback=move || {
-                                view! {
-                                    <button
-                                        prop:disabled=join_disabled
-                                        class=BUTTON_STYLE
-                                        on:click=move |_| send_action(
-                                            TournamentAction::Join(tournament_id.get_value()),
-                                        )
-                                    >
-                                        Join
-                                    </button>
-                                }
-                            }
-                        >
-
-                            <button
-                                class=BUTTON_STYLE
-                                on:click=move |_| send_action(
-                                    TournamentAction::Leave(tournament_id.get_value()),
-                                )
-                            >
-                                Leave
-                            </button>
-                        </Show>
-                        <Show when=user_is_organizer_or_admin>
-                            <button class=BUTTON_STYLE on:click=delete>
-                                {"Delete"}
-                            </button>
-                            <button prop:disabled=start_disabled class=BUTTON_STYLE on:click=start>
-                                {"Start"}
-                            </button>
-                        </Show>
+                    <div>
+                        <span class="font-bold">"Players: "</span>
+                        {number_of_players}
+                        /
+                        {tournament.with_value(|t| t.seats)}
                     </div>
-                    <TournamentAdminControls
-                        user_is_organizer=user_is_organizer_or_admin()
-                        tournament
-                    />
-                </Show>
-                <Show when=move || user_is_organizer_or_admin() && inprogress>
-                    <div class="flex flex-col gap-2 justify-center items-center p-2">
-                        <div class="flex gap-1 justify-center items-center">
-                            <button
-                                class=BUTTON_STYLE
-                                on:click=finish
-                                prop:disabled=tournament_lacks_results
-                            >
-                                {"Finish"}
-                            </button>
+                    <Show when=move || not_started>
+                        <div>
+                            <span class="font-bold">"Minimum players: "</span>
+                            {tournament.with_value(|t| t.min_seats)}
                         </div>
-                        <Show when=move || { unstarted_games_count() > 0 }>
-                            <div class="flex flex-col gap-2 items-center p-2 rounded">
-                                <p class="text-sm font-semibold text-center">
-                                    {move || {
-                                        format!(
-                                            "{} will be double forfeited.",
-                                            unstarted_games_label(),
-                                        )
-                                    }}
-                                </p>
-                                <Show
-                                    when=move || confirming_double_forfeit()
-                                    fallback=move || {
-                                        view! {
-                                            <button class=BUTTON_STYLE on:click=request_double_forfeit>
-                                                "Double forfeit unstarted games"
-                                            </button>
-                                        }
-                                    }
-                                >
-                                    <div class="flex flex-col gap-2 items-center">
-                                        <div class="text-sm text-center">
-                                            {"This will adjudicate every unstarted tournament game as a double forfeit."}
-                                        </div>
-                                        <div class="flex gap-2">
-                                            <button
-                                                class="flex justify-center items-center py-2 px-4 font-bold text-white rounded active:scale-95 bg-ladybug-red dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
-                                                on:click=double_forfeit_unstarted
-                                            >
-                                                {move || format!("Confirm {}", unstarted_games_label())}
-                                            </button>
-                                            <button class=BUTTON_STYLE on:click=cancel_double_forfeit>
-                                                {"Cancel"}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </Show>
-                            </div>
-                        </Show>
-                        <Show when=move || { adjudicated_games_count() > 0 }>
-                            <div class="flex flex-col gap-2 items-center p-2 rounded">
-                                <p class="text-sm font-semibold text-center">
-                                    {move || {
-                                        let count = adjudicated_games_count();
-                                        if count == 1 {
-                                            String::from("1 adjudicated game will be reset.")
-                                        } else {
-                                            format!("{count} adjudicated games will be reset.")
-                                        }
-                                    }}
-                                </p>
-                                <Show
-                                    when=move || confirming_reset_adjudicated()
-                                    fallback=move || {
-                                        view! {
-                                            <button
-                                                class=BUTTON_STYLE
-                                                on:click=move |_| confirming_reset_adjudicated.set(true)
-                                            >
-                                                "Undo adjudications"
-                                            </button>
-                                        }
-                                    }
-                                >
-                                    <div class="flex flex-col gap-2 items-center">
-                                        <div class="text-sm text-center">
-                                            {"This will set all adjudicated tournament games back to not started."}
-                                        </div>
-                                        <div class="flex gap-2">
-                                            <button
-                                                class="flex justify-center items-center py-2 px-4 font-bold text-white rounded active:scale-95 bg-ladybug-red dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
-                                                on:click=reset_adjudicated
-                                            >
-                                                {"Confirm undo"}
-                                            </button>
-                                            <button
-                                                class=BUTTON_STYLE
-                                                on:click=move |_| confirming_reset_adjudicated.set(false)
-                                            >
-                                                {"Cancel"}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </Show>
-                            </div>
-                        </Show>
-                    </div>
-                </Show>
-                // only show if tournament is Swiss
-                <Show when=move || user_is_organizer_or_admin.get() && tournament_is_swiss>
-                    <div class="flex gap-1 justify-center items-center p-2">
-                        <Show when=move || inprogress>
-                            <button
-                                class=BUTTON_STYLE
-                                on:click=progress_to_next_round
-                                // this is also disabled as the Finish button until all existing games have results
-                                prop:disabled=tournament_lacks_results
+                    </Show>
+                    <p class="ui-notice">{starts.clone()}</p>
+                    <div class="space-y-2 ui-setting-group">
+                        <div class="flex flex-col gap-2">
+                            <p class="font-bold">"Organized by"</p>
+                            <For
+                                each=move || { tournament.with_value(|t| t.organizers.clone()) }
+
+                                key=|users| users.uid
+                                let:user
                             >
-                                {"Progress to next round"}
-                            </button>
-                        </Show>
+                                <div>
+                                    <UserIdentity
+                                        user
+                                        class="p-1 h-10"
+                                        link_class="truncate max-w-[120px]"
+                                    />
+                                </div>
+                            </For>
+                        </div>
                     </div>
-                </Show>
+                    <ProgressBar current=finished_games.into() total=total_games />
+                    <Show when=move || not_started>
+                        <div class="flex flex-wrap gap-2">
+                            <Show
+                                when=user_joined
+                                fallback=move || {
+                                    view! {
+                                        <button
+                                            prop:disabled=join_disabled
+                                            class="ui-button ui-button-primary ui-button-md"
+                                            on:click=move |_| send_action(
+                                                TournamentAction::Join(tournament_id.get_value()),
+                                            )
+                                        >
+                                            Join
+                                        </button>
+                                    }
+                                }
+                            >
+
+                                <button
+                                    class="ui-button ui-button-secondary ui-button-md"
+                                    on:click=move |_| send_action(
+                                        TournamentAction::Leave(tournament_id.get_value()),
+                                    )
+                                >
+                                    Leave
+                                </button>
+                            </Show>
+                            <Show when=user_is_organizer_or_admin>
+                                <button
+                                    class="ui-button ui-button-danger ui-button-md"
+                                    on:click=delete
+                                >
+                                    {"Delete"}
+                                </button>
+                                <button
+                                    prop:disabled=start_disabled
+                                    class="ui-button ui-button-primary ui-button-md"
+                                    on:click=start
+                                >
+                                    {"Start"}
+                                </button>
+                            </Show>
+                        </div>
+                        <TournamentAdminControls
+                            user_is_organizer=user_is_organizer_or_admin()
+                            tournament
+                        />
+                    </Show>
+                    <Show when=move || user_is_organizer_or_admin() && inprogress>
+                        <div class="flex flex-col gap-3 ui-setting-group">
+                            <div class="flex flex-wrap gap-2">
+                                <button
+                                    class="ui-button ui-button-primary ui-button-md"
+                                    on:click=finish
+                                    prop:disabled=tournament_lacks_results
+                                >
+                                    {"Finish"}
+                                </button>
+                            </div>
+                            <Show when=move || { unstarted_games_count() > 0 }>
+                                <div class="flex flex-col gap-2">
+                                    <p class="text-sm font-semibold text-center">
+                                        {move || {
+                                            format!(
+                                                "{} will be double forfeited.",
+                                                unstarted_games_label(),
+                                            )
+                                        }}
+                                    </p>
+                                    <Show
+                                        when=confirming_double_forfeit
+                                        fallback=move || {
+                                            view! {
+                                                <button
+                                                    class="ui-button ui-button-danger ui-button-md"
+                                                    on:click=request_double_forfeit
+                                                >
+                                                    "Double forfeit unstarted games"
+                                                </button>
+                                            }
+                                        }
+                                    >
+                                        <div class="flex flex-col gap-2 items-center">
+                                            <div class="text-sm text-center">
+                                                {"This will adjudicate every unstarted tournament game as a double forfeit."}
+                                            </div>
+                                            <div class="flex gap-2">
+                                                <button
+                                                    class="ui-button ui-button-danger ui-button-md"
+                                                    on:click=double_forfeit_unstarted
+                                                >
+                                                    {move || format!("Confirm {}", unstarted_games_label())}
+                                                </button>
+                                                <button
+                                                    class="ui-button ui-button-secondary ui-button-md"
+                                                    on:click=cancel_double_forfeit
+                                                >
+                                                    {"Cancel"}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </Show>
+                                </div>
+                            </Show>
+                            <Show when=move || { adjudicated_games_count() > 0 }>
+                                <div class="flex flex-col gap-2">
+                                    <p class="text-sm font-semibold text-center">
+                                        {move || {
+                                            let count = adjudicated_games_count();
+                                            if count == 1 {
+                                                String::from("1 adjudicated game will be reset.")
+                                            } else {
+                                                format!("{count} adjudicated games will be reset.")
+                                            }
+                                        }}
+                                    </p>
+                                    <Show
+                                        when=confirming_reset_adjudicated
+                                        fallback=move || {
+                                            view! {
+                                                <button
+                                                    class="ui-button ui-button-secondary ui-button-md"
+                                                    on:click=move |_| confirming_reset_adjudicated.set(true)
+                                                >
+                                                    "Undo adjudications"
+                                                </button>
+                                            }
+                                        }
+                                    >
+                                        <div class="flex flex-col gap-2 items-center">
+                                            <div class="text-sm text-center">
+                                                {"This will set all adjudicated tournament games back to not started."}
+                                            </div>
+                                            <div class="flex gap-2">
+                                                <button
+                                                    class="ui-button ui-button-danger ui-button-md"
+                                                    on:click=reset_adjudicated
+                                                >
+                                                    {"Confirm undo"}
+                                                </button>
+                                                <button
+                                                    class="ui-button ui-button-secondary ui-button-md"
+                                                    on:click=move |_| confirming_reset_adjudicated.set(false)
+                                                >
+                                                    {"Cancel"}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </Show>
+                                </div>
+                            </Show>
+                        </div>
+                    </Show>
+                    // only show if tournament is Swiss
+                    <Show when=move || user_is_organizer_or_admin.get() && tournament_is_swiss>
+                        <div class="flex flex-wrap gap-2">
+                            <Show when=move || inprogress>
+                                <button
+                                    class="ui-button ui-button-primary ui-button-md"
+                                    on:click=progress_to_next_round
+                                    // this is also disabled as the Finish button until all existing games have results
+                                    prop:disabled=tournament_lacks_results
+                                >
+                                    {"Progress to next round"}
+                                </button>
+                            </Show>
+                        </div>
+                    </Show>
+                </Panel>
             </div>
             <Show when=move || !not_started>
-                <Standings tournament=Signal::derive(move || tournament.get_value()) />
+                <Standings
+                    tournament=Signal::derive(move || tournament.get_value())
+                    max_height=tournament_info_height
+                />
             </Show>
         </div>
-        <div class="flex flex-col flex-wrap gap-1 justify-center mx-auto w-full sm:flex-row">
-            <MySchedules games_hashmap=Memo::new(move |_| games_hashmap.get_value()) user_id />
-            <Show when=move || !unplayed_games.with_value(|games| games.is_empty())>
-                <details class=DETAILS_STYLE>
-                    <summary class=INFO_STYLE>{unplayed_games_string}</summary>
-                    <For
-                        each=move || unplayed_games.get_value()
-
-                        key=|game| (
-                            game.game_id.clone(),
-                            game.tournament_game_result.clone(),
-                            game.finished,
-                        )
-                        let:game
-                    >
-
-                        <UnplayedGameRow
-                            game
-                            user_is_organizer=user_is_organizer_or_admin
-                            tournament_finished=finished.into()
+        <div class="flex flex-col gap-4 w-full">
+            <Show when=has_top_game_sections>
+                <div class=top_game_sections_layout>
+                    <Show when=has_my_schedules>
+                        <MySchedules
+                            games_hashmap=Memo::new(move |_| games_hashmap.get_value())
+                            user_id
                         />
+                    </Show>
+                    <Show when=has_unplayed_games>
+                        <div class="min-w-0">
+                            <details class=with_class("ui-panel", DETAILS_STYLE)>
+                                <summary class="ui-panel-summary">{unplayed_games_string}</summary>
+                                <div class="space-y-2 ui-panel-body">
+                                    <For
+                                        each=move || unplayed_games.get_value()
 
-                    </For>
-                </details>
+                                        key=|game| (
+                                            game.game_id.clone(),
+                                            game.tournament_game_result.clone(),
+                                            game.finished,
+                                        )
+                                        let:game
+                                    >
+
+                                        <UnplayedGameRow
+                                            game
+                                            user_is_organizer=user_is_organizer_or_admin
+                                            tournament_finished=finished.into()
+                                        />
+
+                                    </For>
+                                </div>
+                            </details>
+                        </div>
+                    </Show>
+                </div>
             </Show>
-            <Show when=move || !game_previews.run(()).is_empty()>
-                <details class=DETAILS_STYLE>
-                    <summary class=INFO_STYLE>Finished or ongoing games:</summary>
-                    <GamePreviews games=game_previews />
+            <Show when=has_game_previews>
+                <details class=with_class("ui-panel", DETAILS_STYLE)>
+                    <summary class="ui-panel-summary">"Finished or ongoing games"</summary>
+                    <div class="ui-panel-body">
+                        <GamePreviews games=game_previews />
+                    </div>
                 </details>
             </Show>
         </div>
         <Show when=move || user_is_organizer_or_admin() || user_joined()>
-            <div class="p-3 m-2 w-full max-w-full h-60 whitespace-normal break-words sm:w-2/3 bg-even-light dark:bg-even-dark">
+            <div class=with_class(
+                "ui-panel",
+                "h-72 w-full overflow-hidden p-3 whitespace-normal break-words",
+            )>
                 <ChatWindow destination=shared_types::SimpleDestination::Tournament(
                     tournament_id.get_value(),
                 ) />

@@ -1,6 +1,11 @@
 use crate::{
     components::molecules::game_row::GameRow,
-    providers::{calculate_initial_batch_size, load_games, FilterState, GamesSearchContext},
+    providers::{
+        calculate_initial_batch_size,
+        initial_profile_filters_for_tab,
+        load_games,
+        GamesSearchContext,
+    },
 };
 use leptos::prelude::*;
 use leptos_router::{hooks::use_params, params::Params};
@@ -31,37 +36,20 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
         move |_, _, _| {
             request_animation_frame(move || {
                 request_animation_frame(move || {
-                    if tab_view != GameProgress::Finished {
-                        ctx.filters.update(|c| c.result = None);
-                        ctx.pending.update(|p| p.result = None);
-                    }
+                    let effective_filters = initial_profile_filters_for_tab(
+                        tab_view,
+                        ctx.get_filter_cookie.get_untracked(),
+                    );
 
-                    let base_filters = if tab_view == GameProgress::Finished {
-                        ctx.filters.get_untracked()
-                    } else {
-                        FilterState::default()
-                    };
-
-                    ctx.pending.set(FilterState {
-                        color: base_filters.color,
-                        result: if tab_view == GameProgress::Finished {
-                            base_filters.result
-                        } else {
-                            None
-                        },
-                        speeds: base_filters.speeds.clone(),
-                        expansions: base_filters.expansions,
-                        rated: base_filters.rated,
-                        exclude_bots: base_filters.exclude_bots,
-                    });
-
+                    ctx.filters.set(effective_filters.clone());
+                    ctx.pending.set(effective_filters.clone());
                     ctx.has_more.set_value(true);
                     ctx.is_first_batch.set_value(true);
                     ctx.next_batch_token.set(None);
                     ctx.games.set(vec![]);
 
                     load_games(
-                        ctx.filters.get_untracked(),
+                        effective_filters,
                         tab_view,
                         username.get_untracked(),
                         None,
@@ -139,7 +127,7 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
     view! {
         <div
             node_ref=el
-            class="overflow-y-auto overflow-x-hidden h-full rounded-lg sm:grid sm:grid-cols-2 sm:content-start lg:grid-cols-3"
+            class="overflow-y-auto overflow-x-hidden h-full sm:grid sm:grid-cols-2 sm:content-start lg:grid-cols-3"
         >
             {move || {
                 ctx.games.get().into_iter().map(|game| view! { <GameRow game /> }).collect_view()

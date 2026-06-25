@@ -1,5 +1,5 @@
 use crate::{
-    common::RatingChangeInfo,
+    common::{with_class, RatingChangeInfo},
     components::{
         atoms::{
             download_pgn::DownloadPgn,
@@ -139,7 +139,10 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
         }
     };
     view! {
-        <article class="flex relative flex-col w-full duration-300 min-h-[10rem] sm:min-h-[14rem] dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
+        <article class=with_class(
+            "ui-game-row",
+            "relative flex min-h-[10rem] w-full flex-col sm:min-h-[14rem]",
+        )>
             <div class="flex justify-between items-start m-2">
                 <div class="flex flex-col gap-1">
                     <p class="flex gap-1 truncate">{rated_string} <TimeRow time_info /></p>
@@ -150,17 +153,20 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
                 </div>
             </div>
 
-            <div class="flex flex-1 gap-4">
-                <div class="flex-shrink-0 w-1/3 sm:w-2/5 max-w-[150px]">
+            <div class="flex flex-1 gap-4 min-h-0">
+                <div class="overflow-hidden flex-shrink-0 w-1/3 sm:w-2/5 max-w-[150px]">
                     <ThumbnailPieces board=StoredValue::new(board) />
                 </div>
                 <div class="flex flex-col flex-1 min-w-0">
                     <Show when=move || { is_tournament }>
-                        <div class="flex pb-1 mb-1 border-b border-gray-200 md:place-content-center dark:border-gray-700">
+                        <div class=with_class(
+                            "ui-divider-bottom",
+                            "mb-1 flex pb-1 md:place-content-center",
+                        )>
                             <p class="flex gap-1 text-sm truncate">
                                 {t!(i18n, game.played_in)}
                                 <a
-                                    class="relative z-30 text-blue-500 hover:underline truncate"
+                                    class="relative z-30 ui-text-link truncate"
                                     href=format!("/tournament/{}", tournament_id)
                                 >
                                     {tournament_name.clone()}

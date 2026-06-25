@@ -1,6 +1,7 @@
 use leptos::prelude::*;
 
-const STYLE: &str = "block mt-2 w-full rounded-lg hover:pillbug-teal accent-orange-twilight active:accent-pillbug-teal";
+const STYLE: &str =
+    "block mt-2 w-full cursor-pointer rounded-lg accent-pillbug-teal active:accent-orange-twilight";
 
 #[component]
 pub fn InputSlider(

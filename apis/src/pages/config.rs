@@ -1,11 +1,12 @@
 use crate::{
     components::{
         atoms::{rating::icon_for_speed, select_options::SelectOption},
+        layouts::page_shell::{PageShell, PageShellVariant},
+        molecules::panel::Panel,
         organisms::{
             background_color_toggle::BackgroundColorToggle,
             confirm_mode_toggle::ConfirmModeToggle,
-            darkmode_toggle::DarkModeToggle,
-            dropdowns::locale::LocaleDropdown,
+            darkmode_toggle::{DarkModeToggle, DarkModeToggleVariant},
             preselect_toggle::PreSelectToggle,
             preview_tiles::PreviewTiles,
             takeback_conf::TakebackConf,
@@ -26,129 +27,129 @@ pub fn Config() -> impl IntoView {
     let i18n = use_i18n();
     let game_speed = RwSignal::new(GameSpeed::Blitz);
     let icon = move || {
-        view! { <Icon width="50" height="50" attr:class="p-2" icon=icon_for_speed(game_speed()) /> }
+        view! { <Icon attr:class="size-8 text-pillbug-teal" icon=icon_for_speed(game_speed()) /> }
     };
     let toggle = move || {
         let game_speed = game_speed();
         view! { <ConfirmModeToggle game_speed /> }
     };
     view! {
-        <div class="pb-20 mx-auto max-w-md pt-page">
-            // Board and Tiles Card
-            <div class="px-8 pt-6 pb-8 mb-6 rounded-lg border shadow-lg bg-stone-300 border-stone-400 dark:bg-slate-800 dark:border-slate-600">
-                <h2 class="mb-4 text-xl font-bold text-center text-purple-600 dark:text-purple-400">
-                    "🎯 Board and Tiles"
-                </h2>
-
-                <TileDesignToggle />
-                <TileRotationToggle />
-                <TileDotsToggle />
-                <BackgroundColorToggle />
-                <h2 class="mb-4 text-xl font-bold text-center text-orange-600 dark:text-orange-400">
-                    "👁️ " {t!(i18n, user_config.preview)}
-                </h2>
-                <PreviewTiles />
-            </div>
-
-            // Takeback Settings Card
-            <div class="px-8 pt-6 pb-8 mb-6 rounded-lg border shadow-lg bg-stone-300 border-stone-400 dark:bg-slate-800 dark:border-slate-600">
-                <h2 class="mb-4 text-xl font-bold text-center text-blue-600 dark:text-blue-400">
-                    "↩️ Allow Takebacks"
-                </h2>
-
-                <div class="p-4 mb-4 bg-amber-50 rounded-lg border border-amber-200 dark:border-amber-700 dark:bg-amber-900/30">
-                    <p class="text-sm text-amber-700 dark:text-amber-300">
-                        "⚠️ If either player in a game has takebacks disabled, it will no longer be possible to ask for takebacks via the game controls panel."
-                    </p>
+        <PageShell variant=PageShellVariant::Dashboard>
+            <div class="flex flex-col gap-6 mx-auto w-full max-w-7xl">
+                <div class="flex flex-col gap-1">
+                    <h1 class="ui-page-title">"Settings"</h1>
+                    <p class="ui-page-subtitle">"Tune board visuals and move input preferences."</p>
                 </div>
 
-                <TakebackConf />
-            </div>
+                <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,24rem)]">
+                    <Panel title="Board Appearance" class="h-full" body_class="space-y-4">
+                        <div class="ui-setting-group">
+                            <TileDesignToggle />
+                        </div>
+                        <div class="grid gap-4 lg:items-start lg:grid-cols-[minmax(0,1fr)_22rem]">
+                            <div class="space-y-4">
+                                <div class="ui-setting-group">
+                                    <div class="grid gap-4 sm:grid-cols-2 sm:items-start">
+                                        <TileRotationToggle />
+                                        <TileDotsToggle />
+                                    </div>
+                                </div>
+                                <div class="ui-setting-group">
+                                    <div class="grid gap-4 xs:grid-cols-2 xs:items-start">
+                                        <div class="flex flex-col gap-2">
+                                            <p class="ui-field-label">
+                                                {t!(i18n, user_config.color_scheme)}
+                                            </p>
+                                            <DarkModeToggle variant=DarkModeToggleVariant::Button />
+                                        </div>
+                                        <BackgroundColorToggle />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex flex-col order-first gap-2 lg:order-none ui-setting-group">
+                                <p class="ui-field-label">{t!(i18n, user_config.preview)}</p>
+                                <PreviewTiles />
+                            </div>
+                        </div>
+                    </Panel>
 
-            <div class="px-8 pt-6 pb-8 mb-6 rounded-lg border shadow-lg bg-stone-300 border-stone-400 dark:bg-slate-800 dark:border-slate-600">
-                <h2 class="mb-4 text-xl font-bold text-center text-teal-600 dark:text-teal-400">
-                    "🌐 " {t!(i18n, user_config.language)}
-                </h2>
-                <div class="flex justify-center">
-                    <LocaleDropdown />
+                    <Panel title="Play Preferences" class="h-full" body_class="space-y-4">
+                        <div class="ui-setting-group">
+                            <label class="flex flex-col gap-1.5">
+                                <span class="ui-field-label">
+                                    {t!(i18n, user_config.game_speed)}
+                                </span>
+                                <div class="flex gap-3 items-center">
+                                    {icon}
+                                    <select
+                                        class="ui-field-select"
+                                        name="Game Speed"
+                                        on:change=move |ev| {
+                                            if let Ok(new_value) = GameSpeed::from_str(
+                                                &event_target_value(&ev),
+                                            ) {
+                                                game_speed.update(|v| *v = new_value);
+                                            }
+                                        }
+                                    >
+                                        <SelectOption
+                                            value=game_speed
+                                            is="Bullet"
+                                            text=t!(i18n, game.speeds.bullet)
+                                        />
+                                        <SelectOption
+                                            value=game_speed
+                                            is="Blitz"
+                                            text=t!(i18n, game.speeds.blitz)
+                                        />
+                                        <SelectOption
+                                            value=game_speed
+                                            is="Rapid"
+                                            text=t!(i18n, game.speeds.rapid)
+                                        />
+                                        <SelectOption
+                                            value=game_speed
+                                            is="Classic"
+                                            text=t!(i18n, game.speeds.classic)
+                                        />
+                                        <SelectOption
+                                            value=game_speed
+                                            is="Correspondence"
+                                            text=t!(i18n, game.speeds.correspondence)
+                                        />
+                                        <SelectOption
+                                            value=game_speed
+                                            is="Untimed"
+                                            text=t!(i18n, game.speeds.untimed)
+                                        />
+                                    </select>
+                                </div>
+                            </label>
+                            <div class="mt-4">{toggle}</div>
+                        </div>
+
+                        <div class="grid gap-4 lg:grid-cols-2 xl:grid-cols-1">
+                            <div class="ui-setting-group">
+                                <div class="flex flex-col gap-2">
+                                    <p class="ui-field-label">"Preselect"</p>
+                                    <p class="ui-field-helper">
+                                        "Allow selecting a piece during the opponent's turn."
+                                    </p>
+                                    <PreSelectToggle />
+                                </div>
+                            </div>
+                            <div class="ui-setting-group">
+                                <div class="flex flex-col gap-3">
+                                    <TakebackConf />
+                                    <p class="ui-field-helper">
+                                        "If either player has takebacks disabled, game controls will not allow takeback requests."
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </Panel>
                 </div>
             </div>
-
-            // Game Speed & Confirmation Card
-            <div class="px-8 pt-6 pb-8 mb-6 rounded-lg border shadow-lg bg-stone-300 border-stone-400 dark:bg-slate-800 dark:border-slate-600">
-                <h2 class="mb-4 text-xl font-bold text-center text-green-600 dark:text-green-400">
-                    "⚡ Game Speed & Confirmation"
-                </h2>
-
-                <label class="mr-1">
-                    <div class="flex flex-wrap items-center">
-                        {icon} <p>{t!(i18n, user_config.game_speed)}</p>
-                    </div>
-                    <select
-                        class="dark:bg-gray-700 bg-odd-light"
-                        name="Game Speed"
-                        on:change=move |ev| {
-                            if let Ok(new_value) = GameSpeed::from_str(&event_target_value(&ev)) {
-                                game_speed.update(|v| *v = new_value);
-                            }
-                        }
-                    >
-                        <SelectOption
-                            value=game_speed
-                            is="Bullet"
-                            text=t!(i18n, game.speeds.bullet)
-                        />
-                        <SelectOption
-                            value=game_speed
-                            is="Blitz"
-                            text=t!(i18n, game.speeds.blitz)
-                        />
-                        <SelectOption
-                            value=game_speed
-                            is="Rapid"
-                            text=t!(i18n, game.speeds.rapid)
-                        />
-                        <SelectOption
-                            value=game_speed
-                            is="Classic"
-                            text=t!(i18n, game.speeds.classic)
-                        />
-                        <SelectOption
-                            value=game_speed
-                            is="Correspondence"
-                            text=t!(i18n, game.speeds.correspondence)
-                        />
-                        <SelectOption
-                            value=game_speed
-                            is="Untimed"
-                            text=t!(i18n, game.speeds.untimed)
-                        />
-                    </select>
-                </label>
-                {toggle}
-            </div>
-
-            // Preselect Card
-            <div class="px-8 pt-6 pb-8 mb-6 rounded-lg border shadow-lg bg-stone-300 border-stone-400 dark:bg-slate-800 dark:border-slate-600">
-                <h2 class="mb-4 text-xl font-bold text-center text-purple-600 dark:text-purple-400">
-                    "🚀 Allow Preselect"
-                </h2>
-                <p class="mb-3 text-sm text-gray-700 dark:text-gray-300">
-                    "Enables selecting a piece on opponent turn to move faster"
-                </p>
-                <PreSelectToggle />
-            </div>
-
-            // Color Scheme Card
-            <div class="px-8 pt-6 pb-8 mb-4 rounded-lg border shadow-lg bg-stone-300 border-stone-400 dark:bg-slate-800 dark:border-slate-600">
-                <h2 class="mb-4 text-xl font-bold text-center text-indigo-600 dark:text-indigo-400">
-                    "🎨 " {t!(i18n, user_config.color_scheme)}
-                </h2>
-                <p class="mb-3 text-sm text-gray-700 dark:text-gray-300">
-                    "Switch between light and dark themes for better visibility"
-                </p>
-                <DarkModeToggle />
-            </div>
-        </div>
+        </PageShell>
     }
 }

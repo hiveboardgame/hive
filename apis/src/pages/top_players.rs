@@ -1,7 +1,13 @@
 use leptos::prelude::*;
 use shared_types::GameSpeed;
 
-use crate::components::{molecules::banner::Banner, organisms::leaderboard::Leaderboard};
+use crate::components::{
+    layouts::{
+        page_header::PageHeader,
+        page_shell::{PageShell, PageShellVariant},
+    },
+    organisms::leaderboard::Leaderboard,
+};
 
 #[component]
 pub fn TopPlayers() -> impl IntoView {
@@ -12,11 +18,13 @@ pub fn TopPlayers() -> impl IntoView {
         })
         .collect_view();
     view! {
-        <div class="flex flex-col items-center pt-page">
-            <Banner title="Top Rated Players" extend_tw_classes="w-10/12" />
-            <div class="flex flex-col flex-wrap gap-1 justify-center items-center w-full md:flex-row">
-                {leaderboards}
+        <PageShell variant=PageShellVariant::Dashboard>
+            <div class="flex flex-col gap-6 mx-auto w-full max-w-[114rem]">
+                <PageHeader title="Top Rated Players" subtitle="Highest rated players by speed." />
+                <div class="flex flex-col flex-wrap gap-3 items-center w-full md:flex-row md:items-start">
+                    {leaderboards}
+                </div>
             </div>
-        </div>
+        </PageShell>
     }
 }

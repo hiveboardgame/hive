@@ -29,16 +29,13 @@ pub fn BackgroundColorToggle() -> impl IntoView {
         });
     };
 
-    // Auto-update background color when switching themes (if using default colors)
     Effect::watch(
         move || config().prefers_dark,
         move |is_dark_mode, prev_dark_mode, _| {
-            // Only update if theme actually changed (not on initial load)
             if let Some(prev) = prev_dark_mode {
                 if *is_dark_mode != *prev {
                     set_cookie.update(|c| {
                         if let Some(cookie) = c {
-                            // Only update if using default colors, not custom colors
                             if !cookie.tile.is_using_custom_background(*is_dark_mode) {
                                 cookie.tile.background_color = None;
                             }
@@ -51,23 +48,22 @@ pub fn BackgroundColorToggle() -> impl IntoView {
     );
 
     view! {
-        <div class="mb-4">
-            <p class="m-1 text-black dark:text-white">{t!(i18n, user_config.background_color)}</p>
+        <div class="flex flex-col gap-2">
+            <p class="ui-field-label">{t!(i18n, user_config.background_color)}</p>
 
             <div class="flex gap-2 items-center">
                 <input
                     type="color"
                     prop:value=current_color
                     on:input=handle_color_change
-                    class="w-16 h-10 bg-transparent rounded border cursor-pointer"
+                    class="p-1 w-16 h-10 bg-transparent rounded-lg border shadow-sm cursor-pointer border-black/10 dark:border-white/10"
                     title=move || t_string!(i18n, user_config.background_color)
                 />
 
-                // Reset button - only show when using custom color
                 <Show when=is_using_custom>
                     <button
                         on:click=reset_to_default
-                        class="py-2 px-3 text-sm bg-gray-200 rounded transition-colors duration-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+                        class="ui-button ui-button-secondary ui-button-sm"
                         title="Reset to default"
                     >
                         "Reset"
@@ -75,10 +71,7 @@ pub fn BackgroundColorToggle() -> impl IntoView {
                 </Show>
             </div>
 
-            // Show current color value for reference
-            <div class="mt-1 text-xs text-gray-600 dark:text-gray-400">
-                {move || format!("Current: {}", current_color())}
-            </div>
+            <div class="ui-field-helper">{move || format!("Current: {}", current_color())}</div>
         </div>
     }
 }

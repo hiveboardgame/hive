@@ -6,7 +6,7 @@ use crate::{
     responses::GameResponse,
 };
 use bimap::BiMap;
-use hive_lib::{GameError, GameType, History, State};
+use hive_lib::{Color, GameError, GameType, History, State};
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, vec};
@@ -24,7 +24,42 @@ pub struct TreeNode {
 }
 
 #[derive(Clone, Copy)]
-pub struct AnalysisSignal(pub RwSignal<AnalysisTree>);
+pub struct AnalysisSignal {
+    pub tree: RwSignal<AnalysisTree>,
+    pub sync_reserve: Callback<Color>,
+    pub hold_reserve_sync: Callback<()>,
+    pub sync_reserve_later: Callback<Color>,
+}
+
+impl AnalysisSignal {
+    pub fn new(
+        tree: AnalysisTree,
+        sync_reserve: Callback<Color>,
+        hold_reserve_sync: Callback<()>,
+        sync_reserve_later: Callback<Color>,
+    ) -> Self {
+        Self {
+            tree: RwSignal::new(tree),
+            sync_reserve,
+            hold_reserve_sync,
+            sync_reserve_later,
+        }
+    }
+
+    pub fn sync_reserve_from_game_state(&self, game_state: GameStateSignal) {
+        self.sync_reserve.run(turn_color(game_state));
+    }
+
+    pub fn sync_reserve_later_from_game_state(&self, game_state: GameStateSignal) {
+        self.sync_reserve_later.run(turn_color(game_state));
+    }
+}
+
+fn turn_color(game_state: GameStateSignal) -> Color {
+    game_state
+        .signal
+        .with_untracked(|game_state| game_state.state.turn_color)
+}
 
 /// Annotation key for the root (no current node); real node ids are `>= 0`.
 pub const ANALYSIS_ROOT_KEY: i32 = START_NODE_ID;
@@ -317,6 +352,7 @@ impl AnalysisTree {
         };
         let state = State::new_from_history(&history)?;
 
+        game_state.full_reset();
         game_state.signal.update(|gs| {
             gs.state = state.clone();
             gs.view = game_state::View::Game;

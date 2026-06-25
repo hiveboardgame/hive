@@ -1,5 +1,11 @@
 use crate::{
-    components::molecules::tournament_row::TournamentRow,
+    components::{
+        layouts::{
+            page_header::PageHeader,
+            page_shell::{PageShell, PageShellVariant},
+        },
+        molecules::{empty_state::EmptyState, panel::Panel, tournament_row::TournamentRow},
+    },
     functions::tournaments::{get_by_status, get_hosting_tournaments, get_joined_tournaments},
     providers::AuthContext,
     responses::TournamentAbstractResponse,
@@ -8,15 +14,14 @@ use leptos::{either::Either, prelude::*};
 use leptos_router::hooks::use_location;
 use shared_types::{TournamentSortOrder, TournamentStatus};
 
-fn get_button_classes(current_path: &str, target_path: &str) -> String {
-    let base_classes = "no-link-style px-4 py-2 rounded";
+fn tournament_tab_class(current_path: &str, target_path: &str) -> &'static str {
     let is_active = current_path == target_path
         || (current_path == "/tournaments" && target_path == "/tournaments/future");
 
     if is_active {
-        format!("{base_classes} bg-blue-500 text-white hover:bg-blue-600")
+        "ui-button ui-button-primary ui-button-md no-link-style"
     } else {
-        format!("{base_classes} font-bold text-white hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 bg-button-dawn dark:bg-button-twilight")
+        "ui-button ui-button-secondary ui-button-md no-link-style"
     }
 }
 
@@ -27,12 +32,16 @@ pub fn Tournaments(children: Children) -> impl IntoView {
     let logged_in = move || auth_context.user.with(|a| a.is_some());
 
     view! {
-        <div class="pt-header">
-            <div class="container flex flex-col items-center px-4 mx-auto">
-                <div class="flex flex-wrap gap-1 justify-center content-center m-4 w-full">
+        <PageShell variant=PageShellVariant::Dashboard>
+            <div class="flex flex-col gap-4 w-full max-w-5xl">
+                <PageHeader
+                    title="Tournaments"
+                    subtitle="Browse upcoming, active, and completed tournaments."
+                />
+                <div class="flex flex-wrap gap-2">
                     <a
                         href="/tournaments/future"
-                        class=move || get_button_classes(
+                        class=move || tournament_tab_class(
                             &location.pathname.get(),
                             "/tournaments/future",
                         )
@@ -41,7 +50,7 @@ pub fn Tournaments(children: Children) -> impl IntoView {
                     </a>
                     <a
                         href="/tournaments/inprogress"
-                        class=move || get_button_classes(
+                        class=move || tournament_tab_class(
                             &location.pathname.get(),
                             "/tournaments/inprogress",
                         )
@@ -50,7 +59,7 @@ pub fn Tournaments(children: Children) -> impl IntoView {
                     </a>
                     <a
                         href="/tournaments/finished"
-                        class=move || get_button_classes(
+                        class=move || tournament_tab_class(
                             &location.pathname.get(),
                             "/tournaments/finished",
                         )
@@ -60,7 +69,7 @@ pub fn Tournaments(children: Children) -> impl IntoView {
                     <Show when=logged_in>
                         <a
                             href="/tournaments/joined"
-                            class=move || get_button_classes(
+                            class=move || tournament_tab_class(
                                 &location.pathname.get(),
                                 "/tournaments/joined",
                             )
@@ -69,7 +78,7 @@ pub fn Tournaments(children: Children) -> impl IntoView {
                         </a>
                         <a
                             href="/tournaments/hosting"
-                            class=move || get_button_classes(
+                            class=move || tournament_tab_class(
                                 &location.pathname.get(),
                                 "/tournaments/hosting",
                             )
@@ -80,7 +89,7 @@ pub fn Tournaments(children: Children) -> impl IntoView {
                 </div>
                 {children()}
             </div>
-        </div>
+        </PageShell>
     }
 }
 
@@ -91,16 +100,16 @@ pub fn TournamentList(
     let search = RwSignal::new(String::new());
 
     view! {
-        <div class="flex flex-col items-center w-full">
+        <Panel body_class="space-y-4" class="w-full">
             <input
                 type="text"
-                class="items-center p-2 my-2 mx-2 w-5/6"
+                class="ui-field-input"
                 placeholder="Search tournaments by name"
                 on:input=move |ev| search.set(event_target_value(&ev))
                 prop:value=search
             />
             <Transition fallback=move || {
-                view! { <div class="flex justify-center">"Loading tournaments..."</div> }
+                view! { <EmptyState title="Loading tournaments..." /> }
             }>
                 {move || {
                     tournament_resource
@@ -108,7 +117,7 @@ pub fn TournamentList(
                         .map(|tournaments| {
                             match tournaments {
                                 Ok(tournaments) => {
-                                    let search_term = search.get();
+                                    let search_term = search.get().to_lowercase();
                                     Either::Left(
 
                                         view! {
@@ -118,10 +127,7 @@ pub fn TournamentList(
                                                         .iter()
                                                         .filter(|t| {
                                                             search_term.is_empty()
-                                                                || t
-                                                                    .name
-                                                                    .to_lowercase()
-                                                                    .contains(&search_term.to_lowercase())
+                                                                || t.name.to_lowercase().contains(&search_term)
                                                         })
                                                         .cloned()
                                                         .collect::<Vec<_>>()
@@ -136,18 +142,14 @@ pub fn TournamentList(
                                 }
                                 Err(_) => {
                                     Either::Right(
-                                        view! {
-                                            <div class="flex justify-center">
-                                                "Error loading tournaments"
-                                            </div>
-                                        },
+                                        view! { <EmptyState title="Error loading tournaments" /> },
                                     )
                                 }
                             }
                         })
                 }}
             </Transition>
-        </div>
+        </Panel>
     }
 }
 

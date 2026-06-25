@@ -66,13 +66,13 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
 
             class=move || {
                 format!(
-                    "flex place-content-center transform transition-transform duration-300 active:scale-95 hover:bg-pillbug-teal dark:hover:bg-pillbug-teal {}",
+                    "ui-board-tab-trigger cursor-pointer {}",
                     if tab() == name {
-                        "dark:bg-button-twilight bg-slate-400"
+                        "ui-segmented-active hover:bg-button-dawn dark:hover:bg-button-twilight"
                     } else if name == TabView::Chat && chat.has_messages(game_id()) {
-                        "bg-ladybug-red"
+                        "ui-button-danger hover:bg-ladybug-red"
                     } else {
-                        "bg-inherit"
+                        "hover:bg-blue-light/70 dark:hover:bg-pillbug-teal/15"
                     },
                 )
             }
@@ -88,7 +88,6 @@ pub fn SideboardTabs(
     tab: RwSignal<TabView>,
     interaction: HivegroundInteraction,
     history_state: Memo<HiveState>,
-    #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let auth_context = expect_context::<AuthContext>();
@@ -101,27 +100,25 @@ pub fn SideboardTabs(
         })
     });
     view! {
-        <div class=format!(
-            "bg-reserve-dawn dark:bg-reserve-twilight h-full flex flex-col select-none col-span-2 border-x-2 border-black dark:border-white row-span-4 row-start-2 relative {extend_tw_classes}",
-        )>
+        <div class="flex relative flex-col col-span-2 row-span-4 row-start-2 h-full min-h-0 select-none ui-board-side-panel">
 
             <div>
-                <div class="flex sticky top-0 z-10 justify-between border-b-2 border-black dark:border-white [&>*]:grow bg-inherit">
+                <div class="sticky top-0 z-10 ui-board-tab-list">
                     <TriggerButton name=TabView::Reserve tab />
                     <TriggerButton name=TabView::History tab />
                     <TriggerButton name=TabView::Chat tab />
                 </div>
             </div>
-            <TabsContent value=TabView::Reserve class="flex flex-col h-full" tab>
+            <TabsContent value=TabView::Reserve class="flex flex-col h-full min-h-0" tab>
                 <ReserveContent player_color show_buttons interaction history_state />
             </TabsContent>
-            <TabsContent value=TabView::History class="h-full" tab>
+            <TabsContent value=TabView::History class="h-full min-h-0" tab>
                 <History interaction history_state />
             </TabsContent>
             <TabsContent
                 tab
                 value=TabView::Chat
-                class="flex flex-col flex-grow h-full max-h-full justify-beetween"
+                class="flex flex-col flex-grow justify-between h-full min-h-0 max-h-full"
             >
                 <HistoryControls interaction history_state />
                 <ChatWindow destination=SimpleDestination::Game />

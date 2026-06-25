@@ -1,5 +1,9 @@
 use crate::{
-    components::update_from_event::update_from_input,
+    components::{
+        layouts::page_shell::{PageShell, PageShellVariant},
+        molecules::page_card::PageCard,
+        update_from_event::update_from_input,
+    },
     functions::{auth::register::Register, users::username_taken},
     i18n::*,
     providers::{AuthContext, RefererContext},
@@ -11,7 +15,7 @@ use web_sys::Event;
 const VALID_USERNAME_CHARS: &str = "-_";
 
 #[component]
-pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
+pub fn Register() -> impl IntoView {
     let i18n = use_i18n();
     let auth_context = expect_context::<AuthContext>();
     let username_taken = Action::new(|user: &String| {
@@ -69,152 +73,183 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
     let conditionally_disable =
         move || !agree() || username_exists() || pw_invalid() || is_invalid_email();
     let register = ServerAction::<Register>::new();
+    let register_value = register.value();
     let email_ref = NodeRef::<html::Input>::new();
     let display_register_error = move || register.value().get().is_some_and(|v| v.is_err());
     Effect::watch(
         register.version(),
-        move |_, _, _| auth_context.refresh(true),
+        move |_, _, _| {
+            if register_value
+                .get_untracked()
+                .is_some_and(|result| result.is_ok())
+            {
+                auth_context.refresh(true);
+            }
+        },
         false,
     );
     view! {
-        <div class=format!("w-full max-w-xs mx-auto pt-page {extend_tw_classes}")>
-            <ActionForm
-                action=register
-                attr:class="px-8 pt-6 pb-8 mb-4 rounded shadow-md bg-inherit bg-stone-300 dark:bg-slate-800"
-            >
-                <label class="block mb-2">
-                    <p class="font-bold">{t!(i18n, user_config.create_account.username.title)}</p>
-                    <input
-                        on:input=validate_username
-                        node_ref=my_input
-                        class="py-2 px-3 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
-                        name="username"
-                        type="text"
-                        prop:value=username
-                        autocomplete="username"
-                        placeholder=move || {
-                            t_string!(i18n, user_config.create_account.username.title)
-                        }
-                        minlength="2"
-                        maxlength="20"
-                    />
-                    <Show when=username_exists>
-                        <small class="text-ladybug-red">
-                            {t!(i18n, user_config.create_account.username.error.taken)}
-                        </small>
-                    </Show>
-                    <Show when=has_invalid_char>
-                        <small class="text-ladybug-red">
-                            {t!(i18n, user_config.create_account.username.error.invalid)}
-                        </small>
-                    </Show>
-                    <br />
-                    <small>{t!(i18n, user_config.create_account.username.description)}</small>
-                </label>
-                <label class="mb-2">
-                    <p class="font-bold">Email</p>
-                    <input
-                        node_ref=email_ref
-                        on:input=debounce(
-                            Duration::from_millis(350),
-                            move |evt| {
-                                if email_ref.get().is_some_and(|e| !e.check_validity()) {
-                                    is_invalid_email.set(true);
-                                } else {
-                                    is_invalid_email.set(false);
-                                }
-                                email.update(|v| v.clone_from(&event_target_value(&evt)));
-                            },
-                        )
-                        class="py-2 px-3 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
-                        name="email"
-                        type="email"
-                        inputmode="email"
-                        prop:value=email
-                        autocomplete="email"
-                        on:invalid=move |_| is_invalid_email.set(true)
-                        placeholder=move || {
-                            t_string!(i18n, user_config.create_account.email.description)
-                        }
-                    />
-                    <Show when=is_invalid_email>
-                        <small class="text-ladybug-red">
-                            {t!(i18n, user_config.create_account.email.error.invalid)}
-                        </small>
-                    </Show>
-                    <br />
-                    <small>{t!(i18n, user_config.create_account.email.description)}</small>
-                </label>
-                <label>
-                    <p class="font-bold">{t!(i18n, user_config.create_account.password)}</p>
-                    <input
-                        on:input=debounce(Duration::from_millis(350), update_from_input(pw))
-                        class="py-2 px-3 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
-                        name="password"
-                        type="password"
-                        prop:value=pw
-                        autocomplete="new-password"
-                        placeholder=move || t_string!(i18n, user_config.create_account.password)
-                        minlength="8"
-                        maxlength="128"
-                    />
-                </label>
-                <small>{t!(i18n, user_config.create_account.password_requirements)}</small>
-                <label>
-                    <p class="font-bold">{t!(i18n, user_config.create_account.confirm_password)}</p>
-                    <input
-                        on:input=debounce(Duration::from_millis(350), update_from_input(pw_confirm))
-                        class="py-2 px-3 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
-                        name="password_confirmation"
-                        type="password"
-                        prop:value=pw_confirm
-                        autocomplete="new-password"
-                        placeholder=move || t_string!(i18n, user_config.create_account.password)
-                        minlength="8"
-                        maxlength="128"
-                    />
-                </label>
-                <Show when=move || pw_invalid() && (!pw().is_empty())>
-                    <small class="text-ladybug-red">
-                        {t!(i18n, user_config.create_account.password_error)}
-                    </small>
-                </Show>
-                <input type="hidden" name="pathname" value=pathname.get_value() />
-                <div class="flex items-center mb-2">
-                    <input
-                        on:change=move |_| agree.update(|b| *b = !*b)
-                        type="checkbox"
-                        class="text-blue-600 bg-gray-100 rounded border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:ring-offset-gray-800 focus:ring-2 focus:ring-blue-500 size-4 dark:focus:ring-blue-600"
-                        prop:value=agree
-                    />
-                    <label
-                        for="agree-checkbox"
-                        class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300"
-                    >
-                        {t!(i18n, user_config.create_account.be_nice_checkbox)}
-                    </label>
-                </div>
-                <input
-                    type="submit"
-                    disabled=conditionally_disable
-                    class="py-2 px-4 font-bold text-white rounded transition-transform duration-300 cursor-pointer focus:outline-none active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
-                    value=move || t_string!(i18n, user_config.create_account.signup_button)
-                />
-                <Show when=display_register_error>
-                    <small class="text-ladybug-red">
-                        {t!(i18n, user_config.create_account.registration_error)}
-                    </small>
-                </Show>
-            </ActionForm>
+        <PageShell variant=PageShellVariant::Form>
+            <PageCard class="p-6 sm:p-8">
+                <ActionForm action=register attr:class="space-y-4">
+                    <div class="flex flex-col gap-1">
+                        <h1 class="ui-page-title">
+                            {t!(i18n, user_config.create_account.signup_button)}
+                        </h1>
+                        <p class="ui-page-subtitle">
+                            "Create an account to play and join tournaments."
+                        </p>
+                    </div>
 
-            <p class="text-xs text-center text-gray-500">
+                    <label class="flex flex-col gap-1.5">
+                        <span class="ui-field-label">
+                            {t!(i18n, user_config.create_account.username.title)}
+                        </span>
+                        <input
+                            on:input=validate_username
+                            node_ref=my_input
+                            class="ui-field-input"
+                            name="username"
+                            type="text"
+                            prop:value=username
+                            autocomplete="username"
+                            placeholder=move || {
+                                t_string!(i18n, user_config.create_account.username.title)
+                            }
+                            minlength="2"
+                            maxlength="20"
+                        />
+                        <Show when=username_exists>
+                            <small class="ui-field-error">
+                                {t!(i18n, user_config.create_account.username.error.taken)}
+                            </small>
+                        </Show>
+                        <Show when=has_invalid_char>
+                            <small class="ui-field-error">
+                                {t!(i18n, user_config.create_account.username.error.invalid)}
+                            </small>
+                        </Show>
+                        <small class="ui-field-helper">
+                            {t!(i18n, user_config.create_account.username.description)}
+                        </small>
+                    </label>
+                    <label class="flex flex-col gap-1.5">
+                        <span class="ui-field-label">"Email"</span>
+                        <input
+                            node_ref=email_ref
+                            on:input=debounce(
+                                Duration::from_millis(350),
+                                move |evt| {
+                                    if email_ref.get().is_some_and(|e| !e.check_validity()) {
+                                        is_invalid_email.set(true);
+                                    } else {
+                                        is_invalid_email.set(false);
+                                    }
+                                    email.update(|v| v.clone_from(&event_target_value(&evt)));
+                                },
+                            )
+                            class="ui-field-input"
+                            name="email"
+                            type="email"
+                            inputmode="email"
+                            prop:value=email
+                            autocomplete="email"
+                            on:invalid=move |_| is_invalid_email.set(true)
+                            placeholder=move || {
+                                t_string!(i18n, user_config.create_account.email.description)
+                            }
+                        />
+                        <Show when=is_invalid_email>
+                            <small class="ui-field-error">
+                                {t!(i18n, user_config.create_account.email.error.invalid)}
+                            </small>
+                        </Show>
+                        <small class="ui-field-helper">
+                            {t!(i18n, user_config.create_account.email.description)}
+                        </small>
+                    </label>
+                    <label class="flex flex-col gap-1.5">
+                        <span class="ui-field-label">
+                            {t!(i18n, user_config.create_account.password)}
+                        </span>
+                        <input
+                            on:input=debounce(Duration::from_millis(350), update_from_input(pw))
+                            class="ui-field-input"
+                            name="password"
+                            type="password"
+                            prop:value=pw
+                            autocomplete="new-password"
+                            placeholder=move || t_string!(i18n, user_config.create_account.password)
+                            minlength="8"
+                            maxlength="128"
+                        />
+                        <small class="ui-field-helper">
+                            {t!(i18n, user_config.create_account.password_requirements)}
+                        </small>
+                    </label>
+                    <label class="flex flex-col gap-1.5">
+                        <span class="ui-field-label">
+                            {t!(i18n, user_config.create_account.confirm_password)}
+                        </span>
+                        <input
+                            on:input=debounce(
+                                Duration::from_millis(350),
+                                update_from_input(pw_confirm),
+                            )
+                            class="ui-field-input"
+                            name="password_confirmation"
+                            type="password"
+                            prop:value=pw_confirm
+                            autocomplete="new-password"
+                            placeholder=move || t_string!(i18n, user_config.create_account.password)
+                            minlength="8"
+                            maxlength="128"
+                        />
+                    </label>
+                    <Show when=move || pw_invalid() && (!pw().is_empty())>
+                        <small class="ui-field-error">
+                            {t!(i18n, user_config.create_account.password_error)}
+                        </small>
+                    </Show>
+                    <input type="hidden" name="pathname" value=pathname.get_value() />
+                    <div class="flex gap-2 items-start">
+                        <input
+                            id="agree-checkbox"
+                            on:change=move |_| agree.update(|b| *b = !*b)
+                            type="checkbox"
+                            class="rounded focus:ring-2 size-4 border-black/20 bg-even-light text-pillbug-teal dark:border-white/20 dark:bg-surface-field focus:ring-pillbug-teal/40"
+                            prop:checked=agree
+                        />
+                        <label
+                            for="agree-checkbox"
+                            class="text-sm font-medium text-gray-900 dark:text-gray-300"
+                        >
+                            {t!(i18n, user_config.create_account.be_nice_checkbox)}
+                        </label>
+                    </div>
+                    <button
+                        type="submit"
+                        disabled=conditionally_disable
+                        class="w-full ui-button ui-button-primary ui-button-md"
+                    >
+                        {move || t_string!(i18n, user_config.create_account.signup_button)}
+                    </button>
+                    <Show when=display_register_error>
+                        <small class="ui-field-error">
+                            {t!(i18n, user_config.create_account.registration_error)}
+                        </small>
+                    </Show>
+                </ActionForm>
+            </PageCard>
+
+            <p class="text-xs text-center text-gray-500 dark:text-gray-400">
                 {t!(
                     i18n, user_config.create_account.existing_account_prompt,
                     < login_link > =
-                    <a class="text-blue-500 transition-transform duration-300 hover:underline" href="/login"/>
+                    <a class="ui-text-link" href="/login"/>
                 )}
             </p>
-        </div>
+        </PageShell>
     }
 }
 

@@ -11,12 +11,7 @@ pub fn TournamentStatusNotification(
 ) -> impl IntoView {
     let notifications = expect_context::<NotificationContext>();
     let tournament_id = StoredValue::new(tournament_id);
-    let div_class = "xs:py-1 xs:px-1 sm:py-2 sm:px-2";
-    let notification_text = format!(
-        "Tournament: {} {}",
-        tournament_name,
-        if !finished { "started" } else { "finished" }
-    );
+    let status = if !finished { "Started" } else { "Finished" };
     let dismiss = move |_| {
         if !finished {
             notifications.tournament_started.update(|t| {
@@ -30,25 +25,23 @@ pub fn TournamentStatusNotification(
     };
 
     view! {
-        <div class="flex justify-between items-center p-2 w-full text-center cursor-pointer dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light">
-            <div class="flex relative flex-grow">
-                <div class=div_class>
-                    <div>{notification_text}</div>
-                </div>
+        <div class="ui-notification-item">
+            <div class="relative flex-1 min-w-0">
+                <div class="ui-notification-label">Tournament</div>
+                <div class="ui-notification-title">{tournament_name}</div>
+                <div class="ui-notification-meta">{status}</div>
                 <a
                     class="absolute top-0 left-0 z-10 size-full"
                     href=format!("/tournament/{}", &tournament_id.get_value())
                 ></a>
             </div>
-            <div>
-                <button
-                    title="Dismiss"
-                    on:click=dismiss
-                    class="z-20 p-1 text-white rounded transition-transform duration-300 hover:bg-red-400 active:scale-95 bg-ladybug-red"
-                >
-                    <Icon icon=icondata_io::IoCloseSharp attr:class="size-6" />
-                </button>
-            </div>
+            <button
+                title="Dismiss"
+                on:click=dismiss
+                class="z-20 ui-button ui-button-danger ui-button-icon"
+            >
+                <Icon icon=icondata_io::IoCloseSharp attr:class="size-6" />
+            </button>
         </div>
     }
 }

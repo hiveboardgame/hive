@@ -1,5 +1,5 @@
 use crate::{
-    common::TournamentAction,
+    common::{with_class, TournamentAction},
     components::atoms::profile_link::ProfileLink,
     providers::{schedules::SchedulesContext, ApiRequestsProvider},
     responses::GameResponse,
@@ -8,8 +8,6 @@ use chrono::{DateTime, Duration, Local, Utc};
 use hive_lib::Color;
 use leptos::prelude::*;
 use shared_types::{GameStart, PrettyString, TournamentGameResult};
-
-pub const BUTTON_STYLE: &str = "no-link-style flex justify-center items-center min-w-fit px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
 
 #[component]
 pub fn UnplayedGameRow(
@@ -62,13 +60,16 @@ pub fn UnplayedGameRow(
     };
     let buttons_container_class = move || {
         if user_is_organizer() {
-            "flex flex-wrap gap-1 items-center m-1 h-fit md:min-w-[405px] justify-center md:grow md:justify-end"
+            "flex flex-wrap gap-2 items-center h-fit justify-center md:grow md:justify-end"
         } else {
-            "flex flex-wrap gap-1 items-center m-1 h-fit w-fit"
+            "flex flex-wrap gap-2 items-center h-fit w-fit"
         }
     };
     view! {
-        <div class="flex flex-col items-center p-3 w-full md:flex-row md:justify-between min-w-fit dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light">
+        <div class=with_class(
+            "ui-card-row",
+            "flex min-w-fit w-full flex-col items-center gap-3 p-3 md:flex-row md:justify-between",
+        )>
             <div class="flex flex-col flex-wrap gap-1 justify-between items-center sm:flex-row h-fit grow">
                 <div class="flex gap-1 items-center p-1">
                     <div class="flex shrink">
@@ -133,7 +134,10 @@ pub fn UnplayedGameRow(
                         {game
                             .with_value(|game| {
                                 view! {
-                                    <a class=BUTTON_STYLE href=format!("/game/{}", &game.game_id)>
+                                    <a
+                                        class="ui-button ui-button-primary ui-button-md no-link-style min-w-fit"
+                                        href=format!("/game/{}", &game.game_id)
+                                    >
                                         {if game.tournament_game_result
                                             == TournamentGameResult::Unknown
                                         {
@@ -155,32 +159,35 @@ pub fn UnplayedGameRow(
                         user_is_organizer() && !tournament_finished()
                             && game.with_value(|game| game.organizer_can_adjudicate())
                     }>
-                        <button class=BUTTON_STYLE on:click=toggle_adjudicate>
+                        <button
+                            class="ui-button ui-button-secondary ui-button-md min-w-fit"
+                            on:click=toggle_adjudicate
+                        >
                             {"Adjudicate"}
                         </button>
                     </Show>
                 </Show>
                 <Show when=move || show_adjudicate_menu() && !tournament_finished()>
                     <button
-                        class=BUTTON_STYLE
+                        class="ui-button ui-button-primary ui-button-md min-w-fit"
                         on:click=move |_| adjudicate(TournamentGameResult::Winner(Color::White))
                     >
                         {"White won"}
                     </button>
                     <button
-                        class=BUTTON_STYLE
+                        class="ui-button ui-button-primary ui-button-md min-w-fit"
                         on:click=move |_| adjudicate(TournamentGameResult::Winner(Color::Black))
                     >
                         {"Black won"}
                     </button>
                     <button
-                        class=BUTTON_STYLE
+                        class="ui-button ui-button-danger ui-button-md min-w-fit"
                         on:click=move |_| adjudicate(TournamentGameResult::DoubeForfeit)
                     >
                         {"Double forfeit"}
                     </button>
                     <button
-                        class=BUTTON_STYLE
+                        class="ui-button ui-button-secondary ui-button-md min-w-fit"
                         on:click=move |_| adjudicate(TournamentGameResult::Draw)
                     >
                         {"Draw"}
@@ -190,7 +197,7 @@ pub fn UnplayedGameRow(
                         fallback=move || {
                             view! {
                                 <button
-                                    class="flex justify-center items-center py-2 px-4 font-bold text-white rounded active:scale-95 bg-ladybug-red dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
+                                    class="ui-button ui-button-danger ui-button-md min-w-fit"
                                     on:click=toggle_adjudicate
                                 >
                                     {"Cancel"}
@@ -199,7 +206,7 @@ pub fn UnplayedGameRow(
                         }
                     >
                         <button
-                            class="flex justify-center items-center py-2 px-4 font-bold text-white rounded active:scale-95 bg-ladybug-red dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
+                            class="ui-button ui-button-danger ui-button-md min-w-fit"
                             on:click=move |_| adjudicate(TournamentGameResult::Unknown)
                         >
                             {"Delete"}

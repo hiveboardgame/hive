@@ -1,4 +1,5 @@
 use crate::{
+    common::with_class,
     components::molecules::hiveground_stacks::HivegroundStacks,
     hiveground::{build_static_render_model, HivegroundInteraction, HivegroundPaint},
     providers::Config,
@@ -15,7 +16,6 @@ pub fn PreviewTiles() -> impl IntoView {
     let paint = Memo::new(move |_| tile_opts.with(HivegroundPaint::new));
     let interaction = HivegroundInteraction::static_view();
 
-    // Background styling logic
     let background_style = Signal::derive(move || {
         let is_dark_mode = config().prefers_dark;
         format!(
@@ -28,11 +28,12 @@ pub fn PreviewTiles() -> impl IntoView {
         Signal::derive(move || config.with(|c| !c.tile.is_using_custom_background(c.prefers_dark)));
 
     let container_classes = Signal::derive(move || {
-        let base_classes = "flex relative flex-col items-center mx-1 my-2 w-72 h-36 rounded sm:h-40 sm:w-80 place-self-center";
+        let base_classes =
+            "flex relative flex-col items-center w-full max-w-72 h-auto aspect-[2/1] rounded-lg border border-black/10 shadow-sm place-self-center sm:max-w-80 dark:border-white/10";
         if is_using_custom() {
             base_classes.to_string()
         } else {
-            format!("{base_classes} dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light")
+            with_class("ui-card-row", base_classes)
         }
     });
 

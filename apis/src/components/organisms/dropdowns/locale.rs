@@ -1,8 +1,5 @@
 use crate::{
-    components::{
-        layouts::base_layout::{COMMON_LINK_STYLE, DROPDOWN_BUTTON_STYLE, DROPDOWN_MENU_STYLE},
-        molecules::hamburger::Hamburger,
-    },
+    components::molecules::hamburger::Hamburger,
     functions::accounts::edit::edit_lang,
     i18n::*,
     providers::AuthContext,
@@ -29,13 +26,14 @@ pub fn LocaleDropdown() -> impl IntoView {
     view! {
         <Hamburger
             hamburger_show=hamburger_show
-            button_style=DROPDOWN_BUTTON_STYLE
-            dropdown_style=DROPDOWN_MENU_STYLE
+            button_style="ui-header-dropdown-button"
+            extend_tw_classes="h-full"
+            dropdown_style="ui-dropdown-menu ui-dropdown-menu-left ui-header-dropdown-menu"
             id="locale_dropdown"
             content=move || i18n.get_locale().to_string()
         >
             <For each=Locale::get_all key=move |locale| locale.to_string() let:locale>
-                <a class=COMMON_LINK_STYLE on:click=move |_| onclick_close(*locale)>
+                <a class="ui-dropdown-link" on:click=move |_| onclick_close(*locale)>
                     {locale.to_string()}
                 </a>
             </For>

@@ -1,6 +1,6 @@
 {
     "page": {
-        "heading": "🔔 Notificări",
+        "heading": "Notificări",
         "intro_before_link": "Alege cum vrei să fii notificat pentru fiecare tip de eveniment. Notificările push ajung la browserele pe care le activezi mai jos. Configurarea Discord este în ",
         "account_link": "secțiunea Discord",
         "intro_after_link": " de mai jos.",
@@ -21,7 +21,7 @@
         "dms": "Mesaj direct"
     },
     "browser": {
-        "heading": "🌐 Acest browser",
+        "heading": "Acest browser",
         "body": "Primește în acest browser notificările push selectate mai sus, chiar și când nu este deschisă nicio filă HiveGame. Activează-le separat pe fiecare dispozitiv care vrei să fie notificat.",
         "enable": "Activează notificările browserului",
         "disable": "Dezactivează notificările browserului",
@@ -31,11 +31,11 @@
         "test_failed": "Testul a eșuat:"
     },
     "ios": {
-        "heading": "📱 Pe iPhone-ul sau iPad-ul tău",
+        "heading": "Pe iPhone-ul sau iPad-ul tău",
         "body": "Pentru a primi notificări pe iOS, adaugă HiveGame pe ecranul principal: apasă butonul Partajează, apoi «Adaugă pe ecranul principal» și deschide-l de acolo."
     },
     "devices": {
-        "heading": "📡 Dispozitivele tale",
+        "heading": "Dispozitivele tale",
         "body": "Toate dispozitivele configurate momentan să primească push. Elimină-le pe cele pe care nu le mai folosești.",
         "remove": "Elimină",
         "this_browser": "(acest browser)",
@@ -93,6 +93,6 @@
         "takeback_declined_title": "Reluare refuzată",
         "takeback_rejected_body": "{{actor}} a refuzat reluarea mutării",
         "test_title": "HiveGame",
-        "test_body": "Notificare de test — notificările funcționează 🐝"
+        "test_body": "Notificare de test — notificările funcționează"
     }
 }

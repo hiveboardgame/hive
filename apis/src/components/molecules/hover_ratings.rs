@@ -1,4 +1,7 @@
-use crate::{components::atoms::rating::RatingWithIcon, responses::UserResponse};
+use crate::{
+    components::{atoms::rating::RatingWithIcon, molecules::dropdown_panel::DropdownPanel},
+    responses::UserResponse,
+};
 use leptos::{either::Either, html, prelude::*};
 use shared_types::GameSpeed;
 
@@ -15,7 +18,7 @@ pub fn HoverRating(user: UserResponse, anchor_ref: NodeRef<html::A>) -> impl Int
         })
         .collect_view();
 
-    let position_vars = move || {
+    let position_vars = Signal::derive(move || {
         anchor_ref.with(|element_opt| {
             if let Some(element) = element_opt {
                 let rect = element.get_bounding_client_rect();
@@ -26,14 +29,14 @@ pub fn HoverRating(user: UserResponse, anchor_ref: NodeRef<html::A>) -> impl Int
                 "--popup-x: 0px; --popup-y: 0px;".to_string()
             }
         })
-    };
+    });
 
     view! {
-        <div
-            class="fixed z-50 p-2 rounded pointer-events-none bg-even-light left-[var(--popup-x)] top-[var(--popup-y)] dark:bg-gray-950"
+        <DropdownPanel
+            class="fixed z-50 p-2 pointer-events-none left-[var(--popup-x)] top-[var(--popup-y)]"
             style=position_vars
         >
             {ratings}
-        </div>
+        </DropdownPanel>
     }
 }

@@ -25,7 +25,7 @@ pub fn DirectChallengeButton(
                 title="Challenge to a game"
                 prop:disabled=disabled
                 on:click=move |_| direct_challenge.open(opponent.get_value())
-                class="p-1 mx-2 text-white rounded transition-transform duration-300 transform active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
+                class="mx-2 ui-button ui-button-primary ui-button-icon"
             >
                 <Icon icon=icondata_ri::RiSwordOthersLine attr:class="size-6" />
             </button>

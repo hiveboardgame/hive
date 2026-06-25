@@ -24,6 +24,8 @@ use leptos::prelude::*;
 
 pub use crate::hiveground::ReserveLayout as Alignment;
 
+pub const MOBILE_RESERVE_VIEWBOX: &str = "-42 -52 438 96";
+
 #[component]
 pub fn Reserve(
     // Analysis/history pass fixed colors; live play passes player-color signals.
@@ -31,7 +33,6 @@ pub fn Reserve(
     alignment: Alignment,
     interaction: HivegroundInteraction,
     history_state: Memo<State>,
-    #[prop(optional)] extend_tw_classes: &'static str,
     #[prop(optional)] viewbox_str: Option<&'static str>,
 ) -> impl IntoView {
     let interaction = interaction.disable_stack_inspection();
@@ -41,8 +42,11 @@ pub fn Reserve(
     let config = expect_context::<Config>().0;
     let tile_opts = Signal::derive(move || config().tile);
     let paint = Memo::new(move |_| tile_opts.with(HivegroundPaint::new));
-    let (viewbox_str, viewbox_styles) = match alignment {
-        Alignment::SingleRow => ("-40 -55 450 100", "inline max-h-[inherit] h-full w-fit"),
+    let (default_viewbox_str, viewbox_styles) = match alignment {
+        Alignment::SingleRow => (
+            "-40 -55 450 100",
+            "inline h-full max-h-[inherit] w-fit max-w-full",
+        ),
         Alignment::DoubleRow => {
             if let Some(viewbox_str) = viewbox_str {
                 (viewbox_str, "")
@@ -51,6 +55,7 @@ pub fn Reserve(
             }
         }
     };
+    let viewbox_str = viewbox_str.unwrap_or(default_viewbox_str);
     // TODO: Should be a Store, this is hacky
     let board_view = create_read_slice(game_state.signal, |gs| gs.view.clone());
     let move_info = create_read_slice(game_state.signal, |gs| gs.move_info.clone());
@@ -120,12 +125,7 @@ pub fn Reserve(
         <svg
             width="100%"
             height="100%"
-            class=move || {
-                format!(
-                    "duration-300 {viewbox_styles} {extend_tw_classes} {}",
-                    reserve_sepia_class(),
-                )
-            }
+            class=move || { format!("transition-none {viewbox_styles} {}", reserve_sepia_class()) }
             viewBox=viewbox_str
             xmlns="http://www.w3.org/2000/svg"
         >
@@ -146,12 +146,12 @@ pub fn ReserveContent(
 
     view! {
         <Reserve color=top_color alignment=Alignment::DoubleRow interaction history_state />
-        <div class="flex flex-row-reverse justify-center items-center">
-            <AnalysisAndDownload />
-            <AnnotationToggle extend_tw_classes="place-self-start" />
+        <div class="flex justify-center items-start">
             <Show when=show_buttons>
                 <ControlButtons />
             </Show>
+            <AnalysisAndDownload />
+            <AnnotationToggle />
         </div>
         <Reserve color=bottom_color alignment=Alignment::DoubleRow interaction history_state />
     }

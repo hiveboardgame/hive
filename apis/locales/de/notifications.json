@@ -1,6 +1,6 @@
 {
     "page": {
-        "heading": "🔔 Benachrichtigungen",
+        "heading": "Benachrichtigungen",
         "intro_before_link": "Wähle, wie du bei jeder Art von Ereignis benachrichtigt werden möchtest. Push geht an die Browser, die du unten aktivierst. Die Discord-Einrichtung findest du im ",
         "account_link": "Discord-Abschnitt",
         "intro_after_link": " unten.",
@@ -21,7 +21,7 @@
         "dms": "Direktnachricht"
     },
     "browser": {
-        "heading": "🌐 Dieser Browser",
+        "heading": "Dieser Browser",
         "body": "Erhalte die oben ausgewählten Push-Benachrichtigungen in diesem Browser, auch wenn kein HiveGame-Tab geöffnet ist. Aktiviere sie auf jedem Gerät separat, das benachrichtigt werden soll.",
         "enable": "Browser-Benachrichtigungen aktivieren",
         "disable": "Browser-Benachrichtigungen deaktivieren",
@@ -31,11 +31,11 @@
         "test_failed": "Test fehlgeschlagen:"
     },
     "ios": {
-        "heading": "📱 Auf deinem iPhone oder iPad",
+        "heading": "Auf deinem iPhone oder iPad",
         "body": "Um Benachrichtigungen unter iOS zu erhalten, füge HiveGame zu deinem Home-Bildschirm hinzu: Tippe auf „Teilen“ und dann auf „Zum Home-Bildschirm“ und öffne es von dort."
     },
     "devices": {
-        "heading": "📡 Deine Geräte",
+        "heading": "Deine Geräte",
         "body": "Alle Geräte, die derzeit für Push eingerichtet sind. Entferne alle, die du nicht mehr verwendest.",
         "remove": "Entfernen",
         "this_browser": "(dieser Browser)",
@@ -93,6 +93,6 @@
         "takeback_declined_title": "Zugrücknahme abgelehnt",
         "takeback_rejected_body": "{{actor}} hat die Zugrücknahme abgelehnt",
         "test_title": "HiveGame",
-        "test_body": "Testbenachrichtigung — Push funktioniert 🐝"
+        "test_body": "Testbenachrichtigung — Push funktioniert"
     }
 }

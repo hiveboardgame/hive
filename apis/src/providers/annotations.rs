@@ -200,7 +200,7 @@ enum AnnotationBackend {
 impl AnnotationBackend {
     fn read_current(&self) -> AnnotationSet {
         match self {
-            AnnotationBackend::Analysis(analysis) => analysis.0.with(|tree| {
+            AnnotationBackend::Analysis(analysis) => analysis.tree.with(|tree| {
                 tree.annotations
                     .get(&tree.current_annotation_key())
                     .cloned()
@@ -215,7 +215,7 @@ impl AnnotationBackend {
 
     fn update_current(&self, mutate: impl FnOnce(&mut AnnotationSet)) {
         match self {
-            AnnotationBackend::Analysis(analysis) => analysis.0.update(|tree| {
+            AnnotationBackend::Analysis(analysis) => analysis.tree.update(|tree| {
                 let key = tree.current_annotation_key();
                 let mut set = tree.annotations.remove(&key).unwrap_or_default();
                 mutate(&mut set);

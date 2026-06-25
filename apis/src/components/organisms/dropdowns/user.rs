@@ -1,8 +1,11 @@
 use crate::{
     components::{
-        layouts::base_layout::COMMON_LINK_STYLE,
         molecules::{hamburger::Hamburger, ping::Ping},
-        organisms::{darkmode_toggle::DarkModeToggle, header::set_redirect, logout::Logout},
+        organisms::{
+            darkmode_toggle::{DarkModeToggle, DarkModeToggleVariant},
+            header::set_redirect,
+            logout::Logout,
+        },
     },
     i18n::*,
     providers::{AuthContext, RefererContext},
@@ -19,13 +22,15 @@ pub fn UserDropdown(username: String) -> impl IntoView {
     view! {
         <Hamburger
             hamburger_show=hamburger_show
-            button_style="bg-button-dawn dark:bg-button-twilight text-white rounded-md px-2 py-1 m-1 hover:bg-pillbug-teal dark:hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 whitespace-nowrap"
-            dropdown_style="mr-1 xs:mt-0 mt-1 flex flex-col items-stretch absolute w-max bg-even-light dark:bg-gray-950 text-black border border-gray-300 rounded-md p-2 right-0 z-50"
+            button_style="ui-header-user-button"
+            extend_tw_classes="h-full"
+            dropdown_style="ui-dropdown-menu ui-dropdown-menu-right ui-header-dropdown-menu"
             content=username.clone()
             id="Username"
         >
+            <Ping />
             <a
-                class=COMMON_LINK_STYLE
+                class="ui-dropdown-link"
                 href=format!("/@/{}", username)
 
                 on:click=move |_| onclick_close()
@@ -33,7 +38,7 @@ pub fn UserDropdown(username: String) -> impl IntoView {
                 {t!(i18n, header.user_menu.profile)}
             </a>
             <a
-                class=COMMON_LINK_STYLE
+                class="ui-dropdown-link"
                 href="/account"
                 on:focus=move |_| set_redirect(pathname)
                 on:click=move |_| onclick_close()
@@ -41,7 +46,7 @@ pub fn UserDropdown(username: String) -> impl IntoView {
                 {t!(i18n, header.user_menu.edit_account)}
             </a>
             <a
-                class=COMMON_LINK_STYLE
+                class="ui-dropdown-link"
                 href="/config"
                 on:focus=move |_| set_redirect(pathname)
                 on:click=move |_| onclick_close()
@@ -49,7 +54,7 @@ pub fn UserDropdown(username: String) -> impl IntoView {
                 {t!(i18n, header.user_menu.config)}
             </a>
             <a
-                class=COMMON_LINK_STYLE
+                class="ui-dropdown-link"
                 href="/notifications"
                 on:focus=move |_| set_redirect(pathname)
                 on:click=move |_| onclick_close()
@@ -58,7 +63,7 @@ pub fn UserDropdown(username: String) -> impl IntoView {
             </a>
             <Show when=move || auth_context.user.with(|a| a.as_ref().is_some_and(|v| v.user.admin))>
                 <a
-                    class=COMMON_LINK_STYLE
+                    class="ui-dropdown-link"
                     href="/admin"
 
                     on:click=move |_| onclick_close()
@@ -66,9 +71,8 @@ pub fn UserDropdown(username: String) -> impl IntoView {
                     Admin
                 </a>
             </Show>
-            <DarkModeToggle />
+            <DarkModeToggle variant=DarkModeToggleVariant::Dropdown />
             <Logout on:submit=move |_| onclick_close() />
-            <Ping />
         </Hamburger>
     }
 }

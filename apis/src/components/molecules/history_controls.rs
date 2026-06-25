@@ -1,8 +1,8 @@
 use crate::{
     components::{
-        molecules::play_history_button::{
-            HistoryButton,
-            PlayHistoryNavigation as HistoryNavigation,
+        molecules::{
+            annotation_toolbar::AnnotationToggle,
+            play_history_button::{HistoryButton, PlayHistoryNavigation as HistoryNavigation},
         },
         organisms::reserve::{Alignment, Reserve},
     },
@@ -43,6 +43,10 @@ pub fn HistoryControls(
                 <HistoryButton action=HistoryNavigation::Previous post_action=focus />
                 <HistoryButton action=HistoryNavigation::Next post_action=if_last_go_to_end />
                 <HistoryButton action=HistoryNavigation::Last post_action=scroll_to_end />
+                <AnnotationToggle
+                    class="ui-board-nav-button"
+                    active_tw_classes="ui-segmented-active"
+                />
             </div>
             <div class="flex p-2">
                 <Reserve

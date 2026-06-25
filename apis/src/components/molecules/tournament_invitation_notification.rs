@@ -34,36 +34,34 @@ pub fn TournamentInvitationNotification(tournament: TournamentAbstractResponse) 
     };
 
     view! {
-        <div class="flex justify-between items-center p-2 w-full text-center cursor-pointer dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light">
-            <div class="flex relative flex-grow">
-                <div class="sm:py-2 sm:px-2 xs:py-1 xs:px-1">
-                    <div class="text-sm font-medium">Tournament Invitation</div>
-                    <div class="font-bold">{tournament.name}</div>
-                </div>
-                <div class="sm:py-2 sm:px-2 xs:py-1 xs:px-1">
-                    <TimeRow time_info />
-                </div>
-                <div class="sm:py-2 sm:px-2 xs:py-1 xs:px-1">
-                    <div>Players: {seats_taken}</div>
+        <div class="ui-notification-item">
+            <div class="relative flex-1 min-w-0">
+                <div class="ui-notification-label">Tournament Invitation</div>
+                <div class="ui-notification-title">{tournament.name}</div>
+                <div class="ui-notification-meta">
+                    <div class="min-w-0">
+                        <TimeRow time_info extend_tw_classes="text-xs leading-tight" />
+                    </div>
+                    <div class="whitespace-nowrap">Players: {seats_taken}</div>
                 </div>
                 <a
                     class="absolute top-0 left-0 z-10 size-full"
                     href=format!("/tournament/{}", tournament_id.get_value())
                 ></a>
             </div>
-            <div class="flex gap-2">
+            <div class="ui-notification-actions">
                 <button
                     title="Accept Invitation"
                     on:click=accept
                     prop:disabled=seats_full
-                    class="z-20 p-1 text-white rounded transition-transform duration-300 active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal disabled:hover:bg-transparent"
+                    class="z-20 ui-button ui-button-primary ui-button-icon"
                 >
                     <Icon icon=icondata_ai::AiCheckOutlined attr:class="size-6" />
                 </button>
                 <button
                     title="Decline Invitation"
                     on:click=decline
-                    class="z-20 p-1 text-white rounded transition-transform duration-300 hover:bg-red-400 active:scale-95 bg-ladybug-red"
+                    class="z-20 ui-button ui-button-danger ui-button-icon"
                 >
                     <Icon icon=icondata_io::IoCloseSharp attr:class="size-6" />
                 </button>

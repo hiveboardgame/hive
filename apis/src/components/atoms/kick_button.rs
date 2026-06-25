@@ -35,7 +35,7 @@ pub fn KickButton(user_id: Uuid, tournament: TournamentResponse) -> impl IntoVie
             <button
                 title="Remove from tournament"
                 on:click=kick
-                class="p-1 mx-2 text-white rounded transition-transform duration-300 active:scale-95 bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
+                class="mx-2 ui-button ui-button-danger ui-button-icon"
             >
                 <Icon icon=icondata_ai::AiUserDeleteOutlined attr:class="size-6" />
             </button>

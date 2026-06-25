@@ -1,5 +1,5 @@
 use crate::{
-    common::ScheduleAction,
+    common::{with_class, ScheduleAction},
     components::atoms::date_time_picker::DateTimePicker,
     providers::ApiRequestsProvider,
     responses::ScheduleResponse,
@@ -34,22 +34,18 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
         api.schedule_action(ScheduleAction::Accept(id));
     });
     view! {
-        <div class=format!(
-            "flex justify-between p-2 rounded text-gray-900 dark:text-gray-100 {}",
-            if agreed {
-                "bg-green-200 dark:bg-green-900"
-            } else {
-                "bg-yellow-200 dark:bg-yellow-600"
-            },
+        <div class=with_class(
+            if agreed { "ui-notice" } else { "ui-warning-notice" },
+            "flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between",
         )>
             <div class=format!(
-                "flex items-center {}",
+                "flex min-w-0 items-center {}",
                 if agreed { "font-bold" } else { "" },
             )>{formatted_game_date(start_date)}</div>
             <Show when=move || !agreed && proposer_id != player_id>
                 <button
                     on:click=move |_| accept.run((id,))
-                    class="py-2 px-2 m-1 text-white rounded transition-transform duration-300 active:scale-95 bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
+                    class="m-1 ui-button ui-button-success ui-button-sm"
                 >
 
                     "Accept"
@@ -61,7 +57,7 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
                     api.schedule_action(ScheduleAction::Cancel(id));
                 }
 
-                class="py-2 px-2 m-1 text-white rounded transition-transform duration-300 hover:bg-red-400 active:scale-95 bg-ladybug-red"
+                class="m-1 ui-button ui-button-danger ui-button-sm"
             >
                 {(if proposer_id == player_id || agreed { "Cancel" } else { "Reject" }).to_string()}
             </button>
@@ -81,7 +77,7 @@ pub fn ProposeDateControls(game_id: GameId) -> impl IntoView {
         selected_time.set(utc);
     });
     view! {
-        <div class="flex justify-between p-2">
+        <div class="flex flex-col gap-2 p-2 sm:flex-row sm:justify-between sm:items-center">
             <DateTimePicker
                 text=""
                 min=Local::now() + Duration::minutes(10)
@@ -90,7 +86,7 @@ pub fn ProposeDateControls(game_id: GameId) -> impl IntoView {
             />
 
             <button
-                class="py-2 px-2 m-1 text-white rounded transition-transform duration-300 active:scale-95 bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
+                class="m-1 ui-button ui-button-primary ui-button-sm"
                 on:click=move |_| propose.run((selected_time.get(),))
             >
 

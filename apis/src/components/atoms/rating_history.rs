@@ -1,5 +1,5 @@
 use crate::{
-    components::layouts::base_layout::OrientationSignal,
+    components::{layouts::base_layout::OrientationSignal, molecules::empty_state::EmptyState},
     functions::games::get::get_rating_history_resource,
     responses::RatingHistoryResponse,
 };
@@ -67,12 +67,17 @@ pub fn RatingGraph(user_id: Uuid, game_speed: GameSpeed) -> impl IntoView {
                         .map(|res| match res.as_ref() {
                             Ok(hist) => {
                                 if hist.is_empty() {
-                                    view! { <p>"No rating history yet."</p> }.into_any()
+                                    view! {
+                                        <EmptyState title="No rating history yet" class="my-6" />
+                                    }
+                                        .into_any()
                                 } else if hist.len() < 5 {
                                     view! {
-                                        <div class="py-8 text-lg text-center text-gray-600 dark:text-yellow-400">
-                                            "Not enough games to build a graph 🐝🐝🐝"
-                                        </div>
+                                        <EmptyState
+                                            title="Not enough games to build a graph"
+                                            message="Play at least five rated games at this speed to show the chart."
+                                            class="my-6"
+                                        />
                                     }
                                         .into_any()
                                 } else {
@@ -101,6 +106,14 @@ pub fn RatingGraph(user_id: Uuid, game_speed: GameSpeed) -> impl IntoView {
                                             .dark ._chartistry_line_markers {
                                              fill: #fcc800;
                                             }
+                                            ._chartistry_tick_label text,
+                                            ._chartistry_rotated_label text {
+                                             fill: #111827;
+                                            }
+                                            .dark ._chartistry_tick_label text,
+                                            .dark ._chartistry_rotated_label text {
+                                             fill: #e5e7eb;
+                                            }
                                             .dark ._chartistry_grid_line_x {
                                              stroke: #1a181845;
                                             }
@@ -121,7 +134,7 @@ pub fn RatingGraph(user_id: Uuid, game_speed: GameSpeed) -> impl IntoView {
                                             }
                                             "
                                         </Style>
-                                        <div class="dark:[&_text]:!fill-gray-200">
+                                        <div>
                                             <Chart
                                                 aspect_ratio=AspectRatio::from_outer_ratio(
                                                     graph_width.get(),
@@ -159,7 +172,13 @@ pub fn RatingGraph(user_id: Uuid, game_speed: GameSpeed) -> impl IntoView {
                             }
                             Err(e) => {
 
-                                view! { <p>"Error loading history: " {format!("{e}")}</p> }
+                                view! {
+                                    <EmptyState
+                                        title="Error loading history"
+                                        message=format!("{e}")
+                                        class="my-6"
+                                    />
+                                }
                                     .into_any()
                             }
                         })

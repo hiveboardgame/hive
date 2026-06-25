@@ -1,5 +1,5 @@
 use crate::{
-    common::UserAction,
+    common::{with_class, UserAction},
     components::{
         atoms::{color_hex::ColorHex, rating::icon_for_speed},
         molecules::user_search::UserSearch,
@@ -13,15 +13,9 @@ use leptos_icons::Icon;
 use shared_types::{GameSortKey, GameSpeed, GamesQueryOptions, ResultFilter};
 use std::{collections::HashSet, str::FromStr};
 
-// Shared field sizing/appearance so inputs, selects and the player-search box
-// all line up (same height, padding, radius, border, focus ring).
-const FIELD_CLASS: &str = "w-full min-h-10 px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-pillbug-teal/50 focus:border-pillbug-teal";
-const SELECT_CLASS: &str = FIELD_CLASS;
-const INPUT_CLASS: &str = FIELD_CLASS;
-const LABEL_CLASS: &str = "block text-sm font-semibold text-gray-700 dark:text-gray-200";
 const FIELD_BLOCK_CLASS: &str = "space-y-1.5";
-const PRIMARY_BUTTON_CLASS: &str =
-    "px-6 py-2.5 font-bold text-white rounded-lg shadow-md transition-all duration-200 cursor-pointer bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal hover:shadow-lg active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-pillbug-teal/50 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:shadow-md";
+const ARCHIVE_DISABLED_FIELD_CLASS: &str =
+    "cursor-not-allowed bg-odd-light/70 dark:bg-surface-muted";
 
 fn date_to_input(date: Option<DateTime<Utc>>) -> String {
     date.map(|d| d.format("%Y-%m-%d").to_string())
@@ -48,16 +42,11 @@ fn enforce_rating_rules(options: &mut GamesQueryOptions) {
 #[component]
 fn TogglePill(checked: Signal<bool>, on_toggle: Callback<()>, children: Children) -> impl IntoView {
     view! {
-        <label class=move || {
-            let base = "inline-flex gap-2 justify-center items-center px-3 min-h-10 text-sm rounded-lg border-2 shadow-sm transition-colors duration-150 cursor-pointer select-none";
-            if checked.get() {
-                format!("{base} border-pillbug-teal bg-pillbug-teal/10 text-pillbug-teal")
-            } else {
-                format!(
-                    "{base} border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-pillbug-teal/40",
-                )
-            }
-        }>
+        <label
+            class="text-sm cursor-pointer select-none ui-choice ui-choice-compact min-h-10"
+            class:ui-choice-active=checked
+            class:ui-choice-inactive=move || !checked.get()
+        >
             <input
                 type="checkbox"
                 class="sr-only"
@@ -120,16 +109,15 @@ fn ArchivePlayerField(
     view! {
         <div class=FIELD_BLOCK_CLASS>
             <label class="flex gap-1 items-center text-sm font-semibold text-gray-700 dark:text-gray-200">
-                {move || label()} <Show when=move || fixed_colors.get()>
+                {label} <Show when=fixed_colors>
                     <ColorHex color=color />
                 </Show>
             </label>
             <UserSearch
                 placeholder=placeholder
-                filtered_users_signal=filtered
+                filtered_users=filtered
                 value=value
                 on_input=set_player
-                input_class=INPUT_CLASS.to_string()
                 compact=true
                 actions=vec![UserAction::Select(set_player)]
             />
@@ -143,7 +131,7 @@ fn ArchiveSpeedField(draft_options: RwSignal<GamesQueryOptions>) -> impl IntoVie
 
     view! {
         <div class=FIELD_BLOCK_CLASS>
-            <label class=LABEL_CLASS>{t!(i18n, archive.speeds)}</label>
+            <label class="ui-field-label">{t!(i18n, archive.speeds)}</label>
             <div class="flex flex-wrap gap-2">
                 {GameSpeed::all_games()
                     .into_iter()
@@ -153,18 +141,11 @@ fn ArchiveSpeedField(draft_options: RwSignal<GamesQueryOptions>) -> impl IntoVie
                             draft_options.with(|o| o.speeds.contains(&speed))
                         });
                         view! {
-                            <label class=move || {
-                                let base = "flex justify-center items-center text-sm rounded-lg border-2 shadow-sm transition-colors duration-150 size-10";
-                                if is_selected() {
-                                    format!(
-                                        "{base} cursor-pointer border-pillbug-teal bg-pillbug-teal/10 text-pillbug-teal",
-                                    )
-                                } else {
-                                    format!(
-                                        "{base} cursor-pointer border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-pillbug-teal/40",
-                                    )
-                                }
-                            }>
+                            <label
+                                class="cursor-pointer ui-choice ui-choice-square"
+                                class:ui-choice-active=is_selected
+                                class:ui-choice-inactive=move || !is_selected()
+                            >
                                 <input
                                     type="checkbox"
                                     class="sr-only"
@@ -204,9 +185,9 @@ fn ArchiveRatedExpansions(draft_options: RwSignal<GamesQueryOptions>) -> impl In
     view! {
         <div class="grid grid-cols-2 gap-3">
             <div class=FIELD_BLOCK_CLASS>
-                <label class=LABEL_CLASS>{t!(i18n, archive.rated)}</label>
+                <label class="ui-field-label">{t!(i18n, archive.rated)}</label>
                 <select
-                    class=SELECT_CLASS
+                    class="ui-field-select"
                     prop:value=Signal::derive(move || match draft_options.with(|o| o.rated) {
                         Some(true) => "true".to_string(),
                         Some(false) => "false".to_string(),
@@ -232,9 +213,9 @@ fn ArchiveRatedExpansions(draft_options: RwSignal<GamesQueryOptions>) -> impl In
                 </select>
             </div>
             <div class=FIELD_BLOCK_CLASS>
-                <label class=LABEL_CLASS>{t!(i18n, archive.expansions)}</label>
+                <label class="ui-field-label">{t!(i18n, archive.expansions)}</label>
                 <select
-                    class=SELECT_CLASS
+                    class="ui-field-select"
                     prop:value=Signal::derive(move || match draft_options.with(|o| o.expansions) {
                         Some(true) => "true".to_string(),
                         Some(false) => "false".to_string(),
@@ -272,18 +253,19 @@ fn ArchiveAdvancedFilters(
     view! {
         <div class="space-y-3">
             <div class=move || {
-                format!(
-                    "{FIELD_BLOCK_CLASS} {}",
+                with_class(
+                    FIELD_BLOCK_CLASS,
                     if draft_options.with(|o| o.rated != Some(true)) { "opacity-60" } else { "" },
                 )
             }>
-                <label class=LABEL_CLASS>{t!(i18n, archive.rating_range)}</label>
+                <label class="ui-field-label">{t!(i18n, archive.rating_range)}</label>
                 <div class="grid grid-cols-2 gap-2">
                     <input
                         class=move || {
-                            let mut base = INPUT_CLASS.to_string();
+                            let mut base = "ui-field-input".to_string();
                             if draft_options.with(|o| o.rated != Some(true)) {
-                                base.push_str(" bg-gray-100 dark:bg-gray-800 cursor-not-allowed");
+                                base.push(' ');
+                                base.push_str(ARCHIVE_DISABLED_FIELD_CLASS);
                             }
                             base
                         }
@@ -308,9 +290,10 @@ fn ArchiveAdvancedFilters(
                     />
                     <input
                         class=move || {
-                            let mut base = INPUT_CLASS.to_string();
+                            let mut base = "ui-field-input".to_string();
                             if draft_options.with(|o| o.rated != Some(true)) {
-                                base.push_str(" bg-gray-100 dark:bg-gray-800 cursor-not-allowed");
+                                base.push(' ');
+                                base.push_str(ARCHIVE_DISABLED_FIELD_CLASS);
                             }
                             base
                         }
@@ -336,10 +319,10 @@ fn ArchiveAdvancedFilters(
                 </div>
             </div>
             <div class=FIELD_BLOCK_CLASS>
-                <label class=LABEL_CLASS>{t!(i18n, archive.turn_range)}</label>
+                <label class="ui-field-label">{t!(i18n, archive.turn_range)}</label>
                 <div class="grid grid-cols-2 gap-2">
                     <input
-                        class=INPUT_CLASS
+                        class="ui-field-input"
                         placeholder=move || t_string!(i18n, archive.min)
                         prop:value=Signal::derive(move || {
                             draft_options
@@ -351,7 +334,7 @@ fn ArchiveAdvancedFilters(
                         }
                     />
                     <input
-                        class=INPUT_CLASS
+                        class="ui-field-input"
                         placeholder=move || t_string!(i18n, archive.max)
                         prop:value=Signal::derive(move || {
                             draft_options
@@ -365,10 +348,10 @@ fn ArchiveAdvancedFilters(
                 </div>
             </div>
             <div class=FIELD_BLOCK_CLASS>
-                <label class=LABEL_CLASS>{t!(i18n, archive.date_range)}</label>
+                <label class="ui-field-label">{t!(i18n, archive.date_range)}</label>
                 <div class="grid grid-cols-2 gap-2">
                     <input
-                        class=INPUT_CLASS
+                        class="ui-field-input"
                         type="date"
                         prop:value=Signal::derive(move || {
                             draft_options.with(|o| date_to_input(o.date_start))
@@ -379,7 +362,7 @@ fn ArchiveAdvancedFilters(
                         }
                     />
                     <input
-                        class=INPUT_CLASS
+                        class="ui-field-input"
                         type="date"
                         prop:value=Signal::derive(move || {
                             draft_options.with(|o| date_to_input(o.date_end))
@@ -392,10 +375,10 @@ fn ArchiveAdvancedFilters(
                 </div>
             </div>
             <div class=FIELD_BLOCK_CLASS>
-                <label class=LABEL_CLASS>{t!(i18n, archive.sorting)}</label>
+                <label class="ui-field-label">{t!(i18n, archive.sorting)}</label>
                 <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <select
-                        class=SELECT_CLASS
+                        class="ui-field-select"
                         prop:value=Signal::derive(move || {
                             draft_options.with(|o| o.sort.key.to_string())
                         })
@@ -411,7 +394,7 @@ fn ArchiveAdvancedFilters(
                         <option value="RatingAvg">{t!(i18n, archive.sort_rating_avg)}</option>
                     </select>
                     <select
-                        class=SELECT_CLASS
+                        class="ui-field-select"
                         prop:value=Signal::derive(move || {
                             if draft_options.with(|o| o.sort.ascending) {
                                 "asc".to_string()
@@ -452,9 +435,7 @@ fn ArchiveAdvancedFilters(
                 // layout keeps the full-width Search button at the bottom.
                 <button
                     type="button"
-                    class=format!(
-                        "{PRIMARY_BUTTON_CLASS} hidden items-center md:inline-flex md:ml-auto",
-                    )
+                    class="hidden items-center md:inline-flex md:ml-auto ui-button ui-button-primary ui-button-md"
                     on:click=move |_| on_search.run(())
                 >
                     {t!(i18n, archive.search)}
@@ -477,8 +458,8 @@ pub fn ArchiveSearchForm(
             .get_untracked();
 
     view! {
-        <div class="flex-shrink-0 w-full border-b border-gray-200 shadow-sm dark:border-gray-800 bg-white/80 backdrop-blur-sm dark:bg-gray-900/80">
-            <div class="p-4 mx-auto space-y-4 max-w-5xl sm:p-6">
+        <div class="flex-shrink-0 px-4 pb-4 w-full sm:px-6">
+            <div class="p-4 mx-auto space-y-4 max-w-5xl sm:p-6 ui-panel">
                 <div class="grid grid-cols-1 gap-4 items-start sm:gap-6 md:grid-cols-2">
                     <div class="space-y-3">
                         <div class="space-y-2">
@@ -511,9 +492,9 @@ pub fn ArchiveSearchForm(
                         </div>
                         <ArchiveSpeedField draft_options=draft_options />
                         <div class=FIELD_BLOCK_CLASS>
-                            <label class=LABEL_CLASS>{t!(i18n, archive.result)}</label>
+                            <label class="ui-field-label">{t!(i18n, archive.result)}</label>
                             <select
-                                class=SELECT_CLASS
+                                class="ui-field-select"
                                 prop:value=Signal::derive(move || {
                                     draft_options.with(|o| o.result_filter.to_string())
                                 })
@@ -546,15 +527,18 @@ pub fn ArchiveSearchForm(
                         <ArchiveRatedExpansions draft_options=draft_options />
                     </div>
 
-                    <details class="rounded-xl border-2 border-gray-200 shadow-sm md:hidden dark:border-gray-700 group bg-gray-50/80 dark:bg-gray-800/50">
-                        <summary class="flex gap-2 items-center py-3 px-4 text-sm font-semibold list-none text-gray-700 rounded-t-xl transition-colors cursor-pointer dark:text-gray-200 hover:bg-gray-100 [&::-webkit-details-marker]:hidden dark:hover:bg-gray-700/50">
+                    <details class="rounded-lg border md:hidden border-black/10 group dark:border-white/10">
+                        <summary class=with_class(
+                            "ui-disclosure-summary",
+                            "px-4 py-3 text-sm font-semibold",
+                        )>
                             <Icon
                                 icon=icondata_lu::LuChevronDown
                                 attr:class="size-4 transition-transform group-open:rotate-180 text-pillbug-teal"
                             />
                             {t!(i18n, archive.more_filters)}
                         </summary>
-                        <div class="p-4 space-y-3 border-t border-gray-200 dark:border-gray-700">
+                        <div class="space-y-3 border-t ui-panel-body border-black/10 dark:border-white/10">
                             <ArchiveAdvancedFilters
                                 draft_options=draft_options
                                 on_search=on_search
@@ -570,7 +554,7 @@ pub fn ArchiveSearchForm(
                 <div class="flex pt-2 sm:justify-end sm:pt-4 md:hidden">
                     <button
                         type="button"
-                        class=format!("{PRIMARY_BUTTON_CLASS} w-full sm:w-auto")
+                        class="w-full sm:w-auto ui-button ui-button-primary ui-button-md"
                         on:click=move |_| on_search.run(())
                     >
                         {t!(i18n, archive.search)}

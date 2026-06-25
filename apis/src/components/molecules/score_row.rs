@@ -40,7 +40,7 @@ pub fn ScoreRow(
         .collect_view();
 
     view! {
-        <tr class="h-6 max-w-fit [&>td:nth-child(3)]:pl-2 sm:[&>td:nth-child(3)]:pl-3 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light">
+        <tr class="h-6 ui-dense-table-row max-w-fit [&>td:nth-child(3)]:pl-2 sm:[&>td:nth-child(3)]:pl-3">
             <td class=td_class>
                 <div class=div_class>{standing}</div>
             </td>

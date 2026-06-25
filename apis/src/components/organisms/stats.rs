@@ -1,4 +1,5 @@
 use crate::{
+    common::with_class,
     components::{
         atoms::{
             rating::{icon_for_speed, Rating},
@@ -11,6 +12,14 @@ use crate::{
 use leptos::{html::Dialog, prelude::*};
 use leptos_icons::*;
 use shared_types::GameSpeed;
+
+const METRIC_TILE_CLASS: &str =
+    "rounded-lg border border-black/5 bg-odd-light/70 text-center dark:border-white/10 dark:bg-surface-muted";
+const METRIC_MUTED_TEXT_CLASS: &str = "text-gray-500 dark:text-gray-400";
+const ACCENT_METRIC_TEXT_CLASS: &str = "text-pillbug-teal";
+const SUCCESS_METRIC_TEXT_CLASS: &str = "text-green-600 dark:text-green-400";
+const DANGER_METRIC_TEXT_CLASS: &str = "text-red-600 dark:text-red-400";
+const WARNING_METRIC_TEXT_CLASS: &str = "text-yellow-600 dark:text-yellow-400";
 
 #[component]
 pub fn Stats(user: UserResponse) -> impl IntoView {
@@ -37,7 +46,10 @@ pub fn Stats(user: UserResponse) -> impl IntoView {
                 .map(|rating| {
                     view! {
                         <button
-                            class="flex flex-col flex-shrink-0 gap-1 items-center p-2 bg-gray-50 rounded-lg border border-gray-200 shadow-sm transition-all duration-200 cursor-pointer md:flex-row dark:bg-gray-800 dark:border-gray-600 hover:bg-blue-50 hover:border-blue-300 hover:shadow-md w-fit dark:hover:bg-gray-700 dark:hover:border-gray-500 hover:scale-[1.02]"
+                            class=with_class(
+                                "ui-card-row",
+                                "flex w-fit flex-shrink-0 cursor-pointer flex-col items-center gap-1 p-2 md:flex-row",
+                            )
                             on:click={
                                 let rating = rating.clone();
                                 move |_| {
@@ -92,19 +104,27 @@ pub fn Stats(user: UserResponse) -> impl IntoView {
                                 </div>
                                 <div class="space-y-3">
                                     <div class="grid grid-cols-2 gap-3">
-                                        <div class="p-3 text-center bg-gray-50 rounded-lg dark:bg-gray-800">
-                                            <div class="text-sm text-gray-500 dark:text-gray-400">
-                                                Rating
-                                            </div>
-                                            <div class="text-xl font-bold text-pillbug-teal">
+                                        <div class=with_class(METRIC_TILE_CLASS, "p-3")>
+                                            <div class=with_class(
+                                                METRIC_MUTED_TEXT_CLASS,
+                                                "text-sm",
+                                            )>Rating</div>
+                                            <div class=with_class(
+                                                ACCENT_METRIC_TEXT_CLASS,
+                                                "text-xl font-bold",
+                                            )>
                                                 <Rating rating=rating.clone() />
                                             </div>
                                         </div>
-                                        <div class="p-3 text-center bg-blue-50 rounded-lg dark:bg-blue-900/20">
-                                            <div class="text-sm text-blue-600 dark:text-blue-400">
-                                                Win Rate
-                                            </div>
-                                            <div class="text-xl font-bold text-blue-600 dark:text-blue-400">
+                                        <div class="p-3 text-center rounded-lg border border-pillbug-teal/20 bg-pillbug-teal/10 dark:border-pillbug-teal/30 dark:bg-pillbug-teal/10">
+                                            <div class=with_class(
+                                                ACCENT_METRIC_TEXT_CLASS,
+                                                "text-sm",
+                                            )>Win Rate</div>
+                                            <div class=with_class(
+                                                ACCENT_METRIC_TEXT_CLASS,
+                                                "text-xl font-bold",
+                                            )>
                                                 {if rating.played > 0 {
                                                     format!(
                                                         "{:.1}%",
@@ -117,37 +137,44 @@ pub fn Stats(user: UserResponse) -> impl IntoView {
                                         </div>
                                     </div>
                                     <div class="grid grid-cols-4 gap-2">
-                                        <div class="p-2 min-w-0 text-center bg-gray-50 rounded-lg dark:bg-gray-800">
-                                            <div class="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                                Total
-                                            </div>
+                                        <div class=with_class(METRIC_TILE_CLASS, "min-w-0 p-2")>
+                                            <div class=with_class(
+                                                METRIC_MUTED_TEXT_CLASS,
+                                                "truncate text-xs",
+                                            )>Total</div>
                                             <div class="text-sm font-semibold text-gray-900 dark:text-gray-100">
                                                 {rating.played}
                                             </div>
                                         </div>
-                                        <div class="p-2 min-w-0 text-center bg-green-50 rounded-lg dark:bg-green-900/20">
-                                            <div class="text-xs text-green-600 dark:text-green-400 truncate">
-                                                Wins
-                                            </div>
-                                            <div class="text-sm font-semibold text-green-600 dark:text-green-400">
-                                                {rating.win}
-                                            </div>
+                                        <div class="p-2 min-w-0 text-center bg-green-50 rounded-lg border border-green-500/20 dark:border-green-400/20 dark:bg-green-900/20">
+                                            <div class=with_class(
+                                                SUCCESS_METRIC_TEXT_CLASS,
+                                                "truncate text-xs",
+                                            )>Wins</div>
+                                            <div class=with_class(
+                                                SUCCESS_METRIC_TEXT_CLASS,
+                                                "text-sm font-semibold",
+                                            )>{rating.win}</div>
                                         </div>
-                                        <div class="p-2 min-w-0 text-center bg-red-50 rounded-lg dark:bg-red-900/20">
-                                            <div class="text-xs text-red-600 dark:text-red-400 truncate">
-                                                Losses
-                                            </div>
-                                            <div class="text-sm font-semibold text-red-600 dark:text-red-400">
-                                                {rating.loss}
-                                            </div>
+                                        <div class="p-2 min-w-0 text-center rounded-lg border border-ladybug-red/20 bg-ladybug-red/10 dark:border-ladybug-red/30 dark:bg-ladybug-red/10">
+                                            <div class=with_class(
+                                                DANGER_METRIC_TEXT_CLASS,
+                                                "truncate text-xs",
+                                            )>Losses</div>
+                                            <div class=with_class(
+                                                DANGER_METRIC_TEXT_CLASS,
+                                                "text-sm font-semibold",
+                                            )>{rating.loss}</div>
                                         </div>
-                                        <div class="p-2 min-w-0 text-center bg-yellow-50 rounded-lg dark:bg-yellow-900/20">
-                                            <div class="text-xs text-yellow-600 dark:text-yellow-400 truncate">
-                                                Draws
-                                            </div>
-                                            <div class="text-sm font-semibold text-yellow-600 dark:text-yellow-400">
-                                                {rating.draw}
-                                            </div>
+                                        <div class="p-2 min-w-0 text-center bg-yellow-50 rounded-lg border border-orange-twilight/25 dark:border-orange-twilight/35 dark:bg-orange-twilight/10">
+                                            <div class=with_class(
+                                                WARNING_METRIC_TEXT_CLASS,
+                                                "truncate text-xs",
+                                            )>Draws</div>
+                                            <div class=with_class(
+                                                WARNING_METRIC_TEXT_CLASS,
+                                                "text-sm font-semibold",
+                                            )>{rating.draw}</div>
                                         </div>
                                     </div>
 

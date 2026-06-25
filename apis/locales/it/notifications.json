@@ -1,6 +1,6 @@
 {
     "page": {
-        "heading": "🔔 Notifiche",
+        "heading": "Notifiche",
         "intro_before_link": "Scegli come vuoi essere avvisato per ogni tipo di evento. Le notifiche push arrivano ai browser che attivi qui sotto. La configurazione di Discord è nella ",
         "account_link": "sezione Discord",
         "intro_after_link": " qui sotto.",
@@ -21,7 +21,7 @@
         "dms": "Messaggio diretto"
     },
     "browser": {
-        "heading": "🌐 Questo browser",
+        "heading": "Questo browser",
         "body": "Ricevi in questo browser le notifiche push selezionate sopra, anche quando nessuna scheda di HiveGame è aperta. Attivale separatamente su ogni dispositivo che vuoi notificare.",
         "enable": "Attiva le notifiche del browser",
         "disable": "Disattiva le notifiche del browser",
@@ -31,11 +31,11 @@
         "test_failed": "Prova non riuscita:"
     },
     "ios": {
-        "heading": "📱 Sul tuo iPhone o iPad",
+        "heading": "Sul tuo iPhone o iPad",
         "body": "Per ricevere notifiche su iOS, aggiungi HiveGame alla schermata Home: tocca il pulsante Condividi, poi «Aggiungi a Home» e aprilo da lì."
     },
     "devices": {
-        "heading": "📡 I tuoi dispositivi",
+        "heading": "I tuoi dispositivi",
         "body": "Tutti i dispositivi attualmente configurati per ricevere notifiche push. Rimuovi quelli che non usi più.",
         "remove": "Rimuovi",
         "this_browser": "(questo browser)",
@@ -93,6 +93,6 @@
         "takeback_declined_title": "Ritiro rifiutato",
         "takeback_rejected_body": "{{actor}} ha rifiutato il ritiro della mossa",
         "test_title": "HiveGame",
-        "test_body": "Notifica di prova — le notifiche funzionano 🐝"
+        "test_body": "Notifica di prova — le notifiche funzionano"
     }
 }

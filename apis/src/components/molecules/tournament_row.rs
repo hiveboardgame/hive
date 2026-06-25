@@ -44,10 +44,12 @@ pub fn TournamentRow(tournament: TournamentAbstractResponse) -> impl IntoView {
     let total_games = tournament.games_total;
     let finished_games = Signal::derive(move || tournament.games_played);
     view! {
-        <article class="flex relative flex-col justify-between items-center py-4 px-2 mx-2 w-5/6 duration-300 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
-            <div class="flex justify-center w-full font-bold break-words">{tournament.name}</div>
-            <div class="flex flex-row justify-between w-full">
-                <div class="flex flex-col">
+        <article class="flex relative flex-col gap-3 p-4 w-full ui-card-row">
+            <div class="w-full text-lg font-bold text-gray-900 break-words dark:text-gray-100">
+                {tournament.name}
+            </div>
+            <div class="grid gap-3 text-sm text-gray-700 sm:grid-cols-2 dark:text-gray-300">
+                <div class="flex flex-col gap-1">
                     <div class="flex gap-1">
                         <div>
                             {tournament
@@ -60,7 +62,7 @@ pub fn TournamentRow(tournament: TournamentAbstractResponse) -> impl IntoView {
                     <TimeRow time_info />
                     <div>{seats_taken}</div>
                 </div>
-                <div class="flex flex-col">
+                <div class="flex flex-col gap-1 sm:text-right">
                     <div>{range}</div>
                     <Show when=move || tournament.invite_only>
                         <div>Invite only</div>

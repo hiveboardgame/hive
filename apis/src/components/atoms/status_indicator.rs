@@ -40,7 +40,7 @@ pub fn StatusIndicator(username: String, deleted: bool) -> impl IntoView {
                 {
                     Some(UserStatus::Online) => " fill-grasshopper-green",
                     // TODO: Handle `Some(UserStatus::Away)`
-                    _ => " fill-slate-400",
+                    _ => " fill-gray-400",
                 },
             };
 

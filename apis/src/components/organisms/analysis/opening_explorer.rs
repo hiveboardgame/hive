@@ -89,7 +89,7 @@ pub fn reset_analysis_preview(
     };
 
     if analysis
-        .0
+        .tree
         .with_untracked(|analysis| analysis.current_node_id())
         == snapshot.node_id
     {
@@ -109,11 +109,17 @@ fn ResultBar(white: i64, draws: i64, black: i64, total: i64) -> impl IntoView {
     let d = pct(draws, total);
     let b = pct(black, total);
     view! {
-        <div class="flex overflow-hidden w-full h-4 leading-4 text-center rounded select-none text-[10px]">
-            <div class="text-black bg-white" style:width=move || format!("{w}%")>
+        <div class="flex overflow-hidden w-full h-4 leading-4 text-center bg-white rounded border shadow-inner select-none border-black/20 text-[10px] dark:border-white/20 dark:bg-surface-raised">
+            <div
+                class="text-black bg-white border-r border-black/15 dark:border-white/15"
+                style:width=move || format!("{w}%")
+            >
                 {move || if w >= 12.0 { format!("{w:.0}%") } else { String::new() }}
             </div>
-            <div class="text-white bg-gray-500" style:width=move || format!("{d}%")>
+            <div
+                class="text-white border-r border-black/15 bg-stone-500 dark:border-white/15"
+                style:width=move || format!("{d}%")
+            >
                 {move || if d >= 12.0 { format!("{d:.0}%") } else { String::new() }}
             </div>
             <div class="text-white bg-black" style:width=move || format!("{b}%")>
@@ -127,15 +133,15 @@ fn ResultBar(white: i64, draws: i64, black: i64, total: i64) -> impl IntoView {
 pub fn OpeningExplorer(
     preview_snapshot: RwSignal<Option<AnalysisPreviewSnapshot>>,
 ) -> impl IntoView {
-    let analysis = expect_context::<AnalysisSignal>().0;
+    let analysis = expect_context::<AnalysisSignal>();
     let game_state = expect_context::<GameStateSignal>();
     let api = expect_context::<ApiRequestsProvider>().0;
 
-    let game_type = analysis.with_untracked(|a| a.game_type);
+    let game_type = analysis.tree.with_untracked(|a| a.game_type);
     let filters = RwSignal::new(ExplorerFilters::new(game_type));
 
     // Current position hash from the analysis tree (0 = empty-board start node).
-    let current_hash = Signal::derive(move || analysis.with(|a| a.current_hash()));
+    let current_hash = Signal::derive(move || analysis.tree.with(|a| a.current_hash()));
 
     let resource = Resource::new(
         move || (current_hash.get(), filters.get()),
@@ -143,7 +149,7 @@ pub fn OpeningExplorer(
     );
 
     let reset_preview = Callback::new(move |_: ()| {
-        reset_analysis_preview(preview_snapshot, AnalysisSignal(analysis), game_state);
+        reset_analysis_preview(preview_snapshot, analysis, game_state);
     });
 
     // Preview a suggested move: apply it to the real position and show it on the board/reserve.
@@ -154,7 +160,9 @@ pub fn OpeningExplorer(
                 let snap = game_state
                     .signal
                     .with_untracked(|game_state| AnalysisPreviewSnapshot {
-                        node_id: analysis.with_untracked(|analysis| analysis.current_node_id()),
+                        node_id: analysis
+                            .tree
+                            .with_untracked(|analysis| analysis.current_node_id()),
                         state: game_state.state.clone(),
                         history_turn: game_state.history_turn,
                     });
@@ -175,13 +183,13 @@ pub fn OpeningExplorer(
     // Play a suggested move. First undo any active preview so we commit from the real position
     // (the board is showing the previewed state while hovered), then play it the normal way.
     let play_move = Callback::new(move |(piece, position): (Piece, Position)| {
-        reset_analysis_preview(preview_snapshot, AnalysisSignal(analysis), game_state);
+        reset_analysis_preview(preview_snapshot, analysis, game_state);
         game_state.signal.update(|gs| {
             gs.move_info.active = Some((piece, PieceType::Move));
             gs.move_info.target_position = Some(position);
         });
         let mut g = game_state;
-        g.move_active(Some(AnalysisSignal(analysis)), api.get_untracked());
+        g.move_active(Some(analysis), api.get_untracked());
     });
 
     // The archive URL for the current position ("Search this position"), or None at the empty
@@ -227,8 +235,10 @@ pub fn OpeningExplorer(
     };
 
     view! {
-        <div class="flex flex-col p-1 text-sm select-none">
-            <div class="font-bold">"Opening explorer"</div>
+        <div class="flex flex-col gap-3 min-h-0 text-sm select-none">
+            <div class="text-xs font-semibold text-gray-600 uppercase dark:text-gray-300">
+                "Opening Explorer"
+            </div>
             <FilterControls filters />
             // Transition (not Suspense) keeps the prior results on screen while a new query loads,
             // so toggling filters doesn't collapse the panel to "Loading…" and jump.
@@ -278,13 +288,13 @@ fn render_response(
 
     let table = if total > 0 {
         view! {
-            <table class="w-full text-sm border-collapse">
+            <table class="w-full text-xs border-collapse table-fixed">
                 <thead>
                     <tr class="text-left text-gray-500 dark:text-gray-400">
-                        <th class="py-1 px-2 font-normal">"Move"</th>
-                        <th class="py-1 px-2 font-normal text-right">"Games"</th>
-                        <th class="py-1 px-2 font-normal text-right">"Score"</th>
-                        <th class="py-1 px-2 w-2/5 font-normal">"W / D / B"</th>
+                        <th class="py-1 px-1 w-1/3 font-normal">"Move"</th>
+                        <th class="py-1 px-1 w-1/5 font-normal text-right">"Games"</th>
+                        <th class="py-1 px-1 w-1/5 font-normal text-right">"Score"</th>
+                        <th class="py-1 px-1 font-normal">"W / D / B"</th>
                     </tr>
                 </thead>
                 <tbody>{rows}</tbody>
@@ -301,7 +311,7 @@ fn render_response(
                     href=href
                     target="_blank"
                     rel="noopener"
-                    class="flex justify-center items-center px-4 h-10 text-white rounded-sm transition-transform duration-300 active:scale-95 no-link-style bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
+                    class="w-full ui-button ui-button-primary ui-button-sm no-link-style"
                 >
                     "Search this position ↗"
                 </a>
@@ -388,21 +398,21 @@ fn top_game_row(g: crate::responses::GameResponse) -> impl IntoView {
             href=href
             target="_blank"
             rel="noopener"
-            class="block py-1 px-2 rounded transition-colors hover:bg-blue-100 no-link-style dark:hover:bg-slate-700"
+            class="block py-1 px-2 rounded transition-colors no-link-style dark:hover:bg-pillbug-teal/15 hover:bg-blue-light/70"
         >
-            <div class="flex gap-2 justify-between items-center">
-                <span class="truncate">{white} " – " {black}</span>
-                <span class="flex gap-1 items-center font-mono shrink-0">
+            <div class="grid gap-y-0.5 gap-x-2 items-center grid-cols-[minmax(0,1fr)_5rem]">
+                <span class="min-w-0 truncate">{white} " – " {black}</span>
+                <span class="flex row-span-2 gap-1 justify-end items-center self-center font-mono shrink-0">
                     {conclusion_icon
                         .map(|icon| view! { <Icon icon attr:class="size-4 shrink-0" /> })}
                     {is_rep.then_some("↺")} {result}
                 </span>
-            </div>
-            <div class="flex gap-1 items-center text-xs text-gray-500 dark:text-gray-400">
-                <Icon icon=speed_icon attr:class="size-4 shrink-0" />
-                {time_text}
-                " · "
-                {g.created_at.format("%Y-%m-%d").to_string()}
+                <span class="flex gap-1 items-center min-w-0 text-xs leading-tight text-gray-500 dark:text-gray-400">
+                    <Icon icon=speed_icon attr:class="size-4 shrink-0" />
+                    <span class="whitespace-nowrap">{time_text}</span>
+                    <span class="shrink-0">" · "</span>
+                    <span class="truncate">{g.created_at.format("%Y-%m-%d").to_string()}</span>
+                </span>
             </div>
         </a>
     }
@@ -429,7 +439,7 @@ fn move_row(
         .or_else(|| Piece::from_str(&m.piece).ok());
     view! {
         <tr
-            class="border-t border-gray-200 transition-colors cursor-pointer dark:border-gray-700 hover:bg-blue-100 dark:hover:bg-slate-700"
+            class="border-t transition-colors cursor-pointer border-black/10 dark:border-white/10 dark:hover:bg-pillbug-teal/15 hover:bg-blue-light/70"
             on:click=move |_| {
                 if let Some(mv) = local_move {
                     handlers.play.run(mv);
@@ -442,15 +452,15 @@ fn move_row(
             }
             on:mouseleave=move |_| handlers.reset.run(())
         >
-            <td class="py-1.5 px-2 whitespace-nowrap">
-                <div class="flex gap-1.5 items-center">
+            <td class="overflow-hidden py-1.5 px-1 whitespace-nowrap">
+                <div class="flex gap-1 items-center min-w-0">
                     {icon_piece.map(|piece| view! { <BugTile piece /> })}
-                    <span class="font-mono">{label}</span>
+                    <span class="font-mono truncate">{label}</span>
                 </div>
             </td>
-            <td class="py-1.5 px-2 tabular-nums text-right">{total.to_string()}</td>
-            <td class="py-1.5 px-2 tabular-nums text-right">{format!("{score:.0}%")}</td>
-            <td class="py-1.5 px-2">
+            <td class="py-1.5 px-1 tabular-nums text-right">{total.to_string()}</td>
+            <td class="py-1.5 px-1 tabular-nums text-right">{format!("{score:.0}%")}</td>
+            <td class="py-1.5 px-1">
                 <ResultBar white=white draws=draws black=black total=total />
             </td>
         </tr>
@@ -459,17 +469,13 @@ fn move_row(
 
 #[component]
 fn FilterControls(filters: RwSignal<ExplorerFilters>) -> impl IntoView {
-    const SELECT_CLASS: &str = "w-full min-h-10 px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-pillbug-teal/50 focus:border-pillbug-teal";
-    const LABEL_CLASS: &str = "block text-sm font-semibold text-gray-700 dark:text-gray-200";
-
     // Speed pill: highlighted when its speed is in the selected set.
     let speed_pill_class = move |speed: GameSpeed| {
         move || {
-            let base = "flex justify-center items-center text-sm rounded-lg border-2 shadow-sm transition-colors duration-150 size-10 cursor-pointer";
             if filters.with(|f| f.speeds.contains(&speed)) {
-                format!("{base} border-pillbug-teal bg-pillbug-teal/10 text-pillbug-teal")
+                "ui-choice ui-choice-square ui-choice-active cursor-pointer"
             } else {
-                format!("{base} border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-pillbug-teal/40")
+                "ui-choice ui-choice-square ui-choice-inactive cursor-pointer"
             }
         }
     };
@@ -495,9 +501,9 @@ fn FilterControls(filters: RwSignal<ExplorerFilters>) -> impl IntoView {
         <div class="py-1 space-y-2">
             <div class="grid grid-cols-2 gap-2">
                 <div class="space-y-1">
-                    <label class=LABEL_CLASS>"Type"</label>
+                    <label class="ui-field-label">"Type"</label>
                     <select
-                        class=SELECT_CLASS
+                        class="ui-field-select"
                         prop:value=Signal::derive(move || filters.with(|f| f.game_type.to_string()))
                         on:change=move |ev| {
                             let v = event_target_value(&ev);
@@ -511,9 +517,9 @@ fn FilterControls(filters: RwSignal<ExplorerFilters>) -> impl IntoView {
                     </select>
                 </div>
                 <div class="space-y-1">
-                    <label class=LABEL_CLASS>"Rated"</label>
+                    <label class="ui-field-label">"Rated"</label>
                     <select
-                        class=SELECT_CLASS
+                        class="ui-field-select"
                         prop:value=Signal::derive(move || match filters.with(|f| f.rated) {
                             Some(true) => "rated".to_string(),
                             Some(false) => "casual".to_string(),
@@ -573,7 +579,7 @@ fn FilterControls(filters: RwSignal<ExplorerFilters>) -> impl IntoView {
                     class=move || {
                         let base = untimed_pill_class();
                         if show_untimed.get() {
-                            base
+                            base.to_string()
                         } else {
                             format!("{base} invisible pointer-events-none")
                         }

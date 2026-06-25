@@ -1,11 +1,19 @@
 use crate::{
-    components::atoms::rating::icon_for_speed,
+    common::with_class,
+    components::{atoms::rating::icon_for_speed, molecules::dropdown_panel::DropdownPanel},
     i18n::*,
     pages::profile_view::tab_from_path,
-    providers::{load_games, FilterState, GamesSearchContext, ResultType},
+    providers::{
+        initial_profile_filters_for_tab,
+        load_games,
+        searchable_profile_filters_for_tab,
+        FilterState,
+        GamesSearchContext,
+        ResultType,
+    },
 };
 use hive_lib::Color;
-use leptos::{html, prelude::*};
+use leptos::{either::Either, html, prelude::*};
 use leptos_i18n::I18nContext;
 use leptos_icons::*;
 use leptos_router::hooks::use_location;
@@ -77,13 +85,16 @@ pub fn GamesFilter(username: String, ctx: GamesSearchContext) -> impl IntoView {
     });
 
     let perform_search = move |new_filters: FilterState| {
-        ctx.filters.set(new_filters);
+        let effective_filters =
+            searchable_profile_filters_for_tab(new_filters, current_tab.get_untracked());
+        ctx.filters.set(effective_filters.clone());
+        ctx.pending.set(effective_filters.clone());
         ctx.has_more.set_value(true);
         ctx.is_first_batch.set_value(true);
         ctx.next_batch_token.set(None);
         let batch_size = ctx.initial_batch_size.get();
         load_games(
-            ctx.filters.get(),
+            effective_filters,
             current_tab.get_untracked(),
             username.get_value(),
             None,
@@ -98,11 +109,10 @@ pub fn GamesFilter(username: String, ctx: GamesSearchContext) -> impl IntoView {
     };
 
     let reset_filters = move |_| {
-        let reset_to = if current_tab.get_untracked() == GameProgress::Finished {
-            ctx.get_filter_cookie.get_untracked().unwrap_or_default()
-        } else {
-            FilterState::default()
-        };
+        let reset_to = initial_profile_filters_for_tab(
+            current_tab.get_untracked(),
+            ctx.get_filter_cookie.get_untracked(),
+        );
         pending.set(reset_to.clone());
 
         if ctx.filters.get_untracked() != reset_to {
@@ -155,7 +165,9 @@ pub fn GamesFilter(username: String, ctx: GamesSearchContext) -> impl IntoView {
     let saved_default_exists =
         Signal::derive(move || ctx.get_filter_cookie.with(|cookie| cookie.is_some()));
     let is_current_saved_default = Signal::derive(move || {
-        let saved_default = ctx.get_filter_cookie.get().unwrap_or_default();
+        let Some(saved_default) = ctx.get_filter_cookie.get() else {
+            return false;
+        };
         if no_changes() {
             saved_default == ctx.filters.get()
         } else {
@@ -165,25 +177,26 @@ pub fn GamesFilter(username: String, ctx: GamesSearchContext) -> impl IntoView {
     let is_system_default = Signal::derive(move || ctx.filters.get() == FilterState::default());
     let reset_disabled = Signal::derive(move || {
         let current_filters = ctx.filters.get();
-        let reset_target = if current_tab() == GameProgress::Finished {
-            ctx.get_filter_cookie.get().unwrap_or_default()
-        } else {
-            FilterState::default()
-        };
+        let reset_target =
+            initial_profile_filters_for_tab(current_tab(), ctx.get_filter_cookie.get());
         current_filters == reset_target
     });
 
     view! {
         <div class="relative">
             <details node_ref=dropdown_ref>
-                <summary class="py-1 px-2 ml-0.5 text-sm font-semibold text-gray-900 bg-gray-100 rounded-lg border-2 border-transparent cursor-pointer dark:text-gray-100 dark:bg-gray-800 hover:bg-gray-200 max-w-fit dark:hover:bg-gray-700">
-                    "🔧 Filters"
+                <summary class="py-1 px-3 ml-0.5 text-sm cursor-pointer ui-button ui-button-secondary ui-button-md max-w-fit [&::-webkit-details-marker]:hidden">
+                    <Icon icon=icondata_lu::LuSlidersHorizontal attr:class="size-4" />
+                    <span>"Filters"</span>
                 </summary>
-                <div class="absolute right-0 top-full z-40 p-2 mt-1 max-w-screen-sm bg-white rounded-lg border border-gray-200 shadow-lg lg:p-0 lg:mt-2 lg:w-96 lg:max-w-none lg:shadow-xl dark:bg-gray-900 dark:border-gray-700 w-[90vw]">
+                <DropdownPanel class="absolute right-0 top-full z-40 p-2 mt-1 max-w-screen-sm lg:p-0 lg:mt-2 lg:max-w-none w-[90vw] lg:w-[31rem]">
                     <ActiveFiltersDisplay ctx current_tab i18n />
 
                     <div class="space-y-2 lg:flex lg:space-y-0">
-                        <div class="space-y-2 lg:flex-1 lg:p-4 lg:border-r lg:border-gray-200 lg:dark:border-gray-700">
+                        <div class=with_class(
+                            "lg:border-r lg:border-black/10 lg:dark:border-white/10",
+                            "space-y-2 lg:flex-1 lg:p-4",
+                        )>
                             <TriStateFilter
                                 filter_type=TriStateType::Color
                                 pending
@@ -192,7 +205,7 @@ pub fn GamesFilter(username: String, ctx: GamesSearchContext) -> impl IntoView {
 
                             <Show when=move || current_tab() == GameProgress::Finished>
                                 <div class="space-y-1 lg:space-y-2">
-                                    <label class="block text-xs font-medium text-gray-700 lg:text-sm dark:text-gray-300">
+                                    <label class="ui-field-label">
                                         {t!(i18n, profile.game_result)}
                                     </label>
                                     <div class="grid grid-cols-2 gap-1 lg:gap-2">
@@ -243,7 +256,7 @@ pub fn GamesFilter(username: String, ctx: GamesSearchContext) -> impl IntoView {
                             </Show>
 
                             <div class="space-y-1 lg:space-y-2">
-                                <label class="block text-xs font-medium text-gray-700 lg:text-sm dark:text-gray-300">
+                                <label class="ui-field-label">
                                     {t!(i18n, profile.include_speeds)}
                                 </label>
                                 <div class="grid grid-cols-3 gap-1 lg:gap-2">
@@ -256,7 +269,8 @@ pub fn GamesFilter(username: String, ctx: GamesSearchContext) -> impl IntoView {
                                                         pending.with(|state| state.speeds.contains(&speed))
                                                     })
                                                     on_click=move |_| toggle_speeds(&speed)
-                                                    flex_class="relative p-1 xs:p-1.5 sm:p-2 lg:p-2 hover:border-pillbug-teal min-h-8 xs:min-h-9 sm:min-h-10 lg:min-h-11 flex items-center justify-center"
+                                                    fit_label=false
+                                                    flex_class=""
                                                 >
                                                     <Icon
                                                         icon=icon_for_speed(speed)
@@ -286,9 +300,7 @@ pub fn GamesFilter(username: String, ctx: GamesSearchContext) -> impl IntoView {
                             </div>
 
                             <div class="flex justify-between items-center lg:pt-2">
-                                <span class="text-xs font-medium text-gray-700 lg:text-sm dark:text-gray-300">
-                                    "Bot Games:"
-                                </span>
+                                <span class="ui-field-label">"Bot Games:"</span>
                                 <FilterButton
                                     is_active=Signal::derive(move || {
                                         !pending.with(|state| state.exclude_bots)
@@ -297,7 +309,7 @@ pub fn GamesFilter(username: String, ctx: GamesSearchContext) -> impl IntoView {
                                         pending
                                             .update(|state| state.exclude_bots = !state.exclude_bots)
                                     }
-                                    flex_class=""
+                                    flex_class="w-24 shrink-0"
                                 >
                                     {move || {
                                         if pending.with(|state| state.exclude_bots) {
@@ -312,21 +324,25 @@ pub fn GamesFilter(username: String, ctx: GamesSearchContext) -> impl IntoView {
                     </div>
 
                     <Show when=no_speeds>
-                        <div class="py-2 px-3 mx-0 mb-0 text-sm text-yellow-800 bg-yellow-100 rounded-lg border border-yellow-300 lg:mx-4 lg:mb-4 dark:text-yellow-200 dark:bg-yellow-900 dark:border-yellow-700">
-                            "Please select at least one game speed"
-                        </div>
+                        <div class=with_class(
+                            "ui-warning-notice",
+                            "mx-0 mb-0 lg:mx-4 lg:mb-4",
+                        )>"Please select at least one game speed"</div>
                     </Show>
 
-                    <div class="flex gap-1 pt-2 mt-3 border-t border-gray-200 lg:gap-3 lg:justify-end lg:p-4 lg:bg-gray-50 lg:border-gray-200 dark:border-gray-700 xs:gap-2 lg:dark:bg-gray-800/30 lg:dark:border-gray-700">
+                    <div class=with_class(
+                        "border-t border-black/10 bg-odd-light/70 dark:border-white/10 dark:bg-surface-muted",
+                        "mt-3 flex gap-1 pt-2 xs:gap-2 lg:justify-end lg:gap-3 lg:p-4",
+                    )>
                         <ActionButton
                             on_click=apply_filters
                             disabled=Signal::derive(move || no_changes() || no_speeds())
-                            variant=ActionButtonVariant::Apply
+                            variant=FilterActionKind::Apply
                         />
                         <ActionButton
                             on_click=reset_filters
                             disabled=reset_disabled
-                            variant=ActionButtonVariant::Reset
+                            variant=FilterActionKind::Reset
                         />
                         <Show when=move || current_tab() == GameProgress::Finished>
                             <ActionButton
@@ -334,28 +350,20 @@ pub fn GamesFilter(username: String, ctx: GamesSearchContext) -> impl IntoView {
                                 disabled=Signal::derive(move || {
                                     is_current_saved_default() || no_speeds()
                                 })
-                                variant=ActionButtonVariant::Save
+                                variant=FilterActionKind::Save
                             />
                             <ActionButton
                                 on_click=clear_default_filters
                                 disabled=Signal::derive(move || {
                                     !saved_default_exists() && is_system_default()
                                 })
-                                variant=ActionButtonVariant::Clear
+                                variant=FilterActionKind::Clear
                             />
                         </Show>
                     </div>
-                </div>
+                </DropdownPanel>
             </details>
         </div>
-    }
-}
-
-fn button_style(is_active: bool) -> &'static str {
-    if is_active {
-        "border-pillbug-teal bg-pillbug-teal/10 text-pillbug-teal"
-    } else {
-        "border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
     }
 }
 
@@ -366,7 +374,7 @@ fn ActiveFiltersDisplay(
     i18n: I18nContext<Locale, I18nKeys>,
 ) -> impl IntoView {
     view! {
-        <div class="pb-2 mb-2 border-b border-gray-200 dark:border-gray-700">
+        <div class="pb-2 mb-2 ui-divider-bottom">
             <div class="flex flex-wrap gap-1 items-center p-2 min-h-[24px]">
                 <span class="mr-1 text-xs font-medium text-gray-600 dark:text-gray-400">
                     "Active:"
@@ -447,23 +455,32 @@ fn FilterButton<F>(
     is_active: Signal<bool>,
     on_click: F,
     children: Children,
+    #[prop(default = true)] fit_label: bool,
     #[prop(optional)] flex_class: &'static str,
 ) -> impl IntoView
 where
     F: Fn(leptos::ev::MouseEvent) + 'static,
 {
+    let content = if fit_label {
+        Either::Left(view! { <span class="ui-fit-label">{children()}</span> })
+    } else {
+        Either::Right(children())
+    };
+
     view! {
         <button
             class=move || {
-                format!(
-                    "rounded-lg border-2 cursor-pointer transition-all font-medium text-center flex items-center justify-center px-1 py-1 text-xs min-h-6 xs:px-3 xs:py-1.5 xs:min-h-7 sm:px-4 sm:py-2 sm:min-h-9 lg:px-3 lg:py-1.5 lg:min-h-7 {} {}",
-                    button_style(is_active()),
-                    flex_class,
-                )
+                let state = if is_active() { "ui-choice-active" } else { "ui-choice-inactive" };
+                let size = if fit_label {
+                    "ui-choice-xs ui-fit-container"
+                } else {
+                    "ui-choice-icon"
+                };
+                with_class(&format!("ui-choice {state} {size} cursor-pointer"), flex_class)
             }
             on:click=on_click
         >
-            {children()}
+            {content}
         </button>
     }
 }
@@ -494,7 +511,7 @@ fn TriStateFilter(
 
     view! {
         <div class="space-y-1 lg:space-y-2">
-            <label class="block text-xs font-medium text-gray-700 lg:text-sm dark:text-gray-300">
+            <label class="ui-field-label">
                 {move || match filter_type {
                     TriStateType::Color => "Player Color",
                     TriStateType::Expansion => "Expansions",
@@ -525,48 +542,41 @@ fn TriStateFilter(
 }
 
 #[derive(Clone, Copy)]
-enum ActionButtonVariant {
+enum FilterActionKind {
     Apply,
     Save,
     Reset,
     Clear,
 }
 
-impl ActionButtonVariant {
+impl FilterActionKind {
     fn label(&self) -> &'static str {
         match self {
-            ActionButtonVariant::Apply => "Apply",
-            ActionButtonVariant::Save => "Save",
-            ActionButtonVariant::Reset => "Reset",
-            ActionButtonVariant::Clear => "Clear",
+            FilterActionKind::Apply => "Apply",
+            FilterActionKind::Save => "Save",
+            FilterActionKind::Reset => "Reset",
+            FilterActionKind::Clear => "Clear",
         }
     }
 
-    fn enabled_classes(&self) -> &'static str {
+    fn tone_class(&self) -> &'static str {
         match self {
-            ActionButtonVariant::Apply => "bg-pillbug-teal hover:bg-pillbug-teal/90 text-white",
-            ActionButtonVariant::Save => "text-blue-700 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800",
-            ActionButtonVariant::Reset => "text-gray-700 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-300",
-            ActionButtonVariant::Clear => "text-red-700 bg-red-100 hover:bg-red-200 dark:bg-red-900 dark:text-red-200 dark:hover:bg-red-800",
+            FilterActionKind::Apply => "ui-button-primary",
+            FilterActionKind::Save | FilterActionKind::Reset => "ui-button-secondary",
+            FilterActionKind::Clear => "ui-button-danger",
         }
     }
 
-    fn base_classes(&self) -> &'static str {
+    fn wide_class(&self) -> &'static str {
         match self {
-            ActionButtonVariant::Apply => {
-                "px-2 py-1 text-xs xs:px-4 xs:py-2 xs:text-sm font-semibold rounded-lg transition-all min-w-0"
-            }
-            _ => "px-2 py-1 text-xs xs:px-3 xs:py-2 xs:text-sm font-medium rounded-lg transition-all min-w-0",
+            FilterActionKind::Apply => "xs:px-4",
+            _ => "",
         }
     }
 }
 
 #[component]
-fn ActionButton<F>(
-    on_click: F,
-    disabled: Signal<bool>,
-    variant: ActionButtonVariant,
-) -> impl IntoView
+fn ActionButton<F>(on_click: F, disabled: Signal<bool>, variant: FilterActionKind) -> impl IntoView
 where
     F: Fn(leptos::ev::MouseEvent) + 'static,
 {
@@ -576,17 +586,13 @@ where
             disabled=disabled
             class=move || {
                 format!(
-                    "{} {}",
-                    variant.base_classes(),
-                    if disabled() {
-                        "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
-                    } else {
-                        variant.enabled_classes()
-                    },
+                    "ui-button {} ui-button-xs ui-fit-container min-w-16 flex-1 lg:flex-none {}",
+                    variant.tone_class(),
+                    variant.wide_class(),
                 )
             }
         >
-            {variant.label()}
+            <span class="ui-fit-label">{variant.label()}</span>
         </button>
     }
 }

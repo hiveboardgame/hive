@@ -1,13 +1,14 @@
 use crate::{
-    common::UserStatus,
+    common::{challenge_displayed_player, challenge_viewer_role, with_class, UserStatus},
     components::molecules::challenge_row::ChallengeRow,
+    hooks::tap_feedback::use_tap_feedback,
     i18n::*,
     providers::{
         challenges::ChallengeStateSignal,
         online_users::{OnlineUsersSignal, OnlineUsersState},
         AuthContext,
     },
-    responses::{ChallengeResponse, UserResponse},
+    responses::ChallengeResponse,
 };
 use leptos::prelude::*;
 use shared_types::ChallengeId;
@@ -100,38 +101,42 @@ enum ChallengeTab {
     Bots,
 }
 
-fn tab_button_state_classes(tab: ChallengeTab, active_tab: ChallengeTab) -> &'static str {
-    match (tab, active_tab) {
-        (ChallengeTab::Humans, ChallengeTab::Humans) | (ChallengeTab::Bots, ChallengeTab::Bots) => {
-            "text-white bg-button-dawn dark:bg-button-twilight"
-        }
-        (ChallengeTab::Humans, ChallengeTab::Bots) | (ChallengeTab::Bots, ChallengeTab::Humans) => {
-            "hover:bg-pillbug-teal/10 dark:hover:bg-pillbug-teal/10"
-        }
-    }
-}
-
-fn tab_badge_state_classes(tab: ChallengeTab, active_tab: ChallengeTab) -> &'static str {
-    match (tab, active_tab) {
-        (ChallengeTab::Humans, ChallengeTab::Humans) | (ChallengeTab::Bots, ChallengeTab::Bots) => {
-            "bg-white/20 text-white"
-        }
-        (ChallengeTab::Humans, ChallengeTab::Bots) | (ChallengeTab::Bots, ChallengeTab::Humans) => {
-            "bg-pillbug-teal/10 text-pillbug-teal"
-        }
-    }
-}
+const CHALLENGE_SEGMENTED_CLASS: &str =
+    "flex overflow-hidden rounded-none border-b border-black/10 bg-odd-light dark:border-white/10 dark:bg-surface-muted";
+const CHALLENGE_TAB_CLASS: &str =
+    "flex grow items-center justify-center gap-2 px-4 py-2 font-bold transition-colors duration-200";
+const CHALLENGE_TAB_ACTIVE_CLASS: &str = "bg-button-dawn text-white hover:bg-button-dawn data-[ui-pressed=true]:bg-button-dawn dark:bg-button-twilight dark:hover:bg-button-twilight dark:data-[ui-pressed=true]:bg-button-twilight";
+const CHALLENGE_TAB_INACTIVE_CLASS: &str = "text-gray-700 hover:bg-pillbug-teal/10 data-[ui-pressed=true]:bg-pillbug-teal/10 dark:text-gray-200 dark:hover:bg-pillbug-teal/10 dark:data-[ui-pressed=true]:bg-pillbug-teal/10";
+const CHALLENGE_TAB_BADGE_CLASS: &str = "rounded-full px-2 py-0.5 text-xs";
+const CHALLENGE_TAB_BADGE_ACTIVE_CLASS: &str = "bg-white/20 text-white";
+const CHALLENGE_TAB_BADGE_INACTIVE_CLASS: &str =
+    "bg-pillbug-teal/10 text-pillbug-teal dark:bg-pillbug-teal/15";
+const CHALLENGE_TABLE_SCROLL_CLASS: &str = "max-h-96 overflow-x-auto overflow-y-auto";
+const CHALLENGE_TABLE_CLASS: &str =
+    "w-full min-w-[21.5rem] table-auto sm:min-w-full sm:table-fixed";
 
 struct ChallengeTabState {
     rows: Vec<GroupedChallenge>,
     signature: Vec<Vec<ChallengeId>>,
 }
 
-fn challenge_tab_state_changed(
-    prev: Option<&ChallengeTabState>,
-    next: Option<&ChallengeTabState>,
+struct ChallengeTabsState {
+    humans: ChallengeTabState,
+    bots: ChallengeTabState,
+}
+
+fn challenge_tabs_state_changed(
+    prev: Option<&ChallengeTabsState>,
+    next: Option<&ChallengeTabsState>,
 ) -> bool {
-    prev.map(|state| &state.signature) != next.map(|state| &state.signature)
+    match (prev, next) {
+        (Some(prev), Some(next)) => {
+            prev.humans.signature != next.humans.signature
+                || prev.bots.signature != next.bots.signature
+        }
+        (None, None) => false,
+        _ => true,
+    }
 }
 
 fn challenge_time_sort_key(challenge: &ChallengeResponse) -> (i32, i32) {
@@ -141,19 +146,10 @@ fn challenge_time_sort_key(challenge: &ChallengeResponse) -> (i32, i32) {
     )
 }
 
-fn displayed_player(challenge: &ChallengeResponse, viewer_id: Option<Uuid>) -> &UserResponse {
-    if Some(challenge.challenger.uid) == viewer_id {
-        if let Some(opponent) = challenge.opponent.as_ref() {
-            return opponent;
-        }
-    }
-
-    &challenge.challenger
-}
-
 fn displayed_player_rating(challenge: &ChallengeResponse, viewer_id: Option<Uuid>) -> u64 {
-    let player = displayed_player(challenge, viewer_id);
-    player.rating_for_speed(&challenge.speed)
+    let role = challenge_viewer_role(challenge, viewer_id);
+    let (_, rating) = challenge_displayed_player(challenge, role);
+    rating
 }
 
 fn displayed_player_is_online(
@@ -161,20 +157,63 @@ fn displayed_player_is_online(
     online_users: &OnlineUsersState,
     viewer_id: Option<Uuid>,
 ) -> bool {
+    let role = challenge_viewer_role(challenge, viewer_id);
+    let (displayed_player, _) = challenge_displayed_player(challenge, role);
     matches!(
-        online_users
-            .username_status
-            .get(&displayed_player(challenge, viewer_id).username),
+        online_users.username_status.get(&displayed_player.username),
         Some(UserStatus::Online)
     )
 }
 
-fn build_tab_state(
-    tab: ChallengeTab,
+fn append_grouped_challenge_rows(
+    tabs: &mut ChallengeTabsState,
+    challenges_list: Vec<ChallengeResponse>,
+    online_users: &OnlineUsersState,
+    viewer_id: Option<Uuid>,
+) {
+    if challenges_list.is_empty() {
+        return;
+    }
+
+    let mut grouped = GroupedChallenge::group_challenges(challenges_list);
+    grouped.sort_by(|a, b| {
+        b.challenge
+            .rated
+            .cmp(&a.challenge.rated)
+            .then_with(|| {
+                challenge_time_sort_key(&a.challenge).cmp(&challenge_time_sort_key(&b.challenge))
+            })
+            .then_with(|| {
+                displayed_player_is_online(&b.challenge, online_users, viewer_id).cmp(
+                    &displayed_player_is_online(&a.challenge, online_users, viewer_id),
+                )
+            })
+            .then_with(|| {
+                displayed_player_rating(&b.challenge, viewer_id)
+                    .cmp(&displayed_player_rating(&a.challenge, viewer_id))
+            })
+            .then_with(|| a.challenge.challenge_id.0.cmp(&b.challenge.challenge_id.0))
+    });
+
+    for group in grouped {
+        let role = challenge_viewer_role(&group.challenge, viewer_id);
+        let (displayed_player, _) = challenge_displayed_player(&group.challenge, role);
+        let tab = if displayed_player.bot {
+            &mut tabs.bots
+        } else {
+            &mut tabs.humans
+        };
+
+        tab.signature.push(group.challenge_ids.clone());
+        tab.rows.push(group);
+    }
+}
+
+fn build_tabs_state(
     challenges: &HashMap<ChallengeId, ChallengeResponse>,
     online_users: &OnlineUsersState,
     viewer_id: Option<Uuid>,
-) -> ChallengeTabState {
+) -> ChallengeTabsState {
     let mut direct = Vec::new();
     let mut own = Vec::new();
     let mut public = Vec::new();
@@ -197,57 +236,22 @@ fn build_tab_state(
         }
     }
 
-    let mut rows = Vec::new();
-    let mut signature = Vec::new();
-    let mut append_matching_rows = |challenges_list: Vec<ChallengeResponse>| {
-        if challenges_list.is_empty() {
-            return;
-        }
-
-        let mut grouped = GroupedChallenge::group_challenges(challenges_list);
-        grouped.sort_by(|a, b| {
-            b.challenge
-                .rated
-                .cmp(&a.challenge.rated)
-                .then_with(|| {
-                    challenge_time_sort_key(&a.challenge)
-                        .cmp(&challenge_time_sort_key(&b.challenge))
-                })
-                .then_with(|| {
-                    displayed_player_is_online(&b.challenge, online_users, viewer_id).cmp(
-                        &displayed_player_is_online(&a.challenge, online_users, viewer_id),
-                    )
-                })
-                .then_with(|| {
-                    displayed_player_rating(&b.challenge, viewer_id)
-                        .cmp(&displayed_player_rating(&a.challenge, viewer_id))
-                })
-                .then_with(|| a.challenge.challenge_id.0.cmp(&b.challenge.challenge_id.0))
-        });
-
-        for group in grouped {
-            let displayed_player_is_bot = match group.challenge.opponent.as_ref() {
-                Some(opponent) if Some(group.challenge.challenger.uid) == viewer_id => opponent.bot,
-                Some(_) | None => group.challenge.challenger.bot,
-            };
-            let group_matches_tab = displayed_player_is_bot
-                == match tab {
-                    ChallengeTab::Humans => false,
-                    ChallengeTab::Bots => true,
-                };
-
-            if group_matches_tab {
-                signature.push(group.challenge_ids.clone());
-                rows.push(group);
-            }
-        }
+    let mut tabs = ChallengeTabsState {
+        humans: ChallengeTabState {
+            rows: Vec::new(),
+            signature: Vec::new(),
+        },
+        bots: ChallengeTabState {
+            rows: Vec::new(),
+            signature: Vec::new(),
+        },
     };
 
-    append_matching_rows(direct);
-    append_matching_rows(own);
-    append_matching_rows(public);
+    append_grouped_challenge_rows(&mut tabs, direct, online_users, viewer_id);
+    append_grouped_challenge_rows(&mut tabs, own, online_users, viewer_id);
+    append_grouped_challenge_rows(&mut tabs, public, online_users, viewer_id);
 
-    ChallengeTabState { rows, signature }
+    tabs
 }
 
 #[component]
@@ -259,28 +263,16 @@ pub fn Challenges() -> impl IntoView {
     let online_users = expect_context::<OnlineUsersSignal>().signal;
     let auth_context = expect_context::<AuthContext>();
     let active_tab = RwSignal::new(ChallengeTab::Humans);
+    let mark_tab_press = use_tap_feedback("[data-challenge-tab]");
     let user = auth_context.user;
-    let humans = Memo::new_with_compare(
+    let tabs = Memo::new_with_compare(
         move |_| {
             let viewer_id = user.with(|account| account.as_ref().map(|account| account.id));
             challenges.with(|state| {
-                online_users.with(|users| {
-                    build_tab_state(ChallengeTab::Humans, &state.challenges, users, viewer_id)
-                })
+                online_users.with(|users| build_tabs_state(&state.challenges, users, viewer_id))
             })
         },
-        challenge_tab_state_changed,
-    );
-    let bots = Memo::new_with_compare(
-        move |_| {
-            let viewer_id = user.with(|account| account.as_ref().map(|account| account.id));
-            challenges.with(|state| {
-                online_users.with(|users| {
-                    build_tab_state(ChallengeTab::Bots, &state.challenges, users, viewer_id)
-                })
-            })
-        },
-        challenge_tab_state_changed,
+        challenge_tabs_state_changed,
     );
     let empty_state_message = move || match active_tab() {
         ChallengeTab::Humans => t_string!(i18n, home.challenge_tabs.empty_state.humans),
@@ -288,108 +280,129 @@ pub fn Challenges() -> impl IntoView {
     };
 
     view! {
-        <div class="flex overflow-hidden justify-center m-2 w-full lg:justify-end 2xl:justify-center">
-            <div class="overflow-hidden w-full max-w-screen-md rounded-lg border border-gray-200 dark:border-gray-700">
-                <div class="flex border-b border-gray-200 dark:bg-gray-900 dark:border-gray-700 bg-stone-100">
-                    <button
-                        class=move || {
-                            format!(
-                                "flex gap-2 items-center justify-center px-4 py-2 font-bold transition-colors duration-300 grow {}",
-                                tab_button_state_classes(ChallengeTab::Humans, active_tab()),
+        <div class="overflow-hidden mx-auto w-full max-w-screen-md ui-panel">
+            <div
+                class=CHALLENGE_SEGMENTED_CLASS
+                on:pointerdown=move |event| mark_tab_press.run(event)
+            >
+                <button
+                    type="button"
+                    data-challenge-tab="true"
+                    class=move || {
+                        if active_tab() == ChallengeTab::Humans {
+                            with_class(CHALLENGE_TAB_CLASS, CHALLENGE_TAB_ACTIVE_CLASS)
+                        } else {
+                            with_class(CHALLENGE_TAB_CLASS, CHALLENGE_TAB_INACTIVE_CLASS)
+                        }
+                    }
+                    on:click=move |_| active_tab.set(ChallengeTab::Humans)
+                >
+                    <span>{move || t_string!(i18n, home.challenge_tabs.humans)}</span>
+                    <span class=move || {
+                        if active_tab() == ChallengeTab::Humans {
+                            with_class(CHALLENGE_TAB_BADGE_CLASS, CHALLENGE_TAB_BADGE_ACTIVE_CLASS)
+                        } else {
+                            with_class(
+                                CHALLENGE_TAB_BADGE_CLASS,
+                                CHALLENGE_TAB_BADGE_INACTIVE_CLASS,
                             )
                         }
-                        on:click=move |_| active_tab.set(ChallengeTab::Humans)
-                    >
-                        <span>{move || t_string!(i18n, home.challenge_tabs.humans)}</span>
-                        <span class=move || {
-                            format!(
-                                "py-0.5 px-2 text-xs rounded-full {}",
-                                tab_badge_state_classes(ChallengeTab::Humans, active_tab()),
-                            )
-                        }>{move || humans.with(|tab| tab.rows.len().to_string())}</span>
-                    </button>
-                    <button
-                        class=move || {
-                            format!(
-                                "flex gap-2 items-center justify-center px-4 py-2 font-bold transition-colors duration-300 grow {}",
-                                tab_button_state_classes(ChallengeTab::Bots, active_tab()),
+                    }>{move || tabs.with(|tabs| tabs.humans.rows.len().to_string())}</span>
+                </button>
+                <button
+                    type="button"
+                    data-challenge-tab="true"
+                    class=move || {
+                        if active_tab() == ChallengeTab::Bots {
+                            with_class(CHALLENGE_TAB_CLASS, CHALLENGE_TAB_ACTIVE_CLASS)
+                        } else {
+                            with_class(CHALLENGE_TAB_CLASS, CHALLENGE_TAB_INACTIVE_CLASS)
+                        }
+                    }
+                    on:click=move |_| active_tab.set(ChallengeTab::Bots)
+                >
+                    <span>{move || t_string!(i18n, home.challenge_tabs.bots)}</span>
+                    <span class=move || {
+                        if active_tab() == ChallengeTab::Bots {
+                            with_class(CHALLENGE_TAB_BADGE_CLASS, CHALLENGE_TAB_BADGE_ACTIVE_CLASS)
+                        } else {
+                            with_class(
+                                CHALLENGE_TAB_BADGE_CLASS,
+                                CHALLENGE_TAB_BADGE_INACTIVE_CLASS,
                             )
                         }
-                        on:click=move |_| active_tab.set(ChallengeTab::Bots)
-                    >
-                        <span>{move || t_string!(i18n, home.challenge_tabs.bots)}</span>
-                        <span class=move || {
-                            format!(
-                                "py-0.5 px-2 text-xs rounded-full {}",
-                                tab_badge_state_classes(ChallengeTab::Bots, active_tab()),
-                            )
-                        }>{move || bots.with(|tab| tab.rows.len().to_string())}</span>
-                    </button>
-                </div>
-                <div class="overflow-y-auto max-h-96">
-                    <table class="w-full min-w-0 table-fixed">
-                        <thead class="sticky top-0 z-10 bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+                    }>{move || tabs.with(|tabs| tabs.bots.rows.len().to_string())}</span>
+                </button>
+            </div>
+            <div class=CHALLENGE_TABLE_SCROLL_CLASS>
+                <table class=CHALLENGE_TABLE_CLASS>
+                    <thead class="sticky top-0 z-10 border-b border-black/10 bg-even-light dark:border-white/10 dark:bg-surface-panel">
+                        <tr>
+                            <th class=format!("{} w-12 xs:w-14 sm:w-6 min-w-0", th_class)></th>
+                            <th class=format!(
+                                "{} w-16 xs:w-20 sm:w-24 md:w-32 lg:w-40 min-w-0 text-xs sm:text-sm",
+                                th_class,
+                            )>{t!(i18n, home.challenge_details.player)}</th>
+                            <th class=format!(
+                                "{} w-12 xs:w-14 sm:w-16 md:w-16 lg:w-20 min-w-0 text-xs sm:text-sm",
+                                th_class,
+                            )>Elo</th>
+                            <th class=format!(
+                                "{} w-8 xs:w-10 sm:w-12 md:w-14 lg:w-16 min-w-0 text-xs sm:text-sm",
+                                th_class,
+                            )>Plm</th>
+                            <th class=format!(
+                                "{} w-12 xs:w-14 sm:w-16 md:w-20 lg:w-24 min-w-0 text-xs sm:text-sm",
+                                th_class,
+                            )>{t!(i18n, home.challenge_details.time)}</th>
+                            <th class=format!(
+                                "{} w-8 xs:w-10 sm:w-12 md:w-14 lg:w-16 min-w-0 text-xs sm:text-sm",
+                                th_class,
+                            )>{t!(i18n, home.challenge_details.rated.title)}</th>
+                            <th class=format!(
+                                "{} hidden sm:table-cell w-14 sm:w-16 md:w-18 lg:w-20 min-w-0",
+                                th_class,
+                            )></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <Show when=move || {
+                            match active_tab() {
+                                ChallengeTab::Humans => {
+                                    tabs.with(|tabs| tabs.humans.rows.is_empty())
+                                }
+                                ChallengeTab::Bots => tabs.with(|tabs| tabs.bots.rows.is_empty()),
+                            }
+                        }>
                             <tr>
-                                <th class=format!("{} w-6 min-w-0", th_class)></th>
-                                <th class=format!(
-                                    "{} w-16 xs:w-20 sm:w-24 md:w-32 lg:w-40 min-w-0 text-xs sm:text-sm",
-                                    th_class,
-                                )>{t!(i18n, home.challenge_details.player)}</th>
-                                <th class=format!(
-                                    "{} w-12 xs:w-14 sm:w-16 md:w-16 lg:w-20 min-w-0 text-xs sm:text-sm",
-                                    th_class,
-                                )>Elo</th>
-                                <th class=format!(
-                                    "{} w-8 xs:w-10 sm:w-12 md:w-14 lg:w-16 min-w-0 text-xs sm:text-sm",
-                                    th_class,
-                                )>Plm</th>
-                                <th class=format!(
-                                    "{} w-12 xs:w-14 sm:w-16 md:w-20 lg:w-24 min-w-0 text-xs sm:text-sm",
-                                    th_class,
-                                )>{t!(i18n, home.challenge_details.time)}</th>
-                                <th class=format!(
-                                    "{} w-8 xs:w-10 sm:w-12 md:w-14 lg:w-16 min-w-0 text-xs sm:text-sm",
-                                    th_class,
-                                )>{t!(i18n, home.challenge_details.rated.title)}</th>
-                                <th class=format!("{} w-16 sm:w-18 lg:w-20 min-w-0", th_class)></th>
+                                <td colspan="7" class="p-3">
+                                    <div class=with_class(
+                                        "flex flex-col items-center justify-center rounded-lg border border-dashed border-black/15 bg-odd-light/80 px-4 py-8 text-center text-gray-600 dark:border-white/15 dark:bg-surface-field dark:text-gray-300",
+                                        "border-0 py-6",
+                                    )>{empty_state_message}</div>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            <Show when=move || {
+                        </Show>
+                        <For
+                            each=move || {
                                 match active_tab() {
-                                    ChallengeTab::Humans => humans.with(|tab| tab.rows.is_empty()),
-                                    ChallengeTab::Bots => bots.with(|tab| tab.rows.is_empty()),
-                                }
-                            }>
-                                <tr>
-                                    <td
-                                        colspan="7"
-                                        class="py-6 px-4 text-sm text-center text-gray-500 dark:text-gray-400"
-                                    >
-                                        {empty_state_message}
-                                    </td>
-                                </tr>
-                            </Show>
-                            <For
-                                each=move || {
-                                    match active_tab() {
-                                        ChallengeTab::Humans => humans.with(|tab| tab.rows.clone()),
-                                        ChallengeTab::Bots => bots.with(|tab| tab.rows.clone()),
+                                    ChallengeTab::Humans => {
+                                        tabs.with(|tabs| tabs.humans.rows.clone())
                                     }
+                                    ChallengeTab::Bots => tabs.with(|tabs| tabs.bots.rows.clone()),
                                 }
-                                key=|g| g.reactive_key()
-                                let(grouped)
-                            >
-                                <ChallengeRow
-                                    challenge=grouped.challenge
-                                    single=false
-                                    count=grouped.count
-                                    challenge_ids=grouped.challenge_ids
-                                />
-                            </For>
-                        </tbody>
-                    </table>
-                </div>
+                            }
+                            key=|g| g.reactive_key()
+                            let(grouped)
+                        >
+                            <ChallengeRow
+                                challenge=grouped.challenge
+                                count=grouped.count
+                                challenge_ids=grouped.challenge_ids
+                            />
+                        </For>
+                    </tbody>
+                </table>
             </div>
         </div>
     }

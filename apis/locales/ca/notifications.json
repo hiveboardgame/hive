@@ -1,6 +1,6 @@
 {
     "page": {
-        "heading": "🔔 Notificacions",
+        "heading": "Notificacions",
         "intro_before_link": "Tria com vols rebre les notificacions per a cada tipus d'esdeveniment. Les notificacions push arriben als navegadors que activis a sota. La configuració de Discord és a la ",
         "account_link": "secció de Discord",
         "intro_after_link": " de sota.",
@@ -21,7 +21,7 @@
         "dms": "Missatge directe"
     },
     "browser": {
-        "heading": "🌐 Aquest navegador",
+        "heading": "Aquest navegador",
         "body": "Rep en aquest navegador les notificacions push seleccionades a dalt, fins i tot quan no hi hagi cap pestanya de HiveGame oberta. Activa-les per separat a cada dispositiu que vulguis notificar.",
         "enable": "Activa les notificacions del navegador",
         "disable": "Desactiva les notificacions del navegador",
@@ -31,11 +31,11 @@
         "test_failed": "La prova ha fallat:"
     },
     "ios": {
-        "heading": "📱 Al teu iPhone o iPad",
+        "heading": "Al teu iPhone o iPad",
         "body": "Per rebre notificacions a l'iOS, afegeix HiveGame a la pantalla d'inici: toca el botó Comparteix i després «Afegeix a la pantalla d'inici» i obre'l des d'allà."
     },
     "devices": {
-        "heading": "📡 Els teus dispositius",
+        "heading": "Els teus dispositius",
         "body": "Tots els dispositius configurats actualment per rebre push. Elimina els que ja no facis servir.",
         "remove": "Elimina",
         "this_browser": "(aquest navegador)",
@@ -93,6 +93,6 @@
         "takeback_declined_title": "Desfer rebutjat",
         "takeback_rejected_body": "{{actor}} ha rebutjat desfer la jugada",
         "test_title": "HiveGame",
-        "test_body": "Notificació de prova — les notificacions funcionen 🐝"
+        "test_body": "Notificació de prova — les notificacions funcionen"
     }
 }

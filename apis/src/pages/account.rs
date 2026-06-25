@@ -1,5 +1,9 @@
 use crate::{
-    components::update_from_event::update_from_input,
+    components::{
+        layouts::page_shell::{PageShell, PageShellVariant},
+        molecules::panel::Panel,
+        update_from_event::update_from_input,
+    },
     functions::accounts::{delete::DeleteAccount, edit::EditAccount},
     i18n::*,
     providers::{AuthContext, RefererContext},
@@ -9,7 +13,7 @@ use leptos::{form::ActionForm, leptos_dom::helpers::debounce, prelude::*, task::
 use std::time::Duration;
 
 #[component]
-pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
+pub fn Account() -> impl IntoView {
     let i18n = use_i18n();
     let account_action = ServerAction::<EditAccount>::new();
     let delete_action = ServerAction::<DeleteAccount>::new();
@@ -55,135 +59,127 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
     );
 
     view! {
-        <div class=format!(
-            "mx-auto w-full max-w-md px-4 pt-20 pb-20 sm:max-w-lg md:max-w-xl pt-20 pb-20 {extend_tw_classes}",
-        )>
-            <div class="px-8 pt-6 pb-8 mb-4 rounded-lg border shadow-lg bg-stone-300 border-stone-400 dark:bg-slate-800 dark:border-slate-600">
-                <h2 class="mb-4 text-xl font-bold text-center text-gray-700 dark:text-gray-300">
-                    "🔐 Change Password"
-                </h2>
-                <ActionForm action=account_action>
-                    <label
-                        class="block mb-2 font-semibold text-gray-700 dark:text-gray-300"
-                        for="old_password"
-                    >
-                        Current Password
+        <PageShell variant=PageShellVariant::Form>
+            <div class="flex flex-col gap-1">
+                <h1 class="ui-page-title">"Account"</h1>
+                <p class="ui-page-subtitle">"Manage password changes and account deletion."</p>
+            </div>
+
+            <Panel title="Change Password" body_class="space-y-4">
+                <ActionForm action=account_action attr:class="space-y-4">
+                    <label class="flex flex-col gap-1.5" for="old_password">
+                        <span class="ui-field-label">"Current Password"</span>
+                        <input
+                            on:input=debounce(
+                                Duration::from_millis(350),
+                                update_from_input(current_password),
+                            )
+                            class="ui-field-input"
+                            id="old_password"
+                            name="password"
+                            type="password"
+                            prop:value=current_password
+                            autocomplete="current-password"
+                            placeholder="Current password"
+                        />
                     </label>
-                    <input
-                        on:input=debounce(
-                            Duration::from_millis(350),
-                            update_from_input(current_password),
-                        )
-                        class="py-2 px-3 mb-3 w-full leading-tight rounded-lg border shadow appearance-none dark:text-white dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                        id="old_password"
-                        name="password"
-                        type="password"
-                        prop:value=current_password
-                        autocomplete="current-password"
-                        placeholder="Current password"
-                    />
-                    <label
-                        class="block mb-2 font-semibold text-gray-700 dark:text-gray-300"
-                        for="new_password"
-                    >
-                        New Password
+                    <label class="flex flex-col gap-1.5" for="new_password">
+                        <span class="ui-field-label">"New Password"</span>
+                        <input
+                            on:input=debounce(
+                                Duration::from_millis(350),
+                                update_from_input(new_password),
+                            )
+                            class="ui-field-input"
+                            name="new_password"
+                            id="new_password"
+                            type="password"
+                            prop:value=new_password
+                            autocomplete="new-password"
+                            placeholder="New password"
+                            minlength="8"
+                            maxlength="128"
+                        />
                     </label>
-                    <input
-                        on:input=debounce(
-                            Duration::from_millis(350),
-                            update_from_input(new_password),
-                        )
-                        class="py-2 px-3 mb-3 w-full leading-tight rounded-lg border shadow appearance-none dark:text-white dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                        name="new_password"
-                        id="new_password"
-                        type="password"
-                        prop:value=new_password
-                        autocomplete="new-password"
-                        placeholder="New password"
-                        minlength="8"
-                        maxlength="128"
-                    />
-                    <label
-                        class="block mb-2 font-semibold text-gray-700 dark:text-gray-300"
-                        for="confirm_password"
-                    >
-                        Confirm Password
+                    <label class="flex flex-col gap-1.5" for="confirm_password">
+                        <span class="ui-field-label">"Confirm Password"</span>
+                        <input
+                            on:input=debounce(
+                                Duration::from_millis(350),
+                                update_from_input(confirm_password),
+                            )
+                            class="ui-field-input"
+                            id="confirm_password"
+                            name="new_password_confirmation"
+                            type="password"
+                            prop:value=confirm_password
+                            autocomplete="new-password"
+                            placeholder="New password (again)"
+                            minlength="8"
+                            maxlength="128"
+                        />
                     </label>
-                    <input
-                        on:input=debounce(
-                            Duration::from_millis(350),
-                            update_from_input(confirm_password),
-                        )
-                        class="py-2 px-3 mb-3 w-full leading-tight rounded-lg border shadow appearance-none dark:text-white dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                        id="confirm_password"
-                        name="new_password_confirmation"
-                        type="password"
-                        prop:value=confirm_password
-                        autocomplete="new-password"
-                        placeholder="New password (again)"
-                        minlength="8"
-                        maxlength="128"
-                    />
                     <Show when=move || password_invalid() && !new_password().is_empty()>
-                        <small class="block mb-3 text-ladybug-red">
+                        <small class="ui-field-error">
                             "Password must be at least 8 characters and match confirmation"
                         </small>
                     </Show>
                     <input type="hidden" name="pathname" value=pathname.get_value() />
-                    <input
+                    <button
                         type="submit"
                         disabled=form_invalid
-                        class="py-3 px-4 w-full font-bold text-white bg-green-600 rounded-lg transition-all duration-300 cursor-pointer hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed"
-                        value="💾 Save Changes"
-                    />
+                        class="w-full ui-button ui-button-success ui-button-md"
+                    >
+                        "Save Changes"
+                    </button>
                     <Show when=display_account_error>
-                        <small class="block mt-2 text-ladybug-red">
+                        <small class="ui-field-error">
                             "Error updating password. Please check your current password and try again."
                         </small>
                     </Show>
                 </ActionForm>
-            </div>
+            </Panel>
 
-            <div class="px-8 pt-6 pb-8 mb-4 rounded-lg border shadow-lg bg-stone-300 border-stone-400 dark:bg-slate-800 dark:border-slate-600">
-                <h2 class="mb-4 text-xl font-bold text-center text-ladybug-red">
-                    {t!(i18n, user_config.delete_account.title)}
-                </h2>
-                <p class="mb-4 text-sm text-gray-700 dark:text-gray-300">
-                    {t!(i18n, user_config.delete_account.description)}
-                </p>
-                <ActionForm action=delete_action>
-                    <label
-                        class="block mb-2 font-semibold text-gray-700 dark:text-gray-300"
-                        for="delete_password"
-                    >
-                        {t!(i18n, user_config.delete_account.password)}
+            <Panel
+                title=move || { t_string!(i18n, user_config.delete_account.title) }
+                body_class="space-y-4"
+            >
+                <p class="ui-danger-notice">{t!(i18n, user_config.delete_account.description)}</p>
+                <ActionForm action=delete_action attr:class="space-y-4">
+                    <label class="flex flex-col gap-1.5" for="delete_password">
+                        <span class="ui-field-label">
+                            {t!(i18n, user_config.delete_account.password)}
+                        </span>
+                        <input
+                            on:input=debounce(
+                                Duration::from_millis(350),
+                                update_from_input(delete_password),
+                            )
+                            class="ui-field-input"
+                            id="delete_password"
+                            name="password"
+                            type="password"
+                            prop:value=delete_password
+                            autocomplete="current-password"
+                            placeholder=move || {
+                                t_string!(i18n, user_config.delete_account.password)
+                            }
+                        />
                     </label>
-                    <input
-                        on:input=debounce(
-                            Duration::from_millis(350),
-                            update_from_input(delete_password),
-                        )
-                        class="py-2 px-3 mb-3 w-full leading-tight rounded-lg border shadow appearance-none dark:text-white dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:outline-none focus:ring-ladybug-red"
-                        id="delete_password"
-                        name="password"
-                        type="password"
-                        prop:value=delete_password
-                        autocomplete="current-password"
-                        placeholder=move || { t_string!(i18n, user_config.delete_account.password) }
-                    />
-                    <input
+                    <button
                         type="submit"
                         disabled=delete_form_invalid
-                        class="py-3 px-4 w-full font-bold text-white rounded-lg transition-all duration-300 cursor-pointer hover:bg-red-700 focus:ring-2 focus:ring-offset-2 focus:outline-none active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed bg-ladybug-red focus:ring-ladybug-red"
-                        value=move || t_string!(i18n, user_config.delete_account.button)
-                    />
+                        class="w-full ui-button ui-button-danger ui-button-md"
+                    >
+                        {move || t_string!(i18n, user_config.delete_account.button)}
+                    </button>
                     <Show when=display_delete_error>
-                        <small class="block mt-2 text-ladybug-red">
+                        <small class="ui-field-error">
                             {t!(i18n, user_config.delete_account.error)}
                         </small>
                     </Show>
                 </ActionForm>
-            </div>
-        </div>
+            </Panel>
+        </PageShell>
     }
 }

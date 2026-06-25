@@ -1,9 +1,9 @@
 use crate::{
+    common::with_class,
     components::atoms::{
         profile_link::ProfileLink,
         schedule_controls::{GameDateControls, ProposeDateControls},
     },
-    pages::tournament::INFO_STYLE,
     providers::schedules::SchedulesContext,
     responses::{GameResponse, ScheduleResponse},
 };
@@ -74,74 +74,79 @@ fn MySchedulesInner(
         ret
     };
     view! {
-        <details class="m-2 w-80">
-            <summary class=INFO_STYLE>My Schedules:</summary>
-            <For each=my_schedules key=|g| (g.0.uuid, g.1) let:game>
+        <details class="w-full min-w-0 h-fit ui-panel">
+            <summary class="ui-panel-summary">"My Schedules"</summary>
+            <div class="space-y-2 ui-panel-body">
+                <For each=my_schedules key=|g| (g.0.uuid, g.1) let:game>
 
-                {
-                    let (gr, _) = game;
-                    let game_id = Signal::derive(move || gr.game_id.clone());
-                    let white_username = gr.white_player.username;
-                    let black_username = gr.black_player.username;
-                    let white_patreon = gr.white_player.patreon;
-                    let black_patreon = gr.black_player.patreon;
-                    let white_bot = gr.white_player.bot;
-                    let black_bot = gr.black_player.bot;
-                    let white_deleted = gr.white_player.deleted;
-                    let black_deleted = gr.black_player.deleted;
-                    view! {
-                        <div class="flex flex-col justify-between p-3 w-full h-fit dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light">
-                            <div class="flex justify-center mb-4">
-                                <div class="flex gap-1 justify-between items-center p-1 w-fit">
-                                    <ProfileLink
-                                        patreon=white_patreon
-                                        bot=white_bot
-                                        username=white_username
-                                        deleted=white_deleted
-                                        extend_tw_classes="truncate max-w-[120px] "
-                                    />
-                                    vs.
-                                    <ProfileLink
-                                        patreon=black_patreon
-                                        bot=black_bot
-                                        username=black_username
-                                        deleted=black_deleted
-                                        extend_tw_classes=" truncate max-w-[120px]"
-                                    />
+                    {
+                        let (gr, _) = game;
+                        let game_id = Signal::derive(move || gr.game_id.clone());
+                        let white_username = gr.white_player.username;
+                        let black_username = gr.black_player.username;
+                        let white_patreon = gr.white_player.patreon;
+                        let black_patreon = gr.black_player.patreon;
+                        let white_bot = gr.white_player.bot;
+                        let black_bot = gr.black_player.bot;
+                        let white_deleted = gr.white_player.deleted;
+                        let black_deleted = gr.black_player.deleted;
+                        view! {
+                            <div class=with_class(
+                                "ui-card-row",
+                                "flex h-fit w-full flex-col justify-between gap-3 p-3",
+                            )>
+                                <div class="flex justify-center">
+                                    <div class="flex gap-1 justify-between items-center p-1 w-fit">
+                                        <ProfileLink
+                                            patreon=white_patreon
+                                            bot=white_bot
+                                            username=white_username
+                                            deleted=white_deleted
+                                            extend_tw_classes="truncate max-w-[120px] "
+                                        />
+                                        vs.
+                                        <ProfileLink
+                                            patreon=black_patreon
+                                            bot=black_bot
+                                            username=black_username
+                                            deleted=black_deleted
+                                            extend_tw_classes=" truncate max-w-[120px]"
+                                        />
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div class="flex flex-col gap-2">
-                                <For
-                                    each=move || { get_schedules(game_id()) }
+                                <div class="flex flex-col gap-2">
+                                    <For
+                                        each=move || { get_schedules(game_id()) }
 
-                                    key=|schedule: &ScheduleResponse| (
-                                        schedule.id,
-                                        schedule.start_t,
-                                        schedule.agreed,
-                                    )
+                                        key=|schedule: &ScheduleResponse| (
+                                            schedule.id,
+                                            schedule.start_t,
+                                            schedule.agreed,
+                                        )
 
-                                    let:schedule
+                                        let:schedule
+                                    >
+                                        <GameDateControls
+                                            player_id=user_id()
+                                            schedule=schedule.clone()
+                                        />
+
+                                    </For>
+                                </div>
+                                <ProposeDateControls game_id=game_id() />
+                                <a
+                                    class="place-self-center ui-button ui-button-primary ui-button-md no-link-style"
+                                    href=format!("/game/{}", &game_id())
                                 >
-                                    <GameDateControls
-                                        player_id=user_id()
-                                        schedule=schedule.clone()
-                                    />
-
-                                </For>
+                                    "Join Game"
+                                </a>
                             </div>
-                            <ProposeDateControls game_id=game_id() />
-                            <a
-                                class="flex gap-1 justify-center items-center place-self-center py-2 px-4 w-2/5 font-bold text-white rounded active:scale-95 no-link-style bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
-                                href=format!("/game/{}", &game_id())
-                            >
-                                "Join Game"
-                            </a>
-                        </div>
+                        }
                     }
-                }
 
-            </For>
+                </For>
+            </div>
         </details>
     }
 }

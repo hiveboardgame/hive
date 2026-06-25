@@ -1,5 +1,5 @@
 use crate::{
-    common::UserAction,
+    common::{with_class, UserAction},
     components::molecules::user_row::UserRow,
     functions::users::search_users,
     i18n::*,
@@ -15,30 +15,17 @@ use wasm_bindgen::JsCast;
 const MIN_SEARCH_LENGTH: usize = 2;
 const MAX_SUGGESTIONS: usize = 10;
 
-const DEFAULT_INPUT_CLASS: &str = "w-full min-w-0 min-h-10 px-3 rounded-lg shadow-sm input input-bordered focus:ring-2 focus:ring-pillbug-teal/50";
-
 #[component]
 pub fn UserSearch(
     #[prop(optional)] placeholder: Option<String>,
     #[prop(optional)] fallback_users: Option<Signal<BTreeMap<String, UserResponse>>>,
-    #[prop(optional)] filtered_users: Option<HashSet<String>>,
-    #[prop(optional)] filtered_users_signal: Option<Signal<HashSet<String>>>,
-    #[prop(optional)] show_count: Option<Signal<String>>,
+    #[prop(optional, into)] filtered_users: Option<Signal<HashSet<String>>>,
     #[prop(optional)] value: Option<Signal<Option<String>>>,
     /// Fires on every keystroke with the trimmed text (`None` when empty).
     /// Callers like the archive use it so the typed value is applied on
     /// Search even when no suggestion is selected.
     #[prop(optional)]
     on_input: Option<Callback<Option<String>>>,
-    /// Overrides the input's CSS classes so callers can match a form's styling.
-    #[prop(optional, into)]
-    input_class: Option<String>,
-    /// Overrides the root container's CSS classes. Defaults to a full-width
-    /// flex column; callers like the home online-users list pass a fixed width
-    /// (`w-64` + margins) so the box doesn't fill its grid column edge-to-edge.
-    /// Must keep `relative` so the suggestion dropdown positions against it.
-    #[prop(optional, into)]
-    container_class: Option<String>,
     /// Drops the reserved-height hint/status rows below the input to keep the
     /// field tight (used by the archive where those rows add unwanted gaps).
     #[prop(optional)]
@@ -54,16 +41,16 @@ pub fn UserSearch(
     let root_ref = NodeRef::<html::Div>::new();
 
     let excluded_users = move || {
-        filtered_users_signal
+        filtered_users
             .as_ref()
-            .map(|s| s())
-            .or_else(|| filtered_users.clone())
+            .map(|filtered_users| filtered_users())
             .unwrap_or_default()
     };
 
-    let user_search = Resource::new(
-        move || (pattern(), excluded_users()),
-        async move |(pattern, filtered_users)| {
+    let user_search = LocalResource::new(move || {
+        let pattern = pattern();
+        let filtered_users = excluded_users();
+        async move {
             if pattern.len() < MIN_SEARCH_LENGTH {
                 None
             } else {
@@ -76,23 +63,20 @@ pub fn UserSearch(
                     .collect();
                 Some(btree)
             }
-        },
-    );
+        }
+    });
 
-    let mut clear_callback: Option<Callback<()>> = None;
+    let select_callback = actions.iter().find_map(|action| match action {
+        UserAction::Select(callback) => Some(*callback),
+        _ => None,
+    });
     let wrapped_actions: Vec<UserAction> = actions
         .into_iter()
         .map(|a| match a {
-            UserAction::Select(cb) => {
-                let cb_clear = cb;
-                clear_callback = Some(Callback::new(move |_| {
-                    cb_clear.run(None);
-                }));
-                UserAction::Select(Callback::new(move |opt| {
-                    pattern.set(String::new());
-                    cb.run(opt);
-                }))
-            }
+            UserAction::Select(cb) => UserAction::Select(Callback::new(move |opt| {
+                let _ = pattern.try_set(String::new());
+                cb.run(opt);
+            })),
             other => other,
         })
         .collect();
@@ -104,16 +88,17 @@ pub fn UserSearch(
     // synchronously in the handler also avoids touching a dead DOM Event later,
     // which trips Firefox's "Permission denied to access object".
     let mut debounced_update = debounce(Duration::from_millis(100), move |val: String| {
-        pattern.set(val.clone());
+        let _ = pattern.try_set(val.clone());
         if val.is_empty() {
-            if let Some(ref cb) = clear_callback {
-                cb.run(());
+            if let Some(cb) = select_callback {
+                cb.run(None);
             }
         }
     });
 
-    let users = Signal::derive(move || {
-        if pattern_len() < MIN_SEARCH_LENGTH {
+    let has_search_query = Signal::derive(move || pattern_len() >= MIN_SEARCH_LENGTH);
+    let visible_users = Signal::derive(move || {
+        if !has_search_query() {
             fallback_users.map(|f| f()).unwrap_or_default()
         } else {
             user_search
@@ -130,15 +115,18 @@ pub fn UserSearch(
     // suggestion list disappears once the user clicks away. A persistent
     // fallback list (e.g. online players) still shows below the threshold.
     let show_suggestions = Signal::derive(move || {
-        !users.get().is_empty() && (pattern_len() < MIN_SEARCH_LENGTH || focused.get())
+        !visible_users.get().is_empty() && (!has_search_query() || focused.get())
     });
 
-    // The persistent fallback list (e.g. online players, shown below the
-    // search threshold) must stay in normal flow so it reserves layout space
-    // instead of overlaying the content beneath it. Typed suggestions still
-    // use an absolute dropdown overlay so they don't push the page around.
+    // Fallback users (e.g. online players) stay in normal flow below the
+    // search threshold; typed search results overlay the surrounding layout.
     let has_fallback = fallback_users.is_some();
-    let as_dropdown = Signal::derive(move || !(has_fallback && pattern_len() < MIN_SEARCH_LENGTH));
+    let fallback_status = Signal::derive(move || {
+        fallback_users.map(|users| {
+            users.with(|users| t_string!(i18n, home.online_players, count = users.len()))
+        })
+    });
+    let results_are_dropdown = Signal::derive(move || !has_fallback || has_search_query());
 
     let display_value = Signal::derive(move || {
         let p = pattern();
@@ -155,28 +143,23 @@ pub fn UserSearch(
             .unwrap_or_else(|| t_string!(i18n, home.search_players).to_string())
     };
 
-    // clear_callback is set only when actions contain UserAction::Select; used for × button and backspace-clear
-    let has_select = clear_callback.is_some();
+    let has_select = select_callback.is_some();
     let wrapped_actions_stored = StoredValue::new(wrapped_actions);
     let show_clear =
         Signal::derive(move || has_select && value.as_ref().and_then(|v| v()).is_some());
 
     let do_clear = move |_| {
-        pattern.set(String::new());
-        if let Some(ref cb) = clear_callback {
-            cb.run(());
+        let _ = pattern.try_set(String::new());
+        if let Some(cb) = select_callback {
+            cb.run(None);
         }
     };
 
-    let resolved_input_class = input_class.unwrap_or_else(|| DEFAULT_INPUT_CLASS.to_string());
-    let resolved_container_class = container_class
-        .unwrap_or_else(|| "flex relative flex-col w-full min-w-0 shrink-0".to_string());
-
     view! {
-        <div node_ref=root_ref class=resolved_container_class>
+        <div node_ref=root_ref class="flex relative flex-col w-full min-w-0 shrink-0">
             <div class="flex relative gap-1 items-center">
                 <input
-                    class=resolved_input_class
+                    class="ui-field-input"
                     type="text"
                     name="user-search"
                     autocomplete="off"
@@ -190,16 +173,21 @@ pub fn UserSearch(
                         }
                         debounced_update(val);
                     }
-                    on:focus=move |_| focused.set(true)
+                    on:focus=move |_| {
+                        let _ = focused.try_set(true);
+                    }
                     on:blur=move |ev: leptos::ev::FocusEvent| {
-                        if let (Some(root), Some(target)) = (root_ref.get(), ev.related_target()) {
+                        if let (Some(root), Some(target)) = (
+                            root_ref.try_get_untracked().flatten(),
+                            ev.related_target(),
+                        ) {
                             if let Some(node) = target.dyn_ref::<web_sys::Node>() {
                                 if root.contains(Some(node)) {
                                     return;
                                 }
                             }
                         }
-                        focused.set(false);
+                        let _ = focused.try_set(false);
                     }
                     placeholder=input_placeholder
                     prop:value=display_value
@@ -215,7 +203,7 @@ pub fn UserSearch(
                         <Show when=show_clear>
                             <button
                                 type="button"
-                                class="flex justify-center items-center w-full h-full text-2xl leading-none text-gray-500 rounded-lg transition-colors hover:text-gray-700 hover:bg-gray-100 dark:hover:text-gray-200 dark:hover:bg-gray-700"
+                                class="ui-button ui-button-ghost ui-button-icon-lg"
                                 aria-label="Clear selection"
                                 on:click=do_clear
                             >
@@ -229,9 +217,7 @@ pub fn UserSearch(
                 .then(|| {
                     view! {
                         <div class="h-5">
-                            <Show when=move || {
-                                pattern_len() > 0 && pattern().len() < MIN_SEARCH_LENGTH
-                            }>
+                            <Show when=move || { pattern_len() > 0 && !has_search_query() }>
                                 <span class="text-xs text-yellow-600">
                                     {move || format!("Minimum {MIN_SEARCH_LENGTH} characters")}
                                 </span>
@@ -246,15 +232,15 @@ pub fn UserSearch(
                         }>
                             <div class="h-5">
                                 <Show when=move || {
-                                    pattern_len() < MIN_SEARCH_LENGTH && show_count.is_some()
-                                }>{show_count.unwrap()}</Show>
+                                    !has_search_query() && fallback_status().is_some()
+                                }>{move || fallback_status().unwrap_or_default()}</Show>
                                 <Show when=move || {
-                                    focused.get() && pattern_len() >= MIN_SEARCH_LENGTH
-                                        && !users.get().is_empty()
+                                    focused.get() && has_search_query()
+                                        && !visible_users.get().is_empty()
                                 }>{t!(i18n, home.found_players)}</Show>
                                 <Show when=move || {
-                                    focused.get() && pattern_len() >= MIN_SEARCH_LENGTH
-                                        && users.get().is_empty()
+                                    focused.get() && has_search_query()
+                                        && visible_users.get().is_empty()
                                 }>
                                     <span class="text-xs text-gray-500">
                                         {move || format!("No users found for \"{}\"", pattern())}
@@ -270,21 +256,22 @@ pub fn UserSearch(
                     // doesn't hide the list before the click lands.
                     <div
                         class=move || {
-                            if as_dropdown.get() {
-                                "overflow-y-auto overflow-x-hidden absolute right-0 left-0 top-full z-50 mt-1 max-h-60 bg-white rounded-lg border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700"
+                            if results_are_dropdown.get() {
+                                with_class(
+                                    "ui-dropdown-panel",
+                                    "overflow-y-auto overflow-x-hidden absolute right-0 left-0 top-full z-50 mt-1 max-h-60",
+                                )
                             } else {
-                                "overflow-y-auto overflow-x-hidden mt-1 max-h-96 bg-white rounded-lg border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700"
+                                with_class(
+                                    "ui-dropdown-panel",
+                                    "overflow-y-auto overflow-x-hidden mt-1 max-h-96",
+                                )
                             }
                         }
                         on:mousedown=|ev| ev.prevent_default()
                     >
-                        <For each=users key=move |(_, user)| user.uid let:user>
-                            <UserRow
-                                actions=wrapped_actions_stored.get_value()
-                                user=user.1
-                                selection_mode=has_select
-                                full_width=true
-                            />
+                        <For each=visible_users key=move |(_, user)| user.uid let:user>
+                            <UserRow actions=wrapped_actions_stored.get_value() user=user.1 />
                         </For>
                     </div>
                 </Show>

@@ -11,7 +11,7 @@ pub struct AuthContext {
     pub logged_in: Signal<Option<bool>>,
     pub admin: Signal<Option<bool>>,
     ws_refresh: StoredValue<bool>,
-    action: Action<(), Result<AccountResponse, ServerFnError>>,
+    action: Action<(), Result<Option<AccountResponse>, ServerFnError>>,
 }
 
 impl AuthContext {
@@ -25,21 +25,21 @@ pub fn provide_auth() {
     let logout = ServerAction::<Logout>::new();
     let action = Action::new(move |_: &()| async { get_account().await });
 
-    // Get the current user and place it in Context
+    #[cfg(not(feature = "ssr"))]
     action.dispatch(());
 
     let account = action.value();
-    let user = Signal::derive(move || account.get().and_then(|v| v.ok()));
+    let user = Signal::derive(move || account.get().and_then(|v| v.ok()).flatten());
     let account = action.value();
     let logged_in = Signal::derive(move || match account.get() {
-        Some(Ok(_)) => Some(true),
-        Some(Err(_)) => Some(false),
+        Some(Ok(Some(_))) => Some(true),
+        Some(Ok(None)) | Some(Err(_)) => Some(false),
         None => None,
     });
     let account = action.value();
     let admin = Signal::derive(move || match account.get() {
-        Some(Ok(account)) => Some(account.user.admin),
-        Some(Err(_)) => Some(false),
+        Some(Ok(Some(account))) => Some(account.user.admin),
+        Some(Ok(None)) | Some(Err(_)) => Some(false),
         None => None,
     });
     let ws_refresh = StoredValue::new(false);

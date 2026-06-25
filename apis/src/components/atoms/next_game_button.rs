@@ -1,4 +1,4 @@
-use crate::providers::games::GamesSignal;
+use crate::{hooks::tap_feedback::use_tap_feedback, providers::games::GamesSignal};
 use leptos::prelude::*;
 use leptos_icons::Icon;
 use leptos_router::hooks::use_params_map;
@@ -31,13 +31,10 @@ pub fn NextGameButton(time_mode: TimeMode, mut games: GamesSignal) -> impl IntoV
         TimeMode::RealTime => icondata_bi::BiStopwatchRegular,
         TimeMode::Correspondence => icondata_ai::AiMailOutlined,
     };
-    let style = move || {
-        match next_games() {
-            0 => "hidden",
-            _ => "no-link-style flex place-items-center bg-ladybug-red transform transition-transform duration-300 active:scale-95 hover:bg-red-400 text-white rounded-md px-2 py-1 m-1",
-        }
+    let style = move || match next_games() {
+        0 => "hidden",
+        _ => "ui-next-game-button no-link-style",
     };
-    let text = move || format!(": {}", next_games());
     let next_game_id = move || {
         games.own.with(|own| {
             let games_list = match time_mode.get_value() {
@@ -57,11 +54,17 @@ pub fn NextGameButton(time_mode: TimeMode, mut games: GamesSignal) -> impl IntoV
             games.visit(time_mode.get_value(), game_id);
         }
     };
+    let mark_pressed = use_tap_feedback(".ui-next-game-button");
 
     view! {
-        <a class=style href=href_game_id on:click=onclick>
+        <a
+            class=style
+            href=href_game_id
+            on:pointerdown=move |event| mark_pressed.run(event)
+            on:click=onclick
+        >
             <Icon icon=icon() attr:class="size-4" />
-            {text}
+            <span>{next_games}</span>
         </a>
     }
 }
