@@ -13,6 +13,7 @@ pub enum ClientRequest {
     Challenge(ChallengeAction),
     Game { game_id: GameId, action: GameAction },
     LinkDiscord,
+    NotificationSeen { game_id: GameId },
     Pong(u64),
     Resync,
     Schedule(ScheduleAction),

@@ -18,7 +18,7 @@ use leptos_icons::*;
 use leptos_use::{use_interval_fn_with_options, use_window, UseIntervalFnOptions};
 use shared_types::{ChallengeId, ChallengeVisibility, TimeInfo};
 
-const BUTTON_BASE_CLASSES: &str = "px-1 py-1 m-1 text-white rounded transition-transform duration-300 transform active:scale-95 focus:outline-none focus:shadow-outline font-bold";
+const BUTTON_BASE_CLASSES: &str = "px-1 py-1 m-0.5 sm:m-1 text-white rounded transition-transform duration-300 transform active:scale-95 focus:outline-none focus:shadow-outline font-bold";
 
 #[component]
 pub fn ChallengeRow(
@@ -307,7 +307,7 @@ pub fn ChallengeRow(
                             }
                             class=admin_cancel_button_classes.get_value()
                         >
-                            <Icon icon=icondata_io::IoCloseSharp attr:class="size-6" />
+                            <Icon icon=icondata_io::IoCloseSharp attr:class="size-5 sm:size-6" />
                         </button>
                     </Show>
                     <Show
@@ -322,7 +322,7 @@ pub fn ChallengeRow(
                                     <button on:click=copy class=copy_button_class>
                                         <Icon
                                             icon=icondata_ai::AiCopyOutlined
-                                            attr:class="size-6"
+                                            attr:class="size-5 sm:size-6"
                                         />
                                     </button>
                                 </Show>
@@ -338,7 +338,10 @@ pub fn ChallengeRow(
                                     }
                                     class=cancel_button_classes.get_value()
                                 >
-                                    <Icon icon=icondata_io::IoCloseSharp attr:class="size-6" />
+                                    <Icon
+                                        icon=icondata_io::IoCloseSharp
+                                        attr:class="size-5 sm:size-6"
+                                    />
                                 </button>
                             }
                         }
@@ -350,7 +353,7 @@ pub fn ChallengeRow(
                             }
                             class=accept_button_classes.get_value()
                         >
-                            <Icon icon=icondata_ai::AiCheckOutlined attr:class="size-6" />
+                            <Icon icon=icondata_ai::AiCheckOutlined attr:class="size-5 sm:size-6" />
 
                         </button>
                         {if has_opponent {
@@ -368,7 +371,10 @@ pub fn ChallengeRow(
                                         }
                                         class=cancel_button_classes.get_value()
                                     >
-                                        <Icon icon=icondata_io::IoCloseSharp attr:class="size-6" />
+                                        <Icon
+                                            icon=icondata_io::IoCloseSharp
+                                            attr:class="size-5 sm:size-6"
+                                        />
 
                                     </button>
                                 },

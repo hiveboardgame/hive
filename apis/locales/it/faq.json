@@ -107,7 +107,7 @@
     },
     "correspondence_notifications": {
         "question": "Posso essere avvisato quando è il mio turno di giocare in un gioco per corrispondenza?",
-        "answer": "Puoi collegare il tuo account Discord al tuo profilo Hivegame.com e ricevere notifiche dal bot busybee. Fai clic sul pulsante del tuo profilo nell'angolo in alto a destra e fai clic su 'Modifica Account'"
+        "answer": "Puoi riceverle tramite notifiche push del browser o su Discord dalla pagina delle notifiche. Per Discord, unisciti al nostro server e collega lì il tuo account Discord."
     },
     "chat_basics": {
         "question": "Come funziona la chat?",

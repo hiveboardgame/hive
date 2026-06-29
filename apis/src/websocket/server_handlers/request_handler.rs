@@ -167,6 +167,13 @@ impl RequestHandler {
                 .await?
                 .into()
             }
+            ClientRequest::NotificationSeen { game_id } => {
+                self.ensure_auth()?;
+                self.data
+                    .pending_notifications
+                    .mark_seen(self.user_id, &game_id);
+                HandlerOutput::empty()
+            }
             ClientRequest::Away => UserStatusHandler::new().await?.handle().await?.into(),
             ClientRequest::Schedule(action) => {
                 match action {

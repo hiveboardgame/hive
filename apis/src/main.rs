@@ -1,13 +1,4 @@
 #![recursion_limit = "256"]
-pub mod api;
-pub mod common;
-pub mod functions;
-pub mod hiveground;
-#[cfg(feature = "ssr")]
-pub mod jobs;
-pub mod providers;
-pub mod responses;
-pub mod websocket;
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 use std::sync::Arc;
@@ -17,11 +8,12 @@ use actix_web::{
     cookie::{time::Duration, SameSite},
     middleware::Compress,
 };
-use websocket::WebsocketData;
+use apis::{api, functions, jobs, notifications};
+use apis::websocket::{self, WebsocketData};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    use crate::websocket::{start_connection, WsHub};
+    use websocket::{start_connection, WsHub};
     use api::v1::bot::{games::{api_get_game, api_get_ongoing_games, api_get_pending_games}, play::{api_control, api_play}, challenges::{api_accept_challenge, api_create_challenge, api_get_challenges}};
     use api::v1::auth::get_token_handler::get_token;
     use api::v1::auth::get_identity_handler::get_identity;
@@ -41,6 +33,10 @@ async fn main() -> std::io::Result<()> {
     use leptos::prelude::*;
     use leptos_actix::{generate_route_list, LeptosRoutes};
     use sha2::*;
+
+    rustls::crypto::aws_lc_rs::default_provider()
+        .install_default()
+        .expect("failed to install rustls aws-lc-rs crypto provider");
 
     let conf = get_configuration(None).expect("Got configuration");
     let addr = conf.leptos_options.site_addr;
@@ -65,6 +61,40 @@ async fn main() -> std::io::Result<()> {
     let hub = Data::new(WsHub::new(Arc::clone(&data), pool.clone()));
     let jwt_secret = JwtSecret::new(config.jwt_secret);
     let jwt_key = Data::new(jwt_secret);
+
+    let web = {
+        let key = std::env::var("VAPID_PRIVATE_KEY")
+            .ok()
+            .filter(|s| !s.is_empty());
+        let subject = std::env::var("VAPID_SUBJECT")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| "https://hivegame.com".to_string());
+        match key {
+            Some(key) => match notifications::WebPushNotifier::from_base64(&key, subject) {
+                Ok(n) => {
+                    log::warn!("Web Push notifier initialised from VAPID_PRIVATE_KEY");
+                    Some(n)
+                }
+                Err(err) => {
+                    log::warn!("Web Push notifier disabled (bad VAPID_PRIVATE_KEY): {err}");
+                    None
+                }
+            },
+            None => {
+                log::warn!("Web Push notifier disabled: VAPID_PRIVATE_KEY is not set or empty");
+                None
+            }
+        }
+    };
+    let push_backends = notifications::PushBackends { web };
+    let push_telemetry = Arc::new(notifications::PushTelemetry::default());
+    notifications::init(notifications::Notifier::spawn(
+        pool.clone(),
+        push_backends,
+        data.pending_notifications.clone(),
+        push_telemetry.clone(),
+    ));
 
     // Telemetry: enabled by default in release with a 30s interval and a
     // default CSV path. Debug builds are opt-in. Both env vars override:
@@ -99,6 +129,7 @@ async fn main() -> std::io::Result<()> {
     jobs::challenge_cleanup(pool.clone());
     jobs::tournament_cleanup(pool.clone());
     jobs::timeout_sweeper(pool.clone(), Data::clone(&hub));
+    jobs::push_device_sweep(pool.clone());
     let pwa_manifest = PwaManifest::from_site_root(&conf.leptos_options.site_root);
 
     println!("listening on http://{}", addr);
@@ -114,6 +145,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::clone(&hub))
             .app_data(Data::clone(&data))
             .app_data(Data::clone(&jwt_key))
+            .app_data(Data::from(push_telemetry.clone()))
             .app_data(Data::new(pwa_manifest.clone()))
             // serve JS/WASM/CSS from `pkg`
             .service(Files::new("/pkg", format!("{site_root}/pkg")))
@@ -124,6 +156,8 @@ async fn main() -> std::io::Result<()> {
             .service(favicon)
             .service(start_connection)
             .service(functions::pwa::cache)
+            .service(functions::web_push_http::vapid_public_key)
+            .service(functions::web_push_http::web_subscription)
             .service(functions::oauth::callback)
             .service(functions::og::og_game_image)
             .service(get_token)

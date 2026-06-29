@@ -3,6 +3,8 @@ mod game;
 mod game_hash;
 mod game_user;
 mod home_banner;
+mod notification_preferences;
+mod push_device;
 mod rating;
 mod schedule;
 mod tournament;
@@ -17,6 +19,12 @@ pub use game::{Game, NewGame};
 pub use game_hash::{GameFinishContext, GameHash};
 pub use game_user::GameUser;
 pub use home_banner::HomeBanner;
+pub use notification_preferences::{
+    NewNotificationPreferences,
+    NotificationPreferences,
+    NotificationPreferencesUpdate,
+};
+pub use push_device::{NewPushDevice, PushDevice};
 pub use rating::{NewRating, Rating};
 pub use schedule::{NewSchedule, Schedule};
 pub use tournament::{NewTournament, Tournament};

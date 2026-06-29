@@ -1,7 +1,8 @@
-use crate::websocket::{busybee::Busybee, WebsocketData, WsHub};
+use crate::websocket::{WebsocketData, WsHub};
 
 use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
+    notifications::{game_end_reason_from, notify_game_ended, notify_your_turn, GameEndReason},
     websocket::messages::{
         GameFinalize,
         HandlerOutput,
@@ -13,13 +14,13 @@ use crate::{
 use anyhow::Result;
 use db_lib::{
     get_conn,
-    models::{Game, Tournament, User},
+    models::{Game, User},
     DbPool,
 };
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
 use hive_lib::{GameError, State, Turn};
 use shared_types::{GameId, TimeMode};
-use std::{str::FromStr, sync::Arc};
+use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct TurnHandler {
@@ -91,29 +92,10 @@ impl TurnHandler {
             })
             .await?;
 
-        match TimeMode::from_str(&game.time_mode) {
-            Ok(TimeMode::RealTime) | Err(_) => {}
-            _ => {
-                let opponent_id = game.not_current_player_id();
-                let opponent = User::find_by_uuid(&opponent_id, &mut conn).await?;
-                let tournament_name = if let Some(id) = game.tournament_id {
-                    let tournament = Tournament::find_by_uuid(id, &mut conn).await?;
-                    format!(" (Tournament: {})", tournament.name)
-                } else {
-                    String::new()
-                };
-
-                let msg = format!("[Your turn](<https://hivegame.com/game/{}>) in your game vs {}{}.\nYou have {} to play.",
-                    game.nanoid,
-                    opponent.username,
-                    tournament_name,
-                    game.str_time_left_for_player(game.current_player_id),
-                );
-
-                if let Err(e) = Busybee::msg(game.current_player_id, msg).await {
-                    println!("{e}");
-                };
-            }
+        if !game.finished {
+            let opponent_id = game.not_current_player_id();
+            let opponent = User::find_by_uuid(&opponent_id, &mut conn).await?;
+            notify_your_turn(&game, opponent.username);
         }
 
         let mut messages = Vec::new();
@@ -161,6 +143,10 @@ impl TurnHandler {
         // Eviction must happen post-dispatch so the dispatch_reaction fanout
         // above still reaches the opponent for the final move.
         let finalize_games = if game.finished {
+            let reason = game_end_reason_from(&game, GameEndReason::Move);
+            if let Err(e) = notify_game_ended(&game, reason, &mut conn).await {
+                log::error!("notify game ended {}: {e}", game.nanoid);
+            }
             let finalize = GameFinalize {
                 game_id: GameId(self.game.nanoid.clone()),
                 white_id: game.white_id,

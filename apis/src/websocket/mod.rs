@@ -21,6 +21,7 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     pub use ws_hub::{WsHub, SOCKET_BUFFER_CAPACITY};
     pub use messages::{reaction_messages, GameFinalize, GameSubscription, InternalServerMessage, MessageDestination, Reaction};
 
+    use crate::notifications::PendingNotifications;
     use chrono::{DateTime, Utc};
     use dashmap::DashMap;
     use shared_types::GameId;
@@ -56,6 +57,7 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
         /// dog-piling the DB. The builder removes its own entry and calls
         /// `notify_waiters` so parked tasks re-read the cache.
         game_response_inflight: DashMap<GameId, Arc<Notify>>,
+        pub pending_notifications: Arc<PendingNotifications>,
     }
 
     impl Default for WebsocketData {
@@ -68,6 +70,7 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
                 telemetry: Arc::new(WsTelemetry::default()),
                 game_response_cache: DashMap::new(),
                 game_response_inflight: DashMap::new(),
+                pending_notifications: Arc::new(PendingNotifications::default()),
             }
         }
     }

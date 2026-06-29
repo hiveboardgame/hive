@@ -244,7 +244,7 @@ pub fn TournamentCreate() -> impl IntoView {
         }
     });
     view! {
-        <div class="flex justify-center items-center pt-10">
+        <div class="flex justify-center items-center pt-header">
             <div class="container flex flex-col justify-between p-2 md:flex-row md:flex-wrap">
                 <div class="basis-1/2">
                     <p class="text-3xl font-extrabold">Tournament settings:</p>

@@ -1,0 +1,98 @@
+{
+    "page": {
+        "heading": "🔔 Értesítések",
+        "intro_before_link": "Válaszd ki, hogyan szeretnél értesítést kapni az egyes eseménytípusokról. A push-értesítések az alább engedélyezett böngészőkbe érkeznek. A Discord beállítását lent, a ",
+        "account_link": "Discord szakaszban",
+        "intro_after_link": " találod.",
+        "col_push": "Push",
+        "col_discord": "Discord",
+        "email_coming_soon": "Az e-mailes kézbesítés hamarosan érkezik.",
+        "saving": "Mentés…",
+        "saved": "Mentve.",
+        "save_failed": "A mentés sikertelen:",
+        "loading": "Betöltés…"
+    },
+    "events": {
+        "your_turn": "Te jössz",
+        "challenges": "Kihívás érkezett",
+        "game_ended": "A játszma véget ért",
+        "tournament": "Versenymeghívó",
+        "schedules": "Időpontjavaslat",
+        "dms": "Közvetlen üzenet"
+    },
+    "browser": {
+        "heading": "🌐 Ez a böngésző",
+        "body": "Fogadd ebben a böngészőben a fent kiválasztott push-értesítéseket, még akkor is, ha nincs nyitva HiveGame lap. Engedélyezd külön minden eszközön, amelyen értesítést szeretnél kapni.",
+        "enable": "Böngészőértesítések engedélyezése",
+        "disable": "Böngészőértesítések letiltása",
+        "working": "Folyamatban…",
+        "send_test": "Teszt küldése",
+        "test_sent": "Tesztértesítés elküldve – ellenőrizd az értesítéseidet.",
+        "test_failed": "A teszt sikertelen:"
+    },
+    "ios": {
+        "heading": "📱 Az iPhone-odon vagy iPadeden",
+        "body": "Az iOS-en való értesítésekhez add hozzá a HiveGame-et a kezdőképernyőhöz: koppints a Megosztás gombra, majd a „Főképernyőhöz adás” lehetőségre, és onnan nyisd meg."
+    },
+    "devices": {
+        "heading": "📡 Az eszközeid",
+        "body": "Minden eszköz, amely jelenleg push fogadására van beállítva. Távolítsd el azokat, amelyeket már nem használsz.",
+        "remove": "Eltávolítás",
+        "this_browser": "(ez a böngésző)",
+        "last_active": "utolsó aktivitás",
+        "platform_web": "Böngésző"
+    },
+    "nudge": {
+        "title": "Kapj értesítést, amikor te jössz",
+        "body_before_link": "Engedélyezd a böngészőértesítéseket ezen az eszközön. Bármikor kezelheted az ",
+        "link": "értesítések oldalán",
+        "body_after_link": ".",
+        "enable": "Engedélyezés",
+        "enabling": "Engedélyezés…",
+        "dismiss": "Bezárás"
+    },
+    "install": {
+        "title": "A HiveGame telepítése alkalmazásként",
+        "button": "Telepítés",
+        "ios_hint": "Telepítsd a HiveGame-et: koppints a Megosztásra, majd a „Főképernyőhöz adás” lehetőségre."
+    },
+    "push": {
+        "your_turn_title": "Te jössz",
+        "your_turn_timed": "{{opponent}} lépett · {{time_left}} maradt",
+        "your_turn_untimed": "{{opponent}} lépett",
+        "challenge_title": "Kihívás",
+        "challenge_rated": "{{challenger}} · {{time_control}} · rangsorolt",
+        "challenge_casual": "{{challenger}} · {{time_control}} · kötetlen",
+        "game_started_title": "Játszma elkezdődött",
+        "game_started_body": "{{opponent}} ellen · {{time_control}}",
+        "game_ended_title": "Játszma véget ért",
+        "game_ended_won_resignation": "{{opponent}} feladta",
+        "game_ended_won_timeout": "{{opponent}} kifutott az időből",
+        "game_ended_won": "Győztél {{opponent}} ellen",
+        "game_ended_lost_resignation": "Feladtad",
+        "game_ended_lost_timeout": "Kifutottál az időből",
+        "game_ended_lost": "{{opponent}} legyőzött",
+        "game_ended_drew_agreement": "Döntetlen {{opponent}} ellen (megegyezés)",
+        "game_ended_drew": "Döntetlen {{opponent}} ellen",
+        "tournament_invite_title": "Versenymeghívó",
+        "tournament_invite_body": "Meghívást kaptál: {{tournament_name}}",
+        "tournament_started_title": "Verseny elkezdődött",
+        "tournament_started_body": "{{tournament_name}} elkezdődött",
+        "schedule_propose_title": "Időpont javasolva",
+        "schedule_propose_body": "{{proposer}} javasolta: {{when}}",
+        "schedule_accept_title": "Időpont elfogadva",
+        "schedule_accept_body": "{{opponent}} elfogadta: {{when}}",
+        "draw_offer_title": "Döntetlen ajánlat",
+        "draw_offered_body": "{{actor}} döntetlent ajánl",
+        "takeback_request_title": "Lépésvisszavonás kérése",
+        "takeback_requested_body": "{{actor}} lépésvisszavonást kér",
+        "draw_declined_title": "Döntetlen elutasítva",
+        "draw_rejected_body": "{{actor}} elutasította a döntetlent",
+        "takeback_accepted_title": "Visszavonás elfogadva",
+        "takeback_accepted_body": "{{actor}} elfogadta a lépésvisszavonást",
+        "takeback_declined_title": "Visszavonás elutasítva",
+        "takeback_rejected_body": "{{actor}} elutasította a lépésvisszavonást",
+        "test_title": "HiveGame",
+        "test_body": "Teszt értesítés — a push működik 🐝"
+    }
+}

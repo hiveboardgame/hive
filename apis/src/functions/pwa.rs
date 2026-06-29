@@ -102,6 +102,7 @@ pub async fn worker(pwa_manifest: web::Data<PwaManifest>) -> impl Responder {
             header::CONTENT_TYPE,
             "application/javascript; charset=utf-8",
         ))
+        .insert_header(("Service-Worker-Allowed", "/"))
         .body(pwa_manifest.worker_script())
 }
 

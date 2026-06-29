@@ -3,8 +3,9 @@ use crate::{
         auth::Auth,
         messages::send::{send_challenge_creation_message, send_challenge_messages},
     },
+    notifications::{notify, time_control_label, Event},
     responses::{ChallengeResponse, GameResponse},
-    websocket::{busybee::Busybee, WsHub},
+    websocket::WsHub,
 };
 use actix_web::{
     get,
@@ -27,9 +28,10 @@ use shared_types::{
     ChallengeId,
     ChallengeVisibility,
     CorrespondenceMode,
+    GameSpeed,
     TimeMode,
 };
-use std::{str::FromStr, sync::Arc};
+use std::sync::Arc;
 use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -266,22 +268,15 @@ async fn accept_challenge(
 
     send_challenge_messages(hub, deleted_challenges, &game, &bot, &pool).await?;
 
-    match TimeMode::from_str(&game.time_mode) {
-        Ok(TimeMode::RealTime) | Err(_) => {}
-        _ => {
-            let challenger_id = challenge.challenger_id;
-            let msg = format!(
-                "[Game started](<https://hivegame.com/game/{}>) - Your game with {} has started.\nYou have {} to play.",
-                game.nanoid,
-                bot.username,
-                game.str_time_left_for_player(challenger_id)
-            );
-
-            if let Err(e) = Busybee::msg(challenger_id, msg).await {
-                println!("Failed to send Busybee message: {e}");
-            }
-        }
-    };
+    let challenger_id = challenge.challenger_id;
+    let speed = GameSpeed::from_base_increment(game.time_base, game.time_increment);
+    notify(Event::GameStarted {
+        recipient: challenger_id,
+        opponent: bot.username.clone(),
+        game_nanoid: game.nanoid.clone(),
+        time_control: time_control_label(speed, game.time_base, game.time_increment),
+        speed,
+    });
 
     let response = GameResponse::from_model(&game, &mut conn).await?;
     Ok(response)

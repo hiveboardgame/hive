@@ -1,5 +1,12 @@
 use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
+    notifications::{
+        game_end_reason_from,
+        notify_game_control,
+        notify_game_ended,
+        GameControlKind,
+        GameEndReason,
+    },
     responses::GameResponse,
     websocket::{
         messages::{
@@ -25,6 +32,17 @@ use hive_lib::{GameControl, GameError};
 use shared_types::{Conclusion, GameId, TimeMode};
 use std::sync::Arc;
 use uuid::Uuid;
+
+fn control_notification_kind(control: GameControl) -> Option<GameControlKind> {
+    match control {
+        GameControl::DrawOffer(_) => Some(GameControlKind::DrawOffered),
+        GameControl::TakebackRequest(_) => Some(GameControlKind::TakebackRequested),
+        GameControl::DrawReject(_) => Some(GameControlKind::DrawRejected),
+        GameControl::TakebackAccept(_) => Some(GameControlKind::TakebackAccepted),
+        GameControl::TakebackReject(_) => Some(GameControlKind::TakebackRejected),
+        _ => None,
+    }
+}
 
 pub struct GameControlHandler {
     control: GameControl,
@@ -99,6 +117,23 @@ impl GameControlHandler {
             }
             _ => {}
         }
+        if let Some(kind) = control_notification_kind(self.control) {
+            let recipient = if self.user_id == self.game.white_id {
+                self.game.black_id
+            } else {
+                self.game.white_id
+            };
+            notify_game_control(
+                recipient,
+                self.username.clone(),
+                self.game.nanoid.clone(),
+                kind,
+                shared_types::GameSpeed::from_base_increment(
+                    self.game.time_base,
+                    self.game.time_increment,
+                ),
+            );
+        }
         if game_response.time_mode == TimeMode::RealTime
             && self
                 .hub
@@ -113,6 +148,17 @@ impl GameControlHandler {
         // Signal the dispatcher to run finalization after dispatch — see the
         // matching comment in turn_handler.rs for the race we're avoiding.
         let finalize_games = if game.finished {
+            let end_reason = match self.control {
+                GameControl::Resign(_) => Some(GameEndReason::Resignation),
+                GameControl::DrawAccept(_) => Some(GameEndReason::Agreement),
+                _ => None,
+            };
+            if let Some(fallback) = end_reason {
+                let reason = game_end_reason_from(&game, fallback);
+                if let Err(e) = notify_game_ended(&game, reason, &mut conn).await {
+                    log::error!("notify game ended {}: {e}", game.nanoid);
+                }
+            }
             let finalize = GameFinalize {
                 game_id: GameId(self.game.nanoid.clone()),
                 white_id: self.game.white_id,

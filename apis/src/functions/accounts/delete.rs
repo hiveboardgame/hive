@@ -14,7 +14,10 @@ pub async fn delete_account(password: String) -> Result<(), ServerFnError> {
         websocket::WsHub,
     };
     use actix_web::web::Data;
-    use db_lib::{get_conn, models::User};
+    use db_lib::{
+        get_conn,
+        models::{PushDevice, User},
+    };
     let uuid = uuid().await?;
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
@@ -35,7 +38,13 @@ pub async fn delete_account(password: String) -> Result<(), ServerFnError> {
         }
     }
 
-    logout().await?;
+    if let Err(err) = PushDevice::revoke_all_for_user(user.id, &mut conn).await {
+        log::warn!(
+            "Failed to revoke push devices for soft-deleted user {}: {err}",
+            user.id
+        );
+    }
+    logout(None).await?;
     leptos_actix::redirect("/");
     Ok(())
 }
@@ -49,6 +58,7 @@ async fn send_soft_delete_updates(
 ) -> Result<(), leptos::prelude::ServerFnError> {
     use crate::{
         common::{ChallengeUpdate, GameActionResponse, GameReaction, ServerMessage, ServerResult},
+        notifications::{game_end_reason_from, notify_game_ended_excluding, GameEndReason},
         responses::GameResponse,
         websocket::{reaction_messages, GameFinalize, InternalServerMessage, MessageDestination},
     };
@@ -162,6 +172,12 @@ async fn send_soft_delete_updates(
             );
             continue;
         };
+        let reason = game_end_reason_from(&game, GameEndReason::Resignation);
+        if let Err(e) =
+            notify_game_ended_excluding(&game, reason, Some(deleted_user_id), conn).await
+        {
+            log::error!("notify game ended {}: {e}", game.nanoid);
+        }
         match add_game_update(
             hub,
             &mut messages,

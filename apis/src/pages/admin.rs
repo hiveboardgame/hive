@@ -18,7 +18,7 @@ pub fn Admin() -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
 
     view! {
-        <div class="pt-20">
+        <div class="pt-page">
             <Show when=move || {
                 auth_context.user.with(|a| a.as_ref().is_some_and(|v| v.user.admin))
             }>
@@ -32,6 +32,12 @@ pub fn Admin() -> impl IntoView {
                     href="/admin/telemetry"
                 >
                     "Open WS telemetry dashboard"
+                </a>
+                <a
+                    class="py-2 px-4 mx-4 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
+                    href="/admin/push-metrics"
+                >
+                    "Open push notification metrics"
                 </a>
             </Show>
         </div>

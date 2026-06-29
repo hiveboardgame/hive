@@ -1,11 +1,17 @@
+pub mod api;
 pub mod app;
 pub mod common;
 pub mod components;
 pub mod functions;
 pub mod hiveground;
 pub mod hooks;
+#[cfg(feature = "ssr")]
+pub mod jobs;
+#[cfg(feature = "ssr")]
+pub mod notifications;
 pub mod pages;
 pub mod providers;
+pub mod pwa;
 pub mod responses;
 pub mod websocket;
 // leptos_i18n::load_locales!();

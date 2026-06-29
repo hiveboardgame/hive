@@ -17,6 +17,7 @@ actix-web = { version = "4", features = ["macros"] }
 actix-ws = "0.4"
 anyhow = "1"
 argon2 = "0.5"
+base64 = "0.22"
 bb8 = { version = "0.9" }
 bimap = { version = "0.6.3", features = ["serde"] }
 bytes = "1"
@@ -72,6 +73,11 @@ rand = "0.9"
 regex = "1.11"
 reactive_stores = { version = "0.3" }
 reqwest = { version = "0.13.1", features = ["json"] }
+rustls = { version = "0.23" }
+# hyper-client instead of the default isahc backend — isahc drags in curl,
+# which is one more native dep for the nix shell to satisfy.
+web-push = { version = "0.10", default-features = false, features = ["hyper-client"] }
+url = "2"
 serde = { version = "1" }
 serde_json = { version = "1" }
 serde_with = { version = "3.14" }
@@ -82,6 +88,7 @@ simple_logger = "5.0"
 skillratings = "0.28.2"
 thiserror = "2.0.18"
 tokio = { version = "1.49", features = ["full"] }
+tokio-util = "0.7"
 tree-ds = { version = "0.2.0", features = ["serde", "compact_serde", "async"] }
 uuid = { version = "1.17", features = ["v4", "js", "serde"] }
 walkdir = "2.5"
@@ -101,6 +108,16 @@ web-sys = { version = "0.3.85", features = [
     "Event",
     "HtmlDocument",
     "MessageEvent",
+    "Navigator",
+    "Notification",
+    "NotificationOptions",
+    "NotificationPermission",
+    "PushManager",
+    "PushSubscription",
+    "PushSubscriptionOptionsInit",
+    "ServiceWorkerContainer",
+    "ServiceWorkerRegistration",
+    "Storage",
     "SvgPoint",
     "SvgsvgElement",
     "SvgGraphicsElement",

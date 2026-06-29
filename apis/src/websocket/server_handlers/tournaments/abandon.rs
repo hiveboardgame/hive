@@ -1,5 +1,6 @@
 use crate::{
     common::{GameActionResponse, GameReaction, ServerMessage, TournamentUpdate},
+    notifications::{game_end_reason_from, notify_game_ended_excluding, GameEndReason},
     responses::GameResponse,
     websocket::messages::{
         GameFinalize,
@@ -69,6 +70,18 @@ impl AbandonHandler {
                 .scope_boxed()
             })
             .await?;
+
+        for game in &abandoned {
+            if !game.finished {
+                continue;
+            }
+            let reason = game_end_reason_from(game, GameEndReason::Resignation);
+            if let Err(e) =
+                notify_game_ended_excluding(game, reason, Some(self.user_id), &mut conn).await
+            {
+                log::error!("notify game ended {}: {e}", game.nanoid);
+            }
+        }
 
         let finalize_games: Vec<GameFinalize> = abandoned
             .iter()

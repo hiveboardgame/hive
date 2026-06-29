@@ -46,6 +46,11 @@ impl GameSpeed {
         vec![Bullet, Blitz, Rapid, Classic]
     }
 
+    pub fn is_real_time(&self) -> bool {
+        use GameSpeed::*;
+        matches!(self, Bullet | Blitz | Rapid | Classic)
+    }
+
     pub fn from_base_increment(base: Option<i32>, increment: Option<i32>) -> GameSpeed {
         let total = base.unwrap_or(0) + 40 * increment.unwrap_or(0);
         if total == 0 {

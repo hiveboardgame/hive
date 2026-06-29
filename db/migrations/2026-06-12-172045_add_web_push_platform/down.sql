@@ -1,0 +1,1 @@
+ALTER TABLE push_devices DROP COLUMN p256dh, DROP COLUMN auth;

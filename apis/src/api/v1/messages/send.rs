@@ -7,6 +7,15 @@ use crate::{
         ServerMessage,
         ServerResult,
     },
+    notifications::{
+        game_end_reason_from,
+        notify,
+        notify_game_ended,
+        notify_your_turn,
+        time_control_label,
+        Event,
+        GameEndReason,
+    },
     responses::{ChallengeResponse, GameResponse},
     websocket::{
         reaction_messages,
@@ -135,6 +144,15 @@ pub async fn send_turn_messages(
     if game.finished {
         hub.finalize_game(&GameId(game.nanoid.clone()), game.white_id, game.black_id);
     }
+
+    if game.finished {
+        let reason = game_end_reason_from(game, GameEndReason::Move);
+        if let Err(e) = notify_game_ended(game, reason, &mut conn).await {
+            log::error!("notify game ended {}: {e}", game.nanoid);
+        }
+    } else {
+        notify_your_turn(game, bot.username.clone());
+    }
     Ok(())
 }
 
@@ -188,6 +206,17 @@ pub async fn send_challenge_creation_message(
         }
         ChallengeVisibility::Direct => {
             if let Some(opponent_id) = opponent_id {
+                notify(Event::ChallengeReceived {
+                    recipient: opponent_id,
+                    challenger: challenge_response.challenger.username.clone(),
+                    challenge_nanoid: challenge_response.challenge_id.0.clone(),
+                    time_control: time_control_label(
+                        challenge_response.speed,
+                        challenge_response.time_base,
+                        challenge_response.time_increment,
+                    ),
+                    rated: challenge_response.rated,
+                });
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::User(opponent_id),
                     message: ServerMessage::Challenge(ChallengeUpdate::Direct(challenge_clone)),
@@ -258,6 +287,17 @@ pub async fn send_control_messages(
 
     if game.finished {
         hub.finalize_game(&GameId(game.nanoid.clone()), game.white_id, game.black_id);
+        let end_reason = match game_control {
+            GameControl::Resign(_) => Some(GameEndReason::Resignation),
+            GameControl::DrawAccept(_) => Some(GameEndReason::Agreement),
+            _ => None,
+        };
+        if let Some(fallback) = end_reason {
+            let reason = game_end_reason_from(game, fallback);
+            if let Err(e) = notify_game_ended(game, reason, &mut conn).await {
+                log::error!("notify game ended {}: {e}", game.nanoid);
+            }
+        }
     }
     Ok(())
 }

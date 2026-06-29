@@ -1,0 +1,98 @@
+{
+    "page": {
+        "heading": "🔔 Notifications",
+        "intro_before_link": "Choose how you want to be notified for each kind of event. Push goes to browsers you enable below. Discord setup is in the ",
+        "account_link": "Discord section",
+        "intro_after_link": " below.",
+        "col_push": "Push",
+        "col_discord": "Discord",
+        "email_coming_soon": "Email delivery is coming soon.",
+        "saving": "Saving…",
+        "saved": "Saved.",
+        "save_failed": "Failed to save:",
+        "loading": "Loading…"
+    },
+    "events": {
+        "your_turn": "Your turn",
+        "challenges": "Challenge received",
+        "game_ended": "Game ended",
+        "tournament": "Tournament invite",
+        "schedules": "Schedule proposal",
+        "dms": "Direct message"
+    },
+    "browser": {
+        "heading": "🌐 This browser",
+        "body": "Receive the push notifications selected above in this browser, even when no HiveGame tab is open. Enable separately on each device you want notified.",
+        "enable": "Enable browser notifications",
+        "disable": "Disable browser notifications",
+        "working": "Working…",
+        "send_test": "Send a test",
+        "test_sent": "Test notification sent — check your notifications.",
+        "test_failed": "Test failed:"
+    },
+    "ios": {
+        "heading": "📱 On your iPhone or iPad",
+        "body": "To get notifications on iOS, add HiveGame to your Home Screen: tap the Share button, then \"Add to Home Screen\", and open it from there."
+    },
+    "devices": {
+        "heading": "📡 Your devices",
+        "body": "Every device currently set up to receive push. Remove any you no longer use.",
+        "remove": "Remove",
+        "this_browser": "(this browser)",
+        "last_active": "last active",
+        "platform_web": "Browser"
+    },
+    "nudge": {
+        "title": "Get notified when it's your turn",
+        "body_before_link": "Turn on browser notifications for this device. Manage them anytime on the ",
+        "link": "notifications page",
+        "body_after_link": ".",
+        "enable": "Enable",
+        "enabling": "Enabling…",
+        "dismiss": "Dismiss"
+    },
+    "install": {
+        "title": "Install HiveGame as an app",
+        "button": "Install",
+        "ios_hint": "Install HiveGame: tap Share, then \"Add to Home Screen\"."
+    },
+    "push": {
+        "your_turn_title": "Your turn",
+        "your_turn_timed": "{{opponent}} moved · {{time_left}} left",
+        "your_turn_untimed": "{{opponent}} moved",
+        "challenge_title": "Challenge",
+        "challenge_rated": "{{challenger}} · {{time_control}} · rated",
+        "challenge_casual": "{{challenger}} · {{time_control}} · casual",
+        "game_started_title": "Game started",
+        "game_started_body": "vs {{opponent}} · {{time_control}}",
+        "game_ended_title": "Game ended",
+        "game_ended_won_resignation": "{{opponent}} resigned",
+        "game_ended_won_timeout": "{{opponent}} timed out",
+        "game_ended_won": "You beat {{opponent}}",
+        "game_ended_lost_resignation": "You resigned",
+        "game_ended_lost_timeout": "You timed out",
+        "game_ended_lost": "{{opponent}} beat you",
+        "game_ended_drew_agreement": "Drew with {{opponent}} (agreement)",
+        "game_ended_drew": "Drew with {{opponent}}",
+        "tournament_invite_title": "Tournament invite",
+        "tournament_invite_body": "Invited to {{tournament_name}}",
+        "tournament_started_title": "Tournament started",
+        "tournament_started_body": "{{tournament_name}} has begun",
+        "schedule_propose_title": "Schedule proposed",
+        "schedule_propose_body": "{{proposer}} proposed {{when}}",
+        "schedule_accept_title": "Schedule accepted",
+        "schedule_accept_body": "{{opponent}} accepted {{when}}",
+        "draw_offer_title": "Draw offer",
+        "draw_offered_body": "{{actor}} offered a draw",
+        "takeback_request_title": "Takeback request",
+        "takeback_requested_body": "{{actor}} requested a takeback",
+        "draw_declined_title": "Draw declined",
+        "draw_rejected_body": "{{actor}} declined the draw",
+        "takeback_accepted_title": "Takeback accepted",
+        "takeback_accepted_body": "{{actor}} accepted the takeback",
+        "takeback_declined_title": "Takeback declined",
+        "takeback_rejected_body": "{{actor}} declined the takeback",
+        "test_title": "HiveGame",
+        "test_body": "Test notification — push is working 🐝"
+    }
+}

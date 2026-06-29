@@ -48,6 +48,14 @@ pub fn UserDropdown(username: String) -> impl IntoView {
             >
                 {t!(i18n, header.user_menu.config)}
             </a>
+            <a
+                class=COMMON_LINK_STYLE
+                href="/notifications"
+                on:focus=move |_| set_redirect(pathname)
+                on:click=move |_| onclick_close()
+            >
+                {t!(i18n, header.user_menu.notifications)}
+            </a>
             <Show when=move || auth_context.user.with(|a| a.as_ref().is_some_and(|v| v.user.admin))>
                 <a
                     class=COMMON_LINK_STYLE

@@ -1,0 +1,98 @@
+{
+    "page": {
+        "heading": "🔔 Benachrichtigungen",
+        "intro_before_link": "Wähle, wie du bei jeder Art von Ereignis benachrichtigt werden möchtest. Push geht an die Browser, die du unten aktivierst. Die Discord-Einrichtung findest du im ",
+        "account_link": "Discord-Abschnitt",
+        "intro_after_link": " unten.",
+        "col_push": "Push",
+        "col_discord": "Discord",
+        "email_coming_soon": "E-Mail-Zustellung kommt bald.",
+        "saving": "Wird gespeichert…",
+        "saved": "Gespeichert.",
+        "save_failed": "Speichern fehlgeschlagen:",
+        "loading": "Wird geladen…"
+    },
+    "events": {
+        "your_turn": "Du bist am Zug",
+        "challenges": "Herausforderung erhalten",
+        "game_ended": "Partie beendet",
+        "tournament": "Turniereinladung",
+        "schedules": "Terminvorschlag",
+        "dms": "Direktnachricht"
+    },
+    "browser": {
+        "heading": "🌐 Dieser Browser",
+        "body": "Erhalte die oben ausgewählten Push-Benachrichtigungen in diesem Browser, auch wenn kein HiveGame-Tab geöffnet ist. Aktiviere sie auf jedem Gerät separat, das benachrichtigt werden soll.",
+        "enable": "Browser-Benachrichtigungen aktivieren",
+        "disable": "Browser-Benachrichtigungen deaktivieren",
+        "working": "Wird ausgeführt…",
+        "send_test": "Test senden",
+        "test_sent": "Testbenachrichtigung gesendet – überprüfe deine Benachrichtigungen.",
+        "test_failed": "Test fehlgeschlagen:"
+    },
+    "ios": {
+        "heading": "📱 Auf deinem iPhone oder iPad",
+        "body": "Um Benachrichtigungen unter iOS zu erhalten, füge HiveGame zu deinem Home-Bildschirm hinzu: Tippe auf „Teilen“ und dann auf „Zum Home-Bildschirm“ und öffne es von dort."
+    },
+    "devices": {
+        "heading": "📡 Deine Geräte",
+        "body": "Alle Geräte, die derzeit für Push eingerichtet sind. Entferne alle, die du nicht mehr verwendest.",
+        "remove": "Entfernen",
+        "this_browser": "(dieser Browser)",
+        "last_active": "zuletzt aktiv",
+        "platform_web": "Browser"
+    },
+    "nudge": {
+        "title": "Lass dich benachrichtigen, wenn du am Zug bist",
+        "body_before_link": "Aktiviere Browser-Benachrichtigungen für dieses Gerät. Verwalte sie jederzeit auf der ",
+        "link": "Benachrichtigungsseite",
+        "body_after_link": ".",
+        "enable": "Aktivieren",
+        "enabling": "Wird aktiviert…",
+        "dismiss": "Schließen"
+    },
+    "install": {
+        "title": "HiveGame als App installieren",
+        "button": "Installieren",
+        "ios_hint": "HiveGame installieren: Tippe auf „Teilen“ und dann auf „Zum Home-Bildschirm“."
+    },
+    "push": {
+        "your_turn_title": "Du bist am Zug",
+        "your_turn_timed": "{{opponent}} hat gezogen · {{time_left}} übrig",
+        "your_turn_untimed": "{{opponent}} hat gezogen",
+        "challenge_title": "Herausforderung",
+        "challenge_rated": "{{challenger}} · {{time_control}} · gewertet",
+        "challenge_casual": "{{challenger}} · {{time_control}} · ungewertet",
+        "game_started_title": "Spiel gestartet",
+        "game_started_body": "gegen {{opponent}} · {{time_control}}",
+        "game_ended_title": "Spiel beendet",
+        "game_ended_won_resignation": "{{opponent}} hat aufgegeben",
+        "game_ended_won_timeout": "{{opponent}} hat die Zeit überschritten",
+        "game_ended_won": "Du hast {{opponent}} besiegt",
+        "game_ended_lost_resignation": "Du hast aufgegeben",
+        "game_ended_lost_timeout": "Du hast die Zeit überschritten",
+        "game_ended_lost": "{{opponent}} hat dich besiegt",
+        "game_ended_drew_agreement": "Remis mit {{opponent}} (Vereinbarung)",
+        "game_ended_drew": "Remis mit {{opponent}}",
+        "tournament_invite_title": "Turniereinladung",
+        "tournament_invite_body": "Eingeladen zu {{tournament_name}}",
+        "tournament_started_title": "Turnier gestartet",
+        "tournament_started_body": "{{tournament_name}} hat begonnen",
+        "schedule_propose_title": "Termin vorgeschlagen",
+        "schedule_propose_body": "{{proposer}} schlug {{when}} vor",
+        "schedule_accept_title": "Termin bestätigt",
+        "schedule_accept_body": "{{opponent}} bestätigte {{when}}",
+        "draw_offer_title": "Remisangebot",
+        "draw_offered_body": "{{actor}} bietet ein Remis an",
+        "takeback_request_title": "Zugrücknahme angefragt",
+        "takeback_requested_body": "{{actor}} bittet um eine Zugrücknahme",
+        "draw_declined_title": "Remis abgelehnt",
+        "draw_rejected_body": "{{actor}} hat das Remis abgelehnt",
+        "takeback_accepted_title": "Zugrücknahme akzeptiert",
+        "takeback_accepted_body": "{{actor}} hat die Zugrücknahme akzeptiert",
+        "takeback_declined_title": "Zugrücknahme abgelehnt",
+        "takeback_rejected_body": "{{actor}} hat die Zugrücknahme abgelehnt",
+        "test_title": "HiveGame",
+        "test_body": "Testbenachrichtigung — Push funktioniert 🐝"
+    }
+}

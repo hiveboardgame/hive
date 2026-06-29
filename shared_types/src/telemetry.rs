@@ -68,6 +68,26 @@ pub struct TelemetryRow {
     pub load_user_state_permit_max: u64,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct PushMetrics {
+    pub received: u64,
+    pub dropped_queue_full: u64,
+    pub suppressed_prefs: u64,
+    pub prefs_db_error: u64,
+    pub ack_eligible: u64,
+    pub ack_suppressed: u64,
+    pub ack_fired: u64,
+    pub test_pushes: u64,
+    pub no_device: u64,
+    pub device_db_error: u64,
+    pub delivered: u64,
+    pub retryable: u64,
+    pub token_dead: u64,
+    pub failed: u64,
+    pub retry_delivered: u64,
+    pub retry_gave_up: u64,
+}
+
 pub const TELEMETRY_COLUMN_COUNT: usize = 45;
 const LEGACY_TELEMETRY_COLUMN_COUNT: usize = 43;
 

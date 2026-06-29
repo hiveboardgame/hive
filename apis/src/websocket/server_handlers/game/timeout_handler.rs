@@ -1,5 +1,6 @@
 use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
+    notifications::{game_end_reason_from, notify_game_ended, GameEndReason},
     websocket::{
         messages::{GameFinalize, HandlerOutput, InternalServerMessage, MessageDestination},
         WebsocketData,
@@ -56,6 +57,10 @@ impl TimeoutHandler {
                     username: self.username.clone(),
                 }))),
             });
+            let reason = game_end_reason_from(&self.game, GameEndReason::Move);
+            if let Err(e) = notify_game_ended(&self.game, reason, &mut conn).await {
+                log::error!("notify game ended {}: {e}", self.game.nanoid);
+            }
             let finalize = GameFinalize {
                 game_id: GameId(self.game.nanoid.clone()),
                 white_id: self.game.white_id,

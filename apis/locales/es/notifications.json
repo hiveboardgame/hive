@@ -1,0 +1,98 @@
+{
+    "page": {
+        "heading": "🔔 Notificaciones",
+        "intro_before_link": "Elige cómo quieres recibir notificaciones para cada tipo de evento. Las notificaciones push llegan a los navegadores que actives abajo. La configuración de Discord está en la ",
+        "account_link": "sección de Discord",
+        "intro_after_link": " de abajo.",
+        "col_push": "Push",
+        "col_discord": "Discord",
+        "email_coming_soon": "El envío por correo electrónico llegará pronto.",
+        "saving": "Guardando…",
+        "saved": "Guardado.",
+        "save_failed": "Error al guardar:",
+        "loading": "Cargando…"
+    },
+    "events": {
+        "your_turn": "Tu turno",
+        "challenges": "Desafío recibido",
+        "game_ended": "Partida finalizada",
+        "tournament": "Invitación a torneo",
+        "schedules": "Propuesta de horario",
+        "dms": "Mensaje directo"
+    },
+    "browser": {
+        "heading": "🌐 Este navegador",
+        "body": "Recibe en este navegador las notificaciones push seleccionadas arriba, incluso cuando no haya ninguna pestaña de HiveGame abierta. Actívalas por separado en cada dispositivo que quieras que reciba notificaciones.",
+        "enable": "Activar notificaciones del navegador",
+        "disable": "Desactivar notificaciones del navegador",
+        "working": "Procesando…",
+        "send_test": "Enviar una prueba",
+        "test_sent": "Notificación de prueba enviada: revisa tus notificaciones.",
+        "test_failed": "La prueba falló:"
+    },
+    "ios": {
+        "heading": "📱 En tu iPhone o iPad",
+        "body": "Para recibir notificaciones en iOS, añade HiveGame a tu pantalla de inicio: toca el botón Compartir y luego «Añadir a pantalla de inicio» y ábrelo desde ahí."
+    },
+    "devices": {
+        "heading": "📡 Tus dispositivos",
+        "body": "Todos los dispositivos configurados actualmente para recibir push. Elimina los que ya no uses.",
+        "remove": "Eliminar",
+        "this_browser": "(este navegador)",
+        "last_active": "última actividad",
+        "platform_web": "Navegador"
+    },
+    "nudge": {
+        "title": "Recibe un aviso cuando sea tu turno",
+        "body_before_link": "Activa las notificaciones del navegador para este dispositivo. Gestiónalas cuando quieras en la ",
+        "link": "página de notificaciones",
+        "body_after_link": ".",
+        "enable": "Activar",
+        "enabling": "Activando…",
+        "dismiss": "Descartar"
+    },
+    "install": {
+        "title": "Instalar HiveGame como aplicación",
+        "button": "Instalar",
+        "ios_hint": "Instala HiveGame: toca Compartir y luego «Añadir a pantalla de inicio»."
+    },
+    "push": {
+        "your_turn_title": "Tu turno",
+        "your_turn_timed": "{{opponent}} movió · quedan {{time_left}}",
+        "your_turn_untimed": "{{opponent}} movió",
+        "challenge_title": "Desafío",
+        "challenge_rated": "{{challenger}} · {{time_control}} · clasificatoria",
+        "challenge_casual": "{{challenger}} · {{time_control}} · amistosa",
+        "game_started_title": "Partida iniciada",
+        "game_started_body": "vs {{opponent}} · {{time_control}}",
+        "game_ended_title": "Partida terminada",
+        "game_ended_won_resignation": "{{opponent}} abandonó",
+        "game_ended_won_timeout": "A {{opponent}} se le acabó el tiempo",
+        "game_ended_won": "Venciste a {{opponent}}",
+        "game_ended_lost_resignation": "Abandonaste",
+        "game_ended_lost_timeout": "Se te acabó el tiempo",
+        "game_ended_lost": "{{opponent}} te venció",
+        "game_ended_drew_agreement": "Tablas con {{opponent}} (acuerdo)",
+        "game_ended_drew": "Tablas con {{opponent}}",
+        "tournament_invite_title": "Invitación a torneo",
+        "tournament_invite_body": "Invitado a {{tournament_name}}",
+        "tournament_started_title": "Torneo iniciado",
+        "tournament_started_body": "{{tournament_name}} ha comenzado",
+        "schedule_propose_title": "Horario propuesto",
+        "schedule_propose_body": "{{proposer}} propuso {{when}}",
+        "schedule_accept_title": "Horario aceptado",
+        "schedule_accept_body": "{{opponent}} aceptó {{when}}",
+        "draw_offer_title": "Oferta de tablas",
+        "draw_offered_body": "{{actor}} ofrece tablas",
+        "takeback_request_title": "Petición de devolución",
+        "takeback_requested_body": "{{actor}} pide devolver la jugada",
+        "draw_declined_title": "Tablas rechazadas",
+        "draw_rejected_body": "{{actor}} rechazó las tablas",
+        "takeback_accepted_title": "Devolución aceptada",
+        "takeback_accepted_body": "{{actor}} aceptó devolver la jugada",
+        "takeback_declined_title": "Devolución rechazada",
+        "takeback_rejected_body": "{{actor}} rechazó devolver la jugada",
+        "test_title": "HiveGame",
+        "test_body": "Notificación de prueba — las notificaciones funcionan 🐝"
+    }
+}

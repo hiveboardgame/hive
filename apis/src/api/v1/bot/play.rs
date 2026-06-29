@@ -102,26 +102,6 @@ async fn play_move(
                 send_turn_messages(hub.clone(), &updated_game, &bot, &pool, played_turn.clone())
                     .await?;
 
-                // Disabled because it spams too much
-                //
-                // use crate::websocket::busybee::Busybee;
-                // match TimeMode::from_str(&updated_game.time_mode) {
-                //     Ok(TimeMode::RealTime) | Err(_) => {}
-                //     _ => {
-                //         let opponent_id = updated_game.current_player_id;
-                //         let msg = format!(
-                //             "[Your turn](<https://hivegame.com/game/{}>) in your game vs {}.\nYou have {} to play.",
-                //             updated_game.nanoid,
-                //             bot.username,
-                //             updated_game.str_time_left_for_player(opponent_id)
-                //         );
-
-                //         if let Err(e) = Busybee::msg(opponent_id, msg).await {
-                //             println!("Failed to send Busybee message: {}", e);
-                //         }
-                //     }
-                // };
-
                 Ok((updated_game, played_turn))
             }
             .scope_boxed()

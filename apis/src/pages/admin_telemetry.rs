@@ -51,7 +51,7 @@ pub fn AdminTelemetry() -> impl IntoView {
     );
 
     view! {
-        <div class="px-4 pt-20">
+        <div class="px-4 pt-page">
             <Show when=move || {
                 auth_context.user.with(|a| a.as_ref().is_some_and(|v| v.user.admin))
             }>

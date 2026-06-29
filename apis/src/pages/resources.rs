@@ -12,7 +12,7 @@ pub fn Resources() -> impl IntoView {
     let class = "text-blue-500 hover:underline";
 
     view! {
-        <div class="px-4 pt-20">
+        <div class="px-4 pt-page">
             <div class="container px-4 mx-auto">
                 <Banner title=t!(i18n, resources.title) />
                 <div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">

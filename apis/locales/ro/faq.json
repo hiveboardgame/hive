@@ -99,7 +99,7 @@
     },
     "correspondence_notifications": {
         "question": "Pot primi notificări pentru jocuri prin corespondență?",
-        "answer": "Da! Le poți primi prin Discord dacă îți conectezi contul la profilul tău Hivegame.com."
+        "answer": "Le poți primi prin notificări push în browser sau prin Discord din pagina de notificări. Pentru Discord, intră pe serverul nostru și conectează-ți acolo contul de Discord."
     },
     "chat_basics": {
         "question": "Cum funcționează chat-ul?",

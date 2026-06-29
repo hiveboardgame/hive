@@ -107,7 +107,7 @@
     },
     "correspondence_notifications": {
         "question": "Mohu být upozorněn, když je můj tah hrát v korespondenční hře?",
-        "answer": "Můžete připojit svůj Discord účet k vašemu profilu Hivegame.com a dostávat oznámení od bota busybee. Klikněte na tlačítko profilu v pravém horním rohu a klikněte na 'Upravit účet'"
+        "answer": "Můžete je dostávat přes push oznámení v prohlížeči nebo přes Discord na stránce oznámení. Pro Discord se připojte k našemu serveru a propojte tam svůj Discord účet."
     },
     "chat_basics": {
         "question": "Jak funguje chat?",

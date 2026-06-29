@@ -41,3 +41,14 @@ pub async fn edit_takeback(takeback: Takeback) -> Result<(), ServerFnError> {
     user.set_takeback(takeback.clone(), &mut conn).await?;
     Ok(())
 }
+
+#[server]
+pub async fn edit_lang(lang: String) -> Result<(), ServerFnError> {
+    use crate::functions::{auth::identity::uuid, db::pool};
+    use db_lib::{get_conn, models::User};
+    let pool = pool().await?;
+    let mut conn = get_conn(&pool).await?;
+    let user = User::find_active_by_uuid(&uuid().await?, &mut conn).await?;
+    user.set_lang(&lang, &mut conn).await?;
+    Ok(())
+}

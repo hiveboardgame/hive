@@ -1,5 +1,6 @@
 use crate::{
     common::{ChallengeUpdate, ServerMessage},
+    notifications::{notify, time_control_label, Event},
     responses::ChallengeResponse,
     websocket::messages::{InternalServerMessage, MessageDestination},
 };
@@ -43,6 +44,17 @@ impl CreateHandler {
         match ChallengeVisibility::from_str(&new_challenge.visibility)? {
             ChallengeVisibility::Direct => {
                 if let Some(ref opponent) = challenge_response.opponent {
+                    notify(Event::ChallengeReceived {
+                        recipient: opponent.uid,
+                        challenger: challenge_response.challenger.username.clone(),
+                        challenge_nanoid: challenge_response.challenge_id.0.clone(),
+                        time_control: time_control_label(
+                            challenge_response.speed,
+                            challenge_response.time_base,
+                            challenge_response.time_increment,
+                        ),
+                        rated: challenge_response.rated,
+                    });
                     messages.push(InternalServerMessage {
                         destination: MessageDestination::User(opponent.uid),
                         message: ServerMessage::Challenge(ChallengeUpdate::Direct(

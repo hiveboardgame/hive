@@ -1,13 +1,21 @@
 use super::reaction::{handle_control, handle_new_game};
 use crate::{
-    common::{GameActionResponse, GameReaction, GameUpdate},
-    providers::{game_state::GameStateSignal, games::GamesSignal, UpdateNotifier},
+    common::{ClientRequest, GameActionResponse, GameReaction, GameUpdate},
+    providers::{
+        game_state::GameStateSignal,
+        games::GamesSignal,
+        refocus::RefocusSignal,
+        websocket::WebsocketContext,
+        AuthContext,
+        UpdateNotifier,
+    },
     responses::GameResponse,
 };
 use hive_lib::{GameStatus, History, State};
 use leptos::{prelude::*, task::spawn_local};
 use leptos_use::{use_timeout_fn, UseTimeoutFnReturn};
-use shared_types::ReadyUser;
+use shared_types::{GameId, ReadyUser};
+use uuid::Uuid;
 
 pub fn handle_game(game_update: GameUpdate) {
     let game_updater = expect_context::<UpdateNotifier>();
@@ -64,13 +72,17 @@ fn handle_reaction(gar: GameActionResponse) {
             } else {
                 games.own_games_add(gar.game.clone());
             }
+            ack_seen_if_watching(&gar.game.game_id, gar.game.current_player_id);
         }
 
         GameReaction::Join => {
             // TODO: Do we want anything here?
         }
 
-        GameReaction::Control(ref game_control) => handle_control(*game_control, gar.clone()),
+        GameReaction::Control(ref game_control) => {
+            ack_control_if_watching(*game_control, &gar);
+            handle_control(*game_control, gar.clone());
+        }
         GameReaction::Started => {
             update_notifier.game_response.set(Some(gar.clone()));
         }
@@ -112,6 +124,55 @@ fn handle_reaction(gar: GameActionResponse) {
             });
         }
     };
+}
+
+fn ack_seen_if_watching(game_id: &GameId, recipient_id: Uuid) {
+    let me = expect_context::<AuthContext>()
+        .user
+        .with_untracked(|a| a.as_ref().map(|account| account.id));
+    if me != Some(recipient_id) {
+        return;
+    }
+    send_seen_ack_if_focused(game_id);
+}
+
+fn ack_control_if_watching(control: hive_lib::GameControl, gar: &GameActionResponse) {
+    let notified = matches!(
+        control,
+        hive_lib::GameControl::DrawOffer(_)
+            | hive_lib::GameControl::TakebackRequest(_)
+            | hive_lib::GameControl::DrawReject(_)
+            | hive_lib::GameControl::TakebackAccept(_)
+            | hive_lib::GameControl::TakebackReject(_)
+    );
+    if !notified {
+        return;
+    }
+    let Some(me) = expect_context::<AuthContext>()
+        .user
+        .with_untracked(|a| a.as_ref().map(|account| account.id))
+    else {
+        return;
+    };
+    let is_player = me == gar.game.white_player.uid || me == gar.game.black_player.uid;
+    if me == gar.user_id || !is_player {
+        return;
+    }
+    send_seen_ack_if_focused(&gar.game.game_id);
+}
+
+fn send_seen_ack_if_focused(game_id: &GameId) {
+    let focused = expect_context::<RefocusSignal>()
+        .signal
+        .with_untracked(|s| s.focused);
+    let on_this_game = web_sys::window()
+        .and_then(|w| w.location().pathname().ok())
+        .is_some_and(|p| p == format!("/game/{}", game_id.0));
+    if focused && on_this_game {
+        expect_context::<WebsocketContext>().send(&ClientRequest::NotificationSeen {
+            game_id: game_id.clone(),
+        });
+    }
 }
 
 pub fn reset_game_state_for_takeback(game: &GameResponse, game_state: &mut GameStateSignal) {
