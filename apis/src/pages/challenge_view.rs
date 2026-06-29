@@ -60,7 +60,7 @@ pub fn ChallengeView() -> impl IntoView {
         }
     };
     view! {
-        <div class="flex flex-col items-center pt-20 mx-auto">
+        <div class="flex flex-col items-center mx-auto pt-page">
             <Suspense fallback=move || {
                 view! {
                     <div class="flex justify-center items-center p-8">

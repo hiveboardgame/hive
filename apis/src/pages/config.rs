@@ -5,6 +5,7 @@ use crate::{
             background_color_toggle::BackgroundColorToggle,
             confirm_mode_toggle::ConfirmModeToggle,
             darkmode_toggle::DarkModeToggle,
+            dropdowns::locale::LocaleDropdown,
             preselect_toggle::PreSelectToggle,
             preview_tiles::PreviewTiles,
             takeback_conf::TakebackConf,
@@ -32,7 +33,7 @@ pub fn Config() -> impl IntoView {
         view! { <ConfirmModeToggle game_speed /> }
     };
     view! {
-        <div class="pt-20 pb-20 mx-auto max-w-md">
+        <div class="pb-20 mx-auto max-w-md pt-page">
             // Board and Tiles Card
             <div class="px-8 pt-6 pb-8 mb-6 rounded-lg border shadow-lg bg-stone-300 border-stone-400 dark:bg-slate-800 dark:border-slate-600">
                 <h2 class="mb-4 text-xl font-bold text-center text-purple-600 dark:text-purple-400">
@@ -62,6 +63,15 @@ pub fn Config() -> impl IntoView {
                 </div>
 
                 <TakebackConf />
+            </div>
+
+            <div class="px-8 pt-6 pb-8 mb-6 rounded-lg border shadow-lg bg-stone-300 border-stone-400 dark:bg-slate-800 dark:border-slate-600">
+                <h2 class="mb-4 text-xl font-bold text-center text-teal-600 dark:text-teal-400">
+                    "🌐 " {t!(i18n, user_config.language)}
+                </h2>
+                <div class="flex justify-center">
+                    <LocaleDropdown />
+                </div>
             </div>
 
             // Game Speed & Confirmation Card

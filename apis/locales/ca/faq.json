@@ -107,7 +107,7 @@
     },
     "correspondence_notifications": {
         "question": "Puc ser notificat quan sigui el meu torn de jugar en una partida de correspondència?",
-        "answer": "Pots connectar el teu compte de Discord al teu perfil de Hivegame.com i rebre notificacions del bot busybee. Fes clic al botó del teu perfil a la part superior dreta i fes clic a 'Editar Compte'"
+        "answer": "Pots rebre-les amb notificacions push del navegador o per Discord des de la pàgina de notificacions. Per a Discord, uneix-te al nostre servidor i vincula-hi el teu compte de Discord."
     },
     "chat_basics": {
         "question": "Com funciona el xat?",

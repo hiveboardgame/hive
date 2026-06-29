@@ -1,0 +1,98 @@
+{
+    "page": {
+        "heading": "🔔 Notifiche",
+        "intro_before_link": "Scegli come vuoi essere avvisato per ogni tipo di evento. Le notifiche push arrivano ai browser che attivi qui sotto. La configurazione di Discord è nella ",
+        "account_link": "sezione Discord",
+        "intro_after_link": " qui sotto.",
+        "col_push": "Push",
+        "col_discord": "Discord",
+        "email_coming_soon": "L'invio via e-mail arriverà presto.",
+        "saving": "Salvataggio…",
+        "saved": "Salvato.",
+        "save_failed": "Salvataggio non riuscito:",
+        "loading": "Caricamento…"
+    },
+    "events": {
+        "your_turn": "Tocca a te",
+        "challenges": "Sfida ricevuta",
+        "game_ended": "Partita terminata",
+        "tournament": "Invito a un torneo",
+        "schedules": "Proposta di orario",
+        "dms": "Messaggio diretto"
+    },
+    "browser": {
+        "heading": "🌐 Questo browser",
+        "body": "Ricevi in questo browser le notifiche push selezionate sopra, anche quando nessuna scheda di HiveGame è aperta. Attivale separatamente su ogni dispositivo che vuoi notificare.",
+        "enable": "Attiva le notifiche del browser",
+        "disable": "Disattiva le notifiche del browser",
+        "working": "Elaborazione…",
+        "send_test": "Invia una prova",
+        "test_sent": "Notifica di prova inviata: controlla le tue notifiche.",
+        "test_failed": "Prova non riuscita:"
+    },
+    "ios": {
+        "heading": "📱 Sul tuo iPhone o iPad",
+        "body": "Per ricevere notifiche su iOS, aggiungi HiveGame alla schermata Home: tocca il pulsante Condividi, poi «Aggiungi a Home» e aprilo da lì."
+    },
+    "devices": {
+        "heading": "📡 I tuoi dispositivi",
+        "body": "Tutti i dispositivi attualmente configurati per ricevere notifiche push. Rimuovi quelli che non usi più.",
+        "remove": "Rimuovi",
+        "this_browser": "(questo browser)",
+        "last_active": "ultima attività",
+        "platform_web": "Browser"
+    },
+    "nudge": {
+        "title": "Ricevi un avviso quando tocca a te",
+        "body_before_link": "Attiva le notifiche del browser per questo dispositivo. Gestiscile in qualsiasi momento nella ",
+        "link": "pagina delle notifiche",
+        "body_after_link": ".",
+        "enable": "Attiva",
+        "enabling": "Attivazione…",
+        "dismiss": "Chiudi"
+    },
+    "install": {
+        "title": "Installa HiveGame come app",
+        "button": "Installa",
+        "ios_hint": "Installa HiveGame: tocca Condividi, poi «Aggiungi a Home»."
+    },
+    "push": {
+        "your_turn_title": "Tocca a te",
+        "your_turn_timed": "{{opponent}} ha mosso · {{time_left}} rimasti",
+        "your_turn_untimed": "{{opponent}} ha mosso",
+        "challenge_title": "Sfida",
+        "challenge_rated": "{{challenger}} · {{time_control}} · classificata",
+        "challenge_casual": "{{challenger}} · {{time_control}} · amichevole",
+        "game_started_title": "Partita iniziata",
+        "game_started_body": "contro {{opponent}} · {{time_control}}",
+        "game_ended_title": "Partita terminata",
+        "game_ended_won_resignation": "{{opponent}} ha abbandonato",
+        "game_ended_won_timeout": "{{opponent}} ha esaurito il tempo",
+        "game_ended_won": "Hai battuto {{opponent}}",
+        "game_ended_lost_resignation": "Hai abbandonato",
+        "game_ended_lost_timeout": "Hai esaurito il tempo",
+        "game_ended_lost": "{{opponent}} ti ha battuto",
+        "game_ended_drew_agreement": "Patta con {{opponent}} (accordo)",
+        "game_ended_drew": "Patta con {{opponent}}",
+        "tournament_invite_title": "Invito al torneo",
+        "tournament_invite_body": "Invitato a {{tournament_name}}",
+        "tournament_started_title": "Torneo iniziato",
+        "tournament_started_body": "{{tournament_name}} è iniziato",
+        "schedule_propose_title": "Orario proposto",
+        "schedule_propose_body": "{{proposer}} ha proposto {{when}}",
+        "schedule_accept_title": "Orario accettato",
+        "schedule_accept_body": "{{opponent}} ha accettato {{when}}",
+        "draw_offer_title": "Offerta di patta",
+        "draw_offered_body": "{{actor}} offre la patta",
+        "takeback_request_title": "Richiesta di ritiro mossa",
+        "takeback_requested_body": "{{actor}} chiede di ritirare la mossa",
+        "draw_declined_title": "Patta rifiutata",
+        "draw_rejected_body": "{{actor}} ha rifiutato la patta",
+        "takeback_accepted_title": "Ritiro accettato",
+        "takeback_accepted_body": "{{actor}} ha accettato il ritiro della mossa",
+        "takeback_declined_title": "Ritiro rifiutato",
+        "takeback_rejected_body": "{{actor}} ha rifiutato il ritiro della mossa",
+        "test_title": "HiveGame",
+        "test_body": "Notifica di prova — le notifiche funzionano 🐝"
+    }
+}

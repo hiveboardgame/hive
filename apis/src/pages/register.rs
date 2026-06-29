@@ -8,7 +8,6 @@ use leptos::{form::ActionForm, html, leptos_dom::helpers::debounce, prelude::*};
 use std::time::Duration;
 use web_sys::Event;
 
-const BANNED_USERNAMES: [&str; 3] = ["black", "white", "admin"];
 const VALID_USERNAME_CHARS: &str = "-_";
 
 #[component]
@@ -58,7 +57,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
     };
     let username_exists = move || {
         let username = username();
-        BANNED_USERNAMES.contains(&username.to_lowercase().as_str())
+        shared_types::RESERVED_USERNAMES.contains(&username.to_lowercase().as_str())
             || username_taken.value().get().is_some_and(|v| {
                 if let Ok(value) = v {
                     username.len() > 1 && value
@@ -78,7 +77,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
         false,
     );
     view! {
-        <div class=format!("w-full max-w-xs mx-auto pt-20 {extend_tw_classes}")>
+        <div class=format!("w-full max-w-xs mx-auto pt-page {extend_tw_classes}")>
             <ActionForm
                 action=register
                 attr:class="px-8 pt-6 pb-8 mb-4 rounded shadow-md bg-inherit bg-stone-300 dark:bg-slate-800"

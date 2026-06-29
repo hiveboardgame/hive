@@ -14,7 +14,7 @@ pub fn RulesSummary() -> impl IntoView {
     let i18n = use_i18n();
     let is_allowed = Signal::derive(move || ALLOWED_LOCALES.contains(&i18n.get_locale()));
     view! {
-        <div class="pt-20">
+        <div class="pt-page">
             <div class="px-4 mx-auto max-w-4xl sm:px-6 lg:px-8">
                 <Show
                     when=is_allowed

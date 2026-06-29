@@ -107,7 +107,7 @@
     },
     "correspondence_notifications": {
         "question": "Kan ik een melding krijgen wanneer het mijn beurt is om te spelen in een correspondentie-spel?",
-        "answer": "Je kunt je Discord-account verbinden met je Hivegame.com-profiel en meldingen ontvangen van de busybee-bot. Klik op je profielknop in de rechterbovenhoek en klik op 'Account Bewerken'"
+        "answer": "Je kunt ze ontvangen via browserpush of Discord vanaf de notificatiepagina. Voor Discord sluit je je aan bij onze server en koppel je daar je Discord-account."
     },
     "chat_basics": {
         "question": "Hoe werkt de chat?",

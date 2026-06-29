@@ -14,6 +14,7 @@ actix-session = { workspace = true, optional = true }
 actix-web = { workspace = true, optional = true, features = ["macros"] }
 actix-ws = { workspace = true, optional = true }
 anyhow = { workspace = true }
+base64 = { workspace = true }
 argon2 = { workspace = true, optional = true }
 bimap = { workspace = true }
 bytes = { workspace = true, optional = true }
@@ -62,6 +63,9 @@ markdown = { workspace = true }
 rand = { workspace = true, optional = true }
 reqwest = { workspace = true }
 resvg = { version = "0.46", optional = true }
+rustls = { workspace = true, optional = true }
+web-push = { workspace = true, optional = true }
+url = { workspace = true, optional = true }
 reactive_stores = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
@@ -72,6 +76,7 @@ shared_types = { path = "../shared_types" }
 simple_logger = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, optional = true }
+tokio-util = { workspace = true, optional = true }
 tree-ds = { workspace = true }
 uuid = { workspace = true }
 walkdir = { workspace = true }
@@ -97,6 +102,7 @@ ssr = [
   "dep:dashmap",
   "dep:futures-util",
   "dep:tokio",
+  "dep:tokio-util",
   "dep:db",
   "dep:diesel",
   "dep:diesel_migrations",
@@ -106,6 +112,9 @@ ssr = [
   "dep:rand",
   "dep:resvg",
   "dep:jsonwebtoken",
+  "dep:rustls",
+  "dep:web-push",
+  "dep:url",
   "leptos/ssr",
   "leptos-use/ssr",
   "leptos-use/actix",

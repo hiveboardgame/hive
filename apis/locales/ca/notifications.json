@@ -1,0 +1,98 @@
+{
+    "page": {
+        "heading": "🔔 Notificacions",
+        "intro_before_link": "Tria com vols rebre les notificacions per a cada tipus d'esdeveniment. Les notificacions push arriben als navegadors que activis a sota. La configuració de Discord és a la ",
+        "account_link": "secció de Discord",
+        "intro_after_link": " de sota.",
+        "col_push": "Push",
+        "col_discord": "Discord",
+        "email_coming_soon": "L'enviament per correu electrònic arribarà aviat.",
+        "saving": "S'està desant…",
+        "saved": "Desat.",
+        "save_failed": "No s'ha pogut desar:",
+        "loading": "S'està carregant…"
+    },
+    "events": {
+        "your_turn": "El teu torn",
+        "challenges": "Repte rebut",
+        "game_ended": "Partida acabada",
+        "tournament": "Invitació a un torneig",
+        "schedules": "Proposta d'horari",
+        "dms": "Missatge directe"
+    },
+    "browser": {
+        "heading": "🌐 Aquest navegador",
+        "body": "Rep en aquest navegador les notificacions push seleccionades a dalt, fins i tot quan no hi hagi cap pestanya de HiveGame oberta. Activa-les per separat a cada dispositiu que vulguis notificar.",
+        "enable": "Activa les notificacions del navegador",
+        "disable": "Desactiva les notificacions del navegador",
+        "working": "S'està processant…",
+        "send_test": "Envia una prova",
+        "test_sent": "Notificació de prova enviada: comprova les teves notificacions.",
+        "test_failed": "La prova ha fallat:"
+    },
+    "ios": {
+        "heading": "📱 Al teu iPhone o iPad",
+        "body": "Per rebre notificacions a l'iOS, afegeix HiveGame a la pantalla d'inici: toca el botó Comparteix i després «Afegeix a la pantalla d'inici» i obre'l des d'allà."
+    },
+    "devices": {
+        "heading": "📡 Els teus dispositius",
+        "body": "Tots els dispositius configurats actualment per rebre push. Elimina els que ja no facis servir.",
+        "remove": "Elimina",
+        "this_browser": "(aquest navegador)",
+        "last_active": "última activitat",
+        "platform_web": "Navegador"
+    },
+    "nudge": {
+        "title": "Rep un avís quan sigui el teu torn",
+        "body_before_link": "Activa les notificacions del navegador per a aquest dispositiu. Gestiona-les en qualsevol moment a la ",
+        "link": "pàgina de notificacions",
+        "body_after_link": ".",
+        "enable": "Activa",
+        "enabling": "S'està activant…",
+        "dismiss": "Descarta"
+    },
+    "install": {
+        "title": "Instal·la HiveGame com a aplicació",
+        "button": "Instal·la",
+        "ios_hint": "Instal·la HiveGame: toca Comparteix i després «Afegeix a la pantalla d'inici»."
+    },
+    "push": {
+        "your_turn_title": "El teu torn",
+        "your_turn_timed": "{{opponent}} ha mogut · queden {{time_left}}",
+        "your_turn_untimed": "{{opponent}} ha mogut",
+        "challenge_title": "Repte",
+        "challenge_rated": "{{challenger}} · {{time_control}} · classificatòria",
+        "challenge_casual": "{{challenger}} · {{time_control}} · amistosa",
+        "game_started_title": "Partida iniciada",
+        "game_started_body": "contra {{opponent}} · {{time_control}}",
+        "game_ended_title": "Partida acabada",
+        "game_ended_won_resignation": "{{opponent}} ha abandonat",
+        "game_ended_won_timeout": "A {{opponent}} se li ha acabat el temps",
+        "game_ended_won": "Has guanyat {{opponent}}",
+        "game_ended_lost_resignation": "Has abandonat",
+        "game_ended_lost_timeout": "Se t'ha acabat el temps",
+        "game_ended_lost": "{{opponent}} t'ha guanyat",
+        "game_ended_drew_agreement": "Taules amb {{opponent}} (acord)",
+        "game_ended_drew": "Taules amb {{opponent}}",
+        "tournament_invite_title": "Invitació a un torneig",
+        "tournament_invite_body": "Convidat a {{tournament_name}}",
+        "tournament_started_title": "Torneig iniciat",
+        "tournament_started_body": "{{tournament_name}} ha començat",
+        "schedule_propose_title": "Horari proposat",
+        "schedule_propose_body": "{{proposer}} ha proposat {{when}}",
+        "schedule_accept_title": "Horari acceptat",
+        "schedule_accept_body": "{{opponent}} ha acceptat {{when}}",
+        "draw_offer_title": "Oferta de taules",
+        "draw_offered_body": "{{actor}} ofereix taules",
+        "takeback_request_title": "Petició de desfer jugada",
+        "takeback_requested_body": "{{actor}} demana desfer la jugada",
+        "draw_declined_title": "Taules rebutjades",
+        "draw_rejected_body": "{{actor}} ha rebutjat les taules",
+        "takeback_accepted_title": "Desfer acceptat",
+        "takeback_accepted_body": "{{actor}} ha acceptat desfer la jugada",
+        "takeback_declined_title": "Desfer rebutjat",
+        "takeback_rejected_body": "{{actor}} ha rebutjat desfer la jugada",
+        "test_title": "HiveGame",
+        "test_body": "Notificació de prova — les notificacions funcionen 🐝"
+    }
+}

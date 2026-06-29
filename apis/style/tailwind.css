@@ -74,6 +74,14 @@ html[data-display-mode="standalone"] {
   grid-template-columns: repeat(8, minmax(0, 1fr)) repeat(2, minmax(0, 220px));
 }
 
+@utility pt-header {
+  padding-top: calc(2.5rem + env(safe-area-inset-top));
+}
+
+@utility pt-page {
+  padding-top: calc(5rem + env(safe-area-inset-top));
+}
+
 @layer base {
   :root {
     color-scheme: light;

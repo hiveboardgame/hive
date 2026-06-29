@@ -101,6 +101,7 @@ const detachStandaloneListeners = () => {
 
 const updatePwaLayout = () => {
   const standalone = isStandalone();
+  window.__hiveStandalone = standalone;
   root.dataset.displayMode = standalone ? 'standalone' : 'browser';
   if (standalone) {
     attachStandaloneListeners();
@@ -117,14 +118,32 @@ const updatePwaLayout = () => {
 updatePwaLayout();
 window.addEventListener('pageshow', updatePwaLayout);
 
+window.__hiveInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (event) => {
+  event.preventDefault();
+  window.__hiveInstallPrompt = event;
+  window.dispatchEvent(new Event('hive-installable'));
+});
+window.addEventListener('appinstalled', () => {
+  window.__hiveInstallPrompt = null;
+});
+
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/assets/js/sw.js', { updateViaCache: 'none' })
-      .then((registration) => {
-        console.log('ServiceWorker registration successful:', registration);
-      })
-      .catch((error) => {
-        console.error('ServiceWorker registration failed:', error);
+  window.addEventListener('load', async () => {
+    try {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(
+        registrations
+          .filter((r) => new URL(r.scope).pathname !== '/')
+          .map((r) => r.unregister())
+      );
+      const registration = await navigator.serviceWorker.register('/assets/js/sw.js', {
+        scope: '/',
+        updateViaCache: 'none',
       });
+      console.log('ServiceWorker registration successful:', registration);
+    } catch (error) {
+      console.error('ServiceWorker registration failed:', error);
+    }
   });
 }

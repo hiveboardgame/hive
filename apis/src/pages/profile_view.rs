@@ -5,12 +5,13 @@ use crate::{
     },
     functions::users::get_profile,
     i18n::*,
-    providers::{calculate_initial_batch_size, provide_games_search_context},
+    providers::{calculate_initial_batch_size, provide_games_search_context, AuthContext},
 };
 use leptos::{either::Either, html, prelude::*};
 use leptos_router::{
-    hooks::{use_location, use_params},
+    hooks::{use_location, use_navigate, use_params},
     params::Params,
+    NavigateOptions,
 };
 use leptos_use::use_element_bounding;
 use shared_types::GameProgress;
@@ -30,6 +31,24 @@ pub fn tab_from_path(path: &str) -> GameProgress {
 #[derive(Params, PartialEq, Eq)]
 struct UsernameParams {
     username: String,
+}
+
+#[component]
+pub fn ProfileMe() -> impl IntoView {
+    let auth = expect_context::<AuthContext>();
+    let navigate = use_navigate();
+    Effect::new(move |_| {
+        let opts = NavigateOptions {
+            replace: true,
+            ..Default::default()
+        };
+        match (auth.logged_in.get(), auth.user.get()) {
+            (Some(true), Some(account)) => navigate(&format!("/@/{}", account.username), opts),
+            (Some(false), _) => navigate("/login", opts),
+            _ => {}
+        }
+    });
+    view! { <p class="p-4 dark:text-white">"Redirecting…"</p> }
 }
 
 #[component]
@@ -97,7 +116,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     );
 
     view! {
-        <div class="flex overflow-hidden flex-col px-3 pt-12 bg-light h-[100vh] dark:bg-gray-950">
+        <div class="flex overflow-hidden flex-col px-3 pt-[calc(3rem+env(safe-area-inset-top))] bg-light h-[100vh] dark:bg-gray-950">
             <Transition fallback=move || {
                 view! { <p>"Loading Profile..."</p> }
             }>

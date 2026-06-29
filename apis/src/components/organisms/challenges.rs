@@ -351,10 +351,7 @@ pub fn Challenges() -> impl IntoView {
                                     "{} w-8 xs:w-10 sm:w-12 md:w-14 lg:w-16 min-w-0 text-xs sm:text-sm",
                                     th_class,
                                 )>{t!(i18n, home.challenge_details.rated.title)}</th>
-                                <th class=format!(
-                                    "{} w-12 xs:w-14 sm:w-16 md:w-18 lg:w-20 min-w-0",
-                                    th_class,
-                                )></th>
+                                <th class=format!("{} w-16 sm:w-18 lg:w-20 min-w-0", th_class)></th>
                             </tr>
                         </thead>
                         <tbody>

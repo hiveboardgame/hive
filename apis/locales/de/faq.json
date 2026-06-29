@@ -107,7 +107,7 @@
     },
     "correspondence_notifications": {
         "question": "Kann ich benachrichtigt werden, wenn ich in einem Korrespondenz-Spiel am Zug bin?",
-        "answer": "Du kannst dein Discord-Konto mit deinem Hivegame.com-Profil verbinden und Benachrichtigungen vom busybee-Bot erhalten. Klicke auf deine Profil-Schaltfläche oben rechts und klicke auf 'Konto bearbeiten'"
+        "answer": "Du kannst sie über Browser-Push oder Discord auf der Benachrichtigungsseite erhalten. Für Discord tritt unserem Server bei und verknüpfe dort dein Discord-Konto."
     },
     "chat_basics": {
         "question": "Wie funktioniert der Chat?",

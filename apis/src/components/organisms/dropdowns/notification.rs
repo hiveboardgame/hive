@@ -40,7 +40,7 @@ pub fn NotificationDropdown() -> impl IntoView {
         <Hamburger
             hamburger_show=hamburger_show
             button_style="h-full p-2 transform transition-transform duration-300 active:scale-95 whitespace-nowrap block"
-            dropdown_style="mr-1 items-center xs:mt-0 mt-1 flex flex-col items-stretch absolute w-max bg-even-light dark:bg-gray-950 border border-gray-300 rounded-md p-2 right-0 z-50"
+            dropdown_style="flex flex-col items-stretch fixed inset-x-1 top-[calc(2.5rem+env(safe-area-inset-top))] max-h-[70vh] overflow-y-auto overflow-x-auto bg-even-light dark:bg-gray-950 border border-gray-300 rounded-md p-2 z-50 sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-1 sm:w-max sm:max-h-none sm:mr-1"
             content=view! { <Icon icon=icondata_io::IoNotifications attr:class=icon_style /> }
             id="Notifications"
         >

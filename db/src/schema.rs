@@ -92,6 +92,35 @@ diesel::table! {
 }
 
 diesel::table! {
+    notification_preferences (user_id) {
+        user_id -> Uuid,
+        your_turn -> Array<Nullable<Text>>,
+        challenges -> Array<Nullable<Text>>,
+        game_ended -> Array<Nullable<Text>>,
+        tournament -> Array<Nullable<Text>>,
+        schedules -> Array<Nullable<Text>>,
+        general_chat -> Array<Nullable<Text>>,
+        dms -> Array<Nullable<Text>>,
+    }
+}
+
+diesel::table! {
+    push_devices (id) {
+        id -> Uuid,
+        user_id -> Uuid,
+        platform -> Text,
+        device_token -> Text,
+        app_version -> Text,
+        locale -> Text,
+        created_at -> Timestamptz,
+        last_seen_at -> Timestamptz,
+        revoked_at -> Nullable<Timestamptz>,
+        p256dh -> Nullable<Text>,
+        auth -> Nullable<Text>,
+    }
+}
+
+diesel::table! {
     ratings (id) {
         id -> Int4,
         user_uid -> Uuid,
@@ -205,12 +234,15 @@ diesel::table! {
         takeback -> Text,
         bot -> Bool,
         deleted -> Bool,
+        lang -> Nullable<Text>,
     }
 }
 
 diesel::joinable!(game_hashes -> games (game_id));
 diesel::joinable!(games_users -> games (game_id));
 diesel::joinable!(games_users -> users (user_id));
+diesel::joinable!(notification_preferences -> users (user_id));
+diesel::joinable!(push_devices -> users (user_id));
 diesel::joinable!(ratings -> users (user_uid));
 diesel::joinable!(schedules -> games (game_id));
 diesel::joinable!(schedules -> tournaments (tournament_id));
@@ -230,6 +262,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     games,
     games_users,
     home_banner,
+    notification_preferences,
+    push_devices,
     ratings,
     schedules,
     tournament_series,

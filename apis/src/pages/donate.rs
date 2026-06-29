@@ -9,7 +9,7 @@ use crate::{
 pub fn Donate() -> impl IntoView {
     let i18n = use_i18n();
     view! {
-        <div class="pt-20">
+        <div class="pt-page">
             <div class="px-4 mx-auto max-w-4xl sm:px-6 lg:px-8">
                 <Banner
                     title=t!(i18n, donate.title)

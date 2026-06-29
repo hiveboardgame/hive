@@ -107,7 +107,7 @@
     },
     "correspondence_notifications": {
         "question": "通信制ゲームで自分のターンになったときに通知を受け取ることはできますか？",
-        "answer": "DiscordアカウントをHivegame.comプロフィールに接続し、busybeeボットから通知を受け取ることができます。右上のプロフィールボタンをクリックし、「アカウント編集」をクリックしてください"
+        "answer": "通知ページでブラウザーのプッシュ通知またはDiscord通知を設定できます。Discordの場合は、サーバーに参加し、そこでDiscordアカウントを連携してください。"
     },
     "chat_basics": {
         "question": "チャットはどのように機能しますか？",

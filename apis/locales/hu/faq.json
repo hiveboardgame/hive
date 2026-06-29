@@ -107,7 +107,7 @@
     },
     "correspondence_notifications": {
         "question": "Kaphatok értesítést, amikor rajtam a sor egy levelezős játékban?",
-        "answer": "Összekapcsolhatod a Discord fiókodat a Hivegame.com profiljával és értesítéseket kaphatsz a busybee bottól. Kattints a profil gombodra a jobb felső sarokban és kattints a 'Fiók Szerkesztése'-re"
+        "answer": "A böngészős push értesítéseket vagy a Discordot az értesítések oldalán állíthatod be. Discordhoz csatlakozz a szerverünkhöz, és ott kapcsold össze a Discord-fiókodat."
     },
     "chat_basics": {
         "question": "Hogyan működik a chat?",

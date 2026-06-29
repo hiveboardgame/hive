@@ -1,15 +1,13 @@
 use crate::{
     common::{ChallengeUpdate, GameActionResponse, GameReaction, GameUpdate, ServerMessage},
+    notifications::{notify, time_control_label, Event},
     responses::GameResponse,
-    websocket::{
-        busybee::Busybee,
-        messages::{InternalServerMessage, MessageDestination},
-    },
+    websocket::messages::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
 use db_lib::{
     get_conn,
-    models::{Challenge, Game, NewGame, Rating, User},
+    models::{Challenge, Game, NewGame, Rating},
     DbPool,
 };
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
@@ -68,6 +66,7 @@ impl AcceptHandler {
                 return Ok(messages);
             }
         }
+        let challenger_id = challenge.challenger_id;
         let (white_id, black_id) = match challenge.color_choice.to_lowercase().as_str() {
             "black" => (self.user_id, challenge.challenger_id),
             "white" => (challenge.challenger_id, self.user_id),
@@ -93,27 +92,13 @@ impl AcceptHandler {
             })
             .await?;
 
-        match speed {
-            GameSpeed::Correspondence | GameSpeed::Untimed => {
-                let white_id = game.white_id;
-                let black_id = game.black_id;
-                let black = User::find_by_uuid(&black_id, &mut conn).await?;
-                let white = User::find_by_uuid(&white_id, &mut conn).await?;
-                let msg = format!(
-                    "[Your game](<https://hivegame.com/game/{}>) vs {} started.\nYou have {} time left.",
-                    game.nanoid,
-                    black.username,
-                    game.str_time_left_for_player(white_id),
-                );
-                let _ = Busybee::msg(white_id, msg).await;
-                let msg = format!(
-                    "[Your game](<https://hivegame.com/game/{}>) vs {} started.",
-                    game.nanoid, white.username
-                );
-                let _ = Busybee::msg(black_id, msg).await;
-            }
-            _ => {}
-        }
+        notify(Event::GameStarted {
+            recipient: challenger_id,
+            opponent: self.username.clone(),
+            game_nanoid: game.nanoid.clone(),
+            time_control: time_control_label(speed, game.time_base, game.time_increment),
+            speed,
+        });
 
         messages.push(InternalServerMessage {
             destination: MessageDestination::User(game.white_id),

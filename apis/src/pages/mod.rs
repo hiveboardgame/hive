@@ -1,5 +1,6 @@
 pub mod account;
 pub mod admin;
+pub mod admin_push_metrics;
 pub mod admin_telemetry;
 pub mod analysis;
 pub mod archive;
@@ -12,6 +13,7 @@ pub mod faq;
 pub mod game_search;
 pub mod home;
 pub mod login;
+pub mod notifications;
 pub mod play;
 pub mod profile_view;
 pub mod puzzles;

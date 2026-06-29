@@ -1,0 +1,1 @@
+ALTER TABLE push_devices ADD COLUMN p256dh TEXT, ADD COLUMN auth TEXT;

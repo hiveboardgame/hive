@@ -125,6 +125,7 @@ mod tests {
             deleted: false,
             ratings: HashMap::new(),
             takeback: Takeback::default(),
+            lang: None,
         }
     }
 

@@ -7,6 +7,7 @@ use crate::{
     pages::{
         account::Account,
         admin::Admin,
+        admin_push_metrics::AdminPushMetrics,
         admin_telemetry::AdminTelemetry,
         analysis::Analysis,
         challenge_view::ChallengeView,
@@ -16,8 +17,9 @@ use crate::{
         game_search::GameSearch,
         home::Home,
         login::Login,
+        notifications::Notifications,
         play::Play,
-        profile_view::ProfileView,
+        profile_view::{ProfileMe, ProfileView},
         puzzles::Puzzles,
         register::Register,
         resources::Resources,
@@ -119,6 +121,7 @@ pub fn App() -> impl IntoView {
                     >
 
                         <Route path=path!("") view=|| view! { <Home /> } />
+                        <Route path=path!("/@/me") view=|| view! { <ProfileMe /> } />
                         <ParentRoute
                             path=path!("/@/:username")
                             view=|| {
@@ -168,6 +171,12 @@ pub fn App() -> impl IntoView {
                             path=path!("/config")
                             redirect_path=|| "/login"
                             view=|| view! { <Config /> }
+                        />
+                        <ProtectedRoute
+                            condition=is_logged_in
+                            path=path!("/notifications")
+                            redirect_path=|| "/login"
+                            view=|| view! { <Notifications /> }
                         />
                         <Route path=path!("/tournament/:nanoid") view=|| view! { <Tournament /> } />
                         <ProtectedRoute
@@ -251,6 +260,12 @@ pub fn App() -> impl IntoView {
                             path=path!("/admin/telemetry")
                             redirect_path=|| "/"
                             view=|| view! { <AdminTelemetry /> }
+                        />
+                        <ProtectedRoute
+                            condition=is_admin
+                            path=path!("/admin/push-metrics")
+                            redirect_path=|| "/"
+                            view=|| view! { <AdminPushMetrics /> }
                         />
                     </ParentRoute>
                 </Routes>

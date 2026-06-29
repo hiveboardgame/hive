@@ -107,7 +107,7 @@
     },
     "correspondence_notifications": {
         "question": "Kan jag få en avisering när det är min tur att spela i ett korrespondensspel?",
-        "answer": "Du kan koppla ditt Discord-konto till din Hivegame.com-profil och ta emot aviseringar från busybee-boten. Klicka på din profilknapp i övre högra hörnet och klicka på 'Redigera konto'"
+        "answer": "Du kan få dem via webbläsar-push eller Discord på aviseringssidan. För Discord går du med i vår server och länkar ditt Discord-konto där."
     },
     "chat_basics": {
         "question": "Hur fungerar chatten?",

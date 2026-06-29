@@ -14,6 +14,7 @@ pub struct UserResponse {
     pub deleted: bool,
     pub ratings: HashMap<GameSpeed, RatingResponse>,
     pub takeback: Takeback,
+    pub lang: Option<String>,
 }
 
 impl UserResponse {
@@ -133,6 +134,7 @@ impl UserResponse {
             deleted: user.deleted,
             takeback: Takeback::from_str_or_default(&user.takeback),
             ratings,
+            lang: user.lang.clone(),
         })
     }
 
@@ -156,6 +158,7 @@ impl UserResponse {
             deleted: user.deleted,
             takeback: Takeback::from_str_or_default(&user.takeback),
             ratings,
+            lang: user.lang.clone(),
         };
         Ok(response)
     }

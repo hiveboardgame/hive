@@ -1,17 +1,28 @@
 use crate::{
     i18n::*,
     providers::{online_users::OnlineUsersSignal, AuthContext},
+    pwa,
 };
-use leptos::{form::ActionForm, prelude::*};
+use leptos::{form::ActionForm, prelude::*, task::spawn_local};
 
 #[component]
 pub fn Logout(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     let mut online_users = expect_context::<OnlineUsersSignal>();
     let i18n = use_i18n();
+
+    let push_endpoint = LocalResource::new(|| async move { pwa::current_endpoint().await });
+
     view! {
         <div class=format!("m-1 {extend_tw_classes}")>
             <ActionForm action=auth_context.logout>
+                <Show when=move || push_endpoint.get().flatten().is_some()>
+                    <input
+                        type="hidden"
+                        name="device_endpoint"
+                        value=move || push_endpoint.get().flatten().unwrap_or_default()
+                    />
+                </Show>
 
                 <button
                     on:click=move |_| {
@@ -22,6 +33,7 @@ pub fn Logout(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                                     online_users.remove(account.user.username.clone());
                                 }
                             });
+                        spawn_local(async { pwa::clear_local_subscription().await });
                     }
 
                     class="flex place-content-start py-2 px-4 font-bold text-white rounded transition-transform duration-300 active:scale-95 size-full bg-button-dawn dark:bg-button-twilight hover:bg-ladybug-red"

@@ -26,6 +26,7 @@
         "profile": "Profile",
         "edit_account": "Edit Account",
         "config": "Config",
+        "notifications": "Notifications",
         "logout": "Logout",
         "login": "Login"
     }

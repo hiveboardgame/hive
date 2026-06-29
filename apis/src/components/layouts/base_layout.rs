@@ -1,8 +1,19 @@
 use crate::{
     components::{
         atoms::{og::OG, title::Title},
-        molecules::{alert::Alert, tournament_ready_popup::TournamentReadyPopup},
+        molecules::{
+            alert::Alert,
+            install_nudge::InstallNudge,
+            tournament_ready_popup::TournamentReadyPopup,
+            web_push_nudge::WebPushNudge,
+        },
         organisms::header::Header,
+    },
+    hooks::{
+        install_nudge::use_install_nudge_active,
+        sync_user_locale::use_sync_user_locale,
+        web_push_nav_listener::use_web_push_nav_listener,
+        web_push_reconcile::use_web_push_reconcile,
     },
     providers::{
         game_state::GameStateSignal,
@@ -60,8 +71,11 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     provide_context(OrientationSignal {
         orientation_vertical,
     });
+    use_sync_user_locale();
+    use_web_push_nav_listener();
+    use_web_push_reconcile();
+    let install_nudge_active = use_install_nudge_active();
 
-    //Copied from leptos-use https://github.com/Synphonyte/leptos-use/blob/main/src/on_click_outside.rs#L123-#L144
     #[cfg(not(feature = "ssr"))]
     {
         if *IS_IOS {
@@ -119,7 +133,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
                 refocus.unfocus();
             }
         },
-        false,
+        true,
     );
 
     // Zombie-socket detector: socket says Open but we haven't seen a
@@ -204,6 +218,8 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         }>
             <Header />
             <Alert />
+            <InstallNudge active=install_nudge_active />
+            <WebPushNudge install_nudge_active=install_nudge_active />
             <TournamentReadyPopup ready_signal=update_notifier.tournament_ready />
             <Show when=move || ws_ready() != ConnectionReadyState::Open>
                 <div class="flex absolute top-1/2 left-1/2 gap-2 items-center -translate-x-1/2 -translate-y-1/2 z-[60]">

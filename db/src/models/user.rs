@@ -1,7 +1,7 @@
 use super::rating::Rating;
 use crate::{
     db_error::DbError,
-    models::{Challenge, Game, GameUser, NewRating, Schedule},
+    models::{Challenge, Game, GameUser, NewRating, NotificationPreferences, Schedule},
     schema::{
         challenges,
         games::{self, current_player_id, finished, game_status, tournament_id},
@@ -21,6 +21,7 @@ use crate::{
                 username as username_field,
                 users as users_table,
             },
+            lang,
             takeback,
         },
     },
@@ -52,7 +53,6 @@ use uuid::Uuid;
 const MAX_USERNAME_LENGTH: usize = 20;
 const MIN_USERNAME_LENGTH: usize = 2;
 const VALID_USERNAME_CHARS: &str = "-_";
-const BANNED_USERNAMES: [&str; 3] = ["black", "white", "admin"];
 const DELETED_USERNAME_PREFIX: &str = "deleted_user_";
 
 lazy_static! {
@@ -102,7 +102,7 @@ fn validate_username(username: &str) -> Result<(), DbError> {
             error: reason,
         });
     }
-    if BANNED_USERNAMES.contains(&username.to_lowercase().as_str()) {
+    if shared_types::RESERVED_USERNAMES.contains(&username.to_lowercase().as_str()) {
         return Err(DbError::InvalidInput {
             info: String::from("Pick another username."),
             error: "Username is not allowed.".to_string(),
@@ -169,6 +169,7 @@ pub struct User {
     pub takeback: String,
     pub bot: bool,
     pub deleted: bool,
+    pub lang: Option<String>,
 }
 
 impl User {
@@ -206,6 +207,7 @@ impl User {
                 .execute(conn)
                 .await?;
         }
+        NotificationPreferences::create_for_user(user.id, conn).await?;
         Ok(user)
     }
 
@@ -246,6 +248,14 @@ impl User {
         let tb = tb.to_string();
         diesel::update(self)
             .set(takeback.eq(tb.to_string()))
+            .execute(conn)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn set_lang(&self, new_lang: &str, conn: &mut DbConn<'_>) -> Result<(), DbError> {
+        diesel::update(self)
+            .set(lang.eq(new_lang))
             .execute(conn)
             .await?;
         Ok(())

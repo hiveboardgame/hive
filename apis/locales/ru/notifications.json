@@ -1,0 +1,98 @@
+{
+    "page": {
+        "heading": "🔔 Уведомления",
+        "intro_before_link": "Выберите, как вы хотите получать уведомления для каждого типа событий. Push-уведомления приходят в браузеры, которые вы включите ниже. Настройка Discord находится в ",
+        "account_link": "разделе Discord",
+        "intro_after_link": " ниже.",
+        "col_push": "Push",
+        "col_discord": "Discord",
+        "email_coming_soon": "Отправка по электронной почте появится скоро.",
+        "saving": "Сохранение…",
+        "saved": "Сохранено.",
+        "save_failed": "Не удалось сохранить:",
+        "loading": "Загрузка…"
+    },
+    "events": {
+        "your_turn": "Ваш ход",
+        "challenges": "Получен вызов",
+        "game_ended": "Партия завершена",
+        "tournament": "Приглашение на турнир",
+        "schedules": "Предложение времени",
+        "dms": "Личное сообщение"
+    },
+    "browser": {
+        "heading": "🌐 Этот браузер",
+        "body": "Получайте в этом браузере выбранные выше push-уведомления, даже когда вкладка HiveGame не открыта. Включите их отдельно на каждом устройстве, на котором хотите получать уведомления.",
+        "enable": "Включить уведомления браузера",
+        "disable": "Отключить уведомления браузера",
+        "working": "Выполнение…",
+        "send_test": "Отправить тест",
+        "test_sent": "Тестовое уведомление отправлено — проверьте свои уведомления.",
+        "test_failed": "Тест не удался:"
+    },
+    "ios": {
+        "heading": "📱 На вашем iPhone или iPad",
+        "body": "Чтобы получать уведомления на iOS, добавьте HiveGame на домашний экран: нажмите кнопку «Поделиться», затем «На экран Домой» и откройте его оттуда."
+    },
+    "devices": {
+        "heading": "📡 Ваши устройства",
+        "body": "Все устройства, на которых сейчас настроены push-уведомления. Удалите те, которыми больше не пользуетесь.",
+        "remove": "Удалить",
+        "this_browser": "(этот браузер)",
+        "last_active": "последняя активность",
+        "platform_web": "Браузер"
+    },
+    "nudge": {
+        "title": "Получайте уведомление, когда настаёт ваш ход",
+        "body_before_link": "Включите уведомления браузера для этого устройства. Управляйте ими в любое время на ",
+        "link": "странице уведомлений",
+        "body_after_link": ".",
+        "enable": "Включить",
+        "enabling": "Включение…",
+        "dismiss": "Закрыть"
+    },
+    "install": {
+        "title": "Установить HiveGame как приложение",
+        "button": "Установить",
+        "ios_hint": "Установите HiveGame: нажмите «Поделиться», затем «На экран Домой»."
+    },
+    "push": {
+        "your_turn_title": "Ваш ход",
+        "your_turn_timed": "Ход от {{opponent}} · осталось {{time_left}}",
+        "your_turn_untimed": "Ход от {{opponent}}",
+        "challenge_title": "Вызов",
+        "challenge_rated": "{{challenger}} · {{time_control}} · рейтинговая",
+        "challenge_casual": "{{challenger}} · {{time_control}} · без рейтинга",
+        "game_started_title": "Партия началась",
+        "game_started_body": "против {{opponent}} · {{time_control}}",
+        "game_ended_title": "Партия завершена",
+        "game_ended_won_resignation": "{{opponent}}: сдача",
+        "game_ended_won_timeout": "У {{opponent}} закончилось время",
+        "game_ended_won": "Вы победили {{opponent}}",
+        "game_ended_lost_resignation": "Вы сдались",
+        "game_ended_lost_timeout": "У вас закончилось время",
+        "game_ended_lost": "Вы проиграли {{opponent}}",
+        "game_ended_drew_agreement": "Ничья с {{opponent}} (соглашение)",
+        "game_ended_drew": "Ничья с {{opponent}}",
+        "tournament_invite_title": "Приглашение на турнир",
+        "tournament_invite_body": "Приглашение на {{tournament_name}}",
+        "tournament_started_title": "Турнир начался",
+        "tournament_started_body": "{{tournament_name}} начался",
+        "schedule_propose_title": "Предложено время",
+        "schedule_propose_body": "От {{proposer}}: предложено {{when}}",
+        "schedule_accept_title": "Время принято",
+        "schedule_accept_body": "От {{opponent}}: принято {{when}}",
+        "draw_offer_title": "Предложение ничьей",
+        "draw_offered_body": "От {{actor}}: предложение ничьей",
+        "takeback_request_title": "Запрос отмены хода",
+        "takeback_requested_body": "От {{actor}}: запрос отмены хода",
+        "draw_declined_title": "Ничья отклонена",
+        "draw_rejected_body": "От {{actor}}: отказ от ничьей",
+        "takeback_accepted_title": "Отмена хода принята",
+        "takeback_accepted_body": "От {{actor}}: отмена хода принята",
+        "takeback_declined_title": "Отмена хода отклонена",
+        "takeback_rejected_body": "От {{actor}}: отмена хода отклонена",
+        "test_title": "HiveGame",
+        "test_body": "Тестовое уведомление — push работает 🐝"
+    }
+}

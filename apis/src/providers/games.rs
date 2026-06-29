@@ -418,7 +418,40 @@ impl Default for LiveGames {
 
 pub fn provide_games() {
     let auth_context = expect_context::<AuthContext>();
-    provide_context(GamesSignal::new(auth_context.user))
+    let games_signal = GamesSignal::new(auth_context.user);
+    provide_context(games_signal);
+
+    let user = auth_context.user;
+    Effect::watch(
+        move || user.get().map(|u| u.id),
+        move |current, _, _| {
+            let mut signal = games_signal;
+            let kept: Vec<GameResponse> = match current {
+                Some(uid) => signal.own.with_untracked(|s| {
+                    s.realtime
+                        .values()
+                        .chain(s.untimed.values())
+                        .chain(s.correspondence.values())
+                        .filter(|g| g.black_player.uid == *uid || g.white_player.uid == *uid)
+                        .cloned()
+                        .collect()
+                }),
+                None => Vec::new(),
+            };
+            signal.own.update(|s| {
+                s.realtime.clear();
+                s.untimed.clear();
+                s.correspondence.clear();
+                s.next_realtime.clear();
+                s.next_untimed.clear();
+                s.next_correspondence.clear();
+            });
+            for game in kept {
+                signal.own_games_add(game);
+            }
+        },
+        false,
+    );
 }
 
 /// A game is shown on TV unless it's finished or the viewer is one of the

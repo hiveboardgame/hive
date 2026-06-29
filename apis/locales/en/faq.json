@@ -99,7 +99,7 @@
     },
     "correspondence_notifications": {
         "question": "Can I get notified when it's my turn to play in a correspondence game?",
-        "answer": "You can connect your discord account to your Hivegame.com profile and receive notifications from the busybee bot. Click on your profile button at the top-right corner and click on 'Edit Account'"
+        "answer": "You can receive them through browser push or Discord from the Notifications page. For Discord, join our server and link your Discord account there."
     },
     "chat_basics": {
         "question": "How does the chat work?",

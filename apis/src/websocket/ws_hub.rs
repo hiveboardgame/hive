@@ -12,6 +12,7 @@ use super::{
 };
 use crate::{
     common::{GameUpdate, ServerMessage, ServerResult, UserStatus, UserUpdate},
+    notifications::{notify_game_ended, GameEndReason},
     responses::{HeartbeatResponse, UserResponse},
 };
 use bytes::Bytes;
@@ -665,6 +666,9 @@ impl WsHub {
                 self.dispatch(&MessageDestination::Global, Bytes::from(serialized), None)
                     .await;
             }
+        }
+        if let Err(e) = notify_game_ended(finalized, GameEndReason::Timeout, conn).await {
+            error!("notify game ended (timeout) {}: {e}", finalized.nanoid);
         }
         self.finalize_game(&game_id, finalized.white_id, finalized.black_id);
         Ok(())

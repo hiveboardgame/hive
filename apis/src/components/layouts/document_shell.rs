@@ -20,7 +20,11 @@ pub fn DocumentShell(
                 />
                 <link rel="manifest" href=manifest_href />
                 <link rel="apple-touch-icon" href=apple_touch_icon_href />
+                <meta name="theme-color" media="(prefers-color-scheme: light)" content="#d1d5db" />
+                <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#2e3e48" />
                 <meta name="mobile-web-app-capable" content="yes" />
+                <meta name="apple-mobile-web-app-capable" content="yes" />
+                <meta name="apple-mobile-web-app-title" content="HiveGame" />
                 <meta name="apple-mobile-web-app-status-bar-style" content="black" />
                 <script src=pwa_script_src></script>
                 <AutoReload options=leptos_options.clone() />

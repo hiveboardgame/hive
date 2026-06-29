@@ -3,16 +3,27 @@ use crate::{
         layouts::base_layout::{COMMON_LINK_STYLE, DROPDOWN_BUTTON_STYLE, DROPDOWN_MENU_STYLE},
         molecules::hamburger::Hamburger,
     },
+    functions::accounts::edit::edit_lang,
     i18n::*,
+    providers::AuthContext,
 };
-use leptos::prelude::*;
+use leptos::{prelude::*, task::spawn_local};
 
 #[component]
 pub fn LocaleDropdown() -> impl IntoView {
     let hamburger_show = RwSignal::new(false);
-    let onclick_close = move |locale| {
+    let onclick_close = move |locale: Locale| {
         use_i18n().set_locale(locale);
         hamburger_show.update(|b| *b = false);
+        let logged_in = expect_context::<AuthContext>()
+            .user
+            .with_untracked(|u| u.is_some());
+        if logged_in {
+            let code = locale.to_string();
+            spawn_local(async move {
+                let _ = edit_lang(code).await;
+            });
+        }
     };
     let i18n = use_i18n();
     view! {

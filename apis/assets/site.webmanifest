@@ -1,26 +1,50 @@
 {
     "name": "HiveGame",
     "short_name": "HiveGame",
+    "id": "/",
+    "description": "Play Hive online — the strategy board game with no dice and no luck.",
+    "lang": "en",
+    "dir": "ltr",
+    "categories": ["games"],
     "start_url": "/",
     "scope": "/",
+    "display": "standalone",
+    "theme_color": "#2e3e48",
+    "background_color": "#edebe9",
     "icons": [
         {
-            "src": "favicon.ico",
+            "src": "/assets/favicon.ico",
             "sizes": "64x64 32x32 24x24 16x16",
             "type": "image/x-icon"
         },
         {
             "src": "/assets/android-chrome-192x192.png",
             "sizes": "192x192",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any"
         },
         {
             "src": "/assets/android-chrome-512x512.png",
             "sizes": "512x512",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/assets/android-chrome-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/assets/safari-pinned-tab.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "monochrome"
         }
     ],
-    "theme_color": "#ffffff",
-    "background_color": "#ffffff",
-    "display": "standalone"
+    "shortcuts": [
+        { "name": "Profile", "url": "/@/me" },
+        { "name": "Archive", "url": "/archive" },
+        { "name": "Analysis", "url": "/analysis" }
+    ]
 }
