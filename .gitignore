@@ -8,6 +8,7 @@ apis/.cargo
 todos
 site/
 docs/
+db/.cargo
 
 hive-hydra/.cargo/
 
@@ -42,3 +43,5 @@ logs
 
 CLAUDE.md
 AGENTS.md
+.codex
+.playwright-mcp

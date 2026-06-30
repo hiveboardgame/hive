@@ -157,5 +157,6 @@ pub enum MessageDestination {
     Game(GameId),
     GameSpectators(GameId, Uuid, Uuid),
     Global,
-    Tournament(TournamentId),
+    /// Tournament members fanout, with an optional user to echo exactly once.
+    Tournament(TournamentId, Option<Uuid>),
 }

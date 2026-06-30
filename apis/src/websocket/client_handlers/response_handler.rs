@@ -8,9 +8,17 @@ use super::{
     tournament::handler::{handle_tournament, handle_tournament_invitation_snapshot},
     user_status::handle::{handle_user_status, handle_user_status_snapshot},
 };
-use crate::common::{LobbySnapshot as LobbySnapshotPayload, ServerMessage::*, ServerResult};
-use leptos::logging::log;
+use crate::{
+    common::{LobbySnapshot as LobbySnapshotPayload, ServerMessage::*, ServerResult},
+    providers::chat::Chat,
+};
+use leptos::{logging::log, prelude::use_context};
 use leptos_router::hooks::use_navigate;
+use shared_types::ConversationKey;
+
+fn parse_chat_error_key(field: &str) -> Option<ConversationKey> {
+    ConversationKey::from_error_field(field)
+}
 
 fn handle_lobby_snapshot(snapshot: LobbySnapshotPayload) {
     handle_tournament_invitation_snapshot(snapshot.tournament_invitations);
@@ -42,8 +50,12 @@ pub fn handle_response(m: ServerResult) {
         },
         ServerResult::Err(e) => {
             if e.status_code == http::StatusCode::UNAUTHORIZED {
-                let navegate = use_navigate();
-                navegate("/login", Default::default());
+                let navigate = use_navigate();
+                navigate("/login", Default::default());
+            } else if e.field == "chat" || e.field.starts_with("chat:") {
+                if let Some(chat) = use_context::<Chat>() {
+                    chat.handle_failed_chat_send(parse_chat_error_key(&e.field), e.reason.clone());
+                }
             }
             log!("Got error from server: {e}");
         }

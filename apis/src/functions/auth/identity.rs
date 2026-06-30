@@ -12,6 +12,18 @@ pub async fn uuid() -> Result<Uuid, ServerFnError> {
         .map_err(|e| ServerFnError::new(format!("Could not retrieve Uuid from identity: {e}")))
 }
 
+pub async fn optional_uuid() -> Result<Option<Uuid>, ServerFnError> {
+    let identity: Option<Identity> = leptos_actix::extract().await?;
+    identity
+        .map(|identity| {
+            let id_str = identity.id()?;
+            Uuid::parse_str(&id_str).map_err(|e| {
+                ServerFnError::new(format!("Could not retrieve Uuid from identity: {e}"))
+            })
+        })
+        .transpose()
+}
+
 #[cfg(feature = "ssr")]
 pub async fn ensure_admin(conn: &mut db_lib::DbConn<'_>) -> Result<(), ServerFnError> {
     use db_lib::models::User;

@@ -8,7 +8,6 @@ use crate::{
 };
 use leptos::prelude::*;
 use leptos_router::hooks::use_location;
-use shared_types::SimpleDestination;
 
 #[component]
 pub fn ChatAndControls() -> impl IntoView {
@@ -25,7 +24,7 @@ pub fn ChatAndControls() -> impl IntoView {
             <Show when=move || !is_finished()>
                 <ToggleControls />
             </Show>
-            <ChatDropdown destination=SimpleDestination::Game />
+            <ChatDropdown />
         </Show>
     }
 }

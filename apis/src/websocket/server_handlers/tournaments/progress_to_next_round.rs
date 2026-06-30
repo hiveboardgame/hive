@@ -35,7 +35,7 @@ impl SwissRoundHandler {
             })
             .await?;
         messages.push(InternalServerMessage {
-            destination: MessageDestination::Tournament(self.tournament_id.clone()),
+            destination: MessageDestination::Tournament(self.tournament_id.clone(), None),
             message: ServerMessage::Tournament(TournamentUpdate::Modified(TournamentId(nanoid))),
         });
 

@@ -8,15 +8,18 @@ use leptos::prelude::*;
 pub struct AuthContext {
     pub logout: ServerAction<Logout>,
     pub user: Signal<Option<AccountResponse>>,
+    /// Used to avoid redirecting to login while auth is still loading (e.g. on refresh).
+    pub action: Action<(), Result<Option<AccountResponse>, ServerFnError>>,
     pub logged_in: Signal<Option<bool>>,
     pub admin: Signal<Option<bool>>,
     ws_refresh: StoredValue<bool>,
-    action: Action<(), Result<Option<AccountResponse>, ServerFnError>>,
 }
 
 impl AuthContext {
     pub fn refresh(&self, ws_reconnect: bool) {
-        self.ws_refresh.set_value(ws_reconnect);
+        if ws_reconnect {
+            self.ws_refresh.set_value(true);
+        }
         self.action.dispatch(());
     }
 }
@@ -49,16 +52,18 @@ pub fn provide_auth() {
         logged_in,
         admin,
         logout,
-        action,
         ws_refresh,
+        action,
     });
 
     let ctx = use_context::<AuthContext>().unwrap();
+    let action_pending = ctx.action.pending();
 
     Effect::watch(
-        ctx.action.version(),
-        move |_, _, _| {
-            if ctx.ws_refresh.get_value() {
+        move || action_pending.get(),
+        move |is_pending, _, _| {
+            if !is_pending && ctx.ws_refresh.get_value() {
+                ctx.ws_refresh.set_value(false);
                 websocket_context.close();
                 websocket_context.open();
             }

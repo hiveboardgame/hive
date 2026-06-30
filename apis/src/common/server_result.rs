@@ -40,7 +40,7 @@ impl fmt::Display for ExternalServerError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ServerMessage {
     Challenge(ChallengeUpdate),
-    Chat(Vec<ChatMessageContainer>),
+    Chat(ChatMessageContainer),
     ConnectionUpdated(Uuid, String),
     Error(String),
     Game(Box<GameUpdate>),

@@ -24,11 +24,7 @@ pub fn Hamburger<T: IntoView + 'static>(
                 move |_| {
                     hamburger_show.update(|b| *b = false);
                 },
-                OnClickOutsideOptions::default().ignore([
-                    "input",
-                    "#ignoreChat",
-                    &format!("#{id}"),
-                ]),
+                OnClickOutsideOptions::default().ignore([&format!("#{id}")]),
             );
         }
     });

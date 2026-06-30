@@ -1,6 +1,4 @@
-mod chat;
 mod lag_tracking;
-pub use chat::Chats;
 pub use lag_tracking::{Lags, Pings};
 pub mod busybee;
 pub mod client_handlers;
@@ -44,7 +42,6 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 
     #[derive(Debug)]
     pub struct WebsocketData {
-        pub chat_storage: Chats,
         pub game_start: TournamentGameStart,
         pub pings: Pings,
         pub lags: Lags,
@@ -63,7 +60,6 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     impl Default for WebsocketData {
         fn default() -> Self {
             Self {
-                chat_storage: Chats::default(),
                 game_start: TournamentGameStart::default(),
                 pings: Pings::default(),
                 lags: Lags::default(),

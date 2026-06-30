@@ -13,7 +13,10 @@ pub fn OnlineUsers() -> impl IntoView {
 
     view! {
         <div class="my-2 mr-2 ml-2 w-64 lg:mr-0 2xl:mr-2 shrink-0">
-            <UserSearch fallback_users=fallback_users actions=vec![UserAction::Challenge] />
+            <UserSearch
+                fallback_users=fallback_users
+                actions=vec![UserAction::Challenge, UserAction::Message]
+            />
         </div>
     }
 }
