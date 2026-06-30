@@ -184,9 +184,10 @@ async fn handle_binary(
             }
         }
         Err(err) => {
-            let status_code = match err {
+            let status_code = match &err {
                 RequestHandlerError::AuthError(_) => http::StatusCode::UNAUTHORIZED,
-                _ => http::StatusCode::NOT_IMPLEMENTED,
+                RequestHandlerError::Forbidden(_) => http::StatusCode::FORBIDDEN,
+                RequestHandlerError::InternalError(_) => http::StatusCode::INTERNAL_SERVER_ERROR,
             };
             printdoc! {r#"
                 -----------------ERROR-----------------
@@ -199,8 +200,8 @@ async fn handle_binary(
             };
             let message = ServerResult::Err(ExternalServerError {
                 user_id: user.user_id,
-                field: "foo".to_string(),
-                reason: format!("{err}"),
+                field: request.error_field(),
+                reason: err.user_safe_reason(),
                 status_code,
             });
             if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {

@@ -114,8 +114,7 @@ async fn main() -> std::io::Result<()> {
         if secs < 10 {
             log::warn!(
                 "WS_TELEMETRY_INTERVAL_SECS={secs} is below the recommended 30s minimum; \
-                 the snapshot walks every chat channel and contends with WS traffic for \
-                 the chat locks at sub-10s intervals"
+                 telemetry snapshots can contend with WS traffic at sub-10s intervals"
             );
         }
         jobs::ws_telemetry(Data::clone(&hub), secs, csv_path);

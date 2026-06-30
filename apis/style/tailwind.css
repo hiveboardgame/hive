@@ -333,6 +333,7 @@ html[data-display-mode="standalone"] {
   }
 
   .ui-modal-panel::backdrop {
+    background-color: rgb(0 0 0 / 0.35);
     backdrop-filter: blur(8px);
   }
 
@@ -396,6 +397,35 @@ html[data-display-mode="standalone"] {
 
   .ui-danger-notice {
     @apply rounded-lg border border-ladybug-red/30 bg-ladybug-red/10 p-3 text-sm text-gray-700 dark:border-ladybug-red/40 dark:bg-ladybug-red/10 dark:text-gray-200;
+  }
+
+  .ui-unread-badge {
+    @apply inline-grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-ladybug-red px-1.5 text-center text-xs font-medium leading-none text-white tabular-nums dark:bg-ladybug-red;
+  }
+
+  /* Chat */
+  .ui-chat-message-list {
+    @apply flex-grow overflow-y-auto w-full min-w-full h-full min-h-0;
+  }
+
+  .ui-chat-bubble {
+    @apply max-w-[85%] break-words rounded-lg border border-black/10 px-3 py-2 text-sm shadow-sm dark:border-white/10 sm:max-w-[75%];
+  }
+
+  .ui-chat-bubble-own {
+    @apply border-pillbug-teal/30 bg-pillbug-teal/15 text-gray-900 dark:border-pillbug-teal/40 dark:bg-pillbug-teal/20 dark:text-gray-100;
+  }
+
+  .ui-chat-bubble-other {
+    @apply bg-even-light text-gray-900 dark:bg-surface-raised dark:text-gray-100;
+  }
+
+  .ui-chat-hidden-message {
+    @apply max-w-[85%] rounded-lg border border-black/10 bg-odd-light/80 px-3 py-2 text-left text-sm text-gray-600 transition-colors hover:bg-blue-light/70 dark:border-white/10 dark:bg-surface-muted dark:text-gray-300 dark:hover:bg-pillbug-teal/15 sm:max-w-[75%];
+  }
+
+  .ui-chat-composer {
+    @apply shrink-0 border-t border-black/10 dark:border-white/10;
   }
 
   .ui-setting-group {
@@ -507,7 +537,7 @@ html[data-display-mode="standalone"] {
   }
 
   .ui-button-sm {
-    @apply rounded px-3 py-1 text-sm;
+    @apply min-h-8 rounded px-3 py-1 text-sm;
   }
 
   .ui-button-xs {

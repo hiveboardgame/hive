@@ -5,16 +5,18 @@ use crate::{
             direct_challenge_button::DirectChallengeButton,
             invite_button::InviteButton,
             kick_button::KickButton,
+            message_button::MessageButton,
             rating::Rating,
             status_indicator::StatusIndicator,
             uninvite_button::UninviteButton,
         },
         molecules::user_identity::UserIdentity,
     },
+    providers::AuthContext,
     responses::UserResponse,
 };
 use leptos::{
-    either::{Either, EitherOf4},
+    either::{Either, EitherOf5},
     prelude::*,
 };
 use shared_types::GameSpeed;
@@ -32,6 +34,7 @@ pub fn UserRow(
     } else {
         None
     });
+    let auth_user = expect_context::<AuthContext>().user;
 
     let (display_actions, select_callback): (_, Option<Callback<String>>) = {
         let user_id = user_id.get_value();
@@ -43,19 +46,27 @@ pub fn UserRow(
                     let opponent = username.get_value();
                     let disabled = user.bot;
                     // TODO: Allow users to direct challenge the bot once it can manage its own time
-                    Some(EitherOf4::A(
+                    Some(EitherOf5::A(
                         view! { <DirectChallengeButton user_id opponent disabled /> },
                     ))
                 }
-                UserAction::Invite(tournament_id) => Some(EitherOf4::B(
+                UserAction::Invite(tournament_id) => Some(EitherOf5::B(
                     view! { <InviteButton user_id tournament_id /> },
                 )),
-                UserAction::Uninvite(tournament_id) => Some(EitherOf4::C(
+                UserAction::Uninvite(tournament_id) => Some(EitherOf5::C(
                     view! { <UninviteButton user_id tournament_id /> },
                 )),
-                UserAction::Kick(tournament) => Some(EitherOf4::D(
+                UserAction::Kick(tournament) => Some(EitherOf5::D(
                     view! { <KickButton user_id tournament=*tournament /> },
                 )),
+                UserAction::Message if user.bot => None,
+                UserAction::Message => Some(EitherOf5::E(view! {
+                    <Show when=move || {
+                        auth_user.with(|me| me.as_ref().is_some_and(|me| me.user.uid != user_id))
+                    }>
+                        <MessageButton username=username.get_value() compact=true />
+                    </Show>
+                })),
                 UserAction::Select(cb) => {
                     select_cb = Some(Callback::new(move |username: String| {
                         cb.run(Some(username))
@@ -106,7 +117,9 @@ pub fn UserRow(
                         <Rating rating=rating.get_value().expect("Rating is some") />
                     </Show>
                 </div>
-                {display_actions}
+                <div class="flex gap-1 items-center shrink-0 [&_.ui-button]:mx-0">
+                    {display_actions}
+                </div>
             </div>
         })
     }

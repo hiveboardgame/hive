@@ -13,6 +13,7 @@ pub mod faq;
 pub mod game_search;
 pub mod home;
 pub mod login;
+pub mod messages;
 pub mod notifications;
 pub mod play;
 pub mod profile_view;

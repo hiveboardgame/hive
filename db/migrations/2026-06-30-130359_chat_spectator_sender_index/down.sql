@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS idx_chat_messages_spectator_sender_id;
