@@ -70,7 +70,7 @@ pub fn UserRow(
 
     let row_class = with_class(
         "ui-dense-table-row",
-        "flex p-1 items-center justify-between h-10 rounded",
+        "flex h-10 w-full min-w-0 items-center justify-between rounded p-1",
     );
 
     if let Some(select_callback) = select_callback {

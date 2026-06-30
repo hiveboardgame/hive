@@ -14,16 +14,16 @@ use crate::{
     responses::ChallengeResponse,
 };
 use hive_lib::ColorChoice;
-use leptos::{either::Either, html::Dialog, prelude::*};
+use leptos::{html::Dialog, prelude::*};
 use leptos_icons::*;
 use leptos_use::use_window;
 use shared_types::{ChallengeId, TimeInfo};
 
 const CHALLENGE_LEADING_RAIL_CLASS: &str = "flex items-center justify-center gap-1";
 const CHALLENGE_LEADING_TOKEN_CLASS: &str =
-    "flex shrink-0 flex-col items-center justify-center gap-0.5 sm:flex-row";
+    "grid shrink-0 grid-cols-1 items-center justify-items-center gap-0.5 sm:grid-cols-[1.75rem_1rem]";
 const CHALLENGE_MOBILE_ACTIONS_CLASS: &str =
-    "flex shrink-0 flex-col items-center justify-center gap-1 min-[360px]:max-[639px]:flex-row sm:hidden";
+    "flex shrink-0 flex-col items-center justify-center gap-1 max-[359px]:min-h-[4.25rem] min-[360px]:max-[639px]:min-w-[4.25rem] min-[360px]:max-[639px]:flex-row sm:hidden";
 const CHALLENGE_DESKTOP_ACTIONS_CLASS: &str =
     "hidden shrink-0 items-center justify-center gap-1 sm:flex";
 
@@ -77,19 +77,19 @@ pub fn ChallengeRow(
     let icon_class = move || {
         let prefers_dark = config.with(|c| c.prefers_dark);
         match color_choice.get_value() {
-            ColorChoice::Random => "pb-[2px]",
+            ColorChoice::Random => "size-4 shrink-0 pb-[2px]",
             ColorChoice::White => {
                 if prefers_dark {
-                    "fill-white pb-[2px]"
+                    "size-4 shrink-0 fill-white pb-[2px]"
                 } else {
-                    "stroke-black pb-[2px]"
+                    "size-4 shrink-0 stroke-black pb-[2px]"
                 }
             }
             ColorChoice::Black => {
                 if prefers_dark {
-                    "stroke-white pb-[2px]"
+                    "size-4 shrink-0 stroke-white pb-[2px]"
                 } else {
-                    "fill-black pb-[2px]"
+                    "size-4 shrink-0 fill-black pb-[2px]"
                 }
             }
         }
@@ -204,7 +204,7 @@ pub fn ChallengeRow(
     };
     view! {
         <tr class="cursor-pointer ui-dense-table-row">
-            <td class=format!("w-12 xs:w-14 sm:w-6 {td_class}")>
+            <td class=format!("w-24 sm:w-16 {td_class}")>
                 <Show when=move || action_flags.with(|flags| flags.admin_cancel)>
                     <Modal dialog_el=admin_cancel_dialog>
                         <div class="flex flex-col items-center p-4 max-w-xs">
@@ -239,17 +239,14 @@ pub fn ChallengeRow(
                 </Show>
                 <div class=CHALLENGE_LEADING_RAIL_CLASS>
                     <div class=CHALLENGE_LEADING_TOKEN_CLASS>
-                        {if group_count > 1 {
-                            Either::Left(
-                                view! {
-                                    <span class="py-0.5 px-1 font-bold leading-none text-white rounded-full sm:px-1.5 sm:text-xs text-[10px] bg-pillbug-teal">
-                                        {format!("x{}", group_count)}
-                                    </span>
-                                },
-                            )
-                        } else {
-                            Either::Right(view! { "" })
-                        }} <Icon icon=Signal::derive(icon) attr:class=Signal::derive(icon_class) />
+                        <span class=move || {
+                            if group_count > 1 {
+                                "inline-flex h-5 items-center justify-center text-[10px] font-bold leading-none text-gray-900 dark:text-gray-100 sm:min-w-7 sm:justify-start sm:text-xs"
+                            } else {
+                                "hidden h-5 items-center justify-center text-[10px] font-bold leading-none text-gray-900 dark:text-gray-100 sm:invisible sm:inline-flex sm:min-w-7 sm:justify-start sm:text-xs"
+                            }
+                        }>{format!("x{}", group_count.max(1))}</span>
+                        <Icon icon=Signal::derive(icon) attr:class=Signal::derive(icon_class) />
                     </div>
                     <div class=CHALLENGE_MOBILE_ACTIONS_CLASS>{action_buttons()}</div>
                 </div>

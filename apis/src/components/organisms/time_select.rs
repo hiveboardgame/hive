@@ -66,13 +66,13 @@ pub fn TimeSelect(
         params.time_signals().corr_days().update(|v| *v = new);
     });
     view! {
-        <div class="flex flex-col p-2">
-            <div class="flex gap-2 items-center">
+        <div class="flex flex-col items-center p-2 w-full">
+            <div class="flex gap-2 justify-center items-center w-full">
                 {gamespeed_icon}
                 <p class="text-lg font-bold text-gray-900 dark:text-gray-100">{title}</p>
             </div>
 
-            <div class="flex flex-row flex-wrap gap-2 justify-center">
+            <div class="flex flex-row flex-wrap gap-2 justify-center w-full">
                 <Show when=move || allow_realtime>
                     <button
                         type="button"
