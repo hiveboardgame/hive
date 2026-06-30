@@ -16,7 +16,7 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     pub mod server_handlers;
 
     pub use start_conn::start_connection;
-    pub use telemetry::{diff_and_format, TelemetrySnapshot, WsTelemetry};
+    pub use telemetry::{TelemetrySnapshot, WsTelemetry};
     pub(crate) use tournament_game_start::TournamentGameStart;
     pub use ws_hub::{WsHub, SOCKET_BUFFER_CAPACITY};
     pub use messages::{reaction_messages, GameFinalize, GameSubscription, InternalServerMessage, MessageDestination, Reaction};
