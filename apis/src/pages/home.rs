@@ -58,7 +58,7 @@ pub fn Home() -> impl IntoView {
                     <div class="order-4 w-full">
                         <div class="mx-auto w-full max-w-screen-md">
                             <div class="w-full lg:flow-root">
-                                <div class="hidden float-right lg:block lg:ml-6 2xl:hidden">
+                                <div class="hidden float-right w-64 lg:block lg:ml-6 2xl:hidden">
                                     <OnlineUsers />
                                 </div>
                                 <Tv />
@@ -66,7 +66,7 @@ pub fn Home() -> impl IntoView {
                         </div>
                     </div>
                 </div>
-                <div class="flex flex-col order-3 items-center min-w-0 lg:hidden 2xl:flex 2xl:order-none 2xl:col-start-3 2xl:row-start-1">
+                <div class="flex flex-col order-3 mx-auto w-full min-w-0 max-w-md lg:hidden 2xl:flex 2xl:order-none 2xl:col-start-3 2xl:row-start-1 2xl:mx-0 2xl:max-w-none">
                     <OnlineUsers />
                 </div>
             </div>

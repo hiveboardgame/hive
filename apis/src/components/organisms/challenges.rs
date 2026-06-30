@@ -338,7 +338,7 @@ pub fn Challenges() -> impl IntoView {
                 <table class=CHALLENGE_TABLE_CLASS>
                     <thead class="sticky top-0 z-10 border-b border-black/10 bg-even-light dark:border-white/10 dark:bg-surface-panel">
                         <tr>
-                            <th class=format!("{} w-12 xs:w-14 sm:w-6 min-w-0", th_class)></th>
+                            <th class=format!("{} w-24 sm:w-16 min-w-0", th_class)></th>
                             <th class=format!(
                                 "{} w-16 xs:w-20 sm:w-24 md:w-32 lg:w-40 min-w-0 text-xs sm:text-sm",
                                 th_class,
@@ -360,7 +360,7 @@ pub fn Challenges() -> impl IntoView {
                                 th_class,
                             )>{t!(i18n, home.challenge_details.rated.title)}</th>
                             <th class=format!(
-                                "{} hidden sm:table-cell w-14 sm:w-16 md:w-18 lg:w-20 min-w-0",
+                                "{} hidden sm:table-cell w-20 md:w-24 min-w-0",
                                 th_class,
                             )></th>
                         </tr>

@@ -51,7 +51,10 @@ pub fn ProfileLink(
                     <span class=name_classes
                         .get_value()>
                         {username.get_value()} <Show when=patreon>
-                            <Icon icon=icondata_lu::LuCrown attr:class="size-2" />
+                            <Icon
+                                icon=icondata_lu::LuCrown
+                                attr:class="size-2 shrink-0 self-start"
+                            />
                         </Show> <Show when=bot>
                             <span class="ml-1 text-[80%]">BOT</span>
                         </Show>

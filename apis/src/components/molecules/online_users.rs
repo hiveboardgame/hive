@@ -12,7 +12,7 @@ pub fn OnlineUsers() -> impl IntoView {
         Signal::derive(move || online_users.signal.with(|ou| ou.username_user.clone()));
 
     view! {
-        <div class="my-2 mr-2 ml-2 w-64 lg:mr-0 2xl:mr-2 shrink-0">
+        <div class="my-2 w-full min-w-0 shrink-0">
             <UserSearch fallback_users=fallback_users actions=vec![UserAction::Challenge] />
         </div>
     }
