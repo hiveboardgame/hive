@@ -1,4 +1,4 @@
-use crate::websocket::{diff_and_format, WsHub};
+use crate::websocket::WsHub;
 use actix_web::web::Data;
 use std::{
     fs::OpenOptions,
@@ -52,7 +52,6 @@ pub fn run(hub: Data<Arc<WsHub>>, interval_secs: u64, csv_path: Option<String>) 
         loop {
             interval.tick().await;
             let curr = hub.snapshot_with_state();
-            log::warn!("{}", diff_and_format(&curr, &prev, interval_secs));
 
             if let Some(ref path) = metrics_path {
                 let ts = SystemTime::now()
