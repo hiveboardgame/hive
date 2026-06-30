@@ -2,6 +2,9 @@
 members = ["apis", "engine", "db", "shared_types", "hive-hydra"]
 resolver = "2"
 
+[workspace.lints.clippy]
+all = "warn"
+
 # need to be applied only to wasm build
 [profile.release]
 codegen-units = 1
