@@ -1,4 +1,6 @@
 pub mod challenge_cleanup;
+pub mod email_cleanup;
+pub mod email_drain;
 pub mod game_cleanup;
 pub mod hash_backfill;
 pub mod heartbeat;
@@ -9,6 +11,8 @@ pub mod tournament_cleanup;
 pub mod tournament_start;
 pub mod ws_telemetry;
 pub use challenge_cleanup::run as challenge_cleanup;
+pub use email_cleanup::run as email_cleanup;
+pub use email_drain::run as email_drain;
 pub use game_cleanup::run as game_cleanup;
 pub use hash_backfill::run as hash_backfill;
 pub use heartbeat::run as heartbeat;

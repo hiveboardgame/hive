@@ -21,6 +21,50 @@ diesel::table! {
 }
 
 diesel::table! {
+    email_queue (id) {
+        id -> Uuid,
+        user_id -> Nullable<Uuid>,
+        kind -> Text,
+        payload -> Jsonb,
+        to_address -> Text,
+        created_at -> Timestamptz,
+        scheduled_at -> Timestamptz,
+        attempts -> Int2,
+        last_error -> Nullable<Text>,
+        sent_at -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
+    email_request_log (id) {
+        id -> Uuid,
+        email -> Text,
+        ip -> Text,
+        purpose -> Text,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    email_state (id) {
+        id -> Int2,
+        last_cleanup_run_at -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
+    email_tokens (id) {
+        id -> Uuid,
+        user_id -> Uuid,
+        purpose -> Text,
+        token_hash -> Text,
+        created_at -> Timestamptz,
+        expires_at -> Timestamptz,
+        used_at -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
     game_hashes (game_id, turn) {
         hash -> Int8,
         game_id -> Uuid,
@@ -235,9 +279,13 @@ diesel::table! {
         bot -> Bool,
         deleted -> Bool,
         lang -> Nullable<Text>,
+        email_verified -> Bool,
+        pending_email -> Nullable<Text>,
     }
 }
 
+diesel::joinable!(email_queue -> users (user_id));
+diesel::joinable!(email_tokens -> users (user_id));
 diesel::joinable!(game_hashes -> games (game_id));
 diesel::joinable!(games_users -> games (game_id));
 diesel::joinable!(games_users -> users (user_id));
@@ -258,6 +306,10 @@ diesel::joinable!(tournaments_users -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     challenges,
+    email_queue,
+    email_request_log,
+    email_state,
+    email_tokens,
     game_hashes,
     games,
     games_users,
