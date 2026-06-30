@@ -82,28 +82,6 @@ pub fn Notifications() -> impl IntoView {
         }
         pending
     });
-    let discord_defaults_applied = RwSignal::new(false);
-    Effect::new(move |_| {
-        if !loaded.get() || discord_defaults_applied.get_untracked() {
-            return;
-        }
-        match discord_name.value().get() {
-            Some(Ok(DiscordHandleStatus::Linked(_))) => {
-                discord_defaults_applied.set(true);
-                if set_visible_channel(&prefs, CHANNEL_DISCORD, true) {
-                    trigger.run(());
-                }
-            }
-            Some(Ok(DiscordHandleStatus::NotLinked | DiscordHandleStatus::NotLoggedIn)) => {
-                discord_defaults_applied.set(true);
-                if set_visible_channel(&prefs, CHANNEL_DISCORD, false) {
-                    trigger.run(());
-                }
-            }
-            Some(Ok(DiscordHandleStatus::Unavailable)) | Some(Err(_)) | None => {}
-        }
-    });
-
     let saving = save.pending();
     let save_result = save.value();
     let save_message = move || {
@@ -601,26 +579,4 @@ fn notification_event_label(
         NotificationCategory::Dms => t_string!(i18n, notifications.events.dms),
     }
     .to_string()
-}
-
-fn set_visible_channel(
-    prefs: &RwSignal<NotificationPreferencesResponse>,
-    channel: &'static str,
-    enabled: bool,
-) -> bool {
-    let mut changed = false;
-    prefs.update(|p| {
-        for category in EVENTS {
-            let channels = p.channels_mut(category);
-            let has_channel = channels.iter().any(|c| c == channel);
-            if enabled && !has_channel {
-                channels.push(channel.to_string());
-                changed = true;
-            } else if !enabled && has_channel {
-                channels.retain(|c| c != channel);
-                changed = true;
-            }
-        }
-    });
-    changed
 }
