@@ -170,6 +170,8 @@ pub struct User {
     pub bot: bool,
     pub deleted: bool,
     pub lang: Option<String>,
+    pub email_verified: bool,
+    pub pending_email: Option<String>,
 }
 
 impl User {

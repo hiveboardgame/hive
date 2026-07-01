@@ -2,6 +2,8 @@ pub mod api;
 pub mod app;
 pub mod common;
 pub mod components;
+#[cfg(feature = "ssr")]
+pub mod email;
 pub mod functions;
 pub mod hiveground;
 pub mod hooks;

@@ -8,7 +8,7 @@ use actix_web::{
     cookie::{time::Duration, SameSite},
     middleware::Compress,
 };
-use apis::{api, functions, jobs, notifications};
+use apis::{api, email, functions, jobs, notifications};
 use apis::websocket::{self, WebsocketData};
 
 #[actix_web::main]
@@ -130,6 +130,8 @@ async fn main() -> std::io::Result<()> {
     jobs::tournament_cleanup(pool.clone());
     jobs::timeout_sweeper(pool.clone(), Data::clone(&hub));
     jobs::push_device_sweep(pool.clone());
+    jobs::email_drain(pool.clone(), email::EmailConfig::from_env());
+    jobs::email_cleanup(pool.clone());
     let pwa_manifest = PwaManifest::from_site_root(&conf.leptos_options.site_root);
 
     println!("listening on http://{}", addr);

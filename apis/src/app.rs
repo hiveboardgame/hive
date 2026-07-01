@@ -14,6 +14,7 @@ use crate::{
         config::Config,
         donate::Donate,
         faq::Faq,
+        forgot_password::ForgotPassword,
         game_search::GameSearch,
         home::Home,
         login::Login,
@@ -22,6 +23,7 @@ use crate::{
         profile_view::{ProfileMe, ProfileView},
         puzzles::Puzzles,
         register::Register,
+        reset_password::ResetPassword,
         resources::Resources,
         rules::Rules,
         rules_summary::RulesSummary,
@@ -158,6 +160,11 @@ pub fn App() -> impl IntoView {
                         <Route path=path!("/archive") view=|| view! { <GameSearch /> } />
                         <Route path=path!("/top_players") view=|| view! { <TopPlayers /> } />
                         <Route path=path!("/login") view=|| view! { <Login /> } />
+                        <Route
+                            path=path!("/forgot-password")
+                            view=|| view! { <ForgotPassword /> }
+                        />
+                        <Route path=path!("/reset-password") view=|| view! { <ResetPassword /> } />
                         <ProtectedRoute
                             condition=is_logged_in
                             path=path!("/account")

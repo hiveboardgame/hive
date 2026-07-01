@@ -77,6 +77,11 @@ pub fn Login() -> impl IntoView {
                     </button>
                 </ActionForm>
             </PageCard>
+            <p class="text-xs text-center">
+                <a class="ui-text-link" href="/forgot-password">
+                    "Forgot your password?"
+                </a>
+            </p>
             <p class="text-xs text-center text-gray-500 dark:text-gray-400">
                 {t!(
                     i18n, user_config.login.no_account_prompt,
