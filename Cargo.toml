@@ -135,3 +135,9 @@ opt-level = 'z'
 lto = true
 codegen-units = 1
 panic = "abort"
+
+[profile.release.package.philanthus]
+opt-level = 3
+
+[profile.release.package.hudsoni]
+opt-level = 3
