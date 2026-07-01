@@ -3,7 +3,7 @@ use crate::{
     hiveground::{build_static_render_model, HivegroundInteraction, HivegroundPaint},
     providers::config::TileOptions,
 };
-use hive_lib::State;
+use hudsoni::State;
 use leptos::prelude::*;
 
 #[component]

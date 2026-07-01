@@ -1,7 +1,7 @@
 use crate::responses::user::UserResponse;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
-use hive_lib::{Bug, GameControl, GameResult, GameStatus, GameType, History, Position, State};
+use hudsoni::{Bug, GameControl, GameResult, GameStatus, GameType, History, Position, State};
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "ssr")]
 use shared_types::GamesQueryOptions;
@@ -208,7 +208,7 @@ use db_lib::{
     models::Game,
     DbConn,
 };
-use hive_lib::{
+use hudsoni::{
     Color, GameStatus::Finished, Piece,
 };
 use std::{str::FromStr, collections::HashSet};

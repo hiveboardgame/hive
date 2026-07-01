@@ -27,7 +27,7 @@ use crate::{
 use chrono::{prelude::*, TimeDelta};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
-use hive_lib::{Color, GameStatus};
+use hudsoni::{Color, GameStatus};
 use itertools::Itertools;
 use nanoid::nanoid;
 use rand::{rng, seq::SliceRandom};

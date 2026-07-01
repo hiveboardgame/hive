@@ -7,7 +7,7 @@ use crate::{
         Config,
     },
 };
-use hive_lib::{Position, State};
+use hudsoni::{Position, State};
 use leptos::prelude::*;
 
 /// Markers/arrows are translucent so the piece below stays visible.

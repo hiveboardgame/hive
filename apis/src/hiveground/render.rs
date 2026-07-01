@@ -1,5 +1,5 @@
 use super::model::{HivegroundRenderModel, RenderLayer};
-use hive_lib::Position;
+use hudsoni::Position;
 use leptos::prelude::*;
 use std::collections::HashMap;
 
@@ -15,7 +15,7 @@ mod preview {
         hiveground::{build_static_render_model, PieceShadow, RenderLayerKind},
         providers::config::TileOptions,
     };
-    use hive_lib::Board;
+    use hudsoni::Board;
     use std::sync::LazyLock;
 
     pub struct PreviewOpts {
@@ -133,7 +133,7 @@ mod preview {
     }
 
     fn piece_glyph(
-        piece: hive_lib::Piece,
+        piece: hudsoni::Piece,
         design_shadow: bool,
         tiles: &TileOptions,
         cx: f32,
@@ -225,7 +225,7 @@ mod preview {
     #[cfg(test)]
     mod tests {
         use super::*;
-        use hive_lib::{History, State};
+        use hudsoni::{History, State};
 
         #[test]
         fn renders_png_for_a_real_game() {

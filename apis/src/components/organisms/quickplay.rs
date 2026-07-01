@@ -6,7 +6,7 @@ use crate::{
     pages::{challenge_bot::ChallengeBot, challenge_create::ChallengeCreate},
     providers::{challenge_params_cookie, ApiRequestsProvider, AuthContext, ChallengeParams},
 };
-use hive_lib::{ColorChoice, GameType};
+use hudsoni::{ColorChoice, GameType};
 use leptos::{ev, html::Dialog, prelude::*};
 use leptos_icons::*;
 use leptos_router::hooks::use_navigate;

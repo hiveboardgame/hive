@@ -7,7 +7,41 @@ use crate::{
     torus_array::TorusArray,
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fmt, str::FromStr};
+use std::{cell::RefCell, collections::HashMap, fmt, str::FromStr};
+
+thread_local! {
+    static ANT_VISITED: RefCell<AntVisited> = RefCell::new(AntVisited::new());
+}
+
+struct AntVisited {
+    marks: TorusArray<u32>,
+    generation: u32,
+}
+
+impl AntVisited {
+    fn new() -> Self {
+        Self {
+            marks: TorusArray::new(0),
+            generation: 0,
+        }
+    }
+
+    fn begin(&mut self) {
+        self.generation = self.generation.wrapping_add(1);
+        if self.generation == 0 {
+            self.marks = TorusArray::new(0);
+            self.generation = 1;
+        }
+    }
+
+    fn mark(&mut self, position: Position) {
+        self.marks.set(position, self.generation);
+    }
+
+    fn is_marked(&self, position: Position) -> bool {
+        *self.marks.get(position) == self.generation
+    }
+}
 
 #[derive(Hash, Eq, PartialEq, Clone, Copy, Serialize, Deserialize, Debug)]
 #[repr(u8)]
@@ -188,6 +222,17 @@ impl Bug {
             Some(Bug::Spider) => Bug::spider_moves(position, board),
             None => Vec::new(),
         }
+    }
+
+    pub fn for_each_normal_move(
+        position: Position,
+        board: &Board,
+        visit: &mut impl FnMut(Position),
+    ) {
+        Bug::scan_normal_moves_while(position, board, &mut |target| {
+            visit(target);
+            true
+        });
     }
 
     pub(crate) fn has_move(position: Position, board: &Board) -> bool {
@@ -372,38 +417,33 @@ impl Bug {
         keep_scanning: &mut impl FnMut(Position) -> bool,
     ) -> bool {
         let board = MidMoveBoard::new(board, position);
-        let mut unexplored = None;
-        for pos in Bug::crawl_negative_space(position, &board) {
-            if !keep_scanning(pos) {
-                return false;
-            }
-            unexplored
-                .get_or_insert_with(|| Vec::with_capacity(24))
-                .push(pos);
-        }
-        let Some(mut unexplored) = unexplored else {
-            return true;
-        };
+        ANT_VISITED.with(|cell| {
+            let mut visited = cell.borrow_mut();
+            visited.begin();
+            visited.mark(position);
 
-        let mut state = TorusArray::new((false, false));
-        state.set(position, (true, true));
-        for pos in &unexplored {
-            state.set(*pos, (true, true));
-        }
-
-        while let Some(position) = unexplored.pop() {
+            let mut frontier: Vec<Position> = Vec::new();
             for pos in Bug::crawl_negative_space(position, &board) {
-                let (found, explored) = state.get(pos);
-                if !explored && !found && board.is_negative_space(pos) {
-                    if !keep_scanning(pos) {
-                        return false;
+                if !keep_scanning(pos) {
+                    return false;
+                }
+                visited.mark(pos);
+                frontier.push(pos);
+            }
+
+            while let Some(position) = frontier.pop() {
+                for pos in Bug::crawl_negative_space(position, &board) {
+                    if !visited.is_marked(pos) && board.is_negative_space(pos) {
+                        if !keep_scanning(pos) {
+                            return false;
+                        }
+                        visited.mark(pos);
+                        frontier.push(pos);
                     }
-                    state.set(pos, (true, true));
-                    unexplored.push(pos);
                 }
             }
-        }
-        true
+            true
+        })
     }
 
     pub fn beetle_moves(position: Position, board: &Board) -> Vec<Position> {
@@ -558,6 +598,21 @@ impl Bug {
             moves.insert(pos, to.clone());
         }
         moves
+    }
+
+    pub fn for_each_throw(
+        position: Position,
+        board: &Board,
+        visit: &mut impl FnMut(Position, Position),
+    ) {
+        if !Bug::has_pillbug_throw(position, board) {
+            return;
+        }
+        for source in Bug::pillbug_throw_sources(position, board) {
+            for target in Bug::pillbug_throw_targets(position, board) {
+                visit(source, target);
+            }
+        }
     }
 
     fn queen_moves(position: Position, board: &Board) -> impl Iterator<Item = Position> + '_ {

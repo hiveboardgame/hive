@@ -6,7 +6,7 @@ use diesel::{
     sql_types::{Array, BigInt, Bool, Double, Integer, Nullable, Text, Uuid as SqlUuid},
 };
 use diesel_async::RunQueryDsl;
-use hive_lib::{Color, GameResult, GameStatus};
+use hudsoni::{Color, GameResult, GameStatus};
 use shared_types::{ExplorerFilters, ExplorerMove};
 use uuid::Uuid;
 

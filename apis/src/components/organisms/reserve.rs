@@ -19,7 +19,7 @@ use crate::{
         Config,
     },
 };
-use hive_lib::{Color, GameStatus, State};
+use hudsoni::{Color, GameStatus, State};
 use leptos::prelude::*;
 
 pub use crate::hiveground::ReserveLayout as Alignment;

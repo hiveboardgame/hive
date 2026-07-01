@@ -19,7 +19,7 @@ use db_lib::{
     models::{Challenge, Game, NewChallenge, NewGame, User},
     DbPool,
 };
-use hive_lib::{ColorChoice, GameType};
+use hudsoni::{ColorChoice, GameType};
 use rand::random;
 use serde::{Deserialize, Serialize};
 use serde_json::json;

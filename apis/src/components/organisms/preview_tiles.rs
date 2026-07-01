@@ -4,7 +4,7 @@ use crate::{
     hiveground::{build_static_render_model, HivegroundInteraction, HivegroundPaint},
     providers::Config,
 };
-use hive_lib::{GameType, State};
+use hudsoni::{GameType, State};
 use leptos::prelude::*;
 
 #[component]

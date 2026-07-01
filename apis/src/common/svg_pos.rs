@@ -1,4 +1,4 @@
-use hive_lib::Position;
+use hudsoni::Position;
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct SvgPos {

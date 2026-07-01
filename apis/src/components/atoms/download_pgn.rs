@@ -1,4 +1,4 @@
-use hive_lib::{Color, GameResult, GameStatus};
+use hudsoni::{Color, GameResult, GameStatus};
 use leptos::prelude::*;
 use leptos_icons::*;
 use wasm_bindgen::{JsCast, JsValue};

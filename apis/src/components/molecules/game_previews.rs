@@ -8,7 +8,7 @@ use crate::{
     i18n::*,
     responses::{GameResponse, UserResponse},
 };
-use hive_lib::{Color, GameStatus};
+use hudsoni::{Color, GameStatus};
 use leptos::prelude::*;
 use shared_types::{Conclusion, GameSpeed, PrettyString, TimeInfo};
 

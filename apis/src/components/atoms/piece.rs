@@ -2,7 +2,7 @@ use crate::{
     common::{PiecePaint, PieceType, SvgPos},
     hiveground::HivegroundInteraction,
 };
-use hive_lib::{Piece, Position};
+use hudsoni::{Piece, Position};
 use leptos::prelude::*;
 
 #[component]

@@ -9,7 +9,7 @@ use db_lib::{
     models::{Challenge, Game, Schedule, Tournament, TournamentInvitation, User},
     DbConn,
 };
-use hive_lib::GameStatus;
+use hudsoni::GameStatus;
 use log::error;
 use shared_types::{GameId, TournamentId};
 use uuid::Uuid;

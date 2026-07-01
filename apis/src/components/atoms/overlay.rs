@@ -1,5 +1,5 @@
 use crate::common::{OverlayPaint, SvgPos};
-use hive_lib::Position;
+use hudsoni::Position;
 use leptos::prelude::*;
 
 #[component]

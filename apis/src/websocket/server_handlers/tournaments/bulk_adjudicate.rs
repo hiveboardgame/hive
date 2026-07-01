@@ -5,7 +5,7 @@ use crate::{
 use anyhow::Result;
 use db_lib::{get_conn, models::Tournament, DbPool};
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
-use hive_lib::GameStatus;
+use hudsoni::GameStatus;
 use shared_types::{GameId, TournamentId};
 use uuid::Uuid;
 

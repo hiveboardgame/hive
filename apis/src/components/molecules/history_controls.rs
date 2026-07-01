@@ -10,7 +10,7 @@ use crate::{
     hooks::history_nav::scroll_move_into_view,
     providers::game_state::GameStateSignal,
 };
-use hive_lib::{Color, State};
+use hudsoni::{Color, State};
 use leptos::{html, prelude::*};
 
 #[component]

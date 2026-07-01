@@ -1,5 +1,5 @@
 use crate::{functions::games::get::get_game_from_nanoid, responses::GameResponse};
-use hive_lib::{Color, GameResult, GameStatus};
+use hudsoni::{Color, GameResult, GameStatus};
 use leptos::prelude::*;
 use leptos_meta::Meta;
 use leptos_router::hooks::use_location;

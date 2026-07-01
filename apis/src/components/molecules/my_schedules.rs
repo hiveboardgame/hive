@@ -8,7 +8,7 @@ use crate::{
     responses::{GameResponse, ScheduleResponse},
 };
 use chrono::{Duration, Utc};
-use hive_lib::GameStatus;
+use hudsoni::GameStatus;
 use leptos::prelude::*;
 use shared_types::{Conclusion, GameId};
 use std::collections::HashMap;

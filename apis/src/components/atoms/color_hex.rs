@@ -1,4 +1,4 @@
-use hive_lib::Color;
+use hudsoni::Color;
 use leptos::prelude::*;
 
 /// Small flat hexagon tile (white/black) used to mark a player's color.

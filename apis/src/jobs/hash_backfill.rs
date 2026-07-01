@@ -5,7 +5,7 @@ use db_lib::{
     DbPool,
 };
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
-use hive_lib::State;
+use hudsoni::State;
 
 const BATCH_SIZE: i64 = 200;
 

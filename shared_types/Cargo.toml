@@ -10,6 +10,6 @@ thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 uuid = { workspace = true }
 chrono = { workspace = true }
-hive = { path = "../engine" }
+hudsoni = { path = "../engine" }
 anyhow = { workspace = true }
 itertools = { workspace = true }

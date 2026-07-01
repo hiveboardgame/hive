@@ -2,7 +2,7 @@ use crate::providers::{
     analysis::{AnalysisSignal, AnalysisTree},
     game_state::GameStateSignal,
 };
-use hive_lib::History;
+use hudsoni::History;
 use leptos::{html, logging, prelude::*};
 use std::path::Path;
 use wasm_bindgen::{JsCast, JsValue};
@@ -71,7 +71,7 @@ pub fn LoadTree() -> impl IntoView {
         string
             .as_string()
             .and_then(|string| History::from_pgn_str(string).ok())
-            .and_then(|history| hive_lib::State::new_from_history(&history).ok())
+            .and_then(|history| hudsoni::State::new_from_history(&history).ok())
             .map(|state| {
                 game_state.full_reset();
                 game_state.signal.update(|gs| gs.state = state.clone());

@@ -26,7 +26,7 @@ use db_lib::{
     DbPool,
     DB_POOL_MAX_SIZE,
 };
-use hive_lib::GameStatus;
+use hudsoni::GameStatus;
 use log::error;
 use rand::Rng;
 use shared_types::{Conclusion, GameId, SimpleUser, TimeMode, TournamentId};

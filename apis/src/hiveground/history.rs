@@ -1,5 +1,5 @@
 use crate::providers::game_state::GameStateSignal;
-use hive_lib::{History, State};
+use hudsoni::{History, State};
 use leptos::prelude::*;
 
 fn build_history_state(history_moves: &[(String, String)], history_turn: Option<usize>) -> State {

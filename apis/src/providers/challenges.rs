@@ -110,7 +110,7 @@ mod tests {
     use super::*;
     use crate::responses::{ChallengeResponse, UserResponse};
     use chrono::Utc;
-    use hive_lib::ColorChoice;
+    use hudsoni::ColorChoice;
     use shared_types::{ChallengeVisibility, GameSpeed, Takeback, TimeMode};
     use std::collections::HashMap;
     use uuid::Uuid;

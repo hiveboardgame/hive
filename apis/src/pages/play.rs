@@ -39,7 +39,7 @@ use crate::{
     },
     websocket::client_handlers::game::{reset_game_state, reset_game_state_for_takeback},
 };
-use hive_lib::{Color, GameControl, GameResult, GameStatus, State as HiveState, Turn};
+use hudsoni::{Color, GameControl, GameResult, GameStatus, State as HiveState, Turn};
 use leptos::prelude::*;
 use leptos_router::hooks::{use_params_map, use_query_map};
 use shared_types::{GameId, GameStart};

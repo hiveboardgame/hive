@@ -1,7 +1,7 @@
 use crate::{functions::games::get::GetBatchFromOptions, responses::GameResponse};
 use codee::{binary::MsgpackSerdeCodec, string::Base64};
 use cookie::SameSite;
-use hive_lib::Color;
+use hudsoni::Color;
 use leptos::{html, prelude::*};
 use leptos_use::{use_cookie_with_options, UseCookieOptions};
 use serde::{Deserialize, Serialize};

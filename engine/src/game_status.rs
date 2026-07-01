@@ -23,6 +23,20 @@ impl fmt::Display for GameStatus {
     }
 }
 
+impl GameStatus {
+    pub fn as_uhp_str(&self) -> &'static str {
+        match self {
+            GameStatus::NotStarted => "NotStarted",
+            GameStatus::InProgress => "InProgress",
+            GameStatus::Finished(GameResult::Winner(Color::White)) => "WhiteWins",
+            GameStatus::Finished(GameResult::Winner(Color::Black)) => "BlackWins",
+            GameStatus::Finished(GameResult::Draw) => "Draw",
+            GameStatus::Finished(GameResult::Unknown) => "InProgress",
+            GameStatus::Adjudicated => "InProgress",
+        }
+    }
+}
+
 impl FromStr for GameStatus {
     type Err = GameError;
 

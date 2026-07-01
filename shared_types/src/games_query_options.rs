@@ -1,6 +1,6 @@
 use crate::game_speed::GameSpeed;
 use chrono::{DateTime, Utc};
-use hive_lib::Color;
+use hudsoni::Color;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use thiserror::Error;

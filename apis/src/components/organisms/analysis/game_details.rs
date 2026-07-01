@@ -10,7 +10,7 @@ use crate::{
     i18n::*,
     providers::game_state::GameStateSignal,
 };
-use hive_lib::Color;
+use hudsoni::Color;
 use leptos::prelude::*;
 
 #[component]

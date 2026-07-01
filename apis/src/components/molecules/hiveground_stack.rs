@@ -2,7 +2,7 @@ use crate::{
     components::atoms::render_layer_view::RenderLayerView,
     hiveground::{HivegroundInteraction, HivegroundPaint, RenderLayer},
 };
-use hive_lib::Position;
+use hudsoni::Position;
 use leptos::prelude::*;
 
 #[component]
@@ -46,7 +46,7 @@ mod tests {
         common::PieceType,
         hiveground::{ActiveMarkerState, LastMoveDirection, PieceShadow, RenderLayerKind},
     };
-    use hive_lib::Piece;
+    use hudsoni::Piece;
 
     fn piece(piece: &str) -> Piece {
         piece.parse().expect("test piece parses")

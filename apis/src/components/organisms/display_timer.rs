@@ -8,7 +8,7 @@ use crate::{
         AuthContext,
     },
 };
-use hive_lib::Color;
+use hudsoni::Color;
 use leptos::prelude::*;
 use leptos_icons::*;
 use shared_types::TimeMode;

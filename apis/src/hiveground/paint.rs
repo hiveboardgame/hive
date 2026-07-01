@@ -3,7 +3,7 @@ use crate::{
     common::{resolve_piece_paint, OverlayPaint, PiecePaint, ShadowHref},
     providers::config::TileOptions,
 };
-use hive_lib::Piece;
+use hudsoni::Piece;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct HivegroundPaint {

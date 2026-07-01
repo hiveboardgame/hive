@@ -17,7 +17,7 @@ use crate::{
     },
     responses::AccountResponse,
 };
-use hive_lib::{Color, GameStatus, Piece, Position};
+use hudsoni::{Color, GameStatus, Piece, Position};
 use leptos::prelude::*;
 use uuid::Uuid;
 

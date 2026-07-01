@@ -5,7 +5,7 @@ use crate::{
     providers::{analysis::AnalysisSignal, game_state::GameStateSignal, ApiRequestsProvider},
     responses::ExplorerResponse,
 };
-use hive_lib::{GameStatus, GameType, Piece, Position, State};
+use hudsoni::{GameStatus, GameType, Piece, Position, State};
 use leptos::prelude::*;
 use leptos_icons::*;
 use shared_types::{

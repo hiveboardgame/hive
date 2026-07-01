@@ -1,5 +1,5 @@
 use crate::providers::Config;
-use hive_lib::ColorChoice;
+use hudsoni::ColorChoice;
 use leptos::prelude::*;
 use leptos_icons::*;
 

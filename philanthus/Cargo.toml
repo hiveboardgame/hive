@@ -1,0 +1,7 @@
+[package]
+name = "philanthus"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+hudsoni = { path = "../engine" }

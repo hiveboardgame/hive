@@ -65,7 +65,7 @@ async fn send_soft_delete_updates(
     use bytes::Bytes;
     use codee::{binary::MsgpackSerdeCodec, Encoder};
     use db_lib::models::{Challenge, Game};
-    use hive_lib::GameControl;
+    use hudsoni::GameControl;
     use shared_types::{ChallengeId, ChallengeVisibility, Conclusion, GameId};
 
     fn challenge_removed_messages(challenge: Challenge) -> Vec<InternalServerMessage> {

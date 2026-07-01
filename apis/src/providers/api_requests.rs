@@ -4,7 +4,7 @@ use crate::{
     providers::websocket::WebsocketContext,
     responses::{create_challenge_handler, AccountResponse},
 };
-use hive_lib::{GameControl, Turn};
+use hudsoni::{GameControl, Turn};
 use leptos::prelude::*;
 use shared_types::{ChallengeId, ChatMessageContainer, GameId, TournamentGameResult, TournamentId};
 

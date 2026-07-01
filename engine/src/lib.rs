@@ -21,7 +21,7 @@ mod svg_position;
 mod torus_array;
 mod turn;
 
-pub use board::Board;
+pub use board::{Board, Unmake};
 pub use bug::Bug;
 pub use bug_stack::BugStack;
 pub use color::{Color, ColorChoice};
@@ -32,6 +32,7 @@ pub use game_error::GameError;
 pub use game_result::GameResult;
 pub use game_status::GameStatus;
 pub use game_type::GameType;
+pub use hasher::Hasher;
 pub use history::History;
 pub use piece::Piece;
 pub use player::Player;

@@ -8,7 +8,7 @@ use crate::{
         AuthContext,
     },
 };
-use hive_lib::{ColorChoice, GameControl};
+use hudsoni::{ColorChoice, GameControl};
 use leptos::{either::EitherOf3, prelude::*};
 use leptos_router::hooks::use_navigate;
 use shared_types::{ChallengeDetails, ChallengeVisibility};

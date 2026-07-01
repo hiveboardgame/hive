@@ -31,7 +31,7 @@ use crate::{
     responses::{GameResponse, TournamentResponse},
 };
 use chrono::Local;
-use hive_lib::GameStatus;
+use hudsoni::GameStatus;
 use leptos::{html, prelude::*};
 use leptos_router::hooks::{use_navigate, use_params_map};
 use leptos_use::use_resize_observer;

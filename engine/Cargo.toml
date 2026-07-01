@@ -1,14 +1,14 @@
 [package]
-name = "hive"
+name = "hudsoni"
 version = "0.1.0"
 edition = "2021"
 
 [lib]
-name = "hive_lib"
+name = "hudsoni"
 path = "src/lib.rs"
 
 [[bin]]
-name = "hive_bin"
+name = "hudsoni"
 path = "src/main.rs" # replace bin.rs with name of your file
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

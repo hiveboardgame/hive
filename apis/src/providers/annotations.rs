@@ -2,7 +2,7 @@ use crate::providers::{
     analysis::AnalysisSignal,
     game_state::{GameStateSignal, View},
 };
-use hive_lib::Position;
+use hudsoni::Position;
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 use shared_types::GameId;

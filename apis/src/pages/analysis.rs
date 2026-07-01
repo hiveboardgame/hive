@@ -28,7 +28,7 @@ use crate::{
     },
     responses::GameResponse,
 };
-use hive_lib::{Color, GameStatus, GameType};
+use hudsoni::{Color, GameStatus, GameType};
 use leptos::{
     leptos_dom::helpers::{set_timeout_with_handle, TimeoutHandle},
     prelude::*,

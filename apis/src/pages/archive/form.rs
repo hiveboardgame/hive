@@ -7,7 +7,7 @@ use crate::{
     i18n::*,
 };
 use chrono::{DateTime, NaiveDate, Utc};
-use hive_lib::Color;
+use hudsoni::Color;
 use leptos::prelude::*;
 use leptos_icons::Icon;
 use shared_types::{GameSortKey, GameSpeed, GamesQueryOptions, ResultFilter};

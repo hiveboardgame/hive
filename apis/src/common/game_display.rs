@@ -2,7 +2,7 @@ use crate::{
     i18n::{t_string, I18nKeys, Locale},
     responses::GameResponse,
 };
-use hive_lib::{Color, GameResult, GameStatus};
+use hudsoni::{Color, GameResult, GameStatus};
 use leptos_i18n::I18nContext;
 use shared_types::{Conclusion, PrettyString, TimeInfo, TimeMode, TournamentGameResult};
 

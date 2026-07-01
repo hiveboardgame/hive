@@ -3,7 +3,7 @@ use crate::{
     components::atoms::piece::PieceGlyph,
     providers::Config,
 };
-use hive_lib::{Piece, Position};
+use hudsoni::{Piece, Position};
 use leptos::prelude::*;
 
 /// A small standalone tile icon for a single piece, rendered with the user's current tile design.

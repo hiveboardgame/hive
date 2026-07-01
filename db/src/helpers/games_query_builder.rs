@@ -9,7 +9,7 @@ use diesel::{
     ExpressionMethods,
     QueryDsl,
 };
-use hive_lib::{Color, GameResult, GameStatus, GameType};
+use hudsoni::{Color, GameResult, GameStatus, GameType};
 use shared_types::{
     BatchToken,
     Conclusion,

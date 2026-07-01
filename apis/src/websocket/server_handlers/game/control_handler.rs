@@ -28,7 +28,7 @@ use db_lib::{
     DbPool,
 };
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
-use hive_lib::{GameControl, GameError};
+use hudsoni::{GameControl, GameError};
 use shared_types::{Conclusion, GameId, TimeMode};
 use std::sync::Arc;
 use uuid::Uuid;

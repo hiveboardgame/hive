@@ -16,7 +16,7 @@ use crate::{
 use anyhow::Result;
 use db_lib::{get_conn, models::Game, DbPool};
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
-use hive_lib::{GameError, GameStatus};
+use hudsoni::{GameError, GameStatus};
 use shared_types::GameId;
 use std::{str::FromStr, sync::Arc};
 use uuid::Uuid;

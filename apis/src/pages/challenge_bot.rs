@@ -6,7 +6,7 @@ use crate::{
     },
     providers::ApiRequestsProvider,
 };
-use hive_lib::GameType;
+use hudsoni::GameType;
 use leptos::prelude::*;
 use shared_types::{ChallengeDetails, ChallengeVisibility, TimeMode};
 

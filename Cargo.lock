@@ -446,9 +446,9 @@ dependencies = [
  "diesel-async",
  "diesel_migrations",
  "futures-util",
- "hive",
  "http 1.4.0",
  "http-serde",
+ "hudsoni",
  "icondata_ai",
  "icondata_bi",
  "icondata_bs",
@@ -1478,7 +1478,7 @@ dependencies = [
  "diesel-async",
  "diesel_migrations",
  "dotenvy",
- "hive",
+ "hudsoni",
  "itertools",
  "lazy_static",
  "nanoid",
@@ -2456,25 +2456,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
-name = "hive"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bitfield-struct",
- "clap",
- "itertools",
- "lazy_static",
- "pest",
- "pest_derive",
- "regex",
- "resvg",
- "serde",
- "serde_with",
- "thiserror 2.0.18",
- "usvg",
-]
-
-[[package]]
 name = "hive-hydra"
 version = "0.1.0"
 dependencies = [
@@ -2631,6 +2612,25 @@ name = "httpdate"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "df3b46402a9d5adb4c86a0cf463f42e19994e3ee891101b1841f30a545cb49a9"
+
+[[package]]
+name = "hudsoni"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bitfield-struct",
+ "clap",
+ "itertools",
+ "lazy_static",
+ "pest",
+ "pest_derive",
+ "regex",
+ "resvg",
+ "serde",
+ "serde_with",
+ "thiserror 1.0.69",
+ "usvg",
+]
 
 [[package]]
 name = "hydration_context"
@@ -4785,6 +4785,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "philanthus"
+version = "0.1.0"
+dependencies = [
+ "hudsoni",
+]
+
+[[package]]
 name = "pico-args"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6119,7 +6126,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "chrono",
- "hive",
+ "hudsoni",
  "itertools",
  "serde",
  "thiserror 2.0.18",

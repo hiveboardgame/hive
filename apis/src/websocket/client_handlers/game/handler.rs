@@ -11,7 +11,7 @@ use crate::{
     },
     responses::GameResponse,
 };
-use hive_lib::{GameStatus, History, State};
+use hudsoni::{GameStatus, History, State};
 use leptos::{prelude::*, task::spawn_local};
 use leptos_use::{use_timeout_fn, UseTimeoutFnReturn};
 use shared_types::{GameId, ReadyUser};
@@ -136,14 +136,14 @@ fn ack_seen_if_watching(game_id: &GameId, recipient_id: Uuid) {
     send_seen_ack_if_focused(game_id);
 }
 
-fn ack_control_if_watching(control: hive_lib::GameControl, gar: &GameActionResponse) {
+fn ack_control_if_watching(control: hudsoni::GameControl, gar: &GameActionResponse) {
     let notified = matches!(
         control,
-        hive_lib::GameControl::DrawOffer(_)
-            | hive_lib::GameControl::TakebackRequest(_)
-            | hive_lib::GameControl::DrawReject(_)
-            | hive_lib::GameControl::TakebackAccept(_)
-            | hive_lib::GameControl::TakebackReject(_)
+        hudsoni::GameControl::DrawOffer(_)
+            | hudsoni::GameControl::TakebackRequest(_)
+            | hudsoni::GameControl::DrawReject(_)
+            | hudsoni::GameControl::TakebackAccept(_)
+            | hudsoni::GameControl::TakebackReject(_)
     );
     if !notified {
         return;

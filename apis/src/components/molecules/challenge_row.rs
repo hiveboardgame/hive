@@ -13,7 +13,7 @@ use crate::{
     providers::{ApiRequestsProvider, AuthContext, Config},
     responses::ChallengeResponse,
 };
-use hive_lib::ColorChoice;
+use hudsoni::ColorChoice;
 use leptos::{either::Either, html::Dialog, prelude::*};
 use leptos_icons::*;
 use leptos_use::use_window;

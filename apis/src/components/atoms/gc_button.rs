@@ -1,5 +1,5 @@
 use crate::{common::with_class, providers::game_state::GameStateSignal};
-use hive_lib::GameControl;
+use hudsoni::GameControl;
 use icondata_core;
 use leptos::prelude::*;
 use leptos_icons::*;

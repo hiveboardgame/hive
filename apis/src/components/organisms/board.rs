@@ -17,7 +17,7 @@ use crate::{
         Config,
     },
 };
-use hive_lib::{GameStatus, Position, State};
+use hudsoni::{GameStatus, Position, State};
 use leptos::{
     either::Either,
     ev::{

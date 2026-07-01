@@ -13,7 +13,7 @@ use crate::{
     providers::{websocket::WebsocketContext, ApiRequestsProvider, AuthContext},
     responses::ChallengeResponse,
 };
-use hive_lib::ColorChoice;
+use hudsoni::ColorChoice;
 use leptos::prelude::*;
 use leptos_icons::*;
 use shared_types::TimeInfo;

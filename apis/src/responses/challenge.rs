@@ -1,6 +1,6 @@
 use crate::{common::ChallengeAction, responses::user::UserResponse};
 use chrono::prelude::*;
-use hive_lib::{ColorChoice, GameType};
+use hudsoni::{ColorChoice, GameType};
 use serde::{Deserialize, Serialize};
 use shared_types::{ChallengeDetails, ChallengeId, ChallengeVisibility, GameSpeed, TimeMode};
 use std::{str, str::FromStr};

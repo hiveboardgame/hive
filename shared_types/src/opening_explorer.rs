@@ -1,5 +1,5 @@
 use crate::GameSpeed;
-use hive_lib::GameType;
+use hudsoni::GameType;
 use serde::{Deserialize, Serialize};
 
 /// Default minimum game length (in plies/turns) for the opening explorer. Games shorter than

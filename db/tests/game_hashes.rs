@@ -8,7 +8,7 @@ use db_lib::{
 };
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
-use hive_lib::{GameStatus, GameType, State};
+use hudsoni::{GameStatus, GameType, State};
 use shared_types::{Conclusion, GameSpeed, GameStart, TimeMode, TournamentGameResult};
 
 fn test_ctx(white_rating: Option<f64>, black_rating: Option<f64>) -> GameFinishContext {

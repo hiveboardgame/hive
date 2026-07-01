@@ -43,7 +43,7 @@ use diesel::{
     SelectableHelper,
 };
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
-use hive_lib::GameControl;
+use hudsoni::GameControl;
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};

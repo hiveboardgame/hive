@@ -29,7 +29,7 @@ db = { path = "../db", optional = true }
 diesel = { workspace = true, optional = true }
 diesel-async = { workspace = true, optional = true }
 diesel_migrations = { workspace = true, optional = true }
-hive = { path = "../engine" }
+hudsoni = { path = "../engine" }
 http = { workspace = true }
 http-serde = { workspace = true }
 icondata_core = { workspace = true }

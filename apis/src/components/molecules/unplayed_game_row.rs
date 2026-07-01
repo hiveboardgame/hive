@@ -5,7 +5,7 @@ use crate::{
     responses::GameResponse,
 };
 use chrono::{DateTime, Duration, Local, Utc};
-use hive_lib::Color;
+use hudsoni::Color;
 use leptos::prelude::*;
 use shared_types::{GameStart, PrettyString, TournamentGameResult};
 

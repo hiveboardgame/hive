@@ -4,7 +4,7 @@ use super::{
 };
 use crate::responses::{AccountResponse, GameResponse};
 use chrono::{DateTime, Utc};
-use hive_lib::{Color, GameControl};
+use hudsoni::{Color, GameControl};
 use leptos::prelude::*;
 use shared_types::{GameId, TimeMode};
 use std::{

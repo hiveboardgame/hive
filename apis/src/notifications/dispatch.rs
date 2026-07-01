@@ -6,7 +6,7 @@ use super::{
 };
 use dashmap::{mapref::entry::Entry, DashMap};
 use db_lib::models::User;
-use hive_lib::{Color, GameResult, GameStatus};
+use hudsoni::{Color, GameResult, GameStatus};
 use shared_types::{Conclusion, TimeMode};
 use std::{
     str::FromStr,

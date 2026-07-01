@@ -9,7 +9,7 @@ use crate::{
     },
     providers::Config,
 };
-use hive_lib::Board;
+use hudsoni::Board;
 use leptos::prelude::*;
 
 const VIEWBOX_WIDTH: f32 = 400.0;

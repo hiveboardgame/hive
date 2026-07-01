@@ -28,7 +28,7 @@ use crate::{
 };
 use cfg_if::cfg_if;
 use chrono::Utc;
-use hive_lib::GameControl;
+use hudsoni::GameControl;
 use leptos::prelude::*;
 use leptos_meta::*;
 use leptos_use::{use_interval_fn, use_media_query, use_window_focus, utils::Pausable};

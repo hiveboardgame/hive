@@ -52,6 +52,38 @@ impl State {
         self.board.clone()
     }
 
+    pub fn to_uhp_game_string(&self) -> String {
+        let turn_color = match self.turn_color {
+            Color::White => "White",
+            Color::Black => "Black",
+        };
+        let move_number = self.turn / 2 + 1;
+        let header = format!(
+            "{};{};{turn_color}[{move_number}]",
+            self.game_type,
+            self.game_status.as_uhp_str()
+        );
+        let moves = self
+            .history
+            .moves
+            .iter()
+            .map(|(piece, position)| uhp_move(piece, position))
+            .collect::<Vec<_>>()
+            .join(";");
+        if moves.is_empty() {
+            header
+        } else {
+            format!("{header};{moves}")
+        }
+    }
+
+    pub fn last_move_uhp(&self) -> Option<String> {
+        self.history
+            .moves
+            .last()
+            .map(|(piece, position)| uhp_move(piece, position))
+    }
+
     pub fn new_from_str(moves: &str, game_type: &str) -> Result<Self, GameError> {
         let game_type = GameType::from_str(game_type)?;
         let history = History::new_from_str(moves)?;
@@ -441,6 +473,14 @@ impl State {
         //         }
         //     }
         // }
+    }
+}
+
+fn uhp_move(piece: &str, position: &str) -> String {
+    if position.is_empty() {
+        piece.to_string()
+    } else {
+        format!("{piece} {position}")
     }
 }
 

@@ -12,7 +12,7 @@ use crate::{
         ResultType,
     },
 };
-use hive_lib::Color;
+use hudsoni::Color;
 use leptos::{either::Either, html, prelude::*};
 use leptos_i18n::I18nContext;
 use leptos_icons::*;

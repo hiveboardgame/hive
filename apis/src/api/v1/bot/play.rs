@@ -17,7 +17,7 @@ use db_lib::{
     DbPool,
 };
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
-use hive_lib::{Color, GameControl, Piece, Position, State, Turn};
+use hudsoni::{Color, GameControl, Piece, Position, State, Turn};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use shared_types::GameId;

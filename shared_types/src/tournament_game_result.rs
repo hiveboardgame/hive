@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use hive_lib::{Color, GameResult};
+use hudsoni::{Color, GameResult};
 use serde::{Deserialize, Serialize};
 use std::{fmt, str::FromStr};
 

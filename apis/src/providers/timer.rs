@@ -3,7 +3,7 @@ use crate::{
     responses::{GameResponse, HeartbeatResponse},
 };
 use chrono::{DateTime, Utc};
-use hive_lib::{Color, GameResult, GameStatus};
+use hudsoni::{Color, GameResult, GameStatus};
 use leptos::prelude::*;
 use shared_types::{Conclusion, GameId, TimeMode};
 use std::time::Duration;

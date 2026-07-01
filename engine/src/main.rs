@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use hive_lib::{Color, GameError, GameResult, GameStatus, GameType, History, State};
+use hudsoni::{Color, GameError, GameResult, GameStatus, GameType, History, State};
 use std::path::PathBuf;
 
 fn print_game_from_file(file: PathBuf, turn: usize) -> Result<(), GameError> {

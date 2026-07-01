@@ -14,7 +14,7 @@ pub async fn opening_explorer(
 ) -> Result<ExplorerResponse, ServerFnError> {
     use crate::{functions::db::pool, responses::GameResponse};
     use db_lib::{get_conn, models::GameHash};
-    use hive_lib::State;
+    use hudsoni::State;
     use shared_types::ExplorerMove;
 
     const TOP_GAMES: i64 = 4;

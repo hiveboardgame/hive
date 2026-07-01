@@ -8,7 +8,7 @@ use crate::{
     i18n::*,
     providers::{ApiRequestsProvider, AuthContext, ChallengeParams, ChallengeParamsStoreFields},
 };
-use hive_lib::GameType;
+use hudsoni::GameType;
 use leptos::prelude::*;
 use reactive_stores::Store;
 use shared_types::{ChallengeDetails, ChallengeVisibility, GameSpeed, TimeMode};

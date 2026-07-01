@@ -1,6 +1,6 @@
 use super::config_options::{TileDesign, TileDots, TileRotation};
 use crate::providers::config::TileOptions;
-use hive_lib::{Bug, Color, Piece};
+use hudsoni::{Bug, Color, Piece};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PiecePaint {

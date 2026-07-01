@@ -17,6 +17,7 @@ use anyhow::Result;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use std::{
+    cell::RefCell,
     cmp::Ordering,
     collections::HashMap,
     fmt::{self, Write},
@@ -27,6 +28,10 @@ use std::{
 
 pub const BOARD_SIZE: i32 = 32;
 const MISSING_DFS_INDEX: u8 = u8::MAX;
+
+thread_local! {
+    static DFS_INDEXES: RefCell<TorusArray<u8>> = RefCell::new(TorusArray::new(MISSING_DFS_INDEX));
+}
 lazy_static! {
     static ref BLACK_QUEEN: Piece = Piece::new_from(Bug::Queen, Color::Black, 0);
     static ref WHITE_QUEEN: Piece = Piece::new_from(Bug::Queen, Color::White, 0);
@@ -118,6 +123,18 @@ pub struct Board {
     pub hasher: Hasher,
     pub smallest: Option<(Piece, Position)>,
     pub eigen_direction: Option<Direction>,
+}
+
+#[derive(Clone, Debug)]
+pub struct Unmake {
+    piece: Piece,
+    from: Option<Position>,
+    to: Position,
+    prev_last_moved: Option<(Piece, Position)>,
+    prev_last_move: (Option<Position>, Option<Position>),
+    prev_stunned: Option<Piece>,
+    prev_pinned: [bool; 48],
+    prev_played: usize,
 }
 
 impl Board {
@@ -622,6 +639,57 @@ impl Board {
         piece
     }
 
+    pub fn make(&mut self, piece: Piece, from: Option<Position>, to: Position) -> Unmake {
+        let unmake = Unmake {
+            piece,
+            from,
+            to,
+            prev_last_moved: self.last_moved,
+            prev_last_move: self.last_move,
+            prev_stunned: self.stunned,
+            prev_pinned: self.pinned,
+            prev_played: self.played,
+        };
+        match from {
+            Some(from) => {
+                debug_assert!(self.is_top_piece(piece, from));
+                let ground_graph_changes = self.level(from) == 1 || !self.occupied(to);
+                let removed = self.remove(from);
+                debug_assert_eq!(removed, piece);
+                self.insert_with_pinned_update(to, piece, false, ground_graph_changes);
+                self.last_move = (Some(from), Some(to));
+            }
+            None => {
+                self.insert(to, piece, true);
+                self.last_move = (None, Some(to));
+            }
+        }
+        unmake
+    }
+
+    pub fn unmake(&mut self, unmake: Unmake) {
+        let removed = self.remove(unmake.to);
+        debug_assert_eq!(removed, unmake.piece);
+        match unmake.from {
+            Some(from) => {
+                let was_empty = !self.occupied(from);
+                self.board.get_mut(from).push_piece(unmake.piece);
+                self.set_position_of_piece(unmake.piece, from);
+                if was_empty {
+                    self.neighbor_count_add(from);
+                }
+            }
+            None => {
+                self.positions[self.piece_to_offset(unmake.piece)] = None;
+            }
+        }
+        self.last_moved = unmake.prev_last_moved;
+        self.last_move = unmake.prev_last_move;
+        self.stunned = unmake.prev_stunned;
+        self.pinned = unmake.prev_pinned;
+        self.played = unmake.prev_played;
+    }
+
     pub fn check(&self) -> bool {
         // This function can be used to perform checks on the engine and for debugging engine
         // issues on every turn
@@ -878,6 +946,50 @@ impl Board {
         moves
     }
 
+    pub fn for_each_move(&self, color: Color, mut visit: impl FnMut(Piece, Position, Position)) {
+        if !matches!(self.game_result(), GameResult::Unknown) {
+            return;
+        }
+        if !self.queen_played(color) {
+            return;
+        }
+        for (piece, pos) in self.top_pieces() {
+            if !piece.is_color(color) || self.last_moved == Some((piece, pos)) {
+                continue;
+            }
+            if !self.is_pinned(piece) {
+                Bug::for_each_normal_move(pos, self, &mut |target| visit(piece, pos, target));
+            }
+            Bug::for_each_throw(pos, self, &mut |source, target| {
+                if let Some(thrown) = self.top_piece(source) {
+                    if self.last_moved != Some((thrown, source)) {
+                        visit(thrown, source, target);
+                    }
+                }
+            });
+        }
+    }
+
+    pub fn for_each_placeable_piece(
+        &self,
+        color: Color,
+        game_type: GameType,
+        mut visit: impl FnMut(Piece),
+    ) {
+        let start = 24 * color as usize;
+        for bug_index in 0..8 {
+            for order_slot in 0..3 {
+                let offset = start + bug_index * 3 + order_slot;
+                if self.positions[offset].is_none()
+                    && self.offset_represents_piece(offset, game_type)
+                {
+                    visit(self.offset_to_piece(offset));
+                    break;
+                }
+            }
+        }
+    }
+
     pub fn spawnable_positions(&self, color: Color) -> impl Iterator<Item = Position> + '_ {
         let game_result = self.game_result();
         std::iter::once(Position::initial_spawn_position())
@@ -909,35 +1021,38 @@ impl Board {
     pub fn calculate_pinned(&self) -> Vec<DfsInfo> {
         // Connectivity is position-based, so stacked positions contribute only their bottom piece.
         let mut dfs_info = Vec::with_capacity(self.played);
-        let mut dfs_indexes = TorusArray::new(MISSING_DFS_INDEX);
 
-        for (i, maybe_pos) in self.positions.iter().enumerate() {
-            let Some(pos) = maybe_pos else {
-                continue;
-            };
-            let piece = self.offset_to_piece(i);
+        DFS_INDEXES.with(|cell| {
+            let mut dfs_indexes = cell.borrow_mut();
 
-            if self.is_bottom_piece(piece, *pos) {
-                let dfs_index = dfs_info.len();
-                debug_assert!(dfs_index < usize::from(MISSING_DFS_INDEX));
+            for (i, maybe_pos) in self.positions.iter().enumerate() {
+                let Some(pos) = maybe_pos else {
+                    continue;
+                };
+                let piece = self.offset_to_piece(i);
 
-                dfs_indexes.set(*pos, dfs_index as u8);
-                dfs_info.push(DfsInfo {
-                    position: *pos,
-                    piece,
-                    visited: false,
-                    depth: 0,
-                    low: 0,
-                    pinned: false,
-                    parent: None,
-                });
+                if self.is_bottom_piece(piece, *pos) {
+                    let dfs_index = dfs_info.len();
+                    debug_assert!(dfs_index < usize::from(MISSING_DFS_INDEX));
+
+                    dfs_indexes.set(*pos, dfs_index as u8);
+                    dfs_info.push(DfsInfo {
+                        position: *pos,
+                        piece,
+                        visited: false,
+                        depth: 0,
+                        low: 0,
+                        pinned: false,
+                        parent: None,
+                    });
+                }
             }
-        }
 
-        if dfs_info.is_empty() {
-            return dfs_info;
-        }
-        self.mark_articulation_points(0, 0, &mut dfs_info, &dfs_indexes);
+            if !dfs_info.is_empty() {
+                self.mark_articulation_points(0, 0, &mut dfs_info, &dfs_indexes);
+            }
+        });
+
         dfs_info
     }
 
@@ -1291,6 +1406,122 @@ mod tests {
                     "{file} turn {}",
                     state.turn
                 );
+                state
+                    .play_turn_from_history(piece, position)
+                    .unwrap_or_else(|err| panic!("{file} turn {}: {err}", state.turn));
+            }
+        }
+    }
+
+    #[test]
+    fn make_unmake_roundtrips_over_corpus() {
+        let mut files: Vec<PathBuf> = fs::read_dir("./test_pgns/valid")
+            .expect("valid corpus directory")
+            .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+            .filter(|path| path.extension().is_some_and(|ext| ext == "pgn"))
+            .collect();
+        files.sort();
+        for file in &files {
+            let file = file.display();
+            let history = History::from_filepath(file.to_string().into()).expect("valid history");
+            let tournament = !history.moves.iter().take(2).any(|(piece, _)| {
+                piece
+                    .parse::<Piece>()
+                    .map(|piece| piece.bug() == Bug::Queen)
+                    .unwrap_or(false)
+            });
+            let mut state = State::new(history.game_type, tournament);
+            for (piece, position) in history.moves.iter() {
+                if matches!(state.board.game_result(), GameResult::Unknown) {
+                    let snapshot = state.board.clone();
+                    for ((mover, from), targets) in state.board.moves(state.turn_color) {
+                        for to in targets {
+                            let unmake = state.board.make(mover, Some(from), to);
+                            state.board.unmake(unmake);
+                            assert_eq!(
+                                state.board, snapshot,
+                                "{file}: movement {mover} {from}->{to}"
+                            );
+                        }
+                    }
+                    let reserve = state.board.reserve(state.turn_color, state.game_type);
+                    let spawnables: Vec<_> =
+                        state.board.spawnable_positions(state.turn_color).collect();
+                    for pieces in reserve.values() {
+                        let Some(piece_str) = pieces.first() else {
+                            continue;
+                        };
+                        let spawn_piece: Piece = piece_str.parse().expect("valid reserve piece");
+                        for to in &spawnables {
+                            let unmake = state.board.make(spawn_piece, None, *to);
+                            state.board.unmake(unmake);
+                            assert_eq!(
+                                state.board, snapshot,
+                                "{file}: placement {spawn_piece} @ {to}"
+                            );
+                        }
+                    }
+                }
+                state
+                    .play_turn_from_history(piece, position)
+                    .unwrap_or_else(|err| panic!("{file} turn {}: {err}", state.turn));
+            }
+        }
+    }
+
+    #[test]
+    fn for_each_move_and_placeable_match_legacy_over_corpus() {
+        let mut files: Vec<PathBuf> = fs::read_dir("./test_pgns/valid")
+            .expect("valid corpus directory")
+            .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+            .filter(|path| path.extension().is_some_and(|ext| ext == "pgn"))
+            .collect();
+        files.sort();
+        for file in &files {
+            let file = file.display();
+            let history = History::from_filepath(file.to_string().into()).expect("valid history");
+            let tournament = !history.moves.iter().take(2).any(|(piece, _)| {
+                piece
+                    .parse::<Piece>()
+                    .map(|piece| piece.bug() == Bug::Queen)
+                    .unwrap_or(false)
+            });
+            let mut state = State::new(history.game_type, tournament);
+            for (piece, position) in history.moves.iter() {
+                if matches!(state.board.game_result(), GameResult::Unknown) {
+                    for color in [Color::White, Color::Black] {
+                        let mut expected = state.board.moves(color);
+                        let mut actual: HashMap<(Piece, Position), Vec<Position>> = HashMap::new();
+                        state.board.for_each_move(color, |moved, from, to| {
+                            actual.entry((moved, from)).or_default().push(to);
+                        });
+                        for targets in expected.values_mut() {
+                            targets.sort_by_key(|p| (p.q, p.r));
+                        }
+                        for targets in actual.values_mut() {
+                            targets.sort_by_key(|p| (p.q, p.r));
+                        }
+                        assert_eq!(expected, actual, "{file} turn {} moves {color}", state.turn);
+
+                        let reserve = state.board.reserve(color, state.game_type);
+                        let expected_pieces: HashSet<Piece> = reserve
+                            .values()
+                            .filter_map(|pieces| pieces.iter().min())
+                            .map(|piece| piece.parse::<Piece>().expect("reserve piece parses"))
+                            .collect();
+                        let mut actual_pieces = HashSet::new();
+                        state
+                            .board
+                            .for_each_placeable_piece(color, state.game_type, |piece| {
+                                actual_pieces.insert(piece);
+                            });
+                        assert_eq!(
+                            expected_pieces, actual_pieces,
+                            "{file} turn {} placeable {color}",
+                            state.turn
+                        );
+                    }
+                }
                 state
                     .play_turn_from_history(piece, position)
                     .unwrap_or_else(|err| panic!("{file} turn {}: {err}", state.turn));

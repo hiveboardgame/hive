@@ -13,7 +13,7 @@ use crate::{
 use anyhow::Result;
 use db_lib::{db_error::DbError, get_conn, models::Tournament, DbPool};
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
-use hive_lib::GameControl;
+use hudsoni::GameControl;
 use shared_types::{GameId, TournamentGameResult, TournamentId};
 use uuid::Uuid;
 

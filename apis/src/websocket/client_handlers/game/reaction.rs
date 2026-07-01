@@ -11,7 +11,7 @@ use crate::{
     },
     responses::GameResponse,
 };
-use hive_lib::GameControl;
+use hudsoni::GameControl;
 use leptos::prelude::*;
 use leptos_router::hooks::{use_location, use_navigate};
 use shared_types::{GameStart, TimeMode};

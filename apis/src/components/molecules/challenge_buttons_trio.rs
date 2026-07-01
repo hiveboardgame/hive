@@ -1,5 +1,5 @@
 use crate::components::atoms::create_challenge_button::CreateChallengeButton;
-use hive_lib::ColorChoice;
+use hudsoni::ColorChoice;
 use leptos::prelude::*;
 
 #[component]

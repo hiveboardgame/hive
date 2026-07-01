@@ -34,7 +34,7 @@ use db_lib::{
     models::{Game, User},
     DbPool,
 };
-use hive_lib::{GameControl, Turn};
+use hudsoni::{GameControl, Turn};
 use shared_types::{ChallengeId, ChallengeVisibility, GameId, TimeMode};
 use std::sync::Arc;
 

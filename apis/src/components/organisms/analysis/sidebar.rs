@@ -5,7 +5,7 @@ use crate::{
     },
     hiveground::HivegroundInteraction,
 };
-use hive_lib::{Color, State};
+use hudsoni::{Color, State};
 use leptos::prelude::*;
 
 #[derive(Clone, Copy, PartialEq)]

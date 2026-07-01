@@ -20,7 +20,7 @@ diesel = { workspace = true }
 diesel-async = { workspace = true }
 diesel_migrations = { workspace = true }
 dotenvy = { workspace = true }
-hive = { path = "../engine/" }
+hudsoni = { path = "../engine/" }
 itertools = { workspace = true }
 lazy_static = { workspace = true }
 nanoid = { workspace = true }

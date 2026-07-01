@@ -16,7 +16,7 @@ use crate::{
     responses::GameResponse,
 };
 use chrono::Utc;
-use hive_lib::{Color, GameResult, GameStatus};
+use hudsoni::{Color, GameResult, GameStatus};
 use leptos::prelude::*;
 use leptos_icons::*;
 use shared_types::{GameStart, PrettyString, TimeInfo, TournamentId};

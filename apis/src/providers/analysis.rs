@@ -6,7 +6,7 @@ use crate::{
     responses::GameResponse,
 };
 use bimap::BiMap;
-use hive_lib::{Color, GameError, GameType, History, State};
+use hudsoni::{Color, GameError, GameType, History, State};
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, vec};

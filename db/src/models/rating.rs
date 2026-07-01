@@ -20,7 +20,7 @@ use diesel_async::{
     AsyncPgConnection,
     RunQueryDsl,
 };
-use hive_lib::{Color, GameResult};
+use hudsoni::{Color, GameResult};
 use serde::{Deserialize, Serialize};
 use shared_types::GameSpeed;
 use skillratings::{

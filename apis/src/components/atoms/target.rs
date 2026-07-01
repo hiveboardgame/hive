@@ -3,7 +3,7 @@ use crate::{
     components::atoms::overlay::OverlayGlyph,
     hiveground::HivegroundInteraction,
 };
-use hive_lib::Position;
+use hudsoni::Position;
 use leptos::prelude::*;
 
 #[component]

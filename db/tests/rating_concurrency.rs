@@ -13,7 +13,7 @@ use diesel::{
     QueryableByName,
 };
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
-use hive_lib::{Color, GameControl, GameStatus, GameType};
+use hudsoni::{Color, GameControl, GameStatus, GameType};
 use shared_types::{Conclusion, GameSpeed, GameStart, TimeMode, TournamentGameResult};
 use std::time::Duration;
 use tokio::{sync::oneshot, task::JoinHandle};

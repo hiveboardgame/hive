@@ -4,7 +4,7 @@ use crate::{
     common::{MoveInfo, PieceType},
     responses::GameResponse,
 };
-use hive_lib::{Color, GameControl, GameStatus, GameType, Piece, Position, State, Turn};
+use hudsoni::{Color, GameControl, GameStatus, GameType, Piece, Position, State, Turn};
 use leptos::{logging::log, prelude::*};
 use shared_types::{GameId, GameSpeed, Takeback};
 use uuid::Uuid;
@@ -480,7 +480,7 @@ impl GameState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hive_lib::Direction as BoardDirection;
+    use hudsoni::Direction as BoardDirection;
 
     fn piece(piece: &str) -> Piece {
         piece.parse().expect("test piece parses")

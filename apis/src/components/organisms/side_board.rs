@@ -10,7 +10,7 @@ use crate::{
         AuthContext,
     },
 };
-use hive_lib::{Color, State as HiveState};
+use hudsoni::{Color, State as HiveState};
 use leptos::{prelude::*, reactive::wrappers::write::SignalSetter};
 use leptos_router::{
     hooks::{query_signal_with_options, use_params_map},

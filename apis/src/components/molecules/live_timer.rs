@@ -6,7 +6,7 @@ use crate::providers::{
     SoundType,
     Sounds,
 };
-use hive_lib::{Color, GameStatus};
+use hudsoni::{Color, GameStatus};
 use leptos::prelude::*;
 use leptos_router::hooks::use_params_map;
 use leptos_use::{

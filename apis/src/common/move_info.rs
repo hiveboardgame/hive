@@ -1,4 +1,4 @@
-use hive_lib::{Piece, Position};
+use hudsoni::{Piece, Position};
 
 use crate::common::PieceType;
 

@@ -12,7 +12,7 @@ use super::{
     },
 };
 use crate::common::{MoveInfo, PieceType};
-use hive_lib::{Board, Bug, BugStack, Color, GameStatus, Piece, Position, State};
+use hudsoni::{Board, Bug, BugStack, Color, GameStatus, Piece, Position, State};
 use std::{collections::HashMap, str::FromStr};
 
 const DOUBLE_ROW_RESERVE_COLUMNS: i32 = 4;
@@ -536,7 +536,7 @@ fn sort_dedup_positions(mut positions: Vec<Position>) -> Vec<Position> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hive_lib::{Bug, Color, GameResult, GameStatus, GameType, Piece};
+    use hudsoni::{Bug, Color, GameResult, GameStatus, GameType, Piece};
 
     fn piece(piece: &str) -> Piece {
         piece.parse().expect("test piece parses")

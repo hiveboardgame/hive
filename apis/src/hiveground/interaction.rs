@@ -1,5 +1,5 @@
 use crate::{common::PieceType, providers::annotations::AnnotationColor};
-use hive_lib::{Piece, Position};
+use hudsoni::{Piece, Position};
 use leptos::prelude::*;
 use web_sys::MouseEvent;
 

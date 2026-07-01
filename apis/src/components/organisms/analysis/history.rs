@@ -11,7 +11,7 @@ use crate::{
     hiveground::HivegroundInteraction,
     providers::analysis::{AnalysisSignal, AnalysisTree, TreeNode},
 };
-use hive_lib::{Color, State};
+use hudsoni::{Color, State};
 use leptos::prelude::*;
 use std::{cmp::Ordering, collections::HashMap};
 use tree_ds::prelude::*;

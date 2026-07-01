@@ -1,5 +1,5 @@
 use crate::{Tiebreaker, TournamentGameResult};
-use hive_lib::Color;
+use hudsoni::Color;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::{

@@ -6,7 +6,7 @@ use crate::{
     hiveground::HivegroundInteraction,
     providers::game_state::{self, GameStateSignal},
 };
-use hive_lib::{GameStatus, State};
+use hudsoni::{GameStatus, State};
 use leptos::{html, prelude::*};
 use leptos_icons::*;
 use leptos_router::hooks::{use_params_map, use_query_map};

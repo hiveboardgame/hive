@@ -1,5 +1,5 @@
 use crate::common::PieceType;
-use hive_lib::{Piece, Position};
+use hudsoni::{Piece, Position};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct HivegroundRenderModel {
