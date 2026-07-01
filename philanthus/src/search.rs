@@ -183,9 +183,9 @@ impl Searcher {
         value: &mut i32,
         best_action: &mut Option<Action>,
     ) -> bool {
-        let reversal = game.make_with_pinned_update(&action, false);
+        let reversal = game.make_leaf(&action);
         let score = -self.leaf_score(game, ply + 1);
-        game.unmake(reversal);
+        game.unmake_leaf(reversal);
         if self.stopped {
             return false;
         }
@@ -385,7 +385,7 @@ impl Searcher {
         let mut best: Option<(Action, i32)> = None;
         let mut alpha = -INF;
         for &action in &actions {
-            let reversal = game.make_with_pinned_update(&action, depth > 1);
+            let reversal = game.make_with_pinned_update(&action, false);
             let score = -self.negamax(game, depth - 1, -INF, -alpha, 1);
             game.unmake(reversal);
             if self.stopped {
@@ -437,6 +437,8 @@ impl Searcher {
             }
         }
 
+        game.board.update_pinned();
+
         if depth == 1 {
             return self.negamax_depth_one(game, alpha, beta, ply, key, alpha_orig);
         }
@@ -457,7 +459,7 @@ impl Searcher {
         let mut value = -INF;
         let mut best_action = None;
         for &action in &actions {
-            let reversal = game.make_with_pinned_update(&action, depth > 1);
+            let reversal = game.make_with_pinned_update(&action, false);
             let score = -self.negamax(game, depth - 1, -beta, -alpha, ply + 1);
             game.unmake(reversal);
             if self.stopped {

@@ -32,6 +32,23 @@ pub struct Reversal {
     prev_hash: u64,
 }
 
+pub(crate) enum LeafReversal {
+    Move {
+        piece: Piece,
+        from: Position,
+        to: Position,
+        prev_turn_color: Color,
+    },
+    Place {
+        piece: Piece,
+        to: Position,
+        prev_turn_color: Color,
+    },
+    Pass {
+        prev_turn_color: Color,
+    },
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Game {
     pub board: Board,
@@ -141,6 +158,44 @@ impl Game {
         self.make_with_pinned_update(action, true)
     }
 
+    pub(crate) fn make_leaf(&mut self, action: &Action) -> LeafReversal {
+        let prev_turn_color = self.turn_color;
+        let reversal = match action {
+            Action::Move(piece, from, to) => {
+                let removed = self.board.remove(*from);
+                debug_assert_eq!(removed, *piece);
+                let was_empty = !self.board.occupied(*to);
+                self.board.board.get_mut(*to).push_piece(*piece);
+                self.board.set_position_of_piece(*piece, *to);
+                if was_empty {
+                    self.board.neighbor_count_add(*to);
+                }
+                LeafReversal::Move {
+                    piece: *piece,
+                    from: *from,
+                    to: *to,
+                    prev_turn_color,
+                }
+            }
+            Action::Place(piece, to) => {
+                let was_empty = !self.board.occupied(*to);
+                self.board.board.get_mut(*to).push_piece(*piece);
+                self.board.set_position_of_piece(*piece, *to);
+                if was_empty {
+                    self.board.neighbor_count_add(*to);
+                }
+                LeafReversal::Place {
+                    piece: *piece,
+                    to: *to,
+                    prev_turn_color,
+                }
+            }
+            Action::Pass => LeafReversal::Pass { prev_turn_color },
+        };
+        self.turn_color = self.turn_color.opposite_color();
+        reversal
+    }
+
     pub(crate) fn make_with_pinned_update(
         &mut self,
         action: &Action,
@@ -207,6 +262,40 @@ impl Game {
                 self.board.last_moved = reversal.prev_last_moved;
                 self.board.last_move = reversal.prev_last_move;
                 self.board.stunned = reversal.prev_stunned;
+            }
+        }
+    }
+
+    pub(crate) fn unmake_leaf(&mut self, reversal: LeafReversal) {
+        match reversal {
+            LeafReversal::Move {
+                piece,
+                from,
+                to,
+                prev_turn_color,
+            } => {
+                let removed = self.board.remove(to);
+                debug_assert_eq!(removed, piece);
+                let was_empty = !self.board.occupied(from);
+                self.board.board.get_mut(from).push_piece(piece);
+                self.board.set_position_of_piece(piece, from);
+                if was_empty {
+                    self.board.neighbor_count_add(from);
+                }
+                self.turn_color = prev_turn_color;
+            }
+            LeafReversal::Place {
+                piece,
+                to,
+                prev_turn_color,
+            } => {
+                let removed = self.board.remove(to);
+                debug_assert_eq!(removed, piece);
+                self.board.positions[self.board.piece_to_offset(piece)] = None;
+                self.turn_color = prev_turn_color;
+            }
+            LeafReversal::Pass { prev_turn_color } => {
+                self.turn_color = prev_turn_color;
             }
         }
     }

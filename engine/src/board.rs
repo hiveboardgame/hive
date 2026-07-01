@@ -884,15 +884,45 @@ impl Board {
     }
 
     pub fn neighbor_count_remove(&mut self, position: Position) {
-        for pos in position.positions_around() {
-            *self.neighbor_count.get_mut(pos) -= 1;
-        }
+        *self
+            .neighbor_count
+            .get_mut(Position::new(position.q, position.r - 1)) -= 1;
+        *self
+            .neighbor_count
+            .get_mut(Position::new(position.q, position.r + 1)) -= 1;
+        *self
+            .neighbor_count
+            .get_mut(Position::new(position.q + 1, position.r - 1)) -= 1;
+        *self
+            .neighbor_count
+            .get_mut(Position::new(position.q - 1, position.r + 1)) -= 1;
+        *self
+            .neighbor_count
+            .get_mut(Position::new(position.q - 1, position.r)) -= 1;
+        *self
+            .neighbor_count
+            .get_mut(Position::new(position.q + 1, position.r)) -= 1;
     }
 
     pub fn neighbor_count_add(&mut self, position: Position) {
-        for pos in position.positions_around() {
-            *self.neighbor_count.get_mut(pos) += 1;
-        }
+        *self
+            .neighbor_count
+            .get_mut(Position::new(position.q, position.r - 1)) += 1;
+        *self
+            .neighbor_count
+            .get_mut(Position::new(position.q, position.r + 1)) += 1;
+        *self
+            .neighbor_count
+            .get_mut(Position::new(position.q + 1, position.r - 1)) += 1;
+        *self
+            .neighbor_count
+            .get_mut(Position::new(position.q - 1, position.r + 1)) += 1;
+        *self
+            .neighbor_count
+            .get_mut(Position::new(position.q - 1, position.r)) += 1;
+        *self
+            .neighbor_count
+            .get_mut(Position::new(position.q + 1, position.r)) += 1;
     }
 
     pub fn neighbor_is_a(&self, position: Position, bug: Bug) -> bool {
