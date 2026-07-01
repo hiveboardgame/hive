@@ -15,7 +15,6 @@ use crate::{
 };
 use anyhow::Result;
 use itertools::Itertools;
-use lazy_static::lazy_static;
 use std::{
     cell::RefCell,
     cmp::Ordering,
@@ -30,6 +29,8 @@ pub const BOARD_SIZE: i32 = 32;
 const BOARD_CELLS: usize = (BOARD_SIZE as usize) * (BOARD_SIZE as usize);
 const POSITION_SET_WORDS: usize = (BOARD_CELLS + 63) / 64;
 const MAX_SPAWNABLE_POSITIONS: usize = 1 + 24 * 6;
+const WHITE_QUEEN: Piece = Piece::from_bits(0);
+const BLACK_QUEEN: Piece = Piece::from_bits(1);
 const OFFSET_TO_PIECES: [Piece; 48] = [
     offset_to_piece_const(0),
     offset_to_piece_const(1),
@@ -84,10 +85,6 @@ const MISSING_DFS_INDEX: u8 = u8::MAX;
 
 thread_local! {
     static DFS_INDEXES: RefCell<TorusArray<u8>> = RefCell::new(TorusArray::new(MISSING_DFS_INDEX));
-}
-lazy_static! {
-    static ref BLACK_QUEEN: Piece = Piece::new_from(Bug::Queen, Color::Black, 0);
-    static ref WHITE_QUEEN: Piece = Piece::new_from(Bug::Queen, Color::White, 0);
 }
 
 struct PositionSet {
@@ -152,6 +149,31 @@ impl Iterator for SpawnablePositions {
         let position = self.positions[self.next];
         self.next += 1;
         Some(position)
+    }
+}
+
+struct TopPieces<'board> {
+    board: &'board Board,
+    offset: usize,
+}
+
+impl Iterator for TopPieces<'_> {
+    type Item = (Piece, Position);
+
+    #[inline(always)]
+    fn next(&mut self) -> Option<Self::Item> {
+        while self.offset < self.board.positions.len() {
+            let offset = self.offset;
+            self.offset += 1;
+            let Some(position) = self.board.positions[offset] else {
+                continue;
+            };
+            let piece = self.board.offset_to_piece(offset);
+            if self.board.top_piece(position) == Some(piece) {
+                return Some((piece, position));
+            }
+        }
+        None
     }
 }
 
@@ -688,10 +710,7 @@ impl Board {
                 return false;
             }
             pos.positions_around().any(|target| {
-                !self.occupied(target)
-                    && !self
-                        .top_layer_neighbors(target)
-                        .any(|piece| color == piece.color().opposite_color())
+                !self.occupied(target) && !self.has_opponent_top_layer_neighbor(target, color)
             })
         })
     }
@@ -713,10 +732,10 @@ impl Board {
 
     pub fn game_result(&self) -> GameResult {
         let black_won = self
-            .position_of_piece(*WHITE_QUEEN)
+            .position_of_piece(WHITE_QUEEN)
             .map(|pos| *self.neighbor_count.get(pos) == 6);
         let white_won = self
-            .position_of_piece(*BLACK_QUEEN)
+            .position_of_piece(BLACK_QUEEN)
             .map(|pos| *self.neighbor_count.get(pos) == 6);
         match (black_won, white_won) {
             (Some(true), Some(true)) => GameResult::Draw,
@@ -877,8 +896,7 @@ impl Board {
     }
 
     pub fn neighbor_is_a(&self, position: Position, bug: Bug) -> bool {
-        self.top_layer_neighbors(position)
-            .any(|piece| piece.bug() == bug)
+        self.has_top_layer_neighbor_bug(position, bug)
     }
 
     #[inline(always)]
@@ -1145,7 +1163,6 @@ impl Board {
         if !matches!(self.game_result(), GameResult::Unknown) {
             return positions;
         }
-
         let initial_position = Position::initial_spawn_position();
         if self.played == 0 {
             positions.push(initial_position);
@@ -1264,36 +1281,52 @@ impl Board {
         let mut child_count = 0;
         let mut is_articulation_point = false;
 
-        for pos in dfs_info[index].position.positions_around() {
-            let neighbor_dfs_index = *dfs_indexes.get(pos);
-            if neighbor_dfs_index == MISSING_DFS_INDEX {
-                continue;
-            }
-            let neighbor_dfs_index = usize::from(neighbor_dfs_index);
-            debug_assert!(
-                neighbor_dfs_index < dfs_info.len(),
-                "Occupied position should have a DFS index"
-            );
+        let position = dfs_info[index].position;
+        macro_rules! visit_neighbor {
+            ($pos:expr) => {{
+                let neighbor_dfs_index = *dfs_indexes.get($pos);
+                if neighbor_dfs_index != MISSING_DFS_INDEX {
+                    let neighbor_dfs_index = usize::from(neighbor_dfs_index);
+                    debug_assert!(
+                        neighbor_dfs_index < dfs_info.len(),
+                        "Occupied position should have a DFS index"
+                    );
 
-            if !dfs_info[neighbor_dfs_index].visited {
-                child_count += 1;
-                dfs_info[neighbor_dfs_index].parent = Some(index);
-                self.mark_articulation_points(neighbor_dfs_index, depth + 1, dfs_info, dfs_indexes);
-                if dfs_info[neighbor_dfs_index].low >= dfs_info[index].depth {
-                    is_articulation_point = true;
+                    if !dfs_info[neighbor_dfs_index].visited {
+                        child_count += 1;
+                        dfs_info[neighbor_dfs_index].parent = Some(index);
+                        self.mark_articulation_points(
+                            neighbor_dfs_index,
+                            depth + 1,
+                            dfs_info,
+                            dfs_indexes,
+                        );
+                        if dfs_info[neighbor_dfs_index].low >= dfs_info[index].depth {
+                            is_articulation_point = true;
+                        }
+                        dfs_info[index].low =
+                            std::cmp::min(dfs_info[index].low, dfs_info[neighbor_dfs_index].low);
+                    } else {
+                        let is_alternate_connection = dfs_info[index]
+                            .parent
+                            .is_some_and(|parent_dfs_index| neighbor_dfs_index != parent_dfs_index);
+                        if is_alternate_connection {
+                            dfs_info[index].low = std::cmp::min(
+                                dfs_info[index].low,
+                                dfs_info[neighbor_dfs_index].depth,
+                            );
+                        }
+                    }
                 }
-                dfs_info[index].low =
-                    std::cmp::min(dfs_info[index].low, dfs_info[neighbor_dfs_index].low);
-            } else {
-                let is_alternate_connection = dfs_info[index]
-                    .parent
-                    .is_some_and(|parent_dfs_index| neighbor_dfs_index != parent_dfs_index);
-                if is_alternate_connection {
-                    dfs_info[index].low =
-                        std::cmp::min(dfs_info[index].low, dfs_info[neighbor_dfs_index].depth);
-                }
-            }
+            }};
         }
+
+        visit_neighbor!(Position::new(position.q, position.r - 1));
+        visit_neighbor!(Position::new(position.q, position.r + 1));
+        visit_neighbor!(Position::new(position.q + 1, position.r - 1));
+        visit_neighbor!(Position::new(position.q - 1, position.r + 1));
+        visit_neighbor!(Position::new(position.q - 1, position.r));
+        visit_neighbor!(Position::new(position.q + 1, position.r));
 
         if dfs_info[index].parent.is_none() {
             is_articulation_point = child_count > 1;
@@ -1305,6 +1338,30 @@ impl Board {
         position
             .positions_around()
             .filter_map(|pos| self.board.get(pos).top_piece())
+    }
+
+    #[inline(always)]
+    fn has_opponent_top_layer_neighbor(&self, position: Position, color: Color) -> bool {
+        for pos in position.positions_around() {
+            if let Some(piece) = self.board.get(pos).top_piece() {
+                if piece.color() != color {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    #[inline(always)]
+    fn has_top_layer_neighbor_bug(&self, position: Position, bug: Bug) -> bool {
+        for pos in position.positions_around() {
+            if let Some(piece) = self.board.get(pos).top_piece() {
+                if piece.bug() == bug {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     pub fn reserve(&self, color: Color, game_type: GameType) -> HashMap<Bug, Vec<String>> {
@@ -1327,15 +1384,11 @@ impl Board {
         self.top_pieces().map(|(_, position)| position)
     }
 
-    fn top_pieces(&self) -> impl Iterator<Item = (Piece, Position)> + '_ {
-        self.positions
-            .iter()
-            .enumerate()
-            .filter_map(|(offset, maybe_position)| {
-                let position = (*maybe_position)?;
-                let piece = self.offset_to_piece(offset);
-                (self.top_piece(position) == Some(piece)).then_some((piece, position))
-            })
+    fn top_pieces(&self) -> TopPieces<'_> {
+        TopPieces {
+            board: self,
+            offset: 0,
+        }
     }
 
     pub fn center_coordinates(&self) -> Position {
@@ -1368,19 +1421,14 @@ impl Board {
         self.spawnable_with_game_result(color, position, &self.game_result())
     }
 
+    #[inline(always)]
     fn spawnable_after_opening(&self, color: Color, position: Position) -> bool {
         if self.occupied(position) {
             return false;
         }
 
-        let mut has_neighbor = false;
-        for piece in self.top_layer_neighbors(position) {
-            has_neighbor = true;
-            if piece.color() != color {
-                return false;
-            }
-        }
-        has_neighbor
+        *self.neighbor_count.get(position) > 0
+            && !self.has_opponent_top_layer_neighbor(position, color)
     }
 
     fn spawnable_with_game_result(
@@ -1402,11 +1450,8 @@ impl Board {
             return self.is_negative_space(position);
         }
 
-        let mut neighbors = self.top_layer_neighbors(position).peekable();
-        if neighbors.peek().is_none() {
-            return false;
-        }
-        !neighbors.any(|piece| color == piece.color().opposite_color())
+        *self.neighbor_count.get(position) > 0
+            && !self.has_opponent_top_layer_neighbor(position, color)
     }
 
     pub fn negative_space(&self) -> impl Iterator<Item = Position> + '_ {
@@ -1418,8 +1463,8 @@ impl Board {
     }
 
     pub fn get_smallest(&mut self, piece: Piece, position: Position) -> Option<(Piece, Position)> {
-        if matches!(self.smallest, Some((piece, _)) if piece == *WHITE_QUEEN) {
-            return Some((*WHITE_QUEEN, self.position_of_piece(*WHITE_QUEEN).unwrap()));
+        if matches!(self.smallest, Some((piece, _)) if piece == WHITE_QUEEN) {
+            return Some((WHITE_QUEEN, self.position_of_piece(WHITE_QUEEN).unwrap()));
         }
         if let Some((current_piece, current_position)) = self.smallest {
             return match piece.simple().cmp(&current_piece.simple()) {
@@ -1453,14 +1498,16 @@ impl Board {
             return;
         }
         let mut stunned = None;
-        for n in self.top_layer_neighbors(position) {
+        for neighbor in position.positions_around() {
+            let Some(n) = self.board.get(neighbor).top_piece() else {
+                continue;
+            };
             if n.color() != piece.color() && n.bug() == Bug::Pillbug
                 || n.bug() == Bug::Mosquito
-                    && self
-                        .top_layer_neighbors(
-                            self.position_of_piece(n).expect("Piece to have a position"),
-                        )
-                        .any(|nn| nn.bug() == Bug::Pillbug)
+                    && self.has_top_layer_neighbor_bug(
+                        self.position_of_piece(n).expect("Piece to have a position"),
+                        Bug::Pillbug,
+                    )
             {
                 stunned = Some(piece);
             }
@@ -1744,10 +1791,8 @@ mod tests {
                         );
 
                         let expected_spawnables = legacy_spawnable_positions(&state.board, color);
-                        let actual_spawnables = state
-                            .board
-                            .spawnable_positions(color)
-                            .collect::<Vec<_>>();
+                        let actual_spawnables =
+                            state.board.spawnable_positions(color).collect::<Vec<_>>();
                         assert_eq!(
                             expected_spawnables, actual_spawnables,
                             "{file} turn {} spawnables {color}",
@@ -1977,11 +2022,7 @@ mod tests {
     fn spawnable_positions_preserve_initial_position_scan_behavior() {
         let mut board = Board::new();
         let center = Position::initial_spawn_position().to(Direction::E);
-        board.insert(
-            center,
-            Piece::new_from(Bug::Queen, Color::White, 0),
-            true,
-        );
+        board.insert(center, Piece::new_from(Bug::Queen, Color::White, 0), true);
         board.insert(
             center.to(Direction::E),
             Piece::new_from(Bug::Ant, Color::White, 1),

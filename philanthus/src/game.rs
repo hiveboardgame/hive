@@ -9,6 +9,19 @@ pub enum Action {
     Pass,
 }
 
+#[inline(always)]
+fn push_action(buf: &mut Vec<Action>, action: Action) {
+    if buf.len() == buf.capacity() {
+        buf.reserve(32);
+    }
+    let len = buf.len();
+    unsafe {
+        // reserve above guarantees one spare slot, and Action has no drop glue.
+        buf.as_mut_ptr().add(len).write(action);
+        buf.set_len(len + 1);
+    }
+}
+
 pub struct Reversal {
     engine: Option<Unmake>,
     prev_turn: usize,
@@ -93,7 +106,7 @@ impl Game {
         }
         let color = self.turn_color;
         self.board.for_each_move(color, |piece, from, to| {
-            buf.push(Action::Move(piece, from, to))
+            push_action(buf, Action::Move(piece, from, to))
         });
 
         let must_place_queen = self.board.queen_required(self.turn, color);
@@ -114,13 +127,13 @@ impl Game {
         if count > 0 {
             for to in self.board.spawnable_positions(color) {
                 for piece in placeable.iter().take(count).flatten() {
-                    buf.push(Action::Place(*piece, to));
+                    push_action(buf, Action::Place(*piece, to));
                 }
             }
         }
 
         if buf.is_empty() && self.board.is_shutout(color, self.game_type) {
-            buf.push(Action::Pass);
+            push_action(buf, Action::Pass);
         }
     }
 
@@ -150,9 +163,9 @@ impl Game {
             }
             Action::Place(piece, to) => {
                 self.hash ^= self.square_term(*to);
-                let unmake =
-                    self.board
-                        .make_with_pinned_update(*piece, None, *to, update_pinned);
+                let unmake = self
+                    .board
+                    .make_with_pinned_update(*piece, None, *to, update_pinned);
                 self.hash ^= self.square_term(*to);
                 Some(unmake)
             }

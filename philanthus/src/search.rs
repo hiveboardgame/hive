@@ -155,6 +155,10 @@ impl Searcher {
         let tt_move = self.tt.probe(key).and_then(|entry| entry.best);
         let mut actions = self.take_buffer();
         game.legal_actions_into(&mut actions);
+        // At depth 1, children are evaluated immediately, so ordering only affects
+        // alpha-beta efficiency. With the current cheap evaluator, skipping ordering
+        // is faster despite visiting more nodes. Revisit if evaluation becomes
+        // expensive or starts depending on legal move generation / pinned state.
         if depth > 1 {
             self.order_actions(game, &mut actions, tt_move);
         }
@@ -219,6 +223,10 @@ impl Searcher {
             self.give_buffer(actions);
             return evaluate(game);
         }
+        // At depth 1, children are evaluated immediately, so ordering only affects
+        // alpha-beta efficiency. With the current cheap evaluator, skipping ordering
+        // is faster despite visiting more nodes. Revisit if evaluation becomes
+        // expensive or starts depending on legal move generation / pinned state.
         if depth > 1 {
             self.order_actions(game, &mut actions, tt_move);
         }
