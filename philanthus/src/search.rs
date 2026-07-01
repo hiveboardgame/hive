@@ -12,6 +12,8 @@ const MAX_DEPTH: u32 = 64;
 const MATE_SCORE: i32 = WIN - 1000;
 const TT_BITS: u32 = 16;
 const ACTION_ORDER_SCORES: [i32; 9] = [i32::MAX, 120, 100, 90, 70, 20, 0, -10, -30];
+const WHITE_QUEEN: Piece = Piece::from_bits(0);
+const BLACK_QUEEN: Piece = Piece::from_bits(1);
 
 pub struct Limits {
     pub depth: Option<u32>,
@@ -117,7 +119,7 @@ impl Searcher {
         if !self.can_abort {
             return false;
         }
-        if self.nodes % 1024 == 0 {
+        if self.nodes.is_multiple_of(1024) {
             if let Some(deadline) = self.deadline {
                 self.stopped = Instant::now() >= deadline;
             }
@@ -166,13 +168,41 @@ impl Searcher {
         if self.should_stop() {
             return 0;
         }
-        if game.is_terminal() {
-            terminal_score(game, ply)
-        } else {
-            evaluate(game)
+        let white_neighbors = game
+            .board
+            .position_of_piece(WHITE_QUEEN)
+            .map(|pos| i32::from(*game.board.neighbor_count.get(pos)));
+        let black_neighbors = game
+            .board
+            .position_of_piece(BLACK_QUEEN)
+            .map(|pos| i32::from(*game.board.neighbor_count.get(pos)));
+        match (white_neighbors == Some(6), black_neighbors == Some(6)) {
+            (true, true) => 0,
+            (true, false) => {
+                if game.turn_color == Color::Black {
+                    WIN - ply
+                } else {
+                    ply - WIN
+                }
+            }
+            (false, true) => {
+                if game.turn_color == Color::White {
+                    WIN - ply
+                } else {
+                    ply - WIN
+                }
+            }
+            (false, false) => {
+                let (us, them) = match game.turn_color {
+                    Color::White => (white_neighbors, black_neighbors),
+                    Color::Black => (black_neighbors, white_neighbors),
+                };
+                (them.unwrap_or(0) - us.unwrap_or(0)) * 10
+            }
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn search_depth_one_action(
         &mut self,
         game: &mut Game,
@@ -385,8 +415,9 @@ impl Searcher {
         let mut best: Option<(Action, i32)> = None;
         let mut alpha = -INF;
         for &action in &actions {
+            let child_pinned_valid = action_preserves_ground_graph(game, &action);
             let reversal = game.make_with_pinned_update(&action, false);
-            let score = -self.negamax(game, depth - 1, -INF, -alpha, 1);
+            let score = -self.negamax(game, depth - 1, -INF, -alpha, 1, child_pinned_valid);
             game.unmake(reversal);
             if self.stopped {
                 return None;
@@ -409,7 +440,15 @@ impl Searcher {
         best
     }
 
-    fn negamax(&mut self, game: &mut Game, depth: u32, mut alpha: i32, beta: i32, ply: i32) -> i32 {
+    fn negamax(
+        &mut self,
+        game: &mut Game,
+        depth: u32,
+        mut alpha: i32,
+        beta: i32,
+        ply: i32,
+        pinned_valid: bool,
+    ) -> i32 {
         self.nodes += 1;
         if self.should_stop() {
             return 0;
@@ -437,7 +476,9 @@ impl Searcher {
             }
         }
 
-        game.board.update_pinned();
+        if !pinned_valid {
+            game.board.update_pinned();
+        }
 
         if depth == 1 {
             return self.negamax_depth_one(game, alpha, beta, ply, key, alpha_orig);
@@ -459,8 +500,9 @@ impl Searcher {
         let mut value = -INF;
         let mut best_action = None;
         for &action in &actions {
+            let child_pinned_valid = action_preserves_ground_graph(game, &action);
             let reversal = game.make_with_pinned_update(&action, false);
-            let score = -self.negamax(game, depth - 1, -beta, -alpha, ply + 1);
+            let score = -self.negamax(game, depth - 1, -beta, -alpha, ply + 1, child_pinned_valid);
             game.unmake(reversal);
             if self.stopped {
                 return 0;
@@ -528,6 +570,14 @@ fn piece_can_throw(piece: Piece, position: Position, game: &Game) -> bool {
             game.board.level(position) == 1 && game.board.neighbor_is_a(position, Bug::Pillbug)
         }
         _ => false,
+    }
+}
+
+fn action_preserves_ground_graph(game: &Game, action: &Action) -> bool {
+    match action {
+        Action::Move(_, from, to) => game.board.level(*from) > 1 && game.board.occupied(*to),
+        Action::Place(_, _) => false,
+        Action::Pass => true,
     }
 }
 

@@ -27,7 +27,7 @@ use std::{
 
 pub const BOARD_SIZE: i32 = 32;
 const BOARD_CELLS: usize = (BOARD_SIZE as usize) * (BOARD_SIZE as usize);
-const POSITION_SET_WORDS: usize = (BOARD_CELLS + 63) / 64;
+const POSITION_SET_WORDS: usize = BOARD_CELLS.div_ceil(64);
 const MAX_SPAWNABLE_POSITIONS: usize = 1 + 24 * 6;
 const WHITE_QUEEN: Piece = Piece::from_bits(0);
 const BLACK_QUEEN: Piece = Piece::from_bits(1);
