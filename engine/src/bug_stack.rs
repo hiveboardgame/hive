@@ -77,10 +77,12 @@ impl BugStack {
         simple
     }
 
+    #[inline(always)]
     pub fn len(&self) -> usize {
         self.size as usize
     }
 
+    #[inline(always)]
     pub fn is_empty(&self) -> bool {
         self.size == 0
     }
@@ -127,6 +129,7 @@ impl BugStack {
         piece
     }
 
+    #[inline(always)]
     pub fn top_piece(&self) -> Option<Piece> {
         if self.size == 0 {
             return None;

@@ -363,18 +363,6 @@ impl Bug {
         }
     }
 
-    fn crawl_negative_space<'a>(
-        position: Position,
-        board: &'a MidMoveBoard<'a>,
-    ) -> impl Iterator<Item = Position> + 'a {
-        position.positions_around().filter(move |pos| {
-            let (pos1, pos2) = position.common_adjacent_positions(*pos);
-            (board.occupied(pos1) || board.occupied(pos2))
-                && board.is_negative_space(*pos)
-                && !board.gated(1, position, *pos)
-        })
-    }
-
     fn crawl(position: Position, board: &Board) -> impl Iterator<Item = Position> + '_ {
         board.positions_taken_around(position).flat_map(move |pos| {
             let (pos1, pos2) = position.common_adjacent_positions(pos);
@@ -423,23 +411,29 @@ impl Bug {
             visited.mark(position);
 
             let mut frontier: Vec<Position> = Vec::new();
-            for pos in Bug::crawl_negative_space(position, &board) {
+            if !board.scan_crawl_negative_space_while(position, &mut |pos| {
                 if !keep_scanning(pos) {
                     return false;
                 }
                 visited.mark(pos);
                 frontier.push(pos);
+                true
+            }) {
+                return false;
             }
 
             while let Some(position) = frontier.pop() {
-                for pos in Bug::crawl_negative_space(position, &board) {
-                    if !visited.is_marked(pos) && board.is_negative_space(pos) {
+                if !board.scan_crawl_negative_space_while(position, &mut |pos| {
+                    if !visited.is_marked(pos) {
                         if !keep_scanning(pos) {
                             return false;
                         }
                         visited.mark(pos);
                         frontier.push(pos);
                     }
+                    true
+                }) {
+                    return false;
                 }
             }
             true
@@ -665,18 +659,22 @@ impl Bug {
     ) -> bool {
         let board = MidMoveBoard::new(board, position);
         let mut positions = Vec::new();
-        for pos1 in Bug::crawl_negative_space(position, &board) {
-            for pos2 in Bug::crawl_negative_space(pos1, &board).filter(|pos| *pos != position) {
-                for pos3 in Bug::crawl_negative_space(pos2, &board)
-                    .filter(|pos3| *pos3 != position && *pos3 != pos1)
-                {
+        board.scan_crawl_negative_space_while(position, &mut |pos1| {
+            board.scan_crawl_negative_space_while(pos1, &mut |pos2| {
+                if pos2 == position {
+                    return true;
+                }
+                board.scan_crawl_negative_space_while(pos2, &mut |pos3| {
+                    if pos3 == position || pos3 == pos1 {
+                        return true;
+                    }
                     if !Bug::scan_unique_target_while(&mut positions, pos3, keep_scanning) {
                         return false;
                     }
-                }
-            }
-        }
-        true
+                    true
+                })
+            })
+        })
     }
 }
 

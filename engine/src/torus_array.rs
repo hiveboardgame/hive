@@ -20,18 +20,17 @@ where
         }
     }
 
+    #[inline(always)]
     pub fn get(&self, position: Position) -> &T {
-        self.data.get((position.r * BOARD_SIZE + position.q) as usize).expect(
-            "TorusArray found an empty position, this should not happen because it's initialized",
-        )
+        &self.data[(position.r * BOARD_SIZE + position.q) as usize]
     }
 
+    #[inline(always)]
     pub fn get_mut(&mut self, position: Position) -> &mut T {
-        self.data.get_mut((position.r * BOARD_SIZE + position.q) as usize).expect(
-            "TorusArray found an empty position, this should not happen because it's initialized",
-        )
+        &mut self.data[(position.r * BOARD_SIZE + position.q) as usize]
     }
 
+    #[inline(always)]
     pub fn set(&mut self, position: Position, element: T) {
         self.data[(position.r * BOARD_SIZE + position.q) as usize] = element;
     }

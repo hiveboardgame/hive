@@ -125,6 +125,14 @@ impl Game {
     }
 
     pub fn make(&mut self, action: &Action) -> Reversal {
+        self.make_with_pinned_update(action, true)
+    }
+
+    pub(crate) fn make_with_pinned_update(
+        &mut self,
+        action: &Action,
+        update_pinned: bool,
+    ) -> Reversal {
         let prev_turn = self.turn;
         let prev_turn_color = self.turn_color;
         let prev_last_moved = self.board.last_moved;
@@ -134,13 +142,17 @@ impl Game {
         let engine = match action {
             Action::Move(piece, from, to) => {
                 self.hash ^= self.square_term(*from) ^ self.square_term(*to);
-                let unmake = self.board.make(*piece, Some(*from), *to);
+                let unmake =
+                    self.board
+                        .make_with_pinned_update(*piece, Some(*from), *to, update_pinned);
                 self.hash ^= self.square_term(*from) ^ self.square_term(*to);
                 Some(unmake)
             }
             Action::Place(piece, to) => {
                 self.hash ^= self.square_term(*to);
-                let unmake = self.board.make(*piece, None, *to);
+                let unmake =
+                    self.board
+                        .make_with_pinned_update(*piece, None, *to, update_pinned);
                 self.hash ^= self.square_term(*to);
                 Some(unmake)
             }

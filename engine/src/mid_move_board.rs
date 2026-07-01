@@ -22,26 +22,73 @@ impl<'this> MidMoveBoard<'this> {
         }
     }
 
-    pub fn is_negative_space(&self, position: Position) -> bool {
-        *self.neighbor_count.get(position) > 0 && self.level(position) == 0
-    }
+    pub(crate) fn scan_crawl_negative_space_while(
+        &self,
+        position: Position,
+        keep_scanning: &mut impl FnMut(Position) -> bool,
+    ) -> bool {
+        let nw = Position::new(position.q, position.r - 1);
+        let se = Position::new(position.q, position.r + 1);
+        let ne = Position::new(position.q + 1, position.r - 1);
+        let sw = Position::new(position.q - 1, position.r + 1);
+        let w = Position::new(position.q - 1, position.r);
+        let e = Position::new(position.q + 1, position.r);
 
-    pub fn gated(&self, level: usize, from: Position, to: Position) -> bool {
-        let (pos1, pos2) = from.common_adjacent_positions(to);
-        let level1 = self.level(pos1);
-        let level2 = self.level(pos2);
-        if level1 == 0 || level2 == 0 {
+        let nw_level = self.level(nw);
+        let se_level = self.level(se);
+        let ne_level = self.level(ne);
+        let sw_level = self.level(sw);
+        let w_level = self.level(w);
+        let e_level = self.level(e);
+
+        if nw_level == 0
+            && *self.neighbor_count.get(nw) > 0
+            && (w_level > 0) != (ne_level > 0)
+            && !keep_scanning(nw)
+        {
             return false;
         }
-        level1 >= level && level2 >= level
+        if se_level == 0
+            && *self.neighbor_count.get(se) > 0
+            && (e_level > 0) != (sw_level > 0)
+            && !keep_scanning(se)
+        {
+            return false;
+        }
+        if ne_level == 0
+            && *self.neighbor_count.get(ne) > 0
+            && (nw_level > 0) != (e_level > 0)
+            && !keep_scanning(ne)
+        {
+            return false;
+        }
+        if sw_level == 0
+            && *self.neighbor_count.get(sw) > 0
+            && (se_level > 0) != (w_level > 0)
+            && !keep_scanning(sw)
+        {
+            return false;
+        }
+        if w_level == 0
+            && *self.neighbor_count.get(w) > 0
+            && (sw_level > 0) != (nw_level > 0)
+            && !keep_scanning(w)
+        {
+            return false;
+        }
+        if e_level == 0
+            && *self.neighbor_count.get(e) > 0
+            && (ne_level > 0) != (se_level > 0)
+            && !keep_scanning(e)
+        {
+            return false;
+        }
+        true
     }
 
-    pub fn occupied(&self, position: Position) -> bool {
-        self.level(position) > 0
-    }
-
+    #[inline(always)]
     fn level(&self, position: Position) -> usize {
-        let mut level = self.board.level(position);
+        let mut level = self.board.board.get(position).size as usize;
         if position == self.position_in_flight {
             level = level
                 .checked_sub(1)

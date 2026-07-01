@@ -11,6 +11,7 @@ use crate::{
 const MAX_DEPTH: u32 = 64;
 const MATE_SCORE: i32 = WIN - 1000;
 const TT_BITS: u32 = 16;
+const ACTION_ORDER_SCORES: [i32; 9] = [i32::MAX, 120, 100, 90, 70, 20, 0, -10, -30];
 
 pub struct Limits {
     pub depth: Option<u32>,
@@ -113,16 +114,54 @@ impl Searcher {
         self.stopped
     }
 
+    fn order_actions(&mut self, game: &Game, actions: &mut [Action], tt_move: Option<Action>) {
+        if actions.len() < 2 {
+            return;
+        }
+
+        let us = game.turn_color;
+        let opp_queen = queen_position(game, us.opposite_color());
+        let own_queen = queen_position(game, us);
+        let mut ranks = Vec::with_capacity(actions.len());
+        let mut counts = [0_usize; ACTION_ORDER_SCORES.len()];
+
+        for action in actions.iter() {
+            let rank = action_order_rank(action, tt_move, opp_queen, own_queen);
+            ranks.push(rank as u8);
+            counts[rank] += 1;
+        }
+
+        let mut starts = [0_usize; ACTION_ORDER_SCORES.len()];
+        let mut next = 0;
+        for (start, count) in starts.iter_mut().zip(counts) {
+            *start = next;
+            next += count;
+        }
+        let mut offsets = starts;
+
+        let mut ordered = self.take_buffer();
+        ordered.resize(actions.len(), Action::Pass);
+        for (action, rank) in actions.iter().copied().zip(ranks) {
+            let rank = rank as usize;
+            ordered[offsets[rank]] = action;
+            offsets[rank] += 1;
+        }
+        actions.copy_from_slice(&ordered[..actions.len()]);
+        self.give_buffer(ordered);
+    }
+
     fn run_root(&mut self, game: &mut Game, depth: u32) -> Option<(Action, i32)> {
         let key = game.hash;
         let tt_move = self.tt.probe(key).and_then(|entry| entry.best);
         let mut actions = self.take_buffer();
         game.legal_actions_into(&mut actions);
-        order_actions(game, &mut actions, tt_move);
+        if depth > 1 {
+            self.order_actions(game, &mut actions, tt_move);
+        }
         let mut best: Option<(Action, i32)> = None;
         let mut alpha = -INF;
         for &action in &actions {
-            let reversal = game.make(&action);
+            let reversal = game.make_with_pinned_update(&action, depth > 1);
             let score = -self.negamax(game, depth - 1, -INF, -alpha, 1);
             game.unmake(reversal);
             if self.stopped {
@@ -180,11 +219,13 @@ impl Searcher {
             self.give_buffer(actions);
             return evaluate(game);
         }
-        order_actions(game, &mut actions, tt_move);
+        if depth > 1 {
+            self.order_actions(game, &mut actions, tt_move);
+        }
         let mut value = -INF;
         let mut best_action = None;
         for &action in &actions {
-            let reversal = game.make(&action);
+            let reversal = game.make_with_pinned_update(&action, depth > 1);
             let score = -self.negamax(game, depth - 1, -beta, -alpha, ply + 1);
             game.unmake(reversal);
             if self.stopped {
@@ -241,18 +282,28 @@ fn from_tt_score(score: i32, ply: i32) -> i32 {
     }
 }
 
-fn order_actions(game: &Game, actions: &mut [Action], tt_move: Option<Action>) {
-    let us = game.turn_color;
-    let opp_queen = queen_position(game, us.opposite_color());
-    let own_queen = queen_position(game, us);
-    actions.sort_by_cached_key(|action| {
-        std::cmp::Reverse(action_order_key(action, tt_move, opp_queen, own_queen))
-    });
-}
-
 fn queen_position(game: &Game, color: Color) -> Option<Position> {
     game.board
         .position_of_piece(Piece::new_from(Bug::Queen, color, 0))
+}
+
+fn action_order_rank(
+    action: &Action,
+    tt_move: Option<Action>,
+    opp_queen: Option<Position>,
+    own_queen: Option<Position>,
+) -> usize {
+    let key = action_order_key(action, tt_move, opp_queen, own_queen);
+    for (rank, score) in ACTION_ORDER_SCORES.iter().enumerate() {
+        if key == *score {
+            return rank;
+        }
+    }
+    debug_assert!(false, "unexpected action order key {key}");
+    ACTION_ORDER_SCORES
+        .iter()
+        .position(|score| key > *score)
+        .unwrap_or(ACTION_ORDER_SCORES.len() - 1)
 }
 
 fn action_order_key(

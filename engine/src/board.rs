@@ -27,6 +27,59 @@ use std::{
 };
 
 pub const BOARD_SIZE: i32 = 32;
+const BOARD_CELLS: usize = (BOARD_SIZE as usize) * (BOARD_SIZE as usize);
+const POSITION_SET_WORDS: usize = (BOARD_CELLS + 63) / 64;
+const MAX_SPAWNABLE_POSITIONS: usize = 1 + 24 * 6;
+const OFFSET_TO_PIECES: [Piece; 48] = [
+    offset_to_piece_const(0),
+    offset_to_piece_const(1),
+    offset_to_piece_const(2),
+    offset_to_piece_const(3),
+    offset_to_piece_const(4),
+    offset_to_piece_const(5),
+    offset_to_piece_const(6),
+    offset_to_piece_const(7),
+    offset_to_piece_const(8),
+    offset_to_piece_const(9),
+    offset_to_piece_const(10),
+    offset_to_piece_const(11),
+    offset_to_piece_const(12),
+    offset_to_piece_const(13),
+    offset_to_piece_const(14),
+    offset_to_piece_const(15),
+    offset_to_piece_const(16),
+    offset_to_piece_const(17),
+    offset_to_piece_const(18),
+    offset_to_piece_const(19),
+    offset_to_piece_const(20),
+    offset_to_piece_const(21),
+    offset_to_piece_const(22),
+    offset_to_piece_const(23),
+    offset_to_piece_const(24),
+    offset_to_piece_const(25),
+    offset_to_piece_const(26),
+    offset_to_piece_const(27),
+    offset_to_piece_const(28),
+    offset_to_piece_const(29),
+    offset_to_piece_const(30),
+    offset_to_piece_const(31),
+    offset_to_piece_const(32),
+    offset_to_piece_const(33),
+    offset_to_piece_const(34),
+    offset_to_piece_const(35),
+    offset_to_piece_const(36),
+    offset_to_piece_const(37),
+    offset_to_piece_const(38),
+    offset_to_piece_const(39),
+    offset_to_piece_const(40),
+    offset_to_piece_const(41),
+    offset_to_piece_const(42),
+    offset_to_piece_const(43),
+    offset_to_piece_const(44),
+    offset_to_piece_const(45),
+    offset_to_piece_const(46),
+    offset_to_piece_const(47),
+];
 const MISSING_DFS_INDEX: u8 = u8::MAX;
 
 thread_local! {
@@ -35,6 +88,90 @@ thread_local! {
 lazy_static! {
     static ref BLACK_QUEEN: Piece = Piece::new_from(Bug::Queen, Color::Black, 0);
     static ref WHITE_QUEEN: Piece = Piece::new_from(Bug::Queen, Color::White, 0);
+}
+
+struct PositionSet {
+    words: [u64; POSITION_SET_WORDS],
+}
+
+impl PositionSet {
+    fn new() -> Self {
+        Self {
+            words: [0; POSITION_SET_WORDS],
+        }
+    }
+
+    fn insert(&mut self, position: Position) -> bool {
+        let index = position_bit_index(position);
+        let word_index = index / 64;
+        let mask = 1_u64 << (index % 64);
+        let was_absent = self.words[word_index] & mask == 0;
+        self.words[word_index] |= mask;
+        was_absent
+    }
+}
+
+struct SpawnablePositions {
+    positions: [Position; MAX_SPAWNABLE_POSITIONS],
+    next: usize,
+    len: usize,
+}
+
+impl SpawnablePositions {
+    fn new() -> Self {
+        Self {
+            positions: [Position { q: 0, r: 0 }; MAX_SPAWNABLE_POSITIONS],
+            next: 0,
+            len: 0,
+        }
+    }
+
+    fn len(&self) -> usize {
+        self.len
+    }
+
+    fn push(&mut self, position: Position) {
+        debug_assert!(self.len < MAX_SPAWNABLE_POSITIONS);
+        self.positions[self.len] = position;
+        self.len += 1;
+    }
+
+    fn sort_from(&mut self, start: usize) {
+        self.positions[start..self.len]
+            .sort_unstable_by_key(|position| position_scan_order(*position));
+    }
+}
+
+impl Iterator for SpawnablePositions {
+    type Item = Position;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.next == self.len {
+            return None;
+        }
+        let position = self.positions[self.next];
+        self.next += 1;
+        Some(position)
+    }
+}
+
+fn position_bit_index(position: Position) -> usize {
+    position.r as usize * BOARD_SIZE as usize + position.q as usize
+}
+
+fn position_scan_order(position: Position) -> usize {
+    position.q as usize * BOARD_SIZE as usize + position.r as usize
+}
+
+const fn offset_to_piece_const(offset: usize) -> Piece {
+    let color = (offset / 24) as u8;
+    let bug = ((offset - color as usize * 24) / 3) as u8;
+    let order = if bug >= 4 {
+        (offset + 1 - bug as usize * 3 - color as usize * 24) as u8
+    } else {
+        0
+    };
+    Piece::from_bits(color | (bug << 1) | (order << 4))
 }
 
 /// Acts as a more transparent representation of
@@ -640,6 +777,16 @@ impl Board {
     }
 
     pub fn make(&mut self, piece: Piece, from: Option<Position>, to: Position) -> Unmake {
+        self.make_with_pinned_update(piece, from, to, true)
+    }
+
+    pub fn make_with_pinned_update(
+        &mut self,
+        piece: Piece,
+        from: Option<Position>,
+        to: Position,
+        update_pinned: bool,
+    ) -> Unmake {
         let unmake = Unmake {
             piece,
             from,
@@ -653,14 +800,15 @@ impl Board {
         match from {
             Some(from) => {
                 debug_assert!(self.is_top_piece(piece, from));
-                let ground_graph_changes = self.level(from) == 1 || !self.occupied(to);
+                let ground_graph_changes =
+                    update_pinned && (self.level(from) == 1 || !self.occupied(to));
                 let removed = self.remove(from);
                 debug_assert_eq!(removed, piece);
                 self.insert_with_pinned_update(to, piece, false, ground_graph_changes);
                 self.last_move = (Some(from), Some(to));
             }
             None => {
-                self.insert(to, piece, true);
+                self.insert_with_pinned_update(to, piece, true, update_pinned);
                 self.last_move = (None, Some(to));
             }
         }
@@ -733,19 +881,19 @@ impl Board {
             .any(|piece| piece.bug() == bug)
     }
 
+    #[inline(always)]
     pub fn level(&self, position: Position) -> usize {
         self.board.get(position).size as usize
     }
 
+    #[inline(always)]
     pub fn piece_to_offset(&self, piece: Piece) -> usize {
         piece.color() as usize * 24 + piece.bug() as usize * 3 + piece.order().saturating_sub(1)
     }
 
+    #[inline(always)]
     pub fn offset_to_piece(&self, offset: usize) -> Piece {
-        let color = offset as u8 / 24;
-        let bug = (offset as u8 - color * 24) / 3;
-        let order = (offset as u8 + 1 - bug * 3 - color * 24) as usize;
-        Piece::new_from(Bug::from(bug), Color::from(color), order)
+        OFFSET_TO_PIECES[offset]
     }
 
     fn offset_represents_piece(&self, offset: usize, game_type: GameType) -> bool {
@@ -763,6 +911,7 @@ impl Board {
         self.board.get(position).bottom_piece()
     }
 
+    #[inline(always)]
     pub fn top_piece(&self, position: Position) -> Option<Piece> {
         self.board.get(position).top_piece()
     }
@@ -835,6 +984,7 @@ impl Board {
             .filter(|pos| self.occupied(*pos))
     }
 
+    #[inline(always)]
     pub fn occupied(&self, position: Position) -> bool {
         self.board.get(position).size > 0
     }
@@ -991,10 +1141,51 @@ impl Board {
     }
 
     pub fn spawnable_positions(&self, color: Color) -> impl Iterator<Item = Position> + '_ {
-        let game_result = self.game_result();
-        std::iter::once(Position::initial_spawn_position())
-            .chain(self.negative_space())
-            .filter(move |pos| self.spawnable_with_game_result(color, *pos, &game_result))
+        let mut positions = SpawnablePositions::new();
+        if !matches!(self.game_result(), GameResult::Unknown) {
+            return positions;
+        }
+
+        let initial_position = Position::initial_spawn_position();
+        if self.played == 0 {
+            positions.push(initial_position);
+            return positions;
+        }
+
+        if self.played == 1 {
+            if self.is_negative_space(initial_position) {
+                positions.push(initial_position);
+            }
+            let scan_order_start = positions.len();
+            let mut seen = PositionSet::new();
+            for (_, position) in self.top_pieces() {
+                for target in position.positions_around() {
+                    if self.is_negative_space(target) && seen.insert(target) {
+                        positions.push(target);
+                    }
+                }
+            }
+            positions.sort_from(scan_order_start);
+            return positions;
+        }
+
+        if self.spawnable_after_opening(color, initial_position) {
+            positions.push(initial_position);
+        }
+        let scan_order_start = positions.len();
+        let mut seen = PositionSet::new();
+        for (piece, position) in self.top_pieces() {
+            if !piece.is_color(color) {
+                continue;
+            }
+            for target in position.positions_around() {
+                if seen.insert(target) && self.spawnable_after_opening(color, target) {
+                    positions.push(target);
+                }
+            }
+        }
+        positions.sort_from(scan_order_start);
+        positions
     }
 
     pub fn queen_played(&self, color: Color) -> bool {
@@ -1051,6 +1242,10 @@ impl Board {
             if !dfs_info.is_empty() {
                 self.mark_articulation_points(0, 0, &mut dfs_info, &dfs_indexes);
             }
+
+            for info in &dfs_info {
+                dfs_indexes.set(info.position, MISSING_DFS_INDEX);
+            }
         });
 
         dfs_info
@@ -1069,8 +1264,12 @@ impl Board {
         let mut child_count = 0;
         let mut is_articulation_point = false;
 
-        for pos in self.positions_taken_around(dfs_info[index].position) {
-            let neighbor_dfs_index = usize::from(*dfs_indexes.get(pos));
+        for pos in dfs_info[index].position.positions_around() {
+            let neighbor_dfs_index = *dfs_indexes.get(pos);
+            if neighbor_dfs_index == MISSING_DFS_INDEX {
+                continue;
+            }
+            let neighbor_dfs_index = usize::from(neighbor_dfs_index);
             debug_assert!(
                 neighbor_dfs_index < dfs_info.len(),
                 "Occupied position should have a DFS index"
@@ -1167,6 +1366,21 @@ impl Board {
 
     pub fn spawnable(&self, color: Color, position: Position) -> bool {
         self.spawnable_with_game_result(color, position, &self.game_result())
+    }
+
+    fn spawnable_after_opening(&self, color: Color, position: Position) -> bool {
+        if self.occupied(position) {
+            return false;
+        }
+
+        let mut has_neighbor = false;
+        for piece in self.top_layer_neighbors(position) {
+            has_neighbor = true;
+            if piece.color() != color {
+                return false;
+            }
+        }
+        has_neighbor
     }
 
     fn spawnable_with_game_result(
@@ -1371,6 +1585,14 @@ mod tests {
     use crate::{history::History, state::State};
     use std::collections::HashSet;
 
+    fn legacy_spawnable_positions(board: &Board, color: Color) -> Vec<Position> {
+        let game_result = board.game_result();
+        std::iter::once(Position::initial_spawn_position())
+            .chain(board.negative_space())
+            .filter(|pos| board.spawnable_with_game_result(color, *pos, &game_result))
+            .collect()
+    }
+
     #[test]
     fn tests_action_existence_matches_full_generation_for_pass_games() {
         for file in [
@@ -1518,6 +1740,17 @@ mod tests {
                         assert_eq!(
                             expected_pieces, actual_pieces,
                             "{file} turn {} placeable {color}",
+                            state.turn
+                        );
+
+                        let expected_spawnables = legacy_spawnable_positions(&state.board, color);
+                        let actual_spawnables = state
+                            .board
+                            .spawnable_positions(color)
+                            .collect::<Vec<_>>();
+                        assert_eq!(
+                            expected_spawnables, actual_spawnables,
+                            "{file} turn {} spawnables {color}",
                             state.turn
                         );
                     }
@@ -1738,6 +1971,31 @@ mod tests {
         assert_eq!(positions.count(), 6);
         let positions = board.spawnable_positions(Color::Black);
         assert_eq!(positions.count(), 0);
+    }
+
+    #[test]
+    fn spawnable_positions_preserve_initial_position_scan_behavior() {
+        let mut board = Board::new();
+        let center = Position::initial_spawn_position().to(Direction::E);
+        board.insert(
+            center,
+            Piece::new_from(Bug::Queen, Color::White, 0),
+            true,
+        );
+        board.insert(
+            center.to(Direction::E),
+            Piece::new_from(Bug::Ant, Color::White, 1),
+            true,
+        );
+
+        assert_eq!(
+            board.spawnable_positions(Color::White).collect::<Vec<_>>(),
+            legacy_spawnable_positions(&board, Color::White)
+        );
+        assert_eq!(
+            board.spawnable_positions(Color::Black).collect::<Vec<_>>(),
+            legacy_spawnable_positions(&board, Color::Black)
+        );
     }
 
     #[test]

@@ -166,8 +166,39 @@ impl Position {
     }
 
     pub fn common_adjacent_positions(&self, to: Position) -> (Position, Position) {
-        let (dir1, dir2) = self.direction(to).adjacent_directions();
-        (self.to(dir1), self.to(dir2))
+        let diff = (
+            Self::wrap_around(to.q - self.q),
+            Self::wrap_around(to.r - self.r),
+        );
+        match diff {
+            (0, -1) => (
+                Position::new(self.q - 1, self.r),
+                Position::new(self.q + 1, self.r - 1),
+            ),
+            (1, -1) => (
+                Position::new(self.q, self.r - 1),
+                Position::new(self.q + 1, self.r),
+            ),
+            (1, 0) => (
+                Position::new(self.q + 1, self.r - 1),
+                Position::new(self.q, self.r + 1),
+            ),
+            (0, 1) => (
+                Position::new(self.q + 1, self.r),
+                Position::new(self.q - 1, self.r + 1),
+            ),
+            (-1, 1) => (
+                Position::new(self.q, self.r + 1),
+                Position::new(self.q - 1, self.r),
+            ),
+            (-1, 0) => (
+                Position::new(self.q - 1, self.r + 1),
+                Position::new(self.q, self.r - 1),
+            ),
+            (q, r) => {
+                panic!("(odd) Direction of movement unknown, from: {self} to: {to} ({q},{r})")
+            }
+        }
     }
 
     pub fn positions_around(&self) -> impl Iterator<Item = Position> {
