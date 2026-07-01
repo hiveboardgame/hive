@@ -391,12 +391,17 @@ impl Bug {
     }
 
     fn ant_moves(position: Position, board: &Board) -> Vec<Position> {
-        let mut found_pos = Vec::with_capacity(24);
-        Bug::scan_ant_moves_while(position, board, &mut |pos| {
-            found_pos.push(pos);
+        let mut moves = Vec::with_capacity(24);
+        Bug::normal_moves_into(position, board, &mut moves);
+        moves
+    }
+
+    pub fn normal_moves_into(position: Position, board: &Board, moves: &mut Vec<Position>) {
+        moves.clear();
+        Bug::scan_normal_moves_while(position, board, &mut |pos| {
+            moves.push(pos);
             true
         });
-        found_pos
     }
 
     fn scan_ant_moves_while(

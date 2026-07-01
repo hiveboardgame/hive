@@ -53,6 +53,7 @@ fn run(game: &mut Game, limits: Limits, tt: TranspositionTable) -> Option<Outcom
         can_abort: false,
         tt,
         pool: Vec::new(),
+        target_buffer: Vec::new(),
     };
     let max_depth = limits.depth.unwrap_or(MAX_DEPTH).max(1);
 
@@ -87,6 +88,7 @@ struct Searcher {
     can_abort: bool,
     tt: TranspositionTable,
     pool: Vec<Vec<Action>>,
+    target_buffer: Vec<Position>,
 }
 
 impl Searcher {
@@ -97,6 +99,15 @@ impl Searcher {
     fn give_buffer(&mut self, mut buffer: Vec<Action>) {
         buffer.clear();
         self.pool.push(buffer);
+    }
+
+    fn take_target_buffer(&mut self) -> Vec<Position> {
+        std::mem::take(&mut self.target_buffer)
+    }
+
+    fn give_target_buffer(&mut self, mut buffer: Vec<Position>) {
+        buffer.clear();
+        self.target_buffer = buffer;
     }
 
     fn should_stop(&mut self) -> bool {
@@ -148,6 +159,215 @@ impl Searcher {
         }
         actions.copy_from_slice(&ordered[..actions.len()]);
         self.give_buffer(ordered);
+    }
+
+    fn leaf_score(&mut self, game: &mut Game, ply: i32) -> i32 {
+        self.nodes += 1;
+        if self.should_stop() {
+            return 0;
+        }
+        if game.is_terminal() {
+            terminal_score(game, ply)
+        } else {
+            evaluate(game)
+        }
+    }
+
+    fn search_depth_one_action(
+        &mut self,
+        game: &mut Game,
+        action: Action,
+        alpha: &mut i32,
+        beta: i32,
+        ply: i32,
+        value: &mut i32,
+        best_action: &mut Option<Action>,
+    ) -> bool {
+        let reversal = game.make_with_pinned_update(&action, false);
+        let score = -self.leaf_score(game, ply + 1);
+        game.unmake(reversal);
+        if self.stopped {
+            return false;
+        }
+        if score > *value {
+            *value = score;
+            *best_action = Some(action);
+        }
+        if *value > *alpha {
+            *alpha = *value;
+        }
+        *alpha < beta
+    }
+
+    fn negamax_depth_one(
+        &mut self,
+        game: &mut Game,
+        mut alpha: i32,
+        beta: i32,
+        ply: i32,
+        key: u64,
+        alpha_orig: i32,
+    ) -> i32 {
+        let color = game.turn_color;
+        let mut value = -INF;
+        let mut best_action = None;
+        let mut saw_action = false;
+        let mut targets = self.take_target_buffer();
+
+        'actions: {
+            if game.board.queen_played(color) {
+                for offset in 0..game.board.positions.len() {
+                    let Some(pos) = game.board.positions[offset] else {
+                        continue;
+                    };
+                    let piece = game.board.offset_to_piece(offset);
+                    if game.board.top_piece(pos) != Some(piece) {
+                        continue;
+                    }
+                    if !piece.is_color(color) || game.board.last_moved == Some((piece, pos)) {
+                        continue;
+                    }
+
+                    if !game.board.is_pinned(piece) {
+                        Bug::normal_moves_into(pos, &game.board, &mut targets);
+                        for i in 0..targets.len() {
+                            saw_action = true;
+                            let action = Action::Move(piece, pos, targets[i]);
+                            if !self.search_depth_one_action(
+                                game,
+                                action,
+                                &mut alpha,
+                                beta,
+                                ply,
+                                &mut value,
+                                &mut best_action,
+                            ) {
+                                if self.stopped {
+                                    self.give_target_buffer(targets);
+                                    return 0;
+                                }
+                                break 'actions;
+                            }
+                        }
+                    }
+
+                    if piece_can_throw(piece, pos, game) {
+                        for source in pos.positions_around() {
+                            let Some(thrown) = game.board.top_piece(source) else {
+                                continue;
+                            };
+                            if game.board.last_moved == Some((thrown, source)) {
+                                continue;
+                            }
+                            for target in pos.positions_around() {
+                                if !Bug::can_throw(pos, source, target, &game.board) {
+                                    continue;
+                                }
+                                saw_action = true;
+                                let action = Action::Move(thrown, source, target);
+                                if !self.search_depth_one_action(
+                                    game,
+                                    action,
+                                    &mut alpha,
+                                    beta,
+                                    ply,
+                                    &mut value,
+                                    &mut best_action,
+                                ) {
+                                    if self.stopped {
+                                        self.give_target_buffer(targets);
+                                        return 0;
+                                    }
+                                    break 'actions;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            let must_place_queen = game.board.queen_required(game.turn, color);
+            let queen_banned = game.tournament && game.turn < 2;
+            let mut placeable: [Option<Piece>; 8] = [None; 8];
+            let mut count = 0;
+            game.board
+                .for_each_placeable_piece(color, game.game_type, |piece| {
+                    if piece.bug() == Bug::Queen && queen_banned {
+                        return;
+                    }
+                    if must_place_queen && piece.bug() != Bug::Queen {
+                        return;
+                    }
+                    placeable[count] = Some(piece);
+                    count += 1;
+                });
+            if count > 0 {
+                targets.clear();
+                targets.extend(game.board.spawnable_positions(color));
+                for i in 0..targets.len() {
+                    let to = targets[i];
+                    for piece in placeable.iter().take(count).flatten() {
+                        saw_action = true;
+                        let action = Action::Place(*piece, to);
+                        if !self.search_depth_one_action(
+                            game,
+                            action,
+                            &mut alpha,
+                            beta,
+                            ply,
+                            &mut value,
+                            &mut best_action,
+                        ) {
+                            if self.stopped {
+                                self.give_target_buffer(targets);
+                                return 0;
+                            }
+                            break 'actions;
+                        }
+                    }
+                }
+            }
+
+            if !saw_action && game.board.is_shutout(color, game.game_type) {
+                let action = Action::Pass;
+                saw_action = true;
+                if !self.search_depth_one_action(
+                    game,
+                    action,
+                    &mut alpha,
+                    beta,
+                    ply,
+                    &mut value,
+                    &mut best_action,
+                ) && self.stopped
+                {
+                    self.give_target_buffer(targets);
+                    return 0;
+                }
+            }
+        }
+
+        self.give_target_buffer(targets);
+
+        if !saw_action {
+            return evaluate(game);
+        }
+
+        let bound = if value <= alpha_orig {
+            Bound::Upper
+        } else if value >= beta {
+            Bound::Lower
+        } else {
+            Bound::Exact
+        };
+        self.tt.store(Entry {
+            key,
+            depth: 1,
+            score: to_tt_score(value, ply),
+            bound,
+            best: best_action,
+        });
+        value
     }
 
     fn run_root(&mut self, game: &mut Game, depth: u32) -> Option<(Action, i32)> {
@@ -215,6 +435,10 @@ impl Searcher {
                     _ => {}
                 }
             }
+        }
+
+        if depth == 1 {
+            return self.negamax_depth_one(game, alpha, beta, ply, key, alpha_orig);
         }
 
         let mut actions = self.take_buffer();
@@ -293,6 +517,16 @@ fn from_tt_score(score: i32, ply: i32) -> i32 {
 fn queen_position(game: &Game, color: Color) -> Option<Position> {
     game.board
         .position_of_piece(Piece::new_from(Bug::Queen, color, 0))
+}
+
+fn piece_can_throw(piece: Piece, position: Position, game: &Game) -> bool {
+    match piece.bug() {
+        Bug::Pillbug => true,
+        Bug::Mosquito => {
+            game.board.level(position) == 1 && game.board.neighbor_is_a(position, Bug::Pillbug)
+        }
+        _ => false,
+    }
 }
 
 fn action_order_rank(
