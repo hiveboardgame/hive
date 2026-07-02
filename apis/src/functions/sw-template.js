@@ -19,6 +19,24 @@ function urlBase64ToUint8Array(base64String) {
   return output;
 }
 
+function isTileSvgRequest(request) {
+  const url = new URL(request.url);
+  return (
+    url.origin === self.location.origin &&
+    url.pathname.startsWith('/assets/tiles/') &&
+    url.pathname.endsWith('.svg')
+  );
+}
+
+async function deleteTileSvgEntries(cache) {
+  const requests = await cache.keys();
+  await Promise.all(
+    requests
+      .filter((request) => isTileSvgRequest(request))
+      .map((request) => cache.delete(request))
+  );
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     (async () => {
@@ -43,6 +61,8 @@ self.addEventListener('activate', (event) => {
           .filter((cacheName) => cacheName.startsWith(CACHE_PREFIX) && cacheName !== CACHE_NAME)
           .map((cacheName) => caches.delete(cacheName))
       );
+      const cache = await caches.open(CACHE_NAME);
+      await deleteTileSvgEntries(cache);
       await self.clients.claim();
     })()
   );
@@ -143,6 +163,10 @@ self.addEventListener('fetch', (event) => {
   }
 
   const url = new URL(request.url);
+  if (isTileSvgRequest(request)) {
+    return;
+  }
+
   const isHashedAsset =
     url.origin === self.location.origin &&
     (url.pathname.startsWith('/pkg/') || url.pathname.startsWith('/assets/'));
