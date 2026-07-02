@@ -297,7 +297,6 @@ impl State {
             .board
             .is_valid_move(self.turn_color, piece, current_position, target_position)
         {
-            println!("Board state is: {}", self.board);
             return Err(Self::invalid_move_error(
                 piece,
                 current_position,
