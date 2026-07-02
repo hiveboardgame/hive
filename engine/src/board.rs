@@ -27,74 +27,35 @@ use std::{
 
 pub const BOARD_SIZE: i32 = 32;
 const BOARD_CELLS: usize = (BOARD_SIZE as usize) * (BOARD_SIZE as usize);
-const POSITION_SET_WORDS: usize = BOARD_CELLS.div_ceil(64);
-const MAX_SPAWNABLE_POSITIONS: usize = 1 + 24 * 6;
+const SEEN_POSITIONS_WORDS: usize = BOARD_CELLS.div_ceil(64);
+const PIECES_PER_COLOR: usize = 14;
+const NEIGHBORS_PER_CELL: usize = 5;
+const MAX_SPAWNABLE_POSITIONS: usize = PIECES_PER_COLOR * NEIGHBORS_PER_CELL + 1;
 const WHITE_QUEEN: Piece = Piece::from_bits(0);
 const BLACK_QUEEN: Piece = Piece::from_bits(1);
-const OFFSET_TO_PIECES: [Piece; 48] = [
-    offset_to_piece_const(0),
-    offset_to_piece_const(1),
-    offset_to_piece_const(2),
-    offset_to_piece_const(3),
-    offset_to_piece_const(4),
-    offset_to_piece_const(5),
-    offset_to_piece_const(6),
-    offset_to_piece_const(7),
-    offset_to_piece_const(8),
-    offset_to_piece_const(9),
-    offset_to_piece_const(10),
-    offset_to_piece_const(11),
-    offset_to_piece_const(12),
-    offset_to_piece_const(13),
-    offset_to_piece_const(14),
-    offset_to_piece_const(15),
-    offset_to_piece_const(16),
-    offset_to_piece_const(17),
-    offset_to_piece_const(18),
-    offset_to_piece_const(19),
-    offset_to_piece_const(20),
-    offset_to_piece_const(21),
-    offset_to_piece_const(22),
-    offset_to_piece_const(23),
-    offset_to_piece_const(24),
-    offset_to_piece_const(25),
-    offset_to_piece_const(26),
-    offset_to_piece_const(27),
-    offset_to_piece_const(28),
-    offset_to_piece_const(29),
-    offset_to_piece_const(30),
-    offset_to_piece_const(31),
-    offset_to_piece_const(32),
-    offset_to_piece_const(33),
-    offset_to_piece_const(34),
-    offset_to_piece_const(35),
-    offset_to_piece_const(36),
-    offset_to_piece_const(37),
-    offset_to_piece_const(38),
-    offset_to_piece_const(39),
-    offset_to_piece_const(40),
-    offset_to_piece_const(41),
-    offset_to_piece_const(42),
-    offset_to_piece_const(43),
-    offset_to_piece_const(44),
-    offset_to_piece_const(45),
-    offset_to_piece_const(46),
-    offset_to_piece_const(47),
-];
+const OFFSET_TO_PIECES: [Piece; 48] = {
+    let mut pieces = [Piece::from_bits(0); 48];
+    let mut offset = 0;
+    while offset < pieces.len() {
+        pieces[offset] = offset_to_piece_const(offset);
+        offset += 1;
+    }
+    pieces
+};
 const MISSING_DFS_INDEX: u8 = u8::MAX;
 
 thread_local! {
     static DFS_INDEXES: RefCell<TorusArray<u8>> = RefCell::new(TorusArray::new(MISSING_DFS_INDEX));
 }
 
-struct PositionSet {
-    words: [u64; POSITION_SET_WORDS],
+struct SeenPositions {
+    words: [u64; SEEN_POSITIONS_WORDS],
 }
 
-impl PositionSet {
+impl SeenPositions {
     fn new() -> Self {
         Self {
-            words: [0; POSITION_SET_WORDS],
+            words: [0; SEEN_POSITIONS_WORDS],
         }
     }
 
@@ -1204,7 +1165,7 @@ impl Board {
                 positions.push(initial_position);
             }
             let scan_order_start = positions.len();
-            let mut seen = PositionSet::new();
+            let mut seen = SeenPositions::new();
             for (_, position) in self.top_pieces() {
                 for target in position.positions_around() {
                     if self.is_negative_space(target) && seen.insert(target) {
@@ -1220,7 +1181,7 @@ impl Board {
             positions.push(initial_position);
         }
         let scan_order_start = positions.len();
-        let mut seen = PositionSet::new();
+        let mut seen = SeenPositions::new();
         for (piece, position) in self.top_pieces() {
             if !piece.is_color(color) {
                 continue;
