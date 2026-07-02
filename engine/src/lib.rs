@@ -21,7 +21,7 @@ mod svg_position;
 mod torus_array;
 mod turn;
 
-pub use board::{Board, Unmake};
+pub use board::{Board, LeafUnmake, Unmake};
 pub use bug::Bug;
 pub use bug_stack::BugStack;
 pub use color::{Color, ColorChoice};

@@ -31,13 +31,11 @@ const SEEN_POSITIONS_WORDS: usize = BOARD_CELLS.div_ceil(64);
 const PIECES_PER_COLOR: usize = 14;
 const NEIGHBORS_PER_CELL: usize = 5;
 const MAX_SPAWNABLE_POSITIONS: usize = PIECES_PER_COLOR * NEIGHBORS_PER_CELL + 1;
-const WHITE_QUEEN: Piece = Piece::from_bits(0);
-const BLACK_QUEEN: Piece = Piece::from_bits(1);
 const OFFSET_TO_PIECES: [Piece; 48] = {
     let mut pieces = [Piece::from_bits(0); 48];
     let mut offset = 0;
     while offset < pieces.len() {
-        pieces[offset] = offset_to_piece_const(offset);
+        pieces[offset] = Piece::from_offset(offset);
         offset += 1;
     }
     pieces
@@ -146,17 +144,6 @@ fn position_scan_order(position: Position) -> usize {
     position.q as usize * BOARD_SIZE as usize + position.r as usize
 }
 
-const fn offset_to_piece_const(offset: usize) -> Piece {
-    let color = (offset / 24) as u8;
-    let bug = ((offset - color as usize * 24) / 3) as u8;
-    let order = if bug >= 4 {
-        (offset + 1 - bug as usize * 3 - color as usize * 24) as u8
-    } else {
-        0
-    };
-    Piece::from_bits(color | (bug << 1) | (order << 4))
-}
-
 /// Acts as a more transparent representation of
 /// locations and stacks pieces on the board.
 /// Each stack is arranged from lowest to highest.
@@ -255,6 +242,13 @@ pub struct Unmake {
     prev_stunned: Option<Piece>,
     prev_pinned: [bool; 48],
     prev_played: usize,
+}
+
+#[derive(Clone, Debug)]
+pub struct LeafUnmake {
+    piece: Piece,
+    from: Option<Position>,
+    to: Position,
 }
 
 impl Board {
@@ -693,10 +687,10 @@ impl Board {
 
     pub fn game_result(&self) -> GameResult {
         let black_won = self
-            .position_of_piece(WHITE_QUEEN)
+            .position_of_piece(Piece::WHITE_QUEEN)
             .map(|pos| *self.neighbor_count.get(pos) == 6);
         let white_won = self
-            .position_of_piece(BLACK_QUEEN)
+            .position_of_piece(Piece::BLACK_QUEEN)
             .map(|pos| *self.neighbor_count.get(pos) == 6);
         match (black_won, white_won) {
             (Some(true), Some(true)) => GameResult::Draw,
@@ -818,6 +812,42 @@ impl Board {
         self.played = unmake.prev_played;
     }
 
+    // Minimal make for immediate leaf evaluation: it updates piece positions and
+    // neighbor counts (all a queen-neighbor score reads) but skips the pinned,
+    // last_moved, stunned, and played bookkeeping. Only valid when paired with
+    // unmake_leaf before any move generation runs again.
+    pub fn make_leaf(&mut self, piece: Piece, from: Option<Position>, to: Position) -> LeafUnmake {
+        if let Some(from) = from {
+            let removed = self.remove(from);
+            debug_assert_eq!(removed, piece);
+        }
+        let was_empty = !self.occupied(to);
+        self.board.get_mut(to).push_piece(piece);
+        self.set_position_of_piece(piece, to);
+        if was_empty {
+            self.neighbor_count_add(to);
+        }
+        LeafUnmake { piece, from, to }
+    }
+
+    pub fn unmake_leaf(&mut self, unmake: LeafUnmake) {
+        let removed = self.remove(unmake.to);
+        debug_assert_eq!(removed, unmake.piece);
+        match unmake.from {
+            Some(from) => {
+                let was_empty = !self.occupied(from);
+                self.board.get_mut(from).push_piece(unmake.piece);
+                self.set_position_of_piece(unmake.piece, from);
+                if was_empty {
+                    self.neighbor_count_add(from);
+                }
+            }
+            None => {
+                self.positions[self.piece_to_offset(unmake.piece)] = None;
+            }
+        }
+    }
+
     pub fn check(&self) -> bool {
         // This function can be used to perform checks on the engine and for debugging engine
         // issues on every turn
@@ -845,45 +875,15 @@ impl Board {
     }
 
     pub fn neighbor_count_remove(&mut self, position: Position) {
-        *self
-            .neighbor_count
-            .get_mut(Position::new(position.q, position.r - 1)) -= 1;
-        *self
-            .neighbor_count
-            .get_mut(Position::new(position.q, position.r + 1)) -= 1;
-        *self
-            .neighbor_count
-            .get_mut(Position::new(position.q + 1, position.r - 1)) -= 1;
-        *self
-            .neighbor_count
-            .get_mut(Position::new(position.q - 1, position.r + 1)) -= 1;
-        *self
-            .neighbor_count
-            .get_mut(Position::new(position.q - 1, position.r)) -= 1;
-        *self
-            .neighbor_count
-            .get_mut(Position::new(position.q + 1, position.r)) -= 1;
+        for neighbor in position.neighbors() {
+            *self.neighbor_count.get_mut(neighbor) -= 1;
+        }
     }
 
     pub fn neighbor_count_add(&mut self, position: Position) {
-        *self
-            .neighbor_count
-            .get_mut(Position::new(position.q, position.r - 1)) += 1;
-        *self
-            .neighbor_count
-            .get_mut(Position::new(position.q, position.r + 1)) += 1;
-        *self
-            .neighbor_count
-            .get_mut(Position::new(position.q + 1, position.r - 1)) += 1;
-        *self
-            .neighbor_count
-            .get_mut(Position::new(position.q - 1, position.r + 1)) += 1;
-        *self
-            .neighbor_count
-            .get_mut(Position::new(position.q - 1, position.r)) += 1;
-        *self
-            .neighbor_count
-            .get_mut(Position::new(position.q + 1, position.r)) += 1;
+        for neighbor in position.neighbors() {
+            *self.neighbor_count.get_mut(neighbor) += 1;
+        }
     }
 
     pub fn neighbor_is_a(&self, position: Position, bug: Bug) -> bool {
@@ -1312,12 +1312,13 @@ impl Board {
             }};
         }
 
-        visit_neighbor!(Position::new(position.q, position.r - 1));
-        visit_neighbor!(Position::new(position.q, position.r + 1));
-        visit_neighbor!(Position::new(position.q + 1, position.r - 1));
-        visit_neighbor!(Position::new(position.q - 1, position.r + 1));
-        visit_neighbor!(Position::new(position.q - 1, position.r));
-        visit_neighbor!(Position::new(position.q + 1, position.r));
+        let neighbors = position.neighbors();
+        visit_neighbor!(neighbors[0]);
+        visit_neighbor!(neighbors[1]);
+        visit_neighbor!(neighbors[2]);
+        visit_neighbor!(neighbors[3]);
+        visit_neighbor!(neighbors[4]);
+        visit_neighbor!(neighbors[5]);
 
         if dfs_info[index].parent.is_none() {
             is_articulation_point = child_count > 1;
@@ -1454,8 +1455,11 @@ impl Board {
     }
 
     pub fn get_smallest(&mut self, piece: Piece, position: Position) -> Option<(Piece, Position)> {
-        if matches!(self.smallest, Some((piece, _)) if piece == WHITE_QUEEN) {
-            return Some((WHITE_QUEEN, self.position_of_piece(WHITE_QUEEN).unwrap()));
+        if matches!(self.smallest, Some((piece, _)) if piece == Piece::WHITE_QUEEN) {
+            return Some((
+                Piece::WHITE_QUEEN,
+                self.position_of_piece(Piece::WHITE_QUEEN).unwrap(),
+            ));
         }
         if let Some((current_piece, current_position)) = self.smallest {
             return match piece.simple().cmp(&current_piece.simple()) {

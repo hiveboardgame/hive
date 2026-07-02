@@ -27,12 +27,7 @@ impl<'this> MidMoveBoard<'this> {
         position: Position,
         keep_scanning: &mut impl FnMut(Position) -> bool,
     ) -> bool {
-        let nw = Position::new(position.q, position.r - 1);
-        let se = Position::new(position.q, position.r + 1);
-        let ne = Position::new(position.q + 1, position.r - 1);
-        let sw = Position::new(position.q - 1, position.r + 1);
-        let w = Position::new(position.q - 1, position.r);
-        let e = Position::new(position.q + 1, position.r);
+        let [nw, se, ne, sw, w, e] = position.neighbors();
 
         let nw_level = self.level(nw);
         let se_level = self.level(se);
@@ -41,49 +36,40 @@ impl<'this> MidMoveBoard<'this> {
         let w_level = self.level(w);
         let e_level = self.level(e);
 
-        if nw_level == 0
-            && *self.neighbor_count.get(nw) > 0
-            && (w_level > 0) != (ne_level > 0)
-            && !keep_scanning(nw)
-        {
-            return false;
-        }
-        if se_level == 0
-            && *self.neighbor_count.get(se) > 0
-            && (e_level > 0) != (sw_level > 0)
-            && !keep_scanning(se)
-        {
-            return false;
-        }
-        if ne_level == 0
-            && *self.neighbor_count.get(ne) > 0
-            && (nw_level > 0) != (e_level > 0)
-            && !keep_scanning(ne)
-        {
-            return false;
-        }
-        if sw_level == 0
-            && *self.neighbor_count.get(sw) > 0
-            && (se_level > 0) != (w_level > 0)
-            && !keep_scanning(sw)
-        {
-            return false;
-        }
-        if w_level == 0
-            && *self.neighbor_count.get(w) > 0
-            && (sw_level > 0) != (nw_level > 0)
-            && !keep_scanning(w)
-        {
-            return false;
-        }
-        if e_level == 0
-            && *self.neighbor_count.get(e) > 0
-            && (ne_level > 0) != (se_level > 0)
-            && !keep_scanning(e)
-        {
-            return false;
+        // Each candidate is the empty neighbor we might crawl into, plus the two
+        // cells it shares with `position`. The two shared cells are its gates.
+        let candidates = [
+            (nw, nw_level, w_level, ne_level),
+            (se, se_level, e_level, sw_level),
+            (ne, ne_level, nw_level, e_level),
+            (sw, sw_level, se_level, w_level),
+            (w, w_level, sw_level, nw_level),
+            (e, e_level, ne_level, se_level),
+        ];
+        for (cell, cell_level, gate_a_level, gate_b_level) in candidates {
+            if self.can_crawl_to(cell, cell_level, gate_a_level, gate_b_level)
+                && !keep_scanning(cell)
+            {
+                return false;
+            }
         }
         true
+    }
+
+    // A crawl target is empty negative space reachable by a ground slide: the
+    // move is not gated, meaning exactly one of the two shared gates is occupied
+    // (a piece to pivot on, but not a wall on both sides).
+    #[inline(always)]
+    fn can_crawl_to(
+        &self,
+        cell: Position,
+        cell_level: usize,
+        gate_a_level: usize,
+        gate_b_level: usize,
+    ) -> bool {
+        cell_level == 0
+            && *self.neighbor_count.get(cell) > 0
+            && (gate_a_level > 0) != (gate_b_level > 0)
     }
 
     #[inline(always)]

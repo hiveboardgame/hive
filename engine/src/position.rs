@@ -111,6 +111,7 @@ impl fmt::Display for Position {
 }
 
 impl Position {
+    #[inline(always)]
     pub fn new(q: i32, r: i32) -> Self {
         let q = q.rem_euclid(BOARD_SIZE);
         let r = r.rem_euclid(BOARD_SIZE);
@@ -172,26 +173,32 @@ impl Position {
         );
         match diff {
             (0, -1) => (
+                // NW
                 Position::new(self.q - 1, self.r),
                 Position::new(self.q + 1, self.r - 1),
             ),
             (1, -1) => (
+                // NE
                 Position::new(self.q, self.r - 1),
                 Position::new(self.q + 1, self.r),
             ),
             (1, 0) => (
+                // E
                 Position::new(self.q + 1, self.r - 1),
                 Position::new(self.q, self.r + 1),
             ),
             (0, 1) => (
+                // SE
                 Position::new(self.q + 1, self.r),
                 Position::new(self.q - 1, self.r + 1),
             ),
             (-1, 1) => (
+                // SW
                 Position::new(self.q, self.r + 1),
                 Position::new(self.q - 1, self.r),
             ),
             (-1, 0) => (
+                // W
                 Position::new(self.q - 1, self.r + 1),
                 Position::new(self.q, self.r - 1),
             ),
@@ -201,16 +208,21 @@ impl Position {
         }
     }
 
-    pub fn positions_around(&self) -> impl Iterator<Item = Position> {
+    #[inline(always)]
+    pub fn neighbors(&self) -> [Position; 6] {
         [
             Position::new(self.q, self.r - 1),     // NW
-            Position::new(self.q, self.r + 1),     //SE
+            Position::new(self.q, self.r + 1),     // SE
             Position::new(self.q + 1, self.r - 1), // NE
             Position::new(self.q - 1, self.r + 1), // SW
             Position::new(self.q - 1, self.r),     // W
             Position::new(self.q + 1, self.r),     // E
         ]
-        .into_iter()
+    }
+
+    #[inline(always)]
+    pub fn positions_around(&self) -> impl Iterator<Item = Position> {
+        self.neighbors().into_iter()
     }
 
     pub fn to(&self, direction: Direction) -> Position {

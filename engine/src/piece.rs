@@ -57,6 +57,20 @@ impl FromStr for Piece {
 }
 
 impl Piece {
+    pub const WHITE_QUEEN: Piece = Piece::from_bits(0);
+    pub const BLACK_QUEEN: Piece = Piece::from_bits(1);
+
+    pub const fn from_offset(offset: usize) -> Piece {
+        let color = (offset / 24) as u8;
+        let bug = ((offset - color as usize * 24) / 3) as u8;
+        let order = if bug >= 4 {
+            (offset + 1 - bug as usize * 3 - color as usize * 24) as u8
+        } else {
+            0
+        };
+        Piece::from_bits(color | (bug << 1) | (order << 4))
+    }
+
     pub fn simple(&self) -> u8 {
         u8::from(*self) & 0b00001111
     }

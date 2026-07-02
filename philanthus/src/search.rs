@@ -11,9 +11,9 @@ use crate::{
 const MAX_DEPTH: u32 = 64;
 const MATE_SCORE: i32 = WIN - 1000;
 const TT_BITS: u32 = 16;
+// Descending bucket boundaries for action ordering; every score
+// `action_order_key` can return lands in exactly one bucket. Keep sorted.
 const ACTION_ORDER_SCORES: [i32; 9] = [i32::MAX, 120, 100, 90, 70, 20, 0, -10, -30];
-const WHITE_QUEEN: Piece = Piece::from_bits(0);
-const BLACK_QUEEN: Piece = Piece::from_bits(1);
 
 pub struct Limits {
     pub depth: Option<u32>,
@@ -170,11 +170,11 @@ impl Searcher {
         }
         let white_neighbors = game
             .board
-            .position_of_piece(WHITE_QUEEN)
+            .position_of_piece(Piece::WHITE_QUEEN)
             .map(|pos| i32::from(*game.board.neighbor_count.get(pos)));
         let black_neighbors = game
             .board
-            .position_of_piece(BLACK_QUEEN)
+            .position_of_piece(Piece::BLACK_QUEEN)
             .map(|pos| i32::from(*game.board.neighbor_count.get(pos)));
         match (white_neighbors == Some(6), black_neighbors == Some(6)) {
             (true, true) => 0,
@@ -588,15 +588,9 @@ fn action_order_rank(
     own_queen: Option<Position>,
 ) -> usize {
     let key = action_order_key(action, tt_move, opp_queen, own_queen);
-    for (rank, score) in ACTION_ORDER_SCORES.iter().enumerate() {
-        if key == *score {
-            return rank;
-        }
-    }
-    debug_assert!(false, "unexpected action order key {key}");
     ACTION_ORDER_SCORES
         .iter()
-        .position(|score| key > *score)
+        .position(|boundary| key >= *boundary)
         .unwrap_or(ACTION_ORDER_SCORES.len() - 1)
 }
 
@@ -856,7 +850,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "needs the transposition table to be fast enough"]
+    #[cfg_attr(debug_assertions, ignore = "too slow in debug; runs in release builds")]
     fn reports_deeper_puzzle_solve_rates() {
         for plies in [3_u32, 5, 7] {
             let stats = puzzle_solve_rate(plies);
