@@ -97,7 +97,19 @@ async fn play_move(
     let (game, played_turn_out) = conn
         .transaction::<_, anyhow::Error, _>(move |tc| {
             async move {
-                state.play_turn_from_position(piece, position)?;
+                if let Err(err) = state.play_turn_from_position(piece, position) {
+                    log::warn!(
+                        "invalid bot turn game={} bot={} bot_username={} db_turn={} request_turn={} error={} board=\n{}",
+                        game.nanoid,
+                        bot.id,
+                        bot.username,
+                        game.turn,
+                        played_turn,
+                        err,
+                        state.board,
+                    );
+                    return Err(err.into());
+                }
                 let updated_game = game.update_gamestate(&state, 0_f64, tc).await?;
                 send_turn_messages(hub.clone(), &updated_game, &bot, &pool, played_turn.clone())
                     .await?;

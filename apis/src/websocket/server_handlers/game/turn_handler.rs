@@ -66,7 +66,19 @@ impl TurnHandler {
             })?,
         };
         let mut state = State::new_from_str(&self.game.history, &self.game.game_type)?;
-        state.play_turn_from_position(piece, position)?;
+        if let Err(err) = state.play_turn_from_position(piece, position) {
+            log::warn!(
+                "invalid websocket turn game={} user={} username={} db_turn={} request_turn={} error={} board=\n{}",
+                self.game.nanoid,
+                self.user_id,
+                self.username,
+                self.game.turn,
+                self.turn,
+                err,
+                state.board,
+            );
+            return Err(err.into());
+        }
 
         let comp = if self.game.time_mode == TimeMode::RealTime.to_string() {
             let ping = self.data.pings.value(self.user_id);
