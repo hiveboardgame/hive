@@ -67,6 +67,47 @@ impl SeenPositions {
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct SpawnableSet {
+    words: [u64; SEEN_POSITIONS_WORDS],
+    count: usize,
+}
+
+impl SpawnableSet {
+    fn new() -> Self {
+        Self {
+            words: [0; SEEN_POSITIONS_WORDS],
+            count: 0,
+        }
+    }
+
+    fn contains(&self, position: Position) -> bool {
+        let index = position_bit_index(position);
+        self.words[index / 64] & (1_u64 << (index % 64)) != 0
+    }
+
+    fn set(&mut self, position: Position, value: bool) {
+        let index = position_bit_index(position);
+        let word = &mut self.words[index / 64];
+        let mask = 1_u64 << (index % 64);
+        let was_set = *word & mask != 0;
+        if value == was_set {
+            return;
+        }
+        if value {
+            *word |= mask;
+            self.count += 1;
+        } else {
+            *word &= !mask;
+            self.count -= 1;
+        }
+    }
+
+    fn len(&self) -> usize {
+        self.count
+    }
+}
+
 struct SpawnablePositions {
     positions: [Position; MAX_SPAWNABLE_POSITIONS],
     next: usize,
@@ -230,6 +271,10 @@ pub struct Board {
     pub hasher: Hasher,
     pub smallest: Option<(Piece, Position)>,
     pub eigen_direction: Option<Direction>,
+    // Positions currently spawnable per color, maintained incrementally across make/unmake (see `update_spawnable`).
+    spawnable: [SpawnableSet; 2],
+    // True whenever `spawnable` was last cleared for a game-over position; an unmake reviving it needs a full rebuild.
+    spawnable_cleared_for_game_over: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -253,6 +298,9 @@ pub struct LeafUnmake {
 
 impl Board {
     pub fn new() -> Self {
+        // played == 0's rule: only the initial position is spawnable; seeded directly since there's no `self` yet.
+        let mut initial_spawnable = SpawnableSet::new();
+        initial_spawnable.set(Position::initial_spawn_position(), true);
         Self {
             board: TorusArray::new(BugStack::new()),
             neighbor_count: TorusArray::new(0),
@@ -268,6 +316,8 @@ impl Board {
             hasher: Hasher::new(),
             smallest: None,
             eigen_direction: None,
+            spawnable: [initial_spawnable.clone(), initial_spawnable],
+            spawnable_cleared_for_game_over: false,
         }
     }
 
@@ -747,6 +797,7 @@ impl Board {
         if bug_stack.is_empty() {
             self.neighbor_count_remove(position);
         }
+        self.update_spawnable(position);
         piece
     }
 
@@ -790,6 +841,13 @@ impl Board {
     }
 
     pub fn unmake(&mut self, unmake: Unmake) {
+        // Restore played/pinned/etc. before remove/push below — update_spawnable dispatches on the post-unmake self.played.
+        self.last_moved = unmake.prev_last_moved;
+        self.last_move = unmake.prev_last_move;
+        self.stunned = unmake.prev_stunned;
+        self.pinned = unmake.prev_pinned;
+        self.played = unmake.prev_played;
+
         let removed = self.remove(unmake.to);
         debug_assert_eq!(removed, unmake.piece);
         match unmake.from {
@@ -800,16 +858,12 @@ impl Board {
                 if was_empty {
                     self.neighbor_count_add(from);
                 }
+                self.update_spawnable(from);
             }
             None => {
                 self.positions[self.piece_to_offset(unmake.piece)] = None;
             }
         }
-        self.last_moved = unmake.prev_last_moved;
-        self.last_move = unmake.prev_last_move;
-        self.stunned = unmake.prev_stunned;
-        self.pinned = unmake.prev_pinned;
-        self.played = unmake.prev_played;
     }
 
     // Minimal make for immediate leaf evaluation: it updates piece positions and
@@ -827,6 +881,7 @@ impl Board {
         if was_empty {
             self.neighbor_count_add(to);
         }
+        self.update_spawnable(to);
         LeafUnmake { piece, from, to }
     }
 
@@ -841,6 +896,7 @@ impl Board {
                 if was_empty {
                     self.neighbor_count_add(from);
                 }
+                self.update_spawnable(from);
             }
             None => {
                 self.positions[self.piece_to_offset(unmake.piece)] = None;
@@ -1161,11 +1217,12 @@ impl Board {
         }
 
         if self.played == 1 {
+            let mut seen = SeenPositions::new();
             if self.is_negative_space(initial_position) {
+                seen.insert(initial_position);
                 positions.push(initial_position);
             }
             let scan_order_start = positions.len();
-            let mut seen = SeenPositions::new();
             for (_, position) in self.top_pieces() {
                 for target in position.positions_around() {
                     if self.is_negative_space(target) && seen.insert(target) {
@@ -1177,11 +1234,12 @@ impl Board {
             return positions;
         }
 
+        let mut seen = SeenPositions::new();
         if self.spawnable_after_opening(color, initial_position) {
+            seen.insert(initial_position);
             positions.push(initial_position);
         }
         let scan_order_start = positions.len();
-        let mut seen = SeenPositions::new();
         for (piece, position) in self.top_pieces() {
             if !piece.is_color(color) {
                 continue;
@@ -1194,6 +1252,98 @@ impl Board {
         }
         positions.sort_from(scan_order_start);
         positions
+    }
+
+    pub fn spawnable_position_count(&self, color: Color) -> usize {
+        self.spawnable[color as usize].len()
+    }
+
+    pub fn spawnable_position_counts(&self) -> [usize; 2] {
+        [
+            self.spawnable[Color::White as usize].len(),
+            self.spawnable[Color::Black as usize].len(),
+        ]
+    }
+
+    fn compute_spawnable_sets(&self) -> [SpawnableSet; 2] {
+        let mut sets = [SpawnableSet::new(), SpawnableSet::new()];
+        if !matches!(self.game_result(), GameResult::Unknown) {
+            return sets;
+        }
+        let initial_position = Position::initial_spawn_position();
+        if self.played == 0 {
+            sets[0].set(initial_position, true);
+            sets[1].set(initial_position, true);
+            return sets;
+        }
+
+        if self.played == 1 {
+            if self.is_negative_space(initial_position) {
+                sets[0].set(initial_position, true);
+                sets[1].set(initial_position, true);
+            }
+            for (_, position) in self.top_pieces() {
+                for target in position.positions_around() {
+                    if self.is_negative_space(target) {
+                        sets[0].set(target, true);
+                        sets[1].set(target, true);
+                    }
+                }
+            }
+            return sets;
+        }
+
+        for color in [Color::White, Color::Black] {
+            if self.spawnable_after_opening(color, initial_position) {
+                sets[color as usize].set(initial_position, true);
+            }
+        }
+        for (piece, position) in self.top_pieces() {
+            let color_index = piece.color() as usize;
+            for target in position.positions_around() {
+                if !sets[color_index].contains(target)
+                    && self.spawnable_after_opening(piece.color(), target)
+                {
+                    sets[color_index].set(target, true);
+                }
+            }
+        }
+        sets
+    }
+
+    fn rebuild_spawnable(&mut self) {
+        self.spawnable = self.compute_spawnable_sets();
+    }
+
+    // Only valid once `played > 2`: a move at `position` can only change spawnability there and at its 6 neighbors.
+    fn refresh_spawnable_near(&mut self, position: Position) {
+        self.refresh_spawnable_at(position);
+        for neighbor in position.neighbors() {
+            self.refresh_spawnable_at(neighbor);
+        }
+    }
+
+    fn refresh_spawnable_at(&mut self, position: Position) {
+        for color in [Color::White, Color::Black] {
+            let should_be_spawnable = self.spawnable_after_opening(color, position);
+            self.spawnable[color as usize].set(position, should_be_spawnable);
+        }
+    }
+
+    // Call after every occupancy/top-piece change at `position`; `played <= 1` and a game-over-to-live transition need a full rebuild, since a local refresh can't derive those from bitset deltas alone.
+    fn update_spawnable(&mut self, position: Position) {
+        if !matches!(self.game_result(), GameResult::Unknown) {
+            self.spawnable = [SpawnableSet::new(), SpawnableSet::new()];
+            self.spawnable_cleared_for_game_over = true;
+            return;
+        }
+        // `played <= 2` and reviving from a game-over position both need a full rebuild; the branch above just cleared everything.
+        if self.played <= 2 || self.spawnable_cleared_for_game_over {
+            self.rebuild_spawnable();
+            self.spawnable_cleared_for_game_over = false;
+        } else {
+            self.refresh_spawnable_near(position);
+        }
     }
 
     pub fn queen_played(&self, color: Color) -> bool {
@@ -1536,6 +1686,7 @@ impl Board {
             self.played += 1;
         }
         self.set_stunned(position, piece, spawn);
+        self.update_spawnable(position);
     }
 
     pub fn all_positions() -> impl Iterator<Item = Position> {
@@ -1629,9 +1780,17 @@ mod tests {
 
     fn legacy_spawnable_positions(board: &Board, color: Color) -> Vec<Position> {
         let game_result = board.game_result();
-        std::iter::once(Position::initial_spawn_position())
-            .chain(board.negative_space())
-            .filter(|pos| board.spawnable_with_game_result(color, *pos, &game_result))
+        let initial = Position::initial_spawn_position();
+        let initial_is_spawnable = board.spawnable_with_game_result(color, initial, &game_result);
+        // `initial` is special-cased first, so it must be excluded from the negative_space() scan below or it double-counts.
+        std::iter::once(initial)
+            .filter(|_| initial_is_spawnable)
+            .chain(
+                board
+                    .negative_space()
+                    .filter(move |&pos| pos != initial)
+                    .filter(|pos| board.spawnable_with_game_result(color, *pos, &game_result)),
+            )
             .collect()
     }
 
@@ -1722,6 +1881,77 @@ mod tests {
                             assert_eq!(
                                 state.board, snapshot,
                                 "{file}: placement {spawn_piece} @ {to}"
+                            );
+                        }
+                    }
+                }
+                state
+                    .play_turn_from_history(piece, position)
+                    .unwrap_or_else(|err| panic!("{file} turn {}: {err}", state.turn));
+            }
+        }
+    }
+
+    #[test]
+    fn make_leaf_unmake_leaf_roundtrips_over_corpus() {
+        let mut files: Vec<PathBuf> = fs::read_dir("./test_pgns/valid")
+            .expect("valid corpus directory")
+            .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+            .filter(|path| path.extension().is_some_and(|ext| ext == "pgn"))
+            .collect();
+        files.sort();
+        for file in &files {
+            let file = file.display();
+            let history = History::from_filepath(file.to_string().into()).expect("valid history");
+            let tournament = !history.moves.iter().take(2).any(|(piece, _)| {
+                piece
+                    .parse::<Piece>()
+                    .map(|piece| piece.bug() == Bug::Queen)
+                    .unwrap_or(false)
+            });
+            let mut state = State::new(history.game_type, tournament);
+            for (piece, position) in history.moves.iter() {
+                if matches!(state.board.game_result(), GameResult::Unknown) {
+                    let snapshot = state.board.clone();
+                    for ((mover, from), targets) in state.board.moves(state.turn_color) {
+                        for to in targets {
+                            let unmake = state.board.make_leaf(mover, Some(from), to);
+                            // Mid-flight (before unmake_leaf), not just after: the incremental state must already match a from-scratch recompute.
+                            for color in [Color::White, Color::Black] {
+                                assert_eq!(
+                                    state.board.spawnable_position_count(color),
+                                    state.board.spawnable_positions(color).count(),
+                                    "{file}: movement {mover} {from}->{to}, mid-flight color {color}"
+                                );
+                            }
+                            state.board.unmake_leaf(unmake);
+                            assert_eq!(
+                                state.board, snapshot,
+                                "{file}: movement {mover} {from}->{to} (make_leaf/unmake_leaf)"
+                            );
+                        }
+                    }
+                    let reserve = state.board.reserve(state.turn_color, state.game_type);
+                    let spawnables: Vec<_> =
+                        state.board.spawnable_positions(state.turn_color).collect();
+                    for pieces in reserve.values() {
+                        let Some(piece_str) = pieces.first() else {
+                            continue;
+                        };
+                        let spawn_piece: Piece = piece_str.parse().expect("valid reserve piece");
+                        for to in &spawnables {
+                            let unmake = state.board.make_leaf(spawn_piece, None, *to);
+                            for color in [Color::White, Color::Black] {
+                                assert_eq!(
+                                    state.board.spawnable_position_count(color),
+                                    state.board.spawnable_positions(color).count(),
+                                    "{file}: placement {spawn_piece} @ {to}, mid-flight color {color}"
+                                );
+                            }
+                            state.board.unmake_leaf(unmake);
+                            assert_eq!(
+                                state.board, snapshot,
+                                "{file}: placement {spawn_piece} @ {to} (make_leaf/unmake_leaf)"
                             );
                         }
                     }
@@ -2032,6 +2262,47 @@ mod tests {
             board.spawnable_positions(Color::Black).collect::<Vec<_>>(),
             legacy_spawnable_positions(&board, Color::Black)
         );
+    }
+
+    #[test]
+    fn spawnable_position_count_matches_spawnable_positions_over_corpus() {
+        let mut files: Vec<PathBuf> = fs::read_dir("./test_pgns/valid")
+            .expect("valid corpus directory")
+            .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+            .filter(|path| path.extension().is_some_and(|ext| ext == "pgn"))
+            .collect();
+        files.sort();
+        for file in &files {
+            let file = file.display();
+            let history = History::from_filepath(file.to_string().into()).expect("valid history");
+            let tournament = !history.moves.iter().take(2).any(|(piece, _)| {
+                piece
+                    .parse::<Piece>()
+                    .map(|piece| piece.bug() == Bug::Queen)
+                    .unwrap_or(false)
+            });
+            let mut state = State::new(history.game_type, tournament);
+            for (piece, position) in history.moves.iter() {
+                let counts = state.board.spawnable_position_counts();
+                for color in [Color::White, Color::Black] {
+                    let expected = state.board.spawnable_positions(color).count();
+                    assert_eq!(
+                        state.board.spawnable_position_count(color),
+                        expected,
+                        "{file} turn {}: color {color}",
+                        state.turn
+                    );
+                    assert_eq!(
+                        counts[color as usize], expected,
+                        "{file} turn {}: color {color} (combined)",
+                        state.turn
+                    );
+                }
+                state
+                    .play_turn_from_history(piece, position)
+                    .unwrap_or_else(|err| panic!("{file} turn {}: {err}", state.turn));
+            }
+        }
     }
 
     #[test]
