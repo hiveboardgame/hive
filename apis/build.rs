@@ -28,6 +28,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             "donate",
             "archive",
             "notifications",
+            "messages",
         ])?
         .parse_options(options);
 

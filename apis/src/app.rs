@@ -18,6 +18,14 @@ use crate::{
         game_search::GameSearch,
         home::Home,
         login::Login,
+        messages::{
+            MessagesDmThread,
+            MessagesGameThread,
+            MessagesGlobalThread,
+            MessagesIndex,
+            MessagesLayout,
+            MessagesTournamentThread,
+        },
         notifications::Notifications,
         play::Play,
         profile_view::{ProfileMe, ProfileView},
@@ -60,11 +68,19 @@ use leptos::prelude::*;
 use leptos_i18n::context::CookieOptions;
 use leptos_meta::*;
 use leptos_router::{
-    components::{Outlet, ParentRoute, ProtectedRoute, Route, Router, Routes},
+    components::{
+        Outlet,
+        ParentRoute,
+        ProtectedParentRoute,
+        ProtectedRoute,
+        Route,
+        Router,
+        Routes,
+    },
     path,
 };
 use leptos_use::SameSite;
-use shared_types::{GameProgress, TournamentStatus};
+use shared_types::{GameProgress, GameThread, TournamentStatus};
 
 // 1 year in milliseconds
 const LOCALE_MAX_AGE: i64 = 1000 * 60 * 60 * 24 * 365;
@@ -165,6 +181,27 @@ pub fn App() -> impl IntoView {
                             view=|| view! { <ForgotPassword /> }
                         />
                         <Route path=path!("/reset-password") view=|| view! { <ResetPassword /> } />
+                        <ProtectedParentRoute
+                            condition=is_logged_in
+                            path=path!("/message")
+                            redirect_path=|| "/login"
+                            view=MessagesLayout
+                        >
+                            <Route path=path!("") view=MessagesIndex />
+                            <Route path=path!("global") view=MessagesGlobalThread />
+                            <Route path=path!("dm/:username") view=MessagesDmThread />
+                            <Route path=path!("tournament/:nanoid") view=MessagesTournamentThread />
+                            <Route
+                                path=path!("game/:nanoid/players")
+                                view=|| view! { <MessagesGameThread thread=GameThread::Players /> }
+                            />
+                            <Route
+                                path=path!("game/:nanoid/spectators")
+                                view=|| {
+                                    view! { <MessagesGameThread thread=GameThread::Spectators /> }
+                                }
+                            />
+                        </ProtectedParentRoute>
                         <ProtectedRoute
                             condition=is_logged_in
                             path=path!("/account")

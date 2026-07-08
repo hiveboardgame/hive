@@ -2,6 +2,7 @@ use super::reaction::{handle_control, handle_new_game};
 use crate::{
     common::{ClientRequest, GameActionResponse, GameReaction, GameUpdate},
     providers::{
+        chat::Chat,
         game_state::GameStateSignal,
         games::GamesSignal,
         refocus::RefocusSignal,
@@ -31,6 +32,8 @@ pub fn handle_game(game_update: GameUpdate) {
         GameUpdate::OwnGameRemoved(game_id) => {
             games_signal.own_games_remove(&game_id);
             games_signal.live_games_remove(&game_id);
+            let chat = expect_context::<Chat>();
+            chat.refresh_messages_hub();
         }
         GameUpdate::Heartbeat(hb) => {
             game_updater.heartbeat.set(hb);
@@ -63,12 +66,16 @@ fn handle_reaction(gar: GameActionResponse) {
             games.own_games_remove(game_id);
             games.live_games_remove(game_id);
             update_notifier.game_response.set(Some(gar.clone()));
+            let chat = expect_context::<Chat>();
+            chat.refresh_messages_hub();
         }
         GameReaction::Turn(_) => {
             update_notifier.game_response.set(Some(gar.clone()));
             if gar.game.finished {
                 games.own_games_remove(&gar.game.game_id);
                 games.live_games_remove(&gar.game.game_id);
+                let chat = expect_context::<Chat>();
+                chat.refresh_messages_hub();
             } else {
                 games.own_games_add(gar.game.clone());
             }

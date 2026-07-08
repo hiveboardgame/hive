@@ -3,7 +3,7 @@ use leptos::prelude::*;
 use leptos_use::use_window;
 use std::sync::Arc;
 
-type SendFn = Arc<dyn Fn(&ClientRequest) + Send + Sync>;
+type SendFn = Arc<dyn Fn(&ClientRequest) -> bool + Send + Sync>;
 type ControlFn = Arc<dyn Fn() + Send + Sync>;
 
 struct WebsocketParts {
@@ -51,7 +51,7 @@ impl WebsocketContext {
     }
 
     #[inline(always)]
-    pub fn send(&self, message: &ClientRequest) {
+    pub fn send(&self, message: &ClientRequest) -> bool {
         (self.send)(message)
     }
 
@@ -473,22 +473,23 @@ mod platform {
             });
         }
 
-        fn send(&self, message: &ClientRequest) {
+        fn send(&self, message: &ClientRequest) -> bool {
             let data = match MsgpackSerdeCodec::encode(message) {
                 Ok(data) => data,
                 Err(err) => {
                     log!("Could not encode websocket message: {err:?}");
-                    return;
+                    return false;
                 }
             };
 
             self.socket.with_value(|socket| {
                 if let Some(socket) = socket.as_ref() {
                     if socket.socket.ready_state() == WebSocket::OPEN {
-                        let _ = socket.socket.send_with_u8_array(&data);
+                        return socket.socket.send_with_u8_array(&data).is_ok();
                     }
                 }
-            });
+                false
+            })
         }
 
         fn is_current(&self, generation: u64) -> bool {
@@ -602,7 +603,7 @@ mod platform {
     ) -> WebsocketParts {
         let _ = url;
         WebsocketParts {
-            send: Arc::new(|_: &ClientRequest| {}),
+            send: Arc::new(|_: &ClientRequest| false),
             open: Arc::new(|| {}),
             close: Arc::new(|| {}),
             reconnect_now: Arc::new(|| {}),

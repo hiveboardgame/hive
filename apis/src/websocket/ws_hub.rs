@@ -29,7 +29,7 @@ use db_lib::{
 use hive_lib::GameStatus;
 use log::error;
 use rand::Rng;
-use shared_types::{Conclusion, GameId, SimpleUser, TimeMode, TournamentId};
+use shared_types::{Conclusion, ConversationKey, GameId, SimpleUser, TimeMode, TournamentId};
 use std::{
     collections::{HashMap, HashSet},
     str::FromStr,
@@ -48,7 +48,7 @@ pub const LOAD_USER_STATE_CONCURRENCY: usize = DB_POOL_MAX_SIZE as usize / 2;
 /// game. The TV view in the lobby is a UX feature, not a per-move feed.
 const TV_THROTTLE: Duration = Duration::from_secs(1);
 /// How long a cached tournament-membership snapshot stays fresh. Tournament
-/// dispatch hits 3 DB queries per `InternalServerMessage` otherwise; busy
+/// dispatch hits multiple DB queries per `InternalServerMessage` otherwise; busy
 /// chat in a populated tournament lobby would amplify pool usage 3×. A newly
 /// joined player may miss broadcasts for up to this window — acceptable
 /// because chat replays on connect and tournament state is re-fetched on
@@ -81,6 +81,31 @@ const GAME_RESPONSE_CACHE_MAX_AGE: Duration = Duration::from_secs(300);
 /// also debounces, but a misbehaving or modified client must not be able to
 /// drain the pool by spamming Resync.
 const RESYNC_COOLDOWN: Duration = Duration::from_millis(500);
+
+#[derive(Debug, Clone, Copy)]
+pub struct DispatchSummary {
+    pub dest_kind: DestKind,
+    pub targeted_users: usize,
+    pub delivered_sockets: usize,
+}
+
+impl DispatchSummary {
+    fn new(dest_kind: DestKind) -> Self {
+        Self {
+            dest_kind,
+            targeted_users: 0,
+            delivered_sockets: 0,
+        }
+    }
+
+    fn with_counts(dest_kind: DestKind, targeted_users: usize, delivered_sockets: usize) -> Self {
+        Self {
+            dest_kind,
+            targeted_users,
+            delivered_sockets,
+        }
+    }
+}
 
 /// WsHub — concurrent, non-actor replacement for `WsServer`.
 ///
@@ -126,6 +151,9 @@ struct Membership {
     /// Sockets that keep an unfinished game eligible for timer heartbeat and
     /// finalization lifecycle work.
     heartbeat: GameMembershipIndex,
+    /// Sockets explicitly watching a persisted chat thread outside the normal
+    /// game/tournament membership fanout.
+    chat: ChatMembershipIndex,
 }
 
 #[derive(Default)]
@@ -216,6 +244,73 @@ impl GameMembershipIndex {
     fn sockets_in_game(&self, game_id: &GameId) -> Vec<(Uuid, Uuid)> {
         self.games_sockets
             .get(game_id)
+            .map(|sockets| sockets.iter().copied().collect())
+            .unwrap_or_default()
+    }
+}
+
+#[derive(Default)]
+struct ChatMembershipIndex {
+    /// channel → set of (user_id, socket_id) pairs subscribed to it.
+    channels_sockets: HashMap<ConversationKey, HashSet<(Uuid, Uuid)>>,
+    /// (user_id, socket_id) → set of channels that socket is subscribed to.
+    sockets_channels: HashMap<(Uuid, Uuid), HashSet<ConversationKey>>,
+}
+
+impl ChatMembershipIndex {
+    fn subscribe(&mut self, user_id: Uuid, socket_id: Uuid, key: &ConversationKey) {
+        self.channels_sockets
+            .entry(key.clone())
+            .or_default()
+            .insert((user_id, socket_id));
+        self.sockets_channels
+            .entry((user_id, socket_id))
+            .or_default()
+            .insert(key.clone());
+    }
+
+    fn unsubscribe(&mut self, user_id: Uuid, socket_id: Uuid, key: &ConversationKey) {
+        let socket_pair = (user_id, socket_id);
+        let prune_channel = if let Some(sockets) = self.channels_sockets.get_mut(key) {
+            sockets.remove(&socket_pair);
+            sockets.is_empty()
+        } else {
+            false
+        };
+        if prune_channel {
+            self.channels_sockets.remove(key);
+        }
+
+        let prune_socket = if let Some(channels) = self.sockets_channels.get_mut(&socket_pair) {
+            channels.remove(key);
+            channels.is_empty()
+        } else {
+            false
+        };
+        if prune_socket {
+            self.sockets_channels.remove(&socket_pair);
+        }
+    }
+
+    fn unsubscribe_socket(&mut self, socket_pair: (Uuid, Uuid)) {
+        if let Some(channels) = self.sockets_channels.remove(&socket_pair) {
+            for key in channels {
+                let prune_channel = if let Some(sockets) = self.channels_sockets.get_mut(&key) {
+                    sockets.remove(&socket_pair);
+                    sockets.is_empty()
+                } else {
+                    false
+                };
+                if prune_channel {
+                    self.channels_sockets.remove(&key);
+                }
+            }
+        }
+    }
+
+    fn sockets_in_channel(&self, key: &ConversationKey) -> Vec<(Uuid, Uuid)> {
+        self.channels_sockets
+            .get(key)
             .map(|sockets| sockets.iter().copied().collect())
             .unwrap_or_default()
     }
@@ -412,6 +507,7 @@ impl WsHub {
             let socket_pair = (user_id, socket_id);
             m.fanout.unsubscribe_socket(socket_pair);
             m.heartbeat.unsubscribe_socket(socket_pair);
+            m.chat.unsubscribe_socket(socket_pair);
 
             if inner_now_empty {
                 let removed = self.sessions.remove_if(&user_id, |_, s| s.is_empty());
@@ -482,27 +578,6 @@ impl WsHub {
             snap.game_start_games_date_len = games_date.len() as u64;
         }
 
-        // chat
-        if let Ok(t) = self.data.chat_storage.tournament.read() {
-            snap.chat_tournament_channels = t.len() as u64;
-            snap.chat_tournament_msgs = t.values().map(|v| v.len() as u64).sum();
-        }
-        if let Ok(t) = self.data.chat_storage.games_public.read() {
-            snap.chat_games_public_channels = t.len() as u64;
-            snap.chat_games_public_msgs = t.values().map(|v| v.len() as u64).sum();
-        }
-        if let Ok(t) = self.data.chat_storage.games_private.read() {
-            snap.chat_games_private_channels = t.len() as u64;
-            snap.chat_games_private_msgs = t.values().map(|v| v.len() as u64).sum();
-        }
-        if let Ok(t) = self.data.chat_storage.direct.read() {
-            snap.chat_direct_pairs = t.len() as u64;
-            snap.chat_direct_msgs = t.values().map(|v| v.len() as u64).sum();
-        }
-        if let Ok(t) = self.data.chat_storage.direct_lookup.read() {
-            snap.chat_direct_lookup_users = t.len() as u64;
-        }
-
         // caches
         snap.game_response_cache_len = self.data.game_response_cache.len() as u64;
         snap.last_tv_broadcast_len = self.last_tv_broadcast.len() as u64;
@@ -539,31 +614,44 @@ impl WsHub {
         dest: &MessageDestination,
         bytes: Bytes,
         from: Option<(Uuid, Uuid)>, // (user_id, socket_id) of the sender
-    ) {
+    ) -> DispatchSummary {
         let dest_kind = DestKind::from(dest);
         self.data.telemetry.record_dispatch(dest_kind);
 
         match dest {
             MessageDestination::Direct(socket) => {
-                self.send_via_tx(&socket.tx, DestKind::Direct, &bytes);
+                let delivered = matches!(
+                    self.send_via_tx(&socket.tx, DestKind::Direct, &bytes),
+                    SendOutcome::Ok
+                ) as usize;
+                DispatchSummary::with_counts(dest_kind, 1, delivered)
             }
             MessageDestination::User(user_id) => {
-                self.send_to_user(user_id, DestKind::User, &bytes);
+                let delivered = self.send_to_user(user_id, DestKind::User, &bytes);
+                DispatchSummary::with_counts(dest_kind, usize::from(delivered > 0), delivered)
             }
             MessageDestination::Global => {
                 if let Some((uid, sid)) = from {
                     self.subscribe_game_fanout(uid, sid, &Self::lobby());
                 }
-                self.fanout_lobby(&bytes, DestKind::Global);
+                let delivered = self.fanout_lobby(&bytes, DestKind::Global);
+                DispatchSummary::with_counts(dest_kind, delivered, delivered)
             }
             MessageDestination::Game(game_id) => {
                 if let Some((uid, sid)) = from {
                     self.subscribe_game_fanout(uid, sid, game_id);
                 }
                 let socket_pairs = self.sockets_in_game(game_id);
+                let targeted_users = socket_pairs
+                    .iter()
+                    .map(|(uid, _)| *uid)
+                    .collect::<HashSet<_>>()
+                    .len();
+                let mut delivered = 0;
                 for (uid, sid) in socket_pairs {
-                    self.send_to_socket(&uid, &sid, DestKind::Game, &bytes);
+                    delivered += self.send_to_socket(&uid, &sid, DestKind::Game, &bytes);
                 }
+                DispatchSummary::with_counts(dest_kind, targeted_users, delivered)
             }
             MessageDestination::GameSpectators(game_id, white_id, black_id) => {
                 if let Some((uid, sid)) = from {
@@ -582,18 +670,47 @@ impl WsHub {
                         })
                         .unwrap_or_default()
                 };
+                let targeted_users = socket_pairs
+                    .iter()
+                    .map(|(uid, _)| *uid)
+                    .collect::<HashSet<_>>()
+                    .len();
+                let mut delivered = 0;
                 for (uid, sid) in socket_pairs {
-                    self.send_to_socket(&uid, &sid, DestKind::GameSpectators, &bytes);
+                    delivered += self.send_to_socket(&uid, &sid, DestKind::GameSpectators, &bytes);
                 }
+                DispatchSummary::with_counts(dest_kind, targeted_users, delivered)
             }
-            MessageDestination::Tournament(tournament_id) => {
-                let user_ids = match self.tournament_members_cached(tournament_id).await {
-                    Some(ids) => ids,
-                    None => return,
-                };
-                for uid in user_ids {
-                    self.send_to_user(&uid, DestKind::Tournament, &bytes);
+            MessageDestination::ChatSubscribers(key) => {
+                let socket_pairs = self.sockets_in_chat(key);
+                let targeted_users = socket_pairs
+                    .iter()
+                    .map(|(uid, _)| *uid)
+                    .collect::<HashSet<_>>()
+                    .len();
+                let mut delivered = 0;
+                for (uid, sid) in socket_pairs {
+                    delivered += self.send_to_socket(&uid, &sid, DestKind::ChatSubscribers, &bytes);
                 }
+                DispatchSummary::with_counts(dest_kind, targeted_users, delivered)
+            }
+            MessageDestination::Tournament(tournament_id, echo_user_id) => {
+                let mut user_ids = match self.tournament_members_cached(tournament_id).await {
+                    Some(ids) => ids,
+                    None if echo_user_id.is_some() => Vec::new(),
+                    None => return DispatchSummary::new(dest_kind),
+                };
+                if let Some(echo_user_id) = echo_user_id {
+                    if !user_ids.contains(echo_user_id) {
+                        user_ids.push(*echo_user_id);
+                    }
+                }
+                let targeted_users = user_ids.len();
+                let mut delivered = 0;
+                for uid in user_ids {
+                    delivered += self.send_to_user(&uid, DestKind::Tournament, &bytes);
+                }
+                DispatchSummary::with_counts(dest_kind, targeted_users, delivered)
             }
         }
     }
@@ -683,13 +800,13 @@ impl WsHub {
     }
 
     /// Resolve a tournament's recipient set (players ∪ organizers), serving
-    /// from cache when fresh. On a miss or stale entry, performs the 3 DB
+    /// from cache when fresh. On a miss or stale entry, performs the DB
     /// queries once and caches the result for `TOURNAMENT_MEMBERS_TTL`.
     /// Returns `None` only when the DB lookup fails entirely.
     async fn tournament_members_cached(&self, tournament_id: &TournamentId) -> Option<Vec<Uuid>> {
         // Refresh `cached_at` on hit so a busy tournament's entry serves
         // until invalidate_tournament_members runs. Without this, every
-        // TOURNAMENT_MEMBERS_TTL window forces a fresh 3-query rebuild even
+        // TOURNAMENT_MEMBERS_TTL window forces a fresh membership rebuild even
         // though membership is invalidated explicitly on join/leave/start/etc.
         if let Some(mut entry) = self.tournament_members.get_mut(tournament_id) {
             let (cached_at, ids) = entry.value_mut();
@@ -910,37 +1027,57 @@ impl WsHub {
         }
     }
 
-    fn send_to_user(&self, user_id: &Uuid, dest: DestKind, bytes: &Bytes) {
+    fn send_to_user(&self, user_id: &Uuid, dest: DestKind, bytes: &Bytes) -> usize {
         let Some(sockets) = self.sessions.get(user_id) else {
-            return;
+            return 0;
         };
+        let mut delivered = 0;
         for entry in sockets.iter() {
-            self.send_via_tx(entry.value(), dest, bytes);
+            if matches!(
+                self.send_via_tx(entry.value(), dest, bytes),
+                SendOutcome::Ok
+            ) {
+                delivered += 1;
+            }
         }
+        delivered
     }
 
     /// Send to one specific socket. Used for game-scoped dispatch where only the
     /// subscribed socket (not all of the user's tabs) should receive the message.
-    fn send_to_socket(&self, user_id: &Uuid, socket_id: &Uuid, dest: DestKind, bytes: &Bytes) {
+    fn send_to_socket(
+        &self,
+        user_id: &Uuid,
+        socket_id: &Uuid,
+        dest: DestKind,
+        bytes: &Bytes,
+    ) -> usize {
         let Some(sockets) = self.sessions.get(user_id) else {
-            return;
+            return 0;
         };
         let Some(tx) = sockets.get(socket_id) else {
-            return;
+            return 0;
         };
-        self.send_via_tx(&tx, dest, bytes);
+        matches!(self.send_via_tx(&tx, dest, bytes), SendOutcome::Ok) as usize
     }
 
-    fn fanout_lobby(&self, bytes: &Bytes, dest: DestKind) {
+    fn fanout_lobby(&self, bytes: &Bytes, dest: DestKind) -> usize {
         let socket_pairs = self.sockets_in_game(&Self::lobby());
+        let mut delivered = 0;
         for (uid, sid) in socket_pairs {
-            self.send_to_socket(&uid, &sid, dest, bytes);
+            delivered += self.send_to_socket(&uid, &sid, dest, bytes);
         }
+        delivered
     }
 
     fn sockets_in_game(&self, game_id: &GameId) -> Vec<(Uuid, Uuid)> {
         let m = self.membership.read().unwrap_or_else(|p| p.into_inner());
         m.fanout.sockets_in_game(game_id)
+    }
+
+    fn sockets_in_chat(&self, key: &ConversationKey) -> Vec<(Uuid, Uuid)> {
+        let m = self.membership.read().unwrap_or_else(|p| p.into_inner());
+        m.chat.sockets_in_channel(key)
     }
 
     pub fn subscribe_game_fanout(&self, user_id: Uuid, socket_id: Uuid, game_id: &GameId) {
@@ -987,6 +1124,16 @@ impl WsHub {
             m.heartbeat.unsubscribe(user_id, socket_id, game_id);
         }
         self.refresh_membership_gauges();
+    }
+
+    pub fn subscribe_chat(&self, user_id: Uuid, socket_id: Uuid, key: &ConversationKey) {
+        let mut m = self.membership.write().unwrap_or_else(|p| p.into_inner());
+        m.chat.subscribe(user_id, socket_id, key);
+    }
+
+    pub fn unsubscribe_chat(&self, user_id: Uuid, socket_id: Uuid, key: &ConversationKey) {
+        let mut m = self.membership.write().unwrap_or_else(|p| p.into_inner());
+        m.chat.unsubscribe(user_id, socket_id, key);
     }
 
     /// True iff any socket currently keeps `game_id` eligible for heartbeat
@@ -1798,50 +1945,6 @@ mod tests {
     // user-derived fields (ratings, profile) after a player completes another
     // game without the current game row changing. TTL bounds that window.
     // Tests live in websocket::cache_tests (pure-logic, no DB needed).
-
-    // Regression (#2): on_game_finished must NOT delete game chat — post-game
-    // chat history must survive finalization.
-    #[tokio::test]
-    async fn game_chat_preserved_after_on_game_finished() {
-        let hub = make_hub().await;
-        let white_id = Uuid::new_v4();
-        let black_id = Uuid::new_v4();
-        let game_id = GameId("chat-preserve".to_string());
-
-        hub.data
-            .chat_storage
-            .games_public
-            .write()
-            .unwrap()
-            .insert(game_id.clone(), vec![]);
-        hub.data
-            .chat_storage
-            .games_private
-            .write()
-            .unwrap()
-            .insert(game_id.clone(), vec![]);
-
-        hub.on_game_finished(&game_id, white_id, black_id);
-
-        assert!(
-            hub.data
-                .chat_storage
-                .games_public
-                .read()
-                .unwrap()
-                .contains_key(&game_id),
-            "public game chat must be preserved after finalization",
-        );
-        assert!(
-            hub.data
-                .chat_storage
-                .games_private
-                .read()
-                .unwrap()
-                .contains_key(&game_id),
-            "private game chat must be preserved after finalization",
-        );
-    }
 
     // Regression (#3): QueuedGuard tracks loader tasks waiting for a semaphore
     // permit, giving telemetry visibility into the queued-vs-active split.

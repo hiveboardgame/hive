@@ -72,3 +72,8 @@ pub async fn search_users(pattern: String) -> Result<Vec<UserResponse>, ServerFn
         .await
         .map_err(ServerFnError::new)
 }
+
+#[server(input = codec::Cbor, output = codec::Cbor)]
+pub async fn resolve_username(username: String) -> Result<UserResponse, ServerFnError> {
+    get_profile(username).await
+}

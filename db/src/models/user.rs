@@ -315,6 +315,12 @@ impl User {
         .await?)
     }
 
+    pub async fn uuid_exists(uuid: &Uuid, conn: &mut DbConn<'_>) -> Result<bool, DbError> {
+        Ok(select(exists(users_table.find(uuid)))
+            .get_result(conn)
+            .await?)
+    }
+
     pub async fn is_admin(uuid: &Uuid, conn: &mut DbConn<'_>) -> Result<bool, DbError> {
         Ok(select(exists(
             users_table.filter(
@@ -326,6 +332,15 @@ impl User {
         ))
         .get_result(conn)
         .await?)
+    }
+
+    pub async fn active_admin_ids(conn: &mut DbConn<'_>) -> Result<Vec<Uuid>, DbError> {
+        Ok(users_table
+            .filter(users::admin.eq(true))
+            .filter(deleted_field.eq(false))
+            .select(users::id)
+            .load::<Uuid>(conn)
+            .await?)
     }
 
     pub async fn find_by_email(email: &str, conn: &mut DbConn<'_>) -> Result<User, DbError> {

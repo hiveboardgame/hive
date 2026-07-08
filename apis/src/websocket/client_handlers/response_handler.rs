@@ -8,9 +8,22 @@ use super::{
     tournament::handler::{handle_tournament, handle_tournament_invitation_snapshot},
     user_status::handle::{handle_user_status, handle_user_status_snapshot},
 };
-use crate::common::{LobbySnapshot as LobbySnapshotPayload, ServerMessage::*, ServerResult};
-use leptos::logging::log;
+use crate::{
+    common::{
+        LobbySnapshot as LobbySnapshotPayload,
+        ServerMessage::*,
+        ServerResult,
+        UserSettingsUpdate,
+    },
+    providers::chat::Chat,
+};
+use leptos::{logging::log, prelude::use_context};
 use leptos_router::hooks::use_navigate;
+use shared_types::ConversationKey;
+
+fn parse_chat_error_key(field: &str) -> Option<ConversationKey> {
+    ConversationKey::from_error_field(field)
+}
 
 fn handle_lobby_snapshot(snapshot: LobbySnapshotPayload) {
     handle_tournament_invitation_snapshot(snapshot.tournament_invitations);
@@ -19,6 +32,39 @@ fn handle_lobby_snapshot(snapshot: LobbySnapshotPayload) {
     handle_challenge_snapshot(snapshot.challenges);
     handle_tv_snapshot(snapshot.tv_games);
     handle_user_status_snapshot(snapshot.online_users);
+}
+
+fn handle_user_settings(update: UserSettingsUpdate) {
+    let Some(chat) = use_context::<Chat>() else {
+        return;
+    };
+    match update {
+        UserSettingsUpdate::BlockedUser { user_id, blocked } => {
+            if chat.set_blocked_user(user_id, blocked) {
+                chat.refresh_blocked_user_ids();
+            }
+        }
+        UserSettingsUpdate::TournamentChatMuted {
+            tournament_id,
+            muted,
+        } => {
+            if chat.set_tournament_muted_authoritative(&tournament_id, muted) {
+                chat.refresh_messages_hub_silent();
+            }
+        }
+    }
+}
+
+fn handle_chat_read(key: ConversationKey, last_read_message_id: i64) {
+    if let Some(chat) = use_context::<Chat>() {
+        chat.apply_read_receipt_update(key, last_read_message_id);
+    }
+}
+
+fn handle_chat_subscription_ready(key: ConversationKey) {
+    if let Some(chat) = use_context::<Chat>() {
+        chat.confirm_chat_subscription(key);
+    }
 }
 
 pub fn handle_response(m: ServerResult) {
@@ -33,8 +79,14 @@ pub fn handle_response(m: ServerResult) {
             }
             Challenge(challenge) => handle_challenge(challenge),
             Chat(message) => handle_chat(message),
+            ChatRead {
+                key,
+                last_read_message_id,
+            } => handle_chat_read(key, last_read_message_id),
+            ChatSubscriptionReady(key) => handle_chat_subscription_ready(key),
             RedirectLink(link) => handle_oauth(link),
             Tournament(tournament_update) => handle_tournament(tournament_update),
+            UserSettings(update) => handle_user_settings(update),
             Schedule(schedule_update) => handle_schedule(schedule_update),
             todo => {
                 log!("Got {todo:?} which is currently still unimplemented");
@@ -44,6 +96,14 @@ pub fn handle_response(m: ServerResult) {
             if e.status_code == http::StatusCode::UNAUTHORIZED {
                 let navegate = use_navigate();
                 navegate("/login", Default::default());
+            } else if e.field == "chat" || e.field.starts_with("chat:") {
+                if let Some(chat) = use_context::<Chat>() {
+                    chat.handle_failed_chat_send(
+                        parse_chat_error_key(&e.field),
+                        e.client_id,
+                        e.reason.clone(),
+                    );
+                }
             }
             log!("Got error from server: {e}");
         }

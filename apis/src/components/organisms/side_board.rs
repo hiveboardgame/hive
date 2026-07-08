@@ -1,13 +1,19 @@
 use crate::{
     components::{
-        molecules::history_controls::HistoryControls,
-        organisms::{chat::ChatWindow, history::History, reserve::ReserveContent},
+        molecules::{
+            game_thread_toggle::{
+                use_embedded_game_chat_state,
+                GameThreadToggle,
+                GameThreadToggleSize,
+            },
+            history_controls::HistoryControls,
+        },
+        organisms::{chat::GameChatWindow, history::History, reserve::ReserveContent},
     },
     hiveground::HivegroundInteraction,
     providers::{
         chat::Chat,
         game_state::{GameStateSignal, View},
-        AuthContext,
     },
 };
 use hive_lib::{Color, State as HiveState};
@@ -17,7 +23,7 @@ use leptos_router::{
     location::State,
     NavigateOptions,
 };
-use shared_types::{GameId, SimpleDestination};
+use shared_types::{GameId, GameThread};
 
 #[derive(Clone, PartialEq, Copy)]
 pub enum TabView {
@@ -42,12 +48,12 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
         TabView::History => "History".to_string(),
         TabView::Chat => "Chat".to_string(),
     };
+    let unread = Signal::derive(move || chat.unread_count_for_game(&game_id()));
     let mut game_state = expect_context::<GameStateSignal>();
     view! {
         <div
             on:click=move |_| {
-                if tab() == TabView::Chat {
-                    chat.seen_messages(game_id());
+                if name == TabView::Chat {
                     let is_game_view = game_state.signal.with_untracked(|gs| gs.view == View::Game);
                     if is_game_view {
                         set_move.set(None);
@@ -65,11 +71,12 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
             }
 
             class=move || {
+                let has_unread = name == TabView::Chat && unread.get() > 0;
                 format!(
                     "ui-board-tab-trigger cursor-pointer {}",
                     if tab() == name {
                         "ui-segmented-active hover:bg-button-dawn dark:hover:bg-button-twilight"
-                    } else if name == TabView::Chat && chat.has_messages(game_id()) {
+                    } else if has_unread {
                         "ui-button-danger hover:bg-ladybug-red"
                     } else {
                         "hover:bg-blue-light/70 dark:hover:bg-pillbug-teal/15"
@@ -89,16 +96,8 @@ pub fn SideboardTabs(
     interaction: HivegroundInteraction,
     history_state: Memo<HiveState>,
 ) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
-    let auth_context = expect_context::<AuthContext>();
-    let user = auth_context.user;
-    let white_and_black = create_read_slice(game_state.signal, |gs| (gs.white_id, gs.black_id));
-    let show_buttons = Signal::derive(move || {
-        user().is_some_and(|user| {
-            let (white_id, black_id) = white_and_black();
-            Some(user.id) == black_id || Some(user.id) == white_id
-        })
-    });
+    let game_chat = use_embedded_game_chat_state();
+    let show_buttons = Signal::derive(move || game_chat.access.get().can_toggle_embedded_threads());
     view! {
         <div class="flex relative flex-col col-span-2 row-span-4 row-start-2 h-full min-h-0 select-none ui-board-side-panel">
 
@@ -121,7 +120,18 @@ pub fn SideboardTabs(
                 class="flex flex-col flex-grow justify-between h-full min-h-0 max-h-full"
             >
                 <HistoryControls interaction history_state />
-                <ChatWindow destination=SimpleDestination::Game />
+                <Show when=show_buttons>
+                    <GameThreadToggle
+                        selected=game_chat.selected_thread
+                        spectators_enabled=Signal::derive(move || {
+                            game_chat.access.get().can_read(GameThread::Spectators)
+                        })
+                        size=GameThreadToggleSize::Compact
+                    />
+                </Show>
+                <div class="flex overflow-hidden flex-col flex-1 min-h-0">
+                    <GameChatWindow explicit_thread=game_chat.explicit_thread />
+                </div>
             </TabsContent>
         </div>
     }

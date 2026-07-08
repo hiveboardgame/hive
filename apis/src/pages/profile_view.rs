@@ -1,12 +1,18 @@
 use crate::{
     common::with_class,
     components::{
+        atoms::{block_toggle_button::BlockToggleButton, message_button::MessageButton},
         molecules::{empty_state::EmptyState, user_identity::UserIdentity},
         organisms::{games_filter::GamesFilter, stats::Stats},
     },
     functions::users::get_profile,
     i18n::*,
-    providers::{calculate_initial_batch_size, provide_games_search_context, AuthContext},
+    providers::{
+        calculate_initial_batch_size,
+        chat::Chat,
+        provide_games_search_context,
+        AuthContext,
+    },
 };
 use leptos::{either::Either, html, prelude::*};
 use leptos_router::{
@@ -87,6 +93,8 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     );
 
     let i18n = use_i18n();
+    let auth_user = expect_context::<AuthContext>().user;
+    let blocked_user_ids = expect_context::<Chat>().blocked_user_ids;
     let radio_classes = |active| {
         with_class(
             if active {
@@ -135,15 +143,40 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                                 Ok(user) => {
                                     let username = StoredValue::new(user.username.clone());
                                     let profile_user = user.clone();
+                                    let profile_user_id = user.uid;
+                                    let profile_is_bot = user.bot;
+                                    let is_profile_blocked = Signal::derive(move || {
+                                        blocked_user_ids
+                                            .with(|blocked| blocked.contains(&profile_user_id))
+                                    });
                                     Either::Left(
                                         view! {
                                             <div class="flex-shrink-0">
                                                 <div class="flex flex-row flex-wrap justify-center mx-1 w-full text-lg sm:text-xl">
-                                                    <UserIdentity
-                                                        user=profile_user
-                                                        show_hover_ratings=false
-                                                        link_class="truncate max-w-[125px]"
-                                                    />
+                                                    <div class="flex flex-wrap gap-2 justify-center items-center min-w-0">
+                                                        <UserIdentity
+                                                            user=profile_user
+                                                            show_hover_ratings=false
+                                                            link_class="truncate max-w-[125px]"
+                                                        />
+                                                        <Show when=move || {
+                                                            !profile_is_bot
+                                                                && auth_user
+                                                                    .with(|viewer| {
+                                                                        viewer
+                                                                            .as_ref()
+                                                                            .is_some_and(|viewer| {
+                                                                                viewer.user.uid != profile_user_id
+                                                                            })
+                                                                    })
+                                                        }>
+                                                            <MessageButton username=username.get_value() />
+                                                            <BlockToggleButton
+                                                                blocked_user_id=profile_user_id
+                                                                is_blocked=is_profile_blocked
+                                                            />
+                                                        </Show>
+                                                    </div>
                                                 </div>
 
                                                 <div class="lg:flex lg:flex-col lg:items-center lg:mx-auto lg:max-w-4xl">

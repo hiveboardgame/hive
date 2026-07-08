@@ -1,6 +1,10 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use super::{messages::MessageDestination, ws_hub::LOAD_USER_STATE_CONCURRENCY};
+use super::{
+    messages::MessageDestination,
+    server_handlers::chat::metrics,
+    ws_hub::LOAD_USER_STATE_CONCURRENCY,
+};
 use db_lib::DB_POOL_MAX_SIZE;
 
 #[derive(Debug, Default)]
@@ -44,15 +48,16 @@ pub enum DestKind {
     Global = 3,
     Tournament = 4,
     Direct = 5,
+    ChatSubscribers = 6,
 }
 
-pub const DEST_KIND_COUNT: usize = 6;
+pub const DEST_KIND_COUNT: usize = 7;
 
 // Compile-time guard: bumps a const_assertion if the enum's max discriminant
 // outgrows the count. Add new variants with explicit discriminants and bump
 // DEST_KIND_COUNT in lockstep.
 const _: () = {
-    assert!((DestKind::Direct as usize) == DEST_KIND_COUNT - 1);
+    assert!((DestKind::ChatSubscribers as usize) == DEST_KIND_COUNT - 1);
 };
 
 impl From<&MessageDestination> for DestKind {
@@ -61,8 +66,9 @@ impl From<&MessageDestination> for DestKind {
             MessageDestination::User(_) => DestKind::User,
             MessageDestination::Game(_) => DestKind::Game,
             MessageDestination::GameSpectators(_, _, _) => DestKind::GameSpectators,
+            MessageDestination::ChatSubscribers(_) => DestKind::ChatSubscribers,
             MessageDestination::Global => DestKind::Global,
-            MessageDestination::Tournament(_) => DestKind::Tournament,
+            MessageDestination::Tournament(_, _) => DestKind::Tournament,
             MessageDestination::Direct(_) => DestKind::Direct,
         }
     }
@@ -114,18 +120,13 @@ pub struct TelemetrySnapshot {
     pub active_games: u64,
     pub lobby_subscribers: u64,
     pub max_queue_depth_seen: u64,
+    pub chat_persist_attempts_total: u64,
+    pub chat_persist_successes_total: u64,
+    pub chat_persist_failures_total: u64,
+    pub chat_message_normalizations_total: u64,
     // Computed from external state at snapshot time.
     pub lags_trackers_len: u64,
     pub game_start_games_date_len: u64,
-    pub chat_tournament_channels: u64,
-    pub chat_tournament_msgs: u64,
-    pub chat_games_public_channels: u64,
-    pub chat_games_public_msgs: u64,
-    pub chat_games_private_channels: u64,
-    pub chat_games_private_msgs: u64,
-    pub chat_direct_pairs: u64,
-    pub chat_direct_msgs: u64,
-    pub chat_direct_lookup_users: u64,
     pub sessions_outer_len: u64,
     pub sessions_inner_total: u64,
     pub membership_games_sockets_len: u64,
@@ -250,6 +251,7 @@ impl WsTelemetry {
         let load_disc = |arr: &[AtomicU64; DISCONNECT_REASON_COUNT]| {
             std::array::from_fn(|i| arr[i].load(Ordering::Relaxed))
         };
+        let chat_metrics = metrics::snapshot();
         TelemetrySnapshot {
             connections_total: load(&self.connections_total),
             handshake_failures: load(&self.handshake_failures),
@@ -274,6 +276,10 @@ impl WsTelemetry {
             active_games: load(&self.active_games),
             lobby_subscribers: load(&self.lobby_subscribers),
             max_queue_depth_seen: self.max_queue_depth_seen.swap(0, Ordering::Relaxed),
+            chat_persist_attempts_total: chat_metrics.persist_attempts_total,
+            chat_persist_successes_total: chat_metrics.persist_successes_total,
+            chat_persist_failures_total: chat_metrics.persist_failures_total,
+            chat_message_normalizations_total: chat_metrics.message_normalizations_total,
             // Filled in by snapshot_with_state at the call site.
             ..TelemetrySnapshot::default()
         }

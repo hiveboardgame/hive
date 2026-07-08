@@ -56,6 +56,7 @@ pub use server_result::{
     ServerMessage,
     ServerResult,
     TournamentUpdate,
+    UserSettingsUpdate,
     UserStatus,
     UserUpdate,
 };

@@ -2,6 +2,7 @@ use crate::{
     components::{
         atoms::challenge_details::ChallengeDetails,
         molecules::{
+            chat_unread_notification::ChatUnreadNotification,
             hamburger::Hamburger,
             schedule_notification::{AcceptanceNotification, ProposalNotification},
             tournament_invitation_notification::TournamentInvitationNotification,
@@ -9,18 +10,47 @@ use crate::{
         },
     },
     functions::tournaments::get_abstracts_by_ids,
-    providers::{challenges::ChallengeStateSignal, NotificationContext, SchedulesContext},
+    providers::{
+        challenges::ChallengeStateSignal,
+        chat::Chat,
+        NotificationContext,
+        SchedulesContext,
+    },
 };
 use leptos::prelude::*;
 use leptos_icons::*;
+use leptos_router::hooks::{use_location, use_params_map};
+use shared_types::GameId;
 
 #[component]
 pub fn NotificationDropdown() -> impl IntoView {
+    let location = use_location();
+    let params = use_params_map();
     let hamburger_show = RwSignal::new(false);
     let challenges = expect_context::<ChallengeStateSignal>();
+    let chat = expect_context::<Chat>();
     let notifications_context = expect_context::<NotificationContext>();
     let schedules_context = expect_context::<SchedulesContext>();
-    let has_notifications = move || !notifications_context.is_empty();
+    let current_game_id = Signal::derive(move || {
+        location
+            .pathname
+            .with(|path| path.starts_with("/game/"))
+            .then(|| {
+                params
+                    .get()
+                    .get("nanoid")
+                    .map(|nanoid| GameId(nanoid.to_string()))
+            })
+            .flatten()
+    });
+    let latest_chat_unread_message_id = Signal::derive(move || {
+        let current_game_id = current_game_id.get();
+        chat.latest_unread_message_id_excluding_game(current_game_id.as_ref())
+    });
+    let dismissed_unread_message_id = RwSignal::new(0_i64);
+    let has_chat_notification =
+        move || latest_chat_unread_message_id.get() > dismissed_unread_message_id.get();
+    let has_notifications = move || !notifications_context.is_empty() || has_chat_notification();
 
     let icon_style = move || {
         if has_notifications() {
@@ -60,11 +90,13 @@ pub fn NotificationDropdown() -> impl IntoView {
                 }
             >
                 <div class="ui-notification-list">
-                    <For
-                        each=move || notifications_context.challenges.get()
-                        key=|c| c.clone()
-                        let:challenge_id
-                    >
+                    <ChatUnreadNotification
+                        unread_message_id=latest_chat_unread_message_id
+                        dismissed_unread_message_id
+                        dropdown_open=hamburger_show
+                    />
+
+                    <For each=notifications_context.challenges key=|c| c.clone() let:challenge_id>
                         {
                             let challenge = Signal::derive(move || {
                                 challenges

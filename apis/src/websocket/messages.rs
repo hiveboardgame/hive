@@ -1,6 +1,6 @@
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
-use shared_types::{GameId, TournamentId};
+use shared_types::{ConversationKey, GameId, TournamentId};
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
@@ -32,6 +32,7 @@ pub struct GameFinalize {
 pub enum GameSubscription {
     Fanout(GameId),
     Heartbeat(GameId),
+    Chat(ConversationKey),
 }
 
 /// A `GameUpdate::Reaction` event that needs to fan out to both players and
@@ -156,6 +157,7 @@ pub enum MessageDestination {
     User(Uuid),
     Game(GameId),
     GameSpectators(GameId, Uuid, Uuid),
+    ChatSubscribers(ConversationKey),
     Global,
-    Tournament(TournamentId),
+    Tournament(TournamentId, Option<Uuid>),
 }

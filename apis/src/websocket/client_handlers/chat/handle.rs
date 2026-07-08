@@ -2,7 +2,7 @@ use crate::providers::chat::Chat;
 use leptos::prelude::*;
 use shared_types::ChatMessageContainer;
 
-pub fn handle_chat(containers: Vec<ChatMessageContainer>) {
-    let mut chat = expect_context::<Chat>();
-    chat.recv(&containers);
+pub fn handle_chat(container: ChatMessageContainer) {
+    let chat = expect_context::<Chat>();
+    chat.recv(container);
 }

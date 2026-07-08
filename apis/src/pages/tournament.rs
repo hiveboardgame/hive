@@ -15,13 +15,14 @@ use crate::{
             user_identity::UserIdentity,
         },
         organisms::{
-            chat::ChatWindow,
+            chat::ResolvedChatWindow,
             standings::Standings,
             tournament_admin::TournamentAdminControls,
         },
         update_from_event::update_from_input,
     },
     functions::tournaments::{get_complete, UpdateDescription},
+    i18n::*,
     providers::{
         websocket::{ConnectionReadyState, WebsocketContext},
         ApiRequestsProvider,
@@ -36,6 +37,7 @@ use leptos::{html, prelude::*};
 use leptos_router::hooks::{use_navigate, use_params_map};
 use leptos_use::use_resize_observer;
 use shared_types::{
+    ChatDestination,
     Conclusion,
     GameSpeed,
     PrettyString,
@@ -102,6 +104,7 @@ pub fn Tournament() -> impl IntoView {
 //TODO: Bring back fine grained reactivity. All the "signals" we had in here weren't really signals as they all depended on static data
 #[component]
 fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
+    let i18n = use_i18n();
     let tournament = StoredValue::new(tournament);
     let auth_context = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
@@ -757,15 +760,26 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                 </details>
             </Show>
         </div>
-        <Show when=move || user_is_organizer_or_admin() || user_joined()>
-            <div class=with_class(
-                "ui-panel",
-                "h-72 w-full overflow-hidden p-3 whitespace-normal break-words",
-            )>
-                <ChatWindow destination=shared_types::SimpleDestination::Tournament(
-                    tournament_id.get_value(),
-                ) />
-            </div>
+        <Show
+            when=move || user_is_organizer_or_admin() || user_joined()
+            fallback=move || {
+                view! {
+                    <p class="ui-notice">{t!(i18n, messages.chat.tournament_read_restricted)}</p>
+                }
+            }
+        >
+            <Panel
+                title=move || t_string!(i18n, messages.chat.tournament_title)
+                class="w-full"
+                body_class="flex h-72 overflow-hidden whitespace-normal break-words"
+            >
+                <div class="flex overflow-hidden flex-col flex-1 w-full min-h-0">
+                    <ResolvedChatWindow
+                        destination=ChatDestination::TournamentLobby(tournament_id.get_value())
+                        compact=true
+                    />
+                </div>
+            </Panel>
         </Show>
     }
 }

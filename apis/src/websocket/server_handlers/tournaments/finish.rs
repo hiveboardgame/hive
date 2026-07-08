@@ -34,7 +34,7 @@ impl FinishHandler {
             .await?;
 
         messages.push(InternalServerMessage {
-            destination: MessageDestination::Tournament(self.tournament_id.clone()),
+            destination: MessageDestination::Tournament(self.tournament_id.clone(), None),
             message: ServerMessage::Tournament(TournamentUpdate::Finished(TournamentId(
                 tournament.nanoid.clone(),
             ))),

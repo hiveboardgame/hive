@@ -8,7 +8,7 @@ use crate::responses::{
 };
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
-use shared_types::{ChallengeId, ChatMessageContainer, GameId, TournamentId};
+use shared_types::{ChallengeId, ChatMessageContainer, ConversationKey, GameId, TournamentId};
 use std::{collections::HashMap, fmt};
 use uuid::Uuid;
 
@@ -22,6 +22,7 @@ pub enum ServerResult {
 pub struct ExternalServerError {
     pub user_id: Uuid,
     pub field: String,
+    pub client_id: Option<Uuid>,
     pub reason: String,
     #[serde(with = "http_serde::status_code")]
     pub status_code: StatusCode,
@@ -40,7 +41,12 @@ impl fmt::Display for ExternalServerError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ServerMessage {
     Challenge(ChallengeUpdate),
-    Chat(Vec<ChatMessageContainer>),
+    Chat(ChatMessageContainer),
+    ChatRead {
+        key: ConversationKey,
+        last_read_message_id: i64,
+    },
+    ChatSubscriptionReady(ConversationKey),
     ConnectionUpdated(Uuid, String),
     Error(String),
     Game(Box<GameUpdate>),
@@ -54,6 +60,7 @@ pub enum ServerMessage {
     },
     Schedule(ScheduleUpdate),
     Tournament(TournamentUpdate),
+    UserSettings(UserSettingsUpdate),
     UserStatus(UserUpdate),
     RedirectLink(String),
 }
@@ -82,6 +89,18 @@ pub enum TournamentUpdate {
     Modified(TournamentId),
     Started(TournamentId),
     Uninvited(TournamentId),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum UserSettingsUpdate {
+    BlockedUser {
+        user_id: Uuid,
+        blocked: bool,
+    },
+    TournamentChatMuted {
+        tournament_id: TournamentId,
+        muted: bool,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

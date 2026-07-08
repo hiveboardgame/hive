@@ -5,7 +5,7 @@ use super::{
     ws_hub::WsHub,
     WebsocketData,
 };
-use crate::common::{ClientRequest, ExternalServerError, GameAction, ServerResult};
+use crate::common::{ClientRequest, ExternalServerError, GameAction, ServerMessage, ServerResult};
 use actix_ws::{AggregatedMessage, AggregatedMessageStream, Session};
 use bytes::Bytes;
 use codee::{binary::MsgpackSerdeCodec, Decoder, Encoder};
@@ -162,13 +162,37 @@ async fn handle_binary(
                     GameSubscription::Heartbeat(game_id) => {
                         hub.subscribe_game_heartbeat(user.user_id, socket.socket_id, &game_id);
                     }
+                    GameSubscription::Chat(key) => {
+                        hub.subscribe_chat(user.user_id, socket.socket_id, &key);
+                        let ready = ServerResult::Ok(Box::new(
+                            ServerMessage::ChatSubscriptionReady(key.clone()),
+                        ));
+                        if let Ok(serialized) = MsgpackSerdeCodec::encode(&ready) {
+                            hub.dispatch(
+                                &MessageDestination::Direct(socket.clone()),
+                                Bytes::from(serialized),
+                                None,
+                            )
+                            .await;
+                        }
+                    }
                 }
             }
             for message in output.messages {
+                let is_chat = matches!(&message.message, ServerMessage::Chat(_));
+                let dispatch_from = if is_chat { None } else { from };
+                let destination = message.destination;
                 let serialized = ServerResult::Ok(Box::new(message.message));
                 if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
-                    hub.dispatch(&message.destination, Bytes::from(serialized), from)
+                    let summary = hub
+                        .dispatch(&destination, Bytes::from(serialized), dispatch_from)
                         .await;
+                    if is_chat && summary.delivered_sockets == 0 {
+                        log::debug!(
+                            "persisted chat dispatch to {:?} delivered to no live sockets",
+                            destination
+                        );
+                    }
                 }
             }
             // Reactions: one serialize, one Bytes allocation, refcount-cloned
@@ -184,28 +208,39 @@ async fn handle_binary(
             }
         }
         Err(err) => {
-            let status_code = match err {
+            let status_code = match &err {
                 RequestHandlerError::AuthError(_) => http::StatusCode::UNAUTHORIZED,
-                _ => http::StatusCode::NOT_IMPLEMENTED,
+                RequestHandlerError::Forbidden(_) => http::StatusCode::FORBIDDEN,
+                _ => http::StatusCode::INTERNAL_SERVER_ERROR,
             };
-            printdoc! {r#"
-                -----------------ERROR-----------------
-                  Request: {:?}
-                  Error:   {:?}
-                  User:    {} {}
-                ------------------END------------------
-                "#,
-                request, err, user.username, user.user_id
-            };
+            if should_log_request_error(&err) {
+                let request_summary = request_log_summary(&request);
+                printdoc! {r#"
+                    -----------------ERROR-----------------
+                      Request: {}
+                      Error:   {:?}
+                      User:    {} {}
+                    ------------------END------------------
+                    "#,
+                    request_summary, err, user.username, user.user_id
+                };
+            }
+            let is_chat_request = matches!(request, ClientRequest::Chat(_));
             let message = ServerResult::Err(ExternalServerError {
                 user_id: user.user_id,
-                field: "foo".to_string(),
-                reason: format!("{err}"),
+                field: request.error_field(),
+                client_id: request.chat_client_id(),
+                reason: err.user_safe_reason(),
                 status_code,
             });
             if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
+                let destination = if is_chat_request {
+                    MessageDestination::Direct(socket.clone())
+                } else {
+                    MessageDestination::User(user.user_id)
+                };
                 hub.dispatch(
-                    &MessageDestination::User(user.user_id),
+                    &destination,
                     Bytes::from(serialized),
                     Some((user.user_id, socket.socket_id)),
                 )
@@ -213,4 +248,24 @@ async fn handle_binary(
             }
         }
     }
+}
+
+fn request_log_summary(request: &ClientRequest) -> String {
+    match request {
+        ClientRequest::Chat(container) => format!(
+            "Chat(field={}, client_id={:?}, sender={}, body_chars={})",
+            request.error_field(),
+            container.client_id,
+            container.message.user_id,
+            container.message.message.chars().count()
+        ),
+        other => format!("{other:?}"),
+    }
+}
+
+fn should_log_request_error(err: &RequestHandlerError) -> bool {
+    !matches!(
+        err,
+        RequestHandlerError::AuthError(_) | RequestHandlerError::Forbidden(_)
+    )
 }
