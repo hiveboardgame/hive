@@ -1,6 +1,7 @@
 use crate::{
     common::with_class,
     components::{
+        atoms::direct_challenge_button::DirectChallengeButton,
         molecules::{empty_state::EmptyState, user_identity::UserIdentity},
         organisms::{games_filter::GamesFilter, stats::Stats},
     },
@@ -143,6 +144,10 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                                                         user=profile_user
                                                         show_hover_ratings=false
                                                         link_class="truncate max-w-[125px]"
+                                                    />
+                                                    <DirectChallengeButton
+                                                        user_id=user.uid
+                                                        opponent=username.get_value()
                                                     />
                                                 </div>
 
