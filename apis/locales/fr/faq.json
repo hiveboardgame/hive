@@ -111,7 +111,7 @@
     },
     "chat_basics": {
         "question": "Comment fonctionne le chat ?",
-        "answer": "La fonctionnalité de chat est très en cours de développement ; nous sommes conscients qu'elle a des problèmes, donc des choses importantes à garder à l'esprit lors de son utilisation : 1. Actuellement le chat ne persiste pas dans la base de données donc à chaque fois que nous déployons une mise à jour vos messages de chat seront perdus ! 2. Pour l'instant, il n'est possible de chatter que dans un jeu (messages directs et autres moyens seront ajoutés à l'avenir), les spectateurs ne voient pas le chat des joueurs, ni les joueurs ne voient le chat des spectateurs. 3. Parfois la notification rouge du chat montrera de nouveaux messages quand il n'y en a pas."
+        "answer": "Les messages de chat sont enregistrés dans la base de données. Le chat est disponible pour les messages directs, les tournois et les parties, tandis que les fils des joueurs et des spectateurs restent séparés. La page Messages regroupe vos conversations récentes et vos messages non lus."
     },
     "tournament_entry": {
         "question": "N'importe qui peut-il rejoindre un tournoi ? Y a-t-il des frais d'entrée ? Qu'en est-il des prix ?",

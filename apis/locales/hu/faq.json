@@ -111,7 +111,7 @@
     },
     "chat_basics": {
         "question": "Hogyan működik a chat?",
-        "answer": "A chat funkció nagyon fejlesztés alatt áll; tudatában vagyunk, hogy vannak problémái, ezért fontos dolgok, amelyeket szem előtt kell tartani használatkor: 1. Jelenleg a chat nem marad meg az adatbázisban, ezért minden alkalommal, amikor frissítést telepítünk, a chat üzeneteid elvesznek! 2. Egyelőre csak játékban lehet chattelni (közvetlen üzenetek és más módok a jövőben lesznek hozzáadva), a nézők nem látják a játékosok chatjét, sem a játékosok nem látják a nézők chatjét. 3. Néha a piros chat értesítés új üzeneteket mutat, amikor nincsenek."
+        "answer": "A chatüzeneteket az adatbázis tárolja. A chat közvetlen üzenetekhez, versenyekhez és játékokhoz érhető el, a játékosok és a nézők játékon belüli beszélgetései pedig elkülönülnek. Az Üzenetek oldal egy helyen mutatja a legutóbbi beszélgetéseidet és az olvasatlan üzeneteket."
     },
     "tournament_entry": {
         "question": "Bárki csatlakozhat versenyhez? Van belépési díj? Mi a helyzet a díjakkal?",

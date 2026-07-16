@@ -14,6 +14,7 @@ pub mod forgot_password;
 pub mod game_search;
 pub mod home;
 pub mod login;
+pub mod messages;
 pub mod notifications;
 pub mod play;
 pub mod profile_view;

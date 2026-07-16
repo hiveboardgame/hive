@@ -1,7 +1,5 @@
-use crate::{
-    common::{ServerMessage, TournamentUpdate},
-    websocket::messages::{InternalServerMessage, MessageDestination},
-};
+use super::membership_removed_messages;
+use crate::websocket::messages::InternalServerMessage;
 use anyhow::Result;
 use db_lib::{get_conn, models::Tournament, DbPool};
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
@@ -16,22 +14,16 @@ pub struct KickHandler {
 }
 
 impl KickHandler {
-    pub async fn new(
-        tournament_id: TournamentId,
-        organizer: Uuid,
-        player: Uuid,
-        pool: &DbPool,
-    ) -> Result<Self> {
-        Ok(Self {
+    pub fn new(tournament_id: TournamentId, organizer: Uuid, player: Uuid, pool: &DbPool) -> Self {
+        Self {
             tournament_id,
             organizer,
             player,
             pool: pool.clone(),
-        })
+        }
     }
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
-        // TODO: This needs to go into a one commit
         let mut conn = get_conn(&self.pool).await?;
         let tournament = Tournament::find_by_tournament_id(&self.tournament_id, &mut conn).await?;
         let tournament = conn
@@ -40,11 +32,9 @@ impl KickHandler {
                     .scope_boxed()
             })
             .await?;
-        Ok(vec![InternalServerMessage {
-            destination: MessageDestination::Global,
-            message: ServerMessage::Tournament(TournamentUpdate::Modified(TournamentId(
-                tournament.nanoid.clone(),
-            ))),
-        }])
+        Ok(membership_removed_messages(
+            TournamentId(tournament.nanoid.clone()),
+            self.player,
+        ))
     }
 }

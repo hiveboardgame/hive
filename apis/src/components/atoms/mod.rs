@@ -1,4 +1,5 @@
 pub mod active;
+pub mod block_toggle_button;
 pub mod bug_tile;
 pub mod challenge_details;
 pub mod color_hex;
@@ -13,6 +14,7 @@ pub mod input_slider;
 pub mod invite_button;
 pub mod kick_button;
 pub mod logo;
+pub mod message_button;
 pub mod next_game_button;
 pub mod og;
 pub mod overlay;
@@ -31,3 +33,4 @@ pub mod target;
 pub mod title;
 pub mod toggle_controls;
 pub mod uninvite_button;
+pub mod unread_badge;

@@ -102,7 +102,6 @@ impl StartHandler {
             messages: Vec::new(),
             reactions,
             finalize_games: Vec::new(),
-            subscriptions: Vec::new(),
         })
     }
 }

@@ -8,10 +8,10 @@ use crate::{
 };
 use leptos::prelude::*;
 use leptos_router::hooks::use_location;
-use shared_types::SimpleDestination;
+use shared_types::GameId;
 
 #[component]
-pub fn ChatAndControls() -> impl IntoView {
+pub fn ChatAndControls(current_game_id: Signal<Option<GameId>>) -> impl IntoView {
     let location = use_location();
     let gamestate = expect_context::<GameStateSignal>();
     let orientation_signal = expect_context::<OrientationSignal>();
@@ -25,7 +25,7 @@ pub fn ChatAndControls() -> impl IntoView {
             <Show when=move || !is_finished()>
                 <ToggleControls />
             </Show>
-            <ChatDropdown destination=SimpleDestination::Game />
+            <ChatDropdown current_game_id />
         </Show>
     }
 }

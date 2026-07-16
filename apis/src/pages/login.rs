@@ -23,11 +23,8 @@ pub fn Login() -> impl IntoView {
     Effect::watch(
         login.version(),
         move |_, _, _| {
-            if login_value
-                .get_untracked()
-                .is_some_and(|result| result.is_ok())
-            {
-                auth_context.refresh(true);
+            if let Some(Ok(account)) = login_value.get_untracked() {
+                auth_context.accept_user(account);
             }
         },
         false,

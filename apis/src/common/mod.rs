@@ -27,7 +27,7 @@ pub use challenge_viewer::{
     ChallengeActionFlags,
     ChallengeViewerRole,
 };
-pub use client_message::ClientRequest;
+pub use client_message::{ChatSendRequest, ClientRequest, SubscriptionAttempt};
 pub use config_options::{CurrentConfirm, MoveConfirm, TileDesign, TileDots, TileRotation};
 pub use game_action::GameAction;
 pub use game_display::{
@@ -48,6 +48,7 @@ pub use rating_change_info::RatingChangeInfo;
 pub use schedule_action::ScheduleAction;
 pub use server_result::{
     ChallengeUpdate,
+    ChatSendError,
     ExternalServerError,
     GameActionResponse,
     GameUpdate,
@@ -55,7 +56,9 @@ pub use server_result::{
     ScheduleUpdate,
     ServerMessage,
     ServerResult,
+    SubscriptionError,
     TournamentUpdate,
+    UserSettingsUpdate,
     UserStatus,
     UserUpdate,
 };

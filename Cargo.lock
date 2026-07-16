@@ -446,9 +446,9 @@ dependencies = [
  "diesel-async",
  "diesel_migrations",
  "futures-util",
+ "gloo-timers",
  "hive",
  "http 1.4.0",
- "http-serde",
  "icondata_ai",
  "icondata_bi",
  "icondata_bs",
@@ -501,6 +501,7 @@ dependencies = [
  "wasm-bindgen-futures",
  "web-push",
  "web-sys",
+ "web-time",
 ]
 
 [[package]]
@@ -2705,16 +2706,6 @@ name = "http-range"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "21dec9db110f5f872ed9699c3ecf50cf16f423502706ba5c72462e28d3157573"
-
-[[package]]
-name = "http-serde"
-version = "2.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f056c8559e3757392c8d091e796416e4649d8e49e88b8d76df6c002f05027fd"
-dependencies = [
- "http 1.4.0",
- "serde",
-]
 
 [[package]]
 name = "httparse"

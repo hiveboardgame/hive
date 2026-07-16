@@ -17,7 +17,7 @@ pub fn Account() -> impl IntoView {
     let i18n = use_i18n();
     let account_action = ServerAction::<EditAccount>::new();
     let delete_action = ServerAction::<DeleteAccount>::new();
-    let auth_context = expect_context::<AuthContext>();
+    let auth_session = expect_context::<AuthContext>().session_actions();
     let pathname = expect_context::<RefererContext>().pathname;
     let current_password = RwSignal::new(String::new());
     let new_password = RwSignal::new(String::new());
@@ -44,6 +44,15 @@ pub fn Account() -> impl IntoView {
     };
     let delete_form_invalid = move || delete_password.with(|p| p.len() < 8);
     Effect::watch(
+        account_action.version(),
+        move |_, _, _| {
+            if let Some(Ok(account)) = account_action.value().get_untracked() {
+                auth_session.accept_same_user_refresh(account);
+            }
+        },
+        false,
+    );
+    Effect::watch(
         delete_action.version(),
         move |_, _, _| {
             if delete_action
@@ -52,7 +61,7 @@ pub fn Account() -> impl IntoView {
                 .is_some_and(|result| result.is_ok())
             {
                 spawn_local(pwa::clear_local_subscription());
-                auth_context.refresh(true);
+                auth_session.accept_anonymous();
             }
         },
         false,

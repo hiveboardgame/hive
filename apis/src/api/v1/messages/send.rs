@@ -50,12 +50,7 @@ async fn send_messages_batch(hub: &Arc<WsHub>, messages: Vec<InternalServerMessa
     for message in messages {
         let serialized = ServerResult::Ok(Box::new(message.message));
         if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
-            // `from=None`: bot requests arrive over HTTP, not WebSocket — the
-            // bot has no entry in `sessions`/`membership`, so there's no
-            // socket to echo back to. `from` is only used for implicit
-            // fanout subscription and spectator filtering, both of which are
-            // moot here.
-            hub.dispatch(&message.destination, Bytes::from(serialized), None)
+            hub.dispatch(&message.destination, Bytes::from(serialized))
                 .await;
         }
     }

@@ -20,6 +20,8 @@ pub struct WsTelemetry {
     pub from_model_calls_total: AtomicU64,
     pub tv_broadcasts_total: AtomicU64,
     pub games_finalized_total: AtomicU64,
+    pub chat_persist_failures: AtomicU64,
+    pub chat_rate_limit_rejections: AtomicU64,
     // Loader-task gauges: queued = waiting for semaphore, in_flight = running
     pub load_user_state_queued: AtomicU64,
     pub load_user_state_in_flight: AtomicU64,
@@ -60,9 +62,9 @@ impl From<&MessageDestination> for DestKind {
         match d {
             MessageDestination::User(_) => DestKind::User,
             MessageDestination::Game(_) => DestKind::Game,
-            MessageDestination::GameSpectators(_, _, _) => DestKind::GameSpectators,
+            MessageDestination::GameSpectators { .. } => DestKind::GameSpectators,
             MessageDestination::Global => DestKind::Global,
-            MessageDestination::Tournament(_) => DestKind::Tournament,
+            MessageDestination::Tournament { .. } => DestKind::Tournament,
             MessageDestination::Direct(_) => DestKind::Direct,
         }
     }
@@ -104,6 +106,8 @@ pub struct TelemetrySnapshot {
     pub from_model_calls_total: u64,
     pub tv_broadcasts_total: u64,
     pub games_finalized_total: u64,
+    pub chat_persist_failures: u64,
+    pub chat_rate_limit_rejections: u64,
     pub load_user_state_queued: u64,
     pub load_user_state_in_flight: u64,
     pub load_user_state_permit_max: u64,
@@ -117,15 +121,6 @@ pub struct TelemetrySnapshot {
     // Computed from external state at snapshot time.
     pub lags_trackers_len: u64,
     pub game_start_games_date_len: u64,
-    pub chat_tournament_channels: u64,
-    pub chat_tournament_msgs: u64,
-    pub chat_games_public_channels: u64,
-    pub chat_games_public_msgs: u64,
-    pub chat_games_private_channels: u64,
-    pub chat_games_private_msgs: u64,
-    pub chat_direct_pairs: u64,
-    pub chat_direct_msgs: u64,
-    pub chat_direct_lookup_users: u64,
     pub sessions_outer_len: u64,
     pub sessions_inner_total: u64,
     pub membership_games_sockets_len: u64,
@@ -219,6 +214,15 @@ impl WsTelemetry {
         self.games_finalized_total.fetch_add(1, Ordering::Relaxed);
     }
 
+    pub fn record_chat_persist_failure(&self) {
+        self.chat_persist_failures.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn record_chat_rate_limit_rejection(&self) {
+        self.chat_rate_limit_rejections
+            .fetch_add(1, Ordering::Relaxed);
+    }
+
     pub fn inc_load_queued(&self) {
         self.load_user_state_queued.fetch_add(1, Ordering::Relaxed);
     }
@@ -264,6 +268,8 @@ impl WsTelemetry {
             from_model_calls_total: load(&self.from_model_calls_total),
             tv_broadcasts_total: load(&self.tv_broadcasts_total),
             games_finalized_total: load(&self.games_finalized_total),
+            chat_persist_failures: load(&self.chat_persist_failures),
+            chat_rate_limit_rejections: load(&self.chat_rate_limit_rejections),
             load_user_state_queued: load(&self.load_user_state_queued),
             load_user_state_in_flight: load(&self.load_user_state_in_flight),
             load_user_state_permit_max: LOAD_USER_STATE_CONCURRENCY as u64,

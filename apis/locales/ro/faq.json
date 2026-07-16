@@ -103,7 +103,7 @@
     },
     "chat_basics": {
         "question": "Cum funcționează chat-ul?",
-        "answer": "Chatul e în lucru și mai are probleme. Deocamdată, mesajele se pierd la actualizări și funcționează doar în timpul jocurilor."
+        "answer": "Mesajele din chat sunt stocate în baza de date. Chatul este disponibil pentru mesaje directe, turnee și jocuri, iar conversațiile jucătorilor și spectatorilor dintr-un joc rămân separate. Pagina Mesaje reunește conversațiile recente și mesajele necitite."
     },
     "tournament_entry": {
         "question": "Poate oricine intra în turnee? Se plătește? Există premii?",

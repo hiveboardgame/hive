@@ -1,4 +1,8 @@
-use crate::{i18n::*, providers::AuthContext, pwa};
+use crate::{
+    i18n::*,
+    providers::{AuthContext, AuthIdentity},
+    pwa,
+};
 use leptos::{prelude::*, task::spawn_local};
 
 #[component]
@@ -10,7 +14,7 @@ pub fn WebPushNudge(install_nudge_active: RwSignal<bool>) -> impl IntoView {
     let error = RwSignal::new(None::<String>);
 
     let should_show = LocalResource::new(move || {
-        let logged_in = auth.logged_in.get() == Some(true);
+        let logged_in = matches!(auth.identity.get(), Some(AuthIdentity::User(_)));
         async move {
             if !logged_in
                 || !pwa::supported()

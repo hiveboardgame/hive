@@ -13,21 +13,16 @@ const CSV_HEADER: &str = "timestamp,interval_secs,\
     drops_closed_user,drops_closed_game,drops_closed_gamespec,drops_closed_global,drops_closed_tour,drops_closed_direct,\
     from_model_calls,tv_broadcasts,games_finalized,load_user_state_queued,load_user_state_in_flight,own_state_drops,\
     lags_trackers,game_start_games_date,\
-    chat_tournament_channels,chat_tournament_msgs,\
-    chat_games_public_channels,chat_games_public_msgs,\
-    chat_games_private_channels,chat_games_private_msgs,\
-    chat_direct_pairs,chat_direct_msgs,chat_direct_lookup_users,\
+    chat_persist_failures,chat_rate_limit_rejections,\
     sessions_outer,sessions_inner_total,membership_games_sockets,membership_sockets_games,\
     game_response_cache,last_tv_broadcast,process_vm_rss_bytes,process_vm_hwm_bytes,\
     db_pool_max_size,load_user_state_permit_max";
 
 /// Spawn the periodic WS telemetry snapshot task.
 ///
-/// Each tick takes a read lock on `lags`, `game_start.games_date`, and the
-/// four chat maps, then sums message counts across every channel. Cost is
-/// O(total chat channels) per tick, plus 5 short read-lock acquisitions.
-/// Recommended minimum interval: **30 s**. Below ~10 s the snapshot starts
-/// to compete with real WS traffic for the chat locks; do not run sub-second.
+/// Each tick snapshots the hub's counters and bounded membership/cache state.
+/// Keep the interval coarse because the process and registry gauges still
+/// require short-lived shared-state reads.
 ///
 /// `csv_path` controls CSV writing: `Some(path)` writes one row per tick,
 /// `None` skips CSV and only emits the periodic log line.
@@ -35,12 +30,8 @@ pub fn run(hub: Data<Arc<WsHub>>, interval_secs: u64, csv_path: Option<String>) 
     let metrics_path = csv_path;
 
     if let Some(ref path) = metrics_path {
-        // Write header only when starting a new file.
-        let is_new = std::fs::metadata(path)
-            .map(|m| m.len() == 0)
-            .unwrap_or(true);
-        if is_new {
-            if let Ok(mut f) = OpenOptions::new().create(true).append(true).open(path) {
+        if let Ok(mut f) = OpenOptions::new().create(true).append(true).open(path) {
+            if f.metadata().is_ok_and(|metadata| metadata.len() == 0) {
                 let _ = writeln!(f, "{CSV_HEADER}");
             }
         }
@@ -64,20 +55,7 @@ pub fn run(hub: Data<Arc<WsHub>>, interval_secs: u64, csv_path: Option<String>) 
                 let c = &curr.recipient_drops_closed;
                 let cp = &prev.recipient_drops_closed;
                 if let Ok(mut file) = OpenOptions::new().append(true).open(path) {
-                    let _ = writeln!(
-                        file,
-                        "{ts},{interval_secs},\
-                         {},{},{},{},\
-                         {},{},{},{},{},{},\
-                         {},{},{},{},{},{},\
-                         {},{},{},{},{},{},\
-                         {},{},\
-                         {},{},\
-                         {},{},\
-                         {},{},\
-                         {},{},{},\
-                         {},{},{},{},\
-                         {},{},{},{},{},{}",
+                    let fields: [u64; shared_types::TELEMETRY_COLUMN_COUNT - 2] = [
                         curr.max_queue_depth_seen,
                         curr.active_sockets,
                         curr.active_users,
@@ -102,15 +80,11 @@ pub fn run(hub: Data<Arc<WsHub>>, interval_secs: u64, csv_path: Option<String>) 
                         d(curr.own_state_drops_total, prev.own_state_drops_total),
                         curr.lags_trackers_len,
                         curr.game_start_games_date_len,
-                        curr.chat_tournament_channels,
-                        curr.chat_tournament_msgs,
-                        curr.chat_games_public_channels,
-                        curr.chat_games_public_msgs,
-                        curr.chat_games_private_channels,
-                        curr.chat_games_private_msgs,
-                        curr.chat_direct_pairs,
-                        curr.chat_direct_msgs,
-                        curr.chat_direct_lookup_users,
+                        d(curr.chat_persist_failures, prev.chat_persist_failures),
+                        d(
+                            curr.chat_rate_limit_rejections,
+                            prev.chat_rate_limit_rejections,
+                        ),
                         curr.sessions_outer_len,
                         curr.sessions_inner_total,
                         curr.membership_games_sockets_len,
@@ -121,11 +95,24 @@ pub fn run(hub: Data<Arc<WsHub>>, interval_secs: u64, csv_path: Option<String>) 
                         curr.process_vm_hwm_bytes,
                         curr.db_pool_max_size,
                         curr.load_user_state_permit_max,
-                    );
+                    ];
+                    let fields = fields.map(|value| value.to_string());
+                    let _ = writeln!(file, "{ts},{interval_secs},{}", fields.join(","));
                 }
             }
 
             prev = curr;
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::CSV_HEADER;
+    use shared_types::TELEMETRY_COLUMN_COUNT;
+
+    #[test]
+    fn csv_header_matches_the_shared_telemetry_contract() {
+        assert_eq!(CSV_HEADER.split(',').count(), TELEMETRY_COLUMN_COUNT);
+    }
 }

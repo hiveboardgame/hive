@@ -173,7 +173,6 @@ impl GameControlHandler {
             messages,
             reactions,
             finalize_games,
-            subscriptions: Vec::new(),
         })
     }
 

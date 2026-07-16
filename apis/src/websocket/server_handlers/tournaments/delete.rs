@@ -14,12 +14,12 @@ pub struct DeleteHandler {
 }
 
 impl DeleteHandler {
-    pub async fn new(tournament_id: TournamentId, user_id: Uuid, pool: &DbPool) -> Result<Self> {
-        Ok(Self {
+    pub fn new(tournament_id: TournamentId, user_id: Uuid, pool: &DbPool) -> Self {
+        Self {
             tournament_id,
             user_id,
             pool: pool.clone(),
-        })
+        }
     }
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {

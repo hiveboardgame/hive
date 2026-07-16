@@ -24,6 +24,7 @@
     "support": "Suport",
     "user_menu": {
         "edit_account": "Editar el compte",
+        "messages": "Missatges",
         "logout": "Sortir",
         "login": "Iniciar sessió",
         "profile": "Perfil",

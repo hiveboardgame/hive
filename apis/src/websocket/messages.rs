@@ -18,6 +18,18 @@ pub struct InternalServerMessage {
     pub message: ServerMessage,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum GameSpectatorAudience {
+    GameViewers,
+    SpectatorChat { include_players: bool },
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum TournamentAudience {
+    Updates,
+    Chat { sender_id: Uuid },
+}
+
 /// Per-game finalization request returned from a handler. The dispatcher runs
 /// finalization *after* sending all messages, so the handler's `Game(game_id)`
 /// fanout still reaches subscribers.
@@ -26,12 +38,6 @@ pub struct GameFinalize {
     pub game_id: GameId,
     pub white_id: Uuid,
     pub black_id: Uuid,
-}
-
-#[derive(Debug, Clone)]
-pub enum GameSubscription {
-    Fanout(GameId),
-    Heartbeat(GameId),
 }
 
 /// A `GameUpdate::Reaction` event that needs to fan out to both players and
@@ -70,11 +76,12 @@ impl Reaction {
                 message: payload.clone(),
             },
             InternalServerMessage {
-                destination: MessageDestination::GameSpectators(
-                    self.game_id,
-                    self.white_id,
-                    self.black_id,
-                ),
+                destination: MessageDestination::GameSpectators {
+                    game_id: self.game_id,
+                    white_id: self.white_id,
+                    black_id: self.black_id,
+                    audience: GameSpectatorAudience::GameViewers,
+                },
                 message: payload,
             },
         ]
@@ -114,7 +121,7 @@ impl GameFinalize {
     }
 }
 
-/// Aggregated handler return: pre-encoded messages, reaction events
+/// Aggregated handler return: messages, reaction events
 /// (dispatched with a single shared `Bytes`), plus post-dispatch
 /// finalizations. `From<Vec<InternalServerMessage>>` lets handlers that
 /// never finalize a game and never emit reactions keep their existing
@@ -124,7 +131,6 @@ pub struct HandlerOutput {
     pub messages: Vec<InternalServerMessage>,
     pub reactions: Vec<Reaction>,
     pub finalize_games: Vec<GameFinalize>,
-    pub subscriptions: Vec<GameSubscription>,
 }
 
 impl HandlerOutput {
@@ -139,7 +145,6 @@ impl From<Vec<InternalServerMessage>> for HandlerOutput {
             messages,
             reactions: Vec::new(),
             finalize_games: Vec::new(),
-            subscriptions: Vec::new(),
         }
     }
 }
@@ -155,7 +160,15 @@ pub enum MessageDestination {
     Direct(SocketTx),
     User(Uuid),
     Game(GameId),
-    GameSpectators(GameId, Uuid, Uuid),
+    GameSpectators {
+        game_id: GameId,
+        white_id: Uuid,
+        black_id: Uuid,
+        audience: GameSpectatorAudience,
+    },
     Global,
-    Tournament(TournamentId),
+    Tournament {
+        tournament_id: TournamentId,
+        audience: TournamentAudience,
+    },
 }

@@ -94,17 +94,8 @@ pub fn run(pool: DbPool, hub: Data<Arc<WsHub>>) {
                                 for message in messages {
                                     let serialized = ServerResult::Ok(Box::new(message.message));
                                     if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
-                                        // `from=None`: this is a periodic job,
-                                        // not a request from a connected
-                                        // socket, so there's no socket to
-                                        // implicitly add to membership or
-                                        // exclude from spectator fanout.
-                                        hub.dispatch(
-                                            &message.destination,
-                                            Bytes::from(serialized),
-                                            None,
-                                        )
-                                        .await;
+                                        hub.dispatch(&message.destination, Bytes::from(serialized))
+                                            .await;
                                     };
                                 }
                             }

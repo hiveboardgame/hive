@@ -1,3 +1,4 @@
+use crate::responses::AccountResponse;
 use leptos::prelude::*;
 
 #[server]
@@ -7,7 +8,7 @@ pub async fn register(
     password: String,
     password_confirmation: String,
     pathname: String,
-) -> Result<(), ServerFnError> {
+) -> Result<AccountResponse, ServerFnError> {
     use crate::functions::{
         auth::password::{hash_password, validate_password},
         db::pool,
@@ -15,7 +16,6 @@ pub async fn register(
     use actix_identity::Identity;
     use actix_web::HttpMessage;
     use db_lib::{
-        db_error::DbError,
         get_conn,
         models::{NewUser, User},
     };
@@ -29,9 +29,14 @@ pub async fn register(
     let email = email.to_lowercase();
     let new_user = NewUser::new(&username, &password, &email)?;
 
-    let user = conn
-        .transaction::<_, DbError, _>(move |tc| {
-            async move { User::create(new_user, tc).await }.scope_boxed()
+    let (user, account) = conn
+        .transaction::<_, ServerFnError, _>(move |tc| {
+            async move {
+                let user = User::create(new_user, tc).await?;
+                let account = AccountResponse::from_uuid(&user.id, tc).await?;
+                Ok((user, account))
+            }
+            .scope_boxed()
         })
         .await?;
 
@@ -40,5 +45,5 @@ pub async fn register(
     Identity::login(&req.extensions(), user.id.to_string()).expect("To have logged in");
     leptos_actix::redirect(&pathname);
 
-    Ok(())
+    Ok(account)
 }

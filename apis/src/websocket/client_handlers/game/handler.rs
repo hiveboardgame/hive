@@ -2,6 +2,7 @@ use super::reaction::{handle_control, handle_new_game};
 use crate::{
     common::{ClientRequest, GameActionResponse, GameReaction, GameUpdate},
     providers::{
+        chat::Chat,
         game_state::GameStateSignal,
         games::GamesSignal,
         refocus::RefocusSignal,
@@ -63,12 +64,16 @@ fn handle_reaction(gar: GameActionResponse) {
             games.own_games_remove(game_id);
             games.live_games_remove(game_id);
             update_notifier.game_response.set(Some(gar.clone()));
+            let chat = expect_context::<Chat>();
+            chat.request_catalog_refresh();
         }
         GameReaction::Turn(_) => {
             update_notifier.game_response.set(Some(gar.clone()));
             if gar.game.finished {
                 games.own_games_remove(&gar.game.game_id);
                 games.live_games_remove(&gar.game.game_id);
+                let chat = expect_context::<Chat>();
+                chat.request_catalog_refresh();
             } else {
                 games.own_games_add(gar.game.clone());
             }

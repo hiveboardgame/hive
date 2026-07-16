@@ -22,8 +22,8 @@ use crate::{
     responses::AccountResponse,
 };
 use leptos::{either::Either, prelude::*};
-use leptos_router::hooks::use_location;
-use shared_types::TimeMode;
+use leptos_router::hooks::{use_location, use_params_map};
+use shared_types::{GameId, TimeMode};
 
 const HEADER_NAV_ITEM_CLASS: &str =
     "flex h-full items-center px-2 py-0 font-bold whitespace-nowrap transition-colors duration-200 active:scale-100 no-link-style hover:bg-black/5 hover:text-pillbug-teal dark:hover:bg-white/10";
@@ -32,6 +32,12 @@ const HEADER_NAV_ITEM_CLASS: &str =
 pub fn Header() -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     let i18n = use_i18n();
+    let location = use_location();
+    let params = use_params_map();
+    let current_game_id = Signal::derive(move || {
+        let nanoid = params.get().get("nanoid")?.to_string();
+        (location.pathname.get() == format!("/game/{nanoid}")).then_some(GameId(nanoid))
+    });
     view! {
         <header class=with_class(
             "ui-top-bar-surface",
@@ -62,17 +68,17 @@ pub fn Header() -> impl IntoView {
                     </a>
                 </div>
             </div>
-            <Controls user=auth_context.user />
+            <Controls user=auth_context.user current_game_id />
         </header>
     }
 }
 
 #[component]
-fn GuestActions() -> impl IntoView {
+fn GuestActions(current_game_id: Signal<Option<GameId>>) -> impl IntoView {
     let referrer = expect_context::<RefererContext>().pathname;
     view! {
         <div class="flex items-center mr-1 h-full">
-            <ChatAndControls />
+            <ChatAndControls current_game_id />
             <SoundToggle />
             <LocaleDropdown />
             <DarkModeToggle variant=DarkModeToggleVariant::Header />
@@ -88,7 +94,10 @@ fn GuestActions() -> impl IntoView {
 }
 
 #[component]
-fn Controls(user: Signal<Option<AccountResponse>>) -> impl IntoView {
+fn Controls(
+    user: Signal<Option<AccountResponse>>,
+    current_game_id: Signal<Option<GameId>>,
+) -> impl IntoView {
     move || match user() {
         Some(user) => {
             let games = expect_context::<GamesSignal>();
@@ -99,15 +108,15 @@ fn Controls(user: Signal<Option<AccountResponse>>) -> impl IntoView {
                     <NextGameButton time_mode=TimeMode::Untimed games />
                 </div>
                 <div class="flex relative z-10 items-center h-full">
-                    <ChatAndControls />
+                    <ChatAndControls current_game_id />
                     <SoundToggle />
                     <LocaleDropdown />
-                    <NotificationDropdown />
-                    <UserDropdown username=user.username.clone() />
+                    <NotificationDropdown current_game_id />
+                    <UserDropdown username=user.username.clone() current_game_id />
                 </div>
             })
         }
-        None => Either::Right(view! { <GuestActions /> }),
+        None => Either::Right(view! { <GuestActions current_game_id /> }),
     }
 }
 

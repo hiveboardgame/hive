@@ -169,11 +169,8 @@ fn AllPanels(rows: Vec<TelemetryRow>) -> impl IntoView {
             <Panel title="Per-game activity (per interval)" body_class="overflow-x-auto">
                 <ChartActivity data=data />
             </Panel>
-            <Panel title="Chat - message counts" body_class="overflow-x-auto">
-                <ChartChatMsgs data=data />
-            </Panel>
-            <Panel title="Chat - channel/pair counts" body_class="overflow-x-auto">
-                <ChartChatChannels data=data />
+            <Panel title="Persistent chat health (per interval)" body_class="overflow-x-auto">
+                <ChartPersistentChatHealth data=data />
             </Panel>
             <Panel title="Sessions" body_class="overflow-x-auto">
                 <ChartSessions data=data />
@@ -183,9 +180,6 @@ fn AllPanels(rows: Vec<TelemetryRow>) -> impl IntoView {
             </Panel>
             <Panel title="Caches" body_class="overflow-x-auto">
                 <ChartCaches data=data />
-            </Panel>
-            <Panel title="Direct chat lookup users" body_class="overflow-x-auto">
-                <ChartLookupUsers data=data />
             </Panel>
         </div>
     }
@@ -308,22 +302,10 @@ fn ChartActivity(data: ReadSignal<Vec<TelemetryRow>>) -> impl IntoView {
 }
 
 #[component]
-fn ChartChatMsgs(data: ReadSignal<Vec<TelemetryRow>>) -> impl IntoView {
+fn ChartPersistentChatHealth(data: ReadSignal<Vec<TelemetryRow>>) -> impl IntoView {
     let series = Series::new(ts)
-        .line(tline!("tournament", chat_tournament_msgs))
-        .line(tline!("games public", chat_games_public_msgs))
-        .line(tline!("games private", chat_games_private_msgs))
-        .line(tline!("direct", chat_direct_msgs));
-    base_chart(series, data)
-}
-
-#[component]
-fn ChartChatChannels(data: ReadSignal<Vec<TelemetryRow>>) -> impl IntoView {
-    let series = Series::new(ts)
-        .line(tline!("tournament ch", chat_tournament_channels))
-        .line(tline!("games public ch", chat_games_public_channels))
-        .line(tline!("games private ch", chat_games_private_channels))
-        .line(tline!("direct pairs", chat_direct_pairs));
+        .line(tline!("failures", chat_persist_failures))
+        .line(tline!("rate-limit rejections", chat_rate_limit_rejections));
     base_chart(series, data)
 }
 
@@ -350,12 +332,6 @@ fn ChartCaches(data: ReadSignal<Vec<TelemetryRow>>) -> impl IntoView {
         .line(tline!("last_tv", last_tv_broadcast))
         .line(tline!("lags trackers", lags_trackers))
         .line(tline!("game_start dates", game_start_games_date));
-    base_chart(series, data)
-}
-
-#[component]
-fn ChartLookupUsers(data: ReadSignal<Vec<TelemetryRow>>) -> impl IntoView {
-    let series = Series::new(ts).line(tline!("lookup users", chat_direct_lookup_users));
     base_chart(series, data)
 }
 

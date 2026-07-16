@@ -2,7 +2,7 @@ use crate::{
     components::molecules::hamburger::Hamburger,
     functions::accounts::edit::edit_lang,
     i18n::*,
-    providers::AuthContext,
+    providers::{AuthContext, AuthIdentity},
 };
 use leptos::{prelude::*, task::spawn_local};
 
@@ -12,9 +12,10 @@ pub fn LocaleDropdown() -> impl IntoView {
     let onclick_close = move |locale: Locale| {
         use_i18n().set_locale(locale);
         hamburger_show.update(|b| *b = false);
-        let logged_in = expect_context::<AuthContext>()
-            .user
-            .with_untracked(|u| u.is_some());
+        let logged_in = matches!(
+            expect_context::<AuthContext>().identity.get_untracked(),
+            Some(AuthIdentity::User(_)),
+        );
         if logged_in {
             let code = locale.to_string();
             spawn_local(async move {

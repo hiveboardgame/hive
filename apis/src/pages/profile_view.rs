@@ -1,13 +1,22 @@
 use crate::{
     common::with_class,
     components::{
-        atoms::direct_challenge_button::DirectChallengeButton,
+        atoms::{
+            block_toggle_button::BlockToggleButton,
+            direct_challenge_button::DirectChallengeButton,
+            message_button::MessageButton,
+        },
         molecules::{empty_state::EmptyState, user_identity::UserIdentity},
         organisms::{games_filter::GamesFilter, stats::Stats},
     },
     functions::users::get_profile,
     i18n::*,
-    providers::{calculate_initial_batch_size, provide_games_search_context, AuthContext},
+    providers::{
+        calculate_initial_batch_size,
+        provide_games_search_context,
+        AuthContext,
+        AuthIdentity,
+    },
 };
 use leptos::{either::Either, html, prelude::*};
 use leptos_router::{
@@ -44,9 +53,11 @@ pub fn ProfileMe() -> impl IntoView {
             replace: true,
             ..Default::default()
         };
-        match (auth.logged_in.get(), auth.user.get()) {
-            (Some(true), Some(account)) => navigate(&format!("/@/{}", account.username), opts),
-            (Some(false), _) => navigate("/login", opts),
+        match (auth.identity.get(), auth.user.get()) {
+            (Some(AuthIdentity::User(_)), Some(account)) => {
+                navigate(&format!("/@/{}", account.username), opts)
+            }
+            (Some(AuthIdentity::Anonymous), _) => navigate("/login", opts),
             _ => {}
         }
     });
@@ -88,6 +99,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     );
 
     let i18n = use_i18n();
+    let auth_user = expect_context::<AuthContext>().user;
     let radio_classes = |active| {
         with_class(
             if active {
@@ -136,19 +148,39 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                                 Ok(user) => {
                                     let username = StoredValue::new(user.username.clone());
                                     let profile_user = user.clone();
+                                    let profile_user_id = user.uid;
+                                    let profile_is_bot = user.bot;
                                     Either::Left(
                                         view! {
                                             <div class="flex-shrink-0">
                                                 <div class="flex flex-row flex-wrap justify-center mx-1 w-full text-lg sm:text-xl">
-                                                    <UserIdentity
-                                                        user=profile_user
-                                                        show_hover_ratings=false
-                                                        link_class="truncate max-w-[125px]"
-                                                    />
-                                                    <DirectChallengeButton
-                                                        user_id=user.uid
-                                                        opponent=username.get_value()
-                                                    />
+                                                    <div class="flex flex-wrap gap-2 justify-center items-center min-w-0">
+                                                        <UserIdentity
+                                                            user=profile_user
+                                                            show_hover_ratings=false
+                                                            link_class="truncate max-w-[125px]"
+                                                        />
+
+                                                        <DirectChallengeButton
+                                                            user_id=user.uid
+                                                            opponent=username.get_value()
+                                                        />
+
+                                                        <Show when=move || {
+                                                            !profile_is_bot
+                                                                && auth_user
+                                                                    .with(|viewer| {
+                                                                        viewer
+                                                                            .as_ref()
+                                                                            .is_some_and(|viewer| {
+                                                                                viewer.user.uid != profile_user_id
+                                                                            })
+                                                                    })
+                                                        }>
+                                                            <MessageButton username=username.get_value() />
+                                                            <BlockToggleButton blocked_user_id=profile_user_id />
+                                                        </Show>
+                                                    </div>
                                                 </div>
 
                                                 <div class="lg:flex lg:flex-col lg:items-center lg:mx-auto lg:max-w-4xl">

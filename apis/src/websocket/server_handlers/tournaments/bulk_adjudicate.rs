@@ -22,18 +22,18 @@ pub struct BulkAdjudicateHandler {
 }
 
 impl BulkAdjudicateHandler {
-    pub async fn new(
+    pub fn new(
         tournament_id: TournamentId,
         user_id: Uuid,
         action: BulkAdjudication,
         pool: &DbPool,
-    ) -> Result<Self> {
-        Ok(Self {
+    ) -> Self {
+        Self {
             tournament_id,
             user_id,
             pool: pool.clone(),
             action,
-        })
+        }
     }
 
     pub async fn handle(&self) -> Result<HandlerOutput> {
@@ -94,7 +94,6 @@ impl BulkAdjudicateHandler {
             messages,
             reactions: Vec::new(),
             finalize_games,
-            subscriptions: Vec::new(),
         })
     }
 }

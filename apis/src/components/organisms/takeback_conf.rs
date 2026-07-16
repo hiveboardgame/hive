@@ -15,7 +15,7 @@ pub fn TakebackConf() -> impl IntoView {
                 .get_untracked()
                 .is_some_and(|result| result.is_ok())
             {
-                auth_context.refresh(false);
+                auth_context.refresh_account();
             }
         },
         false,

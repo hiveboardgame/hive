@@ -111,7 +111,7 @@
     },
     "chat_basics": {
         "question": "Hoe werkt de chat?",
-        "answer": "De chatfunctie is zeer in ontwikkeling; we zijn ons ervan bewust dat het problemen heeft, dus belangrijke dingen om in gedachten te houden bij het gebruik: 1. Momenteel blijft de chat niet bestaan in de database, dus elke keer dat we een update uitrollen, gaan je chatberichten verloren! 2. Voor nu is het alleen mogelijk om te chatten in een spel (directe berichten en andere manieren worden in de toekomst toegevoegd), toeschouwers zien de chat van spelers niet, noch zien spelers de chat van toeschouwers. 3. Soms toont de rode chatmelding nieuwe berichten wanneer er geen zijn."
+        "answer": "Chatberichten worden in de database opgeslagen. Chat is beschikbaar voor directe berichten, toernooien en partijen, terwijl de gesprekken van spelers en toeschouwers gescheiden blijven. Op de pagina Berichten vind je je recente gesprekken en ongelezen berichten bij elkaar."
     },
     "tournament_entry": {
         "question": "Kan iedereen deelnemen aan een toernooi? Is er een inschrijfgeld? Hoe zit het met prijzen?",

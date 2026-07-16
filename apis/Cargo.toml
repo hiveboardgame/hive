@@ -32,9 +32,9 @@ db = { path = "../db", optional = true }
 diesel = { workspace = true, optional = true }
 diesel-async = { workspace = true, optional = true }
 diesel_migrations = { workspace = true, optional = true }
+gloo-timers = { workspace = true }
 hive = { path = "../engine" }
 http = { workspace = true }
-http-serde = { workspace = true }
 icondata_core = { workspace = true }
 icondata_tb = { workspace = true }
 icondata_bi = { workspace = true }
@@ -69,6 +69,7 @@ reqwest = { workspace = true }
 resvg = { version = "0.46", optional = true }
 rustls = { workspace = true, optional = true }
 web-push = { workspace = true, optional = true }
+web-time = { workspace = true }
 url = { workspace = true, optional = true }
 reactive_stores = { workspace = true }
 serde = { workspace = true, features = ["derive"] }

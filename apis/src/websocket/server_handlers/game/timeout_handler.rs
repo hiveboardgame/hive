@@ -74,7 +74,6 @@ impl TimeoutHandler {
             messages,
             reactions: Vec::new(),
             finalize_games,
-            subscriptions: Vec::new(),
         })
     }
 }

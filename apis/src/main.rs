@@ -114,8 +114,7 @@ async fn main() -> std::io::Result<()> {
         if secs < 10 {
             log::warn!(
                 "WS_TELEMETRY_INTERVAL_SECS={secs} is below the recommended 30s minimum; \
-                 the snapshot walks every chat channel and contends with WS traffic for \
-                 the chat locks at sub-10s intervals"
+                 frequent snapshots add avoidable registry and process-sampling overhead"
             );
         }
         jobs::ws_telemetry(Data::clone(&hub), secs, csv_path);
@@ -127,7 +126,7 @@ async fn main() -> std::io::Result<()> {
     jobs::ping(Data::clone(&hub));
     jobs::game_cleanup(pool.clone());
     jobs::challenge_cleanup(pool.clone());
-    jobs::tournament_cleanup(pool.clone());
+    jobs::tournament_cleanup(pool.clone(), Data::clone(&hub));
     jobs::timeout_sweeper(pool.clone(), Data::clone(&hub));
     jobs::push_device_sweep(pool.clone());
     jobs::email_drain(pool.clone(), email::EmailConfig::from_env());

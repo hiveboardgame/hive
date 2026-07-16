@@ -36,6 +36,7 @@ use diesel::{
     ExpressionMethods,
     Identifiable,
     Insertable,
+    OptionalExtension,
     PgTextExpressionMethods,
     QueryDsl,
     Queryable,
@@ -47,7 +48,7 @@ use hive_lib::GameControl;
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use shared_types::{GameId, GameSpeed, Takeback, TournamentStatus};
+use shared_types::{GameId, GameSpeed, Takeback, TournamentId, TournamentStatus};
 use uuid::Uuid;
 
 const MAX_USERNAME_LENGTH: usize = 20;
@@ -122,6 +123,8 @@ pub struct SoftDeleteReport {
     pub deleted_games: Vec<Game>,
     pub resigned_games: Vec<Game>,
     pub deleted_challenges: Vec<Challenge>,
+    pub deleted_tournament_ids: Vec<TournamentId>,
+    pub removed_membership_tournament_ids: Vec<TournamentId>,
 }
 
 #[derive(Insertable, Debug)]
@@ -293,6 +296,20 @@ impl User {
             .await?)
     }
 
+    /// Resolves a direct-message route, including soft-deleted accounts whose
+    /// tombstone username is still present in the messages catalog.
+    pub async fn find_dm_route_user_by_username(
+        username: &str,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Option<(Uuid, String, bool)>, DbError> {
+        Ok(users_table
+            .filter(normalized_username.eq(username.to_lowercase()))
+            .select((users::id, username_field, deleted_field))
+            .first(conn)
+            .await
+            .optional()?)
+    }
+
     pub async fn search_usernames(
         pattern: &str,
         conn: &mut DbConn<'_>,
@@ -313,6 +330,12 @@ impl User {
         ))
         .get_result(conn)
         .await?)
+    }
+
+    pub async fn uuid_exists(uuid: &Uuid, conn: &mut DbConn<'_>) -> Result<bool, DbError> {
+        Ok(select(exists(users_table.find(uuid)))
+            .get_result(conn)
+            .await?)
     }
 
     pub async fn is_admin(uuid: &Uuid, conn: &mut DbConn<'_>) -> Result<bool, DbError> {
@@ -405,13 +428,22 @@ impl User {
                 .execute(tc)
                 .await?;
 
-                let not_started_organized_tournament_ids: Vec<Uuid> = tournaments_organizers::table
-                    .inner_join(tournaments::table)
-                    .filter(tournaments_organizers::organizer_id.eq(user_id))
-                    .filter(tournaments::status.eq(TournamentStatus::NotStarted.to_string()))
-                    .select(tournaments_organizers::tournament_id)
-                    .load(tc)
-                    .await?;
+                let not_started_organized_tournaments: Vec<(Uuid, String)> =
+                    tournaments_organizers::table
+                        .inner_join(tournaments::table)
+                        .filter(tournaments_organizers::organizer_id.eq(user_id))
+                        .filter(tournaments::status.eq(TournamentStatus::NotStarted.to_string()))
+                        .select((tournaments_organizers::tournament_id, tournaments::nanoid))
+                        .load(tc)
+                        .await?;
+                let not_started_organized_tournament_ids = not_started_organized_tournaments
+                    .iter()
+                    .map(|(id, _)| *id)
+                    .collect::<Vec<_>>();
+                report.deleted_tournament_ids = not_started_organized_tournaments
+                    .into_iter()
+                    .map(|(_, nanoid)| TournamentId(nanoid))
+                    .collect();
                 if !not_started_organized_tournament_ids.is_empty() {
                     diesel::delete(
                         tournaments::table
@@ -424,13 +456,21 @@ impl User {
                     .await?;
                 }
 
-                let not_started_tournament_ids: Vec<Uuid> = tournaments_users::table
+                let not_started_tournaments: Vec<(Uuid, String)> = tournaments_users::table
                     .inner_join(tournaments::table)
                     .filter(tournaments_users::user_id.eq(user_id))
                     .filter(tournaments::status.eq(TournamentStatus::NotStarted.to_string()))
-                    .select(tournaments_users::tournament_id)
+                    .select((tournaments_users::tournament_id, tournaments::nanoid))
                     .load(tc)
                     .await?;
+                let not_started_tournament_ids = not_started_tournaments
+                    .iter()
+                    .map(|(id, _)| *id)
+                    .collect::<Vec<_>>();
+                report.removed_membership_tournament_ids = not_started_tournaments
+                    .into_iter()
+                    .map(|(_, nanoid)| TournamentId(nanoid))
+                    .collect();
                 if !not_started_tournament_ids.is_empty() {
                     diesel::delete(
                         tournaments_users::table

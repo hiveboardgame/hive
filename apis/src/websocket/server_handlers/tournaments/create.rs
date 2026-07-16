@@ -19,12 +19,12 @@ pub struct CreateHandler {
 }
 
 impl CreateHandler {
-    pub async fn new(details: TournamentDetails, user_id: Uuid, pool: &DbPool) -> Result<Self> {
-        Ok(Self {
+    pub fn new(details: TournamentDetails, user_id: Uuid, pool: &DbPool) -> Self {
+        Self {
             details,
             user_id,
             pool: pool.clone(),
-        })
+        }
     }
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {

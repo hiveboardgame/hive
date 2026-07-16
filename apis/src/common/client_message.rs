@@ -5,11 +5,29 @@ use super::{
     TournamentAction,
 };
 use serde::{Deserialize, Serialize};
-use shared_types::{ChatMessageContainer, GameId};
+use shared_types::{ConversationKey, GameId};
+use uuid::Uuid;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ChatSendRequest {
+    pub key: ConversationKey,
+    pub client_id: Uuid,
+    pub body: String,
+    pub turn: Option<usize>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SubscriptionAttempt {
+    pub key: ConversationKey,
+    pub session_epoch: u64,
+    pub request_id: u64,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ClientRequest {
-    Chat(ChatMessageContainer),
+    Chat(ChatSendRequest),
+    ChatSubscribe(SubscriptionAttempt),
+    ChatUnsubscribe(ConversationKey),
     Challenge(ChallengeAction),
     Game { game_id: GameId, action: GameAction },
     LinkDiscord,

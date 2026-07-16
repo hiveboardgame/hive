@@ -215,11 +215,13 @@ impl Tournament {
         Ok(())
     }
 
-    pub async fn delete_old_and_unstarted(conn: &mut DbConn<'_>) -> Result<(), DbError> {
+    pub async fn delete_old_and_unstarted(
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<TournamentId>, DbError> {
         use std::time::Duration;
         let cutoff = Utc::now() - Duration::from_secs(60 * 60 * 24 * 60);
         let now = Utc::now();
-        diesel::delete(
+        let deleted_nanoids = diesel::delete(
             tournaments::table.filter(
                 status_column
                     .eq(TournamentStatus::NotStarted.to_string())
@@ -227,9 +229,10 @@ impl Tournament {
                     .and(starts_at.is_null().or(starts_at.lt(now))),
             ),
         )
-        .execute(conn)
+        .returning(nanoid_field)
+        .get_results::<String>(conn)
         .await?;
-        Ok(())
+        Ok(deleted_nanoids.into_iter().map(TournamentId).collect())
     }
 
     async fn ensure_not_invite_only(

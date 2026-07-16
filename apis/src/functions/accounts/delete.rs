@@ -57,7 +57,14 @@ async fn send_soft_delete_updates(
     conn: &mut db_lib::DbConn<'_>,
 ) -> Result<(), leptos::prelude::ServerFnError> {
     use crate::{
-        common::{ChallengeUpdate, GameActionResponse, GameReaction, ServerMessage, ServerResult},
+        common::{
+            ChallengeUpdate,
+            GameActionResponse,
+            GameReaction,
+            ServerMessage,
+            ServerResult,
+            TournamentUpdate,
+        },
         notifications::{game_end_reason_from, notify_game_ended_excluding, GameEndReason},
         responses::GameResponse,
         websocket::{reaction_messages, GameFinalize, InternalServerMessage, MessageDestination},
@@ -158,6 +165,22 @@ async fn send_soft_delete_updates(
     }
 
     let mut messages = Vec::new();
+    for tournament_id in report.deleted_tournament_ids {
+        hub.unsubscribe_user_from_tournament_chat(deleted_user_id, &tournament_id);
+        hub.invalidate_tournament_members(&tournament_id);
+        messages.push(InternalServerMessage {
+            destination: MessageDestination::Global,
+            message: ServerMessage::Tournament(TournamentUpdate::Deleted(tournament_id)),
+        });
+    }
+    for tournament_id in report.removed_membership_tournament_ids {
+        hub.unsubscribe_user_from_tournament_chat(deleted_user_id, &tournament_id);
+        hub.invalidate_tournament_members(&tournament_id);
+        messages.push(InternalServerMessage {
+            destination: MessageDestination::Global,
+            message: ServerMessage::Tournament(TournamentUpdate::StateChanged(tournament_id)),
+        });
+    }
     for challenge in report.deleted_challenges {
         messages.extend(challenge_removed_messages(challenge));
     }
@@ -221,7 +244,7 @@ async fn send_soft_delete_updates(
     for message in messages {
         let serialized = ServerResult::Ok(Box::new(message.message));
         if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
-            hub.dispatch(&message.destination, Bytes::from(serialized), None)
+            hub.dispatch(&message.destination, Bytes::from(serialized))
                 .await;
         }
     }
