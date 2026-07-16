@@ -111,7 +111,7 @@
     },
     "chat_basics": {
         "question": "Como funciona o chat?",
-        "answer": "A funcionalidade de chat está muito em desenvolvimento; estamos conscientes de que tem problemas, portanto coisas importantes a ter em mente ao usá-lo: 1. Atualmente o chat não persiste na base de dados, portanto sempre que implementamos uma atualização as tuas mensagens de chat serão perdidas! 2. Por agora, só é possível conversar num jogo (mensagens diretas e outras formas serão adicionadas no futuro), espectadores não veem o chat dos jogadores, nem os jogadores veem o chat dos espectadores. 3. Por vezes a notificação vermelha do chat mostrará novas mensagens quando não há nenhuma."
+        "answer": "As mensagens de chat são guardadas na base de dados. O chat está disponível para mensagens diretas, torneios e jogos, enquanto as conversas de jogadores e espectadores permanecem separadas. A página Mensagens reúne as tuas conversas recentes e mensagens não lidas."
     },
     "tournament_entry": {
         "question": "Qualquer pessoa pode juntar-se a um torneio? Há taxa de inscrição? E quanto aos prémios?",

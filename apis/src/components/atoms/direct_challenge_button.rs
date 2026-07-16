@@ -1,4 +1,4 @@
-use crate::providers::{AuthContext, DirectChallengeOpener};
+use crate::providers::{AuthContext, AuthIdentity, DirectChallengeOpener};
 use leptos::prelude::*;
 use leptos_icons::*;
 use uuid::Uuid;
@@ -13,10 +13,10 @@ pub fn DirectChallengeButton(
     let direct_challenge = expect_context::<DirectChallengeOpener>();
     let opponent = StoredValue::new(opponent);
     let logged_in_and_not_user = move || {
-        auth_context.user.with(|a| {
-            a.as_ref()
-                .is_some_and(|current_user| current_user.id != user_id)
-        })
+        matches!(
+            auth_context.identity.get(),
+            Some(AuthIdentity::User(current_user_id)) if current_user_id != user_id
+        )
     };
 
     view! {

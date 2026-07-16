@@ -138,7 +138,7 @@ pub fn ChallengeView() -> impl IntoView {
     let params = use_params::<ChallengeParams>();
     let auth_context = expect_context::<AuthContext>();
     let user = auth_context.user;
-    let logged_in = auth_context.logged_in;
+    let identity = auth_context.identity;
     let games = expect_context::<GamesSignal>();
     let websocket = expect_context::<WebsocketContext>();
     let nanoid = Signal::derive(move || {
@@ -214,7 +214,7 @@ pub fn ChallengeView() -> impl IntoView {
                                 Err(_) => EitherOf3::A(view! { <ChallengeNotFound /> }),
                                 Ok(challenge) => {
                                     if challenge.visibility == ChallengeVisibility::Direct
-                                        && logged_in.get().is_none()
+                                        && identity.get().is_none()
                                     {
                                         return EitherOf3::B(
                                             view! {

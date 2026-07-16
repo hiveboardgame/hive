@@ -20,18 +20,18 @@ pub struct AdjudicateResultHandler {
 }
 
 impl AdjudicateResultHandler {
-    pub async fn new(
+    pub fn new(
         game_id: GameId,
         new_result: TournamentGameResult,
         user_id: Uuid,
         pool: &DbPool,
-    ) -> Result<Self> {
-        Ok(Self {
+    ) -> Self {
+        Self {
             game_id,
             new_result,
             user_id,
             pool: pool.clone(),
-        })
+        }
     }
 
     pub async fn handle(&self) -> Result<HandlerOutput> {
@@ -79,7 +79,6 @@ impl AdjudicateResultHandler {
             messages,
             reactions: Vec::new(),
             finalize_games,
-            subscriptions: Vec::new(),
         })
     }
 }

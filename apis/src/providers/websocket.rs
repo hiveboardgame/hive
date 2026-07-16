@@ -3,7 +3,7 @@ use leptos::prelude::*;
 use leptos_use::use_window;
 use std::sync::Arc;
 
-type SendFn = Arc<dyn Fn(&ClientRequest) + Send + Sync>;
+type SendFn = Arc<dyn Fn(&ClientRequest) -> bool + Send + Sync>;
 type ControlFn = Arc<dyn Fn() + Send + Sync>;
 
 struct WebsocketParts {
@@ -29,6 +29,7 @@ pub struct WebsocketContext {
     open: ControlFn,
     close: ControlFn,
     reconnect_now: ControlFn,
+    pub wake_resync_epoch: Signal<u64>,
 }
 
 impl WebsocketContext {
@@ -40,6 +41,26 @@ impl WebsocketContext {
         close: ControlFn,
         reconnect_now: ControlFn,
     ) -> Self {
+        Self::new_with_wake_resync(
+            message,
+            send,
+            ready_state,
+            open,
+            close,
+            reconnect_now,
+            Signal::derive(|| 0),
+        )
+    }
+
+    fn new_with_wake_resync(
+        message: Signal<Option<ServerResult>>,
+        send: SendFn,
+        ready_state: Signal<ConnectionReadyState>,
+        open: ControlFn,
+        close: ControlFn,
+        reconnect_now: ControlFn,
+        wake_resync_epoch: Signal<u64>,
+    ) -> Self {
         Self {
             message,
             send,
@@ -47,11 +68,12 @@ impl WebsocketContext {
             open,
             close,
             reconnect_now,
+            wake_resync_epoch,
         }
     }
 
     #[inline(always)]
-    pub fn send(&self, message: &ClientRequest) {
+    pub fn send(&self, message: &ClientRequest) -> bool {
         (self.send)(message)
     }
 
@@ -116,8 +138,15 @@ mod platform {
         url: String,
         ready_state: RwSignal<ConnectionReadyState>,
         message: RwSignal<Option<ServerResult>>,
+        wake_resync_epoch: RwSignal<u64>,
     ) -> WebsocketParts {
-        let controls = SocketControls::new(url, ready_state, message, Owner::current().unwrap());
+        let controls = SocketControls::new(
+            url,
+            ready_state,
+            message,
+            wake_resync_epoch,
+            Owner::current().unwrap(),
+        );
 
         let send: SendFn = Arc::new({
             let controls = controls.clone();
@@ -243,6 +272,7 @@ mod platform {
         resync_debounce_timer: StoredValue<Option<TimeoutHandle>>,
         ready_state: RwSignal<ConnectionReadyState>,
         message: RwSignal<Option<ServerResult>>,
+        wake_resync_epoch: RwSignal<u64>,
         owner: Owner,
     }
 
@@ -251,6 +281,7 @@ mod platform {
             url: String,
             ready_state: RwSignal<ConnectionReadyState>,
             message: RwSignal<Option<ServerResult>>,
+            wake_resync_epoch: RwSignal<u64>,
             owner: Owner,
         ) -> Self {
             Self {
@@ -264,6 +295,7 @@ mod platform {
                 resync_debounce_timer: StoredValue::new(None),
                 ready_state,
                 message,
+                wake_resync_epoch,
                 owner,
             }
         }
@@ -444,7 +476,10 @@ mod platform {
                 self.owner.with(|| {
                     begin_resync_all();
                 });
-                self.send(&ClientRequest::Resync);
+                if self.send(&ClientRequest::Resync) {
+                    self.wake_resync_epoch
+                        .update(|epoch| *epoch = epoch.saturating_add(1));
+                }
             } else {
                 // Closed: `reconnect_now` → `connect()` will call
                 // `begin_resync_all` itself, so don't double-call here.
@@ -473,22 +508,23 @@ mod platform {
             });
         }
 
-        fn send(&self, message: &ClientRequest) {
+        fn send(&self, message: &ClientRequest) -> bool {
             let data = match MsgpackSerdeCodec::encode(message) {
                 Ok(data) => data,
                 Err(err) => {
                     log!("Could not encode websocket message: {err:?}");
-                    return;
+                    return false;
                 }
             };
 
             self.socket.with_value(|socket| {
                 if let Some(socket) = socket.as_ref() {
                     if socket.socket.ready_state() == WebSocket::OPEN {
-                        let _ = socket.socket.send_with_u8_array(&data);
+                        return socket.socket.send_with_u8_array(&data).is_ok();
                     }
                 }
-            });
+                false
+            })
         }
 
         fn is_current(&self, generation: u64) -> bool {
@@ -599,10 +635,11 @@ mod platform {
         url: String,
         _ready_state: RwSignal<ConnectionReadyState>,
         _message: RwSignal<Option<ServerResult>>,
+        _wake_resync_epoch: RwSignal<u64>,
     ) -> WebsocketParts {
         let _ = url;
         WebsocketParts {
-            send: Arc::new(|_: &ClientRequest| {}),
+            send: Arc::new(|_: &ClientRequest| false),
             open: Arc::new(|| {}),
             close: Arc::new(|| {}),
             reconnect_now: Arc::new(|| {}),
@@ -629,19 +666,21 @@ pub fn provide_websocket(url: &str) {
     let url = fix_wss(url);
     let ready_state = RwSignal::new(ConnectionReadyState::Closed);
     let message = RwSignal::new(None::<ServerResult>);
+    let wake_resync_epoch = RwSignal::new(0_u64);
     let WebsocketParts {
         send,
         open,
         close,
         reconnect_now,
-    } = platform::connect(url, ready_state, message);
+    } = platform::connect(url, ready_state, message, wake_resync_epoch);
 
-    provide_context(WebsocketContext::new(
+    provide_context(WebsocketContext::new_with_wake_resync(
         message.into(),
         send,
         ready_state.into(),
         open,
         close,
         reconnect_now,
+        wake_resync_epoch.into(),
     ));
 }

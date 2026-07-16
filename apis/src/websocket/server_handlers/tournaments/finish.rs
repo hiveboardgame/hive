@@ -1,6 +1,6 @@
 use crate::{
     common::{ServerMessage, TournamentUpdate},
-    websocket::messages::{InternalServerMessage, MessageDestination},
+    websocket::messages::{InternalServerMessage, MessageDestination, TournamentAudience},
 };
 use anyhow::Result;
 use db_lib::{db_error::DbError, get_conn, models::Tournament, DbPool};
@@ -15,12 +15,12 @@ pub struct FinishHandler {
 }
 
 impl FinishHandler {
-    pub async fn new(tournament_id: TournamentId, user_id: Uuid, pool: &DbPool) -> Result<Self> {
-        Ok(Self {
+    pub fn new(tournament_id: TournamentId, user_id: Uuid, pool: &DbPool) -> Self {
+        Self {
             tournament_id,
             user_id,
             pool: pool.clone(),
-        })
+        }
     }
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
@@ -34,7 +34,10 @@ impl FinishHandler {
             .await?;
 
         messages.push(InternalServerMessage {
-            destination: MessageDestination::Tournament(self.tournament_id.clone()),
+            destination: MessageDestination::Tournament {
+                tournament_id: self.tournament_id.clone(),
+                audience: TournamentAudience::Updates,
+            },
             message: ServerMessage::Tournament(TournamentUpdate::Finished(TournamentId(
                 tournament.nanoid.clone(),
             ))),

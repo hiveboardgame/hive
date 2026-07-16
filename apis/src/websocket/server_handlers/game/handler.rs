@@ -113,6 +113,7 @@ impl GameActionHandler {
                     self.user_id,
                     self.received_from.clone(),
                     self.data.clone(),
+                    self.hub.clone(),
                     &self.pool,
                 )
                 .handle()

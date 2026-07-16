@@ -13,6 +13,8 @@ pub enum DbError {
     InvalidTournamentDetails { info: String },
     #[error("Internal database error")]
     InternalError,
+    #[error("Chat client ID conflicts with an existing message")]
+    ChatClientIdConflict,
     #[error("Invalid input")]
     InvalidInput { info: String, error: String },
     #[error("Invalid action")]

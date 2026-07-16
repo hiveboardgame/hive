@@ -25,18 +25,18 @@ pub struct AbandonHandler {
 }
 
 impl AbandonHandler {
-    pub async fn new(
+    pub fn new(
         tournament_id: TournamentId,
         user_id: Uuid,
         username: String,
         pool: &DbPool,
-    ) -> Result<Self> {
-        Ok(Self {
+    ) -> Self {
+        Self {
             tournament_id,
             user_id,
             username,
             pool: pool.clone(),
-        })
+        }
     }
 
     pub async fn handle(&self) -> Result<HandlerOutput> {
@@ -123,13 +123,12 @@ impl AbandonHandler {
 
         messages.push(InternalServerMessage {
             destination: MessageDestination::Global,
-            message: ServerMessage::Tournament(TournamentUpdate::Modified(tournament_response)),
+            message: ServerMessage::Tournament(TournamentUpdate::StateChanged(tournament_response)),
         });
         Ok(HandlerOutput {
             messages,
             reactions,
             finalize_games,
-            subscriptions: Vec::new(),
         })
     }
 }

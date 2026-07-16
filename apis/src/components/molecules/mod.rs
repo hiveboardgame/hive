@@ -13,6 +13,7 @@ pub mod empty_state;
 pub mod game_info;
 pub mod game_previews;
 pub mod game_row;
+pub mod game_thread_toggle;
 pub mod hamburger;
 pub mod history_controls;
 pub mod history_pieces;

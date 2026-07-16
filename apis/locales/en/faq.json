@@ -103,7 +103,7 @@
     },
     "chat_basics": {
         "question": "How does the chat work?",
-        "answer": "The chat feature is very much a work in progress; we are aware it has issues, so important things to keep in mind when using it: 1. Currently the chat does not persist in the database so whenever we deploy an update your chat messages will be lost! 2. For now, it is only possible to chat in a game (direct messages and other ways will be added in the future), spectators don't see the player chat, nor do the players see the spectator chat. 3. Sometimes the red chat notification will show new messages when there aren't any."
+        "answer": "Chat messages are stored in the database. Chat is available for direct messages, tournaments, and games, while player and spectator game threads remain separate. The Messages page brings your recent conversations and unread messages together."
     },
     "tournament_entry": {
         "question": "Can anyone join a tournament? Is there an entry fee? What about prizes?",

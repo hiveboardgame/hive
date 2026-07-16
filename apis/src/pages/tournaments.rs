@@ -7,7 +7,7 @@ use crate::{
         molecules::{empty_state::EmptyState, panel::Panel, tournament_row::TournamentRow},
     },
     functions::tournaments::{get_by_status, get_hosting_tournaments, get_joined_tournaments},
-    providers::AuthContext,
+    providers::{AuthContext, AuthIdentity},
     responses::TournamentAbstractResponse,
 };
 use leptos::{either::Either, prelude::*};
@@ -29,7 +29,7 @@ fn tournament_tab_class(current_path: &str, target_path: &str) -> &'static str {
 pub fn Tournaments(children: Children) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     let location = use_location();
-    let logged_in = move || auth_context.user.with(|a| a.is_some());
+    let logged_in = move || matches!(auth_context.identity.get(), Some(AuthIdentity::User(_)));
 
     view! {
         <PageShell variant=PageShellVariant::Dashboard>

@@ -1,4 +1,4 @@
-use super::game_reaction::GameReaction;
+use super::{client_message::SubscriptionAttempt, game_reaction::GameReaction};
 use crate::responses::{
     ChallengeResponse,
     GameResponse,
@@ -6,10 +6,9 @@ use crate::responses::{
     ScheduleResponse,
     UserResponse,
 };
-use http::StatusCode;
 use serde::{Deserialize, Serialize};
-use shared_types::{ChallengeId, ChatMessageContainer, GameId, TournamentId};
-use std::{collections::HashMap, fmt};
+use shared_types::{ChallengeId, ChatMessageContainer, ConversationKey, GameId, TournamentId};
+use std::{collections::HashMap, fmt, time::Duration};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -18,29 +17,93 @@ pub enum ServerResult {
     Err(ExternalServerError),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExternalServerError {
-    pub user_id: Uuid,
-    pub field: String,
-    pub reason: String,
-    #[serde(with = "http_serde::status_code")]
-    pub status_code: StatusCode,
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum ExternalServerError {
+    Unauthorized {
+        reason: String,
+    },
+    ChatSend {
+        key: ConversationKey,
+        client_id: Uuid,
+        error: ChatSendError,
+    },
+    ChatSubscribe {
+        attempt: SubscriptionAttempt,
+        error: SubscriptionError,
+    },
+    Request {
+        reason: String,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub enum ChatSendError {
+    ClientIdConflict,
+    RateLimited,
+    DirectRestricted,
+    AdminOnly,
+    TournamentRestricted,
+    PlayersRestricted,
+    SpectatorsRestricted,
+    Unavailable,
+}
+
+impl ChatSendError {
+    pub fn reason(&self) -> &str {
+        match self {
+            Self::ClientIdConflict => {
+                "This message retry conflicts with the original delivery. Send it as a new message."
+            }
+            Self::RateLimited => "Too many messages. Please wait and try again.",
+            Self::DirectRestricted => "You cannot send messages to this user.",
+            Self::AdminOnly => "Global chat requires an administrator.",
+            Self::TournamentRestricted => "Only tournament participants can send messages.",
+            Self::PlayersRestricted => "Only players can send messages here.",
+            Self::SpectatorsRestricted => {
+                "Players cannot send to spectator chat while the game is ongoing."
+            }
+            Self::Unavailable => "Unable to send the chat message.",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum SubscriptionError {
+    AccessDenied,
+    Unavailable,
+    RateLimited { retry_after: Duration },
+}
+
+impl SubscriptionError {
+    pub fn reason(&self) -> &str {
+        match self {
+            Self::AccessDenied => "You cannot read this chat",
+            Self::Unavailable => "The chat subscription request failed",
+            Self::RateLimited { .. } => "Too many chat subscription attempts",
+        }
+    }
 }
 
 impl fmt::Display for ExternalServerError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}: We encountered an error {} because {} ",
-            self.status_code, self.field, self.reason
-        )
+        let reason = match self {
+            Self::Unauthorized { reason } | Self::Request { reason } => reason,
+            Self::ChatSend { error, .. } => error.reason(),
+            Self::ChatSubscribe { error, .. } => error.reason(),
+        };
+        write!(f, "WebSocket request failed: {reason}")
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ServerMessage {
     Challenge(ChallengeUpdate),
-    Chat(Vec<ChatMessageContainer>),
+    Chat(ChatMessageContainer),
+    ChatRead {
+        key: ConversationKey,
+        last_read_message_id: i64,
+    },
+    ChatSubscribed(SubscriptionAttempt),
     ConnectionUpdated(Uuid, String),
     Error(String),
     Game(Box<GameUpdate>),
@@ -54,6 +117,7 @@ pub enum ServerMessage {
     },
     Schedule(ScheduleUpdate),
     Tournament(TournamentUpdate),
+    UserSettings(UserSettingsUpdate),
     UserStatus(UserUpdate),
     RedirectLink(String),
 }
@@ -79,9 +143,21 @@ pub enum TournamentUpdate {
     Invited(TournamentId),
     Joined(TournamentId),
     Left(TournamentId),
-    Modified(TournamentId),
+    StateChanged(TournamentId),
     Started(TournamentId),
     Uninvited(TournamentId),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum UserSettingsUpdate {
+    BlockedUser {
+        user_id: Uuid,
+        blocked: bool,
+    },
+    TournamentChatMuted {
+        tournament_id: TournamentId,
+        muted: bool,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

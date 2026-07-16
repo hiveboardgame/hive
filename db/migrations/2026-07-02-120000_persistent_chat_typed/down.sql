@@ -1,0 +1,9 @@
+DROP INDEX IF EXISTS games_black_id_id;
+DROP INDEX IF EXISTS games_white_id_id;
+DROP INDEX IF EXISTS tournaments_organizers_organizer_tournament;
+DROP INDEX IF EXISTS tournaments_users_user_tournament;
+DROP TABLE IF EXISTS user_tournament_chat_mutes;
+DROP TABLE IF EXISTS user_blocks;
+DROP TABLE IF EXISTS chat_read_receipts;
+DROP TABLE IF EXISTS chat_messages;
+DROP TABLE IF EXISTS chat_channels;

@@ -111,7 +111,7 @@
     },
     "chat_basics": {
         "question": "Jak funguje chat?",
-        "answer": "Funkce chatu je velmi v procesu vývoje; jsme si vědomi, že má problémy, takže důležité věci, které je třeba mít na paměti při jeho používání: 1. Momentálně chat nepřetrvává v databázi, takže kdykoli nasadíme aktualizaci, vaše chatové zprávy se ztratí! 2. Zatím je možné chatovat pouze ve hře (přímé zprávy a jiné způsoby budou přidány v budoucnu), diváci nevidí chat hráčů, ani hráči nevidí chat diváků. 3. Někdy červené upozornění chatu zobrazí nové zprávy, když tam žádné nejsou."
+        "answer": "Chatové zprávy se ukládají do databáze. Chat je dostupný pro přímé zprávy, turnaje a hry, přičemž herní vlákna hráčů a diváků zůstávají oddělená. Stránka Zprávy sdružuje vaše nedávné konverzace a nepřečtené zprávy."
     },
     "tournament_entry": {
         "question": "Může se kdokoli připojit k turnaji? Je vstupní poplatek? Co odměny?",

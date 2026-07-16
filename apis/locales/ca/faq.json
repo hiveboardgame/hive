@@ -111,7 +111,7 @@
     },
     "chat_basics": {
         "question": "Com funciona el xat?",
-        "answer": "La funció del xat és molt un treball en progrés; som conscients que té problemes, així que coses importants a tenir en compte quan l'utilitzis: 1. Actualment el xat no persisteix a la base de dades, així que cada cop que despleguem una actualització els teus missatges de xat es perdran! 2. Per ara, només és possible xatejar en una partida (missatges directes i altres maneres s'afegiran en el futur), els espectadors no veuen el xat dels jugadors, ni els jugadors veuen el xat dels espectadors. 3. A vegades la notificació vermella del xat mostrarà missatges nous quan no n'hi ha cap."
+        "answer": "Els missatges del xat es desen a la base de dades. El xat està disponible per a missatges directes, tornejos i partides, mentre que els fils de jugadors i espectadors de cada partida es mantenen separats. La pàgina Missatges agrupa les converses recents i els missatges no llegits."
     },
     "tournament_entry": {
         "question": "Pot qualsevol unir-se a un torneig? Hi ha una tarifa d'entrada? Què passa amb els premis?",

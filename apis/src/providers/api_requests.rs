@@ -6,7 +6,7 @@ use crate::{
 };
 use hive_lib::{GameControl, Turn};
 use leptos::prelude::*;
-use shared_types::{ChallengeId, ChatMessageContainer, GameId, TournamentGameResult, TournamentId};
+use shared_types::{ChallengeId, GameId, TournamentGameResult, TournamentId};
 
 #[derive(Clone)]
 pub struct ApiRequests {
@@ -80,11 +80,6 @@ impl ApiRequests {
     ) {
         let msg =
             ClientRequest::Tournament(TournamentAction::AdjudicateResult(game_id, new_result));
-        self.websocket.send(&msg);
-    }
-
-    pub fn chat(&self, message: &ChatMessageContainer) {
-        let msg = ClientRequest::Chat(message.to_owned());
         self.websocket.send(&msg);
     }
 

@@ -1,6 +1,7 @@
 use crate::{
     common::GameActionResponse,
     providers::{
+        chat::Chat,
         games::GamesSignal,
         AlertType,
         AlertsContext,
@@ -20,9 +21,13 @@ pub fn handle_control(game_control: GameControl, gar: GameActionResponse) {
     let mut games = expect_context::<GamesSignal>();
     let game_updater = expect_context::<UpdateNotifier>();
     game_updater.game_response.set(Some(gar.clone()));
+    let aborted = matches!(game_control, GameControl::Abort(_));
     match game_control {
         GameControl::Abort(_) => {
             games.own_games_remove(&gar.game.game_id);
+            let chat = expect_context::<Chat>();
+            chat.clear_game_thread(&gar.game.game_id);
+            chat.request_catalog_refresh();
             let alerts = expect_context::<AlertsContext>();
             alerts.last_alert.update(|v| {
                 *v = Some(AlertType::Warn(format!(
@@ -53,6 +58,10 @@ pub fn handle_control(game_control: GameControl, gar: GameActionResponse) {
             games.own_games_add(gar.game.to_owned());
         }
         GameControl::DrawReject(_) | GameControl::TakebackReject(_) => {}
+    }
+    if gar.game.finished && !aborted {
+        let chat = expect_context::<Chat>();
+        chat.request_catalog_refresh();
     }
 }
 

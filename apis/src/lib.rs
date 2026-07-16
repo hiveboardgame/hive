@@ -1,5 +1,7 @@
 pub mod api;
 pub mod app;
+#[cfg(feature = "ssr")]
+pub mod chat;
 pub mod common;
 pub mod components;
 #[cfg(feature = "ssr")]

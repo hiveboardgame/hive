@@ -173,7 +173,6 @@ impl TurnHandler {
             messages,
             reactions,
             finalize_games,
-            subscriptions: Vec::new(),
         })
     }
 

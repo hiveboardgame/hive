@@ -15,16 +15,15 @@ pub struct JoinHandler {
 }
 
 impl JoinHandler {
-    pub async fn new(tournament_id: TournamentId, user_id: Uuid, pool: &DbPool) -> Result<Self> {
-        Ok(Self {
+    pub fn new(tournament_id: TournamentId, user_id: Uuid, pool: &DbPool) -> Self {
+        Self {
             tournament_id,
             user_id,
             pool: pool.clone(),
-        })
+        }
     }
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
-        // TODO: This needs to go into a one commit
         let mut conn = get_conn(&self.pool).await?;
         let tournament = Tournament::find_by_tournament_id(&self.tournament_id, &mut conn).await?;
         let tournament = conn
@@ -40,7 +39,7 @@ impl JoinHandler {
             },
             InternalServerMessage {
                 destination: MessageDestination::Global,
-                message: ServerMessage::Tournament(TournamentUpdate::Modified(response)),
+                message: ServerMessage::Tournament(TournamentUpdate::StateChanged(response)),
             },
         ])
     }

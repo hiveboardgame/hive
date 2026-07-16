@@ -1,18 +1,24 @@
 use super::{
-    messages::{GameSubscription, MessageDestination, SocketTx},
+    messages::{MessageDestination, SocketTx},
     server_handlers::request_handler::{RequestHandler, RequestHandlerError},
     telemetry::{DisconnectReason, WsTelemetry},
     ws_hub::WsHub,
     WebsocketData,
 };
-use crate::common::{ClientRequest, ExternalServerError, GameAction, ServerResult};
+use crate::common::{
+    ClientRequest,
+    ExternalServerError,
+    GameAction,
+    ServerResult,
+    SubscriptionError,
+};
 use actix_ws::{AggregatedMessage, AggregatedMessageStream, Session};
 use bytes::Bytes;
 use codee::{binary::MsgpackSerdeCodec, Decoder, Encoder};
 use db_lib::DbPool;
 use futures_util::StreamExt;
 use indoc::printdoc;
-use shared_types::SimpleUser;
+use shared_types::{ConversationKey, GameThread, SimpleUser};
 use std::{
     cell::Cell,
     sync::Arc,
@@ -153,29 +159,18 @@ async fn handle_binary(
 
     match handler.handle().await {
         Ok(output) => {
-            let from = Some((user.user_id, socket.socket_id));
-            for subscription in output.subscriptions {
-                match subscription {
-                    GameSubscription::Fanout(game_id) => {
-                        hub.subscribe_game_fanout(user.user_id, socket.socket_id, &game_id);
-                    }
-                    GameSubscription::Heartbeat(game_id) => {
-                        hub.subscribe_game_heartbeat(user.user_id, socket.socket_id, &game_id);
-                    }
-                }
-            }
             for message in output.messages {
+                let destination = message.destination;
                 let serialized = ServerResult::Ok(Box::new(message.message));
                 if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
-                    hub.dispatch(&message.destination, Bytes::from(serialized), from)
-                        .await;
+                    hub.dispatch(&destination, Bytes::from(serialized)).await;
                 }
             }
             // Reactions: one serialize, one Bytes allocation, refcount-cloned
             // across the three fanouts (both players + spectators). Dispatch
             // after `messages` so urgent state updates land first.
             for reaction in output.reactions {
-                hub.dispatch_reaction(reaction, from).await;
+                hub.dispatch_reaction(reaction).await;
             }
             // Finalize after dispatch so the opponent received the final
             // move/control via still-populated membership.
@@ -184,33 +179,227 @@ async fn handle_binary(
             }
         }
         Err(err) => {
-            let status_code = match err {
-                RequestHandlerError::AuthError(_) => http::StatusCode::UNAUTHORIZED,
-                _ => http::StatusCode::NOT_IMPLEMENTED,
-            };
-            printdoc! {r#"
-                -----------------ERROR-----------------
-                  Request: {:?}
-                  Error:   {:?}
-                  User:    {} {}
-                ------------------END------------------
-                "#,
-                request, err, user.username, user.user_id
-            };
-            let message = ServerResult::Err(ExternalServerError {
-                user_id: user.user_id,
-                field: "foo".to_string(),
-                reason: format!("{err}"),
-                status_code,
-            });
+            if matches!(err, RequestHandlerError::RateLimited(_)) {
+                hub.data.telemetry.record_chat_rate_limit_rejection();
+            }
+            if should_log_request_error(&err) {
+                let request_summary = request_log_summary(&request);
+                printdoc! {r#"
+                    -----------------ERROR-----------------
+                      Request: {}
+                      Error:   {:?}
+                      User:    {} {}
+                    ------------------END------------------
+                    "#,
+                    request_summary, err, user.username, user.user_id
+                };
+            }
+            let message = ServerResult::Err(external_server_error(&request, &err));
             if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
                 hub.dispatch(
-                    &MessageDestination::User(user.user_id),
+                    &MessageDestination::Direct(socket.clone()),
                     Bytes::from(serialized),
-                    Some((user.user_id, socket.socket_id)),
                 )
                 .await;
             }
         }
+    }
+}
+
+fn external_server_error(
+    request: &ClientRequest,
+    error: &RequestHandlerError,
+) -> ExternalServerError {
+    if matches!(error, RequestHandlerError::AuthError(_))
+        && !matches!(request, ClientRequest::ChatSubscribe(_))
+    {
+        return ExternalServerError::Unauthorized {
+            reason: error.user_safe_reason(),
+        };
+    }
+
+    match request {
+        ClientRequest::Chat(request) => {
+            let error = match error {
+                RequestHandlerError::ChatClientIdConflict => {
+                    crate::common::ChatSendError::ClientIdConflict
+                }
+                RequestHandlerError::RateLimited(_) => crate::common::ChatSendError::RateLimited,
+                RequestHandlerError::Forbidden => match &request.key {
+                    ConversationKey::Direct(_) => crate::common::ChatSendError::DirectRestricted,
+                    ConversationKey::Global => crate::common::ChatSendError::AdminOnly,
+                    ConversationKey::Tournament(_) => {
+                        crate::common::ChatSendError::TournamentRestricted
+                    }
+                    ConversationKey::Game {
+                        thread: GameThread::Players,
+                        ..
+                    } => crate::common::ChatSendError::PlayersRestricted,
+                    ConversationKey::Game {
+                        thread: GameThread::Spectators,
+                        ..
+                    } => crate::common::ChatSendError::SpectatorsRestricted,
+                },
+                RequestHandlerError::InternalError(_) => crate::common::ChatSendError::Unavailable,
+                RequestHandlerError::AuthError(_) => crate::common::ChatSendError::Unavailable,
+            };
+            ExternalServerError::ChatSend {
+                key: request.key.clone(),
+                client_id: request.client_id,
+                error,
+            }
+        }
+        ClientRequest::ChatSubscribe(subscription) => {
+            let subscription_error = match error {
+                RequestHandlerError::RateLimited(error) => SubscriptionError::RateLimited {
+                    retry_after: error.retry_after(),
+                },
+                RequestHandlerError::AuthError(_) | RequestHandlerError::Forbidden => {
+                    SubscriptionError::AccessDenied
+                }
+                RequestHandlerError::InternalError(_)
+                | RequestHandlerError::ChatClientIdConflict => SubscriptionError::Unavailable,
+            };
+            ExternalServerError::ChatSubscribe {
+                attempt: subscription.clone(),
+                error: subscription_error,
+            }
+        }
+        _ => ExternalServerError::Request {
+            reason: error.user_safe_reason(),
+        },
+    }
+}
+
+fn request_log_summary(request: &ClientRequest) -> String {
+    match request {
+        ClientRequest::Chat(request) => format!(
+            "Chat(key={:?}, client_id={}, body_chars={})",
+            request.key,
+            request.client_id,
+            request.body.chars().count()
+        ),
+        other => format!("{other:?}"),
+    }
+}
+
+fn should_log_request_error(err: &RequestHandlerError) -> bool {
+    !matches!(
+        err,
+        RequestHandlerError::AuthError(_)
+            | RequestHandlerError::Forbidden
+            | RequestHandlerError::RateLimited(_)
+            | RequestHandlerError::ChatClientIdConflict
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::external_server_error;
+    use crate::{
+        common::{
+            ChatSendError,
+            ChatSendRequest,
+            ClientRequest,
+            ExternalServerError,
+            SubscriptionAttempt,
+            SubscriptionError,
+        },
+        websocket::{
+            messages::AuthError,
+            server_handlers::{chat::limits::ChatLimitError, request_handler::RequestHandlerError},
+        },
+    };
+    use shared_types::{ConversationKey, GameId};
+    use std::time::Duration;
+    use uuid::Uuid;
+
+    #[test]
+    fn subscription_rate_error_carries_typed_key_and_duration() {
+        let key = ConversationKey::game_spectators(&GameId("limited-game".to_string()));
+        let attempt = SubscriptionAttempt {
+            key: key.clone(),
+            session_epoch: 7,
+            request_id: 3,
+        };
+        let request = ClientRequest::ChatSubscribe(attempt.clone());
+        let error = RequestHandlerError::RateLimited(ChatLimitError::SubscriptionAttempts {
+            retry_after: Duration::from_millis(250),
+        });
+
+        assert_eq!(
+            external_server_error(&request, &error),
+            ExternalServerError::ChatSubscribe {
+                attempt,
+                error: SubscriptionError::RateLimited {
+                    retry_after: Duration::from_millis(250),
+                },
+            }
+        );
+    }
+
+    #[test]
+    fn subscription_auth_error_preserves_request_correlation() {
+        let key = ConversationKey::game_spectators(&GameId("private-game".to_string()));
+        let attempt = SubscriptionAttempt {
+            key: key.clone(),
+            session_epoch: 11,
+            request_id: 27,
+        };
+        let request = ClientRequest::ChatSubscribe(attempt.clone());
+
+        assert_eq!(
+            external_server_error(
+                &request,
+                &RequestHandlerError::AuthError(AuthError::Unauthorized),
+            ),
+            ExternalServerError::ChatSubscribe {
+                attempt,
+                error: SubscriptionError::AccessDenied,
+            },
+        );
+    }
+
+    #[test]
+    fn chat_send_error_carries_typed_policy() {
+        let key = ConversationKey::game_spectators(&GameId("limited-game".to_string()));
+        let client_id = Uuid::new_v4();
+        let request = ClientRequest::Chat(ChatSendRequest {
+            key: key.clone(),
+            client_id,
+            body: "hello".to_string(),
+            turn: None,
+        });
+        let error = RequestHandlerError::Forbidden;
+
+        assert!(matches!(
+            external_server_error(&request, &error),
+            ExternalServerError::ChatSend {
+                key: candidate,
+                client_id: candidate_client_id,
+                error: ChatSendError::SpectatorsRestricted,
+            } if candidate == key && candidate_client_id == client_id
+        ));
+    }
+
+    #[test]
+    fn client_id_conflict_remains_typed_on_the_wire() {
+        let key = ConversationKey::direct(Uuid::new_v4());
+        let client_id = Uuid::new_v4();
+        let request = ClientRequest::Chat(ChatSendRequest {
+            key: key.clone(),
+            client_id,
+            body: "hello".to_string(),
+            turn: None,
+        });
+
+        assert_eq!(
+            external_server_error(&request, &RequestHandlerError::ChatClientIdConflict),
+            ExternalServerError::ChatSend {
+                key,
+                client_id,
+                error: ChatSendError::ClientIdConflict,
+            },
+        );
     }
 }

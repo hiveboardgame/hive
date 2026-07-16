@@ -1,4 +1,6 @@
 mod challenge;
+mod chat_channel;
+mod chat_message;
 mod email_queue;
 mod email_request_log;
 mod email_state;
@@ -19,6 +21,8 @@ mod tournament_series_organizer;
 mod tournament_user;
 mod user;
 pub use challenge::{Challenge, NewChallenge};
+pub use chat_channel::ChatChannelKind;
+pub use chat_message::ChatMessage;
 pub use email_queue::{EmailQueueItem, NewEmailQueueItem};
 pub use email_request_log::{EmailRequestLog, NewEmailRequestLog};
 pub use email_state::EmailState;

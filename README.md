@@ -143,9 +143,10 @@ This shows the incremental build output and prints when the server binds to the 
 ### WebSocket telemetry
 
 The server publishes a snapshot of WebSocket-related counters and gauges
-(connections, dispatches, drops, queue depth, chat sizes, process memory,
-etc.) on a fixed interval. Each snapshot is written to the log and, if a
-CSV file path is configured, appended as one row to that file.
+(connections, dispatches, drops, queue depth, chat persistence failures and
+rate-limit rejections, bounded membership/cache state, process memory, etc.)
+on a fixed interval. Each snapshot is written to the log and, if a CSV file
+path is configured, appended as one row to that file.
 
 **Defaults**
 
@@ -159,8 +160,8 @@ CSV file path is configured, appended as one row to that file.
 - `WS_TELEMETRY_INTERVAL_SECS`
   - Set to `0` to disable the snapshot job entirely.
   - Set to a positive integer to override the interval. Values below 10s
-    are accepted but log a warning — the snapshot walks every chat channel
-    and contends with WS traffic for chat locks at sub-10s intervals.
+    are accepted but log a warning because frequent snapshots add avoidable
+    registry and process-sampling overhead.
 - `WS_METRICS_LOG_FILE`
   - Set to an empty string to keep snapshots running but skip CSV writing.
   - Set to a path to override the default CSV location.

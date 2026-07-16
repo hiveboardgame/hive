@@ -18,6 +18,14 @@ use crate::{
         game_search::GameSearch,
         home::Home,
         login::Login,
+        messages::{
+            MessagesDmThread,
+            MessagesGameThread,
+            MessagesGlobalThread,
+            MessagesIndex,
+            MessagesLayout,
+            MessagesTournamentThread,
+        },
         notifications::Notifications,
         play::Play,
         profile_view::{ProfileMe, ProfileView},
@@ -54,24 +62,29 @@ use crate::{
         schedules::provide_schedules,
         websocket::provide_websocket,
         AuthContext,
+        AuthIdentity,
     },
 };
 use leptos::prelude::*;
 use leptos_i18n::context::CookieOptions;
 use leptos_meta::*;
 use leptos_router::{
-    components::{Outlet, ParentRoute, ProtectedRoute, Route, Router, Routes},
+    components::{
+        Outlet,
+        ParentRoute,
+        ProtectedParentRoute,
+        ProtectedRoute,
+        Route,
+        Router,
+        Routes,
+    },
     path,
 };
 use leptos_use::SameSite;
-use shared_types::{GameProgress, TournamentStatus};
+use shared_types::{GameProgress, GameThread, TournamentStatus};
 
 // 1 year in milliseconds
 const LOCALE_MAX_AGE: i64 = 1000 * 60 * 60 * 24 * 365;
-
-fn auth_pending_fallback() -> impl IntoView {
-    view! { <div aria-hidden="true"></div> }
-}
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -102,11 +115,15 @@ pub fn App() -> impl IntoView {
     //expects auth, challengeStateSignal, websocket
     provide_api_requests();
 
-    //expects auth, api_requests, gameStateSignal
+    //expects auth and websocket
     provide_chat();
     let direct_challenge = provide_direct_challenge();
     let auth = expect_context::<AuthContext>();
-    let is_logged_in = move || auth.logged_in.get();
+    let is_logged_in = move || {
+        auth.identity
+            .get()
+            .map(|identity| matches!(identity, AuthIdentity::User(_)))
+    };
     let is_admin = move || auth.admin.get();
     view! {
         <I18nContextProvider cookie_options=CookieOptions::default()
@@ -165,11 +182,31 @@ pub fn App() -> impl IntoView {
                             view=|| view! { <ForgotPassword /> }
                         />
                         <Route path=path!("/reset-password") view=|| view! { <ResetPassword /> } />
+                        <ProtectedParentRoute
+                            condition=is_logged_in
+                            path=path!("/message")
+                            redirect_path=|| "/login"
+                            view=MessagesLayout
+                        >
+                            <Route path=path!("") view=MessagesIndex />
+                            <Route path=path!("global") view=MessagesGlobalThread />
+                            <Route path=path!("dm/:username") view=MessagesDmThread />
+                            <Route path=path!("tournament/:nanoid") view=MessagesTournamentThread />
+                            <Route
+                                path=path!("game/:nanoid/players")
+                                view=|| view! { <MessagesGameThread thread=GameThread::Players /> }
+                            />
+                            <Route
+                                path=path!("game/:nanoid/spectators")
+                                view=|| {
+                                    view! { <MessagesGameThread thread=GameThread::Spectators /> }
+                                }
+                            />
+                        </ProtectedParentRoute>
                         <ProtectedRoute
                             condition=is_logged_in
                             path=path!("/account")
                             redirect_path=|| "/login"
-                            fallback=auth_pending_fallback
                             view=|| view! { <Account /> }
                         />
                         <Route
@@ -182,14 +219,12 @@ pub fn App() -> impl IntoView {
                             condition=is_logged_in
                             path=path!("/config")
                             redirect_path=|| "/login"
-                            fallback=auth_pending_fallback
                             view=|| view! { <Config /> }
                         />
                         <ProtectedRoute
                             condition=is_logged_in
                             path=path!("/notifications")
                             redirect_path=|| "/login"
-                            fallback=auth_pending_fallback
                             view=|| view! { <Notifications /> }
                         />
                         <Route path=path!("/tournament/:nanoid") view=|| view! { <Tournament /> } />
@@ -197,7 +232,6 @@ pub fn App() -> impl IntoView {
                             condition=is_logged_in
                             path=path!("/tournaments/create")
                             redirect_path=|| "/login"
-                            fallback=auth_pending_fallback
                             view=|| view! { <TournamentCreate /> }
                         />
                         <ParentRoute
@@ -246,14 +280,12 @@ pub fn App() -> impl IntoView {
                                 condition=is_logged_in
                                 path=path!("joined")
                                 redirect_path=|| "/login"
-                                fallback=auth_pending_fallback
                                 view=|| view! { <JoinedTournaments /> }
                             />
                             <ProtectedRoute
                                 condition=is_logged_in
                                 path=path!("hosting")
                                 redirect_path=|| "/login"
-                                fallback=auth_pending_fallback
                                 view=|| view! { <HostingTournaments /> }
                             />
                         </ParentRoute>
@@ -270,21 +302,18 @@ pub fn App() -> impl IntoView {
                             condition=is_admin
                             path=path!("/admin")
                             redirect_path=|| "/"
-                            fallback=auth_pending_fallback
                             view=|| view! { <Admin /> }
                         />
                         <ProtectedRoute
                             condition=is_admin
                             path=path!("/admin/telemetry")
                             redirect_path=|| "/"
-                            fallback=auth_pending_fallback
                             view=|| view! { <AdminTelemetry /> }
                         />
                         <ProtectedRoute
                             condition=is_admin
                             path=path!("/admin/push-metrics")
                             redirect_path=|| "/"
-                            fallback=auth_pending_fallback
                             view=|| view! { <AdminPushMetrics /> }
                         />
                     </ParentRoute>

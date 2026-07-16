@@ -9,24 +9,40 @@ use crate::{
         },
     },
     functions::tournaments::get_abstracts_by_ids,
-    providers::{challenges::ChallengeStateSignal, NotificationContext, SchedulesContext},
+    i18n::*,
+    providers::{
+        challenges::ChallengeStateSignal,
+        chat::Chat,
+        NotificationContext,
+        SchedulesContext,
+    },
 };
 use leptos::prelude::*;
 use leptos_icons::*;
+use shared_types::GameId;
 
 #[component]
-pub fn NotificationDropdown() -> impl IntoView {
+pub fn NotificationDropdown(current_game_id: Signal<Option<GameId>>) -> impl IntoView {
+    let i18n = use_i18n();
     let hamburger_show = RwSignal::new(false);
     let challenges = expect_context::<ChallengeStateSignal>();
+    let chat = expect_context::<Chat>();
     let notifications_context = expect_context::<NotificationContext>();
     let schedules_context = expect_context::<SchedulesContext>();
-    let has_notifications = move || !notifications_context.is_empty();
+    let latest_chat_unread_message_id = Memo::new(move |_| {
+        let current_game_id = current_game_id.get();
+        chat.latest_unread_message_id_excluding_game(current_game_id.as_ref())
+    });
+    let dismissed_unread_message_id = RwSignal::new(0_i64);
+    let has_chat_notification =
+        move || latest_chat_unread_message_id.get() > dismissed_unread_message_id.get();
+    let has_notifications = move || !notifications_context.is_empty() || has_chat_notification();
 
     let icon_style = move || {
         if has_notifications() {
-            "size-4 fill-ladybug-red"
+            "inline-flex text-ladybug-red"
         } else {
-            "size-4"
+            "inline-flex"
         }
     };
 
@@ -49,7 +65,11 @@ pub fn NotificationDropdown() -> impl IntoView {
             button_style="ui-header-icon-button"
             extend_tw_classes="h-full"
             dropdown_style="ui-dropdown-menu ui-dropdown-menu-right ui-header-dropdown-menu ui-notification-dropdown-menu"
-            content=view! { <Icon icon=icondata_io::IoNotifications attr:class=icon_style /> }
+            content=view! {
+                <span class=icon_style>
+                    <Icon icon=icondata_io::IoNotifications attr:class="size-4" />
+                </span>
+            }
             id="Notifications"
             aria_label="Open notifications"
         >
@@ -60,11 +80,40 @@ pub fn NotificationDropdown() -> impl IntoView {
                 }
             >
                 <div class="ui-notification-list">
-                    <For
-                        each=move || notifications_context.challenges.get()
-                        key=|c| c.clone()
-                        let:challenge_id
-                    >
+                    <Show when=has_chat_notification>
+                        <div class="ui-notification-item">
+                            <div class="relative flex-1 min-w-0">
+                                <div class="ui-notification-label">
+                                    {t!(i18n, messages.page.title)}
+                                </div>
+                                <div class="ui-notification-title">
+                                    {t!(i18n, messages.chat.new_chat_message)}
+                                </div>
+                                <a
+                                    class="absolute top-0 left-0 z-10 size-full"
+                                    href="/message"
+                                    aria-label=move || t_string!(i18n, header.user_menu.messages)
+                                    on:click=move |_| hamburger_show.set(false)
+                                ></a>
+                            </div>
+                            <button
+                                type="button"
+                                title=move || t_string!(i18n, messages.chat.dismiss)
+                                aria-label=move || t_string!(i18n, messages.chat.dismiss)
+                                on:click=move |event| {
+                                    event.prevent_default();
+                                    event.stop_propagation();
+                                    dismissed_unread_message_id
+                                        .set(latest_chat_unread_message_id.get_untracked());
+                                }
+                                class="z-20 ui-button ui-button-ghost ui-button-icon"
+                            >
+                                <Icon icon=icondata_io::IoCloseSharp attr:class="size-4" />
+                            </button>
+                        </div>
+                    </Show>
+
+                    <For each=notifications_context.challenges key=|c| c.clone() let:challenge_id>
                         {
                             let challenge = Signal::derive(move || {
                                 challenges

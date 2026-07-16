@@ -1,10 +1,12 @@
 mod certainty;
 mod challenge;
+mod chat_capabilities;
 mod chat_message;
 mod conclusion;
 mod game_speed;
 mod game_start;
 mod games_query_options;
+mod messages_hub;
 mod newtypes;
 mod notification_category;
 mod notification_channel;
@@ -28,7 +30,18 @@ mod tournament_sort_order;
 mod tournament_status;
 pub use certainty::{Certainty, RANKABLE_DEVIATION};
 pub use challenge::{ChallengeDetails, ChallengeError, ChallengeVisibility};
-pub use chat_message::{ChatDestination, ChatMessage, ChatMessageContainer, SimpleDestination};
+pub use chat_capabilities::GameChatCapabilities;
+pub use chat_message::{
+    normalize_chat_message,
+    ChatHistoryPage,
+    ChatHistoryResponse,
+    ChatMessage,
+    ChatMessageContainer,
+    ConversationKey,
+    ConversationUnreadState,
+    GameThread,
+    MAX_CHAT_MESSAGE_LENGTH,
+};
 pub use conclusion::Conclusion;
 pub use game_speed::GameSpeed;
 pub use game_start::GameStart;
@@ -43,6 +56,14 @@ pub use games_query_options::{
     ResultFilter,
     SortValue,
     ALLOWED_BATCH_SIZES,
+};
+pub use messages_hub::{
+    ChatInboxSnapshot,
+    DmConversation,
+    GameChannel,
+    MessagesCatalogData,
+    TournamentChannel,
+    MESSAGES_HUB_SECTION_LIMIT,
 };
 pub use newtypes::{ApisId, ChallengeId, GameId, Password, TournamentId};
 pub use notification_category::NotificationCategory;

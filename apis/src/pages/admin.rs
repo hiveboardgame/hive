@@ -4,14 +4,14 @@ use crate::{
         atoms::simple_switch::SimpleSwitch,
         layouts::{page_header::PageHeader, page_shell::PageShell},
         molecules::{panel::Panel, rl_banner::RlBanner},
-        organisms::chat::ChatWindow,
+        organisms::chat::ResolvedChatWindow,
         update_from_event::update_from_input,
     },
     functions::home_banner,
     providers::AuthContext,
 };
 use leptos::prelude::*;
-use shared_types::SimpleDestination;
+use shared_types::ConversationKey;
 
 #[component]
 pub fn Admin() -> impl IntoView {
@@ -24,7 +24,7 @@ pub fn Admin() -> impl IntoView {
                 auth_context.user.with(|a| a.as_ref().is_some_and(|v| v.user.admin))
             }>
                 <Panel title="Send Global Warning" body_class="space-y-3">
-                    <ChatWindow destination=SimpleDestination::Global />
+                    <ResolvedChatWindow conversation=ConversationKey::Global />
                 </Panel>
                 <Panel title="Edit Banner" body_class="space-y-4">
                     <EditBanner />

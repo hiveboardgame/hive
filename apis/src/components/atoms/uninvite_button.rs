@@ -1,6 +1,6 @@
 use crate::{
     common::TournamentAction,
-    providers::{ApiRequestsProvider, AuthContext},
+    providers::{ApiRequestsProvider, AuthContext, AuthIdentity},
 };
 use leptos::prelude::*;
 use leptos_icons::*;
@@ -14,10 +14,10 @@ pub fn UninviteButton(user_id: Uuid, tournament_id: TournamentId) -> impl IntoVi
     let auth_context = expect_context::<AuthContext>();
 
     let logged_in_and_not_user = move || {
-        auth_context.user.with(|a| {
-            a.as_ref()
-                .is_some_and(|current_user| current_user.id != user_id.get_value())
-        })
+        matches!(
+            auth_context.identity.get(),
+            Some(AuthIdentity::User(current_user_id)) if current_user_id != user_id.get_value()
+        )
     };
     let tournament_id = StoredValue::new(tournament_id);
 

@@ -111,7 +111,7 @@
     },
     "chat_basics": {
         "question": "Hur fungerar chatten?",
-        "answer": "Chattfunktionen är mycket under utveckling; vi är medvetna om att den har problem, så viktiga saker att komma ihåg när du använder den: 1. För närvarande finns chatten inte kvar i databasen, så varje gång vi distribuerar en uppdatering kommer dina chattmeddelanden att gå förlorade! 2. Just nu är det bara möjligt att chatta i ett spel (direktmeddelanden och andra sätt kommer att läggas till i framtiden), åskådare ser inte spelarnas chatt, och spelarna ser inte åskådarnas chatt. 3. Ibland visar den röda chattaviseringen nya meddelanden när det inte finns några."
+        "answer": "Chattmeddelanden sparas i databasen. Chatt finns för direktmeddelanden, turneringar och partier, medan spelarnas och åskådarnas trådar förblir åtskilda. På sidan Meddelanden samlas dina senaste konversationer och olästa meddelanden."
     },
     "tournament_entry": {
         "question": "Kan vem som helst gå med i en turnering? Finns det en anmälningsavgift? Vad sägs om priser?",
