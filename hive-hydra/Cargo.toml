@@ -10,14 +10,10 @@ workspace = true
 tokio = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
-env_logger = "0.11"
-log = { workspace = true }
-futures = "0.3"
-chrono = { workspace = true }
 reqwest = { version = "0.13.1", features = ["rustls", "json"], default-features = false }
 thiserror = { workspace = true }
 async-trait = "0.1"
-clap = { version = "4.5", features = ["derive"] }
+clap = { workspace = true }
 config = "0.15"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["local-time", "env-filter"] }

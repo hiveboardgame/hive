@@ -101,6 +101,7 @@ impl State {
         State::play_and_print(history, None, None)
     }
 
+    #[cfg(feature = "cli")]
     pub fn print_turn_from_history(
         history: &History,
         turn: usize,
@@ -112,7 +113,7 @@ impl State {
     fn play_and_print(
         history: &History,
         turn: Option<usize>,
-        file: Option<PathBuf>,
+        _file: Option<PathBuf>,
     ) -> Result<Self, GameError> {
         let mut tournament = true;
         // Did white open with a Queen?
@@ -133,13 +134,15 @@ impl State {
         for (current_turn, (piece, pos)) in history.moves.iter().enumerate() {
             state.play_turn_from_history(piece, pos)?;
             if turn != Some(0) && Some(current_turn + 1) == turn {
-                if let Some(file) = file.clone() {
+                #[cfg(feature = "cli")]
+                if let Some(file) = _file.clone() {
                     state.board.create_svg(file)?;
                 }
             }
         }
         if turn == Some(0) {
-            if let Some(file) = file.clone() {
+            #[cfg(feature = "cli")]
+            if let Some(file) = _file.clone() {
                 state.board.create_svg(file)?;
             }
         }

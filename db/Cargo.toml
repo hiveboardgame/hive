@@ -21,7 +21,6 @@ bb8 = { workspace = true }
 chrono = { workspace = true }
 diesel = { workspace = true }
 diesel-async = { workspace = true }
-diesel_migrations = { workspace = true }
 dotenvy = { workspace = true }
 hive = { path = "../engine/" }
 itertools = { workspace = true }
@@ -31,7 +30,6 @@ regex = { workspace = true }
 rand = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-serde_with = { workspace = true }
 shared_types = { path = "../shared_types/" }
 skillratings = { workspace = true }
 thiserror = { workspace = true }
@@ -40,3 +38,4 @@ uuid = { workspace = true }
 
 [dev-dependencies]
 diesel-async = { workspace = true, features = ["migrations"] }
+diesel_migrations = { workspace = true }

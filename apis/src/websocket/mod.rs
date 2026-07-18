@@ -1,5 +1,6 @@
 mod lag_tracking;
 pub use lag_tracking::{Lags, Pings};
+#[cfg(feature = "ssr")]
 pub mod busybee;
 pub mod client_handlers;
 
