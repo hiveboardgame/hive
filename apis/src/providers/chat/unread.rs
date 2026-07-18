@@ -41,12 +41,12 @@ async fn mark_chat_read_before_timeout(key: ConversationKey, read_through_id: i6
 
         let timeout_ms = u32::try_from(READ_RECEIPT_REQUEST_TIMEOUT.as_millis())
             .expect("read receipt timeout should fit in u32 milliseconds");
-        return complete_before_timeout(
+        complete_before_timeout(
             mark_chat_read(key, read_through_id),
             TimeoutFuture::new(timeout_ms),
         )
         .await
-        .and_then(Result::ok);
+        .and_then(Result::ok)
     }
 
     #[cfg(not(target_arch = "wasm32"))]
