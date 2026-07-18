@@ -1,7 +1,7 @@
 use super::{
     challenge::handler::{handle_challenge, handle_challenge_snapshot},
     chat::handle::handle_chat,
-    game::{handle_game, handle_tv_snapshot, handle_urgent_games_snapshot},
+    game::{handle_game, handle_tv_snapshot, handle_urgent_games_snapshot, reset_game_state},
     oauth::handle::handle_oauth,
     ping::handle::handle_ping,
     schedule::handler::{handle_schedule, handle_schedule_notification_snapshot},
@@ -17,13 +17,24 @@ use crate::{
         SubscriptionAttempt,
         UserSettingsUpdate,
     },
-    providers::chat::Chat,
+    providers::{
+        chat::Chat,
+        game_state::GameStateSignal,
+        games::GamesSignal,
+        RealtimeAvailability,
+    },
 };
-use leptos::{logging::log, prelude::use_context};
+use leptos::{
+    logging::log,
+    prelude::{use_context, WithUntracked},
+};
 use leptos_router::hooks::use_navigate;
-use shared_types::ConversationKey;
+use shared_types::{ConversationKey, GameId};
 
 fn handle_lobby_snapshot(snapshot: LobbySnapshotPayload) {
+    if let Some(realtime) = use_context::<RealtimeAvailability>() {
+        realtime.apply_snapshot(snapshot.realtime_enabled);
+    }
     handle_tournament_invitation_snapshot(snapshot.tournament_invitations);
     handle_schedule_notification_snapshot(snapshot.schedule_notifications);
     handle_urgent_games_snapshot(snapshot.urgent_games);
@@ -61,6 +72,32 @@ fn handle_chat_subscription_ready(acknowledgement: SubscriptionAttempt) {
     }
 }
 
+fn handle_realtime_disabled(rejected_game_id: Option<GameId>) {
+    if let Some(realtime) = use_context::<RealtimeAvailability>() {
+        realtime.apply_incremental(false);
+    }
+
+    let Some(rejected_game_id) = rejected_game_id else {
+        return;
+    };
+    let Some(game_state) = use_context::<GameStateSignal>() else {
+        return;
+    };
+    let game = game_state.signal.with_untracked(|state| {
+        state
+            .game_response
+            .as_ref()
+            .filter(|game| game.game_id == rejected_game_id)
+            .cloned()
+    });
+    if let Some(game) = game {
+        reset_game_state(&game, game_state);
+        if let Some(mut games) = use_context::<GamesSignal>() {
+            games.own_games_add(game);
+        }
+    }
+}
+
 pub fn handle_response(m: ServerResult) {
     match m {
         ServerResult::Ok(message) => match *message {
@@ -82,6 +119,11 @@ pub fn handle_response(m: ServerResult) {
             Tournament(tournament_update) => handle_tournament(tournament_update),
             UserSettings(update) => handle_user_settings(update),
             Schedule(schedule_update) => handle_schedule(schedule_update),
+            RealtimeEnabled(enabled) => {
+                if let Some(realtime) = use_context::<RealtimeAvailability>() {
+                    realtime.apply_incremental(enabled);
+                }
+            }
             todo => {
                 log!("Got {todo:?} which is currently still unimplemented");
             }
@@ -106,6 +148,9 @@ pub fn handle_response(m: ServerResult) {
                     if let Some(chat) = use_context::<Chat>() {
                         chat.handle_failed_chat_send(key, client_id, error.into());
                     }
+                }
+                ExternalServerError::RealtimeDisabled { game_id } => {
+                    handle_realtime_disabled(game_id)
                 }
                 ExternalServerError::Request { .. } => {}
             }

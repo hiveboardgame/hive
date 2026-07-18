@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     components::layouts::base_layout::OrientationSignal,
     i18n::*,
-    providers::{game_state::GameStateSignal, ApiRequestsProvider},
+    providers::{game_state::GameStateSignal, ApiRequestsProvider, RealtimeAvailability},
 };
 use leptos::prelude::*;
 use leptos_icons::*;
@@ -21,6 +21,8 @@ pub fn Unstarted(
     let api = expect_context::<ApiRequestsProvider>().0;
     let game_state = expect_context::<GameStateSignal>();
     let orientation_signal = expect_context::<OrientationSignal>();
+    let realtime = expect_context::<RealtimeAvailability>();
+    let ready_disabled = Signal::derive(move || !realtime.enabled());
     let white = create_read_slice(game_state.signal, move |gs| {
         (gs.game_response.as_ref().map(|gr| {
             if gr.white_player.deleted {
@@ -65,6 +67,9 @@ pub fn Unstarted(
     };
 
     let start = move |_| {
+        if ready_disabled.get_untracked() {
+            return;
+        }
         let api = api.get();
         api.tournament_game_start(game_id());
     };
@@ -99,6 +104,7 @@ pub fn Unstarted(
                         on:click=start
 
                         class="ui-button ui-button-primary ui-button-md"
+                        prop:disabled=ready_disabled
                     >
                         Ready
                     </button>

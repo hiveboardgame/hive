@@ -61,6 +61,7 @@ pub use server_result::{
     UserSettingsUpdate,
     UserStatus,
     UserUpdate,
+    REALTIME_DISABLED_MSG,
 };
 pub use svg_pos::{position_from_svg, SvgPos};
 pub use time_signals::{TimeParams, TimeParamsStoreFields};

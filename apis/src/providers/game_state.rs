@@ -6,14 +6,16 @@ use crate::{
 };
 use hive_lib::{Color, GameControl, GameStatus, GameType, Piece, Position, State, Turn};
 use leptos::{logging::log, prelude::*};
-use shared_types::{GameId, GameSpeed, Takeback};
+use shared_types::{GameId, GameSpeed, Takeback, TimeMode};
 use uuid::Uuid;
 
 use super::{
     analysis::AnalysisSignal,
     api_requests::ApiRequests,
     auth_context::AuthContext,
+    websocket::{ConnectionReadyState, WebsocketContext},
     ApiRequestsProvider,
+    RealtimeAvailability,
 };
 
 #[derive(Clone, Debug, Copy)]
@@ -133,6 +135,20 @@ impl GameStateSignal {
     }
 
     pub fn move_active(&mut self, analysis: Option<AnalysisSignal>, api: ApiRequests) {
+        let disconnected = use_context::<WebsocketContext>().is_some_and(|websocket| {
+            websocket.ready_state.get_untracked() != ConnectionReadyState::Open
+        });
+        let realtime_start_unavailable = use_context::<RealtimeAvailability>()
+            .is_some_and(|realtime| !realtime.enabled())
+            && self.signal.with_untracked(|state| {
+                state.game_response.as_ref().is_some_and(|game| {
+                    game.time_mode == TimeMode::RealTime
+                        && game.game_status == GameStatus::NotStarted
+                })
+            });
+        if analysis.is_none() && (disconnected || realtime_start_unavailable) {
+            return;
+        }
         self.signal.update(|s| s.move_active(analysis, api))
     }
 

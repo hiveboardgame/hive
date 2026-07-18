@@ -6,7 +6,13 @@ use crate::{
         organisms::time_select::TimeSelect,
     },
     i18n::*,
-    providers::{ApiRequestsProvider, AuthContext, ChallengeParams, ChallengeParamsStoreFields},
+    providers::{
+        ApiRequestsProvider,
+        AuthContext,
+        ChallengeParams,
+        ChallengeParamsStoreFields,
+        RealtimeAvailability,
+    },
 };
 use hive_lib::GameType;
 use leptos::prelude::*;
@@ -19,6 +25,7 @@ pub fn ChallengeCreate(#[prop(optional, into)] opponent: Signal<Option<String>>)
     let params = expect_context::<Store<ChallengeParams>>();
     let api = expect_context::<ApiRequestsProvider>().0;
     let auth_context = expect_context::<AuthContext>();
+    let realtime = expect_context::<RealtimeAvailability>();
     let create_challenge = Callback::new(move |color_choice| {
         let api = api.get();
         let direct_opponent = opponent.get_untracked();
@@ -133,6 +140,13 @@ pub fn ChallengeCreate(#[prop(optional, into)] opponent: Signal<Option<String>>)
     let is_public_callback = Callback::new(move |()| {
         params.is_public().update(|b| *b = !*b);
     });
+    let realtime_unavailable = Signal::derive(move || {
+        params.time_signals().time_mode().get() == TimeMode::RealTime && !realtime.enabled()
+    });
+    let realtime_maintenance = Signal::derive(move || {
+        params.time_signals().time_mode().get() == TimeMode::RealTime
+            && realtime.state() == Some(false)
+    });
     view! {
         <div class="flex flex-col items-center w-72 sm:w-96 xs:m-2 xs:w-80">
             <Show when=move || opponent.get().is_some()>
@@ -192,7 +206,10 @@ pub fn ChallengeCreate(#[prop(optional, into)] opponent: Signal<Option<String>>)
                     </div>
                 </div>
             </Show>
-            <ChallengeButtonsTrio create_challenge />
+            <Show when=realtime_maintenance>
+                <p class="ui-notice">"Realtime games are temporarily disabled for maintenance."</p>
+            </Show>
+            <ChallengeButtonsTrio create_challenge disabled=realtime_unavailable />
         </div>
     }
 }

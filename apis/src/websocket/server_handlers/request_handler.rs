@@ -23,6 +23,7 @@ use crate::{
     common::{ClientRequest, GameAction, ServerMessage},
     websocket::{
         messages::{AuthError, HandlerOutput, InternalServerMessage, MessageDestination, SocketTx},
+        RealtimeDisabled,
         WebsocketData,
         WsHub,
     },
@@ -67,6 +68,13 @@ impl RequestHandlerError {
             Self::Forbidden => "Chat access denied".to_string(),
             Self::RateLimited(error) => error.reason().to_string(),
         }
+    }
+
+    pub fn is_realtime_disabled(&self) -> bool {
+        matches!(
+            self,
+            Self::InternalError(error) if error.downcast_ref::<RealtimeDisabled>().is_some()
+        )
     }
 }
 pub struct RequestHandler {
@@ -256,6 +264,7 @@ impl RequestHandler {
                     &self.username,
                     self.user_id,
                     self.admin,
+                    self.data.clone(),
                     &self.pool,
                 )
                 .await?

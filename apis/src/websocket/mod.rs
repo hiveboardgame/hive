@@ -1,4 +1,6 @@
 mod lag_tracking;
+#[cfg(feature = "ssr")]
+mod realtime_gate;
 pub use lag_tracking::{Lags, Pings};
 #[cfg(feature = "ssr")]
 pub mod busybee;
@@ -19,6 +21,7 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     pub(crate) use tournament_game_start::TournamentGameStart;
     pub use ws_hub::{WsHub, SOCKET_BUFFER_CAPACITY};
     pub use messages::{reaction_messages, GameFinalize, InternalServerMessage, MessageDestination, Reaction};
+    pub use realtime_gate::{RealtimeDisabled, RealtimeGate};
 
     use crate::notifications::PendingNotifications;
     use chrono::{DateTime, Utc};
@@ -56,6 +59,7 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
         /// `notify_waiters` so parked tasks re-read the cache.
         game_response_inflight: DashMap<GameId, Arc<Notify>>,
         pub pending_notifications: Arc<PendingNotifications>,
+        pub realtime_gate: RealtimeGate,
     }
 
     impl Default for WebsocketData {
@@ -68,6 +72,7 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
                 game_response_cache: DashMap::new(),
                 game_response_inflight: DashMap::new(),
                 pending_notifications: Arc::new(PendingNotifications::default()),
+                realtime_gate: RealtimeGate::default(),
             }
         }
     }

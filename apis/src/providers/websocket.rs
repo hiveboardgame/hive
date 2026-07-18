@@ -195,6 +195,7 @@ mod platform {
             games::GamesSignal,
             online_users::OnlineUsersSignal,
             NotificationContext,
+            RealtimeAvailability,
             SchedulesContext,
         };
         if let Some(c) = use_context::<ChallengeStateSignal>() {
@@ -211,6 +212,9 @@ mod platform {
         }
         if let Some(s) = use_context::<SchedulesContext>() {
             s.begin_resync();
+        }
+        if let Some(realtime) = use_context::<RealtimeAvailability>() {
+            realtime.begin_resync();
         }
     }
 
@@ -319,6 +323,9 @@ mod platform {
             // backoff timer, and the connect-timeout retry — all funnel
             // through this method.
             self.owner.with(|| {
+                if let Some(realtime) = use_context::<crate::providers::RealtimeAvailability>() {
+                    realtime.reset_session();
+                }
                 begin_resync_all();
             });
             self.generation.update_value(|generation| *generation += 1);
@@ -547,6 +554,12 @@ mod platform {
         fn handle_unexpected_disconnect(&self, generation: u64) {
             if self.is_current(generation) {
                 self.clear_connect_timeout();
+                self.owner.with(|| {
+                    if let Some(realtime) = use_context::<crate::providers::RealtimeAvailability>()
+                    {
+                        realtime.reset_session();
+                    }
+                });
                 self.ready_state.set(ConnectionReadyState::Closed);
                 self.schedule_reconnect();
             }

@@ -11,6 +11,8 @@ use shared_types::{ChallengeId, ChatMessageContainer, ConversationKey, GameId, T
 use std::{collections::HashMap, fmt, time::Duration};
 use uuid::Uuid;
 
+pub const REALTIME_DISABLED_MSG: &str = "Realtime games are temporarily disabled for maintenance.";
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ServerResult {
     Ok(Box<ServerMessage>),
@@ -21,6 +23,9 @@ pub enum ServerResult {
 pub enum ExternalServerError {
     Unauthorized {
         reason: String,
+    },
+    RealtimeDisabled {
+        game_id: Option<GameId>,
     },
     ChatSend {
         key: ConversationKey,
@@ -88,6 +93,7 @@ impl fmt::Display for ExternalServerError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let reason = match self {
             Self::Unauthorized { reason } | Self::Request { reason } => reason,
+            Self::RealtimeDisabled { .. } => REALTIME_DISABLED_MSG,
             Self::ChatSend { error, .. } => error.reason(),
             Self::ChatSubscribe { error, .. } => error.reason(),
         };
@@ -120,11 +126,13 @@ pub enum ServerMessage {
     UserSettings(UserSettingsUpdate),
     UserStatus(UserUpdate),
     RedirectLink(String),
+    RealtimeEnabled(bool),
 }
 
 /// Authoritative best-effort lobby state sent on connect and Resync.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LobbySnapshot {
+    pub realtime_enabled: bool,
     pub tournament_invitations: Vec<TournamentId>,
     pub schedule_notifications: Vec<ScheduleResponse>,
     pub urgent_games: Vec<GameResponse>,

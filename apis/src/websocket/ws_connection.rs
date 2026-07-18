@@ -217,6 +217,16 @@ fn external_server_error(
             reason: error.user_safe_reason(),
         };
     }
+    if error.is_realtime_disabled() {
+        let game_id = match request {
+            ClientRequest::Game {
+                game_id,
+                action: GameAction::Turn(_),
+            } => Some(game_id.clone()),
+            _ => None,
+        };
+        return ExternalServerError::RealtimeDisabled { game_id };
+    }
 
     match request {
         ClientRequest::Chat(request) => {
@@ -284,6 +294,9 @@ fn request_log_summary(request: &ClientRequest) -> String {
 }
 
 fn should_log_request_error(err: &RequestHandlerError) -> bool {
+    if err.is_realtime_disabled() {
+        return false;
+    }
     !matches!(
         err,
         RequestHandlerError::AuthError(_)
@@ -302,14 +315,17 @@ mod tests {
             ChatSendRequest,
             ClientRequest,
             ExternalServerError,
+            GameAction,
             SubscriptionAttempt,
             SubscriptionError,
         },
         websocket::{
             messages::AuthError,
             server_handlers::{chat::limits::ChatLimitError, request_handler::RequestHandlerError},
+            RealtimeDisabled,
         },
     };
+    use hive_lib::Turn;
     use shared_types::{ConversationKey, GameId};
     use std::time::Duration;
     use uuid::Uuid;
@@ -400,6 +416,23 @@ mod tests {
                 client_id,
                 error: ChatSendError::ClientIdConflict,
             },
+        );
+    }
+
+    #[test]
+    fn realtime_maintenance_rejection_carries_game_id() {
+        let game_id = GameId("rejected-game".to_string());
+        let request = ClientRequest::Game {
+            game_id: game_id.clone(),
+            action: GameAction::Turn(Turn::Shutout),
+        };
+        let error = RequestHandlerError::InternalError(anyhow::Error::new(RealtimeDisabled));
+
+        assert_eq!(
+            external_server_error(&request, &error),
+            ExternalServerError::RealtimeDisabled {
+                game_id: Some(game_id),
+            }
         );
     }
 }

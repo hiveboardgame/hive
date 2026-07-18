@@ -14,6 +14,7 @@ use diesel_async::RunQueryDsl;
 use nanoid::nanoid;
 use serde::Serialize;
 use shared_types::{ChallengeDetails, ChallengeError, ChallengeId, ChallengeVisibility, TimeMode};
+use std::str::FromStr;
 use uuid::Uuid;
 
 fn validate_opponent_visibility(
@@ -163,6 +164,10 @@ pub struct Challenge {
 }
 
 impl Challenge {
+    pub fn parsed_time_mode(&self) -> Result<TimeMode, ChallengeError> {
+        TimeMode::from_str(&self.time_mode)
+    }
+
     pub fn validate_accepting_user(&self, user_id: Uuid) -> Result<(), ChallengeError> {
         if self.challenger_id == user_id {
             return Err(ChallengeError::OwnChallenge);

@@ -187,6 +187,10 @@ pub struct Tournament {
 }
 
 impl Tournament {
+    pub fn parsed_time_mode(&self) -> Result<TimeMode, shared_types::ChallengeError> {
+        TimeMode::from_str(&self.time_mode)
+    }
+
     pub async fn create(
         user_id: Uuid,
         new_tournament: &NewTournament,
@@ -1066,27 +1070,21 @@ impl Tournament {
             .await?)
     }
 
-    pub async fn unstarted(conn: &mut DbConn<'_>) -> Result<Vec<Self>, DbError> {
-        let potential_tournaments: Vec<Tournament> = tournaments::table
-            .filter(status_column.eq(TournamentStatus::NotStarted.to_string()))
-            .filter(starts_at.le(Utc::now()))
-            .get_results(conn)
-            .await?;
-        let mut tournaments = Vec::new();
-        for tournament in potential_tournaments {
-            if tournament.has_enough_players(conn).await? {
-                tournaments.push(tournament);
-            }
-        }
-        Ok(tournaments)
-    }
-
     pub async fn automatic_start(
+        time_mode: TimeMode,
         conn: &mut DbConn<'_>,
     ) -> Result<Vec<(Tournament, Vec<Game>, Vec<Uuid>)>, DbError> {
+        let due_tournaments: Vec<Tournament> = tournaments::table
+            .filter(status_column.eq(TournamentStatus::NotStarted.to_string()))
+            .filter(starts_at.le(Utc::now()))
+            .filter(tournaments::time_mode.eq(time_mode.to_string()))
+            .get_results(conn)
+            .await?;
         let mut started_tournaments = Vec::new();
-        for tournament in Tournament::unstarted(conn).await? {
-            started_tournaments.push(tournament.start(conn).await?);
+        for tournament in due_tournaments {
+            if tournament.has_enough_players(conn).await? {
+                started_tournaments.push(tournament.start(conn).await?);
+            }
         }
         Ok(started_tournaments)
     }

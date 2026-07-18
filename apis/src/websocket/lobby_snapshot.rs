@@ -45,6 +45,7 @@ impl WsHub {
         let snapshot = match async {
             self.ensure_socket_connected(user_id, socket)?;
             let snapshot = LobbySnapshot {
+                realtime_enabled: self.data.realtime_gate.enabled().await,
                 tournament_invitations: self
                     .invitation_notification_snapshot(conn, user_id, socket, user)
                     .await?,

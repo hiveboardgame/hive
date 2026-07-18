@@ -17,7 +17,7 @@ use anyhow::Result;
 use db_lib::{get_conn, models::Game, DbPool};
 use diesel_async::AsyncConnection;
 use hive_lib::{GameError, GameStatus};
-use shared_types::GameId;
+use shared_types::{GameId, GameStart};
 use std::{str::FromStr, sync::Arc};
 use uuid::Uuid;
 pub struct GameActionHandler {
@@ -122,6 +122,7 @@ impl GameActionHandler {
             GameAction::Start => {
                 self.ensure_not_finished()?;
                 self.ensure_user_is_player()?;
+                self.ensure_ready_start()?;
                 StartHandler::new(
                     &self.game,
                     self.user_id,
@@ -157,6 +158,15 @@ impl GameActionHandler {
                 username: self.username.to_owned(),
                 game: self.game.nanoid.clone(),
             })?;
+        }
+        Ok(())
+    }
+
+    fn ensure_ready_start(&self) -> Result<()> {
+        if self.game.game_start != GameStart::Ready.to_string() {
+            return Err(anyhow::anyhow!(
+                "Only ready-start games can be explicitly started"
+            ));
         }
         Ok(())
     }

@@ -1,7 +1,7 @@
 use crate::{
     common::with_class,
     i18n::*,
-    providers::{ApiRequestsProvider, AuthContext},
+    providers::{ApiRequestsProvider, AuthContext, RealtimeAvailability},
 };
 use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_params_map};
@@ -22,6 +22,7 @@ pub fn TournamentReadyPopup(
     let i18n = use_i18n();
     let api = expect_context::<ApiRequestsProvider>().0;
     let auth_context = expect_context::<AuthContext>();
+    let realtime = expect_context::<RealtimeAvailability>();
     let params = use_params_map();
     let countdown = RwSignal::new(30);
     let closed_popups = RwSignal::new(HashSet::<(GameId, Uuid)>::new());
@@ -93,7 +94,12 @@ pub fn TournamentReadyPopup(
         })
     });
 
+    let accept_disabled = Signal::derive(move || !realtime.enabled());
+
     let accept_game = move |_| {
+        if accept_disabled.get_untracked() {
+            return;
+        }
         if let Some(game_id) = current_popup_candidate
             .with(|opt| {
                 opt.as_ref().map(|(game_id, opponent_id, _)| {
@@ -110,7 +116,6 @@ pub fn TournamentReadyPopup(
             navigate(&format!("/game/{}", game_id.0), Default::default());
         }
     };
-
     let close_popup = move |_| {
         current_popup_candidate.with(|opt| {
             if let Some((game_id, opponent_id, _)) = opt.as_ref() {
@@ -196,7 +201,11 @@ pub fn TournamentReadyPopup(
                 </div>
 
                 <div class="flex gap-4 justify-center">
-                    <button on:click=accept_game class="ui-button ui-button-success ui-button-md">
+                    <button
+                        on:click=accept_game
+                        class="ui-button ui-button-success ui-button-md"
+                        prop:disabled=accept_disabled
+                    >
                         {t!(i18n, game.tournament_ready_accept)}
                     </button>
 

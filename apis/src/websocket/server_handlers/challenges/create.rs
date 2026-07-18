@@ -2,7 +2,10 @@ use crate::{
     common::{ChallengeUpdate, ServerMessage},
     notifications::{notify, time_control_label, Event},
     responses::ChallengeResponse,
-    websocket::messages::{InternalServerMessage, MessageDestination},
+    websocket::{
+        messages::{InternalServerMessage, MessageDestination},
+        WebsocketData,
+    },
 };
 use anyhow::Result;
 use db_lib::{
@@ -10,22 +13,29 @@ use db_lib::{
     models::{Challenge, NewChallenge, User},
     DbPool,
 };
-use shared_types::{ChallengeDetails, ChallengeVisibility};
-use std::str::FromStr;
+use shared_types::{ChallengeDetails, ChallengeVisibility, TimeMode};
+use std::{str::FromStr, sync::Arc};
 use uuid::Uuid;
 
 pub struct CreateHandler {
     details: ChallengeDetails,
     user_id: Uuid,
     pool: DbPool,
+    data: Arc<WebsocketData>,
 }
 
 impl CreateHandler {
-    pub async fn new(details: ChallengeDetails, user_id: Uuid, pool: &DbPool) -> Result<Self> {
+    pub async fn new(
+        details: ChallengeDetails,
+        user_id: Uuid,
+        data: Arc<WebsocketData>,
+        pool: &DbPool,
+    ) -> Result<Self> {
         Ok(Self {
             details,
             user_id,
             pool: pool.clone(),
+            data,
         })
     }
 
@@ -38,7 +48,14 @@ impl CreateHandler {
 
         let new_challenge =
             NewChallenge::new(self.user_id, opponent, &self.details, &mut conn).await?;
-        let challenge = Challenge::create(&new_challenge, &mut conn).await?;
+        let challenge = self
+            .data
+            .realtime_gate
+            .with_realtime_admission(
+                self.details.time_mode == TimeMode::RealTime,
+                Challenge::create(&new_challenge, &mut conn),
+            )
+            .await?;
         let challenge_response = ChallengeResponse::from_model(&challenge, &mut conn).await?;
         let mut messages = Vec::new();
         match ChallengeVisibility::from_str(&new_challenge.visibility)? {

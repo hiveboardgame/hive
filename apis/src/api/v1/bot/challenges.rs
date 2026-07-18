@@ -250,7 +250,14 @@ async fn create_challenge(
     };
 
     let new_challenge = NewChallenge::new(bot_id, opponent_id, &req, &mut conn).await?;
-    let challenge = Challenge::create(&new_challenge, &mut conn).await?;
+    let challenge = hub
+        .data
+        .realtime_gate
+        .with_realtime_admission(
+            req.time_mode == TimeMode::RealTime,
+            Challenge::create(&new_challenge, &mut conn),
+        )
+        .await?;
     let challenge_response = ChallengeResponse::from_model(&challenge, &mut conn).await?;
 
     send_challenge_creation_message(hub, &challenge_response, &req.visibility, opponent_id).await?;
@@ -266,6 +273,7 @@ async fn accept_challenge(
 ) -> Result<GameResponse> {
     let mut conn = get_conn(&pool).await?;
     let challenge = Challenge::find_by_challenge_id(&id, &mut conn).await?;
+    let time_mode = challenge.parsed_time_mode()?;
     challenge.validate_accepting_user(bot.id)?;
     let (white_id, black_id) = match challenge.color_choice.to_lowercase().as_str() {
         "black" => (bot.id, challenge.challenger_id),
@@ -279,8 +287,14 @@ async fn accept_challenge(
         }
     };
     let new_game = NewGame::new(white_id, black_id, &challenge)?;
-    let (game, deleted_challenges) =
-        Game::create_and_delete_challenges(new_game, &mut conn).await?;
+    let (game, deleted_challenges) = hub
+        .data
+        .realtime_gate
+        .with_realtime_admission(
+            time_mode == TimeMode::RealTime,
+            Game::create_and_delete_challenges(new_game, &mut conn),
+        )
+        .await?;
 
     send_challenge_messages(hub, deleted_challenges, &game, &bot, &pool).await?;
 

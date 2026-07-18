@@ -1,16 +1,17 @@
 use crate::{
     common::with_class,
     components::{
-        atoms::simple_switch::SimpleSwitch,
+        atoms::simple_switch::{SimpleSwitch, SimpleSwitchWithCallback},
         layouts::{page_header::PageHeader, page_shell::PageShell},
         molecules::{panel::Panel, rl_banner::RlBanner},
         organisms::chat::ResolvedChatWindow,
         update_from_event::update_from_input,
     },
-    functions::home_banner,
-    providers::AuthContext,
+    functions::{home_banner, site_config},
+    providers::{AuthContext, RealtimeAvailability},
 };
 use leptos::prelude::*;
+use leptos_use::{use_interval_fn_with_options, UseIntervalFnOptions};
 use shared_types::ConversationKey;
 
 #[component]
@@ -29,6 +30,7 @@ pub fn Admin() -> impl IntoView {
                 <Panel title="Edit Banner" body_class="space-y-4">
                     <EditBanner />
                 </Panel>
+                <RealtimeMaintenance />
                 <Panel title="Telemetry" body_class="flex flex-wrap gap-2">
                     <a class="ui-button ui-button-primary ui-button-md" href="/admin/telemetry">
                         "Open WS telemetry dashboard"
@@ -42,6 +44,106 @@ pub fn Admin() -> impl IntoView {
                 </Panel>
             </Show>
         </PageShell>
+    }
+}
+
+#[component]
+fn RealtimeMaintenance() -> impl IntoView {
+    let realtime = expect_context::<RealtimeAvailability>();
+    let count = RwSignal::new(None::<i64>);
+
+    let transition = Action::new(move |enabled: &bool| {
+        let enabled = *enabled;
+        async move { site_config::set_realtime_enabled(enabled).await }
+    });
+    let refresh_count =
+        Action::new(move |_: &()| async move { site_config::count_active_realtime_clocks().await });
+    let transition_error = Signal::derive(move || {
+        transition
+            .value()
+            .get()
+            .and_then(|result| result.err().map(|error| error.to_string()))
+    });
+    let count_error = Signal::derive(move || {
+        refresh_count
+            .value()
+            .get()
+            .and_then(|result| result.err().map(|error| error.to_string()))
+    });
+
+    Effect::new(move |_| {
+        if let Some(Ok(enabled)) = transition.value().get() {
+            realtime.apply_incremental(enabled);
+        }
+    });
+    Effect::new(move |_| {
+        if let Some(Ok(active)) = refresh_count.value().get() {
+            count.set(Some(active));
+        }
+    });
+
+    let interval = use_interval_fn_with_options(
+        move || {
+            if realtime.state() == Some(false) && !refresh_count.pending().get_untracked() {
+                refresh_count.dispatch(());
+            }
+        },
+        5_000,
+        UseIntervalFnOptions::default().immediate(false),
+    );
+    Effect::new(move |_| match realtime.state() {
+        Some(false) => {
+            if !refresh_count.pending().get_untracked() {
+                refresh_count.dispatch(());
+            }
+            (interval.resume)();
+        }
+        _ => (interval.pause)(),
+    });
+
+    let toggle = Callback::new(move |()| {
+        if !transition.pending().get_untracked() {
+            if let Some(enabled) = realtime.state() {
+                transition.dispatch(!enabled);
+            }
+        }
+    });
+    let toggle_disabled: Signal<bool> = transition.pending().into();
+    let checked = Signal::derive(move || realtime.state() == Some(true));
+
+    view! {
+        <Panel title="Realtime Maintenance" body_class="space-y-3">
+            <div class="flex flex-wrap gap-3 items-center ui-setting-group">
+                <span class="font-semibold">"Realtime game starts"</span>
+                <Show
+                    when=move || realtime.state().is_some()
+                    fallback=|| {
+                        view! { <span class="ui-notice">"Waiting for server state..."</span> }
+                    }
+                >
+                    <SimpleSwitchWithCallback checked disabled=toggle_disabled action=toggle />
+                    <span>{move || if checked() { "Enabled" } else { "Disabled" }}</span>
+                </Show>
+            </div>
+            <Show when=move || transition_error.get().is_some()>
+                <p class="ui-notice">{move || transition_error.get().unwrap_or_default()}</p>
+            </Show>
+            <Show when=move || realtime.state() == Some(false)>
+                <p class="font-semibold">
+                    {move || {
+                        count
+                            .get()
+                            .map_or_else(
+                                || "Realtime games still in progress: loading...".to_string(),
+                                |active| format!("Realtime games still in progress: {active}"),
+                            )
+                    }}
+                </p>
+                <Show when=move || count_error.get().is_some()>
+                    <p class="ui-notice">{move || count_error.get().unwrap_or_default()}</p>
+                </Show>
+            </Show>
+        </Panel>
     }
 }
 
