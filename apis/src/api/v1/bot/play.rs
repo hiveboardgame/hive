@@ -16,7 +16,7 @@ use db_lib::{
     models::{Game, User},
     DbPool,
 };
-use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
+use diesel_async::AsyncConnection;
 use hive_lib::{Color, GameControl, Piece, Position, State, Turn};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -95,8 +95,7 @@ async fn play_move(
     let played_turn = Turn::Move(piece, position);
 
     let (game, played_turn_out) = conn
-        .transaction::<_, anyhow::Error, _>(move |tc| {
-            async move {
+        .transaction::<_, anyhow::Error, _>(async move |tc| {
                 if let Err(err) = state.play_turn_from_position(piece, position) {
                     log::warn!(
                         "invalid bot turn game={} bot={} bot_username={} db_turn={} request_turn={} error={} board=\n{}",
@@ -115,8 +114,7 @@ async fn play_move(
                     .await?;
 
                 Ok((updated_game, played_turn))
-            }
-            .scope_boxed()
+
         })
         .await?;
     Ok((game, played_turn_out))
@@ -196,36 +194,33 @@ async fn handle_control(
     }
 
     let updated_game = conn
-        .transaction::<_, anyhow::Error, _>(move |tc| {
-            async move {
-                let pending_delete = if matches!(game_control, GameControl::Abort(_)) {
-                    Some(hub.as_ref().arm_pending_delete(
-                        GameId(game.nanoid.clone()),
-                        game.white_id,
-                        game.black_id,
-                    ))
-                } else {
-                    None
-                };
-                let result_game = match game_control {
-                    GameControl::Resign(_) => game.resign(&game_control, tc).await?,
-                    GameControl::Abort(_) => {
-                        game.delete(tc).await?;
-                        let mut game_copy = game.clone();
-                        game_copy.finished = true;
-                        game_copy
-                    }
-                    _ => unreachable!(),
-                };
-
-                send_control_messages(hub.clone(), &result_game, &bot, &pool, game_control).await?;
-                if let Some(guard) = pending_delete {
-                    guard.disarm();
+        .transaction::<_, anyhow::Error, _>(async move |tc| {
+            let pending_delete = if matches!(game_control, GameControl::Abort(_)) {
+                Some(hub.as_ref().arm_pending_delete(
+                    GameId(game.nanoid.clone()),
+                    game.white_id,
+                    game.black_id,
+                ))
+            } else {
+                None
+            };
+            let result_game = match game_control {
+                GameControl::Resign(_) => game.resign(&game_control, tc).await?,
+                GameControl::Abort(_) => {
+                    game.delete(tc).await?;
+                    let mut game_copy = game.clone();
+                    game_copy.finished = true;
+                    game_copy
                 }
+                _ => unreachable!(),
+            };
 
-                Ok(result_game)
+            send_control_messages(hub.clone(), &result_game, &bot, &pool, game_control).await?;
+            if let Some(guard) = pending_delete {
+                guard.disarm();
             }
-            .scope_boxed()
+
+            Ok(result_game)
         })
         .await?;
 

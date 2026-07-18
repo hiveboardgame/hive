@@ -12,7 +12,7 @@ use crate::{
 };
 use anyhow::Result;
 use db_lib::{db_error::DbError, get_conn, models::Tournament, DbPool};
-use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
+use diesel_async::AsyncConnection;
 use hive_lib::GameControl;
 use shared_types::{GameId, TournamentGameResult, TournamentId};
 use uuid::Uuid;
@@ -46,28 +46,24 @@ impl AbandonHandler {
         let mut conn = get_conn(&self.pool).await?;
         let mut messages = Vec::new();
         let abandoned = conn
-            .transaction::<_, DbError, _>(move |tc| {
-                async move {
-                    let mut abandoned = Vec::new();
-                    let tournament =
-                        Tournament::find_by_tournament_id(&self.tournament_id, tc).await?;
-                    // Lock all target games before rating updates so abandon cannot hold rating
-                    // locks from one game while waiting on a later game row.
-                    for game in tournament
-                        .unfinished_games_for_user_locked(self.user_id, tc)
-                        .await?
-                    {
-                        if let Some(color) = game.user_color(self.user_id) {
-                            match game.resign(&GameControl::Resign(color), tc).await {
-                                Ok(game) => abandoned.push(game),
-                                Err(DbError::GameIsOver) => continue,
-                                Err(err) => return Err(err),
-                            }
+            .transaction::<_, DbError, _>(async move |tc| {
+                let mut abandoned = Vec::new();
+                let tournament = Tournament::find_by_tournament_id(&self.tournament_id, tc).await?;
+                // Lock all target games before rating updates so abandon cannot hold rating
+                // locks from one game while waiting on a later game row.
+                for game in tournament
+                    .unfinished_games_for_user_locked(self.user_id, tc)
+                    .await?
+                {
+                    if let Some(color) = game.user_color(self.user_id) {
+                        match game.resign(&GameControl::Resign(color), tc).await {
+                            Ok(game) => abandoned.push(game),
+                            Err(DbError::GameIsOver) => continue,
+                            Err(err) => return Err(err),
                         }
                     }
-                    Ok(abandoned)
                 }
-                .scope_boxed()
+                Ok(abandoned)
             })
             .await?;
 

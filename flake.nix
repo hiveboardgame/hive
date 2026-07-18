@@ -101,7 +101,6 @@
         devShells.default = mkShell rec {
           buildInputs =
             [
-              diesel-cli
               (diesel-cli.override {
                 sqliteSupport = false;
                 mysqlSupport = false;

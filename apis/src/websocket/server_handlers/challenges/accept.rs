@@ -11,7 +11,7 @@ use db_lib::{
     models::{Challenge, Game, NewGame, Rating},
     DbPool,
 };
-use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
+use diesel_async::AsyncConnection;
 use shared_types::{ChallengeId, GameSpeed};
 use uuid::Uuid;
 
@@ -93,15 +93,12 @@ impl AcceptHandler {
         };
 
         let (game, deleted_challenges, game_response) = conn
-            .transaction::<_, anyhow::Error, _>(move |tc| {
-                async move {
-                    let new_game = NewGame::new(white_id, black_id, &challenge)?;
-                    let (game, deleted_challenges) =
-                        Game::create_and_delete_challenges(new_game, tc).await?;
-                    let game_response = GameResponse::from_model(&game, tc).await?;
-                    Ok((game, deleted_challenges, game_response))
-                }
-                .scope_boxed()
+            .transaction::<_, anyhow::Error, _>(async move |tc| {
+                let new_game = NewGame::new(white_id, black_id, &challenge)?;
+                let (game, deleted_challenges) =
+                    Game::create_and_delete_challenges(new_game, tc).await?;
+                let game_response = GameResponse::from_model(&game, tc).await?;
+                Ok((game, deleted_challenges, game_response))
             })
             .await?;
 

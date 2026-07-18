@@ -13,7 +13,7 @@ use db_lib::{
     models::{Game, Schedule},
     DbPool,
 };
-use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
+use diesel_async::AsyncConnection;
 use shared_types::GameId;
 use uuid::Uuid;
 
@@ -49,21 +49,17 @@ impl StartHandler {
         if let Ok(should_start) = self.data.game_start.should_start(&self.game, self.user_id) {
             if should_start {
                 let game = conn
-                    .transaction::<_, anyhow::Error, _>(move |tc| {
-                        async move {
-                            let started_game = self.game.start(tc).await?;
+                    .transaction::<_, anyhow::Error, _>(async move |tc| {
+                        let started_game = self.game.start(tc).await?;
 
-                            if let Err(e) = Schedule::delete_all_for_game(started_game.id, tc).await
-                            {
-                                println!(
-                                    "Failed to delete schedules for game {}: {}",
-                                    started_game.id, e
-                                );
-                            }
-
-                            Ok(started_game)
+                        if let Err(e) = Schedule::delete_all_for_game(started_game.id, tc).await {
+                            println!(
+                                "Failed to delete schedules for game {}: {}",
+                                started_game.id, e
+                            );
                         }
-                        .scope_boxed()
+
+                        Ok(started_game)
                     })
                     .await?;
                 let game_response = self.data.get_or_build_response(&game, &mut conn).await?;

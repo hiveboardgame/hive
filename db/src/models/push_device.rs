@@ -9,7 +9,7 @@ use diesel::{
     Queryable,
     Selectable,
 };
-use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
+use diesel_async::{AsyncConnection, RunQueryDsl};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -202,21 +202,18 @@ impl PushDevice {
         conn: &mut DbConn<'_>,
     ) -> Result<(), DbError> {
         let user = new.user_id;
-        conn.transaction::<_, DbError, _>(move |tc| {
-            async move {
-                let carry_revocation = match &old_endpoint {
-                    Some(old) if *old != new.device_token => {
-                        Self::take_rotated_endpoint(user, old, tc).await?
-                    }
-                    _ => false,
-                };
-                let device = Self::upsert(new, false, tc).await?;
-                if carry_revocation {
-                    Self::revoke_for_user(device.id, user, tc).await?;
+        conn.transaction::<_, DbError, _>(async move |tc| {
+            let carry_revocation = match &old_endpoint {
+                Some(old) if *old != new.device_token => {
+                    Self::take_rotated_endpoint(user, old, tc).await?
                 }
-                Ok(())
+                _ => false,
+            };
+            let device = Self::upsert(new, false, tc).await?;
+            if carry_revocation {
+                Self::revoke_for_user(device.id, user, tc).await?;
             }
-            .scope_boxed()
+            Ok(())
         })
         .await
     }

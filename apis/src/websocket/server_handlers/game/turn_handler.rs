@@ -17,7 +17,7 @@ use db_lib::{
     models::{Game, User},
     DbPool,
 };
-use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
+use diesel_async::AsyncConnection;
 use hive_lib::{GameError, State, Turn};
 use shared_types::{GameId, TimeMode};
 use std::sync::Arc;
@@ -99,8 +99,8 @@ impl TurnHandler {
         };
 
         let game = conn
-            .transaction::<_, anyhow::Error, _>(move |tc| {
-                async move { Ok(self.game.update_gamestate(&state, comp, tc).await?) }.scope_boxed()
+            .transaction::<_, anyhow::Error, _>(async move |tc| {
+                Ok(self.game.update_gamestate(&state, comp, tc).await?)
             })
             .await?;
 

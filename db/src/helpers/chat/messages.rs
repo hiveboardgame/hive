@@ -11,12 +11,7 @@ use crate::{
     DbConn,
 };
 use diesel::{dsl::max, prelude::*};
-use diesel_async::{
-    scoped_futures::ScopedFutureExt,
-    AsyncConnection,
-    AsyncPgConnection,
-    RunQueryDsl,
-};
+use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
 use shared_types::{ChatHistoryPage, ChatMessage as SharedChatMessage};
 use uuid::Uuid;
 
@@ -50,14 +45,10 @@ pub async fn insert_chat_message(
 ) -> Result<(ChatMessage, bool), DbError> {
     let turn = persisted_chat_turn(turn)?;
     (**conn)
-        .transaction::<_, DbError, _>(move |conn| {
-            async move {
-                lock_active_chat_sender(conn, sender_id).await?;
-                let channel_id = resolve_channel_id(conn, target).await?;
-                insert_chat_message_in_channel(conn, channel_id, sender_id, client_id, body, turn)
-                    .await
-            }
-            .scope_boxed()
+        .transaction::<_, DbError, _>(async move |conn| {
+            lock_active_chat_sender(conn, sender_id).await?;
+            let channel_id = resolve_channel_id(conn, target).await?;
+            insert_chat_message_in_channel(conn, channel_id, sender_id, client_id, body, turn).await
         })
         .await
 }
@@ -137,27 +128,23 @@ pub async fn insert_chat_message_and_mark_sender_read(
 ) -> Result<(ChatMessage, bool), DbError> {
     let turn = persisted_chat_turn(turn)?;
     (**conn)
-        .transaction::<_, DbError, _>(move |conn| {
-            async move {
-                lock_active_chat_sender(conn, sender_id).await?;
-                let channel_id = resolve_channel_id(conn, target).await?;
-                // Receipts use message IDs as read-through boundaries. Locking before allocating an
-                // ID makes message ID order match commit order for receipt-tracked conversations.
-                chat_channels::table
-                    .find(channel_id)
-                    .select(chat_channels::id)
-                    .for_no_key_update()
-                    .first::<i64>(conn)
-                    .await
-                    .map_err(DbError::from)?;
-                let (row, inserted) = insert_chat_message_in_channel(
-                    conn, channel_id, sender_id, client_id, body, turn,
-                )
-                .await?;
-                advance_chat_read_in_channel(conn, sender_id, row.channel_id, row.id).await?;
-                Ok((row, inserted))
-            }
-            .scope_boxed()
+        .transaction::<_, DbError, _>(async move |conn| {
+            lock_active_chat_sender(conn, sender_id).await?;
+            let channel_id = resolve_channel_id(conn, target).await?;
+            // Receipts use message IDs as read-through boundaries. Locking before allocating an
+            // ID makes message ID order match commit order for receipt-tracked conversations.
+            chat_channels::table
+                .find(channel_id)
+                .select(chat_channels::id)
+                .for_no_key_update()
+                .first::<i64>(conn)
+                .await
+                .map_err(DbError::from)?;
+            let (row, inserted) =
+                insert_chat_message_in_channel(conn, channel_id, sender_id, client_id, body, turn)
+                    .await?;
+            advance_chat_read_in_channel(conn, sender_id, row.channel_id, row.id).await?;
+            Ok((row, inserted))
         })
         .await
 }

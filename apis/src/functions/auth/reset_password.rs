@@ -18,7 +18,7 @@ pub async fn reset_password(
         get_conn,
         models::{EmailToken, User},
     };
-    use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
+    use diesel_async::AsyncConnection;
 
     const PURPOSE: &str = "reset_password";
 
@@ -30,19 +30,16 @@ pub async fn reset_password(
     let password_hash = hash_password(&new_password)?;
     let token_hash = hash_token(&token);
 
-    conn.transaction::<_, DbError, _>(|tc| {
-        async move {
-            let email_token = EmailToken::find_valid(&token_hash, PURPOSE, tc).await?;
-            if !EmailToken::consume(email_token.id, tc).await? {
-                return Err(DbError::NotFound {
-                    reason: "reset token already used".to_owned(),
-                });
-            }
-            let user = User::find_active_by_uuid(&email_token.user_id, tc).await?;
-            user.edit(&password_hash, "", tc).await?;
-            Ok(())
+    conn.transaction::<_, DbError, _>(async |tc| {
+        let email_token = EmailToken::find_valid(&token_hash, PURPOSE, tc).await?;
+        if !EmailToken::consume(email_token.id, tc).await? {
+            return Err(DbError::NotFound {
+                reason: "reset token already used".to_owned(),
+            });
         }
-        .scope_boxed()
+        let user = User::find_active_by_uuid(&email_token.user_id, tc).await?;
+        user.edit(&password_hash, "", tc).await?;
+        Ok(())
     })
     .await
     .map_err(|e| match e {

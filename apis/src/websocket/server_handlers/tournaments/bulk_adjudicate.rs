@@ -4,7 +4,7 @@ use crate::{
 };
 use anyhow::Result;
 use db_lib::{get_conn, models::Tournament, DbPool};
-use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
+use diesel_async::AsyncConnection;
 use hive_lib::GameStatus;
 use shared_types::{GameId, TournamentId};
 use uuid::Uuid;
@@ -41,33 +41,28 @@ impl BulkAdjudicateHandler {
         let tournament = Tournament::find_by_tournament_id(&self.tournament_id, &mut conn).await?;
 
         let finalized_games = conn
-            .transaction::<_, anyhow::Error, _>(move |tc| {
+            .transaction::<_, anyhow::Error, _>(async move |tc| {
                 let tournament = tournament.clone();
                 let user_id = self.user_id;
                 let action = &self.action;
-                async move {
-                    match action {
-                        BulkAdjudication::DoubleForfeitUnstarted => {
-                            let finalized_games = tournament
-                                .games(tc)
-                                .await?
-                                .into_iter()
-                                .filter(|game| {
-                                    game.game_status == GameStatus::NotStarted.to_string()
-                                })
-                                .collect();
-                            tournament
-                                .double_forfeit_unstarted_games(&user_id, tc)
-                                .await?;
-                            Ok(finalized_games)
-                        }
-                        BulkAdjudication::ResetAdjudicated => {
-                            tournament.reset_adjudicated_games(&user_id, tc).await?;
-                            Ok(Vec::new())
-                        }
+                match action {
+                    BulkAdjudication::DoubleForfeitUnstarted => {
+                        let finalized_games = tournament
+                            .games(tc)
+                            .await?
+                            .into_iter()
+                            .filter(|game| game.game_status == GameStatus::NotStarted.to_string())
+                            .collect();
+                        tournament
+                            .double_forfeit_unstarted_games(&user_id, tc)
+                            .await?;
+                        Ok(finalized_games)
+                    }
+                    BulkAdjudication::ResetAdjudicated => {
+                        tournament.reset_adjudicated_games(&user_id, tc).await?;
+                        Ok(Vec::new())
                     }
                 }
-                .scope_boxed()
             })
             .await?;
 

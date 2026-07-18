@@ -8,7 +8,7 @@ use db_lib::{
     models::{NewTournament, Tournament},
     DbPool,
 };
-use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
+use diesel_async::AsyncConnection;
 use shared_types::{TournamentDetails, TournamentId};
 use uuid::Uuid;
 
@@ -31,9 +31,8 @@ impl CreateHandler {
         let mut conn = get_conn(&self.pool).await?;
         let new_tournament = NewTournament::new(self.details.clone())?;
         let tournament = conn
-            .transaction::<_, anyhow::Error, _>(move |tc| {
-                async move { Ok(Tournament::create(self.user_id, &new_tournament, tc).await?) }
-                    .scope_boxed()
+            .transaction::<_, anyhow::Error, _>(async move |tc| {
+                Ok(Tournament::create(self.user_id, &new_tournament, tc).await?)
             })
             .await?;
 

@@ -12,7 +12,7 @@ use diesel::{
     sql_types::{Bool, Text},
     QueryableByName,
 };
-use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
+use diesel_async::{AsyncConnection, RunQueryDsl};
 use hive_lib::{Color, GameControl, GameStatus, GameType};
 use shared_types::{Conclusion, GameSpeed, GameStart, TimeMode, TournamentGameResult};
 use std::time::Duration;
@@ -129,22 +129,19 @@ async fn hold_bullet_rating_lock(
 
     let task = tokio::spawn(async move {
         let mut conn = get_conn(&pool).await.expect("get rating lock connection");
-        conn.transaction::<_, DbError, _>(move |tc| {
-            async move {
-                diesel::update(
-                    ratings::table
-                        .filter(ratings::user_uid.eq(user_id))
-                        .filter(ratings::speed.eq(GameSpeed::Bullet.to_string())),
-                )
-                .set(ratings::rating.eq(1800.0))
-                .execute(tc)
-                .await?;
+        conn.transaction::<_, DbError, _>(async move |tc| {
+            diesel::update(
+                ratings::table
+                    .filter(ratings::user_uid.eq(user_id))
+                    .filter(ratings::speed.eq(GameSpeed::Bullet.to_string())),
+            )
+            .set(ratings::rating.eq(1800.0))
+            .execute(tc)
+            .await?;
 
-                rating_locked_tx.send(()).expect("signal rating lock");
-                release_rating_lock_rx.await.expect("release rating lock");
-                Ok(())
-            }
-            .scope_boxed()
+            rating_locked_tx.send(()).expect("signal rating lock");
+            release_rating_lock_rx.await.expect("release rating lock");
+            Ok(())
         })
         .await
     });
@@ -161,8 +158,8 @@ fn spawn_resign_finalizer(
     tokio::spawn(async move {
         let mut conn = get_conn(&pool).await.expect("get finalizer connection");
         set_application_name(application_name, &mut conn).await;
-        conn.transaction::<_, DbError, _>(move |tc| {
-            async move { game.resign(&GameControl::Resign(Color::Black), tc).await }.scope_boxed()
+        conn.transaction::<_, DbError, _>(async move |tc| {
+            game.resign(&GameControl::Resign(Color::Black), tc).await
         })
         .await
     })

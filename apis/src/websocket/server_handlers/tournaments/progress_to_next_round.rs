@@ -4,7 +4,7 @@ use crate::{
 };
 use anyhow::Result;
 use db_lib::{db_error::DbError, get_conn, models::Tournament, DbPool};
-use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
+use diesel_async::AsyncConnection;
 use shared_types::TournamentId;
 use uuid::Uuid;
 
@@ -29,9 +29,8 @@ impl SwissRoundHandler {
         let tournament = Tournament::find_by_tournament_id(&self.tournament_id, &mut conn).await?;
         let nanoid = tournament.nanoid.clone();
         let _new_games = conn
-            .transaction::<_, DbError, _>(move |tc| {
-                async move { tournament.swiss_create_next_round(&self.user_id, tc).await }
-                    .scope_boxed()
+            .transaction::<_, DbError, _>(async move |tc| {
+                tournament.swiss_create_next_round(&self.user_id, tc).await
             })
             .await?;
         messages.push(InternalServerMessage {

@@ -4,7 +4,7 @@ use crate::{
 };
 use anyhow::Result;
 use db_lib::{get_conn, models::Tournament, DbPool};
-use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
+use diesel_async::AsyncConnection;
 use shared_types::TournamentId;
 use uuid::Uuid;
 
@@ -27,9 +27,8 @@ impl InvitationAccept {
         let mut conn = get_conn(&self.pool).await?;
         let tournament = Tournament::find_by_tournament_id(&self.tournament_id, &mut conn).await?;
         let tournament = conn
-            .transaction::<_, anyhow::Error, _>(move |tc| {
-                async move { Ok(tournament.accept_invitation(&self.user_id, tc).await?) }
-                    .scope_boxed()
+            .transaction::<_, anyhow::Error, _>(async move |tc| {
+                Ok(tournament.accept_invitation(&self.user_id, tc).await?)
             })
             .await?;
         let response = TournamentId(tournament.nanoid.clone());
