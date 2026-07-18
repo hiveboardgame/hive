@@ -136,7 +136,7 @@
           shellHook = ''
             export CARGO_TARGET_DIR="$PWD/.cargo/target"
             # Install wasm-bindgen-cli at the version matching our Cargo.lock
-            WASM_BINDGEN_VERSION="0.2.108"
+            WASM_BINDGEN_VERSION="0.2.126"
             if ! command -v wasm-bindgen &> /dev/null || [[ "$(wasm-bindgen --version 2>/dev/null | cut -d' ' -f2)" != "$WASM_BINDGEN_VERSION" ]]; then
               echo "Installing wasm-bindgen-cli $WASM_BINDGEN_VERSION..."
               cargo install wasm-bindgen-cli --version "$WASM_BINDGEN_VERSION" --quiet
