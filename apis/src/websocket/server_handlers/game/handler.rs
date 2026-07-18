@@ -15,7 +15,7 @@ use crate::{
 };
 use anyhow::Result;
 use db_lib::{get_conn, models::Game, DbPool};
-use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
+use diesel_async::AsyncConnection;
 use hive_lib::{GameError, GameStatus};
 use shared_types::GameId;
 use std::{str::FromStr, sync::Arc};
@@ -45,9 +45,9 @@ impl GameActionHandler {
         let mut connection = get_conn(pool).await?;
 
         let game = connection
-            .transaction::<_, anyhow::Error, _>(move |conn| {
+            .transaction::<_, anyhow::Error, _>(async move |conn| {
                 // find_by_game_id automatically times the game out if needed
-                async move { Ok(Game::find_by_game_id(game_id, conn).await?) }.scope_boxed()
+                Ok(Game::find_by_game_id(game_id, conn).await?)
             })
             .await?;
 

@@ -24,7 +24,7 @@ use db_lib::{
     DbConn,
 };
 use diesel::prelude::*;
-use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
+use diesel_async::{AsyncConnection, RunQueryDsl};
 use hive_lib::{GameStatus, GameType};
 use shared_types::{
     Conclusion,
@@ -598,39 +598,33 @@ async fn non_receipt_message_insert_does_not_wait_for_channel_row_lock() {
     let mut locking_conn = get_conn(&db.pool).await.expect("get locking connection");
     let mut inserting_conn = get_conn(&db.pool).await.expect("get inserting connection");
     locking_conn
-        .transaction::<_, DbError, _>(move |conn| {
-            async move {
-                chat_channels::table
-                    .find(channel_id)
-                    .for_no_key_update()
-                    .select(chat_channels::id)
-                    .first::<i64>(conn)
-                    .await
-                    .map_err(DbError::from)?;
-                inserting_conn
-                    .transaction::<_, DbError, _>(|conn| {
-                        async move {
-                            diesel::sql_query("SET LOCAL lock_timeout = '100ms'")
-                                .execute(conn)
-                                .await
-                                .map_err(DbError::from)?;
-                            insert_chat_message(
-                                conn,
-                                sender.id,
-                                Uuid::new_v4(),
-                                &target,
-                                "lock-free global message",
-                                None,
-                            )
-                            .await?;
-                            Ok(())
-                        }
-                        .scope_boxed()
-                    })
+        .transaction::<_, DbError, _>(async move |conn| {
+            chat_channels::table
+                .find(channel_id)
+                .for_no_key_update()
+                .select(chat_channels::id)
+                .first::<i64>(conn)
+                .await
+                .map_err(DbError::from)?;
+            inserting_conn
+                .transaction::<_, DbError, _>(async |conn| {
+                    diesel::sql_query("SET LOCAL lock_timeout = '100ms'")
+                        .execute(conn)
+                        .await
+                        .map_err(DbError::from)?;
+                    insert_chat_message(
+                        conn,
+                        sender.id,
+                        Uuid::new_v4(),
+                        &target,
+                        "lock-free global message",
+                        None,
+                    )
                     .await?;
-                Ok(())
-            }
-            .scope_boxed()
+                    Ok(())
+                })
+                .await?;
+            Ok(())
         })
         .await
         .expect("hold channel row lock while inserting message");

@@ -6,7 +6,7 @@ use crate::{
 };
 use anyhow::Result;
 use db_lib::{db_error::DbError, get_conn, models::Tournament, DbPool};
-use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
+use diesel_async::AsyncConnection;
 use shared_types::TournamentId;
 use uuid::Uuid;
 
@@ -34,8 +34,8 @@ impl StartHandler {
         let players = tournament.players(&mut conn).await?;
 
         let (tournament, games, deleted_invitations) = conn
-            .transaction::<_, DbError, _>(move |tc| {
-                async move { tournament.start_by_organizer(&self.user_id, tc).await }.scope_boxed()
+            .transaction::<_, DbError, _>(async move |tc| {
+                tournament.start_by_organizer(&self.user_id, tc).await
             })
             .await?;
 

@@ -4,7 +4,7 @@ use db_lib::{
     models::{Game, GameFinishContext, GameHash},
     DbPool,
 };
-use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
+use diesel_async::AsyncConnection;
 use hive_lib::State;
 
 const BATCH_SIZE: i64 = 200;
@@ -70,14 +70,10 @@ pub fn run(pool: DbPool) {
                 let ctx = GameFinishContext::from_finished_game(game);
 
                 let result = conn
-                    .transaction(|conn| {
-                        async move {
-                            Game::set_hashes(game_id, new_hashes, conn).await?;
-                            GameHash::insert_for_game(game_id, &raw_hashes, &moves, &ctx, conn)
-                                .await?;
-                            Ok::<_, DbError>(())
-                        }
-                        .scope_boxed()
+                    .transaction(async |conn| {
+                        Game::set_hashes(game_id, new_hashes, conn).await?;
+                        GameHash::insert_for_game(game_id, &raw_hashes, &moves, &ctx, conn).await?;
+                        Ok::<_, DbError>(())
                     })
                     .await;
 

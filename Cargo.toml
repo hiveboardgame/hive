@@ -31,15 +31,15 @@ codee = { version = "0.3", features = ["msgpack_serde", "base64"] }
 console_error_panic_hook = "0.1.7"
 cookie = "0.18"
 dashmap = "6"
-diesel = { version = "2.3", features = [
+diesel = { version = "2.3.11", features = [
     "postgres",
     "chrono",
     "uuid",
     "serde_json",
     "64-column-tables",
 ] }
-diesel-async = { version = "0.7", features = ["postgres", "bb8"] }
-diesel_migrations = { version = "2.3", features = ["postgres"] }
+diesel-async = { version = "0.9.2", features = ["postgres", "bb8"] }
+diesel_migrations = { version = "2.3.2", features = ["postgres"] }
 dotenvy = "0.15"
 futures-util = "0.3"
 gloo-timers = { version = "0.4", features = ["futures"] }

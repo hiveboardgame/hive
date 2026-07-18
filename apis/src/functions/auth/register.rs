@@ -19,7 +19,7 @@ pub async fn register(
         get_conn,
         models::{NewUser, User},
     };
-    use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
+    use diesel_async::AsyncConnection;
 
     validate_password(&password, &password_confirmation).map_err(ServerFnError::new)?;
 
@@ -30,13 +30,10 @@ pub async fn register(
     let new_user = NewUser::new(&username, &password, &email)?;
 
     let (user, account) = conn
-        .transaction::<_, ServerFnError, _>(move |tc| {
-            async move {
-                let user = User::create(new_user, tc).await?;
-                let account = AccountResponse::from_uuid(&user.id, tc).await?;
-                Ok((user, account))
-            }
-            .scope_boxed()
+        .transaction::<_, ServerFnError, _>(async move |tc| {
+            let user = User::create(new_user, tc).await?;
+            let account = AccountResponse::from_uuid(&user.id, tc).await?;
+            Ok((user, account))
         })
         .await?;
 

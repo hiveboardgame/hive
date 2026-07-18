@@ -27,7 +27,7 @@ use db_lib::{
     DbConn,
     DbPool,
 };
-use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
+use diesel_async::AsyncConnection;
 use hive_lib::{GameControl, GameError};
 use shared_types::{Conclusion, GameId, TimeMode};
 use std::sync::Arc;
@@ -86,9 +86,7 @@ impl GameControlHandler {
         self.ensure_fresh_game_control()?;
 
         let game = conn
-            .transaction::<_, anyhow::Error, _>(move |tc| {
-                async move { self.match_control(tc).await }.scope_boxed()
-            })
+            .transaction::<_, anyhow::Error, _>(async move |tc| self.match_control(tc).await)
             .await?;
         let game_response = self.game_response_for_control(&game, &mut conn).await?;
         let game_action = Self::reaction_for_control_result(&game, self.control);

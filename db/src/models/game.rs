@@ -12,7 +12,7 @@ use crate::{
 use ::nanoid::nanoid;
 use chrono::{DateTime, Datelike, TimeZone, Utc};
 use diesel::{prelude::*, ExpressionMethods, Insertable};
-use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
+use diesel_async::{AsyncConnection, RunQueryDsl};
 use hive_lib::{Color, GameControl, GameResult, GameStatus, GameType, History, State};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -386,19 +386,16 @@ impl Game {
 
     pub async fn check_time(&self, conn: &mut DbConn<'_>) -> Result<Game, DbError> {
         let game_id = self.id;
-        conn.transaction::<_, DbError, _>(move |tc| {
-            async move {
-                // Stale Game values can race here; only the post-lock row may apply ratings.
-                let game: Game = games::table.find(game_id).for_update().first(tc).await?;
-                if game.finished {
-                    return Ok(game);
-                }
-                if let Some(timed_out_color) = game.timed_out_color()? {
-                    return game.finish_timeout(timed_out_color, tc).await;
-                }
-                Ok(game)
+        conn.transaction::<_, DbError, _>(async move |tc| {
+            // Stale Game values can race here; only the post-lock row may apply ratings.
+            let game: Game = games::table.find(game_id).for_update().first(tc).await?;
+            if game.finished {
+                return Ok(game);
             }
-            .scope_boxed()
+            if let Some(timed_out_color) = game.timed_out_color()? {
+                return game.finish_timeout(timed_out_color, tc).await;
+            }
+            Ok(game)
         })
         .await
     }
@@ -820,68 +817,59 @@ impl Game {
             let new_white_time_left = time_info.white_time_left;
             let new_black_time_left = time_info.black_time_left;
             return conn
-                .transaction::<_, DbError, _>(move |tc| {
-                    async move {
-                        let game: Game = games::table.find(game_id).for_update().first(tc).await?;
-                        if game.finished {
-                            return Err(DbError::GameIsOver);
-                        }
-                        if game.turn != expected_turn || game.history != expected_history {
-                            return Err(Self::stale_game_action_error());
-                        }
-                        let tgr = TournamentGameResult::new(&game_result);
-                        let new_game_status = GameStatus::Finished(game_result.clone());
-                        let (
-                            white_rating_before,
-                            black_rating_before,
-                            new_white_rating_change,
-                            new_black_rating_change,
-                        ) = Rating::update(
-                            game.rated,
-                            game.speed.clone(),
-                            game.white_id,
-                            game.black_id,
-                            game_result,
-                            tc,
-                        )
-                        .await?;
-                        let updated_game: Game = diesel::update(games::table.find(game.id))
-                            .set((
-                                games::history.eq(new_history),
-                                games::current_player_id.eq(next_player),
-                                games::turn.eq(new_turn),
-                                games::finished.eq(true),
-                                games::tournament_game_result.eq(tgr.to_string()),
-                                games::game_status.eq(new_game_status.to_string()),
-                                games::game_control_history
-                                    .eq(games::game_control_history.concat(game_control_string)),
-                                games::white_rating.eq(white_rating_before),
-                                games::black_rating.eq(black_rating_before),
-                                games::white_rating_change.eq(new_white_rating_change),
-                                games::black_rating_change.eq(new_black_rating_change),
-                                games::updated_at.eq(Utc::now()),
-                                games::white_time_left.eq(new_white_time_left),
-                                games::black_time_left.eq(new_black_time_left),
-                                games::last_interaction.eq(Some(Utc::now())),
-                                games::move_times.eq(new_move_times),
-                                games::hashes.eq(&new_hashes),
-                                games::conclusion.eq(new_conclusion.to_string()),
-                                games::timeout_at.eq(CLEAR_TIMEOUT_AT),
-                            ))
-                            .get_result(tc)
-                            .await?;
-                        let ctx = GameFinishContext::from_finished_game(&updated_game);
-                        GameHash::insert_for_game(
-                            updated_game.id,
-                            &raw_hashes,
-                            &new_moves,
-                            &ctx,
-                            tc,
-                        )
-                        .await?;
-                        Ok(updated_game)
+                .transaction::<_, DbError, _>(async move |tc| {
+                    let game: Game = games::table.find(game_id).for_update().first(tc).await?;
+                    if game.finished {
+                        return Err(DbError::GameIsOver);
                     }
-                    .scope_boxed()
+                    if game.turn != expected_turn || game.history != expected_history {
+                        return Err(Self::stale_game_action_error());
+                    }
+                    let tgr = TournamentGameResult::new(&game_result);
+                    let new_game_status = GameStatus::Finished(game_result.clone());
+                    let (
+                        white_rating_before,
+                        black_rating_before,
+                        new_white_rating_change,
+                        new_black_rating_change,
+                    ) = Rating::update(
+                        game.rated,
+                        game.speed.clone(),
+                        game.white_id,
+                        game.black_id,
+                        game_result,
+                        tc,
+                    )
+                    .await?;
+                    let updated_game: Game = diesel::update(games::table.find(game.id))
+                        .set((
+                            games::history.eq(new_history),
+                            games::current_player_id.eq(next_player),
+                            games::turn.eq(new_turn),
+                            games::finished.eq(true),
+                            games::tournament_game_result.eq(tgr.to_string()),
+                            games::game_status.eq(new_game_status.to_string()),
+                            games::game_control_history
+                                .eq(games::game_control_history.concat(game_control_string)),
+                            games::white_rating.eq(white_rating_before),
+                            games::black_rating.eq(black_rating_before),
+                            games::white_rating_change.eq(new_white_rating_change),
+                            games::black_rating_change.eq(new_black_rating_change),
+                            games::updated_at.eq(Utc::now()),
+                            games::white_time_left.eq(new_white_time_left),
+                            games::black_time_left.eq(new_black_time_left),
+                            games::last_interaction.eq(Some(Utc::now())),
+                            games::move_times.eq(new_move_times),
+                            games::hashes.eq(&new_hashes),
+                            games::conclusion.eq(new_conclusion.to_string()),
+                            games::timeout_at.eq(CLEAR_TIMEOUT_AT),
+                        ))
+                        .get_result(tc)
+                        .await?;
+                    let ctx = GameFinishContext::from_finished_game(&updated_game);
+                    GameHash::insert_for_game(updated_game.id, &raw_hashes, &new_moves, &ctx, tc)
+                        .await?;
+                    Ok(updated_game)
                 })
                 .await;
         }

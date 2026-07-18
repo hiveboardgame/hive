@@ -43,7 +43,7 @@ use diesel::{
     Selectable,
     SelectableHelper,
 };
-use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
+use diesel_async::{AsyncConnection, RunQueryDsl};
 use hive_lib::GameControl;
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -376,148 +376,143 @@ impl User {
     ) -> Result<SoftDeleteReport, DbError> {
         let user_id = self.id;
         let replacement_password_hash = replacement_password_hash.to_owned();
-        conn.transaction::<_, DbError, _>(move |tc| {
-            async move {
-                let user: User = users_table.find(user_id).for_update().first(tc).await?;
-                if user.deleted {
-                    return Err(DbError::InvalidAction {
-                        info: String::from("Account is already deleted"),
-                    });
-                }
-                let mut report = SoftDeleteReport::default();
+        conn.transaction::<_, DbError, _>(async move |tc| {
+            let user: User = users_table.find(user_id).for_update().first(tc).await?;
+            if user.deleted {
+                return Err(DbError::InvalidAction {
+                    info: String::from("Account is already deleted"),
+                });
+            }
+            let mut report = SoftDeleteReport::default();
 
-                let unfinished_games: Vec<Game> = games::table
-                    .filter(
-                        games::finished
-                            .eq(false)
-                            .and(games::white_id.eq(user_id).or(games::black_id.eq(user_id))),
-                    )
-                    .for_update()
-                    .load(tc)
-                    .await?;
-                let unfinished_game_ids: Vec<Uuid> =
-                    unfinished_games.iter().map(|game| game.id).collect();
-                Schedule::delete_for_games(&unfinished_game_ids, tc).await?;
+            let unfinished_games: Vec<Game> = games::table
+                .filter(
+                    games::finished
+                        .eq(false)
+                        .and(games::white_id.eq(user_id).or(games::black_id.eq(user_id))),
+                )
+                .for_update()
+                .load(tc)
+                .await?;
+            let unfinished_game_ids: Vec<Uuid> =
+                unfinished_games.iter().map(|game| game.id).collect();
+            Schedule::delete_for_games(&unfinished_game_ids, tc).await?;
 
-                let deleted_challenges: Vec<Challenge> = challenges::table
-                    .filter(
-                        challenges::challenger_id
-                            .eq(user_id)
-                            .or(challenges::opponent_id.eq(user_id)),
-                    )
-                    .for_update()
-                    .load(tc)
-                    .await?;
-                let deleted_challenge_ids = deleted_challenges
-                    .iter()
-                    .map(|challenge| challenge.id)
-                    .collect::<Vec<_>>();
-                report.deleted_challenges = deleted_challenges;
-                if !deleted_challenge_ids.is_empty() {
-                    diesel::delete(
-                        challenges::table.filter(challenges::id.eq_any(deleted_challenge_ids)),
-                    )
-                    .execute(tc)
-                    .await?;
-                }
-
+            let deleted_challenges: Vec<Challenge> = challenges::table
+                .filter(
+                    challenges::challenger_id
+                        .eq(user_id)
+                        .or(challenges::opponent_id.eq(user_id)),
+                )
+                .for_update()
+                .load(tc)
+                .await?;
+            let deleted_challenge_ids = deleted_challenges
+                .iter()
+                .map(|challenge| challenge.id)
+                .collect::<Vec<_>>();
+            report.deleted_challenges = deleted_challenges;
+            if !deleted_challenge_ids.is_empty() {
                 diesel::delete(
-                    tournaments_invitations::table
-                        .filter(tournaments_invitations::invitee_id.eq(user_id)),
+                    challenges::table.filter(challenges::id.eq_any(deleted_challenge_ids)),
                 )
                 .execute(tc)
                 .await?;
+            }
 
-                let not_started_organized_tournaments: Vec<(Uuid, String)> =
-                    tournaments_organizers::table
-                        .inner_join(tournaments::table)
-                        .filter(tournaments_organizers::organizer_id.eq(user_id))
-                        .filter(tournaments::status.eq(TournamentStatus::NotStarted.to_string()))
-                        .select((tournaments_organizers::tournament_id, tournaments::nanoid))
-                        .load(tc)
-                        .await?;
-                let not_started_organized_tournament_ids = not_started_organized_tournaments
-                    .iter()
-                    .map(|(id, _)| *id)
-                    .collect::<Vec<_>>();
-                report.deleted_tournament_ids = not_started_organized_tournaments
-                    .into_iter()
-                    .map(|(_, nanoid)| TournamentId(nanoid))
-                    .collect();
-                if !not_started_organized_tournament_ids.is_empty() {
-                    diesel::delete(
-                        tournaments::table
-                            .filter(tournaments::id.eq_any(not_started_organized_tournament_ids))
-                            .filter(
-                                tournaments::status.eq(TournamentStatus::NotStarted.to_string()),
-                            ),
-                    )
-                    .execute(tc)
-                    .await?;
-                }
+            diesel::delete(
+                tournaments_invitations::table
+                    .filter(tournaments_invitations::invitee_id.eq(user_id)),
+            )
+            .execute(tc)
+            .await?;
 
-                let not_started_tournaments: Vec<(Uuid, String)> = tournaments_users::table
+            let not_started_organized_tournaments: Vec<(Uuid, String)> =
+                tournaments_organizers::table
                     .inner_join(tournaments::table)
-                    .filter(tournaments_users::user_id.eq(user_id))
+                    .filter(tournaments_organizers::organizer_id.eq(user_id))
                     .filter(tournaments::status.eq(TournamentStatus::NotStarted.to_string()))
-                    .select((tournaments_users::tournament_id, tournaments::nanoid))
+                    .select((tournaments_organizers::tournament_id, tournaments::nanoid))
                     .load(tc)
                     .await?;
-                let not_started_tournament_ids = not_started_tournaments
-                    .iter()
-                    .map(|(id, _)| *id)
-                    .collect::<Vec<_>>();
-                report.removed_membership_tournament_ids = not_started_tournaments
-                    .into_iter()
-                    .map(|(_, nanoid)| TournamentId(nanoid))
-                    .collect();
-                if !not_started_tournament_ids.is_empty() {
-                    diesel::delete(
-                        tournaments_users::table
-                            .filter(tournaments_users::user_id.eq(user_id))
-                            .filter(
-                                tournaments_users::tournament_id.eq_any(not_started_tournament_ids),
-                            ),
-                    )
-                    .execute(tc)
-                    .await?;
-                }
-
-                for game in unfinished_games {
-                    let color = game
-                        .user_color(user_id)
-                        .ok_or_else(|| DbError::InvalidAction {
-                            info: String::from("Deleted account is not a player"),
-                        })?;
-                    if game.tournament_id.is_none() && game.turn < 2 {
-                        let mut deleted_game = game.clone();
-                        deleted_game.finished = true;
-                        game.delete(tc).await?;
-                        report.deleted_games.push(deleted_game);
-                    } else {
-                        let game_control = GameControl::Resign(color);
-                        let resigned_game = game.resign(&game_control, tc).await?;
-                        report.resigned_games.push(resigned_game);
-                    }
-                }
-
-                let (deleted_username, deleted_email) = Self::deleted_identity(user_id);
-                diesel::update(users_table.find(user_id))
-                    .set((
-                        username_field.eq(&deleted_username),
-                        normalized_username.eq(&deleted_username),
-                        email_field.eq(&deleted_email),
-                        password_field.eq(replacement_password_hash),
-                        users::admin.eq(false),
-                        deleted_field.eq(true),
-                        updated_at.eq(Utc::now()),
-                    ))
-                    .execute(tc)
-                    .await?;
-
-                Ok(report)
+            let not_started_organized_tournament_ids = not_started_organized_tournaments
+                .iter()
+                .map(|(id, _)| *id)
+                .collect::<Vec<_>>();
+            report.deleted_tournament_ids = not_started_organized_tournaments
+                .into_iter()
+                .map(|(_, nanoid)| TournamentId(nanoid))
+                .collect();
+            if !not_started_organized_tournament_ids.is_empty() {
+                diesel::delete(
+                    tournaments::table
+                        .filter(tournaments::id.eq_any(not_started_organized_tournament_ids))
+                        .filter(tournaments::status.eq(TournamentStatus::NotStarted.to_string())),
+                )
+                .execute(tc)
+                .await?;
             }
-            .scope_boxed()
+
+            let not_started_tournaments: Vec<(Uuid, String)> = tournaments_users::table
+                .inner_join(tournaments::table)
+                .filter(tournaments_users::user_id.eq(user_id))
+                .filter(tournaments::status.eq(TournamentStatus::NotStarted.to_string()))
+                .select((tournaments_users::tournament_id, tournaments::nanoid))
+                .load(tc)
+                .await?;
+            let not_started_tournament_ids = not_started_tournaments
+                .iter()
+                .map(|(id, _)| *id)
+                .collect::<Vec<_>>();
+            report.removed_membership_tournament_ids = not_started_tournaments
+                .into_iter()
+                .map(|(_, nanoid)| TournamentId(nanoid))
+                .collect();
+            if !not_started_tournament_ids.is_empty() {
+                diesel::delete(
+                    tournaments_users::table
+                        .filter(tournaments_users::user_id.eq(user_id))
+                        .filter(
+                            tournaments_users::tournament_id.eq_any(not_started_tournament_ids),
+                        ),
+                )
+                .execute(tc)
+                .await?;
+            }
+
+            for game in unfinished_games {
+                let color = game
+                    .user_color(user_id)
+                    .ok_or_else(|| DbError::InvalidAction {
+                        info: String::from("Deleted account is not a player"),
+                    })?;
+                if game.tournament_id.is_none() && game.turn < 2 {
+                    let mut deleted_game = game.clone();
+                    deleted_game.finished = true;
+                    game.delete(tc).await?;
+                    report.deleted_games.push(deleted_game);
+                } else {
+                    let game_control = GameControl::Resign(color);
+                    let resigned_game = game.resign(&game_control, tc).await?;
+                    report.resigned_games.push(resigned_game);
+                }
+            }
+
+            let (deleted_username, deleted_email) = Self::deleted_identity(user_id);
+            diesel::update(users_table.find(user_id))
+                .set((
+                    username_field.eq(&deleted_username),
+                    normalized_username.eq(&deleted_username),
+                    email_field.eq(&deleted_email),
+                    password_field.eq(replacement_password_hash),
+                    users::admin.eq(false),
+                    deleted_field.eq(true),
+                    updated_at.eq(Utc::now()),
+                ))
+                .execute(tc)
+                .await?;
+
+            Ok(report)
         })
         .await
     }
