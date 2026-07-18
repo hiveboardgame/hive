@@ -58,7 +58,7 @@ leptos_meta = { workspace = true }
 leptos_router = { workspace = true }
 lettermint-rs = { workspace = true, optional = true }
 log = { workspace = true }
-lru = { version = "0.12", optional = true }
+lru = { version = "0.18.1", optional = true }
 markdown = { workspace = true }
 rand = { workspace = true, optional = true }
 reqwest = { workspace = true, optional = true }

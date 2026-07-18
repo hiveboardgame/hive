@@ -126,10 +126,10 @@ impl WebPushNotifier {
         match tokio::time::timeout(SEND_TIMEOUT, self.client.send(message)).await {
             Err(_) => NotifyOutcome::Retryable,
             Ok(Ok(())) => NotifyOutcome::Delivered,
-            Ok(Err(WebPushError::EndpointNotFound | WebPushError::EndpointNotValid)) => {
+            Ok(Err(WebPushError::EndpointNotFound(_) | WebPushError::EndpointNotValid(_))) => {
                 NotifyOutcome::TokenDead
             }
-            Ok(Err(WebPushError::ServerError(_))) => NotifyOutcome::Retryable,
+            Ok(Err(WebPushError::ServerError { .. })) => NotifyOutcome::Retryable,
             Ok(Err(e)) => NotifyOutcome::Failed(format!("web push: {e}")),
         }
     }

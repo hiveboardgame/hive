@@ -29,7 +29,7 @@ use db_lib::{
 };
 use hive_lib::GameStatus;
 use log::error;
-use rand::Rng;
+use rand::RngExt;
 use shared_types::{Conclusion, ConversationKey, GameId, SimpleUser, TimeMode, TournamentId};
 use std::{
     collections::{HashMap, HashSet},
