@@ -2,26 +2,37 @@ use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage, TournamentUpdate},
     notifications::{notify, Event},
     responses::GameResponse,
-    websocket::messages::{InternalServerMessage, MessageDestination, TournamentAudience},
+    websocket::{
+        messages::{InternalServerMessage, MessageDestination, TournamentAudience},
+        WebsocketData,
+    },
 };
 use anyhow::Result;
 use db_lib::{db_error::DbError, get_conn, models::Tournament, DbPool};
 use diesel_async::AsyncConnection;
-use shared_types::TournamentId;
+use shared_types::{TimeMode, TournamentId};
+use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct StartHandler {
     tournament_id: TournamentId,
     user_id: Uuid,
     pool: DbPool,
+    data: Arc<WebsocketData>,
 }
 
 impl StartHandler {
-    pub fn new(tournament_id: TournamentId, user_id: Uuid, pool: &DbPool) -> Self {
+    pub fn new(
+        tournament_id: TournamentId,
+        user_id: Uuid,
+        data: Arc<WebsocketData>,
+        pool: &DbPool,
+    ) -> Self {
         Self {
             tournament_id,
             user_id,
             pool: pool.clone(),
+            data,
         }
     }
 
@@ -29,14 +40,20 @@ impl StartHandler {
         let mut conn = get_conn(&self.pool).await?;
         let mut messages = Vec::new();
         let tournament = Tournament::find_by_tournament_id(&self.tournament_id, &mut conn).await?;
+        let time_mode = tournament.parsed_time_mode()?;
 
         // Get all players before starting the tournament
         let players = tournament.players(&mut conn).await?;
 
-        let (tournament, games, deleted_invitations) = conn
-            .transaction::<_, DbError, _>(async move |tc| {
-                tournament.start_by_organizer(&self.user_id, tc).await
-            })
+        let (tournament, games, deleted_invitations) = self
+            .data
+            .realtime_gate
+            .with_realtime_admission(
+                time_mode == TimeMode::RealTime,
+                conn.transaction::<_, DbError, _>(async move |tc| {
+                    tournament.start_by_organizer(&self.user_id, tc).await
+                }),
+            )
             .await?;
 
         for player in players {

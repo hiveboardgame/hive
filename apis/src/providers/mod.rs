@@ -15,6 +15,7 @@ mod games_search_context;
 mod notifications;
 pub mod online_users;
 mod ping;
+mod realtime;
 mod referer;
 pub mod refocus;
 pub mod schedules;
@@ -46,6 +47,7 @@ pub use games_search_context::{
 };
 pub use notifications::{provide_notifications, NotificationContext, ScheduleNotificationKind};
 pub use ping::{provide_ping, PingContext, FRESH_WINDOW_SECS};
+pub use realtime::{provide_realtime_availability, RealtimeAvailability};
 pub use referer::{provide_referer, RefererContext};
 pub use schedules::{provide_schedules, SchedulesContext};
 pub use sounds::{provide_sounds, SoundType, Sounds};

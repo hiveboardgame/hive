@@ -2,7 +2,10 @@ use crate::{
     common::{ChallengeUpdate, GameActionResponse, GameReaction, GameUpdate, ServerMessage},
     notifications::{notify, time_control_label, Event},
     responses::GameResponse,
-    websocket::messages::{InternalServerMessage, MessageDestination},
+    websocket::{
+        messages::{InternalServerMessage, MessageDestination},
+        WebsocketData,
+    },
 };
 use anyhow::Result;
 use db_lib::{
@@ -12,7 +15,8 @@ use db_lib::{
     DbPool,
 };
 use diesel_async::AsyncConnection;
-use shared_types::{ChallengeId, GameSpeed};
+use shared_types::{ChallengeId, GameSpeed, TimeMode};
+use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct AcceptHandler {
@@ -20,6 +24,7 @@ pub struct AcceptHandler {
     user_id: Uuid,
     username: String,
     pool: DbPool,
+    data: Arc<WebsocketData>,
 }
 
 impl AcceptHandler {
@@ -27,6 +32,7 @@ impl AcceptHandler {
         challenge_id: ChallengeId,
         username: &str,
         user_id: Uuid,
+        data: Arc<WebsocketData>,
         pool: &DbPool,
     ) -> Result<Self> {
         Ok(Self {
@@ -34,6 +40,7 @@ impl AcceptHandler {
             user_id,
             username: username.to_owned(),
             pool: pool.clone(),
+            data,
         })
     }
 
@@ -52,6 +59,7 @@ impl AcceptHandler {
             }
             Err(err) => return Err(err.into()),
         };
+        let time_mode = challenge.parsed_time_mode()?;
         challenge.validate_accepting_user(self.user_id)?;
         let speed = GameSpeed::from_base_increment(challenge.time_base, challenge.time_increment);
         let rating = Rating::for_uuid(&self.user_id, &speed, &mut conn)
@@ -92,13 +100,18 @@ impl AcceptHandler {
             }
         };
 
-        let (game, deleted_challenges, game_response) = conn
-            .transaction::<_, anyhow::Error, _>(async move |tc| {
-                let new_game = NewGame::new(white_id, black_id, &challenge)?;
-                let (game, deleted_challenges) =
-                    Game::create_and_delete_challenges(new_game, tc).await?;
-                let game_response = GameResponse::from_model(&game, tc).await?;
-                Ok((game, deleted_challenges, game_response))
+        let (game, deleted_challenges, game_response) = self
+            .data
+            .realtime_gate
+            .with_realtime_admission(time_mode == TimeMode::RealTime, async {
+                conn.transaction::<_, anyhow::Error, _>(async move |tc| {
+                    let new_game = NewGame::new(white_id, black_id, &challenge)?;
+                    let (game, deleted_challenges) =
+                        Game::create_and_delete_challenges(new_game, tc).await?;
+                    let game_response = GameResponse::from_model(&game, tc).await?;
+                    Ok((game, deleted_challenges, game_response))
+                })
+                .await
             })
             .await?;
 

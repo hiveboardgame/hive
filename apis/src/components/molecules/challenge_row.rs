@@ -10,14 +10,14 @@ use crate::{
     },
     hooks::clipboard_copy::use_clipboard_copy,
     i18n::*,
-    providers::{ApiRequestsProvider, AuthContext, Config},
+    providers::{ApiRequestsProvider, AuthContext, Config, RealtimeAvailability},
     responses::ChallengeResponse,
 };
 use hive_lib::ColorChoice;
 use leptos::{html::Dialog, prelude::*};
 use leptos_icons::*;
 use leptos_use::use_window;
-use shared_types::{ChallengeId, TimeInfo};
+use shared_types::{ChallengeId, TimeInfo, TimeMode};
 
 const CHALLENGE_LEADING_RAIL_CLASS: &str = "flex items-center justify-center gap-1";
 const CHALLENGE_LEADING_TOKEN_CLASS: &str =
@@ -48,6 +48,7 @@ pub fn ChallengeRow(
     let config = expect_context::<Config>().0;
     let api = expect_context::<ApiRequestsProvider>().0;
     let auth_context = expect_context::<AuthContext>();
+    let realtime = expect_context::<RealtimeAvailability>();
     let user = auth_context.user;
     let admin = auth_context.admin;
     let challenge_id = StoredValue::new(challenge_id);
@@ -143,6 +144,8 @@ pub fn ChallengeRow(
             ids
         }
     };
+    let accept_disabled =
+        Signal::derive(move || time_mode == TimeMode::RealTime && !realtime.enabled());
 
     let action_buttons = move || {
         view! {
@@ -177,9 +180,13 @@ pub fn ChallengeRow(
             <Show when=move || action_flags.with(|flags| flags.accept)>
                 <button
                     on:click=move |_| {
+                        if accept_disabled.get_untracked() {
+                            return;
+                        }
                         api.get().challenge_accept(challenge_id.get_value());
                     }
                     class=accept_button_classes.get_value()
+                    prop:disabled=accept_disabled
                 >
                     <Icon icon=icondata_ai::AiCheckOutlined attr:class="size-6" />
                 </button>

@@ -111,12 +111,15 @@ impl TournamentHandler {
                     .unsubscribe_user_from_tournament_chat(user, &tournament_id);
                 output.into()
             }
-            TournamentAction::Start(tournament_id) => {
-                StartHandler::new(tournament_id, self.user_id, &self.pool)
-                    .handle()
-                    .await?
-                    .into()
-            }
+            TournamentAction::Start(tournament_id) => StartHandler::new(
+                tournament_id,
+                self.user_id,
+                self.hub.data.clone(),
+                &self.pool,
+            )
+            .handle()
+            .await?
+            .into(),
             TournamentAction::AdjudicateResult(game_id, new_result) => {
                 AdjudicateResultHandler::new(game_id, new_result, self.user_id, &self.pool)
                     .handle()
@@ -158,12 +161,15 @@ impl TournamentHandler {
                     .await?
                     .into()
             }
-            TournamentAction::ProgressToNextRound(tournament_id) => {
-                SwissRoundHandler::new(tournament_id, self.user_id, &self.pool)
-                    .handle()
-                    .await?
-                    .into()
-            }
+            TournamentAction::ProgressToNextRound(tournament_id) => SwissRoundHandler::new(
+                tournament_id,
+                self.user_id,
+                self.hub.data.clone(),
+                &self.pool,
+            )
+            .handle()
+            .await?
+            .into(),
         };
         // Invalidate cached recipients when an action changes membership or
         // deletes the tournament. The next dispatch rebuilds the entry.

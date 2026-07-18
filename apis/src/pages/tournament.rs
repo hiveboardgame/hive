@@ -27,6 +27,7 @@ use crate::{
         websocket::{ConnectionReadyState, WebsocketContext},
         ApiRequestsProvider,
         AuthContext,
+        RealtimeAvailability,
         UpdateNotifier,
     },
     responses::{GameResponse, TournamentResponse},
@@ -42,6 +43,7 @@ use shared_types::{
     GameSpeed,
     PrettyString,
     TimeInfo,
+    TimeMode,
     TournamentGameResult,
     TournamentId,
     TournamentMode,
@@ -114,6 +116,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
     let websocket = expect_context::<WebsocketContext>();
+    let realtime = expect_context::<RealtimeAvailability>();
     let account = auth_context.user;
     let user_id = Signal::derive(move || account.with(|a| a.as_ref().map(|a| a.user.uid)));
     let time_info = tournament.with_value(|t| TimeInfo {
@@ -122,6 +125,9 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
         increment: t.time_increment,
     });
     let tournament_id = StoredValue::new(tournament.with_value(|t| t.tournament_id.clone()));
+    let realtime_start_disabled = Signal::derive(move || {
+        tournament.with_value(|t| t.time_mode == TimeMode::RealTime) && !realtime.enabled()
+    });
     Effect::new(move |_| {
         let ready_state = websocket.ready_state.get();
         if tournament.with_value(|t| t.status.clone()) != TournamentStatus::NotStarted
@@ -185,14 +191,14 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
         }
     };
     let progress_to_next_round = move |_| {
-        if user_is_organizer_or_admin() {
+        if user_is_organizer_or_admin() && !realtime_start_disabled.get_untracked() {
             send_action(TournamentAction::ProgressToNextRound(
                 tournament_id.get_value(),
             ));
         }
     };
     let start = move |_| {
-        if user_is_organizer_or_admin() {
+        if user_is_organizer_or_admin() && !realtime_start_disabled.get_untracked() {
             send_action(TournamentAction::Start(tournament_id.get_value()));
         }
     };
@@ -576,7 +582,9 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                                     {"Delete"}
                                 </button>
                                 <button
-                                    prop:disabled=start_disabled
+                                    prop:disabled=move || {
+                                        start_disabled() || realtime_start_disabled()
+                                    }
                                     class="ui-button ui-button-primary ui-button-md"
                                     on:click=start
                                 >
@@ -702,7 +710,9 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                                     class="ui-button ui-button-primary ui-button-md"
                                     on:click=progress_to_next_round
                                     // this is also disabled as the Finish button until all existing games have results
-                                    prop:disabled=tournament_lacks_results
+                                    prop:disabled=move || {
+                                        tournament_lacks_results || realtime_start_disabled()
+                                    }
                                 >
                                     {"Progress to next round"}
                                 </button>

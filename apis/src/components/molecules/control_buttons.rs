@@ -6,12 +6,13 @@ use crate::{
         game_state::GameStateSignal,
         ApiRequestsProvider,
         AuthContext,
+        RealtimeAvailability,
     },
 };
 use hive_lib::{ColorChoice, GameControl};
 use leptos::{either::EitherOf3, prelude::*};
 use leptos_router::hooks::use_navigate;
-use shared_types::{ChallengeDetails, ChallengeVisibility};
+use shared_types::{ChallengeDetails, ChallengeVisibility, TimeMode};
 
 const FINISHED_GAME_BUTTON_CLASS: &str =
     "ui-button m-1 h-8 min-h-8 grow rounded px-2 py-1 leading-none";
@@ -21,6 +22,7 @@ pub fn ControlButtons() -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let auth_context = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
+    let realtime = expect_context::<RealtimeAvailability>();
     let user_id = move || {
         auth_context.user.with_untracked(|a| {
             a.as_ref()
@@ -42,6 +44,14 @@ pub fn ControlButtons() -> impl IntoView {
             .is_some_and(|gr| gr.tournament.is_none())
     });
     let takeback_allowed = create_read_slice(game_state.signal, |gs| gs.takeback_allowed());
+    let realtime_action_disabled = Signal::derive(move || {
+        !realtime.enabled()
+            && game_state.signal.with(|gs| {
+                gs.game_response
+                    .as_ref()
+                    .is_some_and(|game| game.time_mode == TimeMode::RealTime)
+            })
+    });
     //TODO: Check whether this button works as intended
     let navigate_to_tournament = move |_| {
         let navigate = use_navigate();
@@ -71,6 +81,9 @@ pub fn ControlButtons() -> impl IntoView {
     };
 
     let new_opponent = move |_| {
+        if realtime_action_disabled.get_untracked() {
+            return;
+        }
         game_state.signal.with_untracked(|gs| {
             if let Some(game) = &gs.game_response {
                 let details = ChallengeDetails {
@@ -151,6 +164,9 @@ pub fn ControlButtons() -> impl IntoView {
     };
 
     let rematch = move |_| {
+        if realtime_action_disabled.get_untracked() {
+            return;
+        }
         if let Some(challenge) = rematch_present() {
             let api = api.get();
             api.challenge_accept(challenge.challenge_id);
@@ -193,7 +209,7 @@ pub fn ControlButtons() -> impl IntoView {
                             format!("{} {}", FINISHED_GAME_BUTTON_CLASS, rematch_button_tone())
                         }
 
-                        prop:disabled=sent_challenge
+                        prop:disabled=move || sent_challenge() || realtime_action_disabled()
                         on:click=rematch
                     >
                         {rematch_text}
@@ -201,6 +217,7 @@ pub fn ControlButtons() -> impl IntoView {
                     <button
                         class=format!("{FINISHED_GAME_BUTTON_CLASS} ui-button-primary")
                         on:click=new_opponent
+                        prop:disabled=realtime_action_disabled
                     >
                         New Game
                     </button>

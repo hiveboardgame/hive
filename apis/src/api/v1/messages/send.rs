@@ -32,6 +32,7 @@ use codee::{binary::MsgpackSerdeCodec, Encoder};
 use db_lib::{
     get_conn,
     models::{Game, User},
+    DbConn,
     DbPool,
 };
 use hive_lib::{GameControl, Turn};
@@ -90,20 +91,19 @@ pub async fn send_turn_messages(
     hub: Data<Arc<WsHub>>,
     game: &Game,
     bot: &User,
-    pool: &Data<DbPool>,
+    conn: &mut DbConn<'_>,
     played_turn: Turn,
 ) -> Result<()> {
     let mut messages = Vec::new();
-    let mut conn = get_conn(pool).await?;
-    let next_to_move = User::find_by_uuid(&game.current_player_id, &mut conn).await?;
-    let games = next_to_move.get_games_with_notifications(&mut conn).await?;
-    let game_responses = GameResponse::from_games_batch(games, &mut conn).await?;
+    let next_to_move = User::find_by_uuid(&game.current_player_id, conn).await?;
+    let games = next_to_move.get_games_with_notifications(conn).await?;
+    let game_responses = GameResponse::from_games_batch(games, conn).await?;
     messages.push(InternalServerMessage {
         destination: MessageDestination::User(game.current_player_id),
         message: ServerMessage::Game(Box::new(GameUpdate::Urgent(game_responses))),
     });
 
-    let response = GameResponse::from_model(game, &mut conn).await?;
+    let response = GameResponse::from_model(game, conn).await?;
     let action_response =
         create_game_action_response(response, GameReaction::Turn(played_turn), bot);
 
@@ -142,7 +142,7 @@ pub async fn send_turn_messages(
 
     if game.finished {
         let reason = game_end_reason_from(game, GameEndReason::Move);
-        if let Err(e) = notify_game_ended(game, reason, &mut conn).await {
+        if let Err(e) = notify_game_ended(game, reason, conn).await {
             log::error!("notify game ended {}: {e}", game.nanoid);
         }
     } else {

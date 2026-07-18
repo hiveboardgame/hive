@@ -4,7 +4,13 @@ use crate::{
     hooks::tap_feedback::use_tap_feedback,
     i18n::*,
     pages::{challenge_bot::ChallengeBot, challenge_create::ChallengeCreate},
-    providers::{challenge_params_cookie, ApiRequestsProvider, AuthContext, ChallengeParams},
+    providers::{
+        challenge_params_cookie,
+        ApiRequestsProvider,
+        AuthContext,
+        ChallengeParams,
+        RealtimeAvailability,
+    },
 };
 use hive_lib::{ColorChoice, GameType};
 use leptos::{ev, html::Dialog, prelude::*};
@@ -29,6 +35,7 @@ use QuickPlayTimeControl::*;
 pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
+    let realtime = expect_context::<RealtimeAvailability>();
     let (display_text, icon_data, base, increment, speed_name) = match time_control {
         Bullet1p2 => ("1+2".to_owned(), icon_for_speed(Bullet), 1, 2, "Bullet"),
         Blitz3p3 => ("3+3".to_owned(), icon_for_speed(Blitz), 3, 3, "Blitz"),
@@ -58,8 +65,12 @@ pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
             class="quickplay-hex-button ui-button"
             data-speed=speed_name
             title=hover_text
+            prop:disabled=move || !realtime.enabled()
             on:pointerdown=move |event| mark_pressed.run(event)
             on:click=move |_| {
+                if !realtime.enabled() {
+                    return;
+                }
                 if auth_context.user.with(|a| a.is_some()) {
                     let api = api.get();
                     let details = ChallengeDetails {
@@ -94,6 +105,7 @@ pub fn QuickPlay() -> impl IntoView {
     let dialog_el = NodeRef::<Dialog>::new();
     let bot_dialog_el = NodeRef::<Dialog>::new();
     let auth_context = expect_context::<AuthContext>();
+    let realtime = expect_context::<RealtimeAvailability>();
     let params = expect_context::<Store<ChallengeParams>>();
     let (_, set_cookie) = challenge_params_cookie();
     let mark_custom_pressed = use_tap_feedback(".quickplay-hex-button");
@@ -178,6 +190,11 @@ pub fn QuickPlay() -> impl IntoView {
                     </div>
                 </div>
             </div>
+            <Show when=move || realtime.state() == Some(false)>
+                <p class="ui-notice">
+                    "Realtime games are temporarily disabled for maintenance. Untimed bot play remains available."
+                </p>
+            </Show>
         </div>
     }
 }

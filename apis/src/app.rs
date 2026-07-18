@@ -55,6 +55,7 @@ use crate::{
         provide_direct_challenge,
         provide_notifications,
         provide_ping,
+        provide_realtime_availability,
         provide_referer,
         provide_server_updates,
         provide_sounds,
@@ -104,6 +105,7 @@ pub fn App() -> impl IntoView {
     provide_config();
     provide_users();
     provide_challenges();
+    provide_realtime_availability();
     provide_websocket("/ws/");
 
     //expects websocket

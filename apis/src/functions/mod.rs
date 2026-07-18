@@ -17,6 +17,7 @@ pub mod push_metrics;
 #[cfg(feature = "ssr")]
 pub mod pwa;
 pub mod schedules;
+pub mod site_config;
 pub mod telemetry;
 pub mod tournaments;
 pub mod users;

@@ -93,30 +93,40 @@ async fn play_move(
     };
 
     let played_turn = Turn::Move(piece, position);
+    let requires_realtime_admission = game.requires_realtime_admission();
+    let bot_id = bot.id;
+    let bot_username = bot.username.clone();
 
-    let (game, played_turn_out) = conn
-        .transaction::<_, anyhow::Error, _>(async move |tc| {
-                if let Err(err) = state.play_turn_from_position(piece, position) {
-                    log::warn!(
-                        "invalid bot turn game={} bot={} bot_username={} db_turn={} request_turn={} error={} board=\n{}",
-                        game.nanoid,
-                        bot.id,
-                        bot.username,
-                        game.turn,
-                        played_turn,
-                        err,
-                        state.board,
-                    );
-                    return Err(err.into());
-                }
-                let updated_game = game.update_gamestate(&state, 0_f64, tc).await?;
-                send_turn_messages(hub.clone(), &updated_game, &bot, &pool, played_turn.clone())
-                    .await?;
-
-                Ok((updated_game, played_turn))
-
-        })
+    let mutation = conn.transaction::<_, anyhow::Error, _>(async move |tc| {
+        if let Err(err) = state.play_turn_from_position(piece, position) {
+            log::warn!(
+                "invalid bot turn game={} bot={} bot_username={} db_turn={} request_turn={} error={} board=\n{}",
+                game.nanoid,
+                bot_id,
+                bot_username,
+                game.turn,
+                played_turn,
+                err,
+                state.board,
+            );
+            return Err(err.into());
+        }
+        let updated_game = game.update_gamestate(&state, 0_f64, tc).await?;
+        Ok((updated_game, played_turn))
+    });
+    let (game, played_turn_out) = hub
+        .data
+        .realtime_gate
+        .with_realtime_admission(requires_realtime_admission, mutation)
         .await?;
+    if let Err(error) =
+        send_turn_messages(hub, &game, &bot, &mut conn, played_turn_out.clone()).await
+    {
+        log::error!(
+            "failed to publish committed bot move {}: {error}",
+            game.nanoid
+        );
+    }
     Ok((game, played_turn_out))
 }
 

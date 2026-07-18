@@ -10,13 +10,18 @@ use crate::{
         atoms::{profile_link::ProfileLink, status_indicator::StatusIndicator},
         molecules::time_row::TimeRow,
     },
-    providers::{websocket::WebsocketContext, ApiRequestsProvider, AuthContext},
+    providers::{
+        websocket::WebsocketContext,
+        ApiRequestsProvider,
+        AuthContext,
+        RealtimeAvailability,
+    },
     responses::ChallengeResponse,
 };
 use hive_lib::ColorChoice;
 use leptos::prelude::*;
 use leptos_icons::*;
-use shared_types::TimeInfo;
+use shared_types::{TimeInfo, TimeMode};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum PendingAction {
@@ -48,6 +53,7 @@ pub fn ChallengeDetails(
     let admin = auth_context.admin;
     let api = expect_context::<ApiRequestsProvider>().0;
     let websocket = expect_context::<WebsocketContext>();
+    let realtime = expect_context::<RealtimeAvailability>();
     let challenge = StoredValue::new(challenge);
     let ChallengeResponse {
         challenge_id,
@@ -92,6 +98,8 @@ pub fn ChallengeDetails(
         action_flags.with(|flags| flags.decline || flags.cancel || flags.admin_cancel)
     });
     let has_pending_action = Signal::derive(move || pending_action.get().is_some());
+    let accept_disabled =
+        Signal::derive(move || time_mode == TimeMode::RealTime && !realtime.enabled());
     let has_actions =
         Signal::derive(move || has_pending_action() || show_accept() || show_decline_or_cancel());
 
@@ -145,10 +153,14 @@ pub fn ChallengeDetails(
                                     <button
                                         title="Accept Challenge"
                                         on:click=move |_| {
+                                            if accept_disabled.get_untracked() {
+                                                return;
+                                            }
                                             pending_action.set(Some(PendingAction::Accept));
                                             api.get().challenge_accept(challenge_id.get_value());
                                         }
                                         class="z-20 ui-button ui-button-primary ui-button-icon"
+                                        prop:disabled=accept_disabled
                                     >
                                         <Icon
                                             icon=icondata_ai::AiCheckOutlined

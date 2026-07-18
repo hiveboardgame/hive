@@ -7,6 +7,7 @@ use leptos_icons::*;
 pub fn CreateChallengeButton(
     color_choice: StoredValue<ColorChoice>,
     create_challenge: Callback<ColorChoice>,
+    #[prop(optional, into)] disabled: Signal<bool>,
 ) -> impl IntoView {
     let config = expect_context::<Config>().0;
     let icon = Signal::derive(move || {
@@ -22,8 +23,13 @@ pub fn CreateChallengeButton(
             formmethod="dialog"
             type="submit"
             class="m-0.5 w-14 h-16 shrink-0 xs:m-1 xs:w-16 xs:h-[4.5rem] ui-button ui-button-secondary ui-button-tiny"
+            prop:disabled=disabled
 
-            on:click=move |_| { create_challenge.run(color_choice.get_value()) }
+            on:click=move |_| {
+                if !disabled.get_untracked() {
+                    create_challenge.run(color_choice.get_value());
+                }
+            }
         >
             <Icon icon style="height:100%; width:100%" />
         </button>

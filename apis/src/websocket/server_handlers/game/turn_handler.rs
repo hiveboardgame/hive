@@ -80,28 +80,34 @@ impl TurnHandler {
             return Err(err.into());
         }
 
-        let comp = if self.game.time_mode == TimeMode::RealTime.to_string() {
-            let ping = self.data.pings.value(self.user_id);
-            let base = self.game.time_base.unwrap_or(0) as usize;
-            let inc = self.game.time_increment.unwrap_or(0) as usize;
-            self.data
-                .lags
-                .track_lag(
-                    self.user_id,
-                    GameId(self.game.nanoid.clone()),
-                    ping,
-                    base,
-                    inc,
-                )
-                .unwrap_or(0.0)
-        } else {
-            0.0
-        };
+        let mutation = async {
+            let comp = if self.game.time_mode == TimeMode::RealTime.to_string() {
+                let ping = self.data.pings.value(self.user_id);
+                let base = self.game.time_base.unwrap_or(0) as usize;
+                let inc = self.game.time_increment.unwrap_or(0) as usize;
+                self.data
+                    .lags
+                    .track_lag(
+                        self.user_id,
+                        GameId(self.game.nanoid.clone()),
+                        ping,
+                        base,
+                        inc,
+                    )
+                    .unwrap_or(0.0)
+            } else {
+                0.0
+            };
 
-        let game = conn
-            .transaction::<_, anyhow::Error, _>(async move |tc| {
+            conn.transaction::<_, anyhow::Error, _>(async move |tc| {
                 Ok(self.game.update_gamestate(&state, comp, tc).await?)
             })
+            .await
+        };
+        let game = self
+            .data
+            .realtime_gate
+            .with_realtime_admission(self.game.requires_realtime_admission(), mutation)
             .await?;
 
         if !game.finished {

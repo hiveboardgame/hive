@@ -299,6 +299,23 @@ pub struct Game {
 }
 
 impl Game {
+    pub fn requires_realtime_admission(&self) -> bool {
+        self.time_mode == TimeMode::RealTime.to_string()
+            && self.game_status == GameStatus::NotStarted.to_string()
+    }
+
+    /// Count maintenance drain blockers until their terminal transition commits.
+    /// An expired deadline alone is not sufficient because an in-flight move may renew it.
+    pub async fn count_active_realtime_clocks(conn: &mut DbConn<'_>) -> Result<i64, DbError> {
+        Ok(games::table
+            .filter(games::finished.eq(false))
+            .filter(games::game_status.eq(GameStatus::InProgress.to_string()))
+            .filter(games::time_mode.eq(TimeMode::RealTime.to_string()))
+            .count()
+            .get_result(conn)
+            .await?)
+    }
+
     pub fn hashes(&self) -> Vec<u64> {
         self.hashes
             .iter()

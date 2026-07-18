@@ -11,9 +11,11 @@ use crate::{
         annotations::AnnotationsSignal,
         config::ConfigOpts,
         game_state::GameStateSignal,
+        websocket::{ConnectionReadyState, WebsocketContext},
         ApiRequestsProvider,
         AuthContext,
         Config,
+        RealtimeAvailability,
     },
     responses::AccountResponse,
 };
@@ -30,11 +32,13 @@ pub fn live_hiveground_interaction() -> HivegroundInteraction {
     let user = auth_context.user;
     // Annotate mode suppresses piece selection so board taps annotate.
     let annotations = use_context::<AnnotationsSignal>();
+    let realtime = expect_context::<RealtimeAvailability>();
+    let websocket = expect_context::<WebsocketContext>();
     let capabilities = Signal::derive(move || {
         if annotations.is_some_and(|a| a.mode.get()) {
             HivegroundCapabilities::none()
         } else {
-            live_capabilities(game_state, user, config)
+            live_capabilities(game_state, user, config, realtime, websocket.ready_state)
         }
     });
     let handler = HivegroundActionHandler {
@@ -170,17 +174,24 @@ fn live_capabilities(
     game_state: GameStateSignal,
     user: Signal<Option<AccountResponse>>,
     config: Signal<ConfigOpts>,
+    realtime: RealtimeAvailability,
+    connection: Signal<ConnectionReadyState>,
 ) -> HivegroundCapabilities {
     let user_id = user.with(|user| user.as_ref().map(|user| user.id));
     let allow_preselect = config.with(|config| config.allow_preselect);
-    let (white_id, black_id, turn_color, game_status) = game_state.signal.with(|gs| {
-        (
-            gs.white_id,
-            gs.black_id,
-            gs.state.turn_color,
-            gs.state.game_status.clone(),
-        )
-    });
+    let (white_id, black_id, turn_color, game_status, realtime_not_started) =
+        game_state.signal.with(|gs| {
+            (
+                gs.white_id,
+                gs.black_id,
+                gs.state.turn_color,
+                gs.state.game_status.clone(),
+                gs.game_response.as_ref().is_some_and(|game| {
+                    game.time_mode == shared_types::TimeMode::RealTime
+                        && game.game_status == GameStatus::NotStarted
+                }),
+            )
+        });
     let is_player = user_is_player(user_id, white_id, black_id);
     let current_player_id = match turn_color {
         Color::White => white_id,
@@ -191,6 +202,11 @@ fn live_capabilities(
         game_status,
         GameStatus::Finished(_) | GameStatus::Adjudicated
     );
+    if connection.get() != ConnectionReadyState::Open
+        || (!realtime.enabled() && realtime_not_started)
+    {
+        return HivegroundCapabilities::board_inspection();
+    }
 
     if is_current_player && !is_finished {
         let mut capabilities = HivegroundCapabilities::live_selection();
