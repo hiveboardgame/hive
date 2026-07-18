@@ -16,7 +16,7 @@ pub fn setup_logging() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     // Create a custom time formatter
     let timer = UtcTime::new(
-        time::format_description::parse(
+        time::format_description::parse_borrowed::<3>(
             "[year]-[month]-[day]T[hour]:[minute]:[second].[subsecond digits:3]Z",
         )
         .expect("Invalid time format"),

@@ -42,7 +42,7 @@ diesel-async = { version = "0.7", features = ["postgres", "bb8"] }
 diesel_migrations = { version = "2.3", features = ["postgres"] }
 dotenvy = "0.15"
 futures-util = "0.3"
-gloo-timers = { version = "0.3", features = ["futures"] }
+gloo-timers = { version = "0.4", features = ["futures"] }
 icondata_core = "0.1"
 icondata_tb = "0.1"
 icondata_bi = "0.1"
@@ -56,7 +56,7 @@ icondata_ri = "0.1"
 icondata_ti = "0.1"
 icondata_mdi = "0.1"
 indoc = "2"
-itertools = "0.14.0"
+itertools = "0.15"
 jsonwebtoken = { version = "10.2.0", features = ["rust_crypto"] }
 lazy_static = "1.5"
 leptos = { version = "0.8.20", features = ["nightly"] }
@@ -71,25 +71,25 @@ leptos_router = { version = "0.8.14", features = ["nightly"] }
 lettermint-rs = { version = "0.3.1", features = ["reqwest"] }
 log = "0.4.27"
 markdown = "1.0.0"
-nanoid = "0.4"
-rand = "0.9"
+nanoid = "0.5"
+rand = "0.10.2"
 regex = "1.11"
 reactive_stores = { version = "0.4.3" }
 reqwest = { version = "0.13.1", features = ["json"] }
-resvg = "0.46"
+resvg = { version = "0.47", default-features = false }
 rustls = { version = "0.23" }
 # hyper-client instead of the default isahc backend — isahc drags in curl,
 # which is one more native dep for the nix shell to satisfy.
-web-push = { version = "0.10", default-features = false, features = ["hyper-client"] }
+web-push = { version = "0.11", default-features = false, features = ["hyper-client"] }
 web-time = "1.1"
 url = "2"
 serde = { version = "1" }
 serde_json = { version = "1" }
 serde_with = { version = "3.14" }
 server_fn = { version = "0.8.13", features = ["cbor"] }
-sha2 = "0.10"
+sha2 = "0.11"
 simple_logger = "5.0"
-skillratings = "0.28.2"
+skillratings = "0.29"
 thiserror = "2.0.18"
 tokio = { version = "1.49", features = ["macros", "rt-multi-thread", "sync", "time"] }
 tokio-util = "0.7"

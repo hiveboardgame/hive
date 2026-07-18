@@ -1,7 +1,7 @@
 use std::{fs, path::PathBuf};
 
 use actix_web::{get, http::header, web, HttpResponse, Responder};
-
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use sha2::{Digest, Sha256};
 
 const SERVICE_WORKER_TEMPLATE: &str = include_str!("sw-template.js");
@@ -138,10 +138,7 @@ fn cache_version(asset_entries: &[(String, PathBuf)]) -> String {
         hasher.update([0xff]);
     }
 
-    format!("{:x}", hasher.finalize())
-        .chars()
-        .take(16)
-        .collect()
+    URL_SAFE_NO_PAD.encode(&hasher.finalize()[..12])
 }
 
 fn path_to_uri(site_root: &str, path: &str) -> String {

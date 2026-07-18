@@ -26,7 +26,7 @@ regex = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_with = { workspace = true }
 thiserror = { workspace = true }
-bitfield-struct = "0.12.1"
+bitfield-struct = "0.13"
 itertools = { workspace = true }
 clap = { workspace = true, optional = true }
 anyhow = { workspace = true, optional = true }
