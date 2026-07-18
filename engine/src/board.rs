@@ -11,18 +11,24 @@ use crate::{
     piece::Piece,
     position::{CircleIter, Position, Rotation},
     torus_array::TorusArray,
-    SvgPosition,
 };
-use anyhow::Result;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use std::{
     cmp::Ordering,
     collections::HashMap,
     fmt::{self, Write},
-    fs::{self, OpenOptions},
-    io::{BufWriter, Write as Writer},
-    path::PathBuf,
+};
+
+#[cfg(feature = "cli")]
+use {
+    crate::SvgPosition,
+    anyhow::Result,
+    std::{
+        fs::{self, OpenOptions},
+        io::{BufWriter, Write as Writer},
+        path::PathBuf,
+    },
 };
 
 pub const BOARD_SIZE: i32 = 32;
@@ -140,6 +146,7 @@ impl Board {
         }
     }
 
+    #[cfg(feature = "cli")]
     pub fn create_svg(&self, mut path: PathBuf) -> Result<()> {
         path.set_extension("svg");
         let file = OpenOptions::new()
@@ -259,7 +266,7 @@ impl Board {
 
         let text = fs::read_to_string(&path)?;
 
-        let tree = resvg::usvg::Tree::from_str(&text, &usvg::Options::default())?;
+        let tree = resvg::usvg::Tree::from_str(&text, &resvg::usvg::Options::default())?;
         let mut pixmap =
             resvg::tiny_skia::Pixmap::new(tree.size().width() as u32, tree.size().height() as u32)
                 .unwrap();

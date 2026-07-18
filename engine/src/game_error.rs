@@ -90,6 +90,7 @@ impl GameError {
     }
 }
 
+#[cfg(feature = "cli")]
 impl From<anyhow::Error> for GameError {
     fn from(error: anyhow::Error) -> Self {
         GameError::ParsingError {

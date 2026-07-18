@@ -26,9 +26,9 @@ bimap = { version = "0.6.3", features = ["serde"] }
 bytes = "1"
 cfg-if = "1.0.1"
 chrono = { version = "0.4.43", features = ["serde"] }
+clap = { version = "4.5", features = ["derive"] }
 codee = { version = "0.3", features = ["msgpack_serde", "base64"] }
 console_error_panic_hook = "0.1.7"
-console_log = "1.0.0"
 cookie = "0.18"
 dashmap = "6"
 diesel = { version = "2.3", features = [
@@ -43,7 +43,6 @@ diesel_migrations = { version = "2.3", features = ["postgres"] }
 dotenvy = "0.15"
 futures-util = "0.3"
 gloo-timers = { version = "0.3", features = ["futures"] }
-http = "1.4.0"
 icondata_core = "0.1"
 icondata_tb = "0.1"
 icondata_bi = "0.1"
@@ -77,6 +76,7 @@ rand = "0.9"
 regex = "1.11"
 reactive_stores = { version = "0.3" }
 reqwest = { version = "0.13.1", features = ["json"] }
+resvg = "0.46"
 rustls = { version = "0.23" }
 # hyper-client instead of the default isahc backend — isahc drags in curl,
 # which is one more native dep for the nix shell to satisfy.
@@ -88,11 +88,10 @@ serde_json = { version = "1" }
 serde_with = { version = "3.14" }
 server_fn = { version = "0.8", features = ["cbor"] }
 sha2 = "0.10"
-send_wrapper = "0.6"
 simple_logger = "5.0"
 skillratings = "0.28.2"
 thiserror = "2.0.18"
-tokio = { version = "1.49", features = ["full"] }
+tokio = { version = "1.49", features = ["macros", "rt-multi-thread", "sync", "time"] }
 tokio-util = "0.7"
 tree-ds = { version = "0.2.0", features = ["serde", "compact_serde", "async"] }
 uuid = { version = "1.17", features = ["v4", "js", "serde"] }

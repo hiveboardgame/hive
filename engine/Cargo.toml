@@ -12,20 +12,24 @@ path = "src/lib.rs"
 
 [[bin]]
 name = "hive_bin"
-path = "src/main.rs" # replace bin.rs with name of your file
+path = "src/main.rs"
+required-features = ["cli"]
+
+[features]
+default = []
+cli = ["dep:anyhow", "dep:clap", "dep:resvg"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
-lazy_static = "*"
-regex = "*"
-serde = { version = "*", features = ["derive"] }
-serde_with = "3.14.0"
-thiserror = "*"
+lazy_static = { workspace = true }
+regex = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_with = { workspace = true }
+thiserror = { workspace = true }
 bitfield-struct = "0.12.1"
-itertools = "0.14"
-clap = { version = "4.5.41", features = ["derive"] }
-anyhow.workspace = true
+itertools = { workspace = true }
+clap = { workspace = true, optional = true }
+anyhow = { workspace = true, optional = true }
 pest = "2.8.1"
 pest_derive = "2.8.1"
-resvg = "0.46"
-usvg = "0.46"
+resvg = { workspace = true, optional = true }
