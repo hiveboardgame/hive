@@ -1,6 +1,10 @@
 use crate::{
     i18n::*,
-    providers::{game_state::GameStateSignal, AuthContext, AuthIdentity},
+    providers::{
+        game_state::{GameStateStore, GameStateStoreFields},
+        AuthContext,
+        AuthIdentity,
+    },
 };
 use leptos::prelude::*;
 use shared_types::{GameChatCapabilities, GameThread};
@@ -19,20 +23,20 @@ pub struct EmbeddedGameChatState {
 }
 
 pub fn use_embedded_game_chat_state() -> EmbeddedGameChatState {
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let auth = expect_context::<AuthContext>();
     let selected_thread = RwSignal::new(GameThread::Players);
     let finished = game_state.is_finished();
+    let white_id = game_state.white_id();
+    let black_id = game_state.black_id();
     let access = Signal::derive(move || {
         let current_user = auth.identity.get().and_then(AuthIdentity::user_id);
-        game_state.signal.with(|state| {
-            GameChatCapabilities::new(state.uid_is_player(current_user), finished.get())
-        })
+        let is_player = current_user.is_some()
+            && (white_id.get() == current_user || black_id.get() == current_user);
+        GameChatCapabilities::new(is_player, finished.get())
     });
     Effect::new(move |_| {
-        let loaded = game_state
-            .signal
-            .with(|state| state.white_id.is_some() && state.black_id.is_some());
+        let loaded = white_id.get().is_some() && black_id.get().is_some();
         if !loaded {
             return;
         }

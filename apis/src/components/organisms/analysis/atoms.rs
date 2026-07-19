@@ -12,7 +12,7 @@ use crate::{
     pages::analysis::ToggleStates,
     providers::{
         analysis::{AnalysisSignal, TreeNode},
-        game_state::GameStateSignal,
+        game_state::{GameStateStore, GameStateStoreFields},
     },
 };
 use leptos::prelude::*;
@@ -47,7 +47,7 @@ pub fn AnalysisHistoryControls(
 #[component]
 pub fn UndoButton() -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>();
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let analysis = StoredValue::new(analysis);
     let is_disabled = move || {
         analysis
@@ -95,7 +95,7 @@ pub fn HistoryButton(
     #[prop(optional)] scroll_on_navigate: bool,
 ) -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>();
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let cloned_action = action;
     let icon = match action {
         HistoryNavigation::First => icondata_ai::AiFastBackwardFilled,
@@ -132,7 +132,7 @@ pub fn HistoryMove(
     has_children: bool,
 ) -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>();
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     if let Ok(node_id) = node.get_node_id() {
         let is_current =
             Memo::new(move |_| current_path.with(|path| path.first() == Some(&node_id)));
@@ -153,8 +153,8 @@ pub fn HistoryMove(
         };
         let value = node.get_value().ok().flatten();
         let history_index = value.as_ref().map(|value| value.turn - 1);
-        let repetitions =
-            create_read_slice(game_state.signal, |gs| gs.state.repeating_moves.clone());
+        let state = game_state.state();
+        let repetitions = Memo::new(move |_| state.with(|state| state.repeating_moves.clone()));
         let rep = move || {
             if history_index
                 .is_some_and(|history_index| repetitions.with(|r| r.contains(&history_index)))

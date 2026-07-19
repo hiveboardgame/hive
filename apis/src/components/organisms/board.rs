@@ -13,7 +13,7 @@ use crate::{
     providers::{
         analysis::AnalysisSignal,
         annotations::{AnnotationColor, AnnotationTool, AnnotationsSignal, MarkerShape},
-        game_state::{GameState, GameStateSignal, View},
+        game_state::{BoardView, GameStateStore, GameStateStoreFields},
         Config,
     },
 };
@@ -168,7 +168,7 @@ enum StackExpansionResetKey {
 
 #[component]
 pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let analysis = use_context::<AnalysisSignal>();
     let annotations = use_context::<AnnotationsSignal>();
     // Hex where the current draw gesture started (set on the draw-button press).
@@ -187,13 +187,15 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
     let g_ref = NodeRef::<svg::G>::new();
     let div_ref = NodeRef::<html::Div>::new();
     let last_turn = game_state.is_last_turn_as_signal();
-    let board_view = create_read_slice(game_state.signal, |gs| gs.view.clone());
+    let board_view = game_state.board_view();
+    let state = game_state.state();
     let in_analysis = analysis.is_some();
-    let stack_expansion_reset_key = create_read_slice(game_state.signal, move |gs| {
-        stack_expansion_reset_key(gs, in_analysis)
+    let stack_expansion_reset_key = Memo::new(move |_| {
+        let view = board_view.get();
+        state.with(|state| stack_expansion_reset_key(view, state, in_analysis))
     });
-    let game_status = create_read_slice(game_state.signal, |gs| gs.state.game_status.clone());
-    let game_id_slice = create_read_slice(game_state.signal, |gs| gs.game_id.clone());
+    let game_status = Memo::new(move |_| state.with(|state| state.game_status.clone()));
+    let game_id_slice = game_state.game_id();
     let board_style = move || {
         if orientation_signal.orientation_vertical.get() {
             "flex relative grow min-h-0"
@@ -201,9 +203,9 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
             "relative col-start-1 row-start-1 col-span-8 row-span-6"
         }
     };
-    let history_style = move || match board_view() {
-        View::Game => "",
-        View::History => match game_status() {
+    let history_style = move || match board_view.get() {
+        BoardView::Live => "",
+        BoardView::History { .. } => match game_status.get() {
             GameStatus::Finished(_) | GameStatus::Adjudicated => "",
             _ => {
                 if last_turn() {
@@ -239,9 +241,7 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
 
     // Unified RAF-based viewbox update system
     let update_viewbox_size = move |width: f32, height: f32, respect_zoom: bool| {
-        let current_center = game_state
-            .signal
-            .with_untracked(|gs| gs.state.board.center_coordinates());
+        let current_center = state.with_untracked(|state| state.board.center_coordinates());
         let svg_pos = SvgPos::center_for_level(current_center, 0, straight);
         let (scale_x, scale_y) = if respect_zoom && viewbox_state.has_zoomed.get_untracked() {
             let svg = viewbox_ref.get_untracked().expect("It exists");
@@ -642,7 +642,7 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
                 />
                 <g transform=transform node_ref=g_ref>
                     {move || {
-                        if board_view() == View::History && !last_turn() && !in_analysis {
+                        if board_view.get().is_history() && !last_turn() && !in_analysis {
                             Either::Left(
                                 view! { <HistoryPieces tile_opts interaction history_state /> },
                             )
@@ -759,7 +759,7 @@ fn pointer_hex(
 fn setup_stack_expansion_events(
     viewbox_ref: NodeRef<svg::Svg>,
     interaction: HivegroundInteraction,
-    reset_key: Signal<StackExpansionResetKey>,
+    reset_key: Memo<StackExpansionResetKey>,
     annotations: Option<AnnotationsSignal>,
 ) {
     let stack_touch_start = RwSignal::new(None::<(i32, i32)>);
@@ -881,16 +881,20 @@ fn setup_stack_expansion_events(
     });
 }
 
-fn stack_expansion_reset_key(game_state: &GameState, in_analysis: bool) -> StackExpansionResetKey {
-    if game_state.view == View::History && !game_state.is_last_turn() && !in_analysis {
-        let turn = game_state.history_turn;
-        let hash = turn.and_then(|turn| game_state.state.history.hashes.get(turn).copied());
+fn stack_expansion_reset_key(
+    view: BoardView,
+    state: &State,
+    in_analysis: bool,
+) -> StackExpansionResetKey {
+    if view.is_history() && !view.is_last_turn(state.turn) && !in_analysis {
+        let turn = view.history_turn();
+        let hash = turn.and_then(|turn| state.history.hashes.get(turn).copied());
         return StackExpansionResetKey::HistoryTurn { turn, hash };
     }
 
     StackExpansionResetKey::CurrentTurn {
-        turn: game_state.state.turn,
-        hash: game_state.state.hashes.last().copied(),
+        turn: state.turn,
+        hash: state.hashes.last().copied(),
     }
 }
 

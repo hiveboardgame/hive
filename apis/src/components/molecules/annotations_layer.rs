@@ -3,7 +3,7 @@ use crate::{
     providers::{
         analysis::AnalysisSignal,
         annotations::{AnnotationTool, AnnotationsSignal, MarkerShape},
-        game_state::{GameStateSignal, View},
+        game_state::{GameStateStore, GameStateStoreFields},
         Config,
     },
 };
@@ -21,10 +21,11 @@ pub fn AnnotationsLayer(
     annotations: AnnotationsSignal,
     history_state: Memo<State>,
 ) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let config = expect_context::<Config>().0;
     let in_analysis = use_context::<AnalysisSignal>().is_some();
-    let board_view = create_read_slice(game_state.signal, |gs| gs.view.clone());
+    let board_view = game_state.board_view();
+    let state = game_state.state();
     let last_turn = game_state.is_last_turn_as_signal();
     let current = annotations.current();
 
@@ -34,15 +35,13 @@ pub fn AnnotationsLayer(
         // Scrubbing play history shows an earlier (possibly differently stacked)
         // board, so anchor marks to that board rather than the live one — matching
         // Board's piece-source choice.
-        let show_history = board_view.get() == View::History && !last_turn.get() && !in_analysis;
+        let show_history = board_view.get().is_history() && !last_turn.get() && !in_analysis;
         // Anchor to the top of the stack so marks track the visible piece.
         let center = move |position: Position| {
             let top_level = if show_history {
                 history_state.with(|s| s.board.level(position).saturating_sub(1))
             } else {
-                game_state
-                    .signal
-                    .with(|gs| gs.state.board.level(position).saturating_sub(1))
+                state.with(|state| state.board.level(position).saturating_sub(1))
             };
             SvgPos::center_for_level(position, top_level, straight)
         };

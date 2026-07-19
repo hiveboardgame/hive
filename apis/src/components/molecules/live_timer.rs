@@ -1,5 +1,5 @@
 use crate::providers::{
-    game_state::GameStateSignal,
+    game_state::{GameStateStore, GameStateStoreFields},
     timer::TimerSignal,
     ApiRequestsProvider,
     AuthContext,
@@ -22,7 +22,7 @@ use std::time::Duration;
 
 #[component]
 pub fn LiveTimer(side: Signal<Color>, #[prop(optional)] compact: bool) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let sounds = expect_context::<Sounds>();
     let auth_context = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
@@ -34,16 +34,14 @@ pub fn LiveTimer(side: Signal<Color>, #[prop(optional)] compact: bool) -> impl I
             .map(|s| GameId(s.to_owned()))
             .unwrap_or_default()
     };
-    let user_id = Signal::derive(move || {
-        auth_context
-            .user
-            .with_untracked(|a| a.as_ref().map(|user| user.id))
-    });
-    let user_color = game_state.user_color_as_signal(user_id);
-    let in_progress = create_read_slice(game_state.signal, |gs| {
-        gs.game_response
-            .as_ref()
-            .is_some_and(|gr| gr.game_status == GameStatus::InProgress)
+    let user_color = game_state.user_color_as_signal(auth_context.identity);
+    let game_response = game_state.game_response();
+    let in_progress = Memo::new(move |_| {
+        game_response.with(|game_response| {
+            game_response
+                .as_ref()
+                .is_some_and(|gr| gr.game_status == GameStatus::InProgress)
+        })
     });
     let timer = expect_context::<TimerSignal>().signal;
     let tick_rate = Duration::from_millis(100);

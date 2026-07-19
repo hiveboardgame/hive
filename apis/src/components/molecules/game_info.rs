@@ -8,7 +8,7 @@ use crate::{
     },
     components::molecules::time_row::TimeRow,
     i18n::*,
-    providers::game_state::GameStateSignal,
+    providers::game_state::{GameStateStore, GameStateStoreFields},
 };
 use leptos::prelude::*;
 
@@ -18,30 +18,36 @@ pub fn GameInfo(
     #[prop(optional)] compact: bool,
 ) -> impl IntoView {
     let i18n = use_i18n();
-    let game_state = expect_context::<GameStateSignal>();
-    let has_game_response = create_read_slice(game_state.signal, |gs| gs.game_response.is_some());
-    let time_info = create_read_slice(game_state.signal, |gs| {
-        gs.game_response
-            .as_ref()
-            .map(game_time_info)
-            .unwrap_or_else(untimed_time_info)
+    let game_state = expect_context::<GameStateStore>();
+    let game_response = game_state.game_response();
+    let has_game_response =
+        Memo::new(move |_| game_response.with(|game_response| game_response.is_some()));
+    let time_info = Memo::new(move |_| {
+        game_response.with(|game_response| {
+            game_response
+                .as_ref()
+                .map(game_time_info)
+                .unwrap_or_else(untimed_time_info)
+        })
     });
-    let rated = create_read_slice(game_state.signal, |gs| {
-        gs.game_response
-            .as_ref()
-            .map(|game| game.rated)
-            .unwrap_or_default()
+    let rated = Memo::new(move |_| {
+        game_response.with(|game_response| {
+            game_response
+                .as_ref()
+                .map(|game| game.rated)
+                .unwrap_or_default()
+        })
     });
     let rated_text = move || format_game_rating(i18n, rated());
-    let tournament_info = create_read_slice(game_state.signal, |gs| {
-        gs.game_response.as_ref().and_then(game_tournament_link)
+    let tournament_info = Memo::new(move |_| {
+        game_response.with(|game_response| game_response.as_ref().and_then(game_tournament_link))
     });
-    let is_tournament = Signal::derive(move || tournament_info().is_some());
+    let is_tournament = Memo::new(move |_| tournament_info().is_some());
     let tournament_name =
-        Signal::derive(move || tournament_info().map(|link| link.name).unwrap_or_default());
+        Memo::new(move |_| tournament_info().map(|link| link.name).unwrap_or_default());
     let tournament_href =
-        Signal::derive(move || tournament_info().map(|link| link.href).unwrap_or_default());
-    let tournament_label = Signal::derive(move || {
+        Memo::new(move |_| tournament_info().map(|link| link.href).unwrap_or_default());
+    let tournament_label = Memo::new(move |_| {
         tournament_info()
             .map(|link| {
                 if compact {
@@ -52,15 +58,17 @@ pub fn GameInfo(
             })
             .unwrap_or_default()
     });
-    let compact_tournament_label = Signal::derive(move || {
+    let compact_tournament_label = Memo::new(move |_| {
         tournament_info()
             .map(|link| format!("in {}", link.name))
             .unwrap_or_default()
     });
-    let result_text = create_read_slice(game_state.signal, move |gs| {
-        gs.game_response
-            .as_ref()
-            .and_then(|game| format_game_result(i18n, game))
+    let result_text = Memo::new(move |_| {
+        game_response.with(|game_response| {
+            game_response
+                .as_ref()
+                .and_then(|game| format_game_result(i18n, game))
+        })
     });
 
     let container_class = if compact { "contents" } else { "min-w-0" };

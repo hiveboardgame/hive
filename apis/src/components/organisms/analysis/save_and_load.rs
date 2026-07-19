@@ -1,12 +1,18 @@
 use crate::providers::{
     analysis::{AnalysisSignal, AnalysisTree},
-    game_state::GameStateSignal,
+    game_state::GameStateStore,
 };
 use hive_lib::History;
-use leptos::{html, logging, prelude::*};
+use leptos::{
+    html,
+    logging,
+    prelude::*,
+    reactive::effect::batch,
+    task::spawn_local_scoped_with_cancellation,
+};
 use std::path::Path;
 use wasm_bindgen::{JsCast, JsValue};
-use wasm_bindgen_futures::{spawn_local, JsFuture};
+use wasm_bindgen_futures::JsFuture;
 use web_sys::{js_sys::Array, Blob, Url};
 
 const BUTTON_CLASS: &str = "ui-button ui-button-primary ui-button-sm h-9 flex-1 px-3 text-xs";
@@ -64,8 +70,9 @@ fn blob_and_filename(tree: String) -> (Blob, String) {
 #[component]
 pub fn LoadTree() -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>();
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let input_ref = NodeRef::<html::Input>::new();
+    let load_owner = Owner::current().expect("LoadTree must run inside a reactive owner");
 
     let from_pgn = move |string: JsValue| {
         string
@@ -73,10 +80,11 @@ pub fn LoadTree() -> impl IntoView {
             .and_then(|string| History::from_pgn_str(string).ok())
             .and_then(|history| hive_lib::State::new_from_history(&history).ok())
             .map(|state| {
-                game_state.full_reset();
-                game_state.signal.update(|gs| gs.state = state.clone());
-                let tree = AnalysisTree::from_loaded_state(game_state, &state);
-                analysis.tree.set(tree);
+                let tree = AnalysisTree::from_loaded_state(&state);
+                batch(|| {
+                    game_state.reset_with_state(state.clone());
+                    analysis.tree.set(tree);
+                });
                 analysis.sync_reserve.run(state.turn_color);
             })
     };
@@ -85,14 +93,16 @@ pub fn LoadTree() -> impl IntoView {
             .as_string()
             .and_then(|string| serde_json::from_str::<AnalysisTree>(&string).ok())
             .map(|mut tree| {
-                game_state.full_reset();
                 tree.ensure_start_node();
                 let current_node_id = tree.current_node_id();
-                analysis.tree.set(tree);
-                if let Some(node_id) = current_node_id {
-                    analysis.tree.update(|a| {
-                        a.update_node(node_id, Some(game_state));
-                    });
+                batch(|| {
+                    game_state.full_reset();
+                    if let Some(node_id) = current_node_id {
+                        tree.update_node(node_id, Some(game_state));
+                    }
+                    analysis.tree.set(tree);
+                });
+                if current_node_id.is_some() {
                     analysis.sync_reserve_from_game_state(game_state);
                 }
             })
@@ -109,19 +119,21 @@ pub fn LoadTree() -> impl IntoView {
             || logging::log!("Couldn't open file"),
             |ext| {
                 let ext = ext.to_os_string();
-                spawn_local(async move {
-                    let text = JsFuture::from(file.text()).await.ok();
-                    let result = if ext == "json" {
-                        text.and_then(from_json)
-                    } else if ext == "pgn" {
-                        text.and_then(from_pgn)
-                    } else {
-                        logging::log!("Unsupported file type");
-                        None
-                    };
-                    if result.is_none() {
-                        logging::log!("Couldn't open file");
-                    }
+                load_owner.with(|| {
+                    spawn_local_scoped_with_cancellation(async move {
+                        let text = JsFuture::from(file.text()).await.ok();
+                        let result = if ext == "json" {
+                            text.and_then(from_json)
+                        } else if ext == "pgn" {
+                            text.and_then(from_pgn)
+                        } else {
+                            logging::log!("Unsupported file type");
+                            None
+                        };
+                        if result.is_none() {
+                            logging::log!("Couldn't open file");
+                        }
+                    });
                 });
             },
         );

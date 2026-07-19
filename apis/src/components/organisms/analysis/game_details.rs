@@ -8,7 +8,7 @@ use crate::{
     },
     components::molecules::{time_row::TimeRow, user_with_rating::UserWithRating},
     i18n::*,
-    providers::game_state::GameStateSignal,
+    providers::game_state::{GameStateStore, GameStateStoreFields},
 };
 use hive_lib::Color;
 use leptos::prelude::*;
@@ -16,20 +16,24 @@ use leptos::prelude::*;
 #[component]
 pub fn GameDetailsPanel() -> impl IntoView {
     let i18n = use_i18n();
-    let game_state = expect_context::<GameStateSignal>();
-    let has_game_response = create_read_slice(game_state.signal, |gs| gs.game_response.is_some());
+    let game_state = expect_context::<GameStateStore>();
+    let game_response = game_state.game_response();
+    let has_game_response =
+        Memo::new(move |_| game_response.with(|game_response| game_response.is_some()));
     let details_class = move || {
         format!(
             "group select-none shrink-0 ui-board-side-panel {}",
             if has_game_response() { "" } else { "hidden" },
         )
     };
-    let time_info = create_read_slice(game_state.signal, |gs| {
-        gs.game_response
-            .as_ref()
-            .map(|game| (game_time_info(game), game.rated))
+    let time_info = Memo::new(move |_| {
+        game_response.with(|game_response| {
+            game_response
+                .as_ref()
+                .map(|game| (game_time_info(game), game.rated))
+        })
     });
-    let time_row_info = Signal::derive(move || {
+    let time_row_info = Memo::new(move |_| {
         time_info()
             .map(|(time, _)| time)
             .unwrap_or_else(untimed_time_info)
@@ -39,40 +43,48 @@ pub fn GameDetailsPanel() -> impl IntoView {
             .map(|(_, rated)| format_game_rating(i18n, rated))
             .unwrap_or_default()
     };
-    let result_text = create_read_slice(game_state.signal, move |gs| {
-        gs.game_response
-            .as_ref()
-            .and_then(|game| format_game_result(i18n, game))
+    let result_text = Memo::new(move |_| {
+        game_response.with(|game_response| {
+            game_response
+                .as_ref()
+                .and_then(|game| format_game_result(i18n, game))
+        })
     });
-    let date_text = create_read_slice(game_state.signal, |gs| {
-        gs.game_response
-            .as_ref()
-            .map(|game| game.created_at.format("%Y-%m-%d").to_string())
-            .unwrap_or_default()
+    let date_text = Memo::new(move |_| {
+        game_response.with(|game_response| {
+            game_response
+                .as_ref()
+                .map(|game| game.created_at.format("%Y-%m-%d").to_string())
+                .unwrap_or_default()
+        })
     });
-    let tournament_info = create_read_slice(game_state.signal, |gs| {
-        gs.game_response.as_ref().and_then(game_tournament_link)
+    let tournament_info = Memo::new(move |_| {
+        game_response.with(|game_response| game_response.as_ref().and_then(game_tournament_link))
     });
     let tournament_name =
-        Signal::derive(move || tournament_info().map(|link| link.name).unwrap_or_default());
+        Memo::new(move |_| tournament_info().map(|link| link.name).unwrap_or_default());
     let tournament_href =
-        Signal::derive(move || tournament_info().map(|link| link.href).unwrap_or_default());
-    let summary_title = create_read_slice(game_state.signal, |gs| {
-        gs.game_response
-            .as_ref()
-            .map(|game| {
-                format!(
-                    "{} vs {}",
-                    game.white_player.username, game.black_player.username
-                )
-            })
-            .unwrap_or_else(|| "Game details".to_string())
+        Memo::new(move |_| tournament_info().map(|link| link.href).unwrap_or_default());
+    let summary_title = Memo::new(move |_| {
+        game_response.with(|game_response| {
+            game_response
+                .as_ref()
+                .map(|game| {
+                    format!(
+                        "{} vs {}",
+                        game.white_player.username, game.black_player.username
+                    )
+                })
+                .unwrap_or_else(|| "Game details".to_string())
+        })
     });
-    let game_href = create_read_slice(game_state.signal, |gs| {
-        gs.game_response
-            .as_ref()
-            .map(|game| format!("/game/{}", game.game_id))
-            .unwrap_or_default()
+    let game_href = Memo::new(move |_| {
+        game_response.with(|game_response| {
+            game_response
+                .as_ref()
+                .map(|game| format!("/game/{}", game.game_id))
+                .unwrap_or_default()
+        })
     });
 
     view! {

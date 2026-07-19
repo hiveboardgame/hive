@@ -14,7 +14,7 @@ use crate::{
     },
     providers::{
         analysis::AnalysisSignal,
-        game_state::{GameStateSignal, View},
+        game_state::{BoardView, GameStateStore, GameStateStoreFields},
         AuthContext,
         Config,
     },
@@ -37,7 +37,7 @@ pub fn Reserve(
 ) -> impl IntoView {
     let interaction = interaction.disable_stack_inspection();
     let analysis = use_context::<AnalysisSignal>().is_some();
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let auth_context = expect_context::<AuthContext>();
     let config = expect_context::<Config>().0;
     let tile_opts = Signal::derive(move || config().tile);
@@ -56,26 +56,25 @@ pub fn Reserve(
         }
     };
     let viewbox_str = viewbox_str.unwrap_or(default_viewbox_str);
-    // TODO: Should be a Store, this is hacky
-    let board_view = create_read_slice(game_state.signal, |gs| gs.view.clone());
-    let move_info = create_read_slice(game_state.signal, |gs| gs.move_info.clone());
-    let state = create_read_slice(game_state.signal, |gs| gs.state.clone());
+    let board_view = game_state.board_view();
+    let move_info = game_state.move_info();
+    let state = game_state.state();
     let last_turn = game_state.is_last_turn_as_signal();
-    let status = create_read_slice(game_state.signal, |gs| {
-        gs.game_response
-            .as_ref()
-            .map_or(GameStatus::NotStarted, |g| g.game_status.clone())
+    let game_response = game_state.game_response();
+    let status = Memo::new(move |_| {
+        game_response.with(|game_response| {
+            game_response
+                .as_ref()
+                .map_or(GameStatus::NotStarted, |game| game.game_status.clone())
+        })
     });
-    let user_id = Signal::derive(move || {
-        auth_context
-            .user
-            .with_untracked(|a| a.as_ref().map(|user| user.id))
-    });
-    let user_color = game_state.user_color_as_signal(user_id);
-    let tournament = create_read_slice(game_state.signal, |gs| {
-        gs.game_response
-            .as_ref()
-            .is_some_and(|gr| gr.tournament.is_some())
+    let user_color = game_state.user_color_as_signal(auth_context.identity);
+    let tournament = Memo::new(move |_| {
+        game_response.with(|game_response| {
+            game_response
+                .as_ref()
+                .is_some_and(|game| game.tournament.is_some())
+        })
     });
     let reserve_sepia_class = move || {
         if !analysis {
@@ -88,37 +87,40 @@ pub fn Reserve(
     };
     let stacked_pieces = Memo::new(move |_| {
         let reserve_color = color();
-        let tournament = tournament();
-        let board_view = board_view();
-        let status = status();
-        let viewing_past_turn = board_view == View::History && !last_turn();
-
-        move_info.with(|move_info| {
-            state.with(|state| {
-                let reserve_board = match board_view {
-                    View::Game => state.board.clone(),
-                    View::History => {
-                        history_state.with(|history_state| history_state.board.clone())
-                    }
-                };
-                build_reserve_render_model(
-                    state,
-                    &reserve_board,
-                    move_info,
-                    ReserveRenderOptions {
-                        reserve_color,
-                        alignment,
-                        interactivity: ReserveInteractivity {
-                            viewing_past_turn,
-                            status,
-                            user_color: user_color(),
-                            tournament,
-                            analysis,
-                        },
-                    },
-                )
-            })
-        })
+        let tournament = tournament.get();
+        let board_view = board_view.get();
+        let status = status.get();
+        let viewing_past_turn = board_view.is_history() && !last_turn();
+        let options = ReserveRenderOptions {
+            reserve_color,
+            alignment,
+            interactivity: ReserveInteractivity {
+                viewing_past_turn,
+                status,
+                user_color: user_color(),
+                tournament,
+                analysis,
+            },
+        };
+        match board_view {
+            BoardView::Live => state.with(|state| {
+                move_info.with(|move_info| {
+                    build_reserve_render_model(state, &state.board, move_info, options.clone())
+                })
+            }),
+            BoardView::History { .. } => history_state.with(|history_state| {
+                state.with(|state| {
+                    move_info.with(|move_info| {
+                        build_reserve_render_model(
+                            state,
+                            &history_state.board,
+                            move_info,
+                            options.clone(),
+                        )
+                    })
+                })
+            }),
+        }
     });
 
     view! {

@@ -16,7 +16,7 @@ use crate::{
         web_push_reconcile::use_web_push_reconcile,
     },
     providers::{
-        game_state::GameStateSignal,
+        game_state::{GameStateStore, GameStateStoreFields},
         refocus::RefocusSignal,
         websocket::{ConnectionReadyState, WebsocketContext},
         AuthContext,
@@ -55,13 +55,12 @@ pub struct OrientationSignal {
 
 #[component]
 pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
-    provide_context(GameStateSignal::new());
     let config = expect_context::<Config>().0;
     let ping = expect_context::<PingContext>();
     let ws = expect_context::<WebsocketContext>();
     let ws_ready = ws.ready_state;
     let auth_context = expect_context::<AuthContext>();
-    let gamestate = expect_context::<GameStateSignal>();
+    let gamestate = expect_context::<GameStateStore>();
     let mut refocus = expect_context::<RefocusSignal>();
     let update_notifier = expect_context::<UpdateNotifier>();
     let orientation_vertical = use_media_query("(orientation: portrait), (max-width: 640px)");
@@ -94,17 +93,13 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         }
     }
 
-    let user_id = Signal::derive(move || {
-        auth_context
-            .user
-            .with_untracked(|a| a.as_ref().map(|user| user.id))
-    });
-    let user_color = gamestate.user_color_as_signal(user_id);
-    let has_gamecontrol = create_read_slice(gamestate.signal, move |gs| {
+    let user_color = gamestate.user_color_as_signal(auth_context.identity);
+    let pending_game_control = gamestate.game_control_pending();
+    let has_gamecontrol = Memo::new(move |_| {
         if let Some(color) = user_color() {
             let opp_color = color.opposite_color();
             matches!(
-                gs.game_control_pending,
+                pending_game_control.get(),
                 Some(GameControl::TakebackRequest(color) | GameControl::DrawOffer(color)) if color == opp_color
             )
         } else {
@@ -113,7 +108,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     });
     let hide_controls = ControlsSignal {
         hidden: RwSignal::new(true),
-        notify: has_gamecontrol,
+        notify: has_gamecontrol.into(),
     };
 
     provide_context(hide_controls);

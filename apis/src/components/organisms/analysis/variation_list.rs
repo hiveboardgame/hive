@@ -1,13 +1,13 @@
 use crate::providers::{
     analysis::{AnalysisSignal, AnalysisTree, TreeNode},
-    game_state::GameStateSignal,
+    game_state::GameStateStore,
 };
 use leptos::prelude::*;
 
 #[component]
 pub fn VariationList(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>();
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let alternate_moves = Memo::new(move |_| analysis.tree.with(alternate_moves_for));
     let list_class = move || {
         format!(

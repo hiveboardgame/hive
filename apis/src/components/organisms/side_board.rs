@@ -13,7 +13,7 @@ use crate::{
     hiveground::HivegroundInteraction,
     providers::{
         chat::Chat,
-        game_state::{GameStateSignal, View},
+        game_state::{BoardView, GameStateStore, GameStateStoreFields},
     },
 };
 use hive_lib::{Color, State as HiveState};
@@ -49,19 +49,21 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
         TabView::Chat => "Chat".to_string(),
     };
     let unread = Memo::new(move |_| chat.unread_count_for_game(&game_id()));
-    let mut game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     view! {
         <div
             on:click=move |_| {
                 if name == TabView::Chat {
-                    let is_game_view = game_state.signal.with_untracked(|gs| gs.view == View::Game);
+                    let is_game_view = game_state.board_view().get_untracked() == BoardView::Live;
                     if is_game_view {
                         set_move.set(None);
                     }
                 }
                 if name == TabView::History {
                     game_state.view_history();
-                    let history_turn = game_state.signal.with_untracked(|gs| gs.history_turn);
+                    let history_turn = game_state
+                        .board_view()
+                        .with_untracked(BoardView::history_turn);
                     set_move.set(history_turn.map(|v| v + 1));
                 } else if name == TabView::Reserve {
                     game_state.view_game();

@@ -12,7 +12,7 @@ use crate::{
         },
         molecules::rating_and_change::RatingAndChangeDynamic,
     },
-    providers::game_state::GameStateSignal,
+    providers::game_state::{GameStateStore, GameStateStoreFields},
 };
 
 #[component]
@@ -21,21 +21,21 @@ pub fn UserWithRating(
     #[prop(optional)] text_color: &'static str,
     #[prop(optional)] vertical: bool,
 ) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
-    let game_response = create_read_slice(game_state.signal, |gs| gs.game_response.clone());
-    let player = Signal::derive(move || match side() {
+    let game_state = expect_context::<GameStateStore>();
+    let game_response = game_state.game_response();
+    let player = Memo::new(move |_| match side() {
         Color::White => game_response.with(|g| g.as_ref().map(|g| g.white_player.clone())),
         Color::Black => game_response.with(|g| g.as_ref().map(|g| g.black_player.clone())),
     });
-    let speed = move || {
+    let speed = Memo::new(move |_| {
         game_response.with(|g| {
             g.as_ref().map(|resp| match resp.speed {
                 GameSpeed::Untimed => GameSpeed::Correspondence,
                 _ => resp.speed,
             })
         })
-    };
-    let username = Signal::derive(move || {
+    });
+    let username = Memo::new(move |_| {
         player.with(|p| p.as_ref().map_or(String::new(), |p| p.username.clone()))
     });
     let patreon = move || player.with(|p| p.as_ref().is_some_and(|p| p.patreon));

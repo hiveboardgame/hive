@@ -3,16 +3,15 @@ use crate::{
     common::{ClientRequest, GameActionResponse, GameReaction, GameUpdate},
     providers::{
         chat::Chat,
-        game_state::GameStateSignal,
         games::GamesSignal,
         refocus::RefocusSignal,
         websocket::WebsocketContext,
         AuthContext,
+        AuthIdentity,
         UpdateNotifier,
     },
     responses::GameResponse,
 };
-use hive_lib::{GameStatus, History, State};
 use leptos::{prelude::*, task::spawn_local};
 use leptos_use::{use_timeout_fn, UseTimeoutFnReturn};
 use shared_types::{GameId, ReadyUser};
@@ -133,8 +132,9 @@ fn handle_reaction(gar: GameActionResponse) {
 
 fn ack_seen_if_watching(game_id: &GameId, recipient_id: Uuid) {
     let me = expect_context::<AuthContext>()
-        .user
-        .with_untracked(|a| a.as_ref().map(|account| account.id));
+        .identity
+        .get_untracked()
+        .and_then(AuthIdentity::user_id);
     if me != Some(recipient_id) {
         return;
     }
@@ -154,8 +154,9 @@ fn ack_control_if_watching(control: hive_lib::GameControl, gar: &GameActionRespo
         return;
     }
     let Some(me) = expect_context::<AuthContext>()
-        .user
-        .with_untracked(|a| a.as_ref().map(|account| account.id))
+        .identity
+        .get_untracked()
+        .and_then(AuthIdentity::user_id)
     else {
         return;
     };
@@ -177,33 +178,5 @@ fn send_seen_ack_if_focused(game_id: &GameId) {
         expect_context::<WebsocketContext>().send(&ClientRequest::NotificationSeen {
             game_id: game_id.clone(),
         });
-    }
-}
-
-pub fn reset_game_state_for_takeback(game: &GameResponse, game_state: &mut GameStateSignal) {
-    game_state.view_game();
-    game_state.set_game_response(game.clone());
-    let mut history = History::new();
-    game.history.clone_into(&mut history.moves);
-    game.game_type.clone_into(&mut history.game_type);
-    if let Ok(state) = State::new_from_history(&history) {
-        game_state.set_state(state, game.black_player.uid, game.white_player.uid);
-    };
-}
-
-pub fn reset_game_state(game: &GameResponse, mut game_state: GameStateSignal) {
-    game_state.full_reset();
-    game_state
-        .signal
-        .update_untracked(|gs| gs.game_id = Some(game.game_id.clone()));
-    game_state.set_game_response(game.clone());
-    let mut history = History::new();
-    game.history.clone_into(&mut history.moves);
-    game.game_type.clone_into(&mut history.game_type);
-    if let GameStatus::Finished(result) = &game.game_status {
-        result.clone_into(&mut history.result);
-    }
-    if let Ok(state) = State::new_from_history(&history) {
-        game_state.set_state(state, game.black_player.uid, game.white_player.uid);
     }
 }
