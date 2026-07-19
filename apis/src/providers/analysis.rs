@@ -1,18 +1,16 @@
 use crate::{
     providers::{
         annotations::AnnotationSet,
-        game_state::{GameState, GameStateSignal},
+        game_state::{GameState, GameStateStore, GameStateStoreFields},
     },
     responses::GameResponse,
 };
 use bimap::BiMap;
 use hive_lib::{Color, GameError, GameType, History, State};
-use leptos::prelude::*;
+use leptos::{prelude::*, reactive::effect::batch};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, vec};
 use tree_ds::prelude::{Node, TraversalStrategy, Tree};
-
-use super::game_state;
 
 const START_NODE_ID: i32 = -1;
 
@@ -46,19 +44,17 @@ impl AnalysisSignal {
         }
     }
 
-    pub fn sync_reserve_from_game_state(&self, game_state: GameStateSignal) {
+    pub fn sync_reserve_from_game_state(&self, game_state: GameStateStore) {
         self.sync_reserve.run(turn_color(game_state));
     }
 
-    pub fn sync_reserve_later_from_game_state(&self, game_state: GameStateSignal) {
+    pub fn sync_reserve_later_from_game_state(&self, game_state: GameStateStore) {
         self.sync_reserve_later.run(turn_color(game_state));
     }
 }
 
-fn turn_color(game_state: GameStateSignal) -> Color {
-    game_state
-        .signal
-        .with_untracked(|game_state| game_state.state.turn_color)
+fn turn_color(game_state: GameStateStore) -> Color {
+    game_state.state().with_untracked(|state| state.turn_color)
 }
 
 /// Annotation key for the root (no current node); real node ids are `>= 0`.
@@ -229,16 +225,13 @@ impl AnalysisTree {
             .map_or(0, |id| id + 1)
     }
 
-    pub fn new_blank_analysis(game_state: GameStateSignal, game_type: GameType) -> Self {
-        game_state.signal.update(|gs| {
-            *gs = GameState::new_with_game_type(game_type);
-            gs.view = game_state::View::Game;
-        });
+    pub fn new_blank_analysis(game_state: GameStateStore, game_type: GameType) -> Self {
+        game_state.reset_with_game_type(game_type);
 
         Self::new_with_game_type(game_type)
     }
 
-    pub fn from_loaded_state(game_state: GameStateSignal, state: &State) -> Self {
+    pub fn from_loaded_state(state: &State) -> Self {
         let mut tree = Self::tree_with_start();
         let mut hashes = BiMap::new();
         let mut previous = Some(START_NODE_ID);
@@ -262,10 +255,6 @@ impl AnalysisTree {
 
         let current_node = previous.and_then(|p| tree.get_node_by_id(&p));
 
-        game_state.signal.update(|gs| {
-            gs.view = game_state::View::Game;
-        });
-
         Self {
             current_node,
             tree,
@@ -277,7 +266,7 @@ impl AnalysisTree {
 
     pub fn from_game_response(
         game_response: &GameResponse,
-        game_state: GameStateSignal,
+        game_state: GameStateStore,
         move_number: Option<usize>,
     ) -> Option<Self> {
         let state = game_response.create_state();
@@ -312,15 +301,6 @@ impl AnalysisTree {
 
         let move_count = state.history.moves.len();
 
-        game_state.signal.update(|gs| {
-            gs.view = game_state::View::Game;
-            gs.game_id = Some(game_response.game_id.clone());
-            gs.state = state;
-            gs.game_response = Some(game_response.clone());
-            gs.black_id = Some(game_response.black_player.uid);
-            gs.white_id = Some(game_response.white_player.uid);
-        });
-
         let target_move_id = move_number
             .filter(|move_number| *move_number < move_count)
             .map(|move_number| move_number as i32)
@@ -331,17 +311,21 @@ impl AnalysisTree {
                     move_count.saturating_sub(1) as i32
                 }
             });
-        if analysis_tree
-            .update_node(target_move_id, Some(game_state))
-            .is_none()
-        {
-            analysis_tree.update_node(START_NODE_ID, Some(game_state));
-        }
+        let selected_state = analysis_tree
+            .select_node(target_move_id)
+            .or_else(|| analysis_tree.select_node(START_NODE_ID))?;
+        let mut next_game_state = GameState::new_with_game_type(selected_state.game_type);
+        next_game_state.game_id = Some(game_response.game_id.clone());
+        next_game_state.state = selected_state;
+        next_game_state.black_id = Some(game_response.black_player.uid);
+        next_game_state.white_id = Some(game_response.white_player.uid);
+        next_game_state.game_response = Some(game_response.clone());
+        game_state.replace(next_game_state);
         Some(analysis_tree)
     }
 
     pub fn from_uhp(
-        game_state: GameStateSignal,
+        game_state: GameStateStore,
         uhp_string: impl Into<String>,
     ) -> Result<Self, GameError> {
         let normalized_uhp = normalize_uhp_metadata(uhp_string);
@@ -351,17 +335,12 @@ impl AnalysisTree {
             Err(err) => return Err(err),
         };
         let state = State::new_from_history(&history)?;
-
-        game_state.full_reset();
-        game_state.signal.update(|gs| {
-            gs.state = state.clone();
-            gs.view = game_state::View::Game;
-        });
-
-        Ok(Self::from_loaded_state(game_state, &state))
+        let tree = Self::from_loaded_state(&state);
+        game_state.reset_with_state(state);
+        Ok(tree)
     }
 
-    pub fn update_node(&mut self, node_id: i32, game: Option<GameStateSignal>) -> Option<()> {
+    fn select_node(&mut self, node_id: i32) -> Option<State> {
         let target_node = self.tree.get_node_by_id(&node_id)?;
         let state = if Self::is_start_node_id(node_id) {
             State::new(self.game_type, false)
@@ -391,19 +370,17 @@ impl AnalysisTree {
 
         self.current_node = Some(target_node);
 
-        let history_turn = self
-            .current_node
-            .as_ref()
-            .and_then(|n| n.get_value().ok())
-            .flatten()
-            .map(|v| v.turn);
+        Some(state)
+    }
+
+    pub fn update_node(&mut self, node_id: i32, game: Option<GameStateStore>) -> Option<()> {
+        let state = self.select_node(node_id)?;
 
         if let Some(g) = game {
-            g.signal.update(|gs| {
-                gs.state = state;
-                gs.history_turn = history_turn;
-                gs.move_info.reset();
-            })
+            batch(|| {
+                g.state().set(state);
+                g.move_info().update(|move_info| move_info.reset());
+            });
         }
         Some(())
     }
@@ -460,27 +437,23 @@ impl AnalysisTree {
             .unwrap_or(ANALYSIS_ROOT_KEY)
     }
 
-    pub fn reset(&mut self, game_state: GameStateSignal) {
+    pub fn reset(&mut self, game_state: GameStateStore) {
         self.tree = Self::tree_with_start();
         self.current_node = self.tree.get_node_by_id(&START_NODE_ID);
         self.hashes.clear();
         self.annotations.clear();
-        game_state.signal.update(|gs| {
-            *gs = GameState::new_with_game_type(self.game_type);
-            gs.view = game_state::View::Game;
-        });
+        game_state.reset_with_game_type(self.game_type);
     }
 
     // Navigate to the empty board without clearing the analysis tree so the
     // user can go forward again after pressing back past the first move.
-    pub fn go_to_start(&mut self, game_state: GameStateSignal) {
+    pub fn go_to_start(&mut self, game_state: GameStateStore) {
         self.ensure_start_node();
         self.current_node = self.tree.get_node_by_id(&START_NODE_ID);
         let empty_state = State::new(self.game_type, false);
-        game_state.signal.update(|gs| {
-            gs.state = empty_state;
-            gs.history_turn = None;
-            gs.move_info.reset();
+        batch(|| {
+            game_state.state().set(empty_state);
+            game_state.move_info().update(|move_info| move_info.reset());
         });
     }
 }
@@ -507,12 +480,95 @@ fn normalize_uhp_metadata(uhp_string: impl Into<String>) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::responses::UserResponse;
+    use chrono::Utc;
+    use hive_lib::GameStatus;
+    use leptos::prelude::Owner;
+    use shared_types::{
+        Conclusion,
+        GameId,
+        GameSpeed,
+        GameStart,
+        Takeback,
+        TimeMode,
+        TournamentGameResult,
+    };
+    use std::collections::HashMap;
+    use uuid::Uuid;
 
     fn tree_node(turn: usize) -> TreeNode {
         TreeNode {
             turn,
             piece: format!("wA{turn}"),
             position: String::new(),
+        }
+    }
+
+    fn game_response_from_history(history: History) -> GameResponse {
+        let state = State::new_from_history(&history).expect("valid game history");
+        let player = |username: &str| UserResponse {
+            username: username.to_string(),
+            uid: Uuid::new_v4(),
+            patreon: false,
+            bot: false,
+            admin: false,
+            deleted: false,
+            ratings: HashMap::new(),
+            takeback: Takeback::Always,
+            lang: None,
+        };
+        let white_player = player("white");
+        let black_player = player("black");
+        let current_player_id = match state.turn_color {
+            Color::White => white_player.uid,
+            Color::Black => black_player.uid,
+        };
+        let game_status = state.game_status.clone();
+        let finished = matches!(
+            &game_status,
+            GameStatus::Finished(_) | GameStatus::Adjudicated
+        );
+        let now = Utc::now();
+
+        GameResponse {
+            uuid: Uuid::new_v4(),
+            game_id: GameId("analysis-game".to_string()),
+            tournament: None,
+            current_player_id,
+            turn: state.turn,
+            finished,
+            game_status,
+            game_type: state.game_type,
+            tournament_queen_rule: state.tournament,
+            white_player,
+            black_player,
+            moves: HashMap::new(),
+            spawns: Vec::new(),
+            rated: false,
+            reserve_black: HashMap::new(),
+            reserve_white: HashMap::new(),
+            history: state.history.moves,
+            game_control_history: Vec::new(),
+            white_rating: None,
+            black_rating: None,
+            white_rating_change: None,
+            black_rating_change: None,
+            time_mode: TimeMode::Untimed,
+            time_base: None,
+            time_increment: None,
+            speed: GameSpeed::Untimed,
+            black_time_left: None,
+            white_time_left: None,
+            last_interaction: None,
+            created_at: now,
+            updated_at: now,
+            hashes: state.history.hashes,
+            conclusion: Conclusion::Unknown,
+            repetitions: Vec::new(),
+            game_start: GameStart::Immediate,
+            game_speed: GameSpeed::Untimed,
+            move_times: Vec::new(),
+            tournament_game_result: TournamentGameResult::Unknown,
         }
     }
 
@@ -590,5 +646,37 @@ mod tests {
         assert_eq!(analysis.current_node_id(), Some(1));
         assert_eq!(analysis.hashes.get_by_left(&10), Some(&0));
         assert_eq!(analysis.hashes.get_by_left(&20), Some(&1));
+    }
+
+    #[test]
+    fn game_response_middle_move_keeps_tree_and_shared_state_in_sync() {
+        let owner = Owner::new();
+        owner.with(|| {
+            let history = History::from_pgn_str(
+                include_str!("../../../engine/test_pgns/valid/descend.pgn").to_string(),
+            )
+            .expect("valid game history");
+            let response = game_response_from_history(history);
+            let game_state = GameStateStore::new();
+            let selected_node_index = 9;
+            let expected_turn = 10;
+
+            let analysis =
+                AnalysisTree::from_game_response(&response, game_state, Some(selected_node_index))
+                    .expect("analysis tree from game response");
+
+            assert_eq!(analysis.current_node_id(), Some(selected_node_index as i32));
+            game_state.state().with_untracked(|selected_state| {
+                assert_eq!(selected_state.turn, expected_turn);
+                assert_eq!(
+                    selected_state.history.moves.as_slice(),
+                    &response.history[..expected_turn]
+                );
+                assert_eq!(
+                    selected_state.history.moves.last(),
+                    response.history.get(selected_node_index)
+                );
+            });
+        });
     }
 }

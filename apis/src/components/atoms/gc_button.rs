@@ -1,4 +1,7 @@
-use crate::{common::with_class, providers::game_state::GameStateSignal};
+use crate::{
+    common::with_class,
+    providers::game_state::{GameStateStore, GameStateStoreFields},
+};
 use hive_lib::GameControl;
 use icondata_core;
 use leptos::prelude::*;
@@ -15,7 +18,7 @@ pub fn AcceptDenyGc(
     user_id: Uuid,
     #[prop(optional, into)] hidden: Signal<bool>,
 ) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let (icon, title) = get_icon_and_title(game_control);
 
     let button_style = move || match game_control {
@@ -49,9 +52,10 @@ pub fn ConfirmButton(
     user_id: Uuid,
     #[prop(optional, into)] hidden: Signal<bool>,
 ) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
-    let pending_slice = create_read_slice(game_state.signal, |gs| gs.game_control_pending);
-    let turn = create_read_slice(game_state.signal, |gs| gs.state.turn as i32);
+    let game_state = expect_context::<GameStateStore>();
+    let game_control_pending = game_state.game_control_pending();
+    let state = game_state.state();
+    let turn = Memo::new(move |_| state.with(|state| state.turn as i32));
     let (icon, title) = get_icon_and_title(game_control);
     let color = game_control.color();
     let is_clicked = RwSignal::new(false);
@@ -77,7 +81,7 @@ pub fn ConfirmButton(
         (stop.get_value())();
         is_clicked.set(false);
     };
-    let pending = move |game_control: GameControl| match pending_slice() {
+    let pending = move |game_control: GameControl| match game_control_pending.get() {
         Some(GameControl::DrawOffer(gc_color)) => {
             if color == gc_color && matches!(game_control, GameControl::DrawOffer(_)) {
                 return true;

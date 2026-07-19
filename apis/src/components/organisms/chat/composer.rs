@@ -3,7 +3,7 @@ use crate::{
     i18n::*,
     providers::{
         chat::{Chat, ConversationHandle, InitialHistoryStatus, SendIssue},
-        game_state::GameStateSignal,
+        game_state::{GameStateStore, GameStateStoreFields},
         AuthContext,
         AuthIdentity,
     },
@@ -18,17 +18,18 @@ pub fn ChatInput(
 ) -> impl IntoView {
     let i18n = use_i18n();
     let chat = expect_context::<Chat>();
-    let game_state = use_context::<GameStateSignal>();
+    let game_state = use_context::<GameStateStore>();
     let key = StoredValue::new(conversation.key().clone());
     let turn = move || {
         let game_id = match key.get_value() {
             ConversationKey::Game { game_id, .. } => game_id,
             _ => return None,
         };
-        game_state.and_then(|state| {
-            state.signal.with(|state| {
-                (state.game_id.as_ref() == Some(&game_id)).then_some(state.state.turn)
-            })
+        game_state.and_then(|game_state| {
+            if game_state.game_id().get_untracked().as_ref() != Some(&game_id) {
+                return None;
+            }
+            Some(game_state.state().with_untracked(|state| state.turn))
         })
     };
     let displayed_draft = conversation.draft();

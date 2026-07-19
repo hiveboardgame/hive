@@ -28,29 +28,28 @@ use crate::{
     providers::{
         annotations::AnnotationsSignal,
         config::Config,
-        game_state::{GameStateSignal, View},
+        game_state::{GameStateStore, GameStateStoreFields},
         timer::TimerSignal,
-        websocket::WebsocketContext,
+        websocket::{ConnectionReadyState, WebsocketContext},
         ApiRequestsProvider,
         AuthContext,
+        AuthIdentity,
         SoundType,
         Sounds,
         UpdateNotifier,
     },
-    websocket::client_handlers::game::{reset_game_state, reset_game_state_for_takeback},
 };
-use hive_lib::{Color, GameControl, GameResult, GameStatus, State as HiveState, Turn};
-use leptos::prelude::*;
+use hive_lib::{Color, GameControl, GameStatus, State as HiveState, Turn};
+use leptos::{prelude::*, reactive::effect::batch, task::spawn_local_scoped_with_cancellation};
 use leptos_router::hooks::{use_params_map, use_query_map};
 use shared_types::{GameId, GameStart};
 use uuid::Uuid;
-use wasm_bindgen_futures::spawn_local;
 
 #[component]
 pub fn Play() -> impl IntoView {
     provide_context(TimerSignal::new());
     let timer = expect_context::<TimerSignal>();
-    let mut game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let orientation_signal = expect_context::<OrientationSignal>();
     let vertical = orientation_signal.orientation_vertical;
     let height_lock = orientation_signal.height_lock;
@@ -61,6 +60,7 @@ pub fn Play() -> impl IntoView {
     let sounds = expect_context::<Sounds>();
     let ws = expect_context::<WebsocketContext>();
     let controls_signal = expect_context::<ControlsSignal>();
+    let play_owner = Owner::current().expect("Play must run inside a reactive owner");
     let ws_ready = ws.ready_state;
     let params = use_params_map();
     let queries = use_query_map();
@@ -79,12 +79,12 @@ pub fn Play() -> impl IntoView {
             .unwrap_or_default()
     });
     let tab = RwSignal::new(TabView::Reserve);
+    let game_response = game_state.game_response();
     let current_confirm = Memo::new(move |_| {
         config.with(|cfg| {
             let preferred_confirms = &cfg.confirm_mode;
-            game_state
-                .signal
-                .with(|gs| gs.get_game_speed())
+            game_response
+                .with(|game_response| game_response.as_ref().map(|game| game.speed))
                 .and_then(|game_speed| preferred_confirms.get(&game_speed).cloned())
                 .unwrap_or_default()
         })
@@ -93,28 +93,23 @@ pub fn Play() -> impl IntoView {
     provide_context(AnnotationsSignal::play(game_state));
     let hiveground_interaction = live_hiveground_interaction();
     let history_state = selected_history_state(game_state);
-    let user = auth_context.user;
-    let white_and_black_ids = create_read_slice(game_state.signal, |gs| (gs.white_id, gs.black_id));
+    let identity = auth_context.identity;
+    let white_id = game_state.white_id();
+    let black_id = game_state.black_id();
+    let white_and_black_ids: Signal<(Option<Uuid>, Option<Uuid>)> =
+        Memo::new(move |_| (white_id.get(), black_id.get())).into();
     let user_is_player = Signal::derive(move || {
-        user.with(|a| {
-            if let Some(user) = a {
-                let (white_id, black_id) = white_and_black_ids();
-                Some(user.id) == white_id || Some(user.id) == black_id
-            } else {
-                false
-            }
-        })
+        let user_id = identity.get().and_then(AuthIdentity::user_id);
+        let (white_id, black_id) = white_and_black_ids();
+        user_id.is_some() && (user_id == white_id || user_id == black_id)
     });
     let player_color = Memo::new(move |_| {
-        user.with(|a| {
-            a.as_ref().map_or(Color::White, |user| {
-                let black_id = white_and_black_ids().1;
-                match Some(user.id) == black_id {
-                    true => Color::Black,
-                    false => Color::White,
-                }
-            })
-        })
+        let user_id = identity.get().and_then(AuthIdentity::user_id);
+        if user_id.is_some() && user_id == white_and_black_ids().1 {
+            Color::Black
+        } else {
+            Color::White
+        }
     });
     let parent_container_style = move || {
         if vertical.get() {
@@ -142,11 +137,16 @@ pub fn Play() -> impl IntoView {
         }
     };
 
-    let show_board = create_read_slice(game_state.signal, |gs| {
-        !gs.game_response.as_ref().is_some_and(|gr| {
-            gr.game_start == GameStart::Ready && matches!(gr.game_status, GameStatus::NotStarted)
+    let game_response = game_state.game_response();
+    let show_board: Signal<bool> = Memo::new(move |_| {
+        !game_response.with(|game_response| {
+            game_response.as_ref().is_some_and(|game| {
+                game.game_start == GameStart::Ready
+                    && matches!(game.game_status, GameStatus::NotStarted)
+            })
         })
-    });
+    })
+    .into();
 
     //HB handler
     Effect::watch(
@@ -157,36 +157,44 @@ pub fn Play() -> impl IntoView {
         false,
     );
 
-    let timer_display_key = create_read_slice(game_state.signal, |gs| {
-        let history_turn = gs.history_turn;
-        let gs_view = gs.view.clone();
-        let response = gs.game_response.as_ref().map(|response| {
-            (
-                response.game_id.clone(),
-                response.updated_at,
-                response.conclusion.clone(),
-                response.game_status.clone(),
-                response.time_mode,
-            )
+    let board_view = game_state.board_view();
+    let game_response = game_state.game_response();
+    let timer_display_key = Memo::new(move |_| {
+        let board_view = board_view.get();
+        let response = game_response.with(|game_response| {
+            game_response.as_ref().map(|response| {
+                (
+                    response.game_id.clone(),
+                    response.updated_at,
+                    response.conclusion.clone(),
+                    response.game_status.clone(),
+                    response.time_mode,
+                )
+            })
         });
-        (gs_view, history_turn, response)
+        (board_view, response)
     });
 
     Effect::watch(
         timer_display_key,
         move |_, _, _| {
-            game_state.signal.with_untracked(|gs| {
-                if !matches!(
-                    gs.state.game_status,
+            let is_finished = game_state.state().with_untracked(|state| {
+                matches!(
+                    state.game_status,
                     GameStatus::Finished(_) | GameStatus::Adjudicated
-                ) {
+                )
+            });
+            if !is_finished {
+                return;
+            }
+            let view = game_state.board_view().get_untracked();
+            game_state.game_response().with_untracked(|response| {
+                let Some(response) = response.as_ref() else {
                     return;
-                }
-                if let Some(response) = gs.game_response.as_ref() {
-                    timer.signal.update(|timer| {
-                        timer.update_for_view(response, &gs.view, gs.history_turn);
-                    });
-                }
+                };
+                timer.signal.update(|timer| {
+                    timer.update_for_view(response, &view);
+                });
             });
         },
         true,
@@ -203,48 +211,63 @@ pub fn Play() -> impl IntoView {
     });
 
     Effect::watch(
-        move || {
-            ws_ready();
-            game_id()
-        },
-        move |game_id, prev_game_id, _| {
+        move || (ws_ready(), game_id()),
+        move |(ready_state, next_game_id), previous, _| {
+            let previous_game_id = previous.map(|(_, game_id)| game_id);
+            let route_changed = previous_game_id.is_none_or(|previous| previous != next_game_id);
+
             // Route param can change in place (e.g. /game/A → /game/B reuses
             // the same component), so on_cleanup won't fire. Drop the prior
             // subscription before joining the new game.
-            if let Some(prev) = prev_game_id {
-                if !prev.0.is_empty() && prev != game_id {
+            if let Some(prev) = previous_game_id {
+                if !prev.0.is_empty() && prev != next_game_id {
                     api.0.get().unwatch(prev.clone());
                 }
             }
-            let game_id = game_id.clone();
-            api.0.get().join(game_id.clone());
-            spawn_local(async move {
-                let game = get_game_from_nanoid(game_id).await;
-                if let Ok(game) = game {
-                    reset_game_state(&game, game_state);
-                    timer.update_from(&game);
-                    if let Some((_turn, gc)) = game.game_control_history.last() {
-                        match gc {
-                            GameControl::DrawOffer(_) | GameControl::TakebackRequest(_) => {
-                                game_state.set_pending_gc(*gc)
-                            }
-                            _ => {}
+            // The app-scoped store can retain state across page mounts, while
+            // parameter-only navigation can reuse this component.
+            if route_changed {
+                batch(|| {
+                    game_state.full_reset();
+                    timer.signal.set(Default::default());
+                    controls_signal.hidden.set(true);
+                    tab.set(TabView::Reserve);
+                });
+            }
+
+            let connection_opened = *ready_state == ConnectionReadyState::Open
+                && previous.is_none_or(|(previous_state, _)| {
+                    *previous_state != ConnectionReadyState::Open
+                });
+            if *ready_state != ConnectionReadyState::Open || (!route_changed && !connection_opened)
+            {
+                return;
+            }
+
+            let requested_game_id = next_game_id.clone();
+            api.0.get().join(requested_game_id.clone());
+            play_owner.with(|| {
+                spawn_local_scoped_with_cancellation(async move {
+                    let game = get_game_from_nanoid(requested_game_id.clone()).await;
+                    if let Ok(game) = game {
+                        if requested_game_id != game_id.get_untracked() {
+                            return;
                         }
-                    }
-                    let url_number = move_number.get_untracked();
-                    if url_number.is_some_and(|v| {
-                        game_state
-                            .signal
-                            .with_untracked(|gs| v < gs.state.turn.saturating_sub(1))
-                    }) {
-                        game_state.signal.update(|s| {
-                            s.history_turn = url_number;
-                            s.view = View::History;
+                        batch(|| {
+                            game_state.reset_from_response(&game);
+                            timer.update_from(&game);
+                            let url_number = move_number.get_untracked();
+                            let state_turn = game_state.state().with_untracked(|state| state.turn);
+                            if let Some(url_number) =
+                                url_number.filter(|turn| *turn < state_turn.saturating_sub(1))
+                            {
+                                game_state.show_history_turn(url_number);
+                                controls_signal.hidden.set(false);
+                                tab.set(TabView::History);
+                            }
                         });
-                        controls_signal.hidden.set(false);
-                        tab.set(TabView::History);
-                    }
-                };
+                    };
+                });
             });
         },
         true,
@@ -258,83 +281,114 @@ pub fn Play() -> impl IntoView {
                 if gar.game_id == game_id {
                     match gar.game_action.clone() {
                         GameReaction::Turn(turn) => {
-                            timer.update_from(&gar.game);
-                            game_state.clear_gc();
-                            game_state.set_game_response(gar.game.clone());
                             sounds.play_sound(SoundType::Turn);
-                            let (pos, reserve_pos, history_moves, active, was_at_live_edge) =
-                                game_state.signal.with_untracked(|gs| {
-                                    (
-                                        gs.move_info.current_position,
-                                        gs.move_info.reserve_position,
-                                        gs.state.history.moves.clone(),
-                                        gs.move_info.active,
-                                        matches!(gs.view, View::History) && gs.is_last_turn(),
-                                    )
-                                });
-                            if history_moves != gar.game.history {
-                                match turn {
-                                    Turn::Move(piece, position) => {
-                                        game_state.play_turn(piece, position);
-                                        if was_at_live_edge {
-                                            game_state.view_game();
+                            let (
+                                pos,
+                                reserve_pos,
+                                history_moves,
+                                active,
+                                board_view,
+                                was_at_history_edge,
+                            ) = game_state.with_untracked(|state| {
+                                (
+                                    state.move_info.current_position,
+                                    state.move_info.reserve_position,
+                                    state.state.history.moves.clone(),
+                                    state.move_info.active,
+                                    state.board_view.clone(),
+                                    state.board_view.is_history()
+                                        && state.board_view.is_last_turn(state.state.turn),
+                                )
+                            });
+                            batch(|| {
+                                timer.update_from(&gar.game);
+                                if gar.game.finished {
+                                    game_state.reset_from_response(&gar.game);
+                                    if board_view.is_history() {
+                                        if was_at_history_edge && history_moves != gar.game.history
+                                        {
                                             sync_play_move_query(game_state, &set_move);
-                                        }
-                                        if let Some((piece, piece_type)) = active {
-                                            match piece_type {
-                                                PieceType::Board => {
-                                                    if let Some(position) = pos {
-                                                        game_state.show_moves(piece, position);
-                                                    }
-                                                }
-                                                PieceType::Inactive => {
-                                                    if let Some(position) = reserve_pos {
-                                                        game_state.show_spawns(piece, position);
-                                                    }
-                                                }
-                                                _ => {}
-                                            }
+                                        } else {
+                                            game_state.board_view().set(board_view);
                                         }
                                     }
-                                    _ => unreachable!(),
-                                };
-                            }
+                                    return;
+                                }
+
+                                game_state.game_control_pending().set(None);
+                                game_state.set_game_response(gar.game.clone());
+                                if history_moves != gar.game.history {
+                                    match turn {
+                                        Turn::Move(piece, position) => {
+                                            game_state.play_turn(piece, position);
+                                        }
+                                        Turn::Shutout => unreachable!(),
+                                    }
+                                    if was_at_history_edge {
+                                        game_state.view_game();
+                                        sync_play_move_query(game_state, &set_move);
+                                    }
+                                    if let Some((piece, piece_type)) = active {
+                                        match piece_type {
+                                            PieceType::Board => {
+                                                if let Some(position) = pos {
+                                                    game_state.show_moves(piece, position);
+                                                }
+                                            }
+                                            PieceType::Inactive => {
+                                                if let Some(position) = reserve_pos {
+                                                    game_state.show_spawns(piece, position);
+                                                }
+                                            }
+                                            _ => {}
+                                        }
+                                    }
+                                }
+                            });
                         }
                         GameReaction::Control(game_control) => {
-                            game_state.set_pending_gc(game_control);
-
-                            match game_control {
-                                GameControl::DrawAccept(_) => {
-                                    game_state
-                                        .set_game_status(GameStatus::Finished(GameResult::Draw));
-                                    game_state.set_game_response(gar.game.clone());
+                            let board_view = game_state.board_view().get_untracked();
+                            batch(|| {
+                                if gar.game.finished {
+                                    game_state.reset_from_response(&gar.game);
+                                    if board_view.is_history() {
+                                        game_state.board_view().set(board_view);
+                                    }
                                     timer.update_from(&gar.game);
+                                } else {
+                                    match game_control {
+                                        GameControl::TakebackAccept(_) => {
+                                            timer.update_from(&gar.game);
+                                            game_state.reset_from_response(&gar.game);
+                                        }
+                                        GameControl::TakebackRequest(_)
+                                        | GameControl::DrawOffer(_) => {
+                                            game_state
+                                                .game_control_pending()
+                                                .set(Some(game_control));
+                                        }
+                                        GameControl::DrawAccept(_)
+                                        | GameControl::Resign(_)
+                                        | GameControl::DrawReject(_)
+                                        | GameControl::TakebackReject(_)
+                                        | GameControl::Abort(_) => {
+                                            game_state.game_control_pending().set(None);
+                                        }
+                                    }
                                 }
-                                GameControl::Resign(color) => {
-                                    game_state.set_game_status(GameStatus::Finished(
-                                        GameResult::Winner(color.opposite_color()),
-                                    ));
-                                    game_state.set_game_response(gar.game.clone());
-                                    timer.update_from(&gar.game);
-                                }
-                                GameControl::TakebackAccept(_) => {
-                                    timer.update_from(&gar.game);
-                                    reset_game_state_for_takeback(&gar.game, &mut game_state);
-                                }
-                                GameControl::TakebackRequest(_)
-                                | GameControl::DrawOffer(_)
-                                | GameControl::DrawReject(_)
-                                | GameControl::TakebackReject(_)
-                                | GameControl::Abort(_) => {}
-                            };
+                            });
                         }
                         GameReaction::Started => {
-                            reset_game_state(&gar.game, game_state);
-                            timer.update_from(&gar.game);
+                            batch(|| {
+                                game_state.reset_from_response(&gar.game);
+                                timer.update_from(&gar.game);
+                            });
                         }
                         GameReaction::TimedOut => {
-                            reset_game_state(&gar.game, game_state);
-                            timer.update_from(&gar.game);
+                            batch(|| {
+                                game_state.reset_from_response(&gar.game);
+                                timer.update_from(&gar.game);
+                            });
                         }
                         GameReaction::Join => {
                             // TODO: Do we want anything here?
@@ -473,12 +527,12 @@ fn VerticalLayout(
     interaction: HivegroundInteraction,
     history_state: Memo<HiveState>,
 ) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let controls_signal = expect_context::<ControlsSignal>();
     let vertical = true;
     let top_color = Signal::derive(move || player_color().opposite_color());
-    let show_controls =
-        Signal::derive(move || !controls_signal.hidden.get() || game_state.is_finished()());
+    let is_finished = game_state.is_finished();
+    let show_controls = Signal::derive(move || !controls_signal.hidden.get() || is_finished.get());
     let top_reserve_row_class = move || {
         let size_class = if user_is_player() {
             "h-12 max-h-12"

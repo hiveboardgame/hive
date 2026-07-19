@@ -8,7 +8,7 @@ use crate::{
     },
     hiveground::HivegroundInteraction,
     hooks::history_nav::scroll_move_into_view,
-    providers::game_state::GameStateSignal,
+    providers::game_state::GameStateStore,
 };
 use hive_lib::{Color, State};
 use leptos::{html, prelude::*};
@@ -19,7 +19,7 @@ pub fn HistoryControls(
     history_state: Memo<State>,
     #[prop(optional)] parent: MaybeProp<NodeRef<html::Div>>,
 ) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let focus = Callback::new(move |()| {
         scroll_move_into_view();
     });
@@ -32,7 +32,7 @@ pub fn HistoryControls(
     });
     let if_last_go_to_end = Callback::new(move |()| {
         focus.run(());
-        if game_state.signal.with_untracked(|gs| gs.is_last_turn()) {
+        if game_state.is_last_turn_untracked() {
             scroll_to_end.run(());
         }
     });

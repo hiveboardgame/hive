@@ -33,6 +33,7 @@ pub use challenge_params::{
 };
 pub use config::{provide_config, Config};
 pub use direct_challenge::{provide_direct_challenge, DirectChallengeOpener, DirectChallengeState};
+pub use game_state::provide_game_state;
 pub use game_updater::{provide_server_updates, UpdateNotifier};
 pub use games_search_context::{
     calculate_initial_batch_size,

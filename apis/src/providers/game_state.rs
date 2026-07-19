@@ -1,233 +1,404 @@
-use std::str::FromStr;
+use std::{ops::Deref, str::FromStr};
 
 use crate::{
     common::{MoveInfo, PieceType},
     responses::GameResponse,
 };
 use hive_lib::{Color, GameControl, GameStatus, GameType, Piece, Position, State, Turn};
-use leptos::{logging::log, prelude::*};
-use shared_types::{GameId, GameSpeed, Takeback};
+use leptos::{logging::log, prelude::*, reactive::effect::batch};
+use reactive_stores::Store;
+use shared_types::{GameId, Takeback};
 use uuid::Uuid;
 
 use super::{
     analysis::AnalysisSignal,
     api_requests::ApiRequests,
-    auth_context::AuthContext,
+    auth_context::{AuthContext, AuthIdentity},
     ApiRequestsProvider,
 };
 
-#[derive(Clone, Debug, Copy)]
-pub struct GameStateSignal {
-    pub signal: RwSignal<GameState>,
+#[derive(Clone, Copy, Debug)]
+pub struct GameStateStore(Store<GameState>);
+
+impl Deref for GameStateStore {
+    type Target = Store<GameState>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
-impl Default for GameStateSignal {
+impl Default for GameStateStore {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl GameStateSignal {
+impl GameStateStore {
     pub fn new() -> Self {
-        Self {
-            signal: RwSignal::new(GameState::new()),
-        }
+        Self(Store::new(GameState::new()))
     }
 
     pub fn full_reset(&self) {
-        self.signal.update(|s| *s = GameState::new())
+        self.replace(GameState::new());
     }
 
-    // No longer access the whole signal when getting user_color
-    pub fn user_color_as_signal(&self, user_id: Signal<Option<Uuid>>) -> Signal<Option<Color>> {
-        create_read_slice(self.signal, move |gamestate| {
-            match (gamestate.white_id, gamestate.black_id) {
-                (Some(w), Some(b)) => {
-                    let current_user_id = user_id();
-                    if current_user_id == Some(b) {
-                        Some(Color::Black)
-                    } else if current_user_id == Some(w) {
-                        Some(Color::White)
-                    } else {
-                        None
-                    }
-                }
+    pub fn reset_with_game_type(&self, game_type: GameType) {
+        self.replace(GameState::new_with_game_type(game_type));
+    }
+
+    pub fn reset_with_state(&self, state: State) {
+        let mut game_state = GameState::new_with_game_type(state.game_type);
+        game_state.state = state;
+        self.replace(game_state);
+    }
+
+    pub(crate) fn reset_from_response(&self, game: &GameResponse) {
+        self.replace(GameState::from_response(game));
+    }
+
+    pub(crate) fn replace(&self, game_state: GameState) {
+        self.0.set(game_state);
+    }
+
+    pub fn user_color_as_signal(
+        &self,
+        identity: Signal<Option<AuthIdentity>>,
+    ) -> Signal<Option<Color>> {
+        let white_id = self.white_id();
+        let black_id = self.black_id();
+        Memo::new(move |_| {
+            let user_id = identity.get().and_then(AuthIdentity::user_id);
+            match (white_id.get(), black_id.get()) {
+                (Some(_), Some(black)) if user_id == Some(black) => Some(Color::Black),
+                (Some(white), Some(_)) if user_id == Some(white) => Some(Color::White),
                 _ => None,
             }
         })
-    }
-
-    pub fn undo_move(&mut self) {
-        self.signal.update(|s| {
-            if let Some(turn) = s.history_turn {
-                s.state.undo();
-                if turn > 0 {
-                    s.history_turn = Some(turn - 1);
-                } else {
-                    s.history_turn = None;
-                }
-            };
-        })
-    }
-
-    pub fn set_game_status(&self, status: GameStatus) {
-        self.signal.update(|s| {
-            s.state.game_status = status;
-        })
-    }
-
-    pub fn set_pending_gc(&self, gc: GameControl) {
-        self.signal.update(|s| {
-            s.game_control_pending = Some(gc);
-        })
-    }
-
-    pub fn clear_gc(&self) {
-        self.signal.update(|s| {
-            s.game_control_pending = None;
-        })
+        .into()
     }
 
     pub fn send_game_control(&self, game_control: GameControl, user: Uuid) {
         let api = expect_context::<ApiRequestsProvider>().0;
-        self.signal.with_untracked(|gs| {
-            if let Some(color) = gs.user_color(user) {
-                if color != game_control.color() {
-                    log!("This is a bug, you should only send GCs of your own color, user id color is {color} and gc color is {}", game_control.color());
-                } else if let Some(ref game_id) = gs.game_id {
-                    api.get().game_control(game_id.to_owned(), game_control);
-                } else {
-                    log!("This is a bug, there should be a game_id");
-                }
-            }
-        })
-    }
-
-    pub fn set_state(&mut self, state: State, black_id: Uuid, white_id: Uuid) {
-        self.reset();
-        let turn = if state.turn != 0 {
-            Some(state.turn - 1)
+        let black_id = self.black_id().get_untracked();
+        let white_id = self.white_id().get_untracked();
+        let color = if Some(user) == black_id {
+            Some(Color::Black)
+        } else if Some(user) == white_id {
+            Some(Color::White)
         } else {
             None
         };
-        self.signal.update(|s| {
-            s.history_turn = turn;
-            s.state = state;
-            s.black_id = Some(black_id);
-            s.white_id = Some(white_id);
+        if let Some(color) = color {
+            if color != game_control.color() {
+                log!("This is a bug, you should only send GCs of your own color, user id color is {color} and gc color is {}", game_control.color());
+            } else if let Some(game_id) = self.game_id().get_untracked() {
+                api.get().game_control(game_id, game_control);
+            } else {
+                log!("This is a bug, there should be a game_id");
+            }
+        }
+    }
+
+    pub fn play_turn(&self, piece: Piece, position: Position) {
+        self.state().maybe_update(
+            |state| match state.play_turn_from_position(piece, position) {
+                Ok(()) => true,
+                Err(error) => {
+                    log!("Could not play turn: {} {} {}", piece, position, error);
+                    false
+                }
+            },
+        );
+    }
+
+    pub fn clear_selection(&self) {
+        self.move_info().maybe_update(|move_info| {
+            if *move_info == MoveInfo::new() {
+                false
+            } else {
+                move_info.reset();
+                true
+            }
         })
     }
 
-    pub fn set_game_id(&mut self, game_id: GameId) {
-        self.signal.update_untracked(|s| s.game_id = Some(game_id))
-    }
+    pub fn move_active(&self, analysis: Option<AnalysisSignal>, api: ApiRequests) {
+        let (active, position) = self.move_info().with_untracked(|move_info| {
+            (
+                move_info.active.map(|(piece, _)| piece),
+                move_info.target_position,
+            )
+        });
+        let (Some(active), Some(position)) = (active, position) else {
+            return;
+        };
+        let was_at_history_edge = self.board_view().with_untracked(|view| view.is_history())
+            && self.is_last_turn_untracked();
 
-    pub fn play_turn(&mut self, piece: Piece, position: Position) {
-        self.signal.update(|s| {
-            s.play_turn(piece, position);
-        })
-    }
+        batch(|| {
+            let played = self
+                .state()
+                .try_maybe_update(|state| {
+                    let previous_len = state.history.moves.len();
+                    if let Err(error) = state.play_turn_from_position(active, position) {
+                        log!("Could not play turn: {} {} {}", active, position, error);
+                        return (false, None);
+                    }
+                    let appended = if analysis.is_some() {
+                        state.history.moves[previous_len..]
+                            .iter()
+                            .cloned()
+                            .zip(state.hashes[previous_len..].iter().copied())
+                            .collect()
+                    } else {
+                        Vec::new()
+                    };
+                    (true, Some((appended, state.turn_color, state.turn)))
+                })
+                .flatten();
+            let Some((appended, turn_color, turn)) = played else {
+                return;
+            };
 
-    pub fn reset(&mut self) {
-        self.signal.update(|s| s.move_info.reset())
-    }
-
-    pub fn move_active(&mut self, analysis: Option<AnalysisSignal>, api: ApiRequests) {
-        self.signal.update(|s| s.move_active(analysis, api))
+            if let Some(analysis) = analysis {
+                analysis.tree.update(|analysis| {
+                    for (played_move, hash) in appended {
+                        analysis.add_node(played_move, hash);
+                    }
+                });
+                self.clear_selection();
+                analysis.sync_reserve.run(turn_color);
+            } else if let Some(game_id) = self.game_id().get_untracked() {
+                api.turn(game_id, Turn::Move(active, position));
+                self.clear_selection();
+                if was_at_history_edge {
+                    self.board_view().set(BoardView::History {
+                        turn: turn.checked_sub(1),
+                    });
+                }
+            }
+        });
     }
 
     pub fn is_move_allowed(&self, in_analysis: bool) -> bool {
-        self.signal
-            .with_untracked(|gs| gs.is_move_allowed(in_analysis))
+        if in_analysis {
+            return true;
+        }
+        let (turn, game_status) = self
+            .state()
+            .with_untracked(|state| (state.turn, state.game_status.clone()));
+        if matches!(
+            game_status,
+            GameStatus::Finished(_) | GameStatus::Adjudicated
+        ) {
+            return false;
+        }
+        let black_id = self.black_id().get_untracked();
+        let white_id = self.white_id().get_untracked();
+        let user_id = expect_context::<AuthContext>()
+            .identity
+            .get_untracked()
+            .and_then(AuthIdentity::user_id);
+        if turn.is_multiple_of(2) {
+            white_id == user_id && user_id.is_some()
+        } else {
+            black_id == user_id && user_id.is_some()
+        }
     }
 
-    pub fn show_moves(&mut self, piece: Piece, position: Position) {
-        self.signal.update(|s| s.show_moves(piece, position))
+    pub fn show_moves(&self, piece: Piece, position: Position) {
+        let target_positions = self.state().with_untracked(|state| {
+            state
+                .board
+                .moves(state.turn_color)
+                .get(&(piece, position))
+                .cloned()
+        });
+        self.move_info().update(|move_info| {
+            move_info.reset();
+            move_info.current_position = Some(position);
+            if let Some(target_positions) = target_positions {
+                move_info.target_positions = target_positions;
+                move_info.active = Some((piece, PieceType::Board));
+            }
+        });
     }
 
-    pub fn show_spawns(&mut self, piece: Piece, position: Position) {
-        self.signal.update(|s| s.show_spawns(piece, position))
+    pub fn show_spawns(&self, piece: Piece, position: Position) {
+        let (target_positions, active) = self.state().with_untracked(|state| {
+            let target_positions = state
+                .board
+                .spawnable_positions(state.turn_color)
+                .collect::<Vec<Position>>();
+            let active = state
+                .board
+                .reserve(state.turn_color, state.game_type)
+                .get(&piece.bug())
+                .and_then(|pieces| pieces.first())
+                .and_then(|piece| Piece::from_str(piece).ok());
+            (target_positions, active)
+        });
+        self.move_info().update(|move_info| {
+            move_info.reset();
+            move_info.target_positions = target_positions;
+            if let Some(piece) = active {
+                move_info.active = Some((piece, PieceType::Reserve));
+                move_info.reserve_position = Some(position);
+            }
+        });
     }
 
-    pub fn set_target(&mut self, position: Position) {
-        self.signal.update(|s| s.set_target(position))
+    pub fn set_target(&self, position: Position) {
+        self.move_info().maybe_update(|move_info| {
+            if move_info.target_position == Some(position) {
+                false
+            } else {
+                move_info.target_position = Some(position);
+                true
+            }
+        })
     }
 
     pub fn show_history_turn(&self, turn: usize) {
-        self.signal.update(|s| s.show_history_turn(turn))
+        self.board_view()
+            .set(BoardView::History { turn: Some(turn) });
     }
 
-    pub fn first_history_turn(&mut self) {
-        self.signal.update(|s| s.first_history_turn())
+    pub fn first_history_turn(&self) {
+        let turn = (self.state().with_untracked(|state| state.turn) > 0).then_some(0);
+        self.board_view().set(BoardView::History { turn });
     }
 
-    pub fn last_history_turn(&mut self) {
-        self.signal.update(|s| s.last_history_turn())
+    pub fn last_history_turn(&self) {
+        let turn = self
+            .state()
+            .with_untracked(|state| state.turn.checked_sub(1));
+        self.board_view().set(BoardView::History { turn });
     }
 
-    pub fn next_history_turn(&mut self) {
-        self.signal.update(|s| {
-            s.next_history_turn();
-            if let Some(turn) = s.history_turn {
-                if s.state.history.move_is_pass(turn) {
-                    s.next_history_turn()
-                }
+    pub fn next_history_turn(&self) {
+        let current = self.board_view().with_untracked(BoardView::history_turn);
+        let next = self.state().with_untracked(|state| {
+            if state.turn == 0 {
+                return None;
             }
+            let mut next = match current {
+                Some(turn) => Some((turn + 1).min(state.turn - 1)),
+                None => Some(0),
+            };
+            if next.is_some_and(|turn| state.history.move_is_pass(turn)) {
+                next = next.map(|turn| (turn + 1).min(state.turn - 1));
+            }
+            next
         });
+        self.board_view().set(BoardView::History { turn: next });
     }
 
-    pub fn previous_history_turn(&mut self) {
-        self.signal.update(|s| {
-            s.previous_history_turn();
-            if let Some(turn) = s.history_turn {
-                if s.state.history.move_is_pass(turn) {
-                    s.previous_history_turn()
-                }
+    pub fn previous_history_turn(&self) {
+        let current = self.board_view().with_untracked(BoardView::history_turn);
+        let previous = self.state().with_untracked(|state| {
+            let mut previous = current.and_then(|turn| turn.checked_sub(1));
+            if previous.is_some_and(|turn| state.history.move_is_pass(turn)) {
+                previous = previous.and_then(|turn| turn.checked_sub(1));
             }
+            previous
         });
+        self.board_view().set(BoardView::History { turn: previous });
     }
 
     pub fn view_game(&self) {
-        self.signal.update(|s| s.view_game())
+        self.board_view().set(BoardView::Live);
     }
 
-    pub fn view_history(&mut self) {
-        self.signal.update(|s| s.view_history())
+    pub fn view_history(&self) {
+        if self
+            .board_view()
+            .with_untracked(|view| matches!(view, BoardView::Live))
+        {
+            self.last_history_turn();
+        }
     }
 
-    pub fn set_game_response(&mut self, game_response: GameResponse) {
-        self.signal
-            .update(|s| s.game_response = Some(game_response));
+    pub fn set_game_response(&self, game_response: GameResponse) {
+        self.game_response().set(Some(game_response));
     }
 
     pub fn is_finished(&self) -> Memo<bool> {
-        let game_status_finished = create_read_slice(self.signal, |game_state| {
-            matches!(
-                game_state.state.game_status,
-                GameStatus::Finished(_) | GameStatus::Adjudicated
-            )
-        });
-        let game_response_finished = create_read_slice(self.signal, |game_state| {
-            game_state
-                .game_response
-                .as_ref()
-                .is_some_and(|gr| gr.finished)
-        });
-        Memo::new(move |_| game_status_finished() || game_response_finished())
+        let state = self.state();
+        let game_response = self.game_response();
+        Memo::new(move |_| {
+            let state_is_finished = state.with(|state| {
+                matches!(
+                    state.game_status,
+                    GameStatus::Finished(_) | GameStatus::Adjudicated
+                )
+            });
+            state_is_finished
+                || game_response
+                    .with(|response| response.as_ref().is_some_and(|game| game.finished))
+        })
     }
 
     pub fn is_last_turn_as_signal(&self) -> Signal<bool> {
-        create_read_slice(self.signal, GameState::is_last_turn)
+        let state = self.state();
+        let board_view = self.board_view();
+        Memo::new(move |_| {
+            let state_turn = state.with(|state| state.turn);
+            board_view.with(|view| view.is_last_turn(state_turn))
+        })
+        .into()
+    }
+
+    pub fn is_last_turn_untracked(&self) -> bool {
+        let state_turn = self.state().with_untracked(|state| state.turn);
+        self.board_view()
+            .with_untracked(|view| view.is_last_turn(state_turn))
+    }
+
+    pub fn takeback_allowed(&self) -> bool {
+        self.game_response().with(|game_response| {
+            game_response
+                .as_ref()
+                .is_some_and(takeback_allowed_for_response)
+        })
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum View {
-    History,
-    Game,
+pub fn provide_game_state() {
+    provide_context(GameStateStore::new());
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum BoardView {
+    Live,
+    History {
+        /// Zero-based move index; `None` is the initial empty position.
+        turn: Option<usize>,
+    },
+}
+
+impl BoardView {
+    pub fn history_turn(&self) -> Option<usize> {
+        match self {
+            Self::Live => None,
+            Self::History { turn } => *turn,
+        }
+    }
+
+    pub fn is_history(&self) -> bool {
+        matches!(self, Self::History { .. })
+    }
+
+    pub fn is_last_turn(&self, state_turn: usize) -> bool {
+        match self {
+            Self::Live => true,
+            Self::History { turn } => state_turn == 0 || *turn == state_turn.checked_sub(1),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Store)]
 pub struct GameState {
     // game_id is the nanoid of the game
     pub game_id: Option<GameId>,
@@ -236,10 +407,7 @@ pub struct GameState {
     pub black_id: Option<Uuid>,
     pub white_id: Option<Uuid>,
     pub move_info: MoveInfo,
-    // the turn we want to display the history at
-    pub history_turn: Option<usize>,
-    // show history or reserve
-    pub view: View,
+    pub board_view: BoardView,
     // Unanswered game_control
     pub game_control_pending: Option<GameControl>,
     pub game_response: Option<GameResponse>,
@@ -252,20 +420,31 @@ impl Default for GameState {
 }
 
 impl GameState {
-    // TODO get the state from URL/game_id via a call
-    pub fn new() -> Self {
-        let state = State::new(GameType::MLP, false);
+    pub(crate) fn from_response(game: &GameResponse) -> Self {
+        let game_control_pending = if game.finished {
+            None
+        } else {
+            game.game_control_history
+                .last()
+                .and_then(|(_, control)| match control {
+                    GameControl::DrawOffer(_) | GameControl::TakebackRequest(_) => Some(*control),
+                    _ => None,
+                })
+        };
         Self {
-            game_id: None,
-            state,
-            black_id: None,
-            white_id: None,
+            game_id: Some(game.game_id.clone()),
+            state: game.create_state(),
+            black_id: Some(game.black_player.uid),
+            white_id: Some(game.white_player.uid),
             move_info: MoveInfo::new(),
-            history_turn: None,
-            view: View::Game,
-            game_control_pending: None,
-            game_response: None,
+            board_view: BoardView::Live,
+            game_control_pending,
+            game_response: Some(game.clone()),
         }
+    }
+
+    pub fn new() -> Self {
+        Self::new_with_game_type(GameType::MLP)
     }
 
     pub fn new_with_game_type(game_type: GameType) -> Self {
@@ -276,268 +455,309 @@ impl GameState {
             black_id: None,
             white_id: None,
             move_info: MoveInfo::new(),
-            history_turn: None,
-            view: View::Game,
+            board_view: BoardView::Live,
             game_control_pending: None,
             game_response: None,
         }
     }
+}
 
-    // Still needed because send_game_control uses it, maybe this should be moved out of the gamestate?
-    fn user_color(&self, user_id: Uuid) -> Option<Color> {
-        if Some(user_id) == self.black_id {
-            return Some(Color::Black);
-        }
-        if Some(user_id) == self.white_id {
-            return Some(Color::White);
-        }
-        None
-    }
-
-    pub fn uid_is_player(&self, user_id: Option<Uuid>) -> bool {
-        user_id.is_some() && (user_id == self.white_id || user_id == self.black_id)
-    }
-
-    pub fn play_turn(&mut self, piece: Piece, position: Position) {
-        if let Err(e) = self.state.play_turn_from_position(piece, position) {
-            log!("Could not play turn: {} {} {}", piece, position, e);
-        }
-    }
-
-    pub fn set_target(&mut self, position: Position) {
-        self.move_info.target_position = Some(position);
-    }
-
-    pub fn is_move_allowed(&self, analysis: bool) -> bool {
-        let auth_context = expect_context::<AuthContext>();
-        let user = auth_context.user;
-        if analysis {
-            return true;
-        }
-        if matches!(
-            self.state.game_status,
-            GameStatus::Finished(_) | GameStatus::Adjudicated
-        ) {
-            return false;
-        }
-        user.with_untracked(|a| {
-            a.as_ref().is_some_and(|user| {
-                let turn = self.state.turn;
-                let black_id = self.black_id;
-                let white_id = self.white_id;
-                if turn.is_multiple_of(2) {
-                    white_id.is_some_and(|white| white == user.id)
-                } else {
-                    black_id.is_some_and(|black| black == user.id)
-                }
-            })
-        })
-    }
-
-    pub fn move_active(&mut self, analysis: Option<AnalysisSignal>, api: ApiRequests) {
-        if let (Some((active, _)), Some(position)) =
-            (self.move_info.active, self.move_info.target_position)
-        {
-            if let Err(e) = self.state.play_turn_from_position(active, position) {
-                log!("Could not play turn: {} {} {}", active, position, e);
-            } else if let Some(analysis) = analysis {
-                analysis.tree.update(|analysis| {
-                    let moves = self.state.history.moves.clone();
-                    let hashes = self.state.hashes.clone();
-                    let last_index = moves.len() - 1;
-                    if moves[last_index].0 == "pass" {
-                        //if move is pass, add prev move
-                        analysis.add_node(moves[last_index - 1].clone(), hashes[last_index - 1]);
-                    }
-                    analysis.add_node(moves[last_index].clone(), hashes[last_index]);
-                    self.move_info.reset();
-                });
-                analysis.sync_reserve.run(self.state.turn_color);
-            } else if let Some(ref game_id) = self.game_id {
-                let turn = Turn::Move(active, position);
-                api.turn(game_id.to_owned(), turn);
-                self.move_info.reset();
-                self.history_turn = Some(self.state.turn - 1);
-            }
-        }
-    }
-
-    // TODO refactor to not take a position, the position and piece are in self already
-    pub fn show_moves(&mut self, piece: Piece, position: Position) {
-        self.move_info.reset();
-        self.move_info.current_position = Some(position);
-        let moves = self.state.board.moves(self.state.turn_color);
-        if let Some(positions) = moves.get(&(piece, position)) {
-            positions.clone_into(&mut self.move_info.target_positions);
-            self.move_info.active = Some((piece, PieceType::Board));
-        }
-    }
-
-    pub fn show_spawns(&mut self, piece: Piece, position: Position) {
-        self.move_info.reset();
-        let turn_color = self.state.turn_color;
-        let board = &self.state.board;
-        let game_type = self.state.game_type;
-
-        self.move_info.target_positions = board
-            .spawnable_positions(turn_color)
-            .collect::<Vec<Position>>();
-        let reserve = board.reserve(turn_color, game_type);
-        if let Some(pieces) = reserve.get(&piece.bug()) {
-            if let Some(piece) = pieces.first() {
-                if let Ok(piece) = Piece::from_str(piece) {
-                    self.move_info.active = Some((piece, PieceType::Reserve));
-                    self.move_info.reserve_position = Some(position);
-                }
-            }
-        }
-    }
-
-    pub fn show_history_turn(&mut self, turn: usize) {
-        self.history_turn = Some(turn);
-        self.view_history();
-    }
-
-    pub fn view_history(&mut self) {
-        self.view = View::History;
-    }
-
-    //TODO: is this still useful for play and analysis where gamestate is untracked for the callback?
-    pub fn is_last_turn(&self) -> bool {
-        if self.state.turn == 0 {
-            return true;
-        }
-        self.history_turn == Some(self.state.turn - 1)
-    }
-
-    pub fn is_first_history_turn(&self) -> bool {
-        self.history_turn.is_none() || self.history_turn == Some(0)
-    }
-
-    pub fn view_game(&mut self) {
-        self.view = View::Game;
-        if self.state.turn > 0 {
-            self.history_turn = Some(self.state.turn - 1);
-        }
-    }
-
-    pub fn next_history_turn(&mut self) {
-        self.view = View::History;
-        if let Some(turn) = self.history_turn {
-            self.history_turn = Some(std::cmp::min(turn + 1, self.state.turn - 1));
-        } else if self.state.turn > 0 {
-            self.history_turn = Some(0);
-        }
-    }
-
-    pub fn previous_history_turn(&mut self) {
-        self.view = View::History;
-        if let Some(turn) = self.history_turn {
-            self.history_turn = Some(turn.saturating_sub(1));
-            if turn == 0 {
-                self.history_turn = None;
-            }
-        }
-    }
-
-    pub fn first_history_turn(&mut self) {
-        self.view = View::History;
-        if self.state.turn > 0 {
-            self.history_turn = Some(0)
-        } else {
-            self.history_turn = None;
-        }
-    }
-
-    pub fn last_history_turn(&mut self) {
-        self.view_history();
-        self.history_turn = self.state.turn.checked_sub(1);
-    }
-
-    pub fn get_game_speed(&self) -> Option<GameSpeed> {
-        self.game_response.as_ref().map(|gr| gr.speed)
-    }
-
-    pub fn takeback_allowed(&self) -> bool {
-        let color_allowed = |color: &Color, game_response: &GameResponse| {
-            let rated = game_response.rated;
-            let takeback = match color {
-                Color::Black => &game_response.black_player.takeback,
-                Color::White => &game_response.white_player.takeback,
-            };
-            takeback == &Takeback::Always || takeback == &Takeback::CasualOnly && !rated
+fn takeback_allowed_for_response(game_response: &GameResponse) -> bool {
+    let color_allowed = |color: &Color, game_response: &GameResponse| {
+        let rated = game_response.rated;
+        let takeback = match color {
+            Color::Black => &game_response.black_player.takeback,
+            Color::White => &game_response.white_player.takeback,
         };
-        if let Some(game_response) = self.game_response.as_ref() {
-            let white = color_allowed(&Color::Black, game_response);
-            let black = color_allowed(&Color::White, game_response);
-            white && black
-        } else {
-            false
-        }
-    }
+        takeback == &Takeback::Always || takeback == &Takeback::CasualOnly && !rated
+    };
+    let white = color_allowed(&Color::Black, game_response);
+    let black = color_allowed(&Color::White, game_response);
+    white && black
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hive_lib::Direction as BoardDirection;
+    use crate::{
+        hooks::history_nav::{navigate_play_history, PlayHistoryNavigation},
+        responses::UserResponse,
+    };
+    use chrono::Utc;
+    use hive_lib::{Direction as BoardDirection, History};
+    use leptos::prelude::Owner;
+    use shared_types::{Conclusion, GameSpeed, GameStart, TimeMode, TournamentGameResult};
+    use std::collections::HashMap;
 
     fn piece(piece: &str) -> Piece {
         piece.parse().expect("test piece parses")
     }
 
+    fn with_store(test: impl FnOnce(GameStateStore)) {
+        let owner = Owner::new();
+        owner.with(|| test(GameStateStore::new()));
+    }
+
+    fn game_response() -> GameResponse {
+        let player = |username: &str| UserResponse {
+            username: username.to_string(),
+            uid: Uuid::new_v4(),
+            patreon: false,
+            bot: false,
+            admin: false,
+            deleted: false,
+            ratings: HashMap::new(),
+            takeback: Takeback::Always,
+            lang: None,
+        };
+        let now = Utc::now();
+        GameResponse {
+            uuid: Uuid::new_v4(),
+            game_id: GameId("response-game".to_string()),
+            tournament: None,
+            current_player_id: Uuid::new_v4(),
+            turn: 0,
+            finished: false,
+            game_status: GameStatus::InProgress,
+            game_type: GameType::Base,
+            tournament_queen_rule: false,
+            white_player: player("white"),
+            black_player: player("black"),
+            moves: HashMap::new(),
+            spawns: Vec::new(),
+            rated: false,
+            reserve_black: HashMap::new(),
+            reserve_white: HashMap::new(),
+            history: Vec::new(),
+            game_control_history: Vec::new(),
+            white_rating: None,
+            black_rating: None,
+            white_rating_change: None,
+            black_rating_change: None,
+            time_mode: TimeMode::Untimed,
+            time_base: None,
+            time_increment: None,
+            speed: GameSpeed::Untimed,
+            black_time_left: None,
+            white_time_left: None,
+            last_interaction: None,
+            created_at: now,
+            updated_at: now,
+            hashes: Vec::new(),
+            conclusion: Conclusion::Unknown,
+            repetitions: Vec::new(),
+            game_start: GameStart::Immediate,
+            game_speed: GameSpeed::Untimed,
+            move_times: Vec::new(),
+            tournament_game_result: TournamentGameResult::Unknown,
+        }
+    }
+
+    fn game_response_with_valid_history(game_id: &str) -> GameResponse {
+        let mut response = game_response();
+        let mut state = State::new(GameType::Base, true);
+        state
+            .play_turn_from_history("wS1", "")
+            .expect("valid opening");
+        state
+            .play_turn_from_history("bG1", "/wS1")
+            .expect("valid reply");
+
+        response.game_id = GameId(game_id.to_string());
+        response.current_player_id = match state.turn_color {
+            Color::White => response.white_player.uid,
+            Color::Black => response.black_player.uid,
+        };
+        response.turn = state.turn;
+        response.tournament_queen_rule = state.tournament;
+        response.history = state.history.moves;
+        response.hashes = state.hashes;
+        response
+    }
+
+    fn dirty_game_a(game_state: GameStateStore) {
+        let response = game_response_with_valid_history("game-a");
+        game_state.reset_from_response(&response);
+        game_state.move_info().set(MoveInfo {
+            active: Some((piece("wA1"), PieceType::Reserve)),
+            current_position: None,
+            target_positions: vec![Position::initial_spawn_position()],
+            target_position: Some(Position::initial_spawn_position()),
+            reserve_position: Some(Position::new(0, 0)),
+        });
+        game_state
+            .board_view()
+            .set(BoardView::History { turn: Some(0) });
+        game_state
+            .game_control_pending()
+            .set(Some(GameControl::TakebackRequest(Color::Black)));
+    }
+
+    fn assert_authoritative_snapshot(
+        game_state: GameStateStore,
+        response: &GameResponse,
+        pending_control: Option<GameControl>,
+    ) {
+        let expected_state = response.create_state();
+
+        game_state.with_untracked(|actual| {
+            assert_eq!(actual.game_id.as_ref(), Some(&response.game_id));
+            assert_eq!(actual.white_id, Some(response.white_player.uid));
+            assert_eq!(actual.black_id, Some(response.black_player.uid));
+            assert_eq!(actual.state, expected_state);
+            assert_eq!(actual.move_info, MoveInfo::new());
+            assert_eq!(actual.board_view, BoardView::Live);
+            assert_eq!(actual.game_control_pending, pending_control);
+
+            let stored_response = actual
+                .game_response
+                .as_ref()
+                .expect("authoritative response is stored");
+            assert_eq!(stored_response.uuid, response.uuid);
+            assert_eq!(stored_response.game_id, response.game_id);
+            assert_eq!(
+                stored_response.current_player_id,
+                response.current_player_id
+            );
+            assert_eq!(stored_response.history, response.history);
+            assert_eq!(
+                stored_response.game_control_history,
+                response.game_control_history
+            );
+            assert_eq!(stored_response.finished, response.finished);
+            assert_eq!(stored_response.game_status, response.game_status);
+        });
+    }
+
     #[test]
     fn show_moves_marks_selected_piece_as_board_piece() {
-        let origin = Position::new(0, 0);
-        let mut game_state = GameState::new_with_game_type(GameType::MLP);
-        game_state.state.game_status = GameStatus::InProgress;
-        game_state.state.turn_color = Color::White;
-        game_state.state.board.insert(origin, piece("wQ"), true);
-        game_state
-            .state
-            .board
-            .insert(origin.to(BoardDirection::E), piece("bQ"), true);
-        game_state.state.board.insert(origin, piece("wB1"), true);
-        game_state.state.board.last_moved = None;
+        with_store(|game_state| {
+            let origin = Position::new(0, 0);
+            game_state.state().update(|state| {
+                state.game_status = GameStatus::InProgress;
+                state.turn_color = Color::White;
+                state.board.insert(origin, piece("wQ"), true);
+                state
+                    .board
+                    .insert(origin.to(BoardDirection::E), piece("bQ"), true);
+                state.board.insert(origin, piece("wB1"), true);
+                state.board.last_moved = None;
+            });
 
-        assert!(game_state
-            .state
-            .board
-            .moves(Color::White)
-            .contains_key(&(piece("wB1"), origin)));
+            game_state.show_moves(piece("wB1"), origin);
 
-        game_state.show_moves(piece("wB1"), origin);
-
-        assert_eq!(
-            game_state.move_info.active,
-            Some((piece("wB1"), PieceType::Board))
-        );
-        assert_eq!(game_state.move_info.current_position, Some(origin));
-        assert!(!game_state.move_info.target_positions.is_empty());
-        assert_eq!(game_state.move_info.reserve_position, None);
+            game_state.move_info().with_untracked(|move_info| {
+                assert_eq!(move_info.active, Some((piece("wB1"), PieceType::Board)));
+                assert_eq!(move_info.current_position, Some(origin));
+                assert!(!move_info.target_positions.is_empty());
+                assert_eq!(move_info.reserve_position, None);
+            });
+        });
     }
 
     #[test]
     fn show_spawns_marks_selected_piece_as_reserve_piece() {
-        let reserve_position = Position::new(0, 0);
-        let mut game_state = GameState::new_with_game_type(GameType::Base);
-        game_state.state.game_status = GameStatus::InProgress;
-        game_state.state.turn_color = Color::White;
+        with_store(|game_state| {
+            let reserve_position = Position::new(0, 0);
+            game_state.state().update(|state| {
+                state.game_status = GameStatus::InProgress;
+                state.turn_color = Color::White;
+            });
 
-        game_state.show_spawns(piece("wA1"), reserve_position);
+            game_state.show_spawns(piece("wA1"), reserve_position);
 
-        assert_eq!(
-            game_state.move_info.active,
-            Some((piece("wA1"), PieceType::Reserve))
-        );
-        assert_eq!(game_state.move_info.current_position, None);
-        assert_eq!(
-            game_state.move_info.reserve_position,
-            Some(reserve_position)
-        );
-        assert!(game_state
-            .move_info
-            .target_positions
-            .contains(&Position::initial_spawn_position()));
+            game_state.move_info().with_untracked(|move_info| {
+                assert_eq!(move_info.active, Some((piece("wA1"), PieceType::Reserve)));
+                assert_eq!(move_info.current_position, None);
+                assert_eq!(move_info.reserve_position, Some(reserve_position));
+                assert!(move_info
+                    .target_positions
+                    .contains(&Position::initial_spawn_position()));
+            });
+        });
+    }
+
+    #[test]
+    fn reset_from_unfinished_response_replaces_dirty_game_and_keeps_latest_offer() {
+        with_store(|game_state| {
+            dirty_game_a(game_state);
+
+            let mut response = game_response_with_valid_history("game-b");
+            response
+                .game_control_history
+                .push((0, GameControl::DrawOffer(Color::White)));
+
+            game_state.reset_from_response(&response);
+
+            assert_authoritative_snapshot(
+                game_state,
+                &response,
+                Some(GameControl::DrawOffer(Color::White)),
+            );
+        });
+    }
+
+    #[test]
+    fn reset_from_finished_response_replaces_dirty_game_and_clears_pending_control() {
+        with_store(|game_state| {
+            dirty_game_a(game_state);
+
+            let mut response = game_response_with_valid_history("game-b");
+            response.finished = true;
+            response.game_status = GameStatus::Adjudicated;
+            response
+                .game_control_history
+                .push((0, GameControl::TakebackRequest(Color::Black)));
+
+            game_state.reset_from_response(&response);
+
+            assert_authoritative_snapshot(game_state, &response, None);
+        });
+    }
+
+    #[test]
+    fn history_navigation_skips_passes_from_a_valid_game() {
+        with_store(|game_state| {
+            let history = History::from_pgn_str(
+                include_str!("../../../engine/test_pgns/valid/pass2.pgn").to_string(),
+            );
+            let history = history.expect("valid pass history");
+            let pass_turn = history
+                .moves
+                .iter()
+                .position(|(piece, _)| piece == "pass")
+                .expect("fixture contains a pass");
+            let turn_before_pass = pass_turn.checked_sub(1).expect("pass follows a move");
+            let turn_after_pass = pass_turn
+                .checked_add(1)
+                .filter(|turn| *turn < history.moves.len())
+                .expect("pass precedes a move");
+
+            let state = State::new_from_history(&history).expect("valid pass state");
+            game_state.reset_with_state(state);
+            game_state.show_history_turn(turn_before_pass);
+
+            assert!(navigate_play_history(
+                PlayHistoryNavigation::Next,
+                game_state,
+            ));
+            assert_eq!(
+                game_state.board_view().get_untracked(),
+                BoardView::History {
+                    turn: Some(turn_after_pass)
+                }
+            );
+
+            assert!(navigate_play_history(
+                PlayHistoryNavigation::Previous,
+                game_state,
+            ));
+            assert_eq!(
+                game_state.board_view().get_untracked(),
+                BoardView::History {
+                    turn: Some(turn_before_pass)
+                }
+            );
+        });
     }
 }

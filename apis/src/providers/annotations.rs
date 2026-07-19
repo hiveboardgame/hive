@@ -1,6 +1,6 @@
 use crate::providers::{
     analysis::AnalysisSignal,
-    game_state::{GameStateSignal, View},
+    game_state::{BoardView, GameStateStore, GameStateStoreFields},
 };
 use hive_lib::Position;
 use leptos::prelude::*;
@@ -192,7 +192,7 @@ pub enum AnnotationTool {
 enum AnnotationBackend {
     Analysis(AnalysisSignal),
     Play {
-        game_state: GameStateSignal,
+        game_state: GameStateStore,
         store: RwSignal<HashMap<(Option<GameId>, usize), AnnotationSet>>,
     },
 }
@@ -239,17 +239,16 @@ impl AnnotationBackend {
 
 /// Play-view key: which game, and a canonical ply count for the board on screen.
 /// The ply count is identical whether the board is reached live or by scrubbing
-/// history — `history_turn` is a 0-based ply index (`None` = initial position),
+/// history — its turn is a 0-based ply index (`None` = initial position),
 /// while `state.turn` is the move count. The game id keeps annotations from
 /// leaking across the in-place `/game/:nanoid` route swap.
-fn play_key(game_state: GameStateSignal) -> (Option<GameId>, usize) {
-    game_state.signal.with(|gs| {
-        let turn = match gs.view {
-            View::History => gs.history_turn.map_or(0, |t| t + 1),
-            View::Game => gs.state.turn,
-        };
-        (gs.game_id.clone(), turn)
-    })
+fn play_key(game_state: GameStateStore) -> (Option<GameId>, usize) {
+    let game_id = game_state.game_id().get();
+    let turn = match game_state.board_view().get() {
+        BoardView::History { turn } => turn.map_or(0, |turn| turn + 1),
+        BoardView::Live => game_state.state().with(|state| state.turn),
+    };
+    (game_id, turn)
 }
 
 /// Per-page handle for reading/drawing annotations.
@@ -283,7 +282,7 @@ impl AnnotationsSignal {
         Self::new(AnnotationBackend::Analysis(analysis))
     }
 
-    pub fn play(game_state: GameStateSignal) -> Self {
+    pub fn play(game_state: GameStateStore) -> Self {
         Self::new(AnnotationBackend::Play {
             game_state,
             store: RwSignal::new(HashMap::new()),

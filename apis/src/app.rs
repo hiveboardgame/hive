@@ -53,6 +53,7 @@ use crate::{
         provide_challenge_params,
         provide_config,
         provide_direct_challenge,
+        provide_game_state,
         provide_notifications,
         provide_ping,
         provide_referer,
@@ -104,6 +105,7 @@ pub fn App() -> impl IntoView {
     provide_config();
     provide_users();
     provide_challenges();
+    provide_game_state();
     provide_websocket("/ws/");
 
     //expects websocket

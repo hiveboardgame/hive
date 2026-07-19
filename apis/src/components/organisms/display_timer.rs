@@ -2,10 +2,11 @@ use crate::{
     common::{CurrentConfirm, MoveConfirm},
     components::molecules::{live_timer::LiveTimer, user_with_rating::UserWithRating},
     providers::{
-        game_state::GameStateSignal,
+        game_state::{GameStateStore, GameStateStoreFields},
         timer::TimerSignal,
         ApiRequestsProvider,
         AuthContext,
+        AuthIdentity,
     },
 };
 use hive_lib::Color;
@@ -23,14 +24,18 @@ pub enum Placement {
 
 #[component]
 pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
-    let mut game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let auth_context = expect_context::<AuthContext>();
     let current_confirm = expect_context::<CurrentConfirm>().0;
-    let user = auth_context.user;
+    let identity = auth_context.identity;
 
-    let black_id = create_read_slice(game_state.signal, |gs| gs.black_id);
-    let player_is_black =
-        Memo::new(move |_| user().is_some_and(|user| Some(user.id) == black_id()));
+    let black_id = game_state.black_id();
+    let player_is_black = Memo::new(move |_| {
+        identity
+            .get()
+            .and_then(AuthIdentity::user_id)
+            .is_some_and(|user_id| Some(user_id) == black_id.get())
+    });
     let side = Signal::derive(move || match (player_is_black(), placement) {
         (true, Placement::Top) => Color::White,
         (true, Placement::Bottom) => Color::Black,

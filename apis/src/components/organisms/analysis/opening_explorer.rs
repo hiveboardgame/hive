@@ -2,11 +2,15 @@ use crate::{
     common::PieceType,
     components::atoms::{bug_tile::BugTile, rating::icon_for_speed},
     functions::opening_explorer::opening_explorer,
-    providers::{analysis::AnalysisSignal, game_state::GameStateSignal, ApiRequestsProvider},
+    providers::{
+        analysis::AnalysisSignal,
+        game_state::{GameStateStore, GameStateStoreFields},
+        ApiRequestsProvider,
+    },
     responses::ExplorerResponse,
 };
 use hive_lib::{GameStatus, GameType, Piece, Position, State};
-use leptos::prelude::*;
+use leptos::{prelude::*, reactive::effect::batch};
 use leptos_icons::*;
 use shared_types::{
     Conclusion,
@@ -76,13 +80,12 @@ struct RowHandlers {
 pub struct AnalysisPreviewSnapshot {
     node_id: Option<i32>,
     state: State,
-    history_turn: Option<usize>,
 }
 
 pub fn reset_analysis_preview(
     preview_snapshot: RwSignal<Option<AnalysisPreviewSnapshot>>,
     analysis: AnalysisSignal,
-    game_state: GameStateSignal,
+    game_state: GameStateStore,
 ) {
     let Some(snapshot) = preview_snapshot.get_untracked() else {
         return;
@@ -93,10 +96,9 @@ pub fn reset_analysis_preview(
         .with_untracked(|analysis| analysis.current_node_id())
         == snapshot.node_id
     {
-        game_state.signal.update(|game_state| {
-            game_state.state = snapshot.state;
-            game_state.history_turn = snapshot.history_turn;
-            game_state.move_info.reset();
+        batch(|| {
+            game_state.state().set(snapshot.state);
+            game_state.move_info().update(|move_info| move_info.reset());
         });
     }
     preview_snapshot.set(None);
@@ -134,7 +136,7 @@ pub fn OpeningExplorer(
     preview_snapshot: RwSignal<Option<AnalysisPreviewSnapshot>>,
 ) -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>();
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let api = expect_context::<ApiRequestsProvider>().0;
 
     let game_type = analysis.tree.with_untracked(|a| a.game_type);
@@ -157,25 +159,21 @@ pub fn OpeningExplorer(
         let base = match preview_snapshot.get_untracked() {
             Some(snapshot) => snapshot.state,
             None => {
-                let snap = game_state
-                    .signal
-                    .with_untracked(|game_state| AnalysisPreviewSnapshot {
-                        node_id: analysis
-                            .tree
-                            .with_untracked(|analysis| analysis.current_node_id()),
-                        state: game_state.state.clone(),
-                        history_turn: game_state.history_turn,
-                    });
+                let snap = AnalysisPreviewSnapshot {
+                    node_id: analysis
+                        .tree
+                        .with_untracked(|analysis| analysis.current_node_id()),
+                    state: game_state.state().get_untracked(),
+                };
                 preview_snapshot.set(Some(snap.clone()));
                 snap.state
             }
         };
         let mut previewed = base;
         if previewed.play_turn_from_position(piece, position).is_ok() {
-            game_state.signal.update(move |gs| {
-                gs.history_turn = Some(previewed.history.moves.len().saturating_sub(1));
-                gs.state = previewed;
-                gs.move_info.reset();
+            batch(move || {
+                game_state.state().set(previewed);
+                game_state.move_info().update(|move_info| move_info.reset());
             });
         }
     });
@@ -184,12 +182,11 @@ pub fn OpeningExplorer(
     // (the board is showing the previewed state while hovered), then play it the normal way.
     let play_move = Callback::new(move |(piece, position): (Piece, Position)| {
         reset_analysis_preview(preview_snapshot, analysis, game_state);
-        game_state.signal.update(|gs| {
-            gs.move_info.active = Some((piece, PieceType::Move));
-            gs.move_info.target_position = Some(position);
+        game_state.move_info().update(|move_info| {
+            move_info.active = Some((piece, PieceType::Move));
+            move_info.target_position = Some(position);
         });
-        let mut g = game_state;
-        g.move_active(Some(analysis), api.get_untracked());
+        game_state.move_active(Some(analysis), api.get_untracked());
     });
 
     // The archive URL for the current position ("Search this position"), or None at the empty
@@ -217,12 +214,9 @@ pub fn OpeningExplorer(
         resource.get().map(|result| match result {
             Err(_) => view! { <div class="p-2">"Failed to load opening data."</div> }.into_any(),
             Ok(response) => {
-                let local = game_state
-                    .signal
-                    .with_untracked(|gs| local_moves(&gs.state));
-                let white_to_move = game_state
-                    .signal
-                    .with_untracked(|gs| gs.state.turn % 2 == 0);
+                let (local, white_to_move) = game_state
+                    .state()
+                    .with_untracked(|state| (local_moves(state), state.turn % 2 == 0));
                 let handlers = RowHandlers {
                     play: play_move,
                     preview: preview_move,

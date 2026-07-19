@@ -131,13 +131,16 @@ impl GameResponse {
             }
             GameStatus::Finished(result) => result.clone(),
         };
-        State::new_from_history(&History::new_from_gamestate(
+        let mut state = State::new_from_history(&History::new_from_gamestate(
             self.history.clone(),
             &self.hashes,
             result,
             self.game_type,
         ))
-        .expect("State to be valid, as game was")
+        .expect("State to be valid, as game was");
+        state.game_status = self.game_status.clone();
+        state.tournament = self.tournament_queen_rule;
+        state
     }
 
     /// Preview URLs are user-controlled, so clamp before replaying history.

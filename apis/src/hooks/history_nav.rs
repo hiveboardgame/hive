@@ -1,6 +1,6 @@
 use crate::providers::{
     analysis::{AnalysisSignal, AnalysisTree},
-    game_state::{GameState, GameStateSignal, View},
+    game_state::{BoardView, GameStateStore, GameStateStoreFields},
 };
 use leptos::{ev::keydown, prelude::*, reactive::wrappers::write::SignalSetter};
 use leptos_use::{use_event_listener, use_window};
@@ -42,7 +42,7 @@ pub(crate) fn can_navigate_analysis_history(
 pub(crate) fn navigate_analysis_history(
     action: AnalysisHistoryNavigation,
     analysis: RwSignal<AnalysisTree>,
-    game_state: GameStateSignal,
+    game_state: GameStateStore,
 ) -> bool {
     let updated_node_id = analysis.with_untracked(|analysis| action.target_node_id(analysis));
     let Some(updated_node_id) = updated_node_id else {
@@ -60,7 +60,7 @@ pub(crate) fn use_analysis_history_keyboard_navigation(
     scroll_on_navigate: impl Fn() -> bool + 'static,
     before_navigate: impl Fn(AnalysisSignal) + 'static,
 ) {
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     use_history_arrow_keyboard_navigation(
         AnalysisHistoryNavigation::Previous,
         AnalysisHistoryNavigation::Next,
@@ -84,34 +84,38 @@ pub(crate) fn use_analysis_history_keyboard_navigation(
 }
 
 pub(crate) fn sync_play_move_query(
-    game_state_signal: GameStateSignal,
+    game_state: GameStateStore,
     set_move: &SignalSetter<Option<usize>>,
 ) {
-    game_state_signal.signal.with_untracked(|game_state| {
-        let move_param = match game_state.view {
-            View::Game => None,
-            View::History => game_state.history_turn.map(|turn| turn + 1),
-        };
+    let move_param = match game_state.board_view().get_untracked() {
+        BoardView::Live => None,
+        BoardView::History { turn } => turn.map(|turn| turn + 1),
+    };
 
-        set_move.set(move_param);
-    });
+    set_move.set(move_param);
 }
 
 pub(crate) fn can_navigate_play_history(
-    game_state: &GameState,
+    view: &BoardView,
+    state_turn: usize,
     action: PlayHistoryNavigation,
 ) -> bool {
+    let history_turn = match view {
+        BoardView::Live => state_turn.checked_sub(1),
+        BoardView::History { turn } => *turn,
+    };
+    let is_last_turn = view.is_last_turn(state_turn);
+    let is_first_history_turn = history_turn.is_none() || history_turn == Some(0);
+
     match action {
-        PlayHistoryNavigation::Last => !game_state.is_last_turn(),
-        PlayHistoryNavigation::Next => {
-            matches!(game_state.view, View::History) && !game_state.is_last_turn()
-        }
-        PlayHistoryNavigation::First => !game_state.is_first_history_turn(),
+        PlayHistoryNavigation::Last => !is_last_turn,
+        PlayHistoryNavigation::Next => view.is_history() && !is_last_turn,
+        PlayHistoryNavigation::First => !is_first_history_turn,
         PlayHistoryNavigation::Previous => {
-            if matches!(game_state.view, View::Game) {
-                game_state.state.turn > 0
+            if matches!(view, BoardView::Live) {
+                state_turn > 0
             } else {
-                !game_state.is_first_history_turn()
+                !is_first_history_turn
             }
         }
     }
@@ -119,31 +123,29 @@ pub(crate) fn can_navigate_play_history(
 
 pub(crate) fn navigate_play_history(
     action: PlayHistoryNavigation,
-    mut game_state_signal: GameStateSignal,
+    game_state: GameStateStore,
 ) -> bool {
-    if !game_state_signal
-        .signal
-        .with_untracked(|game_state| can_navigate_play_history(game_state, action))
-    {
+    let can_navigate = game_state.with_untracked(|game_state| {
+        can_navigate_play_history(&game_state.board_view, game_state.state.turn, action)
+    });
+    if !can_navigate {
         return false;
     }
 
     match action {
-        PlayHistoryNavigation::First => game_state_signal.first_history_turn(),
-        PlayHistoryNavigation::Last => game_state_signal.last_history_turn(),
-        PlayHistoryNavigation::Next => game_state_signal.next_history_turn(),
+        PlayHistoryNavigation::First => game_state.first_history_turn(),
+        PlayHistoryNavigation::Last => game_state.last_history_turn(),
+        PlayHistoryNavigation::Next => game_state.next_history_turn(),
         PlayHistoryNavigation::Previous => {
-            if game_state_signal
-                .signal
-                .with_untracked(|game_state| matches!(game_state.view, View::Game))
-            {
-                game_state_signal.last_history_turn();
+            if matches!(game_state.board_view().get_untracked(), BoardView::Live) {
+                game_state.last_history_turn();
             }
 
-            if game_state_signal.signal.with_untracked(
-                |game_state| matches!(game_state.history_turn, Some(turn) if turn > 0),
+            if matches!(
+                game_state.board_view().get_untracked(),
+                BoardView::History { turn: Some(turn) } if turn > 0
             ) {
-                game_state_signal.previous_history_turn();
+                game_state.previous_history_turn();
             }
         }
     }
@@ -152,7 +154,7 @@ pub(crate) fn navigate_play_history(
 }
 
 pub(crate) fn use_play_history_keyboard_navigation(
-    game_state: GameStateSignal,
+    game_state: GameStateStore,
     set_move: SignalSetter<Option<usize>>,
     on_navigate: Callback<PlayHistoryNavigation>,
 ) {
@@ -232,4 +234,39 @@ fn key_event_target_uses_arrows(evt: &KeyboardEvent) -> bool {
         || element
             .get_attribute("contenteditable")
             .is_some_and(|value| value != "false")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hive_lib::{History, State};
+    use leptos::prelude::Owner;
+
+    #[test]
+    fn previous_from_live_enters_history_before_the_live_edge() {
+        let owner = Owner::new();
+        owner.with(|| {
+            let source_history = History::from_pgn_str(
+                include_str!("../../../engine/test_pgns/valid/p_game.pgn").to_string(),
+            )
+            .expect("valid history");
+            let mut history = History::new();
+            history.game_type = source_history.game_type;
+            history.moves = source_history.moves[..5].to_vec();
+
+            let game_state = GameStateStore::new();
+            game_state.reset_with_state(
+                State::new_from_history(&history).expect("history reconstructs a valid state"),
+            );
+
+            assert!(navigate_play_history(
+                PlayHistoryNavigation::Previous,
+                game_state,
+            ));
+            assert_eq!(
+                game_state.board_view().get_untracked(),
+                BoardView::History { turn: Some(3) },
+            );
+        });
+    }
 }

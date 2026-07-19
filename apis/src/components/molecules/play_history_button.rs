@@ -4,7 +4,7 @@ use crate::{
         organisms::side_board::move_query_signal,
     },
     hooks::history_nav::{can_navigate_play_history, navigate_play_history, sync_play_move_query},
-    providers::game_state::GameStateSignal,
+    providers::game_state::{GameStateStore, GameStateStoreFields},
 };
 use leptos::prelude::*;
 use leptos_icons::Icon;
@@ -16,19 +16,21 @@ pub fn HistoryButton(
     action: PlayHistoryNavigation,
     #[prop(optional)] post_action: Option<Callback<()>>,
 ) -> impl IntoView {
-    let game_state_signal = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let (_move, set_move) = move_query_signal();
-    let is_disabled = move || {
-        game_state_signal
-            .signal
-            .with(|game_state| !can_navigate_play_history(game_state, action))
-    };
+    let board_view = game_state.board_view();
+    let state = game_state.state();
+    let is_disabled = Memo::new(move |_| {
+        let board_view = board_view.get();
+        let state_turn = state.with(|state| state.turn);
+        !can_navigate_play_history(&board_view, state_turn, action)
+    });
     let on_press = Callback::new(move |()| {
-        if navigate_play_history(action, game_state_signal) {
+        if navigate_play_history(action, game_state) {
             if let Some(post_action) = post_action {
                 post_action.run(())
             }
-            sync_play_move_query(game_state_signal, &set_move);
+            sync_play_move_query(game_state, &set_move);
         }
     });
     let icon = match action {

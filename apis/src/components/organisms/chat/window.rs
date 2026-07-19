@@ -25,7 +25,7 @@ use crate::{
             SubscriptionIssue,
             SubscriptionStatus,
         },
-        game_state::GameStateSignal,
+        game_state::{GameStateStore, GameStateStoreFields},
         AuthContext,
         AuthIdentity,
     },
@@ -409,7 +409,8 @@ fn ResolvedChatWindowBody(
 pub fn GameChatWindow(#[prop(into)] selected_thread: Signal<GameThread>) -> impl IntoView {
     let i18n = use_i18n();
     let params = use_params_map();
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
+    let current_game_id = game_state.game_id();
     let route_game_id = Signal::derive(move || {
         params
             .get()
@@ -419,14 +420,12 @@ pub fn GameChatWindow(#[prop(into)] selected_thread: Signal<GameThread>) -> impl
     let conversation = Memo::new(move |_| {
         let game_id = route_game_id.get()?;
         let thread = selected_thread.get();
-        game_state.signal.with(|state| {
-            if state.game_id.as_ref() != Some(&game_id) {
-                return None;
-            }
-            Some(match thread {
-                GameThread::Players => ConversationKey::game_players(&game_id),
-                GameThread::Spectators => ConversationKey::game_spectators(&game_id),
-            })
+        if current_game_id.get().as_ref() != Some(&game_id) {
+            return None;
+        }
+        Some(match thread {
+            GameThread::Players => ConversationKey::game_players(&game_id),
+            GameThread::Spectators => ConversationKey::game_spectators(&game_id),
         })
     });
 

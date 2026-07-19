@@ -23,8 +23,9 @@ use crate::{
     providers::{
         analysis::{AnalysisSignal, AnalysisTree},
         annotations::AnnotationsSignal,
-        game_state::GameStateSignal,
+        game_state::{GameStateStore, GameStateStoreFields},
         AuthContext,
+        AuthIdentity,
     },
     responses::GameResponse,
 };
@@ -44,24 +45,25 @@ const MOBILE_RESERVE_SYNC_DELAY: Duration = Duration::from_millis(500);
 
 #[component]
 pub fn Analysis() -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let auth_context = expect_context::<AuthContext>();
     let history_state = selected_history_state(game_state);
     let params = use_params_map();
     let queries = use_query_map();
     let game_id = Memo::new(move |_| params().get("nanoid").map(|s| GameId(s.to_owned())));
-    let move_number = StoredValue::new(
+    let move_number = Memo::new(move |_| {
         queries
-            .get_untracked()
+            .get()
             .get("move")
             .and_then(|s| s.parse::<usize>().ok())
-            .map(|n| n.saturating_sub(1)),
-    );
-    let uhp_string = StoredValue::new(queries.get_untracked().get("uhp"));
+            .map(|n| n.saturating_sub(1))
+    });
+    let uhp_string = Memo::new(move |_| queries.get().get("uhp"));
     let active_analysis = StoredValue::new(None::<AnalysisSignal>);
     let vertical = expect_context::<OrientationSignal>().orientation_vertical;
     let preview_snapshot = RwSignal::new(None::<AnalysisPreviewSnapshot>);
-    let turn_color = create_read_slice(game_state.signal, |gs| gs.state.turn_color);
+    let state = game_state.state();
+    let turn_color = Memo::new(move |_| state.with(|state| state.turn_color));
     let mobile_bottom_color = RwSignal::new(turn_color.get_untracked());
     let reserve_orientation_pending = RwSignal::new(false);
     let reserve_sync_timer = StoredValue::new(None::<TimeoutHandle>);
@@ -123,8 +125,9 @@ pub fn Analysis() -> impl IntoView {
     );
 
     let current_user_id =
-        Signal::derive(move || auth_context.user.with(|u| u.as_ref().map(|user| user.id)));
-    let has_game_response = create_read_slice(game_state.signal, |gs| gs.game_response.is_some());
+        Signal::derive(move || auth_context.identity.get().and_then(AuthIdentity::user_id));
+    let game_response = game_state.game_response();
+    let has_game_response = Memo::new(move |_| game_response.with(Option::is_some));
     let mobile_panel_class = move |color: Color| {
         move || {
             format!(
@@ -207,6 +210,7 @@ pub fn Analysis() -> impl IntoView {
                 view! { <div>"Loading analysis..."</div> }
             }>
                 {move || {
+                    preview_snapshot.set(None);
                     let analysis_signal = game_resource
                         .with(|gr| {
                             let analysis_tree = match gr {
@@ -214,13 +218,13 @@ pub fn Analysis() -> impl IntoView {
                                     AnalysisTree::from_game_response(
                                             game_response,
                                             game_state,
-                                            move_number.get_value(),
+                                            move_number.get(),
                                         )
                                         .unwrap_or_default()
                                 }
                                 _ => {
                                     uhp_string
-                                        .get_value()
+                                        .get()
                                         .and_then(|uhp| {
                                             AnalysisTree::from_uhp(game_state, uhp).ok()
                                         })

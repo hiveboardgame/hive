@@ -1,5 +1,5 @@
 use crate::{
-    providers::game_state::View,
+    providers::game_state::BoardView,
     responses::{GameResponse, HeartbeatResponse},
 };
 use chrono::{DateTime, Utc};
@@ -152,22 +152,17 @@ impl Timer {
             .and_then(|trigger| self.time_increment.map(|increment| trigger + increment * 2))
     }
 
-    pub fn update_for_view(
-        &mut self,
-        response: &GameResponse,
-        view: &View,
-        history_turn: Option<usize>,
-    ) {
+    pub fn update_for_view(&mut self, response: &GameResponse, view: &BoardView) {
         let timeout_color = timeout_loser(response);
-        if matches!(view, View::History) {
+        if let BoardView::History { turn } = view {
             let is_terminal_timeout =
-                timeout_color.is_some() && response.turn.checked_sub(1) == history_turn;
+                timeout_color.is_some() && response.turn.checked_sub(1) == *turn;
             let display_time = if is_terminal_timeout {
                 response.white_time_left.zip(response.black_time_left)
             } else {
-                history_time_left(response, history_turn, Color::White).zip(history_time_left(
+                history_time_left(response, *turn, Color::White).zip(history_time_left(
                     response,
-                    history_turn,
+                    *turn,
                     Color::Black,
                 ))
             };
