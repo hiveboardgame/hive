@@ -41,5 +41,6 @@ engine/perf.data
 .pg
 logs
 
+.agents/
 CLAUDE.md
 AGENTS.md

@@ -496,7 +496,7 @@ fn VerticalLayout(
         format!("flex col-start-1 row-start-2 justify-between ml-1 min-w-0 {size_class}")
     };
     view! {
-        <div class="flex flex-col flex-grow h-full min-h-0">
+        <div class="flex flex-col h-full min-h-0 grow">
             <div class="flex flex-col shrink ui-board-reserve">
                 <Show when=show_controls>
                     <div class="flex flex-row-reverse justify-between items-start min-w-0 shrink">
@@ -558,7 +558,7 @@ fn VerticalLayout(
                     </div>
                 </div>
                 <Show when=show_controls>
-                    <div class="grid grid-cols-5 gap-1 px-1 pb-1 [&>*]:w-full">
+                    <div class="grid grid-cols-5 gap-1 px-1 pb-1 *:w-full">
                         <HistoryButton action=HistoryNavigation::First />
                         <HistoryButton action=HistoryNavigation::Previous />
                         <HistoryButton action=HistoryNavigation::Next />
