@@ -18,6 +18,8 @@ pub enum HopError {
     NoStartBug,
     #[error("chain position {0} referenced before it exists")]
     BadChainRef(usize),
+    #[error("numeric reference {0:?} is too large")]
+    NumberTooLarge(String),
     #[error("expected a bug after '='")]
     MissingStackBug,
     #[error("expected '=', '+' or '-' after chain position {0}")]
@@ -26,6 +28,8 @@ pub enum HopError {
     UnbalancedParens,
     #[error("invalid player-to-move: {0:?}")]
     BadPlayer(String),
+    #[error("a lone piece on the board must be White with Black to move")]
+    LoneWhitePieceRequired,
     #[error("{bug:?} is not part of game type {game_type}")]
     PieceNotInGameType { bug: Bug, game_type: GameType },
     #[error("too many {color} {bug:?} pieces for this game type")]

@@ -34,25 +34,27 @@ pub fn canonicalize(hop: &str) -> Result<String, HopError> {
     ))
 }
 
-/// Lexicographically smallest topology over every root and both chiralities (reflection-invariant).
+/// Lexicographically smallest topology over every root and heading (rotation-invariant).
 fn best_topology(board: &Board) -> String {
     let cells: Vec<Position> = board.all_taken_positions().collect();
     let stacks = board.stacks();
     let headings = Direction::all();
+    let turns = Turns {
+        plus: HOP_PLUS,
+        minus: HOP_MINUS,
+    };
+    let renderer = Renderer {
+        stacks: &stacks,
+        turns,
+        last_moved: board.last_moved,
+    };
 
     let mut best: Option<String> = None;
-    for turns in CHIRALITIES {
-        let renderer = Renderer {
-            stacks: &stacks,
-            turns,
-            last_moved: board.last_moved,
-        };
-        for &start in &cells {
-            for &heading in &headings {
-                if let Some(topology) = renderer.topology(board, &cells, start, heading) {
-                    if best.as_ref().is_none_or(|best| topology < *best) {
-                        best = Some(topology);
-                    }
+    for &start in &cells {
+        for &heading in &headings {
+            if let Some(topology) = renderer.topology(board, &cells, start, heading) {
+                if best.as_ref().is_none_or(|best| topology < *best) {
+                    best = Some(topology);
                 }
             }
         }
@@ -65,17 +67,6 @@ struct Turns {
     plus: Rotation,
     minus: Rotation,
 }
-
-const CHIRALITIES: [Turns; 2] = [
-    Turns {
-        plus: HOP_PLUS,
-        minus: HOP_MINUS,
-    },
-    Turns {
-        plus: HOP_MINUS,
-        minus: HOP_PLUS,
-    },
-];
 
 struct Chain {
     nodes: Vec<(Position, Direction)>,

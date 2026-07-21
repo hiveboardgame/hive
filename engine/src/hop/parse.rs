@@ -26,7 +26,9 @@ pub struct HopPosition {
     pub to_move: Color,
 }
 
-/// Parse a HOP string into a concrete board, game type and side to move.
+/// Parse a HOP string into a concrete board, game type and side to move. White always
+/// opens, so with exactly one piece on the board that piece must be White and Black must
+/// be to move — anything else describes an unreachable position and is rejected.
 pub fn parse(hop: &str) -> Result<HopPosition, HopError> {
     let hop = hop.trim();
     if hop.is_empty() {
@@ -38,17 +40,33 @@ pub fn parse(hop: &str) -> Result<HopPosition, HopError> {
         [game, topology, player] => (parse_game_type(game)?, *topology, *player),
         other => return Err(HopError::FieldCount(other.len())),
     };
+    let to_move = parse_player(player)?;
+    let board = parse_topology(topology, game_type)?;
+    if board.played == 1 {
+        let position = board
+            .all_taken_positions()
+            .next()
+            .expect("played == 1 implies one taken position");
+        let piece_color = board
+            .top_piece(position)
+            .expect("position is taken")
+            .color();
+        if piece_color != Color::White || to_move != Color::Black {
+            return Err(HopError::LoneWhitePieceRequired);
+        }
+    }
     Ok(HopPosition {
-        board: parse_topology(topology, game_type)?,
+        board,
         game_type,
-        to_move: parse_player(player)?,
+        to_move,
     })
 }
 
-/// Canonical position hash of a HOP string (always `stunned = None`; HOP can't express a stun).
-pub fn to_hash(hop: &str) -> Result<i64, HopError> {
+/// Canonical position hash of a HOP string; `stunned` lets the caller supply
+/// stun state that HOP's grammar can't express.
+pub fn to_hash(hop: &str, stunned: Option<Piece>) -> Result<i64, HopError> {
     let mut parsed = parse(hop)?;
-    Ok(parsed.board.position_hash(parsed.to_move, None) as i64)
+    Ok(parsed.board.position_hash(parsed.to_move, stunned) as i64)
 }
 
 fn parse_game_type(field: &str) -> Result<GameType, HopError> {
@@ -82,7 +100,8 @@ fn parse_game_type(field: &str) -> Result<GameType, HopError> {
     })
 }
 
-/// `w`/`b` with an optional, ignored orientation suffix (rotation digit `0–5` then mirror `m`).
+/// `w`/`b` with an optional, ignored orientation suffix: at most one rotation
+/// digit `0`–`5`, then an optional single mirror flag `m`/`M`; nothing else is permitted.
 fn parse_player(field: &str) -> Result<Color, HopError> {
     let field = field.trim();
     let mut chars = field.chars();
@@ -91,10 +110,11 @@ fn parse_player(field: &str) -> Result<Color, HopError> {
         Some('b' | 'B') => Color::Black,
         _ => return Err(HopError::BadPlayer(field.to_string())),
     };
+    let mut rotated = false;
     let mut mirrored = false;
     for ch in chars {
         match ch {
-            '0'..='5' if !mirrored => {}
+            '0'..='5' if !rotated && !mirrored => rotated = true,
             'm' | 'M' if !mirrored => mirrored = true,
             _ => return Err(HopError::BadPlayer(field.to_string())),
         }
@@ -103,6 +123,9 @@ fn parse_player(field: &str) -> Result<Color, HopError> {
 }
 
 fn parse_topology(topology: &str, game_type: GameType) -> Result<Board, HopError> {
+    if topology.is_empty() {
+        return Ok(Board::new());
+    }
     let mut walk = Walk::new(game_type);
     let mut chars = topology.chars().peekable();
     while let Some(ch) = chars.next() {
@@ -115,7 +138,7 @@ fn parse_topology(topology: &str, game_type: GameType) -> Result<Board, HopError
             'd' | 'D' => return Err(HopError::Dragonfly),
             c if c.is_ascii_alphabetic() => walk.place(c)?,
             c if c.is_ascii_digit() => {
-                let n = read_number(c, &mut chars);
+                let n = read_number(c, &mut chars)?;
                 walk.chain_ref(n, &mut chars)?;
             }
             other => return Err(HopError::BadChar(other)),
@@ -263,11 +286,18 @@ fn make_piece(
     Ok(Piece::new_from(bug, color, order))
 }
 
-fn read_number(first: char, chars: &mut Peekable<Chars<'_>>) -> usize {
-    let mut n = first.to_digit(10).unwrap() as usize;
+fn read_number(first: char, chars: &mut Peekable<Chars<'_>>) -> Result<usize, HopError> {
+    let mut text = first.to_string();
+    let mut n = first
+        .to_digit(10)
+        .expect("caller only calls this on an ascii digit") as usize;
     while let Some(d) = chars.peek().and_then(|c| c.to_digit(10)) {
-        n = n * 10 + d as usize;
-        chars.next();
+        let c = chars.next().expect("just peeked");
+        text.push(c);
+        n = n
+            .checked_mul(10)
+            .and_then(|n| n.checked_add(d as usize))
+            .ok_or_else(|| HopError::NumberTooLarge(text.clone()))?;
     }
-    n
+    Ok(n)
 }
