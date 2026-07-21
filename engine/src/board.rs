@@ -67,6 +67,12 @@ impl Stacks {
         let position = Position { q, r };
         self.positions.get(&position).unwrap_or(&Vec::new()).clone()
     }
+
+    pub fn get_ref(&self, q: i32, r: i32) -> &[Piece] {
+        self.positions
+            .get(&Position { q, r })
+            .map_or(&[], Vec::as_slice)
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -342,36 +348,85 @@ impl Board {
                 .update(stack, Some(cc_index as u32), Rotation::CC);
         } else {
             self.eigen_direction = Some(eigen_direction);
-            self.hasher.clear(turn);
-            let smallest_position = self.smallest.unwrap().1;
-            let clockwise = CircleIter::new(smallest_position, eigen_direction, Rotation::C);
-            let mut hashed = 0_usize;
-            for (index, position) in clockwise.enumerate() {
-                let bs = self.board.get_mut(position);
-                bs.set_index(Rotation::C, index);
-                if !bs.is_empty() {
-                    self.hasher.update(bs, Some(index as u32), Rotation::C);
-                    hashed += bs.size as usize;
-                }
-                if hashed == self.played {
-                    break;
-                }
+            self.rehash_spirals(turn);
+        }
+        self.hasher.finish_turn(self.stunned)
+    }
+
+    /// Full-spiral rehash around `smallest`/`eigen_direction` (must be set); no `finish_turn`.
+    fn rehash_spirals(&mut self, turn: usize) {
+        self.hasher.clear(turn);
+        self.hash_spiral(Rotation::C);
+        self.hash_spiral(Rotation::CC);
+    }
+
+    fn hash_spiral(&mut self, rotation: Rotation) {
+        let start = self.smallest.unwrap().1;
+        let eigen_direction = self.eigen_direction.unwrap();
+        let mut hashed = 0_usize;
+        for (index, position) in CircleIter::new(start, eigen_direction, rotation).enumerate() {
+            let bug_stack = self.board.get_mut(position);
+            bug_stack.set_index(rotation, index);
+            if !bug_stack.is_empty() {
+                self.hasher.update(bug_stack, Some(index as u32), rotation);
+                hashed += bug_stack.size as usize;
             }
-            let counter_clockwise =
-                CircleIter::new(smallest_position, eigen_direction, Rotation::CC);
-            hashed = 0_usize;
-            for (index, position) in counter_clockwise.enumerate() {
-                let bs = self.board.get_mut(position);
-                bs.set_index(Rotation::CC, index);
-                if !bs.is_empty() {
-                    self.hasher.update(bs, Some(index as u32), Rotation::CC);
-                    hashed += bs.size as usize;
-                }
-                if hashed == self.played {
-                    break;
-                }
+            if hashed == self.played {
+                break;
             }
         }
+    }
+
+    /// Full re-hash of the current board; for a played board equals the incrementally maintained hash.
+    pub fn rehash(&mut self, turn: usize) -> u64 {
+        self.rehash_spirals(turn);
+        self.hasher.finish_turn(self.stunned)
+    }
+
+    /// Static counterpart of [`Board::get_smallest`]: White Queen anchors if present, else fold all.
+    pub fn compute_smallest(&mut self) -> Option<(Piece, Position)> {
+        if let Some(position) = self.position_of_piece(*WHITE_QUEEN) {
+            self.smallest = Some((*WHITE_QUEEN, position));
+            return self.smallest;
+        }
+        self.smallest = None;
+        for offset in 0..self.positions.len() {
+            if let Some(position) = self.positions[offset] {
+                let piece = self.offset_to_piece(offset);
+                self.smallest = self.get_smallest(piece, position);
+            }
+        }
+        self.smallest
+    }
+
+    /// Canonical hash of a directly-constructed board (e.g. parsed from HOP), matching `game_hashes`.
+    pub fn position_hash(&mut self, to_move: Color, stunned: Option<Piece>) -> u64 {
+        // White-to-move carries the `BLACK_TO_MOVE` term (odd turn parity), Black-to-move does not.
+        let turn = usize::from(to_move == Color::White);
+        self.stunned = stunned;
+        self.compute_smallest();
+        match self.played {
+            0 => {
+                self.hasher.clear(turn);
+                self.hasher.finish_turn(self.stunned)
+            }
+            1 => self.hash_single_piece(),
+            _ => {
+                self.eigen_direction = Some(self.eigen_direction());
+                self.rehash(turn)
+            }
+        }
+    }
+
+    /// First-move fast path mirrored from [`Board::hash_move`]: lone stack at spiral index 0.
+    fn hash_single_piece(&mut self) -> u64 {
+        self.hasher = Hasher::new();
+        let position = self.smallest.unwrap().1;
+        let bug_stack = self.board.get_mut(position);
+        bug_stack.set_index(Rotation::C, 0);
+        bug_stack.set_index(Rotation::CC, 0);
+        self.hasher.update(bug_stack, Some(0), Rotation::C);
+        self.hasher.update(bug_stack, Some(0), Rotation::CC);
         self.hasher.finish_turn(self.stunned)
     }
 
