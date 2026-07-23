@@ -19,7 +19,7 @@ use crate::{
         },
     },
     functions::games::get::get_game_from_nanoid,
-    hiveground::{live_hiveground_interaction, selected_history_state, HivegroundInteraction},
+    hiveground::{live_hiveground_interaction, selected_history_board, HivegroundInteraction},
     hooks::history_nav::{
         scroll_move_into_view,
         sync_play_move_query,
@@ -33,13 +33,12 @@ use crate::{
         websocket::{ConnectionReadyState, WebsocketContext},
         ApiRequestsProvider,
         AuthContext,
-        AuthIdentity,
         SoundType,
         Sounds,
         UpdateNotifier,
     },
 };
-use hive_lib::{Color, GameControl, GameStatus, State as HiveState, Turn};
+use hive_lib::{Board as HiveBoard, Color, GameControl, GameStatus, Turn};
 use leptos::{prelude::*, reactive::effect::batch, task::spawn_local_scoped_with_cancellation};
 use leptos_router::hooks::{use_params_map, use_query_map};
 use shared_types::{GameId, GameStart};
@@ -92,25 +91,15 @@ pub fn Play() -> impl IntoView {
     provide_context(CurrentConfirm(current_confirm));
     provide_context(AnnotationsSignal::play(game_state));
     let hiveground_interaction = live_hiveground_interaction();
-    let history_state = selected_history_state(game_state);
+    let history_board = selected_history_board(game_state);
     let identity = auth_context.identity;
     let white_id = game_state.white_id();
     let black_id = game_state.black_id();
     let white_and_black_ids: Signal<(Option<Uuid>, Option<Uuid>)> =
         Memo::new(move |_| (white_id.get(), black_id.get())).into();
-    let user_is_player = Signal::derive(move || {
-        let user_id = identity.get().and_then(AuthIdentity::user_id);
-        let (white_id, black_id) = white_and_black_ids();
-        user_id.is_some() && (user_id == white_id || user_id == black_id)
-    });
-    let player_color = Memo::new(move |_| {
-        let user_id = identity.get().and_then(AuthIdentity::user_id);
-        if user_id.is_some() && user_id == white_and_black_ids().1 {
-            Color::Black
-        } else {
-            Color::White
-        }
-    });
+    let user_color = game_state.user_color_as_signal(identity);
+    let user_is_player = Signal::derive(move || user_color.get().is_some());
+    let player_color = Memo::new(move |_| user_color.get().unwrap_or(Color::White));
     let parent_container_style = move || {
         if vertical.get() {
             "flex flex-col"
@@ -137,7 +126,6 @@ pub fn Play() -> impl IntoView {
         }
     };
 
-    let game_response = game_state.game_response();
     let show_board: Signal<bool> = Memo::new(move |_| {
         !game_response.with(|game_response| {
             game_response.as_ref().is_some_and(|game| {
@@ -158,7 +146,6 @@ pub fn Play() -> impl IntoView {
     );
 
     let board_view = game_state.board_view();
-    let game_response = game_state.game_response();
     let timer_display_key = Memo::new(move |_| {
         let board_view = board_view.get();
         let response = game_response.with(|game_response| {
@@ -282,31 +269,26 @@ pub fn Play() -> impl IntoView {
                     match gar.game_action.clone() {
                         GameReaction::Turn(turn) => {
                             sounds.play_sound(SoundType::Turn);
-                            let (
-                                pos,
-                                reserve_pos,
-                                history_moves,
-                                active,
-                                board_view,
-                                was_at_history_edge,
-                            ) = game_state.with_untracked(|state| {
-                                (
-                                    state.move_info.current_position,
-                                    state.move_info.reserve_position,
-                                    state.state.history.moves.clone(),
-                                    state.move_info.active,
-                                    state.board_view.clone(),
-                                    state.board_view.is_history()
-                                        && state.board_view.is_last_turn(state.state.turn),
-                                )
+                            let (pos, reserve_pos, active) =
+                                game_state.move_info().with_untracked(|move_info| {
+                                    (
+                                        move_info.current_position,
+                                        move_info.reserve_position,
+                                        move_info.active,
+                                    )
+                                });
+                            let history_changed = game_state.state().with_untracked(|state| {
+                                state.history.moves.as_slice() != gar.game.history.as_slice()
                             });
+                            let board_view = game_state.board_view().get_untracked();
+                            let was_at_history_edge =
+                                board_view.is_history() && game_state.is_last_turn_untracked();
                             batch(|| {
                                 timer.update_from(&gar.game);
                                 if gar.game.finished {
                                     game_state.reset_from_response(&gar.game);
                                     if board_view.is_history() {
-                                        if was_at_history_edge && history_moves != gar.game.history
-                                        {
+                                        if was_at_history_edge && history_changed {
                                             sync_play_move_query(game_state, &set_move);
                                         } else {
                                             game_state.board_view().set(board_view);
@@ -317,7 +299,7 @@ pub fn Play() -> impl IntoView {
 
                                 game_state.game_control_pending().set(None);
                                 game_state.set_game_response(gar.game.clone());
-                                if history_moves != gar.game.history {
+                                if history_changed {
                                     match turn {
                                         Turn::Move(piece, position) => {
                                             game_state.play_turn(piece, position);
@@ -378,13 +360,7 @@ pub fn Play() -> impl IntoView {
                                 }
                             });
                         }
-                        GameReaction::Started => {
-                            batch(|| {
-                                game_state.reset_from_response(&gar.game);
-                                timer.update_from(&gar.game);
-                            });
-                        }
-                        GameReaction::TimedOut => {
+                        GameReaction::Started | GameReaction::TimedOut => {
                             batch(|| {
                                 game_state.reset_from_response(&gar.game);
                                 timer.update_from(&gar.game);
@@ -429,7 +405,7 @@ pub fn Play() -> impl IntoView {
                                 white_and_black_ids
                                 interaction=hiveground_interaction
                                 tab
-                                history_state
+                                history_board
                             />
                         }
                     }
@@ -441,7 +417,7 @@ pub fn Play() -> impl IntoView {
                         game_id
                         white_and_black_ids
                         interaction=hiveground_interaction
-                        history_state
+                        history_board
                     />
 
                 </Show>
@@ -457,7 +433,7 @@ fn BoardOrUnstarted(
     white_and_black_ids: Signal<(Option<Uuid>, Option<Uuid>)>,
     game_id: Memo<GameId>,
     interaction: HivegroundInteraction,
-    history_state: Memo<HiveState>,
+    history_board: Memo<HiveBoard>,
 ) -> impl IntoView {
     let game_updater = expect_context::<UpdateNotifier>();
     view! {
@@ -474,7 +450,7 @@ fn BoardOrUnstarted(
                 }
             }
         >
-            <Board interaction history_state />
+            <Board interaction history_board />
         </Show>
     }
 }
@@ -488,7 +464,7 @@ fn HorizontalLayout(
     game_id: Memo<GameId>,
     interaction: HivegroundInteraction,
     tab: RwSignal<TabView>,
-    history_state: Memo<HiveState>,
+    history_board: Memo<HiveBoard>,
 ) -> impl IntoView {
     let vertical = false;
     let config = expect_context::<Config>().0;
@@ -504,14 +480,14 @@ fn HorizontalLayout(
             game_id
             white_and_black_ids
             interaction
-            history_state
+            history_board
         />
         <div
             class="grid grid-cols-2 col-span-2 col-start-9 grid-rows-6 row-span-full row-start-1 gap-2 p-1"
             style=background_style
         >
             <DisplayTimer placement=Placement::Top vertical />
-            <SideboardTabs player_color tab interaction history_state />
+            <SideboardTabs player_color tab interaction history_board />
             <DisplayTimer placement=Placement::Bottom vertical />
         </div>
     }
@@ -525,7 +501,7 @@ fn VerticalLayout(
     white_and_black_ids: Signal<(Option<Uuid>, Option<Uuid>)>,
     game_id: Memo<GameId>,
     interaction: HivegroundInteraction,
-    history_state: Memo<HiveState>,
+    history_board: Memo<HiveBoard>,
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateStore>();
     let controls_signal = expect_context::<ControlsSignal>();
@@ -570,7 +546,7 @@ fn VerticalLayout(
                             color=top_color
                             viewbox_str=MOBILE_RESERVE_VIEWBOX
                             interaction
-                            history_state
+                            history_board
                         />
                     </div>
                     <div class="flex col-start-2 row-start-1 min-h-0">
@@ -591,7 +567,7 @@ fn VerticalLayout(
                 game_id
                 white_and_black_ids
                 interaction
-                history_state
+                history_board
             />
             <div class="flex flex-col shrink ui-board-reserve">
                 <div class="grid grid-cols-[minmax(0,1fr)_4rem] bg-inherit ui-board-separator-top">
@@ -604,7 +580,7 @@ fn VerticalLayout(
                             color=player_color
                             viewbox_str=MOBILE_RESERVE_VIEWBOX
                             interaction
-                            history_state
+                            history_board
                         />
                     </div>
                     <div class="flex col-start-2 row-span-2 row-start-1 min-h-0">

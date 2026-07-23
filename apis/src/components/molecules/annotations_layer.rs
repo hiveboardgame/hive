@@ -1,13 +1,13 @@
 use crate::{
     common::SvgPos,
     providers::{
-        analysis::AnalysisSignal,
+        analysis::AnalysisContext,
         annotations::{AnnotationTool, AnnotationsSignal, MarkerShape},
         game_state::{GameStateStore, GameStateStoreFields},
         Config,
     },
 };
-use hive_lib::{Position, State};
+use hive_lib::{Board, Position};
 use leptos::prelude::*;
 
 /// Markers/arrows are translucent so the piece below stays visible.
@@ -19,11 +19,11 @@ const SHAPE_OPACITY: &str = "0.8";
 #[component]
 pub fn AnnotationsLayer(
     annotations: AnnotationsSignal,
-    history_state: Memo<State>,
+    history_board: Memo<Board>,
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateStore>();
     let config = expect_context::<Config>().0;
-    let in_analysis = use_context::<AnalysisSignal>().is_some();
+    let in_analysis = use_context::<AnalysisContext>().is_some();
     let board_view = game_state.board_view();
     let state = game_state.state();
     let last_turn = game_state.is_last_turn_as_signal();
@@ -39,7 +39,7 @@ pub fn AnnotationsLayer(
         // Anchor to the top of the stack so marks track the visible piece.
         let center = move |position: Position| {
             let top_level = if show_history {
-                history_state.with(|s| s.board.level(position).saturating_sub(1))
+                history_board.with(|board| board.level(position).saturating_sub(1))
             } else {
                 state.with(|state| state.board.level(position).saturating_sub(1))
             };

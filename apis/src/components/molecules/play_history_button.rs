@@ -22,8 +22,7 @@ pub fn HistoryButton(
     let state = game_state.state();
     let is_disabled = Memo::new(move |_| {
         let board_view = board_view.get();
-        let state_turn = state.with(|state| state.turn);
-        !can_navigate_play_history(&board_view, state_turn, action)
+        state.with(|state| !can_navigate_play_history(board_view, state, action))
     });
     let on_press = Callback::new(move |()| {
         if navigate_play_history(action, game_state) {

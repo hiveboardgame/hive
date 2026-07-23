@@ -11,12 +11,13 @@ use crate::{
         organisms::{chat::GameChatWindow, history::History, reserve::ReserveContent},
     },
     hiveground::HivegroundInteraction,
+    hooks::history_nav::sync_play_move_query,
     providers::{
         chat::Chat,
         game_state::{BoardView, GameStateStore, GameStateStoreFields},
     },
 };
-use hive_lib::{Color, State as HiveState};
+use hive_lib::{Board as HiveBoard, Color};
 use leptos::{prelude::*, reactive::wrappers::write::SignalSetter};
 use leptos_router::{
     hooks::{query_signal_with_options, use_params_map},
@@ -53,21 +54,20 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
     view! {
         <div
             on:click=move |_| {
-                if name == TabView::Chat {
-                    let is_game_view = game_state.board_view().get_untracked() == BoardView::Live;
-                    if is_game_view {
-                        set_move.set(None);
+                match name {
+                    TabView::Chat => {
+                        if game_state.board_view().get_untracked() == BoardView::Live {
+                            sync_play_move_query(game_state, &set_move);
+                        }
                     }
-                }
-                if name == TabView::History {
-                    game_state.view_history();
-                    let history_turn = game_state
-                        .board_view()
-                        .with_untracked(BoardView::history_turn);
-                    set_move.set(history_turn.map(|v| v + 1));
-                } else if name == TabView::Reserve {
-                    game_state.view_game();
-                    set_move.set(None);
+                    TabView::History => {
+                        game_state.view_history();
+                        sync_play_move_query(game_state, &set_move);
+                    }
+                    TabView::Reserve => {
+                        game_state.view_game();
+                        sync_play_move_query(game_state, &set_move);
+                    }
                 }
                 tab.update(|v| *v = name);
             }
@@ -96,7 +96,7 @@ pub fn SideboardTabs(
     player_color: Memo<Color>,
     tab: RwSignal<TabView>,
     interaction: HivegroundInteraction,
-    history_state: Memo<HiveState>,
+    history_board: Memo<HiveBoard>,
 ) -> impl IntoView {
     let game_chat = use_embedded_game_chat_state();
     let show_buttons = Signal::derive(move || game_chat.access.get().can_toggle_embedded_threads());
@@ -111,17 +111,17 @@ pub fn SideboardTabs(
                 </div>
             </div>
             <TabsContent value=TabView::Reserve class="flex flex-col h-full min-h-0" tab>
-                <ReserveContent player_color show_buttons interaction history_state />
+                <ReserveContent player_color show_buttons interaction history_board />
             </TabsContent>
             <TabsContent value=TabView::History class="h-full min-h-0" tab>
-                <History interaction history_state />
+                <History interaction history_board />
             </TabsContent>
             <TabsContent
                 tab
                 value=TabView::Chat
                 class="flex flex-col flex-grow justify-between h-full min-h-0 max-h-full"
             >
-                <HistoryControls interaction history_state />
+                <HistoryControls interaction history_board />
                 <Show when=show_buttons>
                     <GameThreadToggle
                         selected=game_chat.selected_thread

@@ -7,19 +7,18 @@ use super::interaction::{
 use crate::{
     common::{CurrentConfirm, MoveConfirm, PieceType},
     providers::{
-        analysis::AnalysisSignal,
+        analysis::AnalysisContext,
         annotations::AnnotationsSignal,
         config::ConfigOpts,
-        game_state::{GameStateStore, GameStateStoreFields},
+        game_state::{live_move_allowed, GameStateStore, GameStateStoreFields},
         ApiRequestsProvider,
         AuthContext,
         AuthIdentity,
         Config,
     },
 };
-use hive_lib::{Color, GameStatus, Piece, Position};
+use hive_lib::{Color, Piece, Position};
 use leptos::prelude::*;
-use uuid::Uuid;
 
 pub fn live_hiveground_interaction() -> HivegroundInteraction {
     let game_state = expect_context::<GameStateStore>();
@@ -28,13 +27,14 @@ pub fn live_hiveground_interaction() -> HivegroundInteraction {
     let current_confirm = expect_context::<CurrentConfirm>().0;
     let config = expect_context::<Config>().0;
     let identity = auth_context.identity;
+    let user_color = game_state.user_color_as_signal(identity);
     // Annotate mode suppresses piece selection so board taps annotate.
     let annotations = use_context::<AnnotationsSignal>();
     let capabilities = Signal::derive(move || {
         if annotations.is_some_and(|a| a.mode.get()) {
             HivegroundCapabilities::none()
         } else {
-            live_capabilities(game_state, identity, config)
+            live_capabilities(game_state, user_color.get(), config)
         }
     });
     let handler = HivegroundActionHandler {
@@ -50,7 +50,7 @@ pub fn live_hiveground_interaction() -> HivegroundInteraction {
 }
 
 pub fn analysis_hiveground_interaction() -> HivegroundInteraction {
-    let analysis = expect_context::<AnalysisSignal>();
+    let analysis = expect_context::<AnalysisContext>();
     let game_state = expect_context::<GameStateStore>();
     let api = expect_context::<ApiRequestsProvider>();
     let current_confirm = expect_context::<CurrentConfirm>().0;
@@ -79,7 +79,7 @@ pub fn analysis_hiveground_interaction() -> HivegroundInteraction {
 
 struct HivegroundActionHandler {
     game_state: GameStateStore,
-    analysis: Option<AnalysisSignal>,
+    analysis: Option<AnalysisContext>,
     api: ApiRequestsProvider,
     current_confirm: Memo<MoveConfirm>,
     config: Signal<ConfigOpts>,
@@ -167,28 +167,16 @@ impl HivegroundActionHandler {
 
 fn live_capabilities(
     game_state: GameStateStore,
-    identity: Signal<Option<AuthIdentity>>,
+    user_color: Option<Color>,
     config: Signal<ConfigOpts>,
 ) -> HivegroundCapabilities {
-    let user_id = identity.get().and_then(AuthIdentity::user_id);
     let allow_preselect = config.with(|config| config.allow_preselect);
-    let white_id = game_state.white_id().get();
-    let black_id = game_state.black_id().get();
-    let (turn_color, game_status) = game_state
+    let is_player = user_color.is_some();
+    let can_move = game_state
         .state()
-        .with(|state| (state.turn_color, state.game_status.clone()));
-    let is_player = user_is_player(user_id, white_id, black_id);
-    let current_player_id = match turn_color {
-        Color::White => white_id,
-        Color::Black => black_id,
-    };
-    let is_current_player = user_id.is_some() && user_id == current_player_id;
-    let is_finished = matches!(
-        game_status,
-        GameStatus::Finished(_) | GameStatus::Adjudicated
-    );
+        .with(|state| live_move_allowed(user_color, state.turn_color, &state.game_status));
 
-    if is_current_player && !is_finished {
+    if can_move {
         let mut capabilities = HivegroundCapabilities::live_selection();
         capabilities.preselect_piece = false;
         capabilities
@@ -213,9 +201,7 @@ fn preselect_piece(
 ) {
     let allow_preselect = config.with_untracked(|config| config.allow_preselect);
     let user_id = identity.get_untracked().and_then(AuthIdentity::user_id);
-    let white_id = game_state.white_id().get_untracked();
-    let black_id = game_state.black_id().get_untracked();
-    let is_player = user_is_player(user_id, white_id, black_id);
+    let is_player = game_state.user_color_untracked(user_id).is_some();
     let current_turn_color = game_state.state().with_untracked(|state| state.turn_color);
     let is_selectable_piece = allow_preselect
         && match piece_type {
@@ -236,8 +222,4 @@ fn preselect_piece(
             move_info.reserve_position = Some(position);
         }
     });
-}
-
-fn user_is_player(user_id: Option<Uuid>, white_id: Option<Uuid>, black_id: Option<Uuid>) -> bool {
-    user_id.is_some() && (user_id == white_id || user_id == black_id)
 }

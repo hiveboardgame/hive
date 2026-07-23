@@ -16,7 +16,7 @@ pub use build::{
     ReserveRenderOptions,
 };
 pub use config::ReserveLayout;
-pub use history::selected_history_state;
+pub use history::selected_history_board;
 pub use interaction::{HivegroundAction, HivegroundActions, HivegroundInteraction};
 pub use model::{
     ActiveMarkerState,

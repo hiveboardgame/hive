@@ -230,7 +230,7 @@ mod preview {
         #[test]
         fn renders_png_for_a_real_game() {
             let pgn = include_str!("../../../engine/test_pgns/valid/p_game.pgn");
-            let history = History::from_pgn_str(pgn.to_string()).expect("parse test pgn");
+            let history = History::from_pgn_str(pgn).expect("parse test pgn");
             let state = State::new_from_history(&history).expect("valid state");
             let png = board_to_png(&state.board, &PreviewOpts::default()).expect("render png");
             assert!(png.len() > 8 && &png[1..4] == b"PNG", "valid PNG header");

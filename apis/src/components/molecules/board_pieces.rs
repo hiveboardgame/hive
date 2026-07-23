@@ -18,7 +18,9 @@ pub fn BoardPieces(
     let state = game_state.state();
     let paint = Memo::new(move |_| tile_opts.with(HivegroundPaint::new));
     let model = Memo::new(move |_| {
-        state.with(|state| move_info.with(|move_info| build_board_render_model(state, move_info)))
+        state.with(|state| {
+            move_info.with(|move_info| build_board_render_model(&state.board, move_info))
+        })
     });
 
     view! { <HivegroundStacks model paint interaction /> }

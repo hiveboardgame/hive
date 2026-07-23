@@ -1,5 +1,5 @@
 use crate::providers::{
-    analysis::AnalysisSignal,
+    analysis::AnalysisContext,
     game_state::{BoardView, GameStateStore, GameStateStoreFields},
 };
 use hive_lib::Position;
@@ -186,11 +186,11 @@ pub enum AnnotationTool {
     Marker(MarkerShape),
 }
 
-/// Where annotations live: analysis in the `AnalysisTree` (so they save/load),
+/// Where annotations live: analysis in the canonical document (so they save/load),
 /// play in-memory keyed by the viewed turn (private, local-only).
 #[derive(Clone, Copy)]
 enum AnnotationBackend {
-    Analysis(AnalysisSignal),
+    Analysis(AnalysisContext),
     Play {
         game_state: GameStateStore,
         store: RwSignal<HashMap<(Option<GameId>, usize), AnnotationSet>>,
@@ -200,12 +200,7 @@ enum AnnotationBackend {
 impl AnnotationBackend {
     fn read_current(&self) -> AnnotationSet {
         match self {
-            AnnotationBackend::Analysis(analysis) => analysis.tree.with(|tree| {
-                tree.annotations
-                    .get(&tree.current_annotation_key())
-                    .cloned()
-                    .unwrap_or_default()
-            }),
+            AnnotationBackend::Analysis(analysis) => analysis.store.current_annotation(),
             AnnotationBackend::Play { game_state, store } => {
                 let key = play_key(*game_state);
                 store.with(|map| map.get(&key).cloned().unwrap_or_default())
@@ -215,14 +210,9 @@ impl AnnotationBackend {
 
     fn update_current(&self, mutate: impl FnOnce(&mut AnnotationSet)) {
         match self {
-            AnnotationBackend::Analysis(analysis) => analysis.tree.update(|tree| {
-                let key = tree.current_annotation_key();
-                let mut set = tree.annotations.remove(&key).unwrap_or_default();
-                mutate(&mut set);
-                if !set.is_empty() {
-                    tree.annotations.insert(key, set);
-                }
-            }),
+            AnnotationBackend::Analysis(analysis) => {
+                analysis.store.update_current_annotation(mutate)
+            }
             AnnotationBackend::Play { game_state, store } => {
                 let key = play_key(*game_state);
                 store.update(|map| {
@@ -278,7 +268,7 @@ impl AnnotationsSignal {
         }
     }
 
-    pub fn analysis(analysis: AnalysisSignal) -> Self {
+    pub fn analysis(analysis: AnalysisContext) -> Self {
         Self::new(AnnotationBackend::Analysis(analysis))
     }
 
