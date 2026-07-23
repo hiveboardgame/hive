@@ -139,10 +139,10 @@ fn occupied_board_stacks(board: &Board) -> impl Iterator<Item = (Position, &BugS
         .map(move |position| (position, board.board.get(position)))
 }
 
-pub fn build_board_render_model(state: &State, move_info: &MoveInfo) -> HivegroundRenderModel {
+pub fn build_board_render_model(board: &Board, move_info: &MoveInfo) -> HivegroundRenderModel {
     let config = HivegroundConfig {
-        stacks: board_display_stacks(&state.board),
-        overlays: board_overlay_set(state, move_info),
+        stacks: board_display_stacks(board),
+        overlays: board_overlay_set(board, move_info),
     };
     build_hiveground_render_model(&config)
 }
@@ -197,7 +197,7 @@ fn build_hiveground_render_model(config: &HivegroundConfig) -> HivegroundRenderM
     }
 }
 
-fn board_overlay_set(state: &State, move_info: &MoveInfo) -> OverlaySet {
+fn board_overlay_set(board: &Board, move_info: &MoveInfo) -> OverlaySet {
     let active_piece = move_info.active.map(|(piece, _)| piece);
     let preview_source = preview_source(move_info);
     let has_active_preview = active_piece.is_some() && preview_source.is_some();
@@ -226,8 +226,8 @@ fn board_overlay_set(state: &State, move_info: &MoveInfo) -> OverlaySet {
 
     OverlaySet {
         last_move: (!has_active_preview).then_some(LastMoveOverlay {
-            from: state.board.last_move.0,
-            to: state.board.last_move.1,
+            from: board.last_move.0,
+            to: board.last_move.1,
         }),
         active_marker,
         target_positions,
@@ -687,7 +687,7 @@ mod tests {
         let position = Position::new(3, 2);
         let state = state_with_stacks(vec![(position, vec!["wQ"])]);
 
-        let model = build_board_render_model(&state, &MoveInfo::new());
+        let model = build_board_render_model(&state.board, &MoveInfo::new());
 
         assert_eq!(model.stacks.len(), 1);
         assert_eq!(
@@ -701,7 +701,7 @@ mod tests {
         let position = Position::new(3, 2);
         let state = state_with_stacks(vec![(position, vec!["wQ", "bB1"])]);
 
-        let model = build_board_render_model(&state, &MoveInfo::new());
+        let model = build_board_render_model(&state.board, &MoveInfo::new());
 
         assert_eq!(
             layer_summary(stack_at(&model, position)),
@@ -731,7 +731,7 @@ mod tests {
         let mut state = state_with_stacks(vec![(position, vec!["wQ", "bB1"])]);
         state.board.last_move = (Some(from), Some(position));
 
-        let model = build_board_render_model(&state, &MoveInfo::new());
+        let model = build_board_render_model(&state.board, &MoveInfo::new());
 
         assert_eq!(
             layer_summary(stack_at(&model, position)),
@@ -753,7 +753,7 @@ mod tests {
         let mut state = state_with_stacks(vec![(to, vec!["wQ"])]);
         state.board.last_move = (Some(from), Some(to));
 
-        let model = build_board_render_model(&state, &MoveInfo::new());
+        let model = build_board_render_model(&state.board, &MoveInfo::new());
 
         assert_eq!(layer_summary(stack_at(&model, from)), vec!["last:From:0"]);
     }
@@ -769,7 +769,7 @@ mod tests {
         move_info.current_position = Some(origin);
         move_info.target_positions = vec![empty, occupied];
 
-        let model = build_board_render_model(&state, &move_info);
+        let model = build_board_render_model(&state.board, &move_info);
 
         assert_eq!(layer_summary(stack_at(&model, empty)), vec!["target:0"]);
         assert_eq!(
@@ -787,7 +787,7 @@ mod tests {
         move_info.active = Some((piece("bB1"), PieceType::Board));
         move_info.current_position = Some(origin);
 
-        let model = build_board_render_model(&state, &move_info);
+        let model = build_board_render_model(&state.board, &move_info);
 
         assert_eq!(
             layer_summary(stack_at(&model, origin)),
@@ -809,7 +809,7 @@ mod tests {
         let mut move_info = MoveInfo::new();
         move_info.current_position = Some(origin);
 
-        let model = build_board_render_model(&state, &move_info);
+        let model = build_board_render_model(&state.board, &move_info);
 
         assert_eq!(
             layer_summary(stack_at(&model, origin)),
@@ -833,7 +833,7 @@ mod tests {
         move_info.target_position = Some(target);
         move_info.target_positions = vec![target];
 
-        let model = build_board_render_model(&state, &move_info);
+        let model = build_board_render_model(&state.board, &move_info);
 
         assert_eq!(
             layer_summary(stack_at(&model, origin)),
@@ -857,7 +857,7 @@ mod tests {
         move_info.target_position = Some(target);
         move_info.target_positions = vec![target];
 
-        let model = build_board_render_model(&state, &move_info);
+        let model = build_board_render_model(&state.board, &move_info);
 
         assert_eq!(
             layer_summary(stack_at(&model, target)),
@@ -881,7 +881,7 @@ mod tests {
         move_info.target_position = Some(target);
         move_info.target_positions = vec![target];
 
-        let model = build_board_render_model(&state, &move_info);
+        let model = build_board_render_model(&state.board, &move_info);
 
         assert_eq!(
             layer_summary(stack_at(&model, target)),
@@ -899,7 +899,7 @@ mod tests {
         move_info.current_position = Some(occupied);
         move_info.target_positions = vec![target];
 
-        let model = build_board_render_model(&state, &move_info);
+        let model = build_board_render_model(&state.board, &move_info);
 
         assert_eq!(model.bounds.min_q, occupied.q);
         assert_eq!(model.bounds.max_q, target.q);
@@ -925,7 +925,7 @@ mod tests {
         move_info.current_position = Some(occupied);
         move_info.target_positions = vec![target, target, occupied];
 
-        let positions = build_board_render_model(&state, &move_info)
+        let positions = build_board_render_model(&state.board, &move_info)
             .stacks
             .into_iter()
             .map(|stack| stack.position)

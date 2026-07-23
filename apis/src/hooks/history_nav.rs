@@ -1,20 +1,21 @@
 use crate::providers::{
-    analysis::{AnalysisSignal, AnalysisTree},
+    analysis::{AnalysisContext, AnalysisStore, NodeId},
     game_state::{BoardView, GameStateStore, GameStateStoreFields},
 };
+use hive_lib::State;
 use leptos::{ev::keydown, prelude::*, reactive::wrappers::write::SignalSetter};
 use leptos_use::{use_event_listener, use_window};
 use wasm_bindgen::JsCast;
 use web_sys::{Element, KeyboardEvent};
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AnalysisHistoryNavigation {
     First,
     Next,
     Previous,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PlayHistoryNavigation {
     First,
     Last,
@@ -23,7 +24,7 @@ pub enum PlayHistoryNavigation {
 }
 
 impl AnalysisHistoryNavigation {
-    fn target_node_id(self, analysis: &AnalysisTree) -> Option<i32> {
+    fn target_node_id(self, analysis: AnalysisStore) -> Option<NodeId> {
         match self {
             Self::First => analysis.first_history_target_node_id(),
             Self::Next => analysis.next_history_target_node_id(),
@@ -33,7 +34,7 @@ impl AnalysisHistoryNavigation {
 }
 
 pub(crate) fn can_navigate_analysis_history(
-    analysis: &AnalysisTree,
+    analysis: AnalysisStore,
     action: AnalysisHistoryNavigation,
 ) -> bool {
     action.target_node_id(analysis).is_some()
@@ -41,24 +42,20 @@ pub(crate) fn can_navigate_analysis_history(
 
 pub(crate) fn navigate_analysis_history(
     action: AnalysisHistoryNavigation,
-    analysis: RwSignal<AnalysisTree>,
+    analysis: AnalysisStore,
     game_state: GameStateStore,
 ) -> bool {
-    let updated_node_id = analysis.with_untracked(|analysis| action.target_node_id(analysis));
+    let updated_node_id = action.target_node_id(analysis);
     let Some(updated_node_id) = updated_node_id else {
         return false;
     };
 
-    analysis.update(|analysis| {
-        analysis.update_node(updated_node_id, Some(game_state));
-    });
-    true
+    analysis.select_node(updated_node_id, game_state)
 }
 
 pub(crate) fn use_analysis_history_keyboard_navigation(
-    active_analysis: impl Fn() -> Option<AnalysisSignal> + 'static,
-    scroll_on_navigate: impl Fn() -> bool + 'static,
-    before_navigate: impl Fn(AnalysisSignal) + 'static,
+    active_analysis: impl Fn() -> Option<AnalysisContext> + 'static,
+    before_navigate: impl Fn(AnalysisContext) + 'static,
 ) {
     let game_state = expect_context::<GameStateStore>();
     use_history_arrow_keyboard_navigation(
@@ -68,17 +65,11 @@ pub(crate) fn use_analysis_history_keyboard_navigation(
             let Some(analysis) = active_analysis() else {
                 return;
             };
-            if !analysis
-                .tree
-                .with_untracked(|analysis| can_navigate_analysis_history(analysis, action))
-            {
+            let Some(target) = action.target_node_id(analysis.store) else {
                 return;
-            }
+            };
             before_navigate(analysis);
-            if navigate_analysis_history(action, analysis.tree, game_state) && scroll_on_navigate()
-            {
-                scroll_move_into_view();
-            }
+            analysis.store.select_node(target, game_state);
         },
     );
 }
@@ -96,60 +87,82 @@ pub(crate) fn sync_play_move_query(
 }
 
 pub(crate) fn can_navigate_play_history(
-    view: &BoardView,
-    state_turn: usize,
+    view: BoardView,
+    state: &State,
     action: PlayHistoryNavigation,
 ) -> bool {
-    let history_turn = match view {
-        BoardView::Live => state_turn.checked_sub(1),
-        BoardView::History { turn } => *turn,
-    };
-    let is_last_turn = view.is_last_turn(state_turn);
-    let is_first_history_turn = history_turn.is_none() || history_turn == Some(0);
+    play_history_target(view, state, action).is_some()
+}
 
-    match action {
-        PlayHistoryNavigation::Last => !is_last_turn,
-        PlayHistoryNavigation::Next => view.is_history() && !is_last_turn,
-        PlayHistoryNavigation::First => !is_first_history_turn,
-        PlayHistoryNavigation::Previous => {
-            if matches!(view, BoardView::Live) {
-                state_turn > 0
-            } else {
-                !is_first_history_turn
+pub(crate) fn play_history_target(
+    view: BoardView,
+    state: &State,
+    action: PlayHistoryNavigation,
+) -> Option<BoardView> {
+    let displayed_turn = view.displayed_turn(state.turn);
+    let turn = match action {
+        PlayHistoryNavigation::First => {
+            if displayed_turn.is_none() || displayed_turn == Some(0) {
+                return None;
             }
+            Some(0)
         }
+        PlayHistoryNavigation::Last => {
+            if view.is_last_turn(state.turn) {
+                return None;
+            }
+            state.turn.checked_sub(1)
+        }
+        PlayHistoryNavigation::Next => {
+            if !view.is_history() || view.is_last_turn(state.turn) {
+                return None;
+            }
+            let last = state.turn.checked_sub(1)?;
+            let mut next = displayed_turn.map_or(0, |turn| turn.saturating_add(1).min(last));
+            if state.history.move_is_pass(next) {
+                next = next.saturating_add(1).min(last);
+            }
+            Some(next)
+        }
+        PlayHistoryNavigation::Previous => match view {
+            BoardView::Live => {
+                let last = state.turn.checked_sub(1)?;
+                if last == 0 {
+                    Some(0)
+                } else {
+                    previous_turn(state, last)
+                }
+            }
+            BoardView::History { turn } => {
+                if turn.is_none() || turn == Some(0) {
+                    return None;
+                }
+                previous_turn(state, turn?)
+            }
+        },
+    };
+    Some(BoardView::History { turn })
+}
+
+fn previous_turn(state: &State, current: usize) -> Option<usize> {
+    let mut previous = current.checked_sub(1);
+    if previous.is_some_and(|turn| state.history.move_is_pass(turn)) {
+        previous = previous.and_then(|turn| turn.checked_sub(1));
     }
+    previous
 }
 
 pub(crate) fn navigate_play_history(
     action: PlayHistoryNavigation,
     game_state: GameStateStore,
 ) -> bool {
-    let can_navigate = game_state.with_untracked(|game_state| {
-        can_navigate_play_history(&game_state.board_view, game_state.state.turn, action)
+    let target = game_state.with_untracked(|game_state| {
+        play_history_target(game_state.board_view, &game_state.state, action)
     });
-    if !can_navigate {
+    let Some(target) = target else {
         return false;
-    }
-
-    match action {
-        PlayHistoryNavigation::First => game_state.first_history_turn(),
-        PlayHistoryNavigation::Last => game_state.last_history_turn(),
-        PlayHistoryNavigation::Next => game_state.next_history_turn(),
-        PlayHistoryNavigation::Previous => {
-            if matches!(game_state.board_view().get_untracked(), BoardView::Live) {
-                game_state.last_history_turn();
-            }
-
-            if matches!(
-                game_state.board_view().get_untracked(),
-                BoardView::History { turn: Some(turn) } if turn > 0
-            ) {
-                game_state.previous_history_turn();
-            }
-        }
-    }
-
+    };
+    game_state.board_view().set(target);
     true
 }
 
@@ -239,34 +252,114 @@ fn key_event_target_uses_arrows(evt: &KeyboardEvent) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hive_lib::{History, State};
-    use leptos::prelude::Owner;
+    use hive_lib::History;
 
     #[test]
-    fn previous_from_live_enters_history_before_the_live_edge() {
-        let owner = Owner::new();
-        owner.with(|| {
-            let source_history = History::from_pgn_str(
-                include_str!("../../../engine/test_pgns/valid/p_game.pgn").to_string(),
-            )
-            .expect("valid history");
-            let mut history = History::new();
-            history.game_type = source_history.game_type;
-            history.moves = source_history.moves[..5].to_vec();
+    fn play_history_targets_cover_live_and_history_edges() {
+        let source_history =
+            History::from_pgn_str(include_str!("../../../engine/test_pgns/valid/p_game.pgn"))
+                .expect("valid history");
+        let mut history = History::new();
+        history.game_type = source_history.game_type;
+        history.moves = source_history.moves[..5].to_vec();
+        let state = State::new_from_history(&history).expect("valid state");
 
-            let game_state = GameStateStore::new();
-            game_state.reset_with_state(
-                State::new_from_history(&history).expect("history reconstructs a valid state"),
-            );
-
-            assert!(navigate_play_history(
+        let cases = [
+            (
+                BoardView::Live,
+                PlayHistoryNavigation::First,
+                Some(BoardView::History { turn: Some(0) }),
+            ),
+            (BoardView::Live, PlayHistoryNavigation::Last, None),
+            (
+                BoardView::Live,
                 PlayHistoryNavigation::Previous,
-                game_state,
-            ));
+                Some(BoardView::History { turn: Some(3) }),
+            ),
+            (
+                BoardView::History { turn: None },
+                PlayHistoryNavigation::First,
+                None,
+            ),
+            (
+                BoardView::History { turn: None },
+                PlayHistoryNavigation::Next,
+                Some(BoardView::History { turn: Some(0) }),
+            ),
+            (
+                BoardView::History { turn: Some(0) },
+                PlayHistoryNavigation::Previous,
+                None,
+            ),
+            (
+                BoardView::History { turn: Some(2) },
+                PlayHistoryNavigation::First,
+                Some(BoardView::History { turn: Some(0) }),
+            ),
+            (
+                BoardView::History { turn: Some(2) },
+                PlayHistoryNavigation::Last,
+                Some(BoardView::History { turn: Some(4) }),
+            ),
+        ];
+        for (view, action, expected) in cases {
             assert_eq!(
-                game_state.board_view().get_untracked(),
-                BoardView::History { turn: Some(3) },
+                play_history_target(view, &state, action),
+                expected,
+                "unexpected target for {action:?} from {view:?}",
             );
-        });
+        }
+
+        let mut one_move = History::new();
+        one_move.game_type = source_history.game_type;
+        one_move.moves = source_history.moves[..1].to_vec();
+        let one_move = State::new_from_history(&one_move).expect("valid one-move state");
+        assert_eq!(
+            play_history_target(BoardView::Live, &one_move, PlayHistoryNavigation::Previous,),
+            Some(BoardView::History { turn: Some(0) }),
+        );
+    }
+
+    #[test]
+    fn play_history_targets_skip_passes() {
+        let history =
+            History::from_pgn_str(include_str!("../../../engine/test_pgns/valid/pass2.pgn"))
+                .expect("valid pass history");
+        let pass_turn = history
+            .moves
+            .iter()
+            .position(|(piece, _)| piece == "pass")
+            .expect("fixture contains a pass");
+        let turn_before_pass = pass_turn.checked_sub(1).expect("pass follows a move");
+        let turn_after_pass = pass_turn
+            .checked_add(1)
+            .filter(|turn| *turn < history.moves.len())
+            .expect("pass precedes a move");
+        let state = State::new_from_history(&history).expect("valid pass state");
+
+        assert_eq!(
+            play_history_target(
+                BoardView::History {
+                    turn: Some(turn_before_pass),
+                },
+                &state,
+                PlayHistoryNavigation::Next,
+            ),
+            Some(BoardView::History {
+                turn: Some(turn_after_pass),
+            }),
+        );
+        assert_eq!(
+            play_history_target(
+                BoardView::History {
+                    turn: Some(turn_after_pass),
+                },
+                &state,
+                PlayHistoryNavigation::Previous,
+            ),
+            Some(BoardView::History {
+                turn: Some(turn_before_pass),
+            }),
+        );
     }
 }

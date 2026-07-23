@@ -16,7 +16,7 @@ use crate::{
         game_state::{BoardView, GameStateStore, GameStateStoreFields},
     },
 };
-use hive_lib::{Color, State as HiveState};
+use hive_lib::{Board as HiveBoard, Color};
 use leptos::{prelude::*, reactive::wrappers::write::SignalSetter};
 use leptos_router::{
     hooks::{query_signal_with_options, use_params_map},
@@ -61,9 +61,10 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
                 }
                 if name == TabView::History {
                     game_state.view_history();
+                    let state_turn = game_state.state().with_untracked(|state| state.turn);
                     let history_turn = game_state
                         .board_view()
-                        .with_untracked(BoardView::history_turn);
+                        .with_untracked(|view| view.displayed_turn(state_turn));
                     set_move.set(history_turn.map(|v| v + 1));
                 } else if name == TabView::Reserve {
                     game_state.view_game();
@@ -96,7 +97,7 @@ pub fn SideboardTabs(
     player_color: Memo<Color>,
     tab: RwSignal<TabView>,
     interaction: HivegroundInteraction,
-    history_state: Memo<HiveState>,
+    history_board: Memo<HiveBoard>,
 ) -> impl IntoView {
     let game_chat = use_embedded_game_chat_state();
     let show_buttons = Signal::derive(move || game_chat.access.get().can_toggle_embedded_threads());
@@ -111,17 +112,17 @@ pub fn SideboardTabs(
                 </div>
             </div>
             <TabsContent value=TabView::Reserve class="flex flex-col h-full min-h-0" tab>
-                <ReserveContent player_color show_buttons interaction history_state />
+                <ReserveContent player_color show_buttons interaction history_board />
             </TabsContent>
             <TabsContent value=TabView::History class="h-full min-h-0" tab>
-                <History interaction history_state />
+                <History interaction history_board />
             </TabsContent>
             <TabsContent
                 tab
                 value=TabView::Chat
                 class="flex flex-col flex-grow justify-between h-full min-h-0 max-h-full"
             >
-                <HistoryControls interaction history_state />
+                <HistoryControls interaction history_board />
                 <Show when=show_buttons>
                     <GameThreadToggle
                         selected=game_chat.selected_thread

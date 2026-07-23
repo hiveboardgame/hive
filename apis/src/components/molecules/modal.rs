@@ -8,6 +8,7 @@ use leptos_use::on_click_outside;
 pub fn Modal(
     children: Children,
     dialog_el: NodeRef<Dialog>,
+    #[prop(optional, into)] aria_label: Option<String>,
     #[prop(optional, into)] aria_labelledby: Option<String>,
 ) -> impl IntoView {
     let inner = NodeRef::<Div>::new();
@@ -18,7 +19,12 @@ pub fn Modal(
         }
     });
     view! {
-        <dialog node_ref=dialog_el class="ui-modal-panel" aria-labelledby=aria_labelledby>
+        <dialog
+            node_ref=dialog_el
+            class="ui-modal-panel"
+            aria-label=aria_label
+            aria-labelledby=aria_labelledby
+        >
             <div
                 node_ref=inner
                 on:mousedown=|ev| ev.stop_propagation()

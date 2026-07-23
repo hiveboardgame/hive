@@ -3,13 +3,13 @@ use crate::{
     components::atoms::{bug_tile::BugTile, rating::icon_for_speed},
     functions::opening_explorer::opening_explorer,
     providers::{
-        analysis::AnalysisSignal,
+        analysis::{AnalysisContext, NodeId},
         game_state::{GameStateStore, GameStateStoreFields},
         ApiRequestsProvider,
     },
     responses::ExplorerResponse,
 };
-use hive_lib::{GameStatus, GameType, Piece, Position, State};
+use hive_lib::{Color, GameStatus, GameType, Piece, Position, State};
 use leptos::{prelude::*, reactive::effect::batch};
 use leptos_icons::*;
 use shared_types::{
@@ -78,30 +78,25 @@ struct RowHandlers {
 
 #[derive(Clone)]
 pub struct AnalysisPreviewSnapshot {
-    node_id: Option<i32>,
+    node_id: NodeId,
     state: State,
 }
 
 pub fn reset_analysis_preview(
     preview_snapshot: RwSignal<Option<AnalysisPreviewSnapshot>>,
-    analysis: AnalysisSignal,
+    analysis: AnalysisContext,
     game_state: GameStateStore,
 ) {
-    let Some(snapshot) = preview_snapshot.get_untracked() else {
+    let Some(snapshot) = preview_snapshot.try_update(Option::take).flatten() else {
         return;
     };
 
-    if analysis
-        .tree
-        .with_untracked(|analysis| analysis.current_node_id())
-        == snapshot.node_id
-    {
+    if analysis.store.selected_node_id_untracked() == snapshot.node_id {
         batch(|| {
             game_state.state().set(snapshot.state);
             game_state.move_info().update(|move_info| move_info.reset());
         });
     }
-    preview_snapshot.set(None);
 }
 
 /// White/draw/black result bar for an aggregated position.
@@ -135,19 +130,25 @@ fn ResultBar(white: i64, draws: i64, black: i64, total: i64) -> impl IntoView {
 pub fn OpeningExplorer(
     preview_snapshot: RwSignal<Option<AnalysisPreviewSnapshot>>,
 ) -> impl IntoView {
-    let analysis = expect_context::<AnalysisSignal>();
+    let analysis = expect_context::<AnalysisContext>();
     let game_state = expect_context::<GameStateStore>();
     let api = expect_context::<ApiRequestsProvider>().0;
 
-    let game_type = analysis.tree.with_untracked(|a| a.game_type);
+    let game_type = analysis.store.game_type_untracked();
     let filters = RwSignal::new(ExplorerFilters::new(game_type));
 
-    // Current position hash from the analysis tree (0 = empty-board start node).
-    let current_hash = Signal::derive(move || analysis.tree.with(|a| a.current_hash()));
+    let selected_hash = Signal::derive(move || analysis.store.selected_hash());
+    let local_position = Memo::new(move |_| {
+        // Filter changes can reuse this map; only a real analysis selection should rebuild it.
+        let _selected_node = analysis.store.selected_node_id();
+        game_state
+            .state()
+            .with_untracked(|state| (local_moves(state), state.turn_color == Color::White))
+    });
 
     let resource = Resource::new(
-        move || (current_hash.get(), filters.get()),
-        |(hash, filters)| async move { opening_explorer(hash as i64, filters).await },
+        move || (selected_hash.get(), filters.get()),
+        |(hash, filters)| async move { opening_explorer(hash.unwrap_or(0) as i64, filters).await },
     );
 
     let reset_preview = Callback::new(move |_: ()| {
@@ -160,9 +161,7 @@ pub fn OpeningExplorer(
             Some(snapshot) => snapshot.state,
             None => {
                 let snap = AnalysisPreviewSnapshot {
-                    node_id: analysis
-                        .tree
-                        .with_untracked(|analysis| analysis.current_node_id()),
+                    node_id: analysis.store.selected_node_id_untracked(),
                     state: game_state.state().get_untracked(),
                 };
                 preview_snapshot.set(Some(snap.clone()));
@@ -192,10 +191,7 @@ pub fn OpeningExplorer(
     // The archive URL for the current position ("Search this position"), or None at the empty
     // board. Recomputed when the position/filters change (the suggestions closure reruns then).
     let search_href = move || {
-        let hash = current_hash.get_untracked();
-        if hash == 0 {
-            return None;
-        }
+        let hash: u64 = selected_hash.get_untracked()?;
         let expansions = match filters.with_untracked(|f| f.game_type) {
             GameType::Base => Some(false),
             GameType::MLP => Some(true),
@@ -213,18 +209,15 @@ pub fn OpeningExplorer(
     let suggestions = move || {
         resource.get().map(|result| match result {
             Err(_) => view! { <div class="p-2">"Failed to load opening data."</div> }.into_any(),
-            Ok(response) => {
-                let (local, white_to_move) = game_state
-                    .state()
-                    .with_untracked(|state| (local_moves(state), state.turn % 2 == 0));
+            Ok(response) => local_position.with(|(local, white_to_move)| {
                 let handlers = RowHandlers {
                     play: play_move,
                     preview: preview_move,
                     reset: reset_preview,
-                    white_to_move,
+                    white_to_move: *white_to_move,
                 };
-                render_response(response, handlers, &local, search_href()).into_any()
-            }
+                render_response(response, handlers, local, search_href()).into_any()
+            }),
         })
     };
 

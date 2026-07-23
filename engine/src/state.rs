@@ -98,7 +98,11 @@ impl State {
     }
 
     pub fn new_from_history(history: &History) -> Result<Self, GameError> {
-        State::play_and_print(history, None, None)
+        Self::replay_history(history).map_err(|(_, error)| error)
+    }
+
+    pub(crate) fn replay_history(history: &History) -> Result<Self, (usize, GameError)> {
+        Self::play_and_print(history, None, None)
     }
 
     #[cfg(feature = "cli")]
@@ -107,43 +111,42 @@ impl State {
         turn: usize,
         file: PathBuf,
     ) -> Result<Self, GameError> {
-        State::play_and_print(history, Some(turn), Some(file))
+        Self::play_and_print(history, Some(turn), Some(file)).map_err(|(_, error)| error)
     }
 
     fn play_and_print(
         history: &History,
         turn: Option<usize>,
         _file: Option<PathBuf>,
-    ) -> Result<Self, GameError> {
-        let mut tournament = true;
-        // Did white open with a Queen?
-        if let Some((piece_str, _)) = history.moves.first() {
-            let piece: Piece = piece_str.parse()?;
-            if piece.bug() == Bug::Queen {
-                tournament = false;
-            }
-        }
-        // Did black open with a Queen?
-        if let Some((piece_str, _)) = history.moves.get(1) {
-            let piece: Piece = piece_str.parse()?;
-            if piece.bug() == Bug::Queen {
-                tournament = false;
-            }
-        }
+    ) -> Result<Self, (usize, GameError)> {
+        let tournament = !history
+            .moves
+            .iter()
+            .take(2)
+            .filter_map(|(piece, _)| piece.parse::<Piece>().ok())
+            .any(|piece| piece.bug() == Bug::Queen);
         let mut state = State::new(history.game_type, tournament);
         for (current_turn, (piece, pos)) in history.moves.iter().enumerate() {
-            state.play_turn_from_history(piece, pos)?;
+            state
+                .play_turn_from_history(piece, pos)
+                .map_err(|error| (current_turn, error))?;
             if turn != Some(0) && Some(current_turn + 1) == turn {
                 #[cfg(feature = "cli")]
                 if let Some(file) = _file.clone() {
-                    state.board.create_svg(file)?;
+                    state
+                        .board
+                        .create_svg(file)
+                        .map_err(|error| (current_turn, error.into()))?;
                 }
             }
         }
         if turn == Some(0) {
             #[cfg(feature = "cli")]
             if let Some(file) = _file.clone() {
-                state.board.create_svg(file)?;
+                state
+                    .board
+                    .create_svg(file)
+                    .map_err(|error| (0, error.into()))?;
             }
         }
         match history.result {

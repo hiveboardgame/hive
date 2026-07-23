@@ -6,8 +6,7 @@ mod save_and_load;
 mod sidebar;
 mod variation_list;
 
-pub use crate::hooks::history_nav::AnalysisHistoryNavigation as HistoryNavigation;
-pub use atoms::{AnalysisHistoryControls, HistoryButton, UndoButton};
+pub use atoms::AnalysisHistoryControls;
 pub use game_details::GameDetailsPanel;
 pub use history::History;
 pub use opening_explorer::{reset_analysis_preview, AnalysisPreviewSnapshot, OpeningExplorer};
