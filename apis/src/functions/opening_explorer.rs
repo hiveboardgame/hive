@@ -12,7 +12,10 @@ pub async fn opening_explorer(
     hash: i64,
     filters: ExplorerFilters,
 ) -> Result<ExplorerResponse, ServerFnError> {
-    use crate::{functions::db::pool, responses::GameResponse};
+    use crate::{
+        functions::db::pool,
+        responses::{GameResponse, GameResponseDb},
+    };
     use db_lib::{get_conn, models::GameHash};
     use hive_lib::State;
     use shared_types::ExplorerMove;

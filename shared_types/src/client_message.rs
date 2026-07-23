@@ -1,11 +1,12 @@
-use super::{
-    challenge_action::ChallengeAction,
-    game_action::GameAction,
+use crate::{
+    ChallengeAction,
+    ConversationKey,
+    GameAction,
+    GameId,
     ScheduleAction,
     TournamentAction,
 };
 use serde::{Deserialize, Serialize};
-use shared_types::{ConversationKey, GameId};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

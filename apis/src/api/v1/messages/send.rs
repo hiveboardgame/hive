@@ -16,7 +16,7 @@ use crate::{
         Event,
         GameEndReason,
     },
-    responses::{ChallengeResponse, GameResponse},
+    responses::{ChallengeResponse, GameResponse, GameResponseDb},
     websocket::{
         reaction_messages,
         GameFinalize,

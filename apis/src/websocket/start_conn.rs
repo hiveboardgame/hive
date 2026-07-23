@@ -1,10 +1,13 @@
 use std::sync::Arc;
 
-use crate::websocket::{
-    messages::SocketTx,
-    ws_connection::reader_task,
-    ws_hub::{WsHub, SOCKET_BUFFER_CAPACITY},
-    WebsocketData,
+use crate::{
+    api::v1::auth::{bearer::resolve_bearer_user, jwt_secret::JwtSecret},
+    websocket::{
+        messages::SocketTx,
+        ws_connection::reader_task,
+        ws_hub::{WsHub, SOCKET_BUFFER_CAPACITY},
+        WebsocketData,
+    },
 };
 use actix_identity::Identity;
 use actix_web::{
@@ -28,8 +31,12 @@ pub async fn start_connection(
     pool: Data<DbPool>,
     identity: Option<Identity>,
     data: Data<WebsocketData>,
+    jwt_secret: Data<JwtSecret>,
 ) -> Result<HttpResponse, Error> {
-    let user = resolve_identity(identity, &pool).await;
+    let user = match resolve_bearer_identity(&req, &pool, &jwt_secret).await {
+        Some(user) => user,
+        None => resolve_identity(identity, &pool).await,
+    };
 
     let ws_result = actix_ws::handle(&req, body);
     if ws_result.is_err() {
@@ -70,6 +77,24 @@ pub async fn start_connection(
     ));
 
     Ok(response)
+}
+
+/// Bearer-token auth for native clients that can't hold a browser session
+/// cookie. Checked before the cookie-session path; falls through to it
+/// (eventually anonymous) on any failure rather than erroring the handshake.
+async fn resolve_bearer_identity(
+    req: &HttpRequest,
+    pool: &DbPool,
+    jwt_secret: &JwtSecret,
+) -> Option<SimpleUser> {
+    let user = resolve_bearer_user(req, pool, jwt_secret).await?;
+    log::debug!("WS connect: user {} authed via bearer token", user.username);
+    Some(SimpleUser {
+        user_id: user.id,
+        username: user.username,
+        admin: user.admin,
+        authed: true,
+    })
 }
 
 async fn resolve_identity(identity: Option<Identity>, pool: &DbPool) -> SimpleUser {

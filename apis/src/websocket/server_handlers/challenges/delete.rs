@@ -1,6 +1,6 @@
 use crate::{
     common::{ChallengeUpdate, ServerMessage},
-    responses::ChallengeResponse,
+    responses::{ChallengeResponse, ChallengeResponseDb},
     websocket::messages::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;

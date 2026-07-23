@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_user_by_uuid(uuid: Uuid) -> Result<UserResponse, ServerFnError> {
-    use crate::functions::db::pool;
+    use crate::{functions::db::pool, responses::UserResponseDb};
     use db_lib::get_conn;
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
@@ -29,7 +29,10 @@ pub async fn get_top_users(
     game_speed: GameSpeed,
     limit: i64,
 ) -> Result<Vec<(usize, UserResponse)>, ServerFnError> {
-    use crate::functions::{auth::identity::uuid, db::pool};
+    use crate::{
+        functions::{auth::identity::uuid, db::pool},
+        responses::UserResponseDb,
+    };
     use db_lib::{
         get_conn,
         models::{Rating, User},
@@ -53,7 +56,7 @@ pub async fn get_top_users(
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_profile(username: String) -> Result<UserResponse, ServerFnError> {
-    use crate::functions::db::pool;
+    use crate::{functions::db::pool, responses::UserResponseDb};
     use db_lib::get_conn;
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
@@ -64,7 +67,7 @@ pub async fn get_profile(username: String) -> Result<UserResponse, ServerFnError
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn search_users(pattern: String) -> Result<Vec<UserResponse>, ServerFnError> {
-    use crate::functions::db::pool;
+    use crate::{functions::db::pool, responses::UserResponseDb};
     use db_lib::get_conn;
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;

@@ -1,6 +1,6 @@
 use crate::{
     hiveground::{board_to_png, PreviewOpts},
-    responses::GameResponse,
+    responses::{GameResponse, GameResponseDb},
 };
 use actix_web::{
     get,

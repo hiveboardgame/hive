@@ -14,7 +14,7 @@ use super::{
 use crate::{
     common::{GameUpdate, ServerMessage, ServerResult, UserStatus, UserUpdate},
     notifications::{notify_game_ended, GameEndReason},
-    responses::{HeartbeatResponse, UserResponse},
+    responses::{HeartbeatResponse, UserResponse, UserResponseDb},
 };
 use bytes::Bytes;
 use chrono::Utc;

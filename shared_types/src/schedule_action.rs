@@ -1,6 +1,6 @@
+use crate::{GameId, TournamentId};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use shared_types::{GameId, TournamentId};
 use std::fmt;
 use uuid::Uuid;
 

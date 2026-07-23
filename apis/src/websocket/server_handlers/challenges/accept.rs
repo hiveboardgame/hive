@@ -1,7 +1,7 @@
 use crate::{
     common::{ChallengeUpdate, GameActionResponse, GameReaction, GameUpdate, ServerMessage},
     notifications::{notify, time_control_label, Event},
-    responses::GameResponse,
+    responses::{GameResponse, GameResponseDb},
     websocket::messages::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;

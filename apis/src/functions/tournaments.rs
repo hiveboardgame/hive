@@ -8,7 +8,7 @@ use std::collections::HashSet;
 pub async fn get_all_abstract(
     sort_order: TournamentSortOrder,
 ) -> Result<Vec<TournamentAbstractResponse>, ServerFnError> {
-    use crate::functions::db::pool;
+    use crate::{functions::db::pool, responses::TournamentAbstractResponseDb};
     use db_lib::{get_conn, models::Tournament};
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
@@ -45,7 +45,7 @@ pub async fn get_by_status(
     status: TournamentStatus,
     sort_order: TournamentSortOrder,
 ) -> Result<Vec<TournamentAbstractResponse>, ServerFnError> {
-    use crate::functions::db::pool;
+    use crate::{functions::db::pool, responses::TournamentAbstractResponseDb};
     use db_lib::{get_conn, models::Tournament};
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
@@ -65,7 +65,7 @@ pub async fn get_by_status(
 pub async fn get_abstracts_by_ids(
     tournament_ids: HashSet<TournamentId>,
 ) -> Result<Vec<TournamentAbstractResponse>, ServerFnError> {
-    use crate::functions::db::pool;
+    use crate::{functions::db::pool, responses::TournamentAbstractResponseDb};
     use db_lib::{get_conn, models::Tournament};
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
@@ -87,7 +87,10 @@ pub async fn get_abstracts_by_ids(
 pub async fn get_hosting_tournaments(
     sort_order: TournamentSortOrder,
 ) -> Result<Vec<TournamentAbstractResponse>, ServerFnError> {
-    use crate::functions::{auth::identity::uuid, db::pool};
+    use crate::{
+        functions::{auth::identity::uuid, db::pool},
+        responses::TournamentAbstractResponseDb,
+    };
     use db_lib::{get_conn, models::Tournament};
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
@@ -108,7 +111,10 @@ pub async fn get_hosting_tournaments(
 pub async fn get_joined_tournaments(
     sort_order: TournamentSortOrder,
 ) -> Result<Vec<TournamentAbstractResponse>, ServerFnError> {
-    use crate::functions::{auth::identity::uuid, db::pool};
+    use crate::{
+        functions::{auth::identity::uuid, db::pool},
+        responses::TournamentAbstractResponseDb,
+    };
     use db_lib::{get_conn, models::Tournament};
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;

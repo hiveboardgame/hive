@@ -12,6 +12,7 @@ pub struct AccountResponse {
 
 use cfg_if::cfg_if;
 cfg_if! { if #[cfg(feature = "ssr")] {
+use crate::responses::user::UserResponseDb;
 use db_lib::{
     models::User,
     DbConn,

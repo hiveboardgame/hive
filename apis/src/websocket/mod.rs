@@ -21,6 +21,7 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     pub use messages::{reaction_messages, GameFinalize, InternalServerMessage, MessageDestination, Reaction};
 
     use crate::notifications::PendingNotifications;
+    use crate::responses::GameResponseDb;
     use chrono::{DateTime, Utc};
     use dashmap::DashMap;
     use shared_types::GameId;

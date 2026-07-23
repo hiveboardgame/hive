@@ -21,7 +21,10 @@ pub async fn mark_schedule_seen(schedule_id: String) -> Result<(), ServerFnError
 #[server]
 pub async fn get_upcoming_tournament_games(
 ) -> Result<Vec<(DateTime<Utc>, GameResponse)>, ServerFnError> {
-    use crate::{functions::db::pool, responses::GameResponse};
+    use crate::{
+        functions::db::pool,
+        responses::{GameResponse, GameResponseDb},
+    };
     use db_lib::{get_conn, models::Schedule};
 
     let pool = pool().await?;

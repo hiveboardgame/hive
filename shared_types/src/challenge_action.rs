@@ -1,5 +1,5 @@
+use crate::{ChallengeDetails, ChallengeId};
 use serde::{Deserialize, Serialize};
-use shared_types::{ChallengeDetails, ChallengeId};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ChallengeAction {

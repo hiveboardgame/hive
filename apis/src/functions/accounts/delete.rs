@@ -66,7 +66,7 @@ async fn send_soft_delete_updates(
             TournamentUpdate,
         },
         notifications::{game_end_reason_from, notify_game_ended_excluding, GameEndReason},
-        responses::GameResponse,
+        responses::{GameResponse, GameResponseDb},
         websocket::{reaction_messages, GameFinalize, InternalServerMessage, MessageDestination},
     };
     use bytes::Bytes;

@@ -7,7 +7,7 @@ use crate::{
         GameControlKind,
         GameEndReason,
     },
-    responses::GameResponse,
+    responses::{GameResponse, GameResponseDb},
     websocket::{
         messages::{
             GameFinalize,

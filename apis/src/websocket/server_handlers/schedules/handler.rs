@@ -5,7 +5,7 @@ use crate::{
         ServerMessage,
     },
     notifications::{notify, Event},
-    responses::ScheduleResponse,
+    responses::{ScheduleResponse, ScheduleResponseDb},
     websocket::messages::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;

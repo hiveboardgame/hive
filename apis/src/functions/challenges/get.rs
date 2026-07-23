@@ -31,7 +31,7 @@ fn can_read_challenge(challenge: &db_lib::models::Challenge, viewer_id: Option<U
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_challenge_by_uuid(id: Uuid) -> Result<ChallengeResponse, ServerFnError> {
-    use crate::functions::db::pool;
+    use crate::{functions::db::pool, responses::ChallengeResponseDb};
     use db_lib::{get_conn, models::Challenge};
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
@@ -46,7 +46,7 @@ pub async fn get_challenge_by_uuid(id: Uuid) -> Result<ChallengeResponse, Server
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_challenge(challenge_id: ChallengeId) -> Result<ChallengeResponse, ServerFnError> {
-    use crate::functions::db::pool;
+    use crate::{functions::db::pool, responses::ChallengeResponseDb};
     use db_lib::{get_conn, models::Challenge};
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;

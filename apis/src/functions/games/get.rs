@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_game_from_uuid(game_id: Uuid) -> Result<GameResponse, ServerFnError> {
-    use crate::functions::db::pool;
+    use crate::{functions::db::pool, responses::GameResponseDb};
     use db_lib::get_conn;
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
@@ -19,7 +19,7 @@ pub async fn get_game_from_uuid(game_id: Uuid) -> Result<GameResponse, ServerFnE
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_game_from_nanoid(game_id: GameId) -> Result<GameResponse, ServerFnError> {
-    use crate::functions::db::pool;
+    use crate::{functions::db::pool, responses::GameResponseDb};
     use db_lib::get_conn;
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
@@ -32,7 +32,7 @@ pub async fn get_game_from_nanoid(game_id: GameId) -> Result<GameResponse, Serve
 pub async fn get_batch_from_options(
     options: GamesQueryOptions,
 ) -> Result<GameBatchResponse, ServerFnError> {
-    use crate::functions::db::pool;
+    use crate::{functions::db::pool, responses::GameResponseDb};
     use db_lib::get_conn;
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;

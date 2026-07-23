@@ -1,13 +1,18 @@
-use super::{client_message::SubscriptionAttempt, game_reaction::GameReaction};
-use crate::responses::{
+use crate::{
+    ChallengeId,
     ChallengeResponse,
+    ChatMessageContainer,
+    ConversationKey,
+    GameId,
+    GameReaction,
     GameResponse,
     HeartbeatResponse,
     ScheduleResponse,
+    SubscriptionAttempt,
+    TournamentId,
     UserResponse,
 };
 use serde::{Deserialize, Serialize};
-use shared_types::{ChallengeId, ChatMessageContainer, ConversationKey, GameId, TournamentId};
 use std::{collections::HashMap, fmt, time::Duration};
 use uuid::Uuid;
 

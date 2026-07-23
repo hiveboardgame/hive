@@ -7,7 +7,7 @@ use crate::{
         ServerResult,
         TournamentUpdate,
     },
-    responses::GameResponse,
+    responses::{GameResponse, GameResponseDb},
     websocket::{InternalServerMessage, MessageDestination, WsHub},
 };
 use actix_web::web::Data;

@@ -4,7 +4,7 @@ use crate::{
         messages::send::{send_challenge_creation_message, send_challenge_messages},
     },
     notifications::{notify, time_control_label, Event},
-    responses::{ChallengeResponse, GameResponse},
+    responses::{ChallengeResponse, ChallengeResponseDb, GameResponse, GameResponseDb},
     websocket::WsHub,
 };
 use actix_web::{

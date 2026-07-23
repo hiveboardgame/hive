@@ -1,6 +1,15 @@
 use crate::{
     common::{LobbySnapshot, ServerMessage, ServerResult},
-    responses::{ChallengeResponse, GameResponse, ScheduleResponse, UserResponse},
+    responses::{
+        ChallengeResponse,
+        ChallengeResponseDb,
+        GameResponse,
+        GameResponseDb,
+        ScheduleResponse,
+        ScheduleResponseDb,
+        UserResponse,
+        UserResponseDb,
+    },
     websocket::{messages::SocketTx, WsHub},
 };
 use bytes::Bytes;

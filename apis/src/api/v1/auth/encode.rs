@@ -10,18 +10,24 @@ pub struct Bot {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct PersonalTokenRequest {
+    pub email: String,
+    pub password: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
     pub sub: String,
     pub iss: String,
     pub exp: i64,
 }
 
-pub fn jwt_encode(bot: Bot, key: &EncodingKey) -> Result<String> {
+pub fn jwt_encode(email: String, key: &EncodingKey) -> Result<String> {
     let token = encode(
         &Header::default(),
         &Claims {
             iss: String::from("hivegame.com"),
-            sub: bot.email,
+            sub: email,
             exp: (Utc::now() + Duration::minutes(100)).timestamp(),
         },
         key,

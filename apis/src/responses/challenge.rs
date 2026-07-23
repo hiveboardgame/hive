@@ -1,98 +1,94 @@
-use crate::{common::ChallengeAction, responses::user::UserResponse};
-use chrono::prelude::*;
 use hive_lib::{ColorChoice, GameType};
-use serde::{Deserialize, Serialize};
-use shared_types::{ChallengeDetails, ChallengeId, ChallengeVisibility, GameSpeed, TimeMode};
-use std::{str, str::FromStr};
-use uuid::Uuid;
+use shared_types::{ChallengeAction, ChallengeDetails, ChallengeResponse, TimeMode};
+use std::str::FromStr;
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct ChallengeResponse {
-    pub id: Uuid,
-    pub challenge_id: ChallengeId,
-    pub challenger: UserResponse,
-    pub opponent: Option<UserResponse>,
-    pub game_type: String,
-    pub rated: bool,
-    pub visibility: ChallengeVisibility,
-    pub color_choice: ColorChoice,
-    pub created_at: DateTime<Utc>,
-    pub challenger_rating: u64,
-    pub time_mode: TimeMode,         // Correspondence, Timed, Untimed
-    pub time_base: Option<i32>,      // Secons
-    pub time_increment: Option<i32>, // Seconds
-    pub speed: GameSpeed,
-    pub band_upper: Option<i32>,
-    pub band_lower: Option<i32>,
-}
+#[cfg(feature = "ssr")]
+mod ssr {
+    use super::ChallengeResponse;
+    use crate::responses::user::UserResponseDb;
+    use anyhow::Result;
+    use db_lib::{models::Challenge, DbConn};
+    use hive_lib::ColorChoice;
+    use shared_types::{ChallengeId, ChallengeVisibility, GameSpeed, TimeMode, UserResponse};
+    use std::{collections::HashSet, str::FromStr};
+    use uuid::Uuid;
 
-use cfg_if::cfg_if;
-cfg_if! { if #[cfg(feature = "ssr")] {
-use db_lib::{
-    models::Challenge,
-    DbConn,
-};
-use anyhow::Result;
-use std::collections::HashSet;
-impl ChallengeResponse {
-    pub async fn from_model(challenge: &Challenge, conn: &mut DbConn<'_>) -> Result<Self> {
-        let challenger = UserResponse::from_uuid(&challenge.challenger_id, conn).await?;
-        let opponent = match challenge.opponent_id {
-            Some(opponent_id) => Some(UserResponse::from_uuid(&opponent_id, conn).await?),
-            None => None,
-        };
-        Self::from_model_parts(challenge, challenger, opponent)
+    pub trait ChallengeResponseDb: Sized {
+        fn from_model(
+            challenge: &Challenge,
+            conn: &mut DbConn<'_>,
+        ) -> impl std::future::Future<Output = Result<Self>> + Send;
+        fn from_models_batch(
+            challenges: Vec<Challenge>,
+            conn: &mut DbConn<'_>,
+        ) -> impl std::future::Future<Output = Result<Vec<Self>>> + Send;
     }
 
-    pub async fn from_models_batch(
-        challenges: Vec<Challenge>,
-        conn: &mut DbConn<'_>,
-    ) -> Result<Vec<Self>> {
-        if challenges.is_empty() {
-            return Ok(Vec::new());
-        }
-
-        let mut user_ids = HashSet::new();
-        for challenge in &challenges {
-            user_ids.insert(challenge.challenger_id);
-            if let Some(opponent_id) = challenge.opponent_id {
-                user_ids.insert(opponent_id);
-            }
-        }
-
-        let user_ids: Vec<Uuid> = user_ids.into_iter().collect();
-        let users = UserResponse::from_uuids(&user_ids, conn).await?;
-
-        let mut responses = Vec::with_capacity(challenges.len());
-        for challenge in challenges {
-            let challenger = users.get(&challenge.challenger_id).cloned().ok_or_else(|| {
-                anyhow::anyhow!(
-                    "Challenger {} not found for challenge {}",
-                    challenge.challenger_id,
-                    challenge.id
-                )
-            })?;
+    impl ChallengeResponseDb for ChallengeResponse {
+        async fn from_model(challenge: &Challenge, conn: &mut DbConn<'_>) -> Result<Self> {
+            let challenger = UserResponse::from_uuid(&challenge.challenger_id, conn).await?;
             let opponent = match challenge.opponent_id {
-                Some(opponent_id) => Some(users.get(&opponent_id).cloned().ok_or_else(|| {
-                    anyhow::anyhow!(
-                        "Opponent {} not found for challenge {}",
-                        opponent_id,
-                        challenge.id
-                    )
-                })?),
+                Some(opponent_id) => Some(UserResponse::from_uuid(&opponent_id, conn).await?),
                 None => None,
             };
-            responses.push(Self::from_model_parts(&challenge, challenger, opponent)?);
+            from_model_parts(challenge, challenger, opponent)
         }
 
-        Ok(responses)
+        async fn from_models_batch(
+            challenges: Vec<Challenge>,
+            conn: &mut DbConn<'_>,
+        ) -> Result<Vec<Self>> {
+            if challenges.is_empty() {
+                return Ok(Vec::new());
+            }
+
+            let mut user_ids = HashSet::new();
+            for challenge in &challenges {
+                user_ids.insert(challenge.challenger_id);
+                if let Some(opponent_id) = challenge.opponent_id {
+                    user_ids.insert(opponent_id);
+                }
+            }
+
+            let user_ids: Vec<Uuid> = user_ids.into_iter().collect();
+            let users = UserResponse::from_uuids(&user_ids, conn).await?;
+
+            let mut responses = Vec::with_capacity(challenges.len());
+            for challenge in challenges {
+                let challenger = users
+                    .get(&challenge.challenger_id)
+                    .cloned()
+                    .ok_or_else(|| {
+                        anyhow::anyhow!(
+                            "Challenger {} not found for challenge {}",
+                            challenge.challenger_id,
+                            challenge.id
+                        )
+                    })?;
+                let opponent = match challenge.opponent_id {
+                    Some(opponent_id) => {
+                        Some(users.get(&opponent_id).cloned().ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "Opponent {} not found for challenge {}",
+                                opponent_id,
+                                challenge.id
+                            )
+                        })?)
+                    }
+                    None => None,
+                };
+                responses.push(from_model_parts(&challenge, challenger, opponent)?);
+            }
+
+            Ok(responses)
+        }
     }
 
     fn from_model_parts(
         challenge: &Challenge,
         challenger: UserResponse,
         opponent: Option<UserResponse>,
-    ) -> Result<Self> {
+    ) -> Result<ChallengeResponse> {
         let game_speed =
             GameSpeed::from_base_increment(challenge.time_base, challenge.time_increment);
         let challenger_rating = challenger.rating_for_speed(&game_speed);
@@ -115,10 +111,10 @@ impl ChallengeResponse {
             band_lower: challenge.band_lower,
         })
     }
+}
 
-}
-}
-}
+#[cfg(feature = "ssr")]
+pub use ssr::ChallengeResponseDb;
 
 fn is_compatible(
     existing_challenge: &ChallengeResponse,

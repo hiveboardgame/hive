@@ -16,6 +16,8 @@ async fn main() -> std::io::Result<()> {
     use websocket::{start_connection, WsHub};
     use api::v1::bot::{games::{api_get_game, api_get_ongoing_games, api_get_pending_games}, play::{api_control, api_play}, challenges::{api_accept_challenge, api_create_challenge, api_get_challenges}};
     use api::v1::auth::get_token_handler::get_token;
+    use api::v1::auth::get_personal_token_handler::get_personal_token;
+    use api::v1::auth::get_whoami_handler::get_whoami;
     use api::v1::auth::get_identity_handler::get_identity;
     use api::v1::auth::jwt_secret::JwtSecret;
     use api::v1::bot::users::api_get_user;
@@ -162,6 +164,8 @@ async fn main() -> std::io::Result<()> {
             .service(functions::oauth::callback)
             .service(functions::og::og_game_image)
             .service(get_token)
+            .service(get_personal_token)
+            .service(get_whoami)
             .service(get_identity)
             .service(api_play)
             .service(api_control)

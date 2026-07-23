@@ -1,5 +1,5 @@
+use crate::{GameId, TournamentDetails, TournamentGameResult, TournamentId};
 use serde::{Deserialize, Serialize};
-use shared_types::{GameId, TournamentDetails, TournamentGameResult, TournamentId};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

@@ -1,5 +1,5 @@
+use crate::GameId;
 use serde::{Deserialize, Serialize};
-use shared_types::GameId;
 use std::time::Duration;
 
 #[derive(Clone, Serialize, Deserialize, Debug, Default)]

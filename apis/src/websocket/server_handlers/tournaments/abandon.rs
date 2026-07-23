@@ -1,7 +1,7 @@
 use crate::{
     common::{GameActionResponse, GameReaction, ServerMessage, TournamentUpdate},
     notifications::{game_end_reason_from, notify_game_ended_excluding, GameEndReason},
-    responses::GameResponse,
+    responses::{GameResponse, GameResponseDb},
     websocket::messages::{
         GameFinalize,
         HandlerOutput,
