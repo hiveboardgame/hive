@@ -18,7 +18,8 @@
         "game_ended": "Partidă încheiată",
         "tournament": "Invitație la turneu",
         "schedules": "Propunere de oră",
-        "dms": "Mesaj direct"
+        "dms": "Mesaj direct",
+        "general_chat": "Group & lobby chat"
     },
     "browser": {
         "heading": "Acest browser",

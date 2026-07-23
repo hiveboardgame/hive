@@ -79,6 +79,21 @@ pub async fn blocked_user_ids(
         .map_err(DbError::from)
 }
 
+/// Every user who has blocked `blocked_id`, in one query — for filtering a
+/// recipient list (e.g. chat-notification fan-out) instead of awaiting
+/// `is_user_blocked` once per candidate.
+pub async fn blockers_of_user(
+    conn: &mut DbConn<'_>,
+    blocked_id: Uuid,
+) -> Result<Vec<Uuid>, DbError> {
+    user_blocks::table
+        .filter(user_blocks::blocked_id.eq(blocked_id))
+        .select(user_blocks::blocker_id)
+        .load(conn)
+        .await
+        .map_err(DbError::from)
+}
+
 pub async fn is_tournament_chat_muted(
     conn: &mut DbConn<'_>,
     user_id: Uuid,
@@ -105,6 +120,21 @@ pub async fn muted_tournament_ids_for_user(
         .load::<String>(conn)
         .await
         .map(|rows| rows.into_iter().map(TournamentId).collect())
+        .map_err(DbError::from)
+}
+
+/// Every user who has muted `tournament_id`'s chat, in one query — for
+/// filtering a recipient list instead of awaiting `is_tournament_chat_muted`
+/// once per candidate.
+pub async fn muted_tournament_chat_user_ids(
+    conn: &mut DbConn<'_>,
+    tournament_id: Uuid,
+) -> Result<Vec<Uuid>, DbError> {
+    user_tournament_chat_mutes::table
+        .filter(user_tournament_chat_mutes::tournament_id.eq(tournament_id))
+        .select(user_tournament_chat_mutes::user_id)
+        .load(conn)
+        .await
         .map_err(DbError::from)
 }
 

@@ -18,7 +18,8 @@
         "game_ended": "Partita terminata",
         "tournament": "Invito a un torneo",
         "schedules": "Proposta di orario",
-        "dms": "Messaggio diretto"
+        "dms": "Messaggio diretto",
+        "general_chat": "Group & lobby chat"
     },
     "browser": {
         "heading": "Questo browser",

@@ -9,6 +9,7 @@ pub struct NotificationPreferencesResponse {
     pub tournament: Vec<String>,
     pub schedules: Vec<String>,
     pub dms: Vec<String>,
+    pub general_chat: Vec<String>,
 }
 
 impl NotificationPreferencesResponse {
@@ -20,6 +21,7 @@ impl NotificationPreferencesResponse {
             NotificationCategory::Tournament => &self.tournament,
             NotificationCategory::Schedules => &self.schedules,
             NotificationCategory::Dms => &self.dms,
+            NotificationCategory::GeneralChat => &self.general_chat,
         }
     }
 
@@ -31,6 +33,7 @@ impl NotificationPreferencesResponse {
             NotificationCategory::Tournament => &mut self.tournament,
             NotificationCategory::Schedules => &mut self.schedules,
             NotificationCategory::Dms => &mut self.dms,
+            NotificationCategory::GeneralChat => &mut self.general_chat,
         }
     }
 }
@@ -45,6 +48,7 @@ impl From<db_lib::models::NotificationPreferences> for NotificationPreferencesRe
             tournament: flatten(p.tournament),
             schedules: flatten(p.schedules),
             dms: flatten(p.dms),
+            general_chat: flatten(p.general_chat),
         }
     }
 }

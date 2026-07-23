@@ -1,4 +1,5 @@
 use crate::{
+    common::ClientRequest,
     components::{
         atoms::{og::OG, title::Title},
         molecules::{
@@ -117,6 +118,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     Effect::new(move |_| is_hidden.set(""));
 
     let focused = use_window_focus();
+    let focus_ws = ws.clone();
     let _ = Effect::watch(
         focused,
         move |focused, _, _| {
@@ -124,6 +126,25 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
                 refocus.refocus();
             } else {
                 refocus.unfocus();
+            }
+            focus_ws.send(&ClientRequest::SetFocus { focused: *focused });
+        },
+        true,
+    );
+
+    // `send` silently drops if the socket isn't open yet, which the focus
+    // effect above hits on every fresh load/reconnect (it fires immediately,
+    // before the handshake completes). Re-send the current focus state
+    // whenever the connection (re)opens so the server's per-socket flag
+    // can't get stuck on its initial `true` default.
+    let resend_focus_ws = ws.clone();
+    let _ = Effect::watch(
+        ws_ready,
+        move |ready, _, _| {
+            if *ready == ConnectionReadyState::Open {
+                resend_focus_ws.send(&ClientRequest::SetFocus {
+                    focused: focused.get_untracked(),
+                });
             }
         },
         true,

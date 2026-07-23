@@ -22,12 +22,14 @@ use leptos::{prelude::*, task::spawn_local};
 use leptos_i18n::I18nContext;
 use shared_types::{NotificationCategory, CHANNEL_DISCORD, CHANNEL_PUSH};
 
-const EVENTS: [NotificationCategory; 5] = [
+const EVENTS: [NotificationCategory; 7] = [
     NotificationCategory::YourTurn,
     NotificationCategory::Challenges,
     NotificationCategory::GameEnded,
     NotificationCategory::Tournament,
     NotificationCategory::Schedules,
+    NotificationCategory::Dms,
+    NotificationCategory::GeneralChat,
 ];
 
 #[component]
@@ -577,6 +579,7 @@ fn notification_event_label(
         NotificationCategory::Tournament => t_string!(i18n, notifications.events.tournament),
         NotificationCategory::Schedules => t_string!(i18n, notifications.events.schedules),
         NotificationCategory::Dms => t_string!(i18n, notifications.events.dms),
+        NotificationCategory::GeneralChat => t_string!(i18n, notifications.events.general_chat),
     }
     .to_string()
 }

@@ -389,9 +389,14 @@ impl Chat {
         channel_key: ConversationKey,
     ) -> Memo<SubscriptionStatus> {
         let chat = *self;
-        let owner = requires_subscription(&channel_key).then(|| {
-            chat.acquire_subscription(channel_key.clone(), chat.session_epoch.get_untracked())
-        });
+        // Acquired unconditionally, even for kinds that don't gate history
+        // readiness on it (see `requires_subscription`), so the server's
+        // `WsHub` channel-membership map is populated for every conversation
+        // kind. That map is what chat push-notification suppression checks
+        // ("is the recipient actively viewing this conversation") reads from.
+        let owner = Some(
+            chat.acquire_subscription(channel_key.clone(), chat.session_epoch.get_untracked()),
+        );
 
         on_cleanup(move || {
             if let Some(owner) = owner {

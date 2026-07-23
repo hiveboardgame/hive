@@ -8,16 +8,18 @@ pub enum NotificationCategory {
     Tournament,
     Schedules,
     Dms,
+    GeneralChat,
 }
 
 impl NotificationCategory {
-    pub const ALL: [NotificationCategory; 6] = [
+    pub const ALL: [NotificationCategory; 7] = [
         Self::YourTurn,
         Self::Challenges,
         Self::GameEnded,
         Self::Tournament,
         Self::Schedules,
         Self::Dms,
+        Self::GeneralChat,
     ];
 
     pub fn column(&self) -> &'static str {
@@ -28,6 +30,22 @@ impl NotificationCategory {
             Self::Tournament => "tournament",
             Self::Schedules => "schedules",
             Self::Dms => "dms",
+            Self::GeneralChat => "general_chat",
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn all_covers_every_category() {
+        assert_eq!(NotificationCategory::ALL.len(), 7);
+    }
+
+    #[test]
+    fn general_chat_column_name() {
+        assert_eq!(NotificationCategory::GeneralChat.column(), "general_chat");
     }
 }

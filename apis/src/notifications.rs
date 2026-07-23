@@ -19,7 +19,14 @@ pub use dispatch::{
     NotifyOutcome,
     PushBackends,
 };
-pub use event::{time_control_label, Event, GameControlKind, GameEndReason, GameOutcome};
+pub use event::{
+    time_control_label,
+    ChatNotifyContext,
+    Event,
+    GameControlKind,
+    GameEndReason,
+    GameOutcome,
+};
 pub use payload::Push;
 pub use pending::PendingNotifications;
 pub use service::Notifier;

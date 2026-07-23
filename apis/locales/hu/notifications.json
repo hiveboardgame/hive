@@ -18,7 +18,8 @@
         "game_ended": "A játszma véget ért",
         "tournament": "Versenymeghívó",
         "schedules": "Időpontjavaslat",
-        "dms": "Közvetlen üzenet"
+        "dms": "Közvetlen üzenet",
+        "general_chat": "Group & lobby chat"
     },
     "browser": {
         "heading": "Ez a böngésző",

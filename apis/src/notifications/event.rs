@@ -102,6 +102,12 @@ pub enum Event {
         sender: String,
         preview: String,
     },
+    ChatMessage {
+        recipient: Uuid,
+        sender: String,
+        preview: String,
+        context: ChatNotifyContext,
+    },
     GameControl {
         recipient: Uuid,
         actor: String,
@@ -112,6 +118,35 @@ pub enum Event {
     TestPush {
         recipient: Uuid,
     },
+}
+
+#[derive(Debug, Clone)]
+pub enum ChatNotifyContext {
+    GamePlayers {
+        game_nanoid: String,
+        opponent: String,
+    },
+    GameSpectators {
+        game_nanoid: String,
+    },
+    Tournament {
+        tournament_nanoid: String,
+        tournament_name: String,
+    },
+    Global,
+}
+
+impl ChatNotifyContext {
+    fn label(&self) -> String {
+        match self {
+            ChatNotifyContext::GamePlayers { opponent, .. } => format!("game vs {opponent}"),
+            ChatNotifyContext::GameSpectators { .. } => "game spectators chat".to_string(),
+            ChatNotifyContext::Tournament {
+                tournament_name, ..
+            } => format!("tournament {tournament_name}"),
+            ChatNotifyContext::Global => "global chat".to_string(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -172,6 +207,7 @@ impl Event {
             | Event::SchedulePropose { recipient, .. }
             | Event::ScheduleAccept { recipient, .. }
             | Event::DirectMessage { recipient, .. }
+            | Event::ChatMessage { recipient, .. }
             | Event::GameControl { recipient, .. }
             | Event::TestPush { recipient, .. } => *recipient,
         }
@@ -191,6 +227,7 @@ impl Event {
                 NotificationCategory::Schedules
             }
             Event::DirectMessage { .. } => NotificationCategory::Dms,
+            Event::ChatMessage { .. } => NotificationCategory::GeneralChat,
             Event::GameControl { .. } => NotificationCategory::YourTurn,
             Event::TestPush { .. } => NotificationCategory::YourTurn,
         }
@@ -207,6 +244,12 @@ impl Event {
             Event::SchedulePropose { .. } => "schedule_propose",
             Event::ScheduleAccept { .. } => "schedule_accept",
             Event::DirectMessage { .. } => "dm",
+            Event::ChatMessage { context, .. } => match context {
+                ChatNotifyContext::GamePlayers { .. }
+                | ChatNotifyContext::GameSpectators { .. } => "game_chat",
+                ChatNotifyContext::Tournament { .. } => "tournament_chat",
+                ChatNotifyContext::Global => "global_chat",
+            },
             Event::GameControl { .. } => "game_control",
             Event::TestPush { .. } => "test",
         }
@@ -247,7 +290,21 @@ impl Event {
             } => Some(format!(
                 "https://hivegame.com/tournament/{tournament_nanoid}"
             )),
-            Event::DirectMessage { .. } => None,
+            Event::DirectMessage { sender, .. } => {
+                Some(format!("https://hivegame.com/message/dm/{sender}"))
+            }
+            Event::ChatMessage { context, .. } => Some(match context {
+                ChatNotifyContext::GamePlayers { game_nanoid, .. } => {
+                    format!("https://hivegame.com/message/game/{game_nanoid}/players")
+                }
+                ChatNotifyContext::GameSpectators { game_nanoid } => {
+                    format!("https://hivegame.com/message/game/{game_nanoid}/spectators")
+                }
+                ChatNotifyContext::Tournament {
+                    tournament_nanoid, ..
+                } => format!("https://hivegame.com/message/tournament/{tournament_nanoid}"),
+                ChatNotifyContext::Global => "https://hivegame.com/message/global".to_string(),
+            }),
             Event::TestPush { .. } => Some("https://hivegame.com/notifications".to_string()),
         }
     }
@@ -449,6 +506,9 @@ impl Event {
             Event::DirectMessage {
                 sender, preview, ..
             } => (sender.clone(), preview.clone()),
+            Event::ChatMessage {
+                sender, preview, ..
+            } => (sender.clone(), preview.clone()),
             Event::GameControl { actor, kind, .. } => {
                 let title = match kind {
                     GameControlKind::DrawOffered => {
@@ -605,6 +665,12 @@ impl Event {
             Event::DirectMessage { sender, preview, .. } => {
                 format!("DM from {sender}: {preview}")
             }
+            Event::ChatMessage {
+                sender,
+                preview,
+                context,
+                ..
+            } => format!("{sender} in {}: {preview}", context.label()),
             Event::GameControl {
                 actor,
                 game_nanoid,
@@ -697,7 +763,16 @@ impl Event {
             ),
             Event::DirectMessage { sender, preview, .. } => (
                 format!("New message from {sender}"),
-                format!("{sender}: {preview}"),
+                format!("{sender}: {preview}. Open: {link}"),
+            ),
+            Event::ChatMessage {
+                sender,
+                preview,
+                context,
+                ..
+            } => (
+                format!("New message from {sender} in {}", context.label()),
+                format!("{sender}: {preview}. Open: {link}"),
             ),
             Event::GameControl { actor, kind, .. } => (
                 format!("{actor} {}", kind.action()),
@@ -875,12 +950,84 @@ mod tests {
     }
 
     #[test]
-    fn direct_message_has_no_link() {
+    fn direct_message_link_points_at_dm_route() {
         let e = Event::DirectMessage {
             recipient: uid(),
             sender: "s".into(),
             preview: "hi".into(),
         };
-        assert!(e.link().is_none());
+        assert_eq!(
+            e.link().as_deref(),
+            Some("https://hivegame.com/message/dm/s")
+        );
+    }
+
+    #[test]
+    fn chat_message_category_is_general_chat() {
+        let e = Event::ChatMessage {
+            recipient: uid(),
+            sender: "s".into(),
+            preview: "hi".into(),
+            context: ChatNotifyContext::Global,
+        };
+        assert!(matches!(e.category(), NotificationCategory::GeneralChat));
+    }
+
+    #[test]
+    fn chat_message_link_per_context() {
+        let players = Event::ChatMessage {
+            recipient: uid(),
+            sender: "s".into(),
+            preview: "hi".into(),
+            context: ChatNotifyContext::GamePlayers {
+                game_nanoid: "g1".into(),
+                opponent: "opp".into(),
+            },
+        };
+        assert_eq!(
+            players.link().as_deref(),
+            Some("https://hivegame.com/message/game/g1/players")
+        );
+        assert_eq!(players.event_type_tag(), "game_chat");
+
+        let spectators = Event::ChatMessage {
+            recipient: uid(),
+            sender: "s".into(),
+            preview: "hi".into(),
+            context: ChatNotifyContext::GameSpectators {
+                game_nanoid: "g1".into(),
+            },
+        };
+        assert_eq!(
+            spectators.link().as_deref(),
+            Some("https://hivegame.com/message/game/g1/spectators")
+        );
+
+        let tournament = Event::ChatMessage {
+            recipient: uid(),
+            sender: "s".into(),
+            preview: "hi".into(),
+            context: ChatNotifyContext::Tournament {
+                tournament_nanoid: "t1".into(),
+                tournament_name: "Cup".into(),
+            },
+        };
+        assert_eq!(
+            tournament.link().as_deref(),
+            Some("https://hivegame.com/message/tournament/t1")
+        );
+        assert_eq!(tournament.event_type_tag(), "tournament_chat");
+
+        let global = Event::ChatMessage {
+            recipient: uid(),
+            sender: "s".into(),
+            preview: "hi".into(),
+            context: ChatNotifyContext::Global,
+        };
+        assert_eq!(
+            global.link().as_deref(),
+            Some("https://hivegame.com/message/global")
+        );
+        assert_eq!(global.event_type_tag(), "global_chat");
     }
 }

@@ -166,6 +166,7 @@ fn channels_for(prefs: &NotificationPreferences, category: NotificationCategory)
         NotificationCategory::Tournament => &prefs.tournament,
         NotificationCategory::Schedules => &prefs.schedules,
         NotificationCategory::Dms => &prefs.dms,
+        NotificationCategory::GeneralChat => &prefs.general_chat,
     };
     parse_channels(raw)
 }
@@ -399,5 +400,38 @@ async fn send_discord(event: &Event, recipient: uuid::Uuid) {
     let msg = event.render_discord();
     if let Err(err) = Busybee::msg(recipient, msg).await {
         log::warn!("notify: discord send for {recipient} failed: {err}");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn prefs_with(general_chat: Vec<Option<String>>) -> NotificationPreferences {
+        NotificationPreferences {
+            user_id: Uuid::nil(),
+            your_turn: vec![],
+            challenges: vec![],
+            game_ended: vec![],
+            tournament: vec![],
+            schedules: vec![],
+            general_chat,
+            dms: vec![],
+        }
+    }
+
+    #[test]
+    fn channels_for_general_chat_reads_general_chat_column() {
+        let prefs = prefs_with(vec![Some("push".to_string())]);
+        assert_eq!(
+            channels_for(&prefs, NotificationCategory::GeneralChat),
+            vec![Channel::Push]
+        );
+    }
+
+    #[test]
+    fn channels_for_general_chat_empty_by_default() {
+        let prefs = prefs_with(vec![]);
+        assert!(channels_for(&prefs, NotificationCategory::GeneralChat).is_empty());
     }
 }

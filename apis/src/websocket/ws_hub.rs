@@ -101,6 +101,12 @@ pub struct WsHub {
     /// Per-socket timestamp of the last accepted Resync. Used to enforce
     /// `RESYNC_COOLDOWN`. Entries are evicted on `on_disconnect`.
     last_resync: DashMap<Uuid, Instant>,
+    /// Per-socket "tab is focused" flag, updated by `ClientRequest::SetFocus`.
+    /// Cross-referenced with `ChatMembershipIndex.channels_sockets` to decide
+    /// whether a chat-message push should be suppressed because the recipient
+    /// is actively looking at that conversation. Entries are evicted on
+    /// `on_disconnect`.
+    socket_focus: DashMap<Uuid, bool>,
     chat_limits: ChatRateLimits,
     /// Users whose accounts were deleted while websocket sessions were already
     /// open. Authentication is cached on each socket, so central auth checks
@@ -326,6 +332,7 @@ impl WsHub {
             tournament_members: DashMap::new(),
             pending_deleted_games: DashMap::new(),
             last_resync: DashMap::new(),
+            socket_focus: DashMap::new(),
             chat_limits: ChatRateLimits::default(),
             revoked_users: DashSet::new(),
         })
@@ -384,6 +391,7 @@ impl WsHub {
                 user_entry.insert(socket_id, tx);
                 empty
             };
+            self.socket_focus.insert(socket_id, true);
             m.fanout
                 .games_sockets
                 .entry(lobby.clone())
@@ -466,6 +474,7 @@ impl WsHub {
             }
 
             self.last_resync.remove(&socket_id);
+            self.socket_focus.remove(&socket_id);
             self.chat_limits.remove_socket(socket_id);
 
             let socket_pair = (user_id, socket_id);
@@ -1071,6 +1080,22 @@ impl WsHub {
         m.chat.unsubscribe(user_id, socket_id, key);
     }
 
+    pub fn set_socket_focus(&self, socket_id: Uuid, focused: bool) {
+        self.socket_focus.insert(socket_id, focused);
+    }
+
+    /// True if `user_id` has a socket that is both subscribed to `key` and
+    /// currently reports its tab as focused — used to suppress a chat push
+    /// notification for someone actively looking at that conversation.
+    pub fn has_focused_subscriber(&self, user_id: Uuid, key: &ConversationKey) -> bool {
+        let m = self.membership.read().unwrap_or_else(|p| p.into_inner());
+        m.chat.channels_sockets.get(key).is_some_and(|sockets| {
+            sockets
+                .iter()
+                .any(|(uid, sid)| *uid == user_id && self.socket_focus.get(sid).is_some_and(|f| *f))
+        })
+    }
+
     pub fn unsubscribe_user_from_tournament_chat(
         &self,
         user_id: Uuid,
@@ -1406,6 +1431,47 @@ mod tests {
             .await
             .expect("bb8 pool builds without connecting");
         WsHub::new(Arc::new(WebsocketData::default()), pool)
+    }
+
+    #[tokio::test]
+    async fn has_focused_subscriber_true_only_when_subscribed_and_focused() {
+        let hub = make_hub().await;
+        let user_id = Uuid::new_v4();
+        let socket_id = Uuid::new_v4();
+        let key = ConversationKey::Direct(Uuid::new_v4());
+
+        let _rx = hub.register_socket(user_id, socket_id);
+        assert!(!hub.has_focused_subscriber(user_id, &key));
+
+        hub.subscribe_chat(user_id, socket_id, &key);
+        assert!(
+            !hub.has_focused_subscriber(user_id, &key),
+            "subscribed but not focused should not suppress"
+        );
+
+        hub.set_socket_focus(socket_id, true);
+        assert!(hub.has_focused_subscriber(user_id, &key));
+
+        hub.set_socket_focus(socket_id, false);
+        assert!(!hub.has_focused_subscriber(user_id, &key));
+    }
+
+    #[tokio::test]
+    async fn has_focused_subscriber_true_if_any_of_multiple_sockets_is_focused() {
+        let hub = make_hub().await;
+        let user_id = Uuid::new_v4();
+        let socket_a = Uuid::new_v4();
+        let socket_b = Uuid::new_v4();
+        let key = ConversationKey::Global;
+
+        let _rx_a = hub.register_socket(user_id, socket_a);
+        let _rx_b = hub.register_socket(user_id, socket_b);
+        hub.subscribe_chat(user_id, socket_a, &key);
+        hub.subscribe_chat(user_id, socket_b, &key);
+
+        hub.set_socket_focus(socket_a, false);
+        hub.set_socket_focus(socket_b, true);
+        assert!(hub.has_focused_subscriber(user_id, &key));
     }
 
     #[tokio::test]

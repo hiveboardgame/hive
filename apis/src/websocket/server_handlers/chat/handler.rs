@@ -1,5 +1,6 @@
 use crate::{
     common::{ChatSendRequest, ServerMessage},
+    notifications::{notify, ChatNotifyContext, Event},
     websocket::{
         messages::{
             GameSpectatorAudience,
@@ -7,6 +8,7 @@ use crate::{
             MessageDestination,
             TournamentAudience,
         },
+        WsHub,
         WsTelemetry,
     },
 };
@@ -15,13 +17,31 @@ use anyhow::{Context, Result};
 use chrono::Utc;
 use db_lib::{
     db_error::DbError,
-    helpers::{insert_chat_message, insert_chat_message_and_mark_sender_read, DbChatTarget},
-    models::ChatMessage as DbChatMessage,
+    helpers::{
+        blockers_of_user,
+        insert_chat_message,
+        insert_chat_message_and_mark_sender_read,
+        muted_tournament_chat_user_ids,
+        DbChatTarget,
+    },
+    models::{ChatMessage as DbChatMessage, NotificationPreferences, Tournament},
     DbConn,
 };
-use shared_types::{ChatMessage, ChatMessageContainer, ConversationKey, GameThread};
+use shared_types::{ChatMessage, ChatMessageContainer, ConversationKey, GameThread, CHANNEL_PUSH};
+use std::{collections::HashSet, sync::Arc};
 use thiserror::Error;
 use uuid::Uuid;
+
+const CHAT_PREVIEW_MAX_CHARS: usize = 140;
+
+fn chat_preview(body: &str) -> String {
+    if body.chars().count() <= CHAT_PREVIEW_MAX_CHARS {
+        body.to_string()
+    } else {
+        let truncated: String = body.chars().take(CHAT_PREVIEW_MAX_CHARS).collect();
+        format!("{truncated}\u{2026}")
+    }
+}
 
 #[derive(Debug, Error)]
 pub enum ChatHandlerError {
@@ -42,14 +62,21 @@ pub struct ChatHandler<'a> {
     request: ChatSendRequest,
     sender: (&'a str, Uuid),
     target: DbChatTarget,
+    hub: Arc<WsHub>,
 }
 
 impl<'a> ChatHandler<'a> {
-    pub fn new(request: ChatSendRequest, sender: (&'a str, Uuid), target: DbChatTarget) -> Self {
+    pub fn new(
+        request: ChatSendRequest,
+        sender: (&'a str, Uuid),
+        target: DbChatTarget,
+        hub: Arc<WsHub>,
+    ) -> Self {
         Self {
             request,
             sender,
             target,
+            hub,
         }
     }
 
@@ -73,7 +100,153 @@ impl<'a> ChatHandler<'a> {
                     .into());
             }
         };
+        if inserted {
+            self.dispatch_notifications(conn).await;
+        }
         self.messages_for_persisted(persisted, inserted)
+    }
+
+    /// The key a *recipient* (not the sender) would be subscribed under for
+    /// this conversation. Symmetric for every target except `Direct`, whose
+    /// `ConversationKey` names "the other party" and is therefore different
+    /// depending on which side of the conversation is looking.
+    fn conversation_key_for_recipient(&self) -> ConversationKey {
+        match &self.target {
+            DbChatTarget::Direct { .. } => ConversationKey::Direct(self.sender.1),
+            _ => self.request.key.clone(),
+        }
+    }
+
+    /// Push-notify this message's recipients, skipping anyone who blocked the
+    /// sender, muted this tournament's chat, or has a browser tab currently
+    /// subscribed-and-focused on this conversation.
+    async fn dispatch_notifications(&self, conn: &mut DbConn<'_>) {
+        let preview = chat_preview(&self.request.body);
+        let recipient_key = self.conversation_key_for_recipient();
+
+        let recipients: Vec<(Uuid, Option<ChatNotifyContext>)> = match &self.target {
+            DbChatTarget::Direct { other_user_id, .. } => vec![(*other_user_id, None)],
+            DbChatTarget::Game {
+                thread: GameThread::Players,
+                game,
+                game_id,
+                ..
+            } => [game.white_id, game.black_id]
+                .into_iter()
+                .filter(|id| *id != self.sender.1)
+                .map(|id| {
+                    (
+                        id,
+                        Some(ChatNotifyContext::GamePlayers {
+                            game_nanoid: game_id.0.clone(),
+                            opponent: self.sender.0.to_string(),
+                        }),
+                    )
+                })
+                .collect(),
+            // Spectators are an ephemeral, unauthenticated-allowed audience
+            // with no persisted roster (unlike players/tournament/DM
+            // participants), so there is no stable recipient list to push to.
+            DbChatTarget::Game {
+                thread: GameThread::Spectators,
+                ..
+            } => Vec::new(),
+            DbChatTarget::Tournament {
+                tournament_id,
+                id: tournament_uuid,
+                ..
+            } => match self
+                .tournament_recipients(tournament_id, *tournament_uuid, conn)
+                .await
+            {
+                Ok(recipients) => recipients,
+                Err(error) => {
+                    log::warn!(
+                        "chat notify: tournament lookup for {tournament_id:?} failed: {error}"
+                    );
+                    Vec::new()
+                }
+            },
+            DbChatTarget::Global { .. } => {
+                match NotificationPreferences::user_ids_with_general_chat_channel(
+                    CHANNEL_PUSH,
+                    conn,
+                )
+                .await
+                {
+                    Ok(ids) => ids
+                        .into_iter()
+                        .filter(|id| *id != self.sender.1)
+                        .map(|id| (id, Some(ChatNotifyContext::Global)))
+                        .collect(),
+                    Err(error) => {
+                        log::warn!(
+                            "chat notify: general_chat push recipients lookup failed: {error}"
+                        );
+                        Vec::new()
+                    }
+                }
+            }
+        };
+
+        let blockers: HashSet<Uuid> = blockers_of_user(conn, self.sender.1)
+            .await
+            .unwrap_or_else(|error| {
+                log::warn!("chat notify: blockers lookup for {} failed: {error}", self.sender.1);
+                Vec::new()
+            })
+            .into_iter()
+            .collect();
+
+        for (recipient, context) in recipients {
+            if blockers.contains(&recipient) {
+                continue;
+            }
+            if self.hub.has_focused_subscriber(recipient, &recipient_key) {
+                continue;
+            }
+            match context {
+                None => notify(Event::DirectMessage {
+                    recipient,
+                    sender: self.sender.0.to_string(),
+                    preview: preview.clone(),
+                }),
+                Some(context) => notify(Event::ChatMessage {
+                    recipient,
+                    sender: self.sender.0.to_string(),
+                    preview: preview.clone(),
+                    context,
+                }),
+            }
+        }
+    }
+
+    async fn tournament_recipients(
+        &self,
+        tournament_id: &shared_types::TournamentId,
+        tournament_uuid: Uuid,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<(Uuid, Option<ChatNotifyContext>)>, DbError> {
+        let tournament = Tournament::find_by_tournament_id(tournament_id, conn).await?;
+        let players = tournament.players(conn).await?;
+        let muted: HashSet<Uuid> = muted_tournament_chat_user_ids(conn, tournament_uuid)
+            .await?
+            .into_iter()
+            .collect();
+        let recipients = players
+            .into_iter()
+            .filter(|player| player.id != self.sender.1 && !muted.contains(&player.id))
+            .map(|player| {
+                (
+                    player.id,
+                    Some(ChatNotifyContext::Tournament {
+                        tournament_nanoid: tournament_id.0.clone(),
+                        tournament_name: tournament.name.clone(),
+                    }),
+                )
+            })
+            .collect();
+        Ok(recipients)
     }
 
     fn messages_for_persisted(
@@ -199,8 +372,15 @@ impl<'a> ChatHandler<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::ChatSendRequest;
+    use crate::{common::ChatSendRequest, websocket::WebsocketData};
     use shared_types::{ConversationKey, TournamentId};
+
+    async fn test_hub() -> Arc<WsHub> {
+        let pool = db_lib::get_pool("postgresql://test:test@127.0.0.1:9/test")
+            .await
+            .expect("bb8 pool builds without connecting");
+        WsHub::new(Arc::new(WebsocketData::default()), pool)
+    }
 
     fn persisted(sender_id: Uuid, client_id: Uuid) -> DbChatMessage {
         DbChatMessage {
@@ -214,8 +394,8 @@ mod tests {
         }
     }
 
-    #[test]
-    fn direct_fanout_uses_audience_relative_keys_with_one_persisted_identity() {
+    #[tokio::test]
+    async fn direct_fanout_uses_audience_relative_keys_with_one_persisted_identity() {
         let sender_id = Uuid::new_v4();
         let peer_id = Uuid::new_v4();
         let client_id = Uuid::new_v4();
@@ -234,6 +414,7 @@ mod tests {
                 low_id,
                 high_id,
             },
+            test_hub().await,
         );
 
         let messages = handler
@@ -256,8 +437,8 @@ mod tests {
         assert_eq!(recipient.client_id, sender.client_id);
     }
 
-    #[test]
-    fn idempotent_retry_acknowledges_only_the_sender() {
+    #[tokio::test]
+    async fn idempotent_retry_acknowledges_only_the_sender() {
         let sender_id = Uuid::new_v4();
         let client_id = Uuid::new_v4();
         let tournament_id = TournamentId("retry-ack".to_string());
@@ -274,6 +455,7 @@ mod tests {
                 channel_id: Some(7),
                 id: Uuid::new_v4(),
             },
+            test_hub().await,
         );
 
         let messages = handler

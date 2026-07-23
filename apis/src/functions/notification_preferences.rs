@@ -60,6 +60,7 @@ pub async fn set_notification_preferences(
         tournament: dedup(payload.tournament),
         schedules: dedup(payload.schedules),
         dms: dedup(payload.dms),
+        general_chat: dedup(payload.general_chat),
     };
     let updated = NotificationPreferences::update_for_user(user_id, upd, &mut conn)
         .await

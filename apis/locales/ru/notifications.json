@@ -18,7 +18,8 @@
         "game_ended": "Партия завершена",
         "tournament": "Приглашение на турнир",
         "schedules": "Предложение времени",
-        "dms": "Личное сообщение"
+        "dms": "Личное сообщение",
+        "general_chat": "Group & lobby chat"
     },
     "browser": {
         "heading": "Этот браузер",
