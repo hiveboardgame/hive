@@ -35,7 +35,6 @@ pub enum ClientRequest {
     Pong(u64),
     Resync,
     Schedule(ScheduleAction),
-    SetFocus { focused: bool },
     Tournament(TournamentAction),
     // leptos-use idle or window unfocused will send
     Away, // Online and Offline are not needed because they will be handled by the WS connection

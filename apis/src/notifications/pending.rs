@@ -4,11 +4,20 @@ use std::{
 };
 
 use dashmap::{mapref::entry::Entry, DashMap};
-use shared_types::GameId;
+use shared_types::{ConversationKey, GameId};
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
-type Key = (Uuid, GameId);
+/// What a parked notification is waiting to be superseded by: a game-turn/
+/// control ack (`NotificationSeen`), or a chat read receipt covering the
+/// message that triggered it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum AckKey {
+    Game(GameId),
+    Chat(ConversationKey),
+}
+
+type Key = (Uuid, AckKey);
 
 const SEEN_TTL: Duration = Duration::from_secs(2);
 
@@ -24,8 +33,8 @@ pub struct PendingNotifications {
 }
 
 impl PendingNotifications {
-    pub fn register(&self, recipient: Uuid, game: GameId) -> Option<Arc<CancellationToken>> {
-        match self.inner.entry((recipient, game)) {
+    pub fn register(&self, recipient: Uuid, key: AckKey) -> Option<Arc<CancellationToken>> {
+        match self.inner.entry((recipient, key)) {
             Entry::Occupied(mut e) => {
                 if let Slot::Seen(at) = e.get() {
                     if at.elapsed() < SEEN_TTL {
@@ -47,8 +56,8 @@ impl PendingNotifications {
         }
     }
 
-    pub fn mark_seen(&self, user: Uuid, game: &GameId) {
-        match self.inner.entry((user, game.clone())) {
+    pub fn mark_seen(&self, user: Uuid, key: &AckKey) {
+        match self.inner.entry((user, key.clone())) {
             Entry::Occupied(mut e) => {
                 if let Slot::Parked(token) = e.get() {
                     token.cancel();
@@ -61,9 +70,9 @@ impl PendingNotifications {
         }
     }
 
-    pub fn clear(&self, recipient: Uuid, game: &GameId, token: &Arc<CancellationToken>) {
+    pub fn clear(&self, recipient: Uuid, key: &AckKey, token: &Arc<CancellationToken>) {
         self.inner.remove_if(
-            &(recipient, game.clone()),
+            &(recipient, key.clone()),
             |_, slot| matches!(slot, Slot::Parked(t) if Arc::ptr_eq(t, token)),
         );
     }
@@ -80,8 +89,19 @@ impl PendingNotifications {
 mod tests {
     use super::*;
 
-    fn key() -> (Uuid, GameId) {
-        (Uuid::nil(), GameId("g1".into()))
+    fn key() -> (Uuid, AckKey) {
+        (Uuid::nil(), AckKey::Game(GameId("g1".into())))
+    }
+
+    #[test]
+    fn chat_ack_key_parks_and_cancels_independently_of_game_key() {
+        let p = PendingNotifications::default();
+        let u = Uuid::nil();
+        let chat_key = AckKey::Chat(ConversationKey::Direct(Uuid::new_v4()));
+        let token = p.register(u, chat_key.clone()).expect("first park");
+        assert!(!token.is_cancelled());
+        p.mark_seen(u, &chat_key);
+        assert!(token.is_cancelled());
     }
 
     #[test]

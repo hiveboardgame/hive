@@ -47,34 +47,3 @@ async fn update_for_user_round_trips_general_chat() {
         .expect("find preferences");
     assert_eq!(found.general_chat, vec![Some("push".to_string())]);
 }
-
-#[tokio::test(flavor = "multi_thread")]
-async fn user_ids_with_general_chat_channel_only_returns_matching_users() {
-    let db = common::db::test_db().await;
-    let mut conn = get_conn(&db.pool).await.expect("get connection");
-    let opted_in = create_user("general_chat_opted_in", &mut conn).await;
-    let opted_out = create_user("general_chat_opted_out", &mut conn).await;
-
-    NotificationPreferences::create_for_user(opted_in.id, &mut conn)
-        .await
-        .expect("create default preferences");
-    NotificationPreferences::create_for_user(opted_out.id, &mut conn)
-        .await
-        .expect("create default preferences");
-
-    NotificationPreferences::update_for_user(
-        opted_in.id,
-        update_with_general_chat(vec![Some("push".to_string())]),
-        &mut conn,
-    )
-    .await
-    .expect("opt in to general chat push");
-    // opted_out keeps the default '{}' general_chat value.
-
-    let ids = NotificationPreferences::user_ids_with_general_chat_channel("push", &mut conn)
-        .await
-        .expect("query recipients");
-
-    assert!(ids.contains(&opted_in.id));
-    assert!(!ids.contains(&opted_out.id));
-}

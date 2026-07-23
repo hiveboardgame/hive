@@ -1,9 +1,9 @@
 use crate::i18n::*;
 use chrono::{DateTime, Utc};
-use shared_types::{GameId, GameSpeed, NotificationCategory};
+use shared_types::{ConversationKey, GameId, GameSpeed, NotificationCategory};
 use uuid::Uuid;
 
-use super::payload::Push;
+use super::{payload::Push, pending::AckKey};
 
 const DEFAULT_PUSH_TTL_SECS: u32 = 4 * 3600;
 
@@ -101,6 +101,7 @@ pub enum Event {
         recipient: Uuid,
         sender: String,
         preview: String,
+        conversation_key: ConversationKey,
     },
     ChatMessage {
         recipient: Uuid,
@@ -316,11 +317,14 @@ impl Event {
         matches!(self, Event::YourTurn { speed, .. } if speed.is_real_time())
     }
 
-    pub fn ack_key(&self) -> Option<GameId> {
+    pub fn ack_key(&self) -> Option<AckKey> {
         match self {
             Event::YourTurn { game_nanoid, .. } | Event::GameControl { game_nanoid, .. } => {
-                Some(GameId(game_nanoid.clone()))
+                Some(AckKey::Game(GameId(game_nanoid.clone())))
             }
+            Event::DirectMessage {
+                conversation_key, ..
+            } => Some(AckKey::Chat(conversation_key.clone())),
             _ => None,
         }
     }
@@ -955,10 +959,26 @@ mod tests {
             recipient: uid(),
             sender: "s".into(),
             preview: "hi".into(),
+            conversation_key: ConversationKey::Direct(uid()),
         };
         assert_eq!(
             e.link().as_deref(),
             Some("https://hivegame.com/message/dm/s")
+        );
+    }
+
+    #[test]
+    fn direct_message_ack_key_uses_conversation_key() {
+        let sender_id = Uuid::new_v4();
+        let e = Event::DirectMessage {
+            recipient: uid(),
+            sender: "s".into(),
+            preview: "hi".into(),
+            conversation_key: ConversationKey::Direct(sender_id),
+        };
+        assert_eq!(
+            e.ack_key(),
+            Some(AckKey::Chat(ConversationKey::Direct(sender_id)))
         );
     }
 

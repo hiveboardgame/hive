@@ -128,11 +128,23 @@ async fn chat_connection(pool: &DbPool) -> Result<DbConn<'_>, ServerFnError> {
 async fn dispatch_chat_read_update(user_id: Uuid, key: ConversationKey, last_read_message_id: i64) {
     use crate::{
         common::{ServerMessage, ServerResult},
-        websocket::{MessageDestination, WsHub},
+        notifications::AckKey,
+        websocket::{MessageDestination, WebsocketData, WsHub},
     };
     use actix_web::web::Data;
     use bytes::Bytes;
     use codee::{binary::MsgpackSerdeCodec, Encoder};
+
+    // A DM read receipt is the same source of truth the header bell uses to
+    // clear its unread state, so it also cancels any DM push notification
+    // still parked (`Notifier`'s ack/park window, see `ChatHandler::dispatch_notifications`)
+    // waiting to fire for this conversation.
+    if matches!(key, ConversationKey::Direct(_)) {
+        if let Ok(data) = leptos_actix::extract::<Data<WebsocketData>>().await {
+            data.pending_notifications
+                .mark_seen(user_id, &AckKey::Chat(key.clone()));
+        }
+    }
 
     let Ok(hub) = leptos_actix::extract::<Data<std::sync::Arc<WsHub>>>().await else {
         return;

@@ -28,7 +28,7 @@ pub use event::{
     GameOutcome,
 };
 pub use payload::Push;
-pub use pending::PendingNotifications;
+pub use pending::{AckKey, PendingNotifications};
 pub use service::Notifier;
 pub use telemetry::PushTelemetry;
 pub use web_push::WebPushNotifier;

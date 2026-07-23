@@ -140,9 +140,9 @@ async fn handle_event(
             )
             .await
         }
-        Some(game) => {
+        Some(key) => {
             telemetry.ack_eligible();
-            let Some(token) = pending.register(recipient, game.clone()) else {
+            let Some(token) = pending.register(recipient, key.clone()) else {
                 telemetry.ack_suppressed();
                 return;
             };
@@ -153,7 +153,7 @@ async fn handle_event(
                 }
                 _ = token.cancelled() => { telemetry.ack_suppressed(); }
             }
-            pending.clear(recipient, &game, &token);
+            pending.clear(recipient, &key, &token);
         }
     }
 }

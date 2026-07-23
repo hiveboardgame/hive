@@ -21,6 +21,7 @@ use crate::{
         ChatAccessError,
     },
     common::{ClientRequest, GameAction, ServerMessage},
+    notifications::AckKey,
     websocket::{
         messages::{AuthError, HandlerOutput, InternalServerMessage, MessageDestination, SocketTx},
         WebsocketData,
@@ -155,21 +156,18 @@ impl RequestHandler {
                 let target = authorize_chat_send(&mut conn, self.user_id, self.admin, &channel_key)
                     .await
                     .map_err(Self::map_chat_access_error)?;
-                ChatHandler::new(
-                    request,
-                    (&self.username, self.user_id),
-                    target,
-                    self.hub.clone(),
-                )
-                .handle(&mut conn, &self.data.telemetry)
-                .await
-                .map_err(|error| match error {
-                    ChatHandlerError::ClientIdConflict => RequestHandlerError::ChatClientIdConflict,
-                    ChatHandlerError::Internal(error) => {
-                        RequestHandlerError::InternalError(error.context("handling chat message"))
-                    }
-                })?
-                .into()
+                ChatHandler::new(request, (&self.username, self.user_id), target)
+                    .handle(&mut conn, &self.data.telemetry)
+                    .await
+                    .map_err(|error| match error {
+                        ChatHandlerError::ClientIdConflict => {
+                            RequestHandlerError::ChatClientIdConflict
+                        }
+                        ChatHandlerError::Internal(error) => RequestHandlerError::InternalError(
+                            error.context("handling chat message"),
+                        ),
+                    })?
+                    .into()
             }
             ClientRequest::ChatSubscribe(subscription) => {
                 self.hub
@@ -270,15 +268,10 @@ impl RequestHandler {
                 self.ensure_auth()?;
                 self.data
                     .pending_notifications
-                    .mark_seen(self.user_id, &game_id);
+                    .mark_seen(self.user_id, &AckKey::Game(game_id));
                 HandlerOutput::empty()
             }
             ClientRequest::Away => UserStatusHandler::new().await?.handle().await?.into(),
-            ClientRequest::SetFocus { focused } => {
-                self.hub
-                    .set_socket_focus(self.received_from.socket_id, focused);
-                HandlerOutput::empty()
-            }
             ClientRequest::Schedule(action) => {
                 match action {
                     crate::common::ScheduleAction::TournamentPublic(_) => {}
