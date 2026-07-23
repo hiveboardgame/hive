@@ -126,6 +126,18 @@ pub struct Board {
     pub eigen_direction: Option<Direction>,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct BoardSnapshot {
+    pieces: Vec<(Position, Piece)>,
+    last_moved: Option<(Piece, Position)>,
+    last_move: (Option<Position>, Option<Position>),
+    stunned: Option<Piece>,
+    pinned: [bool; 48],
+    hasher: Hasher,
+    smallest: Option<(Piece, Position)>,
+    eigen_direction: Option<Direction>,
+}
+
 impl Board {
     pub fn new() -> Self {
         Self {
@@ -144,6 +156,68 @@ impl Board {
             smallest: None,
             eigen_direction: None,
         }
+    }
+
+    pub fn snapshot(&self) -> BoardSnapshot {
+        let mut pieces = Vec::with_capacity(self.played);
+        for position in self.all_taken_positions() {
+            let stack = self.board.get(position);
+            for piece in &stack.pieces[..stack.len()] {
+                pieces.push((position, *piece));
+            }
+        }
+        BoardSnapshot {
+            pieces,
+            last_moved: self.last_moved,
+            last_move: self.last_move,
+            stunned: self.stunned,
+            pinned: self.pinned,
+            hasher: self.hasher.clone(),
+            smallest: self.smallest,
+            eigen_direction: self.eigen_direction,
+        }
+    }
+
+    pub fn from_snapshot(snapshot: &BoardSnapshot) -> Self {
+        let mut board = Self::new();
+        for (position, piece) in &snapshot.pieces {
+            if board.board.get(*position).is_empty() {
+                board.neighbor_count_add(*position);
+            }
+            board.board.get_mut(*position).push_piece(*piece);
+            board.set_position_of_piece(*piece, *position);
+        }
+        board.last_moved = snapshot.last_moved;
+        board.last_move = snapshot.last_move;
+        board.stunned = snapshot.stunned;
+        board.pinned = snapshot.pinned;
+        board.played = snapshot.pieces.len();
+        board.hasher = snapshot.hasher.clone();
+        board.smallest = snapshot.smallest;
+        board.eigen_direction = snapshot.eigen_direction;
+        if board.played == 1 {
+            let stack = board.board.get_mut(Position::initial_spawn_position());
+            for rotation in [Rotation::C, Rotation::CC] {
+                stack.set_index(rotation, 0);
+            }
+        } else if let (Some((_, smallest_position)), Some(eigen_direction)) =
+            (board.smallest, board.eigen_direction)
+        {
+            for rotation in [Rotation::C, Rotation::CC] {
+                let mut indexed = 0;
+                for (index, position) in
+                    CircleIter::new(smallest_position, eigen_direction, rotation).enumerate()
+                {
+                    let stack = board.board.get_mut(position);
+                    stack.set_index(rotation, index);
+                    indexed += stack.len();
+                    if indexed == board.played {
+                        break;
+                    }
+                }
+            }
+        }
+        board
     }
 
     #[cfg(feature = "cli")]
@@ -344,31 +418,20 @@ impl Board {
             self.eigen_direction = Some(eigen_direction);
             self.hasher.clear(turn);
             let smallest_position = self.smallest.unwrap().1;
-            let clockwise = CircleIter::new(smallest_position, eigen_direction, Rotation::C);
-            let mut hashed = 0_usize;
-            for (index, position) in clockwise.enumerate() {
-                let bs = self.board.get_mut(position);
-                bs.set_index(Rotation::C, index);
-                if !bs.is_empty() {
-                    self.hasher.update(bs, Some(index as u32), Rotation::C);
-                    hashed += bs.size as usize;
-                }
-                if hashed == self.played {
-                    break;
-                }
-            }
-            let counter_clockwise =
-                CircleIter::new(smallest_position, eigen_direction, Rotation::CC);
-            hashed = 0_usize;
-            for (index, position) in counter_clockwise.enumerate() {
-                let bs = self.board.get_mut(position);
-                bs.set_index(Rotation::CC, index);
-                if !bs.is_empty() {
-                    self.hasher.update(bs, Some(index as u32), Rotation::CC);
-                    hashed += bs.size as usize;
-                }
-                if hashed == self.played {
-                    break;
+            for rotation in [Rotation::C, Rotation::CC] {
+                let mut hashed = 0_usize;
+                for (index, position) in
+                    CircleIter::new(smallest_position, eigen_direction, rotation).enumerate()
+                {
+                    let bs = self.board.get_mut(position);
+                    bs.set_index(rotation, index);
+                    if !bs.is_empty() {
+                        self.hasher.update(bs, Some(index as u32), rotation);
+                        hashed += bs.size as usize;
+                    }
+                    if hashed == self.played {
+                        break;
+                    }
                 }
             }
         }
@@ -1262,6 +1325,58 @@ mod tests {
     use super::*;
     use crate::{history::History, state::State};
     use std::collections::HashSet;
+
+    fn assert_snapshot_equivalent(actual: &State, expected: &State) {
+        let mut actual_board = actual.board.clone();
+        for position in Board::all_positions() {
+            let actual_stack = actual_board.board.get(position);
+            let expected_stack = expected.board.board.get(position);
+            assert_eq!(actual_stack.size, expected_stack.size, "{position}");
+            assert_eq!(actual_stack.pieces, expected_stack.pieces, "{position}");
+            if actual_stack.is_empty() {
+                *actual_board.board.get_mut(position) = expected_stack.clone();
+            }
+        }
+        assert_eq!(actual_board, expected.board);
+
+        let mut actual_state = actual.clone();
+        actual_state.board = expected.board.clone();
+        assert_eq!(actual_state, *expected);
+    }
+
+    #[test]
+    fn snapshot_restores_moved_stack_and_continues() {
+        let mut history = History::from_filepath("./test_pgns/hash/short_pass.pgn".into())
+            .expect("valid history");
+        let continuation = history.moves[7].clone();
+        assert_eq!(continuation, ("bL".to_string(), "-wQ".to_string()));
+        history.moves.truncate(7);
+
+        let mut expected = State::new_from_history(&history).expect("valid first seven plies");
+        let beetle_position = expected
+            .board
+            .position_of_piece("wB1".parse().expect("valid piece"))
+            .expect("beetle on board");
+        assert_eq!(
+            expected
+                .board
+                .position_of_piece("bQ".parse().expect("valid piece")),
+            Some(beetle_position)
+        );
+        assert_eq!(expected.board.level(beetle_position), 2);
+
+        let mut restored = expected.clone();
+        restored.board = Board::from_snapshot(&expected.board.snapshot());
+        assert_snapshot_equivalent(&restored, &expected);
+
+        expected
+            .play_turn_from_history(&continuation.0, &continuation.1)
+            .expect("legal continuation");
+        restored
+            .play_turn_from_history(&continuation.0, &continuation.1)
+            .expect("legal continuation after restore");
+        assert_snapshot_equivalent(&restored, &expected);
+    }
 
     #[test]
     fn tests_action_existence_matches_full_generation_for_pass_games() {

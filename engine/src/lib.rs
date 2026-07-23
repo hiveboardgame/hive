@@ -21,7 +21,7 @@ mod svg_position;
 mod torus_array;
 mod turn;
 
-pub use board::Board;
+pub use board::{Board, BoardSnapshot};
 pub use bug::Bug;
 pub use bug_stack::BugStack;
 pub use color::{Color, ColorChoice};

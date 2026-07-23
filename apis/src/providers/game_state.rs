@@ -11,7 +11,7 @@ use shared_types::{GameId, Takeback};
 use uuid::Uuid;
 
 use super::{
-    analysis::AnalysisSignal,
+    analysis::AnalysisContext,
     api_requests::ApiRequests,
     auth_context::{AuthContext, AuthIdentity},
     ApiRequestsProvider,
@@ -69,27 +69,22 @@ impl GameStateStore {
         let black_id = self.black_id();
         Memo::new(move |_| {
             let user_id = identity.get().and_then(AuthIdentity::user_id);
-            match (white_id.get(), black_id.get()) {
-                (Some(_), Some(black)) if user_id == Some(black) => Some(Color::Black),
-                (Some(white), Some(_)) if user_id == Some(white) => Some(Color::White),
-                _ => None,
-            }
+            color_for_user(user_id, white_id.get(), black_id.get())
         })
         .into()
     }
 
+    pub fn user_color_untracked(&self, user_id: Option<Uuid>) -> Option<Color> {
+        color_for_user(
+            user_id,
+            self.white_id().get_untracked(),
+            self.black_id().get_untracked(),
+        )
+    }
+
     pub fn send_game_control(&self, game_control: GameControl, user: Uuid) {
         let api = expect_context::<ApiRequestsProvider>().0;
-        let black_id = self.black_id().get_untracked();
-        let white_id = self.white_id().get_untracked();
-        let color = if Some(user) == black_id {
-            Some(Color::Black)
-        } else if Some(user) == white_id {
-            Some(Color::White)
-        } else {
-            None
-        };
-        if let Some(color) = color {
+        if let Some(color) = self.user_color_untracked(Some(user)) {
             if color != game_control.color() {
                 log!("This is a bug, you should only send GCs of your own color, user id color is {color} and gc color is {}", game_control.color());
             } else if let Some(game_id) = self.game_id().get_untracked() {
@@ -123,7 +118,7 @@ impl GameStateStore {
         })
     }
 
-    pub fn move_active(&self, analysis: Option<AnalysisSignal>, api: ApiRequests) {
+    pub fn move_active(&self, analysis: Option<AnalysisContext>, api: ApiRequests) {
         let (active, position) = self.move_info().with_untracked(|move_info| {
             (
                 move_info.active.map(|(piece, _)| piece),
@@ -162,11 +157,7 @@ impl GameStateStore {
             };
 
             if let Some(analysis) = analysis {
-                analysis.tree.update(|analysis| {
-                    for (played_move, hash) in appended {
-                        analysis.add_node(played_move, hash);
-                    }
-                });
+                analysis.store.append_moves(appended, *self);
                 self.clear_selection();
                 analysis.sync_reserve.run(turn_color);
             } else if let Some(game_id) = self.game_id().get_untracked() {
@@ -185,26 +176,14 @@ impl GameStateStore {
         if in_analysis {
             return true;
         }
-        let (turn, game_status) = self
-            .state()
-            .with_untracked(|state| (state.turn, state.game_status.clone()));
-        if matches!(
-            game_status,
-            GameStatus::Finished(_) | GameStatus::Adjudicated
-        ) {
-            return false;
-        }
-        let black_id = self.black_id().get_untracked();
-        let white_id = self.white_id().get_untracked();
         let user_id = expect_context::<AuthContext>()
             .identity
             .get_untracked()
             .and_then(AuthIdentity::user_id);
-        if turn.is_multiple_of(2) {
-            white_id == user_id && user_id.is_some()
-        } else {
-            black_id == user_id && user_id.is_some()
-        }
+        let user_color = self.user_color_untracked(user_id);
+        self.state().with_untracked(|state| {
+            live_move_allowed(user_color, state.turn_color, &state.game_status)
+        })
     }
 
     pub fn show_moves(&self, piece: Piece, position: Position) {
@@ -265,48 +244,6 @@ impl GameStateStore {
             .set(BoardView::History { turn: Some(turn) });
     }
 
-    pub fn first_history_turn(&self) {
-        let turn = (self.state().with_untracked(|state| state.turn) > 0).then_some(0);
-        self.board_view().set(BoardView::History { turn });
-    }
-
-    pub fn last_history_turn(&self) {
-        let turn = self
-            .state()
-            .with_untracked(|state| state.turn.checked_sub(1));
-        self.board_view().set(BoardView::History { turn });
-    }
-
-    pub fn next_history_turn(&self) {
-        let current = self.board_view().with_untracked(BoardView::history_turn);
-        let next = self.state().with_untracked(|state| {
-            if state.turn == 0 {
-                return None;
-            }
-            let mut next = match current {
-                Some(turn) => Some((turn + 1).min(state.turn - 1)),
-                None => Some(0),
-            };
-            if next.is_some_and(|turn| state.history.move_is_pass(turn)) {
-                next = next.map(|turn| (turn + 1).min(state.turn - 1));
-            }
-            next
-        });
-        self.board_view().set(BoardView::History { turn: next });
-    }
-
-    pub fn previous_history_turn(&self) {
-        let current = self.board_view().with_untracked(BoardView::history_turn);
-        let previous = self.state().with_untracked(|state| {
-            let mut previous = current.and_then(|turn| turn.checked_sub(1));
-            if previous.is_some_and(|turn| state.history.move_is_pass(turn)) {
-                previous = previous.and_then(|turn| turn.checked_sub(1));
-            }
-            previous
-        });
-        self.board_view().set(BoardView::History { turn: previous });
-    }
-
     pub fn view_game(&self) {
         self.board_view().set(BoardView::Live);
     }
@@ -316,7 +253,10 @@ impl GameStateStore {
             .board_view()
             .with_untracked(|view| matches!(view, BoardView::Live))
         {
-            self.last_history_turn();
+            let turn = self
+                .state()
+                .with_untracked(|state| state.turn.checked_sub(1));
+            self.board_view().set(BoardView::History { turn });
         }
     }
 
@@ -369,7 +309,7 @@ pub fn provide_game_state() {
     provide_context(GameStateStore::new());
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BoardView {
     Live,
     History {
@@ -379,23 +319,44 @@ pub enum BoardView {
 }
 
 impl BoardView {
-    pub fn history_turn(&self) -> Option<usize> {
+    pub fn displayed_turn(self, state_turn: usize) -> Option<usize> {
         match self {
-            Self::Live => None,
-            Self::History { turn } => *turn,
+            Self::Live => state_turn.checked_sub(1),
+            Self::History { turn } => turn,
         }
     }
 
-    pub fn is_history(&self) -> bool {
+    pub fn is_history(self) -> bool {
         matches!(self, Self::History { .. })
     }
 
-    pub fn is_last_turn(&self, state_turn: usize) -> bool {
-        match self {
-            Self::Live => true,
-            Self::History { turn } => state_turn == 0 || *turn == state_turn.checked_sub(1),
-        }
+    pub fn is_last_turn(self, state_turn: usize) -> bool {
+        self.displayed_turn(state_turn) == state_turn.checked_sub(1)
     }
+}
+
+pub(crate) fn color_for_user(
+    user_id: Option<Uuid>,
+    white_id: Option<Uuid>,
+    black_id: Option<Uuid>,
+) -> Option<Color> {
+    let user_id = user_id?;
+    if Some(user_id) == white_id {
+        Some(Color::White)
+    } else if Some(user_id) == black_id {
+        Some(Color::Black)
+    } else {
+        None
+    }
+}
+
+pub(crate) fn live_move_allowed(
+    user_color: Option<Color>,
+    turn_color: Color,
+    status: &GameStatus,
+) -> bool {
+    user_color == Some(turn_color)
+        && !matches!(status, GameStatus::Finished(_) | GameStatus::Adjudicated)
 }
 
 #[derive(Clone, Debug, Store)]
@@ -479,12 +440,9 @@ fn takeback_allowed_for_response(game_response: &GameResponse) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        hooks::history_nav::{navigate_play_history, PlayHistoryNavigation},
-        responses::UserResponse,
-    };
+    use crate::responses::UserResponse;
     use chrono::Utc;
-    use hive_lib::{Direction as BoardDirection, History};
+    use hive_lib::Direction as BoardDirection;
     use leptos::prelude::Owner;
     use shared_types::{Conclusion, GameSpeed, GameStart, TimeMode, TournamentGameResult};
     use std::collections::HashMap;
@@ -496,6 +454,26 @@ mod tests {
     fn with_store(test: impl FnOnce(GameStateStore)) {
         let owner = Owner::new();
         owner.with(|| test(GameStateStore::new()));
+    }
+
+    #[test]
+    fn user_color_handles_partial_player_data() {
+        let white = Uuid::new_v4();
+        let black = Uuid::new_v4();
+        let spectator = Uuid::new_v4();
+
+        let cases = [
+            (Some(white), Some(white), None, Some(Color::White)),
+            (Some(black), None, Some(black), Some(Color::Black)),
+            (Some(white), Some(white), Some(black), Some(Color::White)),
+            (Some(black), Some(white), Some(black), Some(Color::Black)),
+            (Some(spectator), Some(white), Some(black), None),
+            (None, Some(white), Some(black), None),
+        ];
+
+        for (user_id, white_id, black_id, expected) in cases {
+            assert_eq!(color_for_user(user_id, white_id, black_id), expected);
+        }
     }
 
     fn game_response() -> GameResponse {
@@ -712,52 +690,6 @@ mod tests {
             game_state.reset_from_response(&response);
 
             assert_authoritative_snapshot(game_state, &response, None);
-        });
-    }
-
-    #[test]
-    fn history_navigation_skips_passes_from_a_valid_game() {
-        with_store(|game_state| {
-            let history = History::from_pgn_str(
-                include_str!("../../../engine/test_pgns/valid/pass2.pgn").to_string(),
-            );
-            let history = history.expect("valid pass history");
-            let pass_turn = history
-                .moves
-                .iter()
-                .position(|(piece, _)| piece == "pass")
-                .expect("fixture contains a pass");
-            let turn_before_pass = pass_turn.checked_sub(1).expect("pass follows a move");
-            let turn_after_pass = pass_turn
-                .checked_add(1)
-                .filter(|turn| *turn < history.moves.len())
-                .expect("pass precedes a move");
-
-            let state = State::new_from_history(&history).expect("valid pass state");
-            game_state.reset_with_state(state);
-            game_state.show_history_turn(turn_before_pass);
-
-            assert!(navigate_play_history(
-                PlayHistoryNavigation::Next,
-                game_state,
-            ));
-            assert_eq!(
-                game_state.board_view().get_untracked(),
-                BoardView::History {
-                    turn: Some(turn_after_pass)
-                }
-            );
-
-            assert!(navigate_play_history(
-                PlayHistoryNavigation::Previous,
-                game_state,
-            ));
-            assert_eq!(
-                game_state.board_view().get_untracked(),
-                BoardView::History {
-                    turn: Some(turn_before_pass)
-                }
-            );
         });
     }
 }

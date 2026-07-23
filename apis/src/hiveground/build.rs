@@ -139,10 +139,10 @@ fn occupied_board_stacks(board: &Board) -> impl Iterator<Item = (Position, &BugS
         .map(move |position| (position, board.board.get(position)))
 }
 
-pub fn build_board_render_model(state: &State, move_info: &MoveInfo) -> HivegroundRenderModel {
+pub fn build_board_render_model(board: &Board, move_info: &MoveInfo) -> HivegroundRenderModel {
     let config = HivegroundConfig {
-        stacks: board_display_stacks(&state.board),
-        overlays: board_overlay_set(state, move_info),
+        stacks: board_display_stacks(board),
+        overlays: board_overlay_set(board, move_info),
     };
     build_hiveground_render_model(&config)
 }
@@ -197,7 +197,7 @@ fn build_hiveground_render_model(config: &HivegroundConfig) -> HivegroundRenderM
     }
 }
 
-fn board_overlay_set(state: &State, move_info: &MoveInfo) -> OverlaySet {
+fn board_overlay_set(board: &Board, move_info: &MoveInfo) -> OverlaySet {
     let active_piece = move_info.active.map(|(piece, _)| piece);
     let preview_source = preview_source(move_info);
     let has_active_preview = active_piece.is_some() && preview_source.is_some();
@@ -226,8 +226,8 @@ fn board_overlay_set(state: &State, move_info: &MoveInfo) -> OverlaySet {
 
     OverlaySet {
         last_move: (!has_active_preview).then_some(LastMoveOverlay {
-            from: state.board.last_move.0,
-            to: state.board.last_move.1,
+            from: board.last_move.0,
+            to: board.last_move.1,
         }),
         active_marker,
         target_positions,
@@ -542,15 +542,14 @@ mod tests {
         piece.parse().expect("test piece parses")
     }
 
-    fn state_with_stacks(stacks: Vec<(Position, Vec<&str>)>) -> State {
-        let mut state = State::new(GameType::MLP, false);
-        state.game_status = GameStatus::InProgress;
+    fn board_with_stacks(stacks: Vec<(Position, Vec<&str>)>) -> Board {
+        let mut board = Board::new();
         for (position, pieces) in stacks {
             for piece in pieces {
-                state.board.insert(position, self::piece(piece), true);
+                board.insert(position, self::piece(piece), true);
             }
         }
-        state
+        board
     }
 
     fn stack_at(model: &HivegroundRenderModel, position: Position) -> &RenderStack {
@@ -685,9 +684,9 @@ mod tests {
     #[test]
     fn board_model_single_piece_renders_board_piece() {
         let position = Position::new(3, 2);
-        let state = state_with_stacks(vec![(position, vec!["wQ"])]);
+        let board = board_with_stacks(vec![(position, vec!["wQ"])]);
 
-        let model = build_board_render_model(&state, &MoveInfo::new());
+        let model = build_board_render_model(&board, &MoveInfo::new());
 
         assert_eq!(model.stacks.len(), 1);
         assert_eq!(
@@ -699,9 +698,9 @@ mod tests {
     #[test]
     fn board_model_marks_covered_and_top_piece() {
         let position = Position::new(3, 2);
-        let state = state_with_stacks(vec![(position, vec!["wQ", "bB1"])]);
+        let board = board_with_stacks(vec![(position, vec!["wQ", "bB1"])]);
 
-        let model = build_board_render_model(&state, &MoveInfo::new());
+        let model = build_board_render_model(&board, &MoveInfo::new());
 
         assert_eq!(
             layer_summary(stack_at(&model, position)),
@@ -714,9 +713,9 @@ mod tests {
     #[test]
     fn static_model_marks_all_pieces_as_history() {
         let position = Position::new(3, 2);
-        let state = state_with_stacks(vec![(position, vec!["wQ", "bB1"])]);
+        let board = board_with_stacks(vec![(position, vec!["wQ", "bB1"])]);
 
-        let model = build_static_render_model(&state.board);
+        let model = build_static_render_model(&board);
 
         assert_eq!(
             layer_summary(stack_at(&model, position)),
@@ -728,10 +727,10 @@ mod tests {
     fn board_model_keeps_last_move_to_under_top_piece() {
         let from = Position::new(2, 2);
         let position = Position::new(3, 2);
-        let mut state = state_with_stacks(vec![(position, vec!["wQ", "bB1"])]);
-        state.board.last_move = (Some(from), Some(position));
+        let mut board = board_with_stacks(vec![(position, vec!["wQ", "bB1"])]);
+        board.last_move = (Some(from), Some(position));
 
-        let model = build_board_render_model(&state, &MoveInfo::new());
+        let model = build_board_render_model(&board, &MoveInfo::new());
 
         assert_eq!(
             layer_summary(stack_at(&model, position)),
@@ -750,10 +749,10 @@ mod tests {
     fn board_model_renders_last_move_from_on_empty_origin() {
         let from = Position::new(2, 2);
         let to = Position::new(3, 2);
-        let mut state = state_with_stacks(vec![(to, vec!["wQ"])]);
-        state.board.last_move = (Some(from), Some(to));
+        let mut board = board_with_stacks(vec![(to, vec!["wQ"])]);
+        board.last_move = (Some(from), Some(to));
 
-        let model = build_board_render_model(&state, &MoveInfo::new());
+        let model = build_board_render_model(&board, &MoveInfo::new());
 
         assert_eq!(layer_summary(stack_at(&model, from)), vec!["last:From:0"]);
     }
@@ -763,13 +762,13 @@ mod tests {
         let origin = Position::new(2, 2);
         let occupied = Position::new(3, 2);
         let empty = Position::new(4, 2);
-        let state = state_with_stacks(vec![(origin, vec!["bB1"]), (occupied, vec!["wQ"])]);
+        let board = board_with_stacks(vec![(origin, vec!["bB1"]), (occupied, vec!["wQ"])]);
         let mut move_info = MoveInfo::new();
         move_info.active = Some((piece("bB1"), PieceType::Board));
         move_info.current_position = Some(origin);
         move_info.target_positions = vec![empty, occupied];
 
-        let model = build_board_render_model(&state, &move_info);
+        let model = build_board_render_model(&board, &move_info);
 
         assert_eq!(layer_summary(stack_at(&model, empty)), vec!["target:0"]);
         assert_eq!(
@@ -781,13 +780,12 @@ mod tests {
     #[test]
     fn board_model_active_piece_without_target_keeps_origin_piece() {
         let origin = Position::new(3, 2);
-        let mut state = state_with_stacks(vec![(origin, vec!["wQ", "bB1"])]);
-        state.turn_color = Color::Black;
+        let board = board_with_stacks(vec![(origin, vec!["wQ", "bB1"])]);
         let mut move_info = MoveInfo::new();
         move_info.active = Some((piece("bB1"), PieceType::Board));
         move_info.current_position = Some(origin);
 
-        let model = build_board_render_model(&state, &move_info);
+        let model = build_board_render_model(&board, &move_info);
 
         assert_eq!(
             layer_summary(stack_at(&model, origin)),
@@ -805,11 +803,11 @@ mod tests {
     #[test]
     fn board_model_clicked_piece_without_active_move_keeps_marker() {
         let origin = Position::new(3, 2);
-        let state = state_with_stacks(vec![(origin, vec!["wQ"])]);
+        let board = board_with_stacks(vec![(origin, vec!["wQ"])]);
         let mut move_info = MoveInfo::new();
         move_info.current_position = Some(origin);
 
-        let model = build_board_render_model(&state, &move_info);
+        let model = build_board_render_model(&board, &move_info);
 
         assert_eq!(
             layer_summary(stack_at(&model, origin)),
@@ -825,15 +823,14 @@ mod tests {
     fn board_model_lifts_active_origin_and_adds_move_ghost() {
         let origin = Position::new(3, 2);
         let target = Position::new(4, 2);
-        let mut state = state_with_stacks(vec![(origin, vec!["wQ", "bB1"])]);
-        state.turn_color = Color::Black;
+        let board = board_with_stacks(vec![(origin, vec!["wQ", "bB1"])]);
         let mut move_info = MoveInfo::new();
         move_info.active = Some((piece("bB1"), PieceType::Board));
         move_info.current_position = Some(origin);
         move_info.target_position = Some(target);
         move_info.target_positions = vec![target];
 
-        let model = build_board_render_model(&state, &move_info);
+        let model = build_board_render_model(&board, &move_info);
 
         assert_eq!(
             layer_summary(stack_at(&model, origin)),
@@ -849,15 +846,14 @@ mod tests {
     fn board_model_places_move_ghost_above_target_marker_on_stack() {
         let origin = Position::new(3, 2);
         let target = Position::new(4, 2);
-        let mut state = state_with_stacks(vec![(origin, vec!["bB1"]), (target, vec!["wQ", "bA1"])]);
-        state.turn_color = Color::Black;
+        let board = board_with_stacks(vec![(origin, vec!["bB1"]), (target, vec!["wQ", "bA1"])]);
         let mut move_info = MoveInfo::new();
         move_info.active = Some((piece("bB1"), PieceType::Board));
         move_info.current_position = Some(origin);
         move_info.target_position = Some(target);
         move_info.target_positions = vec![target];
 
-        let model = build_board_render_model(&state, &move_info);
+        let model = build_board_render_model(&board, &move_info);
 
         assert_eq!(
             layer_summary(stack_at(&model, target)),
@@ -873,15 +869,14 @@ mod tests {
     #[test]
     fn board_model_adds_spawn_ghost_for_reserve_origin() {
         let target = Position::new(4, 2);
-        let mut state = state_with_stacks(vec![(Position::new(3, 2), vec!["wQ"])]);
-        state.turn_color = Color::Black;
+        let board = board_with_stacks(vec![(Position::new(3, 2), vec!["wQ"])]);
         let mut move_info = MoveInfo::new();
         move_info.active = Some((piece("bA1"), PieceType::Reserve));
         move_info.reserve_position = Some(Position::new(0, 0));
         move_info.target_position = Some(target);
         move_info.target_positions = vec![target];
 
-        let model = build_board_render_model(&state, &move_info);
+        let model = build_board_render_model(&board, &move_info);
 
         assert_eq!(
             layer_summary(stack_at(&model, target)),
@@ -893,13 +888,13 @@ mod tests {
     fn board_model_bounds_include_empty_overlay_positions() {
         let occupied = Position::new(3, 2);
         let target = Position::new(4, 2);
-        let state = state_with_stacks(vec![(occupied, vec!["wQ"])]);
+        let board = board_with_stacks(vec![(occupied, vec!["wQ"])]);
         let mut move_info = MoveInfo::new();
         move_info.active = Some((piece("wQ"), PieceType::Board));
         move_info.current_position = Some(occupied);
         move_info.target_positions = vec![target];
 
-        let model = build_board_render_model(&state, &move_info);
+        let model = build_board_render_model(&board, &move_info);
 
         assert_eq!(model.bounds.min_q, occupied.q);
         assert_eq!(model.bounds.max_q, target.q);
@@ -918,14 +913,14 @@ mod tests {
         let occupied = Position::new(3, 2);
         let last_move_from = Position::new(1, 2);
         let target = Position::new(4, 2);
-        let mut state = state_with_stacks(vec![(occupied, vec!["wQ"])]);
-        state.board.last_move = (Some(last_move_from), Some(occupied));
+        let mut board = board_with_stacks(vec![(occupied, vec!["wQ"])]);
+        board.last_move = (Some(last_move_from), Some(occupied));
         let mut move_info = MoveInfo::new();
         move_info.active = Some((piece("wQ"), PieceType::Board));
         move_info.current_position = Some(occupied);
         move_info.target_positions = vec![target, target, occupied];
 
-        let positions = build_board_render_model(&state, &move_info)
+        let positions = build_board_render_model(&board, &move_info)
             .stacks
             .into_iter()
             .map(|stack| stack.position)

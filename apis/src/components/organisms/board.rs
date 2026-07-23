@@ -11,13 +11,13 @@ use crate::{
     },
     hiveground::HivegroundInteraction,
     providers::{
-        analysis::AnalysisSignal,
+        analysis::AnalysisContext,
         annotations::{AnnotationColor, AnnotationTool, AnnotationsSignal, MarkerShape},
         game_state::{BoardView, GameStateStore, GameStateStoreFields},
         Config,
     },
 };
-use hive_lib::{GameStatus, Position, State};
+use hive_lib::{Board as HiveBoard, GameStatus, Position, State};
 use leptos::{
     either::Either,
     ev::{
@@ -167,9 +167,9 @@ enum StackExpansionResetKey {
 }
 
 #[component]
-pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> impl IntoView {
+pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>) -> impl IntoView {
     let game_state = expect_context::<GameStateStore>();
-    let analysis = use_context::<AnalysisSignal>();
+    let analysis = use_context::<AnalysisContext>();
     let annotations = use_context::<AnnotationsSignal>();
     // Hex where the current draw gesture started (set on the draw-button press).
     let annotation_start = RwSignal::new(None::<Position>);
@@ -644,7 +644,7 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
                     {move || {
                         if board_view.get().is_history() && !last_turn() && !in_analysis {
                             Either::Left(
-                                view! { <HistoryPieces tile_opts interaction history_state /> },
+                                view! { <HistoryPieces tile_opts interaction history_board /> },
                             )
                         } else {
                             Either::Right(view! { <BoardPieces tile_opts interaction /> })
@@ -652,7 +652,7 @@ pub fn Board(interaction: HivegroundInteraction, history_state: Memo<State>) -> 
                     }}
                     {annotations
                         .map(|annotations| {
-                            view! { <AnnotationsLayer annotations history_state /> }
+                            view! { <AnnotationsLayer annotations history_board /> }
                         })}
                 </g>
             </svg>
@@ -887,7 +887,7 @@ fn stack_expansion_reset_key(
     in_analysis: bool,
 ) -> StackExpansionResetKey {
     if view.is_history() && !view.is_last_turn(state.turn) && !in_analysis {
-        let turn = view.history_turn();
+        let turn = view.displayed_turn(state.turn);
         let hash = turn.and_then(|turn| state.history.hashes.get(turn).copied());
         return StackExpansionResetKey::HistoryTurn { turn, hash };
     }

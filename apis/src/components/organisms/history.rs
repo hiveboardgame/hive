@@ -4,9 +4,9 @@ use crate::{
         organisms::side_board::move_query_signal,
     },
     hiveground::HivegroundInteraction,
-    providers::game_state::{BoardView, GameStateStore, GameStateStoreFields},
+    providers::game_state::{GameStateStore, GameStateStoreFields},
 };
-use hive_lib::{GameStatus, State};
+use hive_lib::{Board, GameStatus};
 use leptos::{html, prelude::*};
 use leptos_icons::*;
 use leptos_router::hooks::{use_params_map, use_query_map};
@@ -38,20 +38,11 @@ pub fn HistoryMove(
                 .is_some_and(|game| game.time_mode == TimeMode::RealTime)
         })
     });
-    let is_current = Signal::derive(move || match board_view.get() {
-        BoardView::Live => state.with(|state| state.turn.checked_sub(1) == Some(turn)),
-        BoardView::History {
-            turn: Some(history_turn),
-        } => turn == history_turn,
-        BoardView::History { turn: None } => false,
+    let is_current = Signal::derive(move || {
+        let board_view = board_view.get();
+        state.with(|state| board_view.displayed_turn(state.turn) == Some(turn))
     });
-    let get_class = move || {
-        let base_class = "col-span-2 p-1 h-auto max-h-6 leading-6 transition-transform duration-300 transform odd:ml-1 odd:justify-self-start even:mr-1 even:justify-self-end hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95";
-        if is_current.get() {
-            return format!("{base_class} bg-orange-twilight");
-        }
-        base_class.to_string()
-    };
+    let base_class = "col-span-2 p-1 h-auto max-h-6 leading-6 transition-transform duration-300 transform odd:ml-1 odd:justify-self-start even:mr-1 even:justify-self-end hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95";
     div_ref.on_load(move |elem| {
         if let Some(parent_div) = parent_div.get_untracked() {
             parent_div.set_scroll_top(parent_div.scroll_height())
@@ -60,11 +51,7 @@ pub fn HistoryMove(
             elem.scroll_into_view_with_bool(false);
         }
     });
-    let rep = if repetition {
-        String::from(" ↺")
-    } else {
-        String::new()
-    };
+    let rep = if repetition { " ↺" } else { "" };
     let time_took = move || {
         if turn < 2 {
             return None;
@@ -85,7 +72,8 @@ pub fn HistoryMove(
     view! {
         <div
             node_ref=div_ref
-            class=get_class
+            class=base_class
+            class=("bg-orange-twilight", move || is_current.get())
             data-history-current=move || is_current.get().to_string()
             on:click=onclick
         >
@@ -96,7 +84,7 @@ pub fn HistoryMove(
 }
 
 #[component]
-pub fn History(interaction: HivegroundInteraction, history_state: Memo<State>) -> impl IntoView {
+pub fn History(interaction: HivegroundInteraction, history_board: Memo<Board>) -> impl IntoView {
     let game_state = expect_context::<GameStateStore>();
     let params = use_params_map();
     let queries = use_query_map();
@@ -138,11 +126,11 @@ pub fn History(interaction: HivegroundInteraction, history_state: Memo<State>) -
     });
 
     let is_repetition = move |turn: usize| {
-        if let Some(repetitions) = repetitions() {
-            repetitions.contains(&turn)
-        } else {
-            false
-        }
+        repetitions.with(|repetitions| {
+            repetitions
+                .as_ref()
+                .is_some_and(|repetitions| repetitions.contains(&turn))
+        })
     };
 
     let analysis_url = move || {
@@ -161,7 +149,7 @@ pub fn History(interaction: HivegroundInteraction, history_state: Memo<State>) -
     view! {
         <div class="flex flex-col pb-4 h-full">
 
-            <HistoryControls parent=parent.into() interaction history_state />
+            <HistoryControls parent=parent.into() interaction history_board />
             <Show when=is_finished>
                 <div class="flex flex-col gap-2 px-2 pb-2">
                     <div class="flex flex-wrap gap-2 justify-center text-sm font-semibold text-center">

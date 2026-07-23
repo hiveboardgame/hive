@@ -1,12 +1,12 @@
 use crate::providers::game_state::{BoardView, GameStateStore, GameStateStoreFields};
-use hive_lib::{GameType, History, State};
+use hive_lib::{Board, GameType, History, State};
 use leptos::prelude::*;
 
-fn build_history_state(
+fn build_history_board(
     history_moves: &[(String, String)],
     history_turn: Option<usize>,
     game_type: GameType,
-) -> State {
+) -> Board {
     let mut history = History::new();
     history.game_type = game_type;
     if let Some(turn) = history_turn {
@@ -14,24 +14,27 @@ fn build_history_state(
             history.moves = history_moves[0..=turn].into();
         }
     }
-    State::new_from_history(&history).expect("Got state from history")
+    State::new_from_history(&history)
+        .expect("Got state from history")
+        .board
 }
 
-pub fn selected_history_state(game_state: GameStateStore) -> Memo<State> {
+fn history_board_for_view(state: &State, board_view: BoardView) -> Board {
+    let history_turn = board_view.displayed_turn(state.turn);
+    if board_view.is_last_turn(state.turn) {
+        state.board.clone()
+    } else {
+        build_history_board(&state.history.moves, history_turn, state.game_type)
+    }
+}
+
+pub fn selected_history_board(game_state: GameStateStore) -> Memo<Board> {
     let board_view = game_state.board_view();
     let state = game_state.state();
-    let history =
-        Memo::new(move |_| state.with(|state| (state.history.moves.clone(), state.game_type)));
 
     Memo::new(move |_| {
         let board_view = board_view.get();
-        history.with(|(moves, game_type)| {
-            let history_turn = match board_view {
-                BoardView::Live => moves.len().checked_sub(1),
-                BoardView::History { turn } => turn,
-            };
-            build_history_state(moves, history_turn, *game_type)
-        })
+        state.with(|state| history_board_for_view(state, board_view))
     })
 }
 
@@ -40,35 +43,28 @@ mod tests {
     use super::*;
 
     #[test]
-    fn selected_history_state_reacts_to_board_view_and_preserves_the_game_type() {
+    fn selected_history_board_reacts_to_board_view() {
         let owner = Owner::new();
         owner.with(|| {
-            let history = History::from_pgn_str(
-                include_str!("../../../engine/test_pgns/valid/p_game.pgn").to_string(),
-            )
-            .expect("valid history");
-            let game_state = GameStateStore::new();
+            let history =
+                History::from_pgn_str(include_str!("../../../engine/test_pgns/valid/p_game.pgn"))
+                    .expect("valid history");
             let full_state = State::new_from_history(&history).expect("valid state");
-            let canonical_moves = full_state.history.moves.clone();
-            game_state.reset_with_state(full_state);
+            let game_state = GameStateStore::new();
+            game_state.reset_with_state(full_state.clone());
 
-            let selected_state = selected_history_state(game_state);
-            let live_state = selected_state.get_untracked();
-            assert_eq!(live_state.game_type, GameType::P);
-            assert_eq!(live_state.history.moves, canonical_moves);
+            let selected_board = selected_history_board(game_state);
+            assert_eq!(selected_board.get_untracked(), full_state.board);
 
             let history_turn = 7;
             game_state.show_history_turn(history_turn);
+            let mut prefix = history;
+            prefix.moves.truncate(history_turn + 1);
+            let expected = State::new_from_history(&prefix)
+                .expect("valid prefix")
+                .board;
 
-            let actual = selected_state.get_untracked();
-            let mut expected_history = History::new();
-            expected_history.game_type = history.game_type;
-            expected_history.moves = canonical_moves[..=history_turn].to_vec();
-            let expected = State::new_from_history(&expected_history).expect("valid history state");
-
-            assert_eq!(actual, expected);
-            assert_eq!(actual.game_type, GameType::P);
-            assert_eq!(actual.history.moves, canonical_moves[..=history_turn]);
+            assert_eq!(selected_board.get_untracked(), expected);
         });
     }
 }

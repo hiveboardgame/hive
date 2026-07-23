@@ -1,14 +1,14 @@
 use crate::providers::{
-    analysis::{AnalysisSignal, AnalysisTree, TreeNode},
+    analysis::{AnalysisContext, MoveDelta},
     game_state::GameStateStore,
 };
 use leptos::prelude::*;
 
 #[component]
 pub fn VariationList(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
-    let analysis = expect_context::<AnalysisSignal>();
+    let analysis = expect_context::<AnalysisContext>();
     let game_state = expect_context::<GameStateStore>();
-    let alternate_moves = Memo::new(move |_| analysis.tree.with(alternate_moves_for));
+    let alternate_moves = Memo::new(move |_| analysis.store.alternate_moves());
     let list_class = move || {
         format!(
             "w-fit max-w-full {} {}",
@@ -24,7 +24,7 @@ pub fn VariationList(#[prop(optional)] extend_tw_classes: &'static str) -> impl 
         alternate_moves.with(|moves| {
             moves
                 .iter()
-                .map(|(node_id, TreeNode {
+                .map(|(node_id, MoveDelta {
                     turn,
                     piece,
                     position,
@@ -35,11 +35,7 @@ pub fn VariationList(#[prop(optional)] extend_tw_classes: &'static str) -> impl 
                         <div
                             class="flex items-center px-2 h-6 font-mono text-xs whitespace-nowrap rounded transition-colors cursor-pointer active:scale-95 dark:hover:bg-pillbug-teal/15 hover:bg-blue-light/70"
                             on:click=move |_| {
-                                analysis
-                                    .tree
-                                    .update(|a| {
-                                        a.update_node(node_id, Some(game_state));
-                                    });
+                                analysis.store.select_node(node_id, game_state);
                                 analysis.sync_reserve_from_game_state(game_state);
                             }
                         >
@@ -60,23 +56,4 @@ pub fn VariationList(#[prop(optional)] extend_tw_classes: &'static str) -> impl 
             </div>
         </div>
     }
-}
-
-fn alternate_moves_for(analysis: &AnalysisTree) -> Vec<(i32, TreeNode)> {
-    let tree = &analysis.tree;
-    analysis
-        .current_node
-        .as_ref()
-        .and_then(|node| node.get_node_id().ok())
-        .and_then(|node_id| tree.get_sibling_ids(&node_id, false).ok())
-        .map_or_else(Vec::new, |sibling_ids| {
-            sibling_ids
-                .iter()
-                .filter_map(|id| {
-                    tree.get_node_by_id(id)
-                        .and_then(|node| node.get_value().ok().flatten())
-                        .map(|tree_node| (*id, tree_node))
-                })
-                .collect()
-        })
 }
