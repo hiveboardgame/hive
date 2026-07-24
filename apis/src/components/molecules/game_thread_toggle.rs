@@ -3,7 +3,6 @@ use crate::{
     providers::{
         game_state::{GameStateStore, GameStateStoreFields},
         AuthContext,
-        AuthIdentity,
     },
 };
 use leptos::prelude::*;
@@ -29,11 +28,9 @@ pub fn use_embedded_game_chat_state() -> EmbeddedGameChatState {
     let finished = game_state.is_finished();
     let white_id = game_state.white_id();
     let black_id = game_state.black_id();
+    let user_color = game_state.user_color_as_signal(auth.identity);
     let access = Signal::derive(move || {
-        let current_user = auth.identity.get().and_then(AuthIdentity::user_id);
-        let is_player = current_user.is_some()
-            && (white_id.get() == current_user || black_id.get() == current_user);
-        GameChatCapabilities::new(is_player, finished.get())
+        GameChatCapabilities::new(user_color.get().is_some(), finished.get())
     });
     Effect::new(move |_| {
         let loaded = white_id.get().is_some() && black_id.get().is_some();

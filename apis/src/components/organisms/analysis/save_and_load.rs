@@ -1,15 +1,5 @@
-use crate::providers::{
-    analysis::{AnalysisSignal, AnalysisTree},
-    game_state::GameStateStore,
-};
-use hive_lib::History;
-use leptos::{
-    html,
-    logging,
-    prelude::*,
-    reactive::effect::batch,
-    task::spawn_local_scoped_with_cancellation,
-};
+use crate::providers::{analysis::AnalysisContext, game_state::GameStateStore};
+use leptos::{html, logging, prelude::*, task::spawn_local_scoped_with_cancellation};
 use std::path::Path;
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
@@ -19,19 +9,13 @@ const BUTTON_CLASS: &str = "ui-button ui-button-primary ui-button-sm h-9 flex-1 
 
 #[component]
 pub fn DownloadTree() -> impl IntoView {
-    let analysis = expect_context::<AnalysisSignal>().tree;
+    let analysis = expect_context::<AnalysisContext>().store;
 
     let download = move |_| {
-        let tree_json = analysis.with_untracked(|a| {
-            let out = AnalysisTree {
-                current_node: a.current_node.clone(),
-                tree: a.tree.clone(),
-                hashes: a.hashes.clone(),
-                game_type: a.game_type,
-                annotations: a.annotations.clone(),
-            };
-            serde_json::to_string(&out).unwrap()
-        });
+        let Ok(tree_json) = analysis.to_json() else {
+            logging::log!("Couldn't serialize analysis");
+            return;
+        };
 
         let (blob, filename) = blob_and_filename(tree_json);
         let url = Url::create_object_url_with_blob(&blob).unwrap();
@@ -69,86 +53,91 @@ fn blob_and_filename(tree: String) -> (Blob, String) {
 
 #[component]
 pub fn LoadTree() -> impl IntoView {
-    let analysis = expect_context::<AnalysisSignal>();
+    let analysis = expect_context::<AnalysisContext>();
     let game_state = expect_context::<GameStateStore>();
     let input_ref = NodeRef::<html::Input>::new();
     let load_owner = Owner::current().expect("LoadTree must run inside a reactive owner");
-
-    let from_pgn = move |string: JsValue| {
-        string
-            .as_string()
-            .and_then(|string| History::from_pgn_str(string).ok())
-            .and_then(|history| hive_lib::State::new_from_history(&history).ok())
-            .map(|state| {
-                let tree = AnalysisTree::from_loaded_state(&state);
-                batch(|| {
-                    game_state.reset_with_state(state.clone());
-                    analysis.tree.set(tree);
-                });
-                analysis.sync_reserve.run(state.turn_color);
-            })
-    };
-    let from_json = move |string: JsValue| {
-        string
-            .as_string()
-            .and_then(|string| serde_json::from_str::<AnalysisTree>(&string).ok())
-            .map(|mut tree| {
-                tree.ensure_start_node();
-                let current_node_id = tree.current_node_id();
-                batch(|| {
-                    game_state.full_reset();
-                    if let Some(node_id) = current_node_id {
-                        tree.update_node(node_id, Some(game_state));
-                    }
-                    analysis.tree.set(tree);
-                });
-                if current_node_id.is_some() {
-                    analysis.sync_reserve_from_game_state(game_state);
-                }
-            })
-    };
+    let error = RwSignal::new(None::<String>);
+    let request_id = RwSignal::new(0_u64);
     let oninput = move |_| {
-        let file = input_ref
-            .get_untracked()
-            .unwrap()
-            .files()
-            .unwrap()
-            .get(0)
-            .unwrap();
-        Path::new(&file.name()).extension().map_or_else(
-            || logging::log!("Couldn't open file"),
-            |ext| {
-                let ext = ext.to_os_string();
-                load_owner.with(|| {
-                    spawn_local_scoped_with_cancellation(async move {
-                        let text = JsFuture::from(file.text()).await.ok();
-                        let result = if ext == "json" {
-                            text.and_then(from_json)
-                        } else if ext == "pgn" {
-                            text.and_then(from_pgn)
-                        } else {
-                            logging::log!("Unsupported file type");
-                            None
-                        };
-                        if result.is_none() {
-                            logging::log!("Couldn't open file");
-                        }
-                    });
+        let Some(input) = input_ref.get_untracked() else {
+            return;
+        };
+        let Some(file) = input.files().and_then(|files| files.get(0)) else {
+            return;
+        };
+        input.set_value("");
+        let next_request = request_id.get_untracked() + 1;
+        request_id.set(next_request);
+        let extension = Path::new(&file.name())
+            .extension()
+            .and_then(|extension| extension.to_str())
+            .map(str::to_ascii_lowercase);
+        let Some(extension) = extension else {
+            error.set(Some("Choose a .json or .pgn file.".to_string()));
+            return;
+        };
+        if extension != "json" && extension != "pgn" {
+            error.set(Some(format!(
+                "Unsupported .{extension} file. Choose JSON or PGN."
+            )));
+            return;
+        }
+        error.set(None);
+        load_owner.with(|| {
+            spawn_local_scoped_with_cancellation(async move {
+                let text = match JsFuture::from(file.text()).await {
+                    Ok(text) => text.as_string().ok_or_else(|| {
+                        "The selected file did not contain readable text.".to_string()
+                    }),
+                    Err(read_error) => {
+                        Err(format!("Could not read the selected file: {read_error:?}"))
+                    }
+                };
+                if request_id.get_untracked() != next_request {
+                    return;
+                }
+                let result = text.and_then(|text| {
+                    if extension == "json" {
+                        analysis
+                            .store
+                            .load_json(game_state, &text)
+                            .map_err(|error| format!("Could not open analysis JSON: {error}"))
+                    } else {
+                        analysis
+                            .store
+                            .load_pgn(game_state, &text)
+                            .map_err(|error| format!("Could not open PGN: {error}"))
+                    }
                 });
-            },
-        );
+                match result {
+                    Ok(()) => {
+                        analysis.sync_reserve_from_game_state(game_state);
+                    }
+                    Err(message) => {
+                        logging::log!("{message}");
+                        error.set(Some(message));
+                    }
+                }
+            });
+        });
     };
     view! {
-        <label for="load-analysis" class=format!("{BUTTON_CLASS} cursor-pointer")>
-            "Load"
-        </label>
-        <input
-            node_ref=input_ref
-            on:input=oninput
-            type="file"
-            id="load-analysis"
-            accept=".json,.pgn"
-            hidden
-        />
+        <div class="flex flex-col flex-1 gap-1 min-w-0">
+            <label for="load-analysis" class=format!("{BUTTON_CLASS} w-full cursor-pointer")>
+                "Load"
+            </label>
+            <input
+                node_ref=input_ref
+                on:input=oninput
+                type="file"
+                id="load-analysis"
+                accept=".json,.pgn"
+                hidden
+            />
+            <ShowLet some=move || error.get() let:message>
+                <span class="text-xs ui-field-error">{message}</span>
+            </ShowLet>
+        </div>
     }
 }

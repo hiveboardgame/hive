@@ -10,13 +10,13 @@ use crate::{
     hooks::history_nav::scroll_move_into_view,
     providers::game_state::GameStateStore,
 };
-use hive_lib::{Color, State};
+use hive_lib::{Board, Color};
 use leptos::{html, prelude::*};
 
 #[component]
 pub fn HistoryControls(
     interaction: HivegroundInteraction,
-    history_state: Memo<State>,
+    history_board: Memo<Board>,
     #[prop(optional)] parent: MaybeProp<NodeRef<html::Div>>,
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateStore>();
@@ -53,13 +53,13 @@ pub fn HistoryControls(
                     alignment=Alignment::DoubleRow
                     color=Color::White
                     interaction
-                    history_state
+                    history_board
                 />
                 <Reserve
                     alignment=Alignment::DoubleRow
                     color=Color::Black
                     interaction
-                    history_state
+                    history_board
                 />
             </div>
         </div>

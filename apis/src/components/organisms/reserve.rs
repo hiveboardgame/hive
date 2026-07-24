@@ -13,13 +13,13 @@ use crate::{
         ReserveRenderOptions,
     },
     providers::{
-        analysis::AnalysisSignal,
-        game_state::{BoardView, GameStateStore, GameStateStoreFields},
+        analysis::AnalysisContext,
+        game_state::{GameStateStore, GameStateStoreFields},
         AuthContext,
         Config,
     },
 };
-use hive_lib::{Color, GameStatus, State};
+use hive_lib::{Board, Color, GameStatus};
 use leptos::prelude::*;
 
 pub use crate::hiveground::ReserveLayout as Alignment;
@@ -32,11 +32,11 @@ pub fn Reserve(
     #[prop(into)] color: Signal<Color>,
     alignment: Alignment,
     interaction: HivegroundInteraction,
-    history_state: Memo<State>,
+    history_board: Memo<Board>,
     #[prop(optional)] viewbox_str: Option<&'static str>,
 ) -> impl IntoView {
     let interaction = interaction.disable_stack_inspection();
-    let analysis = use_context::<AnalysisSignal>().is_some();
+    let analysis = use_context::<AnalysisContext>().is_some();
     let game_state = expect_context::<GameStateStore>();
     let auth_context = expect_context::<AuthContext>();
     let config = expect_context::<Config>().0;
@@ -102,24 +102,20 @@ pub fn Reserve(
                 analysis,
             },
         };
-        match board_view {
-            BoardView::Live => state.with(|state| {
+        if board_view.is_history() && !analysis {
+            history_board.with(|history_board| {
+                state.with(|state| {
+                    move_info.with(|move_info| {
+                        build_reserve_render_model(state, history_board, move_info, options.clone())
+                    })
+                })
+            })
+        } else {
+            state.with(|state| {
                 move_info.with(|move_info| {
                     build_reserve_render_model(state, &state.board, move_info, options.clone())
                 })
-            }),
-            BoardView::History { .. } => history_state.with(|history_state| {
-                state.with(|state| {
-                    move_info.with(|move_info| {
-                        build_reserve_render_model(
-                            state,
-                            &history_state.board,
-                            move_info,
-                            options.clone(),
-                        )
-                    })
-                })
-            }),
+            })
         }
     });
 
@@ -141,13 +137,13 @@ pub fn ReserveContent(
     player_color: Memo<Color>,
     show_buttons: Signal<bool>,
     interaction: HivegroundInteraction,
-    history_state: Memo<State>,
+    history_board: Memo<Board>,
 ) -> impl IntoView {
     let top_color = Signal::derive(move || player_color().opposite_color());
     let bottom_color = Signal::derive(player_color);
 
     view! {
-        <Reserve color=top_color alignment=Alignment::DoubleRow interaction history_state />
+        <Reserve color=top_color alignment=Alignment::DoubleRow interaction history_board />
         <div class="flex justify-center items-start">
             <Show when=show_buttons>
                 <ControlButtons />
@@ -155,6 +151,6 @@ pub fn ReserveContent(
             <AnalysisAndDownload />
             <AnnotationToggle />
         </div>
-        <Reserve color=bottom_color alignment=Alignment::DoubleRow interaction history_state />
+        <Reserve color=bottom_color alignment=Alignment::DoubleRow interaction history_board />
     }
 }

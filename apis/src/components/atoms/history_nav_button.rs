@@ -1,4 +1,4 @@
-use leptos::{leptos_dom::helpers::debounce, prelude::*};
+use leptos::prelude::*;
 
 #[component]
 pub fn HistoryNavButton<F>(
@@ -10,9 +10,7 @@ pub fn HistoryNavButton<F>(
 where
     F: Fn() -> bool + Send + 'static,
 {
-    let debounced_action = debounce(std::time::Duration::from_millis(10), move |_| {
-        on_press.run(())
-    });
+    let press = move |_| on_press.run(());
     let mark_pointerdown = move |_| {
         if let Some(on_pointerdown) = on_pointerdown {
             on_pointerdown.run(());
@@ -24,7 +22,7 @@ where
             class="ui-board-nav-button"
             prop:disabled=disabled
             on:pointerdown=mark_pointerdown
-            on:click=debounced_action
+            on:click=press
         >
             {children()}
         </button>

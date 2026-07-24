@@ -1,236 +1,108 @@
 use crate::{
     components::organisms::{
-        analysis::{
-            atoms::{CollapsibleMove, HistoryMove},
-            AnalysisHistoryControls,
-            DownloadTree,
-            LoadTree,
-        },
+        analysis::{atoms::HistoryRow, AnalysisHistoryControls, DownloadTree, LoadTree},
         reserve::{Alignment, Reserve},
     },
     hiveground::HivegroundInteraction,
-    providers::analysis::{AnalysisSignal, AnalysisTree, TreeNode},
+    providers::analysis::AnalysisContext,
 };
-use hive_lib::{Color, State};
-use leptos::prelude::*;
-use std::{cmp::Ordering, collections::HashMap};
-use tree_ds::prelude::*;
+use hive_lib::{Board, Color};
+use leptos::{html, leptos_dom::helpers::request_animation_frame, prelude::*};
+use leptos_use::use_resize_observer;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 
-fn action_button_class() -> String {
-    "ui-button ui-button-secondary ui-button-sm min-h-9 w-full whitespace-normal px-2 py-1 text-center text-xs leading-tight"
-        .to_string()
-}
+pub(super) const ROW_HEIGHT: usize = 32;
+const OVERSCAN_ROWS: usize = 8;
+const ACTION_BUTTON_CLASS: &str =
+    "ui-button ui-button-secondary ui-button-sm min-h-9 w-full whitespace-normal px-2 py-1 text-center text-xs leading-tight";
 
-#[derive(Clone, Debug, PartialEq)]
-enum HistoryItem {
-    /// A plain history row: <HistoryMove ... />
-    Move { node_id: i32 },
-
-    /// A collapsible row:
-    /// <CollapsibleMove ... inner= ... >
-    Collapsible {
-        node_id: i32,
-        inner: Vec<HistoryItem>,
-    },
-}
-
-fn build_history_model(tree: &Tree<i32, TreeNode>) -> Option<Vec<HistoryItem>> {
-    let root = tree.get_root_node()?;
-    let root_id = root.get_node_id().ok()?;
-    // Post-order traversal ensures children are processed before their parents.
-    let node_order = tree.traverse(&root_id, TraversalStrategy::PostOrder).ok()?;
-
-    // At each step this holds the rendered subtree for the current branch.
-    let mut content: Vec<HistoryItem> = Vec::new();
-
-    // Branch root id -> fully built content of that branch.
-    let mut branches: HashMap<i32, Vec<HistoryItem>> = HashMap::new();
-
-    for node_id in node_order {
-        let node = tree.get_node_by_id(&node_id)?;
-        let children_ids = node.get_children_ids().ok().unwrap_or_default();
-        let siblings_ids = tree
-            .get_sibling_ids(&node_id, true)
-            .ok()
-            .unwrap_or_default();
-
-        let parent_degree = siblings_ids.len();
-        let is_main_variation = siblings_ids.first().is_some_and(|first| *first == node_id);
-        let is_start_node =
-            AnalysisTree::is_start_node_id(node_id) && node.get_value().ok().flatten().is_none();
-
-        content = match children_ids.len() {
-            // The synthetic start node is only useful in the list when it owns
-            // alternate move-1 branches; otherwise keep it out of the rendered history.
-            0 | 1 if is_start_node => content,
-
-            // Multiple children: put secondary variations inside a collapsible,
-            // then continue the main line inline.
-            n if n > 1 => {
-                // Collect full branch contents for secondary variations.
-                let mut secondary_variations: Vec<HistoryItem> = Vec::new();
-                for child_id in children_ids.iter().skip(1) {
-                    if let Some(mut branch) = branches.remove(child_id) {
-                        secondary_variations.append(&mut branch);
-                    }
-                }
-
-                if let Some(first_child) = children_ids.first() {
-                    // Main line content for the first child.
-                    let mut main_branch = branches.remove(first_child).unwrap_or_default();
-
-                    // Parent node is rendered as a collapsible, with the secondary
-                    // variations as its inner content, then the main line inline.
-                    let mut new_content = Vec::with_capacity(1 + main_branch.len());
-                    new_content.push(HistoryItem::Collapsible {
-                        node_id,
-                        inner: secondary_variations,
-                    });
-                    new_content.append(&mut main_branch);
-                    new_content
-                } else {
-                    content
-                }
-            }
-
-            // Single child in a non‑main variation where the parent has >2 children:
-            // wrap it in a collapsible for aesthetics.
-            1 if parent_degree > 2 && !is_main_variation => {
-                let inner = content;
-                vec![HistoryItem::Collapsible { node_id, inner }]
-            }
-
-            // Default case: a plain HistoryMove followed by the already‑built content.
-            _ => {
-                let mut new_content = Vec::with_capacity(1 + content.len());
-                new_content.push(HistoryItem::Move { node_id });
-                new_content.extend(content);
-                new_content
-            }
-        };
-
-        // Start of a new branch: store its content and reset current content
-        // so siblings/parent can consume it later.
-        if parent_degree > 1 {
-            branches.insert(node_id, std::mem::take(&mut content));
-        }
-    }
-
-    debug_assert!(branches.is_empty());
-    Some(content)
-}
-
-fn render_history_items(
-    items: &[HistoryItem],
-    analysis: RwSignal<AnalysisTree>,
-    current_path: Memo<Vec<i32>>,
-) -> AnyView {
-    items
-        .iter()
-        .map(|item| match item {
-            HistoryItem::Move { node_id } => {
-                let maybe_node = analysis.with(|a| a.tree.get_node_by_id(node_id));
-
-                if let Some(node) = maybe_node {
-                    // Plain row: children render via their own entries, so has_children=false.
-                    view! { <HistoryMove current_path node has_children=false /> }.into_any()
-                } else {
-                    view! { <div>"Invalid node"</div> }.into_any()
-                }
-            }
-
-            HistoryItem::Collapsible { node_id, inner } => {
-                let maybe_node = analysis.with(|a| a.tree.get_node_by_id(node_id));
-
-                if let Some(node) = maybe_node {
-                    let inner_view = render_history_items(inner, analysis, current_path);
-
-                    view! { <CollapsibleMove current_path node inner=inner_view /> }.into_any()
-                } else {
-                    view! { <div>"Invalid node"</div> }.into_any()
-                }
-            }
-        })
-        .collect_view()
-        .into_any()
+fn visible_row_bounds(row_count: usize, scroll_top: f64, viewport_height: f64) -> (usize, usize) {
+    let first_visible =
+        ((scroll_top / ROW_HEIGHT as f64).floor() as usize).min(row_count.saturating_sub(1));
+    let first = first_visible.saturating_sub(OVERSCAN_ROWS).min(row_count);
+    let visible_count = (viewport_height / ROW_HEIGHT as f64).ceil() as usize;
+    let end = first
+        .saturating_add(visible_count)
+        .saturating_add(OVERSCAN_ROWS * 2)
+        .min(row_count);
+    (first, end)
 }
 
 #[component]
 pub fn History(
     interaction: HivegroundInteraction,
-    history_state: Memo<State>,
+    history_board: Memo<Board>,
     #[prop(optional)] mobile: bool,
     #[prop(optional)] hide_controls: bool,
 ) -> impl IntoView {
-    let analysis = expect_context::<AnalysisSignal>().tree;
+    let analysis = expect_context::<AnalysisContext>();
+    let store = analysis.store;
     let reserve_class =
         "flex flex-col py-1 px-2 rounded border border-black/5 bg-odd-light/70 dark:border-white/10 dark:bg-surface-muted";
-    let current_path = Memo::new(move |_| {
-        analysis.with(|a| {
-            a.current_node
-                .as_ref()
-                .and_then(|node| node.get_node_id().ok())
-                .map(|current_id| {
-                    let mut path = vec![current_id];
-                    if let Ok(ancestors) = a.tree.get_ancestor_ids(&current_id) {
-                        path.extend(ancestors);
-                    }
-                    path
-                })
-                .unwrap_or_default()
-        })
+    let has_history = Memo::new(move |_| store.has_moves());
+    let row_count = Memo::new(move |_| store.visible_row_count());
+    let scroll_top = RwSignal::new(0_f64);
+    let viewport_height = RwSignal::new(320_f64);
+    let scroll_ref = NodeRef::<html::Div>::new();
+    let mounted = Arc::new(AtomicBool::new(true));
+    let cleanup_mounted = Arc::clone(&mounted);
+    on_cleanup(move || cleanup_mounted.store(false, Ordering::Release));
+    use_resize_observer(scroll_ref, move |entries, _observer| {
+        let next_viewport_height = entries[0].content_rect().height();
+        if viewport_height.get_untracked() != next_viewport_height {
+            viewport_height.set(next_viewport_height);
+        }
     });
-
-    let has_history = Memo::new(move |_| analysis.with(|a| a.has_real_moves()));
-    let promote_variation = move |promote_all: bool| {
-        analysis.update(|a| {
-            let current_path = current_path();
-            let current_path = current_path
-                .iter()
-                .filter_map(|id| a.tree.get_node_by_id(id));
-            for node in current_path {
-                let Some((parent_id, current_id)) = node
-                    .get_parent_id()
-                    .ok()
-                    .flatten()
-                    .zip(node.get_node_id().ok())
-                else {
-                    continue;
-                };
-
-                let Some(parent) = a.tree.get_node_by_id(&parent_id) else {
-                    continue;
-                };
-                let Ok(children) = parent.get_children_ids() else {
-                    continue;
-                };
-
-                if children.first().is_some_and(|id| *id != current_id) {
-                    let _ = parent.sort_children(|a, b| {
-                        if a == &current_id {
-                            Ordering::Less
-                        } else if b == &current_id {
-                            Ordering::Greater
-                        } else {
-                            Ordering::Equal
-                        }
-                    });
-                    if !promote_all {
-                        break;
-                    }
-                }
+    let visible_bounds = Memo::new(move |_| {
+        visible_row_bounds(row_count.get(), scroll_top.get(), viewport_height.get())
+    });
+    Effect::new(move |_| {
+        let selected = store.selected_node_id();
+        let selected_index = store.visible_row_index(selected);
+        let Some(selected_index) = selected_index else {
+            return;
+        };
+        let mounted = Arc::clone(&mounted);
+        request_animation_frame(move || {
+            if !mounted.load(Ordering::Acquire) {
+                return;
+            }
+            let Some(element) = scroll_ref.get_untracked() else {
+                return;
+            };
+            let client_height = element.client_height();
+            let row_top = selected_index.saturating_mul(ROW_HEIGHT) as i32;
+            let row_bottom = row_top.saturating_add(ROW_HEIGHT as i32);
+            let viewport_top = element.scroll_top();
+            let viewport_bottom = viewport_top.saturating_add(client_height);
+            let next_scroll_top = if row_top < viewport_top {
+                row_top
+            } else if row_bottom > viewport_bottom {
+                row_bottom.saturating_sub(client_height)
+            } else {
+                viewport_top
+            };
+            if next_scroll_top != viewport_top {
+                element.set_scroll_top(next_scroll_top);
+            }
+            let client_height = f64::from(client_height);
+            if viewport_height.get_untracked() != client_height {
+                viewport_height.set(client_height);
+            }
+            let next_scroll_top = f64::from(next_scroll_top);
+            if scroll_top.get_untracked() != next_scroll_top {
+                scroll_top.set(next_scroll_top);
             }
         });
-    };
-
-    let history_model =
-        Memo::new(move |_| analysis.with(|a| build_history_model(&a.tree).unwrap_or_default()));
-
+    });
     let viewbox_str = "-32 -40 250 120";
     view! {
         <div class="flex flex-col gap-3 min-h-0 size-full">
             <Show when=move || !hide_controls>
-                <AnalysisHistoryControls scroll_on_navigate=!mobile />
+                <AnalysisHistoryControls />
             </Show>
             <Show when=move || !mobile>
                 <div class=reserve_class>
@@ -239,14 +111,14 @@ pub fn History(
                         color=Color::Black
                         viewbox_str
                         interaction
-                        history_state
+                        history_board
                     />
                     <Reserve
                         alignment=Alignment::DoubleRow
                         color=Color::White
                         viewbox_str
                         interaction
-                        history_state
+                        history_board
                     />
                 </div>
             </Show>
@@ -257,20 +129,63 @@ pub fn History(
                 <LoadTree />
             </div>
             <div class="grid gap-2 w-full grid-cols-[repeat(auto-fit,minmax(7rem,1fr))]">
-                <button on:click=move |_| promote_variation(true) class=action_button_class()>
+                <button
+                    on:click=move |_| store.promote_current_variation(true)
+                    class=ACTION_BUTTON_CLASS
+                >
                     "Make main line"
                 </button>
-                <button on:click=move |_| promote_variation(false) class=action_button_class()>
+                <button
+                    on:click=move |_| store.promote_current_variation(false)
+                    class=ACTION_BUTTON_CLASS
+                >
                     "Promote variation"
                 </button>
             </div>
-            <div class="overflow-y-auto flex-grow p-2 min-h-0 text-sm rounded border border-black/5 bg-even-light/70 dark:border-white/10 dark:bg-surface-field">
-                {move || {
-                    history_model
-                        .with(|items| { render_history_items(items, analysis, current_path) })
-                }}
-
+            <div
+                node_ref=scroll_ref
+                class="overflow-y-auto p-2 min-h-0 text-sm rounded border grow border-black/5 bg-even-light/70 dark:border-white/10 dark:bg-surface-field"
+                on:scroll=move |event| {
+                    let element = event_target::<web_sys::HtmlElement>(&event);
+                    let next_scroll_top = f64::from(element.scroll_top());
+                    if scroll_top.get_untracked() != next_scroll_top {
+                        scroll_top.set(next_scroll_top);
+                    }
+                }
+            >
+                <div
+                    class="relative w-full"
+                    style:height=move || {
+                        format!("{}px", row_count.get().saturating_mul(ROW_HEIGHT))
+                    }
+                >
+                    <div
+                        class="absolute inset-x-0"
+                        style:top=move || {
+                            format!(
+                                "{}px",
+                                visible_bounds.with(|(first, _)| first.saturating_mul(ROW_HEIGHT)),
+                            )
+                        }
+                    >
+                        <For
+                            each=move || {
+                                let (first, end) = visible_bounds.get();
+                                store.visible_rows_in(first..end)
+                            }
+                            key=|row| (row.node_id, row.indent, row.has_variations)
+                            children=move |row| {
+                                let value = store.node_value_untracked(row.node_id);
+                                // Document replacement remounts History before node IDs can be reused.
+                                view! { <HistoryRow row value /> }
+                            }
+                        />
+                    </div>
+                </div>
             </div>
+            <Show when=move || !mobile>
+                <AnalysisHistoryControls />
+            </Show>
         </div>
     }
 }
@@ -279,69 +194,18 @@ pub fn History(
 mod tests {
     use super::*;
 
-    fn node(turn: usize, piece: &str) -> TreeNode {
-        TreeNode {
-            turn,
-            piece: piece.to_string(),
-            position: String::new(),
+    #[test]
+    fn visible_row_bounds_include_overscan_and_clamp_to_history() {
+        for (row_count, scroll_top, viewport_height, expected) in [
+            (0, 0.0, 320.0, (0, 0)),
+            (100, 0.0, 64.0, (0, 18)),
+            (100, 320.0, 64.0, (2, 20)),
+            (3, 52_000.0, 320.0, (0, 3)),
+        ] {
+            assert_eq!(
+                visible_row_bounds(row_count, scroll_top, viewport_height),
+                expected,
+            );
         }
-    }
-
-    #[test]
-    fn empty_start_node_is_not_rendered() {
-        let mut tree = Tree::new(Some("analysis"));
-        tree.add_node(Node::new(-1, None), None).unwrap();
-
-        assert_eq!(build_history_model(&tree).unwrap(), Vec::new());
-    }
-
-    #[test]
-    fn single_line_hides_start_node() {
-        let mut tree = Tree::new(Some("analysis"));
-        let start = tree.add_node(Node::new(-1, None), None).unwrap();
-        let move_1 = tree
-            .add_node(Node::new(0, Some(node(1, "wG1"))), Some(&start))
-            .unwrap();
-        tree.add_node(Node::new(1, Some(node(2, "bG1"))), Some(&move_1))
-            .unwrap();
-
-        assert_eq!(
-            build_history_model(&tree).unwrap(),
-            vec![
-                HistoryItem::Move { node_id: 0 },
-                HistoryItem::Move { node_id: 1 },
-            ]
-        );
-    }
-
-    #[test]
-    fn start_node_variations_are_collapsible_branches() {
-        let mut tree = Tree::new(Some("analysis"));
-        let start = tree.add_node(Node::new(-1, None), None).unwrap();
-        let main_1 = tree
-            .add_node(Node::new(0, Some(node(1, "wG1"))), Some(&start))
-            .unwrap();
-        tree.add_node(Node::new(1, Some(node(2, "bG1"))), Some(&main_1))
-            .unwrap();
-        let variation_1 = tree
-            .add_node(Node::new(2, Some(node(1, "wM"))), Some(&start))
-            .unwrap();
-        tree.add_node(Node::new(3, Some(node(2, "bG1"))), Some(&variation_1))
-            .unwrap();
-
-        assert_eq!(
-            build_history_model(&tree).unwrap(),
-            vec![
-                HistoryItem::Collapsible {
-                    node_id: -1,
-                    inner: vec![
-                        HistoryItem::Move { node_id: 2 },
-                        HistoryItem::Move { node_id: 3 },
-                    ],
-                },
-                HistoryItem::Move { node_id: 0 },
-                HistoryItem::Move { node_id: 1 },
-            ]
-        );
     }
 }

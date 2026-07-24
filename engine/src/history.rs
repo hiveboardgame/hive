@@ -73,8 +73,7 @@ impl History {
             return Ok(history);
         }
         for mov in moves.split_terminator(';') {
-            let split = mov.split_whitespace().collect::<Vec<&str>>();
-            history.push_move_tokens(&split)?;
+            history.push_move_str(mov)?;
         }
         Ok(history)
     }
@@ -193,7 +192,7 @@ impl History {
         Ok(history)
     }
 
-    pub fn from_pgn_str(string: String) -> Result<Self, GameError> {
+    pub fn from_pgn_str(string: &str) -> Result<Self, GameError> {
         let mut history = History::new();
         for line in string.lines() {
             if line.is_empty() {
@@ -216,89 +215,24 @@ impl History {
         Ok(history)
     }
 
-    pub fn from_uhp_str(string: String) -> Result<Self, GameError> {
-        let mut history = History::new();
-        let trimmed = string.trim();
-        if trimmed.is_empty() {
-            return Ok(history);
-        }
+    pub fn from_uhp_str(string: &str) -> Result<Self, GameError> {
+        let mut history = Self::parse_uhp_str(string)?;
 
-        let parts: Vec<&str> = trimmed
-            .split(';')
-            .map(|s| s.trim())
-            .filter(|s| !s.is_empty())
-            .collect();
-
-        if parts.is_empty() {
-            return Ok(history);
-        }
-
-        let mut index = 0;
-
-        if let Some(token) = parts.get(index) {
-            if token.starts_with("Base") {
-                history.game_type = token.parse()?;
-                index += 1;
-            }
-        }
-
-        if let Some(token) = parts.get(index) {
-            if let Some(result) = Self::parse_uhp_game_status(token) {
-                history.result = result;
-                index += 1;
-            }
-        }
-
-        if let Some(token) = parts.get(index) {
-            if UHP_TURN.is_match(token) {
-                index += 1;
-            } else if Self::looks_like_metadata(token) {
-                return Err(GameError::ParsingError {
-                    found: (*token).to_string(),
-                    typ: "UHP metadata string".to_string(),
-                });
-            }
-        }
-
-        while let Some(token) = parts.get(index) {
-            let split = token.split_whitespace().collect::<Vec<&str>>();
-            if split.is_empty() {
-                index += 1;
-                continue;
-            }
-            if let Err(err) = history.push_move_tokens(&split) {
-                let turn = history.moves.len();
-                return Err(GameError::PartialHistory {
-                    history,
-                    turn,
-                    reason: err.to_string(),
-                });
-            }
-            if let Some(piece) = split.first() {
-                history.upgrade_game_type_for_piece(piece);
-            }
-            index += 1;
-        }
-
-        let mut playback_history = history.clone();
-        playback_history.result = GameResult::Unknown;
-        match State::new_from_history(&playback_history) {
+        let declared_result = std::mem::take(&mut history.result);
+        match State::replay_history(&history) {
             Ok(state) => {
                 history.result = match state.game_status {
                     GameStatus::Finished(result) => result,
                     _ => GameResult::Unknown,
                 };
             }
-            Err(err) => {
-                //TODO: fix engine/src/game_error.rs so we can just use the turn from there instead of replaying the game in case of an error
-                let (turn, reason) = Self::failing_turn(&history)
-                    .map(|(turn, err)| (turn, err.to_string()))
-                    .unwrap_or_else(|| (history.moves.len(), err.to_string()));
+            Err((turn, error)) => {
+                history.result = declared_result;
                 history.moves.truncate(turn);
                 return Err(GameError::PartialHistory {
                     history,
                     turn,
-                    reason,
+                    reason: error.to_string(),
                 });
             }
         }
@@ -306,22 +240,70 @@ impl History {
         Ok(history)
     }
 
-    fn push_move_tokens(&mut self, split: &[&str]) -> Result<(), GameError> {
-        let maybe_piece = split.first().ok_or(GameError::ParsingError {
-            found: split.join(" "),
+    pub fn parse_uhp_str(string: &str) -> Result<Self, GameError> {
+        let mut history = History::new();
+        let mut parts = string
+            .split(';')
+            .map(str::trim)
+            .filter(|token| !token.is_empty())
+            .peekable();
+
+        if parts.peek().is_some_and(|token| token.starts_with("Base")) {
+            history.game_type = parts.next().expect("peeked UHP game type").parse()?;
+        }
+
+        if let Some(result) = parts
+            .peek()
+            .and_then(|token| Self::parse_uhp_game_status(token))
+        {
+            history.result = result;
+            parts.next();
+        }
+
+        if let Some(token) = parts.peek().copied() {
+            if UHP_TURN.is_match(token) {
+                parts.next();
+            } else if Self::looks_like_metadata(token) {
+                return Err(GameError::ParsingError {
+                    found: token.to_string(),
+                    typ: "UHP metadata string".to_string(),
+                });
+            }
+        }
+
+        for token in parts {
+            match history.push_move_str(token) {
+                Ok(piece) => history.upgrade_game_type_for_piece(piece),
+                Err(error) => {
+                    let turn = history.moves.len();
+                    return Err(GameError::PartialHistory {
+                        history,
+                        turn,
+                        reason: error.to_string(),
+                    });
+                }
+            }
+        }
+
+        Ok(history)
+    }
+
+    fn push_move_str<'a>(&mut self, mov: &'a str) -> Result<&'a str, GameError> {
+        let mut tokens = mov.split_whitespace();
+        let piece = tokens.next().ok_or_else(|| GameError::ParsingError {
+            found: mov.to_string(),
             typ: "Piece".to_string(),
         })?;
 
-        if let Some(position) = split.get(1) {
-            self.moves
-                .push((maybe_piece.to_string(), position.to_string()));
+        if let Some(position) = tokens.next() {
+            self.moves.push((piece.to_string(), position.to_string()));
         } else {
-            match *maybe_piece {
+            match piece {
                 "pass" => {
                     self.moves.push(("pass".to_string(), "".to_string()));
                 }
                 _ if self.moves.is_empty() => {
-                    self.moves.push((maybe_piece.to_string(), "".to_string()));
+                    self.moves.push((piece.to_string(), "".to_string()));
                 }
                 any => {
                     return Err(GameError::ParsingError {
@@ -331,7 +313,7 @@ impl History {
                 }
             }
         }
-        Ok(())
+        Ok(piece)
     }
 
     fn upgrade_game_type_for_piece(&mut self, piece: &str) {
@@ -370,16 +352,6 @@ impl History {
             .map(|c| c.is_ascii_uppercase())
             .unwrap_or(false)
     }
-
-    fn failing_turn(history: &History) -> Option<(usize, GameError)> {
-        let mut state = State::new(history.game_type, false);
-        for (turn, (piece, position)) in history.moves.iter().enumerate() {
-            if let Err(err) = state.play_turn_from_history(piece, position) {
-                return Some((turn, err));
-            }
-        }
-        None
-    }
 }
 
 #[cfg(test)]
@@ -395,7 +367,7 @@ mod tests {
 
     #[test]
     fn parses_full_metadata_game_string() {
-        let history = History::from_uhp_str(FULL_METADATA_GAME.to_string()).expect("valid UHP");
+        let history = History::from_uhp_str(FULL_METADATA_GAME).expect("valid UHP");
         assert_eq!(history.moves.len(), 56);
         assert_eq!(history.game_type, GameType::MLP);
         assert_eq!(history.result, GameResult::Unknown);
@@ -403,8 +375,7 @@ mod tests {
 
     #[test]
     fn parses_moves_when_metadata_missing() {
-        let history =
-            History::from_uhp_str(IMPLICIT_METADATA_GAME.to_string()).expect("implicit UHP");
+        let history = History::from_uhp_str(IMPLICIT_METADATA_GAME).expect("implicit UHP");
         assert_eq!(history.moves.len(), 48);
         assert_eq!(history.game_type, GameType::Base);
         assert_eq!(history.result, GameResult::Unknown);
@@ -413,23 +384,21 @@ mod tests {
 
     #[test]
     fn upgrades_game_type_based_on_moves() {
-        let history =
-            History::from_uhp_str(BASE_DECLARED_GAME.to_string()).expect("upgrade game type");
+        let history = History::from_uhp_str(BASE_DECLARED_GAME).expect("upgrade game type");
         assert_eq!(history.moves.len(), 35);
         assert_eq!(history.game_type, GameType::MLP);
     }
 
     #[test]
     fn prefers_computed_result_over_declared_state() {
-        let history =
-            History::from_uhp_str(RESULT_MISMATCH_GAME.to_string()).expect("mismatch resilience");
+        let history = History::from_uhp_str(RESULT_MISMATCH_GAME).expect("mismatch resilience");
         assert_eq!(history.moves.len(), 2);
         assert_eq!(history.result, GameResult::Unknown);
     }
 
     #[test]
     fn returns_partial_history_error() {
-        match History::from_uhp_str(PARTIAL_GAME.to_string()) {
+        match History::from_uhp_str(PARTIAL_GAME) {
             Err(GameError::PartialHistory {
                 history,
                 turn,
@@ -446,8 +415,63 @@ mod tests {
     }
 
     #[test]
+    fn replay_errors_report_early_turns_and_preserve_declared_results() {
+        for (uhp, expected_turn, expected_result, expected_reason) in [
+            (
+                "Base;WhiteWins;White[1];not-a-piece",
+                0,
+                GameResult::Winner(Color::White),
+                None,
+            ),
+            (
+                "Base;BlackWins;Black[1];wS1;not-a-piece -wS1",
+                1,
+                GameResult::Winner(Color::Black),
+                None,
+            ),
+            (
+                "wS1 bad_input;not-a-piece -wS1",
+                0,
+                GameResult::Unknown,
+                Some("bad_input"),
+            ),
+        ] {
+            match History::from_uhp_str(uhp) {
+                Err(GameError::PartialHistory {
+                    history,
+                    turn,
+                    reason,
+                }) => {
+                    assert_eq!(turn, expected_turn);
+                    assert_eq!(history.moves.len(), expected_turn);
+                    assert_eq!(history.result, expected_result);
+                    if let Some(expected_reason) = expected_reason {
+                        assert!(reason.contains(expected_reason));
+                    } else {
+                        assert!(!reason.is_empty());
+                    }
+                }
+                other => panic!("expected partial history error, got {other:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn parse_uhp_keeps_moves_for_caller_validation() {
+        let history = History::parse_uhp_str(PARTIAL_GAME).unwrap();
+        assert_eq!(history.moves.len(), 5);
+        assert_eq!(
+            history
+                .moves
+                .get(2)
+                .map(|(piece, position)| (piece.as_str(), position.as_str())),
+            Some(("wQ", "bad_input")),
+        );
+    }
+
+    #[test]
     fn q_first_still_returns_partial_history_error() {
-        match History::from_uhp_str(QUEEN_FIRST_BAD.to_string()) {
+        match History::from_uhp_str(QUEEN_FIRST_BAD) {
             Err(GameError::PartialHistory {
                 history,
                 turn,
