@@ -1662,6 +1662,8 @@ dependencies = [
  "skillratings",
  "thiserror 2.0.18",
  "tokio",
+ "tournamint",
+ "tracing",
  "uuid",
 ]
 
@@ -2195,6 +2197,12 @@ dependencies = [
  "smallvec",
  "writeable",
 ]
+
+[[package]]
+name = "fixedbitset"
+version = "0.5.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d674e81391d1e1ab681a28d99df07927c6d4aa5b027d7da16ba32d1d21ecd99"
 
 [[package]]
 name = "flate2"
@@ -6992,6 +7000,15 @@ name = "toml_writer"
 version = "1.1.2+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7d56353a2a665ad0f41a421187180aab746c8c325620617ad883a99a1cbe66d2"
+
+[[package]]
+name = "tournamint"
+version = "0.1.0"
+dependencies = [
+ "fixedbitset",
+ "smallvec",
+ "thiserror 2.0.18",
+]
 
 [[package]]
 name = "tower"

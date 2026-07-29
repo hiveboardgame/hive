@@ -147,6 +147,11 @@ diesel::table! {
         game_start -> Text,
         move_times -> Array<Nullable<Int8>>,
         timeout_at -> Nullable<Timestamptz>,
+        round -> Nullable<Int4>,
+        white_berserked -> Bool,
+        black_berserked -> Bool,
+        arena_game_id -> Nullable<Int4>,
+        finished_at -> Nullable<Timestamptz>,
     }
 }
 
@@ -226,6 +231,25 @@ diesel::table! {
 }
 
 diesel::table! {
+    tournament_arena_events (id) {
+        id -> Int4,
+        tournament_id -> Uuid,
+        user_id -> Uuid,
+        kind -> Text,
+        at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    tournament_byes (tournament_id, round, user_id) {
+        tournament_id -> Uuid,
+        round -> Int4,
+        user_id -> Uuid,
+        kind -> Text,
+    }
+}
+
+diesel::table! {
     tournament_series (id) {
         id -> Uuid,
         nanoid -> Text,
@@ -270,6 +294,15 @@ diesel::table! {
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
         series -> Nullable<Uuid>,
+        fully_automated -> Bool,
+        third_place_match -> Bool,
+        arena_duration_seconds -> Nullable<Int4>,
+        points_win -> Nullable<Float8>,
+        points_draw -> Nullable<Float8>,
+        points_loss -> Nullable<Float8>,
+        points_forfeit_loss -> Nullable<Float8>,
+        points_zero_point_bye -> Nullable<Float8>,
+        points_pairing_allocated_bye -> Nullable<Float8>,
     }
 }
 
@@ -292,6 +325,10 @@ diesel::table! {
     tournaments_users (tournament_id, user_id) {
         tournament_id -> Uuid,
         user_id -> Uuid,
+        seed -> Nullable<Int4>,
+        rating -> Nullable<Float8>,
+        joined_at -> Nullable<Timestamptz>,
+        withdrawn_at -> Nullable<Timestamptz>,
     }
 }
 
@@ -345,6 +382,10 @@ diesel::joinable!(push_devices -> users (user_id));
 diesel::joinable!(ratings -> users (user_uid));
 diesel::joinable!(schedules -> games (game_id));
 diesel::joinable!(schedules -> tournaments (tournament_id));
+diesel::joinable!(tournament_arena_events -> tournaments (tournament_id));
+diesel::joinable!(tournament_arena_events -> users (user_id));
+diesel::joinable!(tournament_byes -> tournaments (tournament_id));
+diesel::joinable!(tournament_byes -> users (user_id));
 diesel::joinable!(tournament_series_organizers -> tournament_series (tournament_series_id));
 diesel::joinable!(tournament_series_organizers -> users (organizer_id));
 diesel::joinable!(tournaments -> tournament_series (series));
@@ -374,6 +415,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     push_devices,
     ratings,
     schedules,
+    tournament_arena_events,
+    tournament_byes,
     tournament_series,
     tournament_series_organizers,
     tournaments,

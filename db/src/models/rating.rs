@@ -114,6 +114,18 @@ impl Rating {
             .await?)
     }
 
+    pub async fn for_uuids_at_speed(
+        uuids: &[Uuid],
+        game_speed: &GameSpeed,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Self>, DbError> {
+        let game_speed = Self::normalized_game_speed(*game_speed);
+        Ok(ratings_table
+            .filter(user_uid.eq_any(uuids).and(speed.eq(game_speed)))
+            .load(conn)
+            .await?)
+    }
+
     pub async fn for_uuids(uuids: &[Uuid], conn: &mut DbConn<'_>) -> Result<Vec<Self>, DbError> {
         Ok(ratings_table
             .filter(user_uid.eq_any(uuids))

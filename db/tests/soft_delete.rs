@@ -4,7 +4,18 @@ use chrono::Utc;
 use db_lib::{
     db_error::DbError,
     get_conn,
-    models::{Game, NewGame, NewSchedule, NewTournament, NewUser, Schedule, Tournament, User},
+    models::{
+        Game,
+        NewGame,
+        NewSchedule,
+        NewTournament,
+        NewUser,
+        ProgressOutcome,
+        Schedule,
+        Tournament,
+        TournamentBye,
+        User,
+    },
     schema::{games, tournaments, tournaments_organizers, tournaments_users, users},
 };
 use diesel::prelude::*;
@@ -107,7 +118,7 @@ async fn soft_delete_aborts_early_games_resigns_ready_tournament_games_and_delet
     let early_game = create_abortable_game(deleting_user.id, opponent.id, &mut conn).await;
     let tournament = create_realtime_tournament(organizer.id, &mut conn).await;
     let ready_game = Game::create(
-        NewGame::new_from_tournament(deleting_user.id, opponent.id, &tournament),
+        NewGame::new_from_tournament(deleting_user.id, opponent.id, &tournament, 1),
         &mut conn,
     )
     .await
@@ -234,7 +245,6 @@ async fn soft_deleted_double_swiss_player_is_not_paired_in_next_round() {
     let player_two = create_user("swiss_two", &mut conn).await;
     let player_three = create_user("swiss_three", &mut conn).await;
     let deleting_user = create_user("swiss_deleted", &mut conn).await;
-    let bye_player = create_swiss_bye_player(&mut conn).await;
 
     let tournament = create_double_swiss_tournament(organizer.id, &mut conn).await;
     for player in [&player_one, &player_two, &player_three, &deleting_user] {
@@ -264,39 +274,36 @@ async fn soft_deleted_double_swiss_player_is_not_paired_in_next_round() {
         .await
         .expect("soft delete user");
 
-    let next_round_games = tournament
-        .swiss_create_next_round(&organizer.id, &mut conn)
+    let ProgressOutcome::Advanced(next_round_games) = tournament
+        .progress_by_organizer(&organizer.id, &mut conn)
         .await
-        .expect("create next round");
+        .expect("advance to the next round")
+    else {
+        panic!("every first-round game was finished, so the tournament must advance");
+    };
 
-    assert_eq!(next_round_games.len(), 4);
+    // Three pairable players are left, so one of them sits out. The bye is a
+    // row in tournament_byes now, not a game against a dummy account.
+    assert_eq!(next_round_games.len(), 2);
     assert!(next_round_games
         .iter()
         .all(|game| game.white_id != deleting_user.id && game.black_id != deleting_user.id));
-    assert!(next_round_games
-        .iter()
-        .any(|game| game.white_id == bye_player.id || game.black_id == bye_player.id));
 
-    tournaments_users::table
-        .find((tournament.id, bye_player.id))
-        .select(tournaments_users::user_id)
-        .first::<uuid::Uuid>(&mut conn)
+    let byes = TournamentBye::for_tournament(tournament.id, &mut conn)
         .await
-        .expect("bye player is available for standings display");
+        .expect("load byes");
+    let second_round: Vec<&TournamentBye> = byes.iter().filter(|bye| bye.round == 2).collect();
+    assert_eq!(second_round.len(), 1, "an odd field gets exactly one bye");
+    assert_ne!(
+        second_round[0].user_id, deleting_user.id,
+        "a withdrawn player is not given a bye either"
+    );
 }
 
 async fn create_user(username: &str, conn: &mut db_lib::DbConn<'_>) -> User {
     let new_user = NewUser::new(username, "password", &format!("{username}@example.com"))
         .expect("create new user fixture");
     User::create(new_user, conn).await.expect("insert user")
-}
-
-async fn create_swiss_bye_player(conn: &mut db_lib::DbConn<'_>) -> User {
-    let new_user = NewUser::new("SwissByePlayer", "password", "swiss-bye-player@example.com")
-        .expect("create Swiss bye user fixture");
-    User::create(new_user, conn)
-        .await
-        .expect("insert Swiss bye user")
 }
 
 async fn create_abortable_game(
@@ -340,6 +347,10 @@ async fn create_abortable_game(
             game_start: GameStart::Moves.to_string(),
             move_times: Vec::new(),
             timeout_at: None,
+            round: None,
+            white_berserked: false,
+            black_berserked: false,
+            arena_game_id: None,
         },
         conn,
     )
@@ -378,6 +389,15 @@ async fn create_double_swiss_tournament(
             created_at: Utc::now(),
             updated_at: Utc::now(),
             series: None,
+            fully_automated: false,
+            third_place_match: false,
+            arena_duration_seconds: None,
+            points_win: None,
+            points_draw: None,
+            points_loss: None,
+            points_forfeit_loss: None,
+            points_zero_point_bye: None,
+            points_pairing_allocated_bye: None,
         },
         conn,
     )
@@ -416,6 +436,15 @@ async fn create_realtime_tournament(
             created_at: Utc::now(),
             updated_at: Utc::now(),
             series: None,
+            fully_automated: false,
+            third_place_match: false,
+            arena_duration_seconds: None,
+            points_win: None,
+            points_draw: None,
+            points_loss: None,
+            points_forfeit_loss: None,
+            points_zero_point_bye: None,
+            points_pairing_allocated_bye: None,
         },
         conn,
     )

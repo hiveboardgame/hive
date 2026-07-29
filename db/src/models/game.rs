@@ -127,10 +127,21 @@ pub struct NewGame {
     pub game_start: String,
     pub move_times: Vec<Option<i64>>,
     pub timeout_at: Option<DateTime<Utc>>,
+    pub round: Option<i32>,
+    pub white_berserked: bool,
+    pub black_berserked: bool,
+    pub arena_game_id: Option<i32>,
 }
 
 impl NewGame {
-    pub fn new_from_tournament(white: Uuid, black: Uuid, tournament: &Tournament) -> Self {
+    // `games::dsl::*` is glob-imported here, so a parameter named `round`
+    // would be shadowed by the column of the same name.
+    pub fn new_from_tournament(
+        white: Uuid,
+        black: Uuid,
+        tournament: &Tournament,
+        round_number: i32,
+    ) -> Self {
         let (time_left, start, status, interaction) =
             match TimeMode::from_str(&tournament.time_mode).unwrap() {
                 TimeMode::Untimed => unreachable!("Tournaments cannot be untimed"),
@@ -196,6 +207,10 @@ impl NewGame {
             game_start: start,
             move_times: vec![],
             timeout_at: initial_timeout_at,
+            round: Some(round_number),
+            white_berserked: false,
+            black_berserked: false,
+            arena_game_id: None,
         }
     }
 
@@ -253,6 +268,10 @@ impl NewGame {
             game_start: GameStart::Moves.to_string(),
             move_times: vec![],
             timeout_at: None,
+            round: None,
+            white_berserked: false,
+            black_berserked: false,
+            arena_game_id: None,
         })
     }
 }
@@ -296,6 +315,18 @@ pub struct Game {
     pub game_start: String,
     pub move_times: Vec<Option<i64>>,
     pub timeout_at: Option<DateTime<Utc>>,
+    /// Which round of its tournament this game belongs to. `None` for
+    /// non-tournament games, and for tournament games created before rounds
+    /// were recorded.
+    pub round: Option<i32>,
+    pub white_berserked: bool,
+    pub black_berserked: bool,
+    /// The id the arena knows this game by, from its pairing order.
+    pub arena_game_id: Option<i32>,
+    /// When the game finished, as opposed to when the row was last written.
+    /// The arena replays its timeline from stored instants, so it needs one
+    /// that later writes to the row cannot move.
+    pub finished_at: Option<DateTime<Utc>>,
 }
 
 impl Game {
@@ -430,8 +461,18 @@ impl Game {
             return Ok(None);
         }
 
+        // A started game always has a last interaction; without one there is no
+        // instant to measure the clock from. Nothing should write that
+        // combination, but it is two independent columns and the status is
+        // free text, so this refuses rather than panicking on the way through
+        // every resign, timeout and finalisation path.
         let Some(last_seen) = self.last_interaction else {
-            todo!("Well this is not good and needs a better error message");
+            return Err(DbError::TimeNotFound {
+                reason: format!(
+                    "game {} is {} but has no last_interaction to time from",
+                    self.nanoid, self.game_status
+                ),
+            });
         };
 
         let active_color = if self.turn % 2 == 0 {
@@ -488,6 +529,7 @@ impl Game {
                 games::black_time_left.eq(new_black_time_left),
                 games::conclusion.eq(Conclusion::Timeout.to_string()),
                 games::timeout_at.eq(CLEAR_TIMEOUT_AT),
+                games::finished_at.eq(Utc::now()),
             ))
             .get_result(conn)
             .await?;
@@ -550,6 +592,7 @@ impl Game {
                 games::black_time_left.eq(new_black_time_left),
                 games::conclusion.eq(final_conclusion.to_string()),
                 games::timeout_at.eq(CLEAR_TIMEOUT_AT),
+                games::finished_at.eq(Utc::now()),
             ))
             .get_result(conn)
             .await?;
@@ -574,7 +617,97 @@ impl Game {
             })
     }
 
-    fn time_increment_duration(&self) -> Result<Duration, DbError> {
+    pub fn berserked(&self, color: Color) -> bool {
+        match color {
+            Color::White => self.white_berserked,
+            Color::Black => self.black_berserked,
+        }
+    }
+
+    /// Berserking trades clock for arena points, and lichess charges it two
+    /// ways: the increment goes, and half the base goes with it. The penalty is
+    /// waived when the increment dominates the base, since halving a 10+10 game
+    /// would be no penalty at all but losing the increment would be brutal.
+    /// (lila `ClockConfig::berserkPenalty` — same `40 x increment` threshold
+    /// `GameSpeed::from_base_increment` already uses.)
+    pub fn berserk_penalty_nanos(base: Option<i32>, increment: Option<i32>) -> i64 {
+        let base = base.unwrap_or(0) as i64;
+        if base < 40 * increment.unwrap_or(0) as i64 {
+            return 0;
+        }
+        base * NANOS_IN_SECOND as i64 / 2
+    }
+
+    /// Declares berserk for one side, before the game starts: they give up
+    /// half their clock and all of their increment in exchange for the arena
+    /// scoring bonus. Refused once a move has been made, because the clock
+    /// reduction has to apply to the full starting time.
+    pub async fn berserk(&self, color: Color, conn: &mut DbConn<'_>) -> Result<Self, DbError> {
+        // Read under the row lock rather than trusting the caller's snapshot: a
+        // move can land between the two, and halving a clock the opponent has
+        // already spent time against would discard that elapsed time and apply
+        // the penalty to a game that had started.
+        let locked: Game = games::table
+            .find(self.id)
+            .for_update()
+            .get_result(conn)
+            .await?;
+        if locked.turn > 0 || locked.finished || !locked.history.is_empty() {
+            return Err(DbError::InvalidAction {
+                info: String::from("berserk has to be declared before the game starts"),
+            });
+        }
+        // Berserk buys arena points with clock time. Anywhere else there is
+        // nothing to buy, so halving a clock would be pure loss.
+        let tournament = match locked.tournament_id {
+            Some(tournament_uuid) => Tournament::find(tournament_uuid, conn).await?,
+            None => {
+                return Err(DbError::InvalidAction {
+                    info: String::from("only an arena game can be berserked"),
+                })
+            }
+        };
+        if !tournament.mode()?.is_arena() {
+            return Err(DbError::InvalidAction {
+                info: String::from("only an arena game can be berserked"),
+            });
+        }
+        if locked.berserked(color) {
+            return Ok(locked);
+        }
+
+        let penalty = Self::berserk_penalty_nanos(locked.time_base, locked.time_increment);
+        let reduced = |left: Option<i64>| left.map(|left| (left - penalty).max(0));
+        let game = match color {
+            Color::White => {
+                diesel::update(games::table.find(locked.id))
+                    .set((
+                        white_berserked.eq(true),
+                        white_time_left.eq(reduced(locked.white_time_left)),
+                        updated_at.eq(Utc::now()),
+                    ))
+                    .get_result(conn)
+                    .await?
+            }
+            Color::Black => {
+                diesel::update(games::table.find(locked.id))
+                    .set((
+                        black_berserked.eq(true),
+                        black_time_left.eq(reduced(locked.black_time_left)),
+                        updated_at.eq(Utc::now()),
+                    ))
+                    .get_result(conn)
+                    .await?
+            }
+        };
+        Ok(game)
+    }
+
+    /// The increment actually credited to `color`: none, if they berserked.
+    fn time_increment_duration(&self, color: Color) -> Result<Duration, DbError> {
+        if self.berserked(color) {
+            return Ok(Duration::ZERO);
+        }
         if let Some(increment) = self.time_increment {
             Ok(Duration::from_secs(increment as u64))
         } else {
@@ -622,17 +755,20 @@ impl Game {
             }
         }
         let comp = (comp * 1_000_000_000.0) as i64;
-        let increment = self.time_increment_duration()?.as_nanos() as i64;
+        // Each side carries its own increment, because a berserked player
+        // forfeits theirs while the opponent keeps hers.
+        let white_increment = self.time_increment_duration(Color::White)?.as_nanos() as i64;
+        let black_increment = self.time_increment_duration(Color::Black)?.as_nanos() as i64;
         if self.turn % 2 == 0 {
-            white_time = white_time.map(|time| time + increment + comp);
+            white_time = white_time.map(|time| time + white_increment + comp);
         } else {
-            black_time = black_time.map(|time| time + increment + comp);
+            black_time = black_time.map(|time| time + black_increment + comp);
         };
         if shutout {
             if self.turn % 2 == 0 {
-                black_time = black_time.map(|time| time + increment);
+                black_time = black_time.map(|time| time + black_increment);
             } else {
-                white_time = white_time.map(|time| time + increment);
+                white_time = white_time.map(|time| time + white_increment);
             };
         };
 
@@ -863,6 +999,7 @@ impl Game {
                             games::hashes.eq(&new_hashes),
                             games::conclusion.eq(new_conclusion.to_string()),
                             games::timeout_at.eq(CLEAR_TIMEOUT_AT),
+                            games::finished_at.eq(Utc::now()),
                         ))
                         .get_result(tc)
                         .await?;
@@ -1419,7 +1556,10 @@ impl Game {
     ) -> Result<Self, DbError> {
         if !(matches!(
             Conclusion::from_str(&self.conclusion),
-            Ok(Conclusion::Committee) | Ok(Conclusion::Unknown) | Ok(Conclusion::Forfeit)
+            Ok(Conclusion::Committee)
+                | Ok(Conclusion::Unknown)
+                | Ok(Conclusion::Forfeit)
+                | Ok(Conclusion::Withdrawal)
         ) && self.turn == 0
             && self.history.is_empty()
             && self.game_start == GameStart::Ready.to_string()
@@ -1444,7 +1584,10 @@ impl Game {
         self.update_tournament_result(new_result, conn).await
     }
 
-    pub(crate) async fn assign_tournament_result(
+    /// Records a tournament result without the organizer check or the
+    /// "game hasn't started" guard that `adjudicate_tournament_result`
+    /// applies.
+    pub async fn assign_tournament_result(
         &self,
         new_result: &TournamentGameResult,
         conn: &mut DbConn<'_>,
@@ -1489,6 +1632,10 @@ impl Game {
                 updated_at.eq(Utc::now()),
                 last_interaction.eq(new_last_interaction),
                 timeout_at.eq(CLEAR_TIMEOUT_AT),
+                // Re-adjudicating must not move an instant the arena timeline
+                // has already replayed past, so an existing stamp is kept and
+                // only un-finishing clears it.
+                finished_at.eq(fin.then(|| self.finished_at.unwrap_or_else(Utc::now))),
             ))
             .get_result(conn)
             .await?;

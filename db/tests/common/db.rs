@@ -10,6 +10,9 @@ const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
 static DB_LOCK: Mutex<()> = Mutex::const_new(());
 static MIGRATED: OnceLock<()> = OnceLock::new();
 
+/// Arbitrary, but shared by every test binary — that is the whole point.
+const ADVISORY_LOCK_KEY: i64 = 0x4849_5645_5445_5354;
+
 #[derive(QueryableByName)]
 struct CurrentDatabase {
     #[diesel(sql_type = Text)]
@@ -19,17 +22,36 @@ struct CurrentDatabase {
 pub struct TestDb {
     pub pool: DbPool,
     _lock: MutexGuard<'static, ()>,
+    /// Holds the Postgres advisory lock for as long as the test runs. Dropping
+    /// the connection ends the session, which releases the lock.
+    _guard: AsyncPgConnection,
 }
 
+/// Serializes tests **across processes**, not just within one.
+///
+/// Every test truncates the whole database on entry, and `cargo test` runs the
+/// test binaries concurrently — so an in-process `Mutex` alone lets one
+/// binary's truncate wipe another binary's fixture mid-test. They all share one
+/// `TEST_DATABASE_URL`, so the lock has to live in the database.
 pub async fn test_db() -> TestDb {
     let lock = DB_LOCK.lock().await;
     let database_url = test_database_url();
 
+    let mut guard = AsyncPgConnection::establish(&database_url)
+        .await
+        .expect("connect to test database for the advisory lock");
+    assert_test_database(&mut guard).await;
+    diesel::sql_query(format!("SELECT pg_advisory_lock({ADVISORY_LOCK_KEY})"))
+        .execute(&mut guard)
+        .await
+        .expect("take the cross-process test lock");
+
+    // Inside the lock: two binaries migrating at once would race, and the
+    // OnceLock only knows about this process.
     if MIGRATED.get().is_none() {
-        let mut conn = AsyncPgConnection::establish(&database_url)
+        let conn = AsyncPgConnection::establish(&database_url)
             .await
             .expect("connect to test database for migration");
-        assert_test_database(&mut conn).await;
         let mut harness = AsyncMigrationHarness::new(conn);
         harness
             .run_pending_migrations(MIGRATIONS)
@@ -42,7 +64,11 @@ pub async fn test_db() -> TestDb {
         .expect("create test database pool");
     truncate(&pool).await;
 
-    TestDb { pool, _lock: lock }
+    TestDb {
+        pool,
+        _lock: lock,
+        _guard: guard,
+    }
 }
 
 fn test_database_url() -> String {

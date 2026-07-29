@@ -7,6 +7,10 @@ pub enum Conclusion {
     Committee,
     Draw,
     Forfeit,
+    /// Auto-forfeited because a player left the tournament. Distinct from
+    /// `Forfeit` so reinstating them can undo exactly these games and leave an
+    /// organizer's own adjudications alone.
+    Withdrawal,
     Repetition,
     Resigned,
     Timeout,
@@ -20,6 +24,7 @@ impl PrettyString for Conclusion {
             Conclusion::Committee => String::from("Committee decision"),
             Conclusion::Draw => String::from("Draw agreed"),
             Conclusion::Forfeit => String::from("Forfeit"),
+            Conclusion::Withdrawal => String::from("Withdrawal"),
             Conclusion::Repetition => String::from("3 move repetition"),
             Conclusion::Resigned => String::from("Resigned"),
             Conclusion::Timeout => String::from("Timeout"),
@@ -35,6 +40,7 @@ impl fmt::Display for Conclusion {
             Conclusion::Committee => "Committee",
             Conclusion::Draw => "Draw",
             Conclusion::Forfeit => "Forfeit",
+            Conclusion::Withdrawal => "Withdrawal",
             Conclusion::Repetition => "Repetition",
             Conclusion::Resigned => "Resigned",
             Conclusion::Timeout => "Timeout",
@@ -62,6 +68,7 @@ impl std::str::FromStr for Conclusion {
             "Committee" => Ok(Conclusion::Committee),
             "Draw" => Ok(Conclusion::Draw),
             "Forfeit" => Ok(Conclusion::Forfeit),
+            "Withdrawal" => Ok(Conclusion::Withdrawal),
             "Repetition" => Ok(Conclusion::Repetition),
             "Resigned" => Ok(Conclusion::Resigned),
             "Timeout" => Ok(Conclusion::Timeout),

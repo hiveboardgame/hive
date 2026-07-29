@@ -93,6 +93,11 @@ skillratings = "0.29"
 thiserror = "2.0.18"
 tokio = { version = "1.49", features = ["macros", "rt-multi-thread", "sync", "time"] }
 tokio-util = "0.7"
+tracing = "0.1"
+# TODO(before merge): swap to the pinned git dep once CI has a deploy key for
+# the private repo:
+#   tournamint = { git = "ssh://git@github.com/hiveboardgame/tournamint.git", rev = "51061d3" }
+tournamint = { path = "../tournamint" }
 tree-ds = { version = "0.2.0", features = ["serde", "compact_serde", "async"] }
 uuid = { version = "1.17", features = ["v4", "js", "serde"] }
 walkdir = "2.5"

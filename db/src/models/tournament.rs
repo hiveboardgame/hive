@@ -1,4 +1,4 @@
-use super::{Game, NewGame, Schedule, TournamentInvitation};
+use super::{Game, Schedule, TournamentInvitation};
 use crate::{
     db_error::DbError,
     models::{
@@ -19,7 +19,6 @@ use crate::{
             updated_at,
         },
         tournaments_organizers,
-        tournaments_users,
         users,
     },
     DbConn,
@@ -27,15 +26,11 @@ use crate::{
 use chrono::{prelude::*, TimeDelta};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
-use hive_lib::{Color, GameStatus};
-use itertools::Itertools;
+use hive_lib::GameStatus;
 use nanoid::nanoid;
-use rand::{rng, seq::SliceRandom};
 use serde::{Deserialize, Serialize};
 use shared_types::{
     Conclusion,
-    Standings,
-    Tiebreaker,
     TimeMode,
     TournamentDetails,
     TournamentGameResult,
@@ -44,10 +39,7 @@ use shared_types::{
     TournamentSortOrder,
     TournamentStatus,
 };
-use std::{
-    collections::{HashSet, VecDeque},
-    str::FromStr,
-};
+use std::str::FromStr;
 use uuid::Uuid;
 
 #[derive(Insertable, Debug)]
@@ -77,6 +69,15 @@ pub struct NewTournament {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub series: Option<Uuid>,
+    pub fully_automated: bool,
+    pub third_place_match: bool,
+    pub arena_duration_seconds: Option<i32>,
+    pub points_win: Option<f64>,
+    pub points_draw: Option<f64>,
+    pub points_loss: Option<f64>,
+    pub points_forfeit_loss: Option<f64>,
+    pub points_zero_point_bye: Option<f64>,
+    pub points_pairing_allocated_bye: Option<f64>,
 }
 
 impl NewTournament {
@@ -107,17 +108,68 @@ impl NewTournament {
             });
         }
 
-        if details.rounds < 1 {
+        let mode = TournamentMode::from_str(&details.mode).map_err(|_| {
+            DbError::InvalidTournamentDetails {
+                info: format!("{} is not a valid tournament mode", details.mode),
+            }
+        })?;
+
+        if details.min_seats < 2 {
             return Err(DbError::InvalidTournamentDetails {
-                info: String::from("Number of rounds needs to be >= 1"),
+                info: String::from("A tournament needs at least 2 players"),
             });
         }
 
-        if details.rounds > 16 {
+        // Only Swiss lets the organizer choose; every other format's round
+        // count falls out of the field size, and is written back at start.
+        let rounds = if mode.rounds_are_chosen() {
+            if details.rounds < 1 {
+                return Err(DbError::InvalidTournamentDetails {
+                    info: String::from("Number of rounds needs to be >= 1"),
+                });
+            }
+            if details.rounds > 16 {
+                return Err(DbError::InvalidTournamentDetails {
+                    info: String::from("Number of rounds needs to <= 16"),
+                });
+            }
+            // Checked against the field that can actually start, not the
+            // ceiling: `seats` is only an upper bound, and a tournament that
+            // starts with `min_seats` players has no more pairings available
+            // than that allows.
+            if details.rounds >= details.min_seats {
+                return Err(DbError::InvalidTournamentDetails {
+                    info: String::from("A Swiss tournament needs more players than rounds"),
+                });
+            }
+            details.rounds
+        } else {
+            0
+        };
+
+        // The engine doubles every value so a draw stays a whole number, which
+        // is exactly why halves are as fine as a tournament can go.
+        if !details.points.is_valid() {
             return Err(DbError::InvalidTournamentDetails {
-                info: String::from("Number of rounds needs to <= 16"),
+                info: String::from(
+                    "point values must be non-negative and in steps of half a point",
+                ),
             });
         }
+
+        // An arena is defined by how long it runs; nothing else bounds it.
+        let arena_duration_seconds = if mode.is_arena() {
+            match details.arena_duration_seconds {
+                Some(seconds) if seconds > 0 => Some(seconds),
+                _ => {
+                    return Err(DbError::InvalidTournamentDetails {
+                        info: String::from("An arena needs a positive duration"),
+                    })
+                }
+            }
+        } else {
+            None
+        };
 
         Ok(Self {
             nanoid: nanoid!(11),
@@ -132,7 +184,7 @@ impl NewTournament {
                 .collect(),
             seats: details.seats,
             min_seats: details.min_seats,
-            rounds: details.rounds,
+            rounds,
             invite_only: details.invite_only,
             mode: details.mode,
             time_mode: details.time_mode.to_string(),
@@ -149,6 +201,16 @@ impl NewTournament {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             series: details.series,
+            fully_automated: details.fully_automated,
+            third_place_match: details.third_place_match
+                && mode == TournamentMode::SingleElimination,
+            arena_duration_seconds,
+            points_win: details.points.win,
+            points_draw: details.points.draw,
+            points_loss: details.points.loss,
+            points_forfeit_loss: details.points.forfeit_loss,
+            points_zero_point_bye: details.points.zero_point_bye,
+            points_pairing_allocated_bye: details.points.pairing_allocated_bye,
         })
     }
 }
@@ -184,6 +246,19 @@ pub struct Tournament {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub series: Option<Uuid>,
+    /// Whether the background job advances rounds and finishes this
+    /// tournament, rather than an organizer pressing the button.
+    pub fully_automated: bool,
+    pub third_place_match: bool,
+    /// How long an arena runs for. Meaningless, and null, for every other mode.
+    pub arena_duration_seconds: Option<i32>,
+    /// The point system, in human units. Null means the mode default.
+    pub points_win: Option<f64>,
+    pub points_draw: Option<f64>,
+    pub points_loss: Option<f64>,
+    pub points_forfeit_loss: Option<f64>,
+    pub points_zero_point_bye: Option<f64>,
+    pub points_pairing_allocated_bye: Option<f64>,
 }
 
 impl Tournament {
@@ -235,7 +310,7 @@ impl Tournament {
         Ok(deleted_nanoids.into_iter().map(TournamentId).collect())
     }
 
-    async fn ensure_not_invite_only(
+    pub(crate) async fn ensure_not_invite_only(
         &self,
         user_id: &Uuid,
         conn: &mut DbConn<'_>,
@@ -259,7 +334,7 @@ impl Tournament {
         Ok(())
     }
 
-    async fn ensure_not_full(&self, conn: &mut DbConn<'_>) -> Result<(), DbError> {
+    pub(crate) async fn ensure_not_full(&self, conn: &mut DbConn<'_>) -> Result<(), DbError> {
         if self.number_of_players(conn).await? == self.seats as i64 {
             return Err(DbError::TournamentFull);
         }
@@ -276,7 +351,7 @@ impl Tournament {
         Ok(())
     }
 
-    fn ensure_inprogress(&self) -> Result<(), DbError> {
+    pub(crate) fn ensure_inprogress(&self) -> Result<(), DbError> {
         if self.status != TournamentStatus::InProgress.to_string() {
             return Err(DbError::InvalidInput {
                 info: format!("Tournament status is {}", self.status),
@@ -337,6 +412,17 @@ impl Tournament {
         self.ensure_user_is_organizer_or_admin(user_id, conn)
             .await?;
         self.ensure_games_finished(conn).await?;
+        self.finish_unchecked(conn).await
+    }
+
+    /// The `fully_automated` path: no organizer to authorize it.
+    pub async fn finish_automatically(&self, conn: &mut DbConn<'_>) -> Result<Tournament, DbError> {
+        self.ensure_inprogress()?;
+        self.ensure_games_finished(conn).await?;
+        self.finish_unchecked(conn).await
+    }
+
+    async fn finish_unchecked(&self, conn: &mut DbConn<'_>) -> Result<Tournament, DbError> {
         let tournament = diesel::update(tournaments::table.find(self.id))
             .set((
                 updated_at.eq(Utc::now()),
@@ -355,6 +441,19 @@ impl Tournament {
         self.ensure_inprogress()?;
         self.ensure_user_is_organizer_or_admin(user_id, conn)
             .await?;
+
+        // A two-game match cannot stand on a drawn result, and a double forfeit
+        // is scored as one: this would put every affected pairing into a replay
+        // loop rather than clearing it. That is true of Double-Swiss just as
+        // much as a bracket. An organizer unsticking one has to adjudicate a
+        // winner per game instead.
+        if self.mode()?.is_two_game_match() {
+            return Err(DbError::InvalidAction {
+                info: String::from(
+                    "a two-game match needs a decisive result; adjudicate the games instead",
+                ),
+            });
+        }
 
         let unstarted_game_ids = self
             .game_ids_with_status(GameStatus::NotStarted, conn)
@@ -375,6 +474,7 @@ impl Tournament {
                     games::updated_at.eq(Utc::now()),
                     games::last_interaction.eq(Utc::now()),
                     games::timeout_at.eq(crate::models::game::CLEAR_TIMEOUT_AT),
+                    games::finished_at.eq(Utc::now()),
                 ))
                 .execute(conn)
                 .await?;
@@ -393,8 +493,18 @@ impl Tournament {
         self.ensure_user_is_organizer_or_admin(user_id, conn)
             .await?;
 
-        let unstarted_game_ids = self
-            .game_ids_with_status(GameStatus::Adjudicated, conn)
+        // A withdrawal forfeit is adjudicated too, but it is the engine's doing
+        // rather than an organizer's and the field still reflects it: clearing
+        // one leaves a game nobody will play, and overwrites the very
+        // conclusion `restore_withdrawn_games` finds it by, so there would be
+        // no way back. Committee stays in — that is what an organizer's own
+        // adjudication writes, which is exactly what this undoes.
+        let unstarted_game_ids: Vec<Uuid> = games::table
+            .filter(tournament_id_column.eq(self.id))
+            .filter(games::game_status.eq(GameStatus::Adjudicated.to_string()))
+            .filter(games::conclusion.ne(Conclusion::Withdrawal.to_string()))
+            .select(games::id)
+            .get_results(conn)
             .await?;
 
         if unstarted_game_ids.is_empty() {
@@ -412,6 +522,7 @@ impl Tournament {
                     games::last_interaction.eq::<Option<DateTime<Utc>>>(None),
                     games::turn.eq(0),
                     games::timeout_at.eq(crate::models::game::CLEAR_TIMEOUT_AT),
+                    games::finished_at.eq::<Option<DateTime<Utc>>>(None),
                 ))
                 .execute(conn)
                 .await?;
@@ -688,23 +799,29 @@ impl Tournament {
         if !self.has_enough_players(conn).await? {
             return Err(DbError::NotEnoughPlayers);
         }
+        // Validation could only check `min_seats`; this is the first point the
+        // real field is known. A Swiss with more rounds than players runs out
+        // of legal pairings partway through, and there is no recovery from that
+        // once it has started.
+        if self.mode()?.rounds_are_chosen() {
+            let players = self.number_of_players(conn).await?;
+            if self.rounds as i64 >= players {
+                return Err(DbError::InvalidAction {
+                    info: format!(
+                        "a {}-round Swiss needs more than {players} players",
+                        self.rounds
+                    ),
+                });
+            }
+        }
         let ends = if let Some(days) = self.round_duration {
             let days = TimeDelta::days(days as i64);
             Some(Utc::now() + days)
         } else {
             None
         };
-        // Make sure all the conditions have been met
-        // and then call different starts for different tournament types
         let mut deleted_invitees = Vec::new();
-        let games = match TournamentMode::from_str(&self.mode)
-            .expect("Only valid modes should make it to the DB")
-        {
-            TournamentMode::DoubleRoundRobin => self.double_round_robin_start(conn).await?,
-            TournamentMode::QuadrupleRoundRobin => self.quad_round_robin_start(conn).await?,
-            TournamentMode::SextupleRoundRobin => self.sextuple_round_robin_start(conn).await?,
-            TournamentMode::DoubleSwiss => self.swiss_create_first_round(conn).await?,
-        };
+        let games = self.create_initial_games(conn).await?;
         let tournament: Tournament = diesel::update(self)
             .set((
                 updated_at.eq(Utc::now()),
@@ -722,333 +839,6 @@ impl Tournament {
             invitation.delete(conn).await?;
         }
         Ok((tournament, games, deleted_invitees))
-    }
-
-    pub async fn quad_round_robin_start(
-        &self,
-        conn: &mut DbConn<'_>,
-    ) -> Result<Vec<Game>, DbError> {
-        let mut games = Vec::new();
-        let players = self.players(conn).await?;
-        let combinations: Vec<Vec<User>> = players.into_iter().combinations(2).collect();
-        for combination in combinations {
-            let white = combination[0].id;
-            let black = combination[1].id;
-            let new_game = NewGame::new_from_tournament(white, black, self);
-            let game = Game::create(new_game, conn).await?;
-            games.push(game);
-            let new_game = NewGame::new_from_tournament(black, white, self);
-            let game = Game::create(new_game, conn).await?;
-            games.push(game);
-            let new_game = NewGame::new_from_tournament(white, black, self);
-            let game = Game::create(new_game, conn).await?;
-            games.push(game);
-            let new_game = NewGame::new_from_tournament(black, white, self);
-            let game = Game::create(new_game, conn).await?;
-            games.push(game);
-        }
-        Ok(games)
-    }
-
-    pub async fn double_round_robin_start(
-        &self,
-        conn: &mut DbConn<'_>,
-    ) -> Result<Vec<Game>, DbError> {
-        let mut games = Vec::new();
-        let players = self.players(conn).await?;
-        let combinations: Vec<Vec<User>> = players.into_iter().combinations(2).collect();
-        for combination in combinations {
-            let white = combination[0].id;
-            let black = combination[1].id;
-            let new_game = NewGame::new_from_tournament(white, black, self);
-            let game = Game::create(new_game, conn).await?;
-            games.push(game);
-            let new_game = NewGame::new_from_tournament(black, white, self);
-            let game = Game::create(new_game, conn).await?;
-            games.push(game);
-        }
-        Ok(games)
-    }
-
-    pub async fn sextuple_round_robin_start(
-        &self,
-        conn: &mut DbConn<'_>,
-    ) -> Result<Vec<Game>, DbError> {
-        let mut games = Vec::new();
-        let players = self.players(conn).await?;
-        let combinations: Vec<Vec<User>> = players.into_iter().combinations(2).collect();
-        for combination in combinations {
-            let white = combination[0].id;
-            let black = combination[1].id;
-
-            for _ in 0..3 {
-                let new_game = NewGame::new_from_tournament(white, black, self);
-                let game = Game::create(new_game, conn).await?;
-                games.push(game);
-            }
-
-            for _ in 0..3 {
-                let new_game = NewGame::new_from_tournament(black, white, self);
-                let game = Game::create(new_game, conn).await?;
-                games.push(game);
-            }
-        }
-        Ok(games)
-    }
-
-    async fn swiss_create_first_round(&self, conn: &mut DbConn<'_>) -> Result<Vec<Game>, DbError> {
-        let mut players = self.players(conn).await?;
-        let mut games = Vec::new();
-
-        // if odd number of players, add a bye player
-        let bye_player = User::find_by_username("SwissByePlayer", conn).await?;
-        if !players.len().is_multiple_of(2) && !players.iter().any(|p| p.id == bye_player.id) {
-            self.join(&bye_player.id, conn).await?;
-            players.push(bye_player.clone());
-        };
-        // shuffle players to create random pairings
-        {
-            let mut rng = rng();
-            players.shuffle(&mut rng);
-        }
-
-        // pair adjacent players
-        for pair in players.chunks(2) {
-            if pair.len() != 2 {
-                continue; // shouldn't happen since we handled odd number of players
-            }
-
-            let p1 = pair[0].id;
-            let p2 = pair[1].id;
-
-            for (white, black) in [(p1, p2), (p2, p1)] {
-                let new_game = NewGame::new_from_tournament(white, black, self);
-                let game = Game::create(new_game, conn).await?;
-
-                if let Some(winner) = if white == bye_player.id {
-                    Some(Color::Black)
-                } else if black == bye_player.id {
-                    Some(Color::White)
-                } else {
-                    None
-                } {
-                    game.assign_tournament_result(&TournamentGameResult::Winner(winner), conn)
-                        .await?;
-                }
-
-                games.push(game);
-            }
-        }
-
-        Ok(games)
-    }
-
-    fn brute_force_pairings(
-        players: &[Uuid],
-        standings: &Standings,
-        attempt: usize,
-        max_attempts: usize,
-    ) -> Vec<(Uuid, Uuid)> {
-        // Base greedy pairing
-        let mut unpaired: VecDeque<Uuid> = players.iter().copied().collect();
-        let mut pairs = Vec::new();
-
-        while let Some(current) = unpaired.pop_front() {
-            if let Some((idx, _)) = unpaired
-                .iter()
-                .enumerate()
-                .find(|(_, opp)| standings.pairings_between(current, **opp).is_empty())
-            {
-                let opponent = unpaired.remove(idx).unwrap();
-                pairs.push((current, opponent));
-            } else if let Some(opponent) = unpaired.pop_front() {
-                // fallback: allow repeat
-                pairs.push((current, opponent));
-            }
-        }
-
-        let has_repeats = pairs
-            .iter()
-            .any(|(a, b)| !standings.pairings_between(*a, *b).is_empty());
-
-        if has_repeats && attempt < max_attempts && pairs.len() >= 2 {
-            // Shuffle bottom 4 and retry
-            let mut rng = rng();
-            let mut shuffled_players = players.to_vec();
-            let n = shuffled_players.len();
-            let start = n.saturating_sub(4);
-            shuffled_players[start..].shuffle(&mut rng);
-
-            return Tournament::brute_force_pairings(
-                &shuffled_players,
-                standings,
-                attempt + 1,
-                max_attempts,
-            );
-        }
-
-        if attempt >= max_attempts {
-            // max attempts reached -> shuffle all players and pair randomly
-            let mut rng = rng();
-            let mut shuffled_players = players.to_vec();
-            shuffled_players.shuffle(&mut rng);
-
-            return shuffled_players
-                .chunks(2)
-                .filter_map(|c| {
-                    if c.len() == 2 {
-                        Some((c[0], c[1]))
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-        }
-
-        pairs
-    }
-
-    /// Try to generate all pairings without repeats using backtracking
-    fn backtrack_pairings(
-        players: &[Uuid],
-        standings: &Standings,
-        used_pairs: &mut Vec<(Uuid, Uuid)>,
-    ) -> Option<Vec<(Uuid, Uuid)>> {
-        if players.is_empty() {
-            return Some(used_pairs.clone());
-        }
-
-        let current = players[0];
-        for (i, &opponent) in players.iter().enumerate().skip(1) {
-            // Skip if they've already played
-            if !standings.pairings_between(current, opponent).is_empty() {
-                continue;
-            }
-
-            // Choose this pairing
-            used_pairs.push((current, opponent));
-
-            // Remaining players (exclude current and opponent)
-            let mut remaining = players[1..].to_vec();
-            remaining.remove(i - 1);
-
-            if let Some(result) = Tournament::backtrack_pairings(&remaining, standings, used_pairs)
-            {
-                return Some(result);
-            }
-
-            // Undo choice
-            used_pairs.pop();
-        }
-
-        // If no valid opponent worked, fail this branch
-        None
-    }
-
-    pub async fn swiss_create_next_round(
-        &self,
-        organizer: &Uuid,
-        conn: &mut DbConn<'_>,
-    ) -> Result<Vec<Game>, DbError> {
-        self.ensure_inprogress()?;
-        self.ensure_user_is_organizer_or_admin(organizer, conn)
-            .await?;
-        self.ensure_games_finished(conn).await?;
-
-        if TournamentMode::from_str(&self.mode).expect("Only valid modes should make it to the DB")
-            != TournamentMode::DoubleSwiss
-        {
-            return Err(DbError::InvalidAction {
-                info: String::from("Only Swiss tournaments can progress to the next round"),
-            });
-        }
-
-        let played_games = self.games(conn).await?;
-        let mut games = Vec::new();
-        let mut standings = Standings::new();
-
-        for tiebreaker in self.tiebreaker.iter().flatten() {
-            standings.add_tiebreaker(
-                Tiebreaker::from_str(tiebreaker).unwrap_or(Tiebreaker::SonnebornBerger),
-            );
-        }
-        for played_game in played_games {
-            let white_uuid = played_game.white_id;
-            let black_uuid = played_game.black_id;
-            let white_elo = played_game.white_rating;
-            let black_elo = played_game.black_rating;
-            let result = TournamentGameResult::from_str(&played_game.tournament_game_result)
-                .unwrap_or(TournamentGameResult::Unknown);
-            standings.add_result(
-                white_uuid,
-                black_uuid,
-                white_elo.unwrap_or(0.0),
-                black_elo.unwrap_or(0.0),
-                result,
-            );
-        }
-        standings.enforce_tiebreakers();
-
-        let bye_player = User::find_by_username("SwissByePlayer", conn).await?;
-        let mut active_player_ids: HashSet<Uuid> = tournaments_users::table
-            .inner_join(users::table)
-            .filter(tournaments_users::tournament_id.eq(self.id))
-            .filter(users::deleted.eq(false))
-            .select(tournaments_users::user_id)
-            .load::<Uuid>(conn)
-            .await?
-            .into_iter()
-            .collect();
-        let bye_player_joined = active_player_ids.remove(&bye_player.id);
-
-        let mut flattened_players_standing: Vec<Uuid> = standings
-            .players_standings
-            .iter()
-            .flatten()
-            .copied()
-            .filter(|id| active_player_ids.contains(id))
-            .collect();
-
-        if !flattened_players_standing.len().is_multiple_of(2) {
-            if !bye_player_joined {
-                TournamentUser::new(self.id, bye_player.id)
-                    .insert(conn)
-                    .await?;
-            }
-            flattened_players_standing.push(bye_player.id);
-        }
-        let mut used_pairs = Vec::new();
-
-        // first try backtracking to find a solution without repeats
-        let pairings = Tournament::backtrack_pairings(
-            &flattened_players_standing,
-            &standings,
-            &mut used_pairs,
-        )
-        .unwrap_or_else(|| {
-            // and then fall back to greedy brute force (may repeat)
-            Tournament::brute_force_pairings(&flattened_players_standing, &standings, 0, 5)
-        });
-        for (a, b) in pairings {
-            for (white, black) in [(a, b), (b, a)] {
-                let game =
-                    Game::create(NewGame::new_from_tournament(white, black, self), conn).await?;
-
-                if let Some(winner) = if white == bye_player.id {
-                    Some(Color::Black)
-                } else if black == bye_player.id {
-                    Some(Color::White)
-                } else {
-                    None
-                } {
-                    game.assign_tournament_result(&TournamentGameResult::Winner(winner), conn)
-                        .await?;
-                }
-
-                games.push(game);
-            }
-        }
-        Ok(games)
     }
 
     pub async fn find(id: Uuid, conn: &mut DbConn<'_>) -> Result<Self, DbError> {

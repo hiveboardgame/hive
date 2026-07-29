@@ -9,19 +9,19 @@ pub enum DbError {
     TournamentFull,
     #[error("Cannot join an invite only tournament")]
     TournamentInviteOnly,
-    #[error("Invalid TournamentDetails")]
+    #[error("Invalid TournamentDetails: {info}")]
     InvalidTournamentDetails { info: String },
-    #[error("Internal database error")]
-    InternalError,
+    #[error("Internal database error: {reason}")]
+    InternalError { reason: String },
     #[error("Chat client ID conflicts with an existing message")]
     ChatClientIdConflict,
     #[error("Invalid input")]
     InvalidInput { info: String, error: String },
-    #[error("Invalid action")]
+    #[error("Invalid action: {info}")]
     InvalidAction { info: String },
-    #[error("Not found")]
+    #[error("Not found: {reason}")]
     NotFound { reason: String },
-    #[error("Time not present")]
+    #[error("Time not present: {reason}")]
     TimeNotFound { reason: String },
     #[error("Game is over")]
     GameIsOver,
@@ -35,7 +35,11 @@ impl From<diesel::result::Error> for DbError {
             diesel::result::Error::NotFound => DbError::NotFound {
                 reason: "Not found.".to_string(),
             },
-            _ => DbError::InternalError,
+            // Keeping the cause: without it every failed query anywhere in the
+            // crate surfaces as the same three words, in logs and in tests.
+            error => DbError::InternalError {
+                reason: error.to_string(),
+            },
         }
     }
 }
@@ -46,7 +50,9 @@ impl From<shared_types::ChallengeError> for DbError {
             shared_types::ChallengeError::NotValidTimeMode { found } => {
                 DbError::TimeNotFound { reason: found }
             }
-            _ => DbError::InternalError,
+            error => DbError::InternalError {
+                reason: error.to_string(),
+            },
         }
     }
 }
