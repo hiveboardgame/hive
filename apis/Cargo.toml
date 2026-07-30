@@ -76,6 +76,7 @@ shared_types = { path = "../shared_types" }
 simple_logger = { workspace = true, optional = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, optional = true }
+tracing = { workspace = true }
 tokio-util = { workspace = true, optional = true }
 tree-ds = { workspace = true }
 uuid = { workspace = true }

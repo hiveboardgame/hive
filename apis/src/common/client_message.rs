@@ -23,7 +23,8 @@ pub struct SubscriptionAttempt {
     pub request_id: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// Not `Eq`, because `TournamentAction` is not — see the note there.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ClientRequest {
     Chat(ChatSendRequest),
     ChatSubscribe(SubscriptionAttempt),

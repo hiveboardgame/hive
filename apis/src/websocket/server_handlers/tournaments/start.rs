@@ -66,6 +66,15 @@ impl StartHandler {
             ))),
         });
 
+        if tournament.mode()?.is_arena() {
+            messages.push(InternalServerMessage {
+                destination: MessageDestination::Global,
+                message: ServerMessage::Tournament(TournamentUpdate::ArenaStarted(TournamentId(
+                    tournament.nanoid.clone(),
+                ))),
+            });
+        }
+
         let game_responses = GameResponse::from_games_batch(games, &mut conn).await?;
         for game in game_responses {
             messages.push(InternalServerMessage {

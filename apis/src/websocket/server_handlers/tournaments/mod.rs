@@ -1,5 +1,7 @@
 pub mod abandon;
 pub mod adjudicate_result;
+pub mod arena;
+pub mod berserk;
 pub mod bulk_adjudicate;
 pub mod create;
 pub mod delete;
@@ -14,6 +16,8 @@ pub mod kick;
 pub mod leave;
 pub mod progress_to_next_round;
 pub mod start;
+pub mod withdraw;
+pub mod zero_point_bye;
 
 use crate::{
     common::{ServerMessage, TournamentUpdate},

@@ -36,6 +36,10 @@ pub struct TournamentAbstractResponse {
     pub ends_at: Option<DateTime<Utc>>,
     pub started_at: Option<DateTime<Utc>>,
     pub updated_at: DateTime<Utc>,
+    /// Arena only. An arena is bounded by a clock rather than a round count, so
+    /// this plus `started_at` is what a countdown is derived from — and what
+    /// tells a listing whether the arena is still worth joining.
+    pub arena_duration_seconds: Option<i32>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -48,6 +52,9 @@ pub struct TournamentResponse {
     pub scoring: ScoringMode,
     pub tiebreakers: Vec<Tiebreaker>,
     pub invitees: Vec<UserResponse>,
+    /// Invitees who said no. Kept separate from `invitees` so an organizer can
+    /// tell a decline apart from an invitation still sitting unanswered.
+    pub declined_invitees: Vec<UserResponse>,
     pub players: HashMap<Uuid, UserResponse>,
     pub organizers: Vec<UserResponse>,
     pub games: Vec<GameResponse>,
@@ -69,12 +76,14 @@ pub struct TournamentResponse {
     pub round_duration: Option<i32>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    /// Arena only. With `started_at` this is what the arena countdown is
+    /// derived from — an arena ends on its clock, not on a round count.
+    pub arena_duration_seconds: Option<i32>,
 }
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 use anyhow::Result;
 use db_lib::{models::Tournament, DbConn};
-use shared_types::TournamentGameResult;
 use std::str::FromStr;
 
 impl TournamentAbstractResponse {
@@ -120,6 +129,7 @@ impl TournamentAbstractResponse {
             ends_at: tournament.ends_at,
             started_at: tournament.started_at,
             updated_at: tournament.updated_at,
+            arena_duration_seconds: tournament.arena_duration_seconds,
         })
     }
 }
@@ -144,6 +154,10 @@ impl TournamentResponse {
         for user in tournament.invitees(conn).await? {
             invitees.push(UserResponse::from_model(&user, conn).await?);
         }
+        let mut declined_invitees = Vec::new();
+        for user in tournament.declined_invitees(conn).await? {
+            declined_invitees.push(UserResponse::from_model(&user, conn).await?);
+        }
         let mut players = HashMap::new();
         for user in tournament.players(conn).await? {
             players.insert(user.id, UserResponse::from_model(&user, conn).await?);
@@ -153,36 +167,28 @@ impl TournamentResponse {
             organizers.push(UserResponse::from_model(&user, conn).await?);
         }
         let games = tournament.games(conn).await?;
-        let mut standings = Standings::new();
-        for tiebreaker in tournament.tiebreaker.iter().flatten() {
-            standings.add_tiebreaker(Tiebreaker::from_str(tiebreaker)?)
-        }
-        for game in &games {
-            standings.add_result(
-                game.white_id,
-                game.black_id,
-                game.white_rating.unwrap_or(0.0),
-                game.black_rating.unwrap_or(0.0),
-                TournamentGameResult::from_str(&game.tournament_game_result)?,
-            );
-        }
+        // Standings are the pairing engine's to work out — it replays the whole
+        // tournament to produce them, which is the only way the bracket and
+        // arena formats can be scored at all.
+        let standings = tournament.standings(conn).await?;
         let game_responses = GameResponse::from_games_batch(games, conn).await?;
-        standings.enforce_tiebreakers();
         Ok(Box::new(Self {
             id: tournament.id,
             tournament_id: TournamentId(tournament.nanoid.clone()),
             name: tournament.name.clone(),
             description: tournament.description.clone(),
+            // Taken from the standings rather than the stored column, because
+            // the engine prepends the format's primary score — `RawPoints`, or
+            // `RoundsSurvived` for a bracket — and drops any stored tiebreaker
+            // it does not recognise. These are the columns that actually exist.
+            tiebreakers: standings.tiebreakers.clone(),
             standings,
             scoring: ScoringMode::from_str(&tournament.scoring)?,
             players,
             organizers,
             games: game_responses,
-            tiebreakers: tournament
-                .tiebreaker
-                .clone()
-                .into_iter().flatten().flat_map(|t| Tiebreaker::from_str(&t).ok()).collect(),
             invitees,
+            declined_invitees,
             seats: tournament.seats,
             min_seats: tournament.min_seats,
             rounds: tournament.rounds,
@@ -201,6 +207,7 @@ impl TournamentResponse {
             round_duration: tournament.round_duration,
             created_at: tournament.created_at,
             updated_at: tournament.updated_at,
+            arena_duration_seconds: tournament.arena_duration_seconds,
         }))
     }
 }

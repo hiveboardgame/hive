@@ -18,7 +18,7 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     pub use telemetry::{TelemetrySnapshot, WsTelemetry};
     pub(crate) use tournament_game_start::TournamentGameStart;
     pub use ws_hub::{WsHub, SOCKET_BUFFER_CAPACITY};
-    pub use messages::{reaction_messages, GameFinalize, InternalServerMessage, MessageDestination, Reaction};
+    pub use messages::{reaction_messages, GameFinalize, InternalServerMessage, MessageDestination, Reaction, TournamentAudience};
 
     use crate::notifications::PendingNotifications;
     use chrono::{DateTime, Utc};

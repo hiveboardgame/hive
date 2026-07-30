@@ -114,6 +114,8 @@ fn winner_str(
         Conclusion::Resigned => "by resignation",
         Conclusion::Board => "on the board",
         Conclusion::Committee => "by committee decision",
+        Conclusion::Withdrawal => "by withdrawal",
+        Conclusion::Forfeit => "by forfeit",
         _ => "",
     };
 

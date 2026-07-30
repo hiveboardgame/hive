@@ -1,4 +1,5 @@
 use crate::{
+    common::tiebreaker_explanation,
     components::molecules::{dropdown_panel::DropdownPanel, panel::Panel, score_row::ScoreRow},
     i18n::*,
     responses::TournamentResponse,
@@ -21,13 +22,7 @@ fn TiebreakerHeader(tiebreaker: Tiebreaker) -> impl IntoView {
         is_open.update(|o| *o = !*o);
     };
 
-    let tiebreaker_clone = tiebreaker.clone();
-    let explanation = Signal::derive(move || match &tiebreaker_clone {
-        Tiebreaker::RawPoints => t_string!(i18n, tournaments.tiebreakers.raw_points),
-        Tiebreaker::HeadToHead => t_string!(i18n, tournaments.tiebreakers.head_to_head),
-        Tiebreaker::WinsAsBlack => t_string!(i18n, tournaments.tiebreakers.wins_as_black),
-        Tiebreaker::SonnebornBerger => t_string!(i18n, tournaments.tiebreakers.sonneborn_berger),
-    });
+    let explanation = Signal::derive(move || tiebreaker_explanation(i18n, tiebreaker));
 
     let _ = on_click_outside(container_ref, move |_| {
         is_open.set(false);
@@ -78,12 +73,16 @@ pub fn Standings(
         .map(|tiebreaker| view! { <TiebreakerHeader tiebreaker=tiebreaker.clone() /> })
         .collect_view();
 
+    // `groups` is best-first, each inner group a tie the tiebreakers could not
+    // split. Flattened for rendering; the shared `position` is what shows the
+    // tie.
     let standings_data = move || {
         tournament.with(|t| {
             t.standings
-                .results()
-                .into_iter()
+                .groups
+                .iter()
                 .flatten()
+                .cloned()
                 .collect::<Vec<_>>()
         })
     };
@@ -108,32 +107,29 @@ pub fn Standings(
                     <tbody>
                         <For
                             each=standings_data
-                            key=|(uuid, position, finished, hash)| (
-                                *uuid,
-                                position.clone(),
-                                *finished,
-                                hash.values().sum::<f32>() as i64,
+                            key=|standing| (
+                                standing.player,
+                                standing.position,
+                                standing.games_played,
+                                standing.scores.values().sum::<f32>() as i64,
                             )
-                            let:player_at_position
+                            let:standing
                         >
 
-                            {
-                                let (uuid, position, finished, hash) = player_at_position;
-                                let user = players_map
-                                    .get(&uuid)
-                                    .expect("User in tournament")
-                                    .clone();
-
-                                view! {
-                                    <ScoreRow
-                                        user
-                                        standing=position
-                                        finished
-                                        tiebreakers=tiebreakers.clone()
-                                        scores=hash
-                                    />
-                                }
-                            }
+                            {players_map
+                                .get(&standing.player)
+                                .cloned()
+                                .map(|user| {
+                                    view! {
+                                        <ScoreRow
+                                            user
+                                            standing=standing.position.to_string()
+                                            finished=standing.games_played
+                                            tiebreakers=tiebreakers.clone()
+                                            scores=standing.scores.clone()
+                                        />
+                                    }
+                                })}
 
                         </For>
                     </tbody>

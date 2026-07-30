@@ -559,6 +559,10 @@ mod tests {
             speed: GameSpeed::Untimed,
             black_time_left: None,
             white_time_left: None,
+            // Analysis is untimed, so there is no clock to give up.
+            white_berserked: false,
+            black_berserked: false,
+            round: None,
             last_interaction: None,
             created_at: now,
             updated_at: now,

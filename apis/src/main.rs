@@ -122,6 +122,7 @@ async fn main() -> std::io::Result<()> {
 
     jobs::hash_backfill(pool.clone());
     jobs::tournament_start(pool.clone(), Data::clone(&hub));
+    jobs::tournament_progress(pool.clone(), Data::clone(&hub));
     jobs::heartbeat(Data::clone(&hub));
     jobs::ping(Data::clone(&hub));
     jobs::game_cleanup(pool.clone());

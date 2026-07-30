@@ -7,6 +7,7 @@ use crate::{
             calendar::Calendar,
             challenges::Challenges,
             featured_video::FeaturedVideo,
+            live_arenas::LiveArenas,
             quickplay::QuickPlay,
             tv::Tv,
         },
@@ -51,6 +52,12 @@ pub fn Home() -> impl IntoView {
                     </div>
                     <div class="order-1 w-full lg:order-2">
                         <QuickPlay />
+                    </div>
+                    // Above the challenge list: an arena that is already
+                    // running is the most time-sensitive thing on the page —
+                    // it takes joiners until its clock runs out.
+                    <div class="order-2 w-full">
+                        <LiveArenas />
                     </div>
                     <div class="order-3 w-full">
                         <Challenges />

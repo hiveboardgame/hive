@@ -15,6 +15,8 @@ use crate::{
             user_identity::UserIdentity,
         },
         organisms::{
+            arena_controls::ArenaControls,
+            bracket::Bracket,
             chat::ResolvedChatWindow,
             standings::Standings,
             tournament_admin::TournamentAdminControls,
@@ -41,6 +43,7 @@ use shared_types::{
     ConversationKey,
     GameSpeed,
     PrettyString,
+    Tiebreaker,
     TimeInfo,
     TournamentGameResult,
     TournamentId,
@@ -259,6 +262,22 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
     let not_started = tournament.with_value(|t| t.status == TournamentStatus::NotStarted);
     let inprogress = tournament.with_value(|t| t.status == TournamentStatus::InProgress);
     let finished = tournament.with_value(|t| t.status == TournamentStatus::Finished);
+    // `RawPoints` leads every scored format and is the primary rather than a
+    // tiebreaker, so it is not listed as one.
+    let tiebreakers = tournament.with_value(|t| {
+        t.tiebreakers
+            .iter()
+            .filter(|tiebreaker| **tiebreaker != Tiebreaker::RawPoints)
+            .map(|tiebreaker| tiebreaker.full_name())
+            .collect::<Vec<_>>()
+            .join(", ")
+    });
+    let tiebreakers = StoredValue::new(tiebreakers);
+    let tournament_is_elimination = tournament.with_value(|t| {
+        t.mode
+            .parse::<TournamentMode>()
+            .is_ok_and(|mode| mode.is_elimination())
+    });
     let tournament_is_swiss = tournament.with_value(|t| {
         matches!(
             t.mode.parse::<TournamentMode>().ok(),
@@ -519,6 +538,16 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                             {tournament.with_value(|t| t.min_seats)}
                         </div>
                     </Show>
+                    // How ties are broken is part of the tournament's rules, so
+                    // it belongs where the rules are — not only as column
+                    // headers on the standings table. In order, since the first
+                    // one that separates two players decides.
+                    <Show when=move || !tiebreakers.with_value(String::is_empty)>
+                        <div class="flex flex-wrap gap-1">
+                            <span class="font-bold">"Tiebreakers: "</span>
+                            <span>{move || tiebreakers.get_value()}</span>
+                        </div>
+                    </Show>
                     <p class="ui-notice">{starts.clone()}</p>
                     <div class="space-y-2 ui-setting-group">
                         <div class="flex flex-col gap-2">
@@ -711,11 +740,23 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                     </Show>
                 </Panel>
             </div>
+            <ArenaControls tournament=Signal::derive(move || tournament.get_value()) />
             <Show when=move || !not_started>
-                <Standings
-                    tournament=Signal::derive(move || tournament.get_value())
-                    max_height=tournament_info_height
-                />
+                // A bracket's result *is* who beat whom in which round, so it
+                // gets the matchup diagram rather than a points table.
+                <Show
+                    when=move || tournament_is_elimination
+                    fallback=move || {
+                        view! {
+                            <Standings
+                                tournament=Signal::derive(move || tournament.get_value())
+                                max_height=tournament_info_height
+                            />
+                        }
+                    }
+                >
+                    <Bracket tournament=Signal::derive(move || tournament.get_value()) />
+                </Show>
             </Show>
         </div>
         <div class="flex flex-col gap-4 w-full">

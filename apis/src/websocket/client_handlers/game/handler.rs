@@ -87,7 +87,9 @@ fn handle_reaction(gar: GameActionResponse) {
             ack_control_if_watching(*game_control, &gar);
             handle_control(*game_control, gar.clone());
         }
-        GameReaction::Started => {
+        // Both push the whole updated game through; berserk changes the clock
+        // and the increment, which the timer reads off the response.
+        GameReaction::Started | GameReaction::Berserk => {
             update_notifier.game_response.set(Some(gar.clone()));
         }
         GameReaction::Ready => {

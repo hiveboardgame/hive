@@ -145,7 +145,20 @@ pub enum TournamentUpdate {
     Left(TournamentId),
     StateChanged(TournamentId),
     Started(TournamentId),
+    /// An arena opened, announced to everybody rather than to its entrants.
+    ///
+    /// Distinct from `Started` because an arena takes walk-ins for as long as its
+    /// clock runs, so it is worth advertising to people with no connection to it
+    /// — and because `Started` posts a notification, which strangers should not
+    /// get for a tournament they are not in.
+    ArenaStarted(TournamentId),
     Uninvited(TournamentId),
+    /// Sent to the player who left a running tournament, so their own view can
+    /// switch out of "you are playing in this" without waiting for a refetch.
+    /// Everyone else learns about it through `StateChanged`.
+    Withdrawn(TournamentId),
+    /// The organizer put them back in.
+    Reinstated(TournamentId),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

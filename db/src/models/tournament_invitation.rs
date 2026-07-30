@@ -25,6 +25,9 @@ pub struct TournamentInvitation {
     pub tournament_id: Uuid,
     pub invitee_id: Uuid,
     pub created_at: DateTime<Utc>,
+    /// Set when the invitee says no. The row is kept rather than deleted so an
+    /// organizer can tell a decline apart from an invitation nobody has opened.
+    pub declined_at: Option<DateTime<Utc>>,
 }
 
 impl TournamentInvitation {
@@ -33,7 +36,30 @@ impl TournamentInvitation {
             tournament_id,
             invitee_id,
             created_at: Utc::now(),
+            declined_at: None,
         }
+    }
+
+    /// Records a decline without losing the invitation. Re-inviting is
+    /// `insert` with `on_conflict`, which clears it again.
+    pub async fn decline(&self, conn: &mut DbConn<'_>) -> Result<(), DbError> {
+        diesel::update(self)
+            .set(tournaments_invitations::declined_at.eq(Some(Utc::now())))
+            .execute(conn)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn declined_for_tournament(
+        tournament: &Uuid,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Uuid>, DbError> {
+        Ok(tournaments_invitations_table
+            .filter(tournament_id_column.eq(tournament))
+            .filter(tournaments_invitations::declined_at.is_not_null())
+            .select(invitee_id_column)
+            .get_results(conn)
+            .await?)
     }
 
     pub async fn insert(&self, conn: &mut DbConn<'_>) -> Result<(), DbError> {
@@ -69,13 +95,17 @@ impl TournamentInvitation {
         Ok(())
     }
 
+    /// Whether an invitation is *outstanding* — a declined one no longer opens
+    /// the door, which is how it behaved when declining deleted the row.
     pub async fn exists(t_id: &Uuid, i_id: &Uuid, conn: &mut DbConn<'_>) -> Result<bool, DbError> {
         Ok(select(exists(
-            tournaments_invitations_table.filter(
-                tournament_id_column
-                    .eq(t_id)
-                    .and(invitee_id_column.eq(i_id)),
-            ),
+            tournaments_invitations_table
+                .filter(
+                    tournament_id_column
+                        .eq(t_id)
+                        .and(invitee_id_column.eq(i_id)),
+                )
+                .filter(tournaments_invitations::declined_at.is_null()),
         ))
         .get_result(conn)
         .await?)

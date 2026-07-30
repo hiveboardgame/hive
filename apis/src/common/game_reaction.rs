@@ -12,6 +12,10 @@ pub enum GameReaction {
     New,
     TimedOut,
     Tv,
+    /// A player declared berserk before the game started. Both sides need it:
+    /// it halves that player's clock and drops their increment, so the other
+    /// side's timer display changes too.
+    Berserk,
 }
 
 impl fmt::Display for GameReaction {
@@ -25,6 +29,7 @@ impl fmt::Display for GameReaction {
             GameReaction::Ready => write!(f, "Ready"),
             GameReaction::TimedOut => write!(f, "TimedOut"),
             GameReaction::Tv => write!(f, "Tv"),
+            GameReaction::Berserk => write!(f, "Berserk"),
         }
     }
 }

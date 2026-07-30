@@ -78,11 +78,23 @@ pub fn handle_tournament(tournament: TournamentUpdate) {
                 tournaments.insert(tournament_id.clone());
             });
         }
+        // Only nudges anything already listing arenas to refetch — deliberately
+        // no notification, since this reaches everyone connected.
+        TournamentUpdate::ArenaStarted(tournament_id) => {
+            notify_update.set(tournament_id);
+        }
         TournamentUpdate::Finished(tournament_id) => {
             notify_update.set(tournament_id.clone());
             notifications.tournament_finished.update(|tournaments| {
                 tournaments.insert(tournament_id.clone());
             });
+        }
+        // Unlike `Left`, withdrawing keeps the player's row and everything they
+        // already scored, so their chat thread stays: they are still part of
+        // the tournament's record, just not of its pairings.
+        TournamentUpdate::Withdrawn(tournament_id)
+        | TournamentUpdate::Reinstated(tournament_id) => {
+            notify_update.set(tournament_id);
         }
     }
 }

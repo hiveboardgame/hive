@@ -52,6 +52,19 @@ pub fn TournamentAdminControls(
                         <UserRow actions=user_uninvite() user />
                     </For>
                 </Show>
+                // Kept visible so a decline is distinguishable from an
+                // invitation nobody has opened yet — otherwise there is no way
+                // to tell whether to chase somebody or invite a replacement.
+                <Show when=move || tournament.with_value(|t| !t.declined_invitees.is_empty())>
+                    <p class="font-bold">"Declined"</p>
+                    <For
+                        each=move || { tournament.with_value(|t| t.declined_invitees.clone()) }
+                        key=|users| users.uid
+                        let:user
+                    >
+                        <UserRow actions=vec![] user />
+                    </For>
+                </Show>
                 <Show when=move || user_is_organizer>
                     <p class="font-bold">"Invite players"</p>
                     <InviteUser tournament />

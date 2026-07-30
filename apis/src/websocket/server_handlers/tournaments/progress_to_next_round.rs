@@ -28,9 +28,12 @@ impl SwissRoundHandler {
         let mut messages = Vec::new();
         let tournament = Tournament::find_by_tournament_id(&self.tournament_id, &mut conn).await?;
         let nanoid = tournament.nanoid.clone();
-        let _new_games = conn
+        // Advances whatever the format needs advancing: a Swiss or bracket
+        // round, an arena pairing tick, or nothing if the round is still being
+        // played. The outcome only says which of those happened.
+        let _outcome = conn
             .transaction::<_, DbError, _>(async move |tc| {
-                tournament.swiss_create_next_round(&self.user_id, tc).await
+                tournament.progress_by_organizer(&self.user_id, tc).await
             })
             .await?;
         messages.push(InternalServerMessage {

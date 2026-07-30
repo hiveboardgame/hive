@@ -1,6 +1,8 @@
 pub mod analysis;
+pub mod arena_controls;
 pub mod background_color_toggle;
 pub mod board;
+pub mod bracket;
 pub mod calendar;
 pub mod challenges;
 pub mod chat;
@@ -15,6 +17,7 @@ pub mod games_filter;
 pub mod header;
 pub mod history;
 pub mod leaderboard;
+pub mod live_arenas;
 pub mod logout;
 pub mod preselect_toggle;
 pub mod preview_tiles;

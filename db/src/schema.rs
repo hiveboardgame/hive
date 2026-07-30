@@ -311,6 +311,7 @@ diesel::table! {
         tournament_id -> Uuid,
         invitee_id -> Uuid,
         created_at -> Timestamptz,
+        declined_at -> Nullable<Timestamptz>,
     }
 }
 

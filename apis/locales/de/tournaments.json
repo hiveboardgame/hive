@@ -1,8 +1,25 @@
 {
-    "tiebreakers": {
-        "raw_points": "Gesamte Turnierpunkte erhalten",
-        "head_to_head": "Gewonnene Spiele zwischen punktgleichen Spielern",
-        "wins_as_black": "Gewonnene Spiele mit schwarzen Steinen",
-        "sonneborn_berger": "Summe der Punkte aller Gegner gegen die Sie punkteten"
-    }
+  "tiebreakers": {
+    "raw_points": "Gesamte Turnierpunkte erhalten",
+    "head_to_head": "Gewonnene Spiele zwischen punktgleichen Spielern",
+    "wins_as_black": "Gewonnene Spiele mit schwarzen Steinen",
+    "sonneborn_berger": "Summe der Punkte aller Gegner gegen die Sie punkteten",
+    "match_points": "Points counting each match as a single result",
+    "game_points": "Points counting every individual game",
+    "buchholz": "Sum of every opponent's score",
+    "buchholz_cut_1": "Sum of every opponent's score, with the lowest dropped",
+    "buchholz_cut_2": "Sum of every opponent's score, with the two lowest dropped",
+    "buchholz_median": "Sum of every opponent's score, with the highest and lowest dropped",
+    "buchholz_buchholz": "Sum of every opponent's Buchholz score",
+    "koya": "Points scored against opponents who finished on at least half",
+    "progressive_score": "Running total of your score after each round",
+    "wins": "Number of games won",
+    "rounds_survived": "How many rounds of the bracket you won",
+    "games_played": "Number of games finished",
+    "draws": "Number of games drawn",
+    "losses": "Number of games lost",
+    "current_streak": "Wins in a row right now",
+    "best_streak": "Longest run of wins in a row",
+    "berserks": "How often you berserked for the clock bonus"
+  }
 }

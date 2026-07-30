@@ -24,6 +24,8 @@ pub struct TournamentDetails {
     pub starts_at: Option<DateTime<Utc>>,
     pub round_duration: Option<i32>,
     pub series: Option<Uuid>,
+    /// Starts on schedule, and advances to the next round as soon as every game
+    /// in the current one has finished, instead of waiting for the organizer.
     pub fully_automated: bool,
     pub third_place_match: bool,
     pub arena_duration_seconds: Option<i32>,

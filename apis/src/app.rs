@@ -38,7 +38,7 @@ use crate::{
         strategy::Strategy,
         top_players::TopPlayers,
         tournament::Tournament,
-        tournament_create::TournamentCreate,
+        tournament_create::{provide_tournament_signals, TournamentCreate},
         tournaments::{HostingTournaments, JoinedTournaments, Tournaments, TournamentsByStatus},
         tutorial::Tutorial,
     },
@@ -102,6 +102,7 @@ pub fn App() -> impl IntoView {
     provide_refocus();
     provide_alerts();
     provide_challenge_params();
+    provide_tournament_signals();
     provide_config();
     provide_users();
     provide_challenges();

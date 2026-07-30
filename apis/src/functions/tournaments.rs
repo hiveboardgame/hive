@@ -40,6 +40,17 @@ pub async fn get_complete(
     }
 }
 
+/// Whether a tournament name is already in use, so the create form can say so
+/// before submitting instead of surfacing a unique-constraint violation.
+#[server(input = codec::Cbor, output = codec::Cbor)]
+pub async fn tournament_name_taken(name: String) -> Result<bool, ServerFnError> {
+    use crate::functions::db::pool;
+    use db_lib::{get_conn, models::Tournament};
+    let pool = pool().await?;
+    let mut conn = get_conn(&pool).await?;
+    Ok(Tournament::name_exists(&name, &mut conn).await?)
+}
+
 #[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_by_status(
     status: TournamentStatus,

@@ -64,6 +64,14 @@ pub struct GameResponse {
     pub speed: GameSpeed,
     pub black_time_left: Option<Duration>,
     pub white_time_left: Option<Duration>,
+    /// Berserk halves that player's starting clock and drops their increment
+    /// entirely, so both sides' timers depend on these.
+    pub white_berserked: bool,
+    pub black_berserked: bool,
+    /// Which round of its tournament this game belongs to. `None` outside a
+    /// tournament. This is what lets a bracket be reconstructed: round plus the
+    /// two players is a matchup.
+    pub round: Option<i32>,
     pub last_interaction: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -158,7 +166,13 @@ impl GameResponse {
     pub fn organizer_can_adjudicate(&self) -> bool {
         matches!(
             self.conclusion,
-            Conclusion::Unknown | Conclusion::Committee | Conclusion::Forfeit
+            // Withdrawal included deliberately: a withdrawal forfeit is exactly
+            // the kind of unplayed game an organizer may need to re-decide,
+            // and `Game::adjudicate_tournament_result` already accepts it.
+            Conclusion::Unknown
+                | Conclusion::Committee
+                | Conclusion::Forfeit
+                | Conclusion::Withdrawal
         ) && self.turn == 0
             && self.history.is_empty()
             && self.game_start == GameStart::Ready
@@ -368,6 +382,9 @@ impl GameResponse {
             black_rating_change,
             white_time_left,
             black_time_left,
+            white_berserked: game.white_berserked,
+            black_berserked: game.black_berserked,
+            round: game.round,
             time_mode: TimeMode::from_str(&game.time_mode)?,
             time_base: game.time_base,
             time_increment: game.time_increment,

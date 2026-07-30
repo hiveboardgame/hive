@@ -11,6 +11,7 @@ use crate::{
         tournaments::{
             self,
             ends_at,
+            name as name_column,
             nanoid as nanoid_field,
             series as series_column,
             started_at,
@@ -25,7 +26,7 @@ use crate::{
 };
 use chrono::{prelude::*, TimeDelta};
 use diesel::prelude::*;
-use diesel_async::RunQueryDsl;
+use diesel_async::{AsyncConnection, RunQueryDsl};
 use hive_lib::GameStatus;
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
@@ -89,13 +90,6 @@ impl NewTournament {
             });
         }
 
-        // TODO: @leex add some more validations
-        if details.tiebreakers.is_empty() {
-            return Err(DbError::InvalidTournamentDetails {
-                info: String::from("No tiebreaker set"),
-            });
-        }
-
         if details.time_mode == TimeMode::Correspondence && details.round_duration.is_some() {
             return Err(DbError::InvalidTournamentDetails {
                 info: String::from("Cannot set round duration on correspondence tournaments"),
@@ -114,9 +108,27 @@ impl NewTournament {
             }
         })?;
 
-        if details.min_seats < 2 {
+        // An arena ranks on points, then wins, then fewest games, and a bracket
+        // on how far each player got — both are the engine's own orders, fixed
+        // and already applied to the standings they return. Neither has a tie
+        // left to break, so demanding one here would make them uncreatable.
+        if details.tiebreakers.is_empty() && !mode.is_arena() && !mode.is_elimination() {
+            return Err(DbError::InvalidTournamentDetails {
+                info: String::from("No tiebreaker set"),
+            });
+        }
+
+        // An arena opens on its clock and pairs whoever has turned up, so it has
+        // no minimum: if nobody joins, nobody plays, and it ends when the clock
+        // does. Every other format pairs a fixed field and needs two.
+        if details.min_seats < 2 && !mode.is_arena() {
             return Err(DbError::InvalidTournamentDetails {
                 info: String::from("A tournament needs at least 2 players"),
+            });
+        }
+        if details.min_seats < 1 {
+            return Err(DbError::InvalidTournamentDetails {
+                info: String::from("A tournament needs at least one seat"),
             });
         }
 
@@ -383,6 +395,12 @@ impl Tournament {
     }
 
     async fn has_enough_players(&self, conn: &mut DbConn<'_>) -> Result<bool, DbError> {
+        // An arena is never waiting for a quorum — it runs against a wall clock
+        // and admits players for as long as that clock lasts. Holding it back
+        // until somebody joins would mean it never opens for them to join.
+        if self.mode()?.is_arena() {
+            return Ok(true);
+        }
         Ok(self.number_of_players(conn).await? >= self.min_seats as i64)
     }
 
@@ -415,7 +433,8 @@ impl Tournament {
         self.finish_unchecked(conn).await
     }
 
-    /// The `fully_automated` path: no organizer to authorize it.
+    /// The `fully_automated` path, driven by the job rather than by an
+    /// organizer's click — so there is nobody to authorize against.
     pub async fn finish_automatically(&self, conn: &mut DbConn<'_>) -> Result<Tournament, DbError> {
         self.ensure_inprogress()?;
         self.ensure_games_finished(conn).await?;
@@ -571,7 +590,9 @@ impl Tournament {
     ) -> Result<Tournament, DbError> {
         self.ensure_not_started()?;
         if let Ok(invitation) = TournamentInvitation::find_by_ids(&self.id, user_id, conn).await {
-            invitation.delete(conn).await?;
+            // Marked, not deleted: an organizer needs to see that somebody said
+            // no, which is different from an invitation still sitting unopened.
+            invitation.decline(conn).await?;
             Ok(self.clone())
         } else {
             Err(DbError::NotFound {
@@ -707,9 +728,21 @@ impl Tournament {
             .await?)
     }
 
+    /// Invitations still outstanding. Somebody who declined is no longer
+    /// waiting on anything, so they belong in `declined_invitees` instead.
     pub async fn invitees(&self, conn: &mut DbConn<'_>) -> Result<Vec<User>, DbError> {
         Ok(TournamentInvitation::belonging_to(self)
             .inner_join(users::table)
+            .filter(crate::schema::tournaments_invitations::declined_at.is_null())
+            .select(User::as_select())
+            .get_results(conn)
+            .await?)
+    }
+
+    pub async fn declined_invitees(&self, conn: &mut DbConn<'_>) -> Result<Vec<User>, DbError> {
+        Ok(TournamentInvitation::belonging_to(self)
+            .inner_join(users::table)
+            .filter(crate::schema::tournaments_invitations::declined_at.is_not_null())
             .select(User::as_select())
             .get_results(conn)
             .await?)
@@ -871,14 +904,44 @@ impl Tournament {
         Ok(tournaments)
     }
 
+    /// Starts every tournament whose time has come, each in its own
+    /// transaction.
+    ///
+    /// One that cannot start must not stop the others: a failed statement
+    /// poisons the surrounding Postgres transaction, so sharing one would mean
+    /// a single bad tournament silently prevents every other scheduled
+    /// tournament on the site from ever starting.
     pub async fn automatic_start(
         conn: &mut DbConn<'_>,
     ) -> Result<Vec<(Tournament, Vec<Game>, Vec<Uuid>)>, DbError> {
         let mut started_tournaments = Vec::new();
         for tournament in Tournament::unstarted(conn).await? {
-            started_tournaments.push(tournament.start(conn).await?);
+            let nanoid = tournament.nanoid.clone();
+            let started = conn
+                .transaction::<_, DbError, _>(async move |tc| tournament.start(tc).await)
+                .await;
+            match started {
+                Ok(started) => started_tournaments.push(started),
+                Err(error) => {
+                    tracing::error!(
+                        tournament = %nanoid,
+                        %error,
+                        "could not start this tournament; skipping it",
+                    );
+                }
+            }
         }
         Ok(started_tournaments)
+    }
+
+    /// `tournaments.name` is unique, so this lets the form say so before
+    /// submitting rather than surfacing a raw constraint violation.
+    pub async fn name_exists(name: &str, conn: &mut DbConn<'_>) -> Result<bool, DbError> {
+        Ok(diesel::select(diesel::dsl::exists(
+            tournaments::table.filter(name_column.eq(name)),
+        ))
+        .get_result(conn)
+        .await?)
     }
 
     pub async fn find_by_tournament_ids(

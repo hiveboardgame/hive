@@ -3,6 +3,8 @@ use std::sync::Arc;
 use super::{
     abandon::AbandonHandler,
     adjudicate_result::AdjudicateResultHandler,
+    arena::ArenaHandler,
+    berserk::BerserkHandler,
     bulk_adjudicate::{BulkAdjudicateHandler, BulkAdjudication},
     create::CreateHandler,
     delete::DeleteHandler,
@@ -16,6 +18,8 @@ use super::{
     leave::LeaveHandler,
     progress_to_next_round::SwissRoundHandler,
     start::StartHandler,
+    withdraw::{Membership, WithdrawHandler},
+    zero_point_bye::ZeroPointByeHandler,
 };
 use crate::{
     common::TournamentAction,
@@ -164,6 +168,50 @@ impl TournamentHandler {
                     .await?
                     .into()
             }
+            TournamentAction::Withdraw(tournament_id, player) => WithdrawHandler::new(
+                tournament_id,
+                player,
+                self.user_id,
+                Membership::Withdraw,
+                &self.pool,
+            )
+            .handle()
+            .await?
+            .into(),
+            TournamentAction::Reinstate(tournament_id, player) => WithdrawHandler::new(
+                tournament_id,
+                player,
+                self.user_id,
+                Membership::Reinstate,
+                &self.pool,
+            )
+            .handle()
+            .await?
+            .into(),
+            TournamentAction::JoinArena(tournament_id) => {
+                ArenaHandler::join(tournament_id, self.user_id, &self.pool)
+                    .handle()
+                    .await?
+                    .into()
+            }
+            TournamentAction::ArenaBreak(tournament_id, kind) => {
+                ArenaHandler::break_(tournament_id, self.user_id, kind, &self.pool)
+                    .handle()
+                    .await?
+                    .into()
+            }
+            TournamentAction::Berserk(game_id) => {
+                BerserkHandler::new(game_id, self.user_id, self.username.clone(), &self.pool)
+                    .handle()
+                    .await?
+                    .into()
+            }
+            TournamentAction::GrantZeroPointBye(tournament_id, player) => {
+                ZeroPointByeHandler::new(tournament_id, player, self.user_id, &self.pool)
+                    .handle()
+                    .await?
+                    .into()
+            }
         };
         // Invalidate cached recipients when an action changes membership or
         // deletes the tournament. The next dispatch rebuilds the entry.
@@ -177,6 +225,17 @@ impl TournamentHandler {
             | TournamentAction::Delete(id)
             | TournamentAction::InvitationAccept(id) => Some(id),
             TournamentAction::Kick(id, _) => Some(id),
+            // An arena admits players while it runs, so a join genuinely adds
+            // to the recipient set.
+            TournamentAction::JoinArena(id) => Some(id),
+            // Withdrawing does *not*: the row stays, the results stay, and the
+            // player keeps receiving the tournament's messages. Only pairing
+            // stops. Same for reinstating and for sitting out a round.
+            TournamentAction::Withdraw(_, _)
+            | TournamentAction::Reinstate(_, _)
+            | TournamentAction::ArenaBreak(_, _)
+            | TournamentAction::GrantZeroPointBye(_, _)
+            | TournamentAction::Berserk(_) => None,
             // These actions change invitations, games, or tournament state,
             // but not the players ∪ organizers recipient set.
             TournamentAction::AdjudicateResult(_, _)
