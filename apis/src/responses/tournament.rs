@@ -2,6 +2,7 @@ use super::{GameResponse, UserResponse};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use shared_types::{
+    ByeKind,
     ScoringMode,
     Standings,
     StartMode,
@@ -42,6 +43,14 @@ pub struct TournamentAbstractResponse {
     pub arena_duration_seconds: Option<i32>,
 }
 
+/// A round a player sat out, and why — which is what decides what it scored.
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct ByeResponse {
+    pub player: Uuid,
+    pub round: i32,
+    pub kind: ByeKind,
+}
+
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct TournamentResponse {
     pub id: Uuid,
@@ -56,7 +65,14 @@ pub struct TournamentResponse {
     /// tell a decline apart from an invitation still sitting unanswered.
     pub declined_invitees: Vec<UserResponse>,
     pub players: HashMap<Uuid, UserResponse>,
+    /// Players who left mid-event. They keep their row and everything they
+    /// scored, so without this a leaver is indistinguishable from somebody who
+    /// simply has no game in the current round.
+    pub withdrawn: HashSet<Uuid>,
     pub organizers: Vec<UserResponse>,
+    /// Rounds a player sat out. A bye earns points but produces no game, so it
+    /// is invisible in `games` and has to travel separately.
+    pub byes: Vec<ByeResponse>,
     pub games: Vec<GameResponse>,
     pub seats: i32,
     pub min_seats: i32,
@@ -83,7 +99,10 @@ pub struct TournamentResponse {
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 use anyhow::Result;
-use db_lib::{models::Tournament, DbConn};
+use db_lib::{
+    models::{Tournament, TournamentBye},
+    DbConn,
+};
 use std::str::FromStr;
 
 impl TournamentAbstractResponse {
@@ -166,6 +185,22 @@ impl TournamentResponse {
         for user in tournament.organizers(conn).await? {
             organizers.push(UserResponse::from_model(&user, conn).await?);
         }
+        let withdrawn = tournament
+            .withdrawn_players(conn)
+            .await?
+            .into_iter()
+            .collect();
+        let byes = TournamentBye::for_tournament(tournament.id, conn)
+            .await?
+            .into_iter()
+            .map(|bye| {
+                Ok(ByeResponse {
+                    player: bye.user_id,
+                    round: bye.round,
+                    kind: ByeKind::from_str(&bye.kind)?,
+                })
+            })
+            .collect::<Result<Vec<_>>>()?;
         let games = tournament.games(conn).await?;
         // Standings are the pairing engine's to work out — it replays the whole
         // tournament to produce them, which is the only way the bracket and
@@ -185,7 +220,9 @@ impl TournamentResponse {
             standings,
             scoring: ScoringMode::from_str(&tournament.scoring)?,
             players,
+            withdrawn,
             organizers,
+            byes,
             games: game_responses,
             invitees,
             declined_invitees,

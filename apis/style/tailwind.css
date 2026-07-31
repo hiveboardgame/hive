@@ -140,6 +140,27 @@ html[data-display-mode="standalone"] {
     @apply p-3;
   }
 
+  /*
+   * Bracket columns. Vertical placement comes from equal-height slots — a column
+   * of four slots centres each box against the two feeding it — while the lines
+   * themselves are measured and drawn as an SVG overlay, because they start at a
+   * specific player row and can fork.
+   */
+  /*
+   * A fixed width, not a minimum. Both halves of a double elimination are laid
+   * out independently, so a column that grows to fit a long player name pushes
+   * that half out of step with the other — upper round 3 and lower round 2 ended
+   * up three pixels apart, and every cross-bracket line then had to cross a lane
+   * some other line already occupied. One width means one grid.
+   */
+  .ui-bracket-column {
+    @apply flex w-52 shrink-0 flex-col gap-2;
+  }
+
+  .ui-bracket-feed {
+    @apply relative flex flex-1 items-center;
+  }
+
   @media (width >= 360px) {
     .ui-panel-header {
       @apply px-4 py-3;

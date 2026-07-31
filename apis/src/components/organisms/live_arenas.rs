@@ -67,7 +67,10 @@ pub fn LiveArenas() -> impl IntoView {
                 (!arenas.is_empty())
                     .then(|| {
                         view! {
-                            <div class="mx-auto w-full max-w-md">
+                            // Exactly what `Challenges` constrains itself to
+                            // (`challenges.rs:283`), so the two panels line up
+                            // instead of one guessing at the other's width.
+                            <div class="mx-auto w-full max-w-screen-md">
                                 <Panel title="Arenas running now">
                                     <ul class="divide-y divide-gray-200 dark:divide-gray-700">
                                         {arenas
@@ -133,8 +136,10 @@ fn ArenaCard(arena: TournamentAbstractResponse) -> impl IntoView {
                 class="flex flex-col min-w-0 rounded transition-opacity hover:opacity-80 grow"
             >
                 <span class="text-sm font-medium truncate">{name.clone()}</span>
-                <span class="flex gap-1.5 items-center text-xs text-gray-600 dark:text-gray-300">
-                    <Icon icon=icon_for_speed(speed) attr:class="size-3" />
+                // Wraps rather than overflows: on a narrow phone the speed, the
+                // field size and the countdown together outrun one line.
+                <span class="flex flex-wrap gap-x-1.5 items-center text-xs text-gray-600 dark:text-gray-300">
+                    <Icon icon=icon_for_speed(speed) attr:class="size-3 shrink-0" />
                     <span>{time_control.clone()}</span>
                     <span aria-hidden="true">"·"</span>
                     <span>{format!("{players} playing")}</span>
@@ -148,13 +153,19 @@ fn ArenaCard(arena: TournamentAbstractResponse) -> impl IntoView {
                 when=move || is_signed_in.get() && !is_entrant.get()
                 fallback=move || {
                     view! {
-                        <a href=href.clone() class="ui-button ui-button-secondary ui-button-sm">
+                        <a
+                            href=href.clone()
+                            class="shrink-0 ui-button ui-button-secondary ui-button-sm"
+                        >
                             "View"
                         </a>
                     }
                 }
             >
-                <button class="ui-button ui-button-primary ui-button-sm" on:click=join.clone()>
+                <button
+                    class="shrink-0 ui-button ui-button-primary ui-button-sm"
+                    on:click=join.clone()
+                >
                     "Join"
                 </button>
             </Show>

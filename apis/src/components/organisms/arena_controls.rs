@@ -60,7 +60,7 @@ pub fn ArenaControls(tournament: Signal<TournamentResponse>) -> impl IntoView {
 
     view! {
         <Show when=is_running_arena>
-            <div class="flex flex-wrap gap-y-2 gap-x-4 justify-between items-center p-3 w-full max-w-md ui-setting-group">
+            <div class="flex flex-wrap gap-y-2 gap-x-4 justify-between items-center p-3 w-full ui-setting-group">
                 <div class="flex flex-col">
                     <span class="text-xs tracking-tight text-gray-600 uppercase dark:text-gray-400">
                         "Time left"

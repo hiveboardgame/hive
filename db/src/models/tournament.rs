@@ -20,6 +20,7 @@ use crate::{
             updated_at,
         },
         tournaments_organizers,
+        tournaments_users,
         users,
     },
     DbConn,
@@ -752,6 +753,20 @@ impl Tournament {
         Ok(TournamentUser::belonging_to(self)
             .inner_join(users::table)
             .select(User::as_select())
+            .get_results(conn)
+            .await?)
+    }
+
+    /// Players who left mid-event.
+    ///
+    /// They keep their row and everything they already scored, so nothing else
+    /// distinguishes them from a player who simply has no game in the current
+    /// round — which is why a view has to be told explicitly.
+    pub async fn withdrawn_players(&self, conn: &mut DbConn<'_>) -> Result<Vec<Uuid>, DbError> {
+        Ok(tournaments_users::table
+            .filter(tournaments_users::tournament_id.eq(self.id))
+            .filter(tournaments_users::withdrawn_at.is_not_null())
+            .select(tournaments_users::user_id)
             .get_results(conn)
             .await?)
     }

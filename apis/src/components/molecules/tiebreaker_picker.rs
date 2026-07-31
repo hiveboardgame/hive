@@ -103,7 +103,10 @@ pub fn TiebreakerPicker(
                                     <span class="w-6 text-sm text-gray-500">
                                         {format!("{}.", index + 1)}
                                     </span>
-                                    <span class="flex flex-col grow" title=explain(tiebreaker)>
+                                    <span
+                                        class="flex flex-col min-w-0 grow"
+                                        title=explain(tiebreaker)
+                                    >
                                         <span class="text-sm">{tiebreaker.full_name()}</span>
                                         <span class="text-xs text-gray-500 dark:text-gray-400">
                                             {explain(tiebreaker)}

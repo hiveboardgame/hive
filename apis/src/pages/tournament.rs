@@ -7,7 +7,7 @@ use crate::{
             page_shell::{PageShell, PageShellVariant},
         },
         molecules::{
-            game_previews::GamePreviews,
+            games_by_round::GamesByRound,
             my_schedules::MySchedules,
             panel::Panel,
             time_row::TimeRow,
@@ -18,6 +18,7 @@ use crate::{
             arena_controls::ArenaControls,
             bracket::Bracket,
             chat::ResolvedChatWindow,
+            encounters::Encounters,
             standings::Standings,
             tournament_admin::TournamentAdminControls,
         },
@@ -35,9 +36,8 @@ use crate::{
 };
 use chrono::Local;
 use hive_lib::GameStatus;
-use leptos::{html, prelude::*};
+use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_params_map};
-use leptos_use::use_resize_observer;
 use shared_types::{
     Conclusion,
     ConversationKey,
@@ -85,7 +85,11 @@ pub fn Tournament() -> impl IntoView {
     });
     view! {
         <PageShell variant=PageShellVariant::Dashboard>
-            <div class="flex flex-col gap-6 w-full max-w-6xl">
+            // Wider than the usual reading column once there is room for it: a
+            // bracket is as wide as the field it holds, and capping the page at
+            // 6xl left a 16-player one scrolling sideways inside a mostly empty
+            // window. Prose still stops at 6xl on narrower screens.
+            <div class="flex flex-col gap-6 w-full max-w-6xl xl:max-w-[80vw]">
                 <Show
                     when=move || current_tournament.value().get().is_some()
                     fallback=|| {
@@ -273,6 +277,39 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
             .join(", ")
     });
     let tiebreakers = StoredValue::new(tiebreakers);
+    // Folded away by default and toggled from inside `Encounters`, whose own
+    // player list covers the common case.
+    let show_standings = RwSignal::new(false);
+    let user_withdrawn = move || {
+        user_id().is_some_and(|user| tournament.with_value(|t| t.withdrawn.contains(&user)))
+    };
+    // The top three placings, taken from the tie groups rather than the flattened
+    // list so a shared position is reported as such — two players tied for second
+    // means there is no third.
+    let podium = StoredValue::new(tournament.with_value(|t| {
+        t.standings
+            .groups
+            .iter()
+            .filter(|group| !group.is_empty())
+            .take(3)
+            .filter_map(|group| {
+                let position = group[0].position;
+                let medal = match position {
+                    1 => "🥇",
+                    2 => "🥈",
+                    3 => "🥉",
+                    _ => return None,
+                };
+                let names = group
+                    .iter()
+                    .filter_map(|standing| t.players.get(&standing.player))
+                    .map(|user| user.username.clone())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                Some((medal, position, names))
+            })
+            .collect::<Vec<_>>()
+    }));
     let tournament_is_elimination = tournament.with_value(|t| {
         t.mode
             .parse::<TournamentMode>()
@@ -283,6 +320,11 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
             t.mode.parse::<TournamentMode>().ok(),
             Some(TournamentMode::DoubleSwiss)
         )
+    });
+    let tournament_is_arena = tournament.with_value(|t| {
+        t.mode
+            .parse::<TournamentMode>()
+            .is_ok_and(|mode| mode.is_arena())
     });
     let game_previews = Memo::new(move |_| {
         games_hashmap.with_value(|hashmap| {
@@ -407,16 +449,18 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
             format!("{nr} unplayed games")
         }
     };
-    let tournament_style =
-        "grid w-full gap-6 lg:grid-cols-[repeat(auto-fit,minmax(min(100%,28rem),1fr))] lg:items-start";
-    let tournament_info_ref = NodeRef::<html::Div>::new();
-    let tournament_info_height = RwSignal::new(None::<f64>);
-    use_resize_observer(tournament_info_ref, move |entries, _observer| {
-        let rect = entries[0].content_rect();
-        tournament_info_height.set(Some(rect.height()));
-    });
+    // Stacked rather than side by side: a bracket is rounds-as-columns and a
+    // standings table grows a column per tiebreaker, so results are the widest
+    // thing on the page and sharing a row with the info panel was squeezing them
+    // into half the window. Info is capped instead, since it is a short list that
+    // gains nothing from the extra width.
+    let tournament_style = "flex flex-col gap-6 w-full";
     view! {
         <PageHeader title=tournament.with_value(|t| t.name.clone()) subtitle=starts.clone() />
+        // Above the description on purpose: in a running arena the clock and the
+        // join button are the only things that are time-critical, and reading
+        // past a paragraph of rules to find them wastes the entrant's own time.
+        <ArenaControls tournament=Signal::derive(move || tournament.get_value()) />
         <Panel body_class="space-y-4">
             <Show
                 when=editing_description
@@ -510,7 +554,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
             </Show>
         </Panel>
         <div class=tournament_style>
-            <div node_ref=tournament_info_ref class="min-w-0">
+            <div class="w-full min-w-0">
                 <Panel title="Tournament Info" class="min-w-0" body_class="space-y-3 h-fit">
                     <div>
                         <span class="font-bold">"Type: "</span>
@@ -549,6 +593,31 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                         </div>
                     </Show>
                     <p class="ui-notice">{starts.clone()}</p>
+                    // Only once it is over: mid-event these are the current
+                    // leaders, not a podium, and calling them first/second/third
+                    // would be wrong the moment another game finishes.
+                    <Show when=move || finished && !podium.with_value(Vec::is_empty)>
+                        <div class="flex flex-col gap-1">
+                            <p class="font-bold">"Final placings"</p>
+                            {move || {
+                                podium
+                                    .get_value()
+                                    .into_iter()
+                                    .map(|(medal, position, names)| {
+                                        view! {
+                                            <div class="flex gap-2 items-center text-sm">
+                                                <span aria-hidden="true">{medal}</span>
+                                                <span class="w-4 text-xs tabular-nums text-gray-500">
+                                                    {position}
+                                                </span>
+                                                <span class="font-bold">{names}</span>
+                                            </div>
+                                        }
+                                    })
+                                    .collect_view()
+                            }}
+                        </div>
+                    </Show>
                     <div class="space-y-2 ui-setting-group">
                         <div class="flex flex-col gap-2">
                             <p class="font-bold">"Organized by"</p>
@@ -569,6 +638,33 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                         </div>
                     </div>
                     <ProgressBar current=finished_games.into() total=total_games />
+                    // Sitting a round out is the player's own call, so it lives
+                    // with their controls rather than needing an organizer. An
+                    // arena has no rounds to sit out, and somebody who has already
+                    // left has nothing to skip.
+                    <Show when=move || {
+                        !not_started && !finished && !tournament_is_arena && user_joined()
+                            && !user_withdrawn()
+                    }>
+                        <div class="flex flex-wrap gap-2">
+                            <button
+                                class="ui-button ui-button-secondary ui-button-md"
+                                title="Skip the next round. Scores whatever this tournament gives a requested bye — nothing, by default."
+                                on:click=move |_| {
+                                    if let Some(user) = user_id() {
+                                        send_action(
+                                            TournamentAction::GrantZeroPointBye(
+                                                tournament_id.get_value(),
+                                                user,
+                                            ),
+                                        );
+                                    }
+                                }
+                            >
+                                "Sit out next round"
+                            </button>
+                        </div>
+                    </Show>
                     <Show when=move || not_started>
                         <div class="flex flex-wrap gap-2">
                             <Show
@@ -740,7 +836,6 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                     </Show>
                 </Panel>
             </div>
-            <ArenaControls tournament=Signal::derive(move || tournament.get_value()) />
             <Show when=move || !not_started>
                 // A bracket's result *is* who beat whom in which round, so it
                 // gets the matchup diagram rather than a points table.
@@ -748,10 +843,30 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                     when=move || tournament_is_elimination
                     fallback=move || {
                         view! {
-                            <Standings
-                                tournament=Signal::derive(move || tournament.get_value())
-                                max_height=tournament_info_height
-                            />
+                            // Encounters first: who played whom is the question the
+                            // page is usually open for, and its own player list
+                            // already says who is ahead. An arena has no rounds to
+                            // lay out, so it keeps the plain table.
+                            <Show
+                                when=move || !tournament_is_arena
+                                fallback=move || {
+                                    view! {
+                                        <Standings tournament=Signal::derive(move || {
+                                            tournament.get_value()
+                                        }) />
+                                    }
+                                }
+                            >
+                                <Encounters
+                                    tournament=Signal::derive(move || tournament.get_value())
+                                    show_standings
+                                />
+                                <Show when=move || show_standings.get()>
+                                    <Standings tournament=Signal::derive(move || {
+                                        tournament.get_value()
+                                    }) />
+                                </Show>
+                            </Show>
                         }
                     }
                 >
@@ -801,7 +916,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                 <details class=with_class("ui-panel", DETAILS_STYLE)>
                     <summary class="ui-panel-summary">"Finished or ongoing games"</summary>
                     <div class="ui-panel-body">
-                        <GamePreviews games=game_previews />
+                        <GamesByRound games=game_previews />
                     </div>
                 </details>
             </Show>

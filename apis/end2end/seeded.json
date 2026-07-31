@@ -1,0 +1,188 @@
+[
+  {
+    "name": "SingleRoundRobin done gT9dM",
+    "nanoid": "AXu_R2_RQxT",
+    "mode": "SingleRoundRobin",
+    "stage": "done"
+  },
+  {
+    "name": "SingleRoundRobin live MTo2J",
+    "nanoid": "CQSsIbR_omL",
+    "mode": "SingleRoundRobin",
+    "stage": "live"
+  },
+  {
+    "name": "SingleRoundRobin upcoming RH2_K",
+    "nanoid": "BJd5T95rVEL",
+    "mode": "SingleRoundRobin",
+    "stage": "upcoming"
+  },
+  {
+    "name": "DoubleRoundRobin done HwWjV",
+    "nanoid": "8lmBwzgSA7F",
+    "mode": "DoubleRoundRobin",
+    "stage": "done"
+  },
+  {
+    "name": "DoubleRoundRobin live L1MHb",
+    "nanoid": "IUbthhDEVq9",
+    "mode": "DoubleRoundRobin",
+    "stage": "live"
+  },
+  {
+    "name": "DoubleRoundRobin upcoming 2uTDP",
+    "nanoid": "0-6PCwX1PDZ",
+    "mode": "DoubleRoundRobin",
+    "stage": "upcoming"
+  },
+  {
+    "name": "DutchSwiss done Q5B-y",
+    "nanoid": "3AVbQjOt2L1",
+    "mode": "DutchSwiss",
+    "stage": "done"
+  },
+  {
+    "name": "DutchSwiss live RQcsX",
+    "nanoid": "S9nfR3KSkgN",
+    "mode": "DutchSwiss",
+    "stage": "live"
+  },
+  {
+    "name": "DutchSwiss upcoming 89R7m",
+    "nanoid": "k_4_n8coodY",
+    "mode": "DutchSwiss",
+    "stage": "upcoming"
+  },
+  {
+    "name": "BursteinSwiss done 1rplm",
+    "nanoid": "Gn_g2S17RTk",
+    "mode": "BursteinSwiss",
+    "stage": "done"
+  },
+  {
+    "name": "BursteinSwiss live 4t_LH",
+    "nanoid": "UJOxF3fdZOw",
+    "mode": "BursteinSwiss",
+    "stage": "live"
+  },
+  {
+    "name": "BursteinSwiss upcoming vDQd9",
+    "nanoid": "--ClGZB6hyv",
+    "mode": "BursteinSwiss",
+    "stage": "upcoming"
+  },
+  {
+    "name": "DoubleSwiss done 5YbXP",
+    "nanoid": "oIYgzGGWFv_",
+    "mode": "DoubleSwiss",
+    "stage": "done"
+  },
+  {
+    "name": "DoubleSwiss live thN2r",
+    "nanoid": "2t1WrKvSQKA",
+    "mode": "DoubleSwiss",
+    "stage": "live"
+  },
+  {
+    "name": "DoubleSwiss upcoming Tj-gr",
+    "nanoid": "gaxvIZuE_pF",
+    "mode": "DoubleSwiss",
+    "stage": "upcoming"
+  },
+  {
+    "name": "SingleElimination done uxQD-",
+    "nanoid": "ocuP8fnhH5n",
+    "mode": "SingleElimination",
+    "stage": "done"
+  },
+  {
+    "name": "SingleElimination live h_H7O",
+    "nanoid": "t1ffYUGqpqF",
+    "mode": "SingleElimination",
+    "stage": "live"
+  },
+  {
+    "name": "SingleElimination upcoming Zz_UE",
+    "nanoid": "5_O-wJjukyD",
+    "mode": "SingleElimination",
+    "stage": "upcoming"
+  },
+  {
+    "name": "DoubleElimination done UUTrG",
+    "nanoid": "amt24a4-jWw",
+    "mode": "DoubleElimination",
+    "stage": "done"
+  },
+  {
+    "name": "DoubleElimination live EcumW",
+    "nanoid": "BXq6VyWUCSN",
+    "mode": "DoubleElimination",
+    "stage": "live"
+  },
+  {
+    "name": "DoubleElimination upcoming iPvvc",
+    "nanoid": "HmozkZGQwVO",
+    "mode": "DoubleElimination",
+    "stage": "upcoming"
+  },
+  {
+    "name": "SextupleRoundRobin (cross-table) done 7Gahg",
+    "nanoid": "z8nPbNr-1t8",
+    "mode": "SextupleRoundRobin",
+    "stage": "done"
+  },
+  {
+    "name": "SingleElimination (big field) done RsW_E",
+    "nanoid": "rdY7-gy5-lg",
+    "mode": "SingleElimination",
+    "stage": "done"
+  },
+  {
+    "name": "DutchSwiss (odd field) live utEW2",
+    "nanoid": "G91oJAi2o7o",
+    "mode": "DutchSwiss",
+    "stage": "live"
+  },
+  {
+    "name": "DutchSwiss (odd field) done ivHPl",
+    "nanoid": "gueZZz6MeVL",
+    "mode": "DutchSwiss",
+    "stage": "done"
+  },
+  {
+    "name": "BursteinSwiss (withdrawals) live WSL-W",
+    "nanoid": "r2UX9lG8Nlm",
+    "mode": "BursteinSwiss",
+    "stage": "live"
+  },
+  {
+    "name": "BursteinSwiss (withdrawals) done kQEkK",
+    "nanoid": "MgXNHo_P3GA",
+    "mode": "BursteinSwiss",
+    "stage": "done"
+  },
+  {
+    "name": "DutchSwiss (requested bye) live H3h8G",
+    "nanoid": "j_KKRSGy0O2",
+    "mode": "DutchSwiss",
+    "stage": "live"
+  },
+  {
+    "name": "SingleRoundRobin (withdrawals) done BBeIh",
+    "nanoid": "6TK58pTu6MU",
+    "mode": "SingleRoundRobin",
+    "stage": "done"
+  },
+  {
+    "name": "Arena live 5o1rZ",
+    "nanoid": "wT7qb1YDP64",
+    "mode": "Arena",
+    "stage": "live"
+  },
+  {
+    "name": "Arena done W_cut",
+    "nanoid": "r2Usaakw0MM",
+    "mode": "Arena",
+    "stage": "done"
+  }
+]

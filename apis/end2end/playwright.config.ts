@@ -2,106 +2,76 @@ import type { PlaywrightTestConfig } from "@playwright/test";
 import { devices } from "@playwright/test";
 
 /**
- * Read environment variables from file.
- * https://github.com/motdotla/dotenv
- */
-// require('dotenv').config();
-
-/**
- * See https://playwright.dev/docs/test-configuration.
+ * The suite runs against an already-running server with a seeded database:
+ *
+ *   cargo run --bin script cleanup
+ *   cargo run --bin script tournaments
+ *   cargo leptos serve
+ *   cargo leptos end-to-end
+ *
+ * `webServer` is deliberately not configured. `cargo leptos serve` takes minutes
+ * from cold and needs the workspace toolchain, so starting it per run would make
+ * the suite unusable locally, and the seeding has to happen in between anyway.
  */
 const config: PlaywrightTestConfig = {
   testDir: "./tests",
-  /* Maximum time one test can run for. */
-  timeout: 30 * 1000,
+  /*
+   * Generous because hydration dominates: a debug wasm bundle is ~240MB and each
+   * test gets a cold browser context, so nothing is cached between them —
+   * roughly 17s per page. Against a release build this is far quicker.
+   */
+  timeout: 120 * 1000,
   expect: {
-    /**
-     * Maximum time expect() should wait for the condition to be met.
-     * For example in `await expect(locator).toHaveText();`
-     */
-    timeout: 5000,
+    timeout: 10_000,
   },
-  /* Run tests in files in parallel */
   fullyParallel: true,
-  /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
-  /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: "html",
-  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    /* Maximum time each action such as `click()` can take. Defaults to 0 (no limit). */
     actionTimeout: 0,
-    /* Base URL to use in actions like `await page.goto('/')`. */
-    // baseURL: 'http://localhost:3000',
-
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
+    baseURL: process.env.HIVE_BASE_URL ?? "http://localhost:3000",
     trace: "on-first-retry",
   },
 
-  /* Configure projects for major browsers */
   projects: [
+    /*
+     * Phone first: it is the width everything here was least verified at, and
+     * horizontal overflow only appears when the viewport is narrower than the
+     * content.
+     */
+    {
+      name: "Mobile Chrome",
+      use: { ...devices["Pixel 5"] },
+    },
+    {
+      name: "Mobile Safari",
+      use: { ...devices["iPhone 12"] },
+    },
+    /*
+     * Tablet width is where the `sm:` and `md:` breakpoints start applying, so a
+     * layout can be correct on a phone and on a desktop and still break here.
+     */
+    {
+      name: "Tablet",
+      use: { ...devices["iPad Mini"] },
+    },
     {
       name: "chromium",
-      use: {
-        ...devices["Desktop Chrome"],
-      },
+      use: { ...devices["Desktop Chrome"] },
     },
-
+    /*
+     * Every page again in dark, because the palette is applied per-element and a
+     * token missing its dark variant is invisible until somebody switches. One
+     * viewport only: a missing colour does not depend on width, and pairing both
+     * themes with all four widths would double the suite for no new coverage.
+     */
     {
-      name: "firefox",
-      use: {
-        ...devices["Desktop Firefox"],
-      },
+      name: "Mobile Chrome dark",
+      use: { ...devices["Pixel 5"], colorScheme: "dark" },
     },
-
-    {
-      name: "webkit",
-      use: {
-        ...devices["Desktop Safari"],
-      },
-    },
-
-    /* Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: {
-    //     ...devices['Pixel 5'],
-    //   },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: {
-    //     ...devices['iPhone 12'],
-    //   },
-    // },
-
-    /* Test against branded browsers. */
-    // {
-    //   name: 'Microsoft Edge',
-    //   use: {
-    //     channel: 'msedge',
-    //   },
-    // },
-    // {
-    //   name: 'Google Chrome',
-    //   use: {
-    //     channel: 'chrome',
-    //   },
-    // },
   ],
-
-  /* Folder for test artifacts such as screenshots, videos, traces, etc. */
-  // outputDir: 'test-results/',
-
-  /* Run your local dev server before starting the tests */
-  // webServer: {
-  //   command: 'npm run start',
-  //   port: 3000,
-  // },
 };
 
 export default config;

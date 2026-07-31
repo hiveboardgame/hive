@@ -1154,17 +1154,25 @@ impl Tournament {
     /// Only the round about to be paired can be granted one: the engine scores
     /// a bye at `begin_round`, so a round already in the history would have to
     /// be re-scored, and a round further ahead does not exist yet.
+    /// Gives a player the next round off at their own request.
+    ///
+    /// `actor` may be the player themselves — sitting a round out is a decision
+    /// about their own time, and needing to ask an organizer for it turns a
+    /// two-second action into a conversation. Anyone acting for somebody else
+    /// still has to be an organizer, which mirrors `withdraw_player`.
     pub async fn grant_zero_point_bye(
         &self,
         user: &Uuid,
-        organizer: &Uuid,
+        actor: &Uuid,
         conn: &mut DbConn<'_>,
     ) -> Result<TournamentBye, DbError> {
         let locked = self.lock_row(conn).await?;
         locked.ensure_inprogress()?;
-        locked
-            .ensure_user_is_organizer_or_admin(organizer, conn)
-            .await?;
+        if actor != user {
+            locked
+                .ensure_user_is_organizer_or_admin(actor, conn)
+                .await?;
+        }
 
         if locked.mode()?.is_arena() {
             return Err(DbError::InvalidAction {
