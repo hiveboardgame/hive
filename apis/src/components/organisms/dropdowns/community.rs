@@ -18,6 +18,9 @@ pub fn CommunityDropdown() -> impl IntoView {
             <a class="ui-dropdown-link" on:click=onclick_close href="/top_players">
                 {t!(i18n, header.community.top_players)}
             </a>
+            <a class="ui-dropdown-link" on:click=onclick_close href="/top_bots">
+                {t!(i18n, header.community.top_bots)}
+            </a>
             <a class="ui-dropdown-link" on:click=onclick_close href="/resources">
                 {t!(i18n, header.community.resources)}
             </a>

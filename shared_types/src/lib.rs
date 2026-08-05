@@ -6,6 +6,7 @@ mod conclusion;
 mod game_speed;
 mod game_start;
 mod games_query_options;
+mod leaderboard_kind;
 mod messages_hub;
 mod newtypes;
 mod notification_category;
@@ -57,6 +58,7 @@ pub use games_query_options::{
     SortValue,
     ALLOWED_BATCH_SIZES,
 };
+pub use leaderboard_kind::LeaderboardKind;
 pub use messages_hub::{
     ChatInboxSnapshot,
     DmConversation,

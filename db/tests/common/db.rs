@@ -1,11 +1,17 @@
 use db_lib::{get_conn, get_pool, DbPool};
-use diesel::{sql_types::Text, QueryableByName};
+use diesel::{
+    sql_types::{BigInt, Text},
+    QueryableByName,
+};
 use diesel_async::{AsyncConnection, AsyncMigrationHarness, AsyncPgConnection, RunQueryDsl};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use std::sync::OnceLock;
 use tokio::sync::{Mutex, MutexGuard};
 
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
+
+// The in-process mutex cannot order the TRUNCATE across parallel test binaries.
+const ADVISORY_LOCK_KEY: i64 = 0x4849_5645_5445_5354;
 
 static DB_LOCK: Mutex<()> = Mutex::const_new(());
 static MIGRATED: OnceLock<()> = OnceLock::new();
@@ -18,12 +24,23 @@ struct CurrentDatabase {
 
 pub struct TestDb {
     pub pool: DbPool,
+    _session: AsyncPgConnection,
     _lock: MutexGuard<'static, ()>,
 }
 
 pub async fn test_db() -> TestDb {
     let lock = DB_LOCK.lock().await;
     let database_url = test_database_url();
+
+    let mut session = AsyncPgConnection::establish(&database_url)
+        .await
+        .expect("connect to test database for advisory lock");
+    assert_test_database(&mut session).await;
+    diesel::sql_query("SELECT pg_advisory_lock($1)")
+        .bind::<BigInt, _>(ADVISORY_LOCK_KEY)
+        .execute(&mut session)
+        .await
+        .expect("take test database advisory lock");
 
     if MIGRATED.get().is_none() {
         let mut conn = AsyncPgConnection::establish(&database_url)
@@ -42,7 +59,11 @@ pub async fn test_db() -> TestDb {
         .expect("create test database pool");
     truncate(&pool).await;
 
-    TestDb { pool, _lock: lock }
+    TestDb {
+        pool,
+        _session: session,
+        _lock: lock,
+    }
 }
 
 fn test_database_url() -> String {
