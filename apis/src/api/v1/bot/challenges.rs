@@ -1,13 +1,18 @@
 use crate::{
     api::v1::{
         auth::Auth,
-        messages::send::{send_challenge_creation_message, send_challenge_messages},
+        messages::send::{
+            send_challenge_creation_message,
+            send_challenge_messages,
+            send_challenge_removed_messages,
+        },
     },
     notifications::{notify, time_control_label, Event},
     responses::{ChallengeResponse, GameResponse},
     websocket::WsHub,
 };
 use actix_web::{
+    delete,
     get,
     post,
     web::{Data, Json, Path},
@@ -25,6 +30,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use shared_types::{
     ChallengeDetails,
+    ChallengeError,
     ChallengeId,
     ChallengeVisibility,
     CorrespondenceMode,
@@ -187,6 +193,61 @@ pub async fn api_accept_challenge(
     }
 }
 
+#[delete("/api/v1/bot/challenge/{nanoid}")]
+pub async fn api_delete_challenge(
+    nanoid: Path<ChallengeId>,
+    Auth(bot): Auth,
+    pool: Data<DbPool>,
+    hub: Data<Arc<WsHub>>,
+) -> HttpResponse {
+    let nanoid = nanoid.into_inner();
+    match delete_challenge(nanoid, bot.clone(), pool, hub).await {
+        Ok(challenge_id) => HttpResponse::Ok().json(json!({
+          "success": true,
+          "data": {
+            "bot": bot.email,
+            "bot_username": bot.username,
+            "challenge_id": challenge_id,
+          }
+        })),
+        Err(e) => HttpResponse::Ok().json(json!({
+          "success": false,
+          "data": {
+            "error": e.to_string(),
+          }
+        })),
+    }
+}
+
+#[delete("/api/v1/bot/challenges/")]
+pub async fn api_delete_challenges(
+    Auth(bot): Auth,
+    pool: Data<DbPool>,
+    hub: Data<Arc<WsHub>>,
+) -> HttpResponse {
+    match delete_own_challenges(bot.id, pool, hub).await {
+        Ok(result) => {
+            let count = result.challenge_ids.len();
+            HttpResponse::Ok().json(json!({
+              "success": true,
+              "data": {
+                "bot": bot.email,
+                "bot_username": bot.username,
+                "challenge_ids": result.challenge_ids,
+                "count": count,
+                "failures": result.failures,
+              }
+            }))
+        }
+        Err(e) => HttpResponse::Ok().json(json!({
+          "success": false,
+          "data": {
+            "error": e.to_string(),
+          }
+        })),
+    }
+}
+
 #[post("/api/v1/bot/challenges/")]
 pub async fn api_create_challenge(
     Json(req): Json<BotChallengeRequest>,
@@ -256,6 +317,82 @@ async fn create_challenge(
     send_challenge_creation_message(hub, &challenge_response, &req.visibility, opponent_id).await?;
 
     Ok(challenge_response)
+}
+
+#[derive(Serialize)]
+struct ChallengeDeleteFailure {
+    challenge_id: ChallengeId,
+    error: String,
+}
+
+struct DeleteChallengesResult {
+    challenge_ids: Vec<ChallengeId>,
+    failures: Vec<ChallengeDeleteFailure>,
+}
+
+async fn delete_challenge(
+    id: ChallengeId,
+    bot: User,
+    pool: Data<DbPool>,
+    hub: Data<Arc<WsHub>>,
+) -> Result<ChallengeId> {
+    let mut conn = get_conn(&pool).await?;
+    let challenge = Challenge::find_by_challenge_id(&id, &mut conn).await?;
+
+    if !bot.admin && challenge.challenger_id != bot.id && challenge.opponent_id != Some(bot.id) {
+        return Err(ChallengeError::NotUserChallenge.into());
+    }
+
+    let response = ChallengeResponse::from_model(&challenge, &mut conn).await?;
+    challenge.delete(&mut conn).await?;
+    drop(conn);
+
+    send_challenge_removed_messages(hub, vec![response]).await;
+    Ok(id)
+}
+
+async fn delete_own_challenges(
+    bot_id: Uuid,
+    pool: Data<DbPool>,
+    hub: Data<Arc<WsHub>>,
+) -> Result<DeleteChallengesResult> {
+    let mut conn = get_conn(&pool).await?;
+    let challenges = Challenge::get_own(bot_id, &mut conn).await?;
+    let mut challenge_ids = Vec::with_capacity(challenges.len());
+    let mut failures = Vec::new();
+    let mut deleted = Vec::with_capacity(challenges.len());
+
+    for challenge in challenges {
+        let challenge_id = ChallengeId(challenge.nanoid.clone());
+        let response = match ChallengeResponse::from_model(&challenge, &mut conn).await {
+            Ok(response) => response,
+            Err(error) => {
+                failures.push(ChallengeDeleteFailure {
+                    challenge_id,
+                    error: error.to_string(),
+                });
+                continue;
+            }
+        };
+
+        match challenge.delete(&mut conn).await {
+            Ok(()) => {
+                challenge_ids.push(challenge_id);
+                deleted.push(response);
+            }
+            Err(error) => failures.push(ChallengeDeleteFailure {
+                challenge_id,
+                error: error.to_string(),
+            }),
+        }
+    }
+    drop(conn);
+
+    send_challenge_removed_messages(hub, deleted).await;
+    Ok(DeleteChallengesResult {
+        challenge_ids,
+        failures,
+    })
 }
 
 async fn accept_challenge(
