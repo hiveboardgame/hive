@@ -1,0 +1,34 @@
+name: Tests
+on: pull_request
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: hive
+          POSTGRES_PASSWORD: hive
+          # The test harness refuses any database whose name does not contain "test".
+          POSTGRES_DB: hive_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      TEST_DATABASE_URL: postgres://hive:hive@localhost:5432/hive_test
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace
+      # The engine's binary target only exists behind `cli`; without the feature it is neither
+      # linted nor tested.
+      - run: cargo clippy -p hive --features cli --all-targets -- -D warnings
+      - run: cargo test -p hive --features cli
