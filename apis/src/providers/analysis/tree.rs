@@ -122,6 +122,15 @@ impl AnalysisArena {
         canonical
     }
 
+    /// Equal depth and equal hash anywhere in the tree; smallest id for determinism.
+    pub(super) fn transposition(&self, hash: u64, depth: usize) -> Option<NodeId> {
+        self.nodes
+            .iter()
+            .filter(|(_, node)| node.depth == depth && node.hash == Some(hash))
+            .map(|(id, _)| *id)
+            .min()
+    }
+
     pub(super) fn path_to(&self, target: NodeId) -> Option<Vec<NodeId>> {
         let mut path = Vec::new();
         let mut current = Some(target);
@@ -231,7 +240,6 @@ impl AnalysisArena {
             || (State::new(game_type, false), 1),
             |(index, checkpoint)| (checkpoint.restore(game_type), index + 1),
         );
-        state.history.game_type = game_type;
         let context_end = replay_start.saturating_sub(1);
         if context_end > 0 {
             let mut moves = Vec::with_capacity(context_end);

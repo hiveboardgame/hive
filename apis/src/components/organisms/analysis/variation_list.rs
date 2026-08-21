@@ -35,7 +35,7 @@ pub fn VariationList(#[prop(optional)] extend_tw_classes: &'static str) -> impl 
                         <div
                             class="flex items-center px-2 h-6 font-mono text-xs whitespace-nowrap rounded transition-colors cursor-pointer active:scale-95 dark:hover:bg-pillbug-teal/15 hover:bg-blue-light/70"
                             on:click=move |_| {
-                                analysis.store.select_node(node_id, game_state);
+                                analysis.select_node(node_id, game_state);
                                 analysis.sync_reserve_from_game_state(game_state);
                             }
                         >

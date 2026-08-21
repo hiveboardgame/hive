@@ -658,12 +658,15 @@ impl Board {
     }
 
     /// @neal - move piece
+    /// `mover` is the colour whose turn it is, which is not always `piece.color()`: a Pillbug can
+    /// move an *enemy* piece. [`Board::set_stunned`] needs to know which it was.
     pub fn move_piece(
         &mut self,
         piece: Piece,
         current: Position,
         target: Position,
         turn: usize,
+        mover: Color,
     ) -> Result<(), GameError> {
         if !self.is_top_piece(piece, current) {
             return Err(GameError::InvalidMove {
@@ -678,7 +681,7 @@ impl Board {
         let ground_graph_changes = self.level(current) == 1 || !self.occupied(target);
         let removed_piece = self.remove(current);
         debug_assert_eq!(removed_piece, piece);
-        self.insert_with_pinned_update(target, piece, false, ground_graph_changes);
+        self.insert_with_pinned_update(target, piece, false, ground_graph_changes, mover);
         Ok(())
     }
 
@@ -1188,30 +1191,53 @@ impl Board {
         Some((piece, position))
     }
 
-    pub fn set_stunned(&mut self, position: Position, piece: Piece, spawn: bool) {
+    /// Stun only when the restriction removes a legal move - it feeds the hash, and a vacuous
+    /// stun splits identical positions. `mover` != `piece.color()` when a Pillbug throws.
+    pub fn set_stunned(&mut self, position: Position, piece: Piece, spawn: bool, mover: Color) {
+        // A spawn never touches an enemy piece.
         if spawn {
             self.stunned = None;
             return;
         }
-        let mut stunned = None;
-        for n in self.top_layer_neighbors(position) {
-            if n.color() != piece.color() && n.bug() == Bug::Pillbug
-                || n.bug() == Bug::Mosquito
-                    && self
-                        .top_layer_neighbors(
-                            self.position_of_piece(n).expect("Piece to have a position"),
-                        )
-                        .any(|nn| nn.bug() == Bug::Pillbug)
-            {
-                stunned = Some(piece);
-            }
+        // Stacked pieces cannot be thrown, and a throw lands on empty cells.
+        if self.level(position) > 1 {
+            self.stunned = None;
+            return;
         }
-        self.stunned = stunned;
+        // A decided game has no moves left to restrict (threefolds end at State level).
+        if self.game_result() != GameResult::Unknown {
+            self.stunned = None;
+            return;
+        }
+        let opponent = mover.opposite_color();
+        // No board moves before the Queen is down.
+        if !self.queen_played(opponent) {
+            self.stunned = None;
+            return;
+        }
+
+        // A thrown opponent piece may not act at all, so movement and ability are separate losses.
+        let is_the_opponents_piece = piece.color() == opponent;
+        let loses_its_own_move =
+            is_the_opponents_piece && !self.is_pinned(piece) && Bug::has_move(position, self);
+        // Not behind `is_pinned`: the ability moves another piece, so a pinned Pillbug keeps it.
+        let loses_its_own_ability =
+            is_the_opponents_piece && Bug::has_available_ability(position, self);
+
+        // Otherwise only the throw itself is lost - if the opponent could actually have made it.
+        let loses_a_throw = || {
+            self.ability_pieces_around(opponent, position)
+                .any(|(_, ability)| Bug::could_throw_ignoring_last_moved(ability, position, self))
+        };
+
+        self.stunned =
+            (loses_its_own_move || loses_its_own_ability || loses_a_throw()).then_some(piece);
     }
 
     /// @neal - add piece
     pub fn insert(&mut self, position: Position, piece: Piece, spawn: bool) {
-        self.insert_with_pinned_update(position, piece, spawn, true);
+        // You can only ever place your own piece, so for a spawn the mover is the piece owner.
+        self.insert_with_pinned_update(position, piece, spawn, true, piece.color());
     }
 
     fn insert_with_pinned_update(
@@ -1220,6 +1246,7 @@ impl Board {
         piece: Piece,
         spawn: bool,
         update_pinned: bool,
+        mover: Color,
     ) {
         self.last_moved = Some((piece, position));
         let stack = self.board.get_mut(position);
@@ -1234,7 +1261,7 @@ impl Board {
         if spawn {
             self.played += 1;
         }
-        self.set_stunned(position, piece, spawn);
+        self.set_stunned(position, piece, spawn, mover);
     }
 
     pub fn all_positions() -> impl Iterator<Item = Position> {
@@ -1323,7 +1350,7 @@ impl fmt::Display for Board {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{history::History, state::State};
+    use crate::{game_status::GameStatus, history::History, state::State};
     use std::collections::HashSet;
 
     fn assert_snapshot_equivalent(actual: &State, expected: &State) {
@@ -1776,5 +1803,393 @@ mod tests {
         for pos in pos.positions_around() {
             assert_eq!(board.positions_taken_around(pos).count(), 3);
         }
+    }
+    // stunned feeds the hash, so only set it when the restriction removes a legal move
+
+    /// Three mutually adjacent cells, so nothing in the ring is pinned.
+    fn triangle(centre: Position) -> (Position, Position, Position) {
+        (centre, centre.to(Direction::E), centre.to(Direction::SE))
+    }
+
+    /// The colour test used to sit inside the Pillbug arm only (`&&` binds tighter than `||`),
+    /// so a friendly Mosquito next to a Pillbug set a stun.
+    #[test]
+    fn set_stunned_ignores_a_friendly_ability_piece() {
+        let (moved_at, mosquito_at, third) = triangle(Position::new(10, 10));
+        let mut board = Board::new();
+        let ant = Piece::new_from(Bug::Ant, Color::White, 1);
+        board.insert(moved_at, ant, true);
+        board.insert(
+            mosquito_at,
+            Piece::new_from(Bug::Mosquito, Color::White, 0),
+            true,
+        );
+        board.insert(third, Piece::new_from(Bug::Pillbug, Color::White, 0), true);
+        // Black needs a Queen on the board or the whole question is moot.
+        board.insert(
+            third.to(Direction::SE),
+            Piece::new_from(Bug::Queen, Color::Black, 0),
+            true,
+        );
+        assert!(board.queen_played(Color::Black));
+
+        board.set_stunned(moved_at, ant, false, Color::White);
+        assert_eq!(
+            board.stunned, None,
+            "White's own Mosquito cannot throw White's piece before the restriction lapses"
+        );
+    }
+
+    /// A Mosquito that has climbed is a Beetle and borrows nothing. The legality code has always
+    /// checked `level == 1`; `set_stunned` did not.
+    #[test]
+    fn set_stunned_ignores_a_climbed_mosquito() {
+        let (moved_at, mosquito_at, third) = triangle(Position::new(10, 10));
+        let mut board = Board::new();
+        let ant = Piece::new_from(Bug::Ant, Color::White, 1);
+        board.insert(moved_at, ant, true);
+        board.insert(
+            mosquito_at,
+            Piece::new_from(Bug::Queen, Color::Black, 0),
+            true,
+        );
+        // Black's Mosquito climbs on top of its own Queen, so it moves as a Beetle from now on.
+        board.insert(
+            mosquito_at,
+            Piece::new_from(Bug::Mosquito, Color::Black, 0),
+            true,
+        );
+        board.insert(third, Piece::new_from(Bug::Pillbug, Color::Black, 0), true);
+        assert_eq!(board.level(mosquito_at), 2);
+
+        board.set_stunned(moved_at, ant, false, Color::White);
+        assert_eq!(
+            board.stunned, None,
+            "a Mosquito on a stack has no Pillbug ability"
+        );
+    }
+
+    /// Standing next to an enemy Pillbug is not a restriction if the Pillbug has nowhere to throw
+    /// to. This one cost a real game its draw: hivegame.com/game/lYtE84YtiA_9.
+    #[test]
+    fn set_stunned_ignores_a_pillbug_with_nowhere_to_throw() {
+        let moved_at = Position::new(10, 10);
+        let pillbug_at = moved_at.to(Direction::E);
+        let mut board = Board::new();
+        let ant = Piece::new_from(Bug::Ant, Color::White, 1);
+        board.insert(moved_at, ant, true);
+        board.insert(
+            pillbug_at,
+            Piece::new_from(Bug::Pillbug, Color::Black, 0),
+            true,
+        );
+        // Ring the Pillbug so it has no empty cell left to throw into.
+        let ring = [
+            Piece::new_from(Bug::Grasshopper, Color::Black, 1),
+            Piece::new_from(Bug::Grasshopper, Color::Black, 2),
+            Piece::new_from(Bug::Grasshopper, Color::Black, 3),
+            Piece::new_from(Bug::Spider, Color::Black, 1),
+            // One of the ring is the Queen, or the restriction is moot for the wrong reason.
+            Piece::new_from(Bug::Queen, Color::Black, 0),
+        ];
+        let mut filler = ring.into_iter();
+        for around in pillbug_at.positions_around() {
+            if around == moved_at {
+                continue;
+            }
+            board.insert(around, filler.next().expect("five cells to fill"), true);
+        }
+        assert!(board.queen_played(Color::Black));
+
+        board.set_stunned(moved_at, ant, false, Color::White);
+        assert_eq!(
+            board.stunned, None,
+            "a fully surrounded Pillbug removes no legal move"
+        );
+    }
+
+    /// Positive control: stops a "fix" that never stuns anything from passing every test above.
+    #[test]
+    fn set_stunned_marks_a_piece_the_opponent_could_throw() {
+        let (moved_at, pillbug_at, third) = triangle(Position::new(10, 10));
+        let mut board = Board::new();
+        let ant = Piece::new_from(Bug::Ant, Color::White, 1);
+        board.insert(moved_at, ant, true);
+        board.insert(
+            pillbug_at,
+            Piece::new_from(Bug::Pillbug, Color::Black, 0),
+            true,
+        );
+        board.insert(third, Piece::new_from(Bug::Queen, Color::Black, 0), true);
+
+        board.set_stunned(moved_at, ant, false, Color::White);
+        assert_eq!(board.stunned, Some(ant));
+    }
+
+    /// A stun on a game-ending move made identical final positions hash apart over a restriction
+    /// nobody can feel.
+    #[test]
+    fn set_stunned_ignores_a_restriction_once_the_game_is_over() {
+        let (moved_at, pillbug_at, third) = triangle(Position::new(10, 10));
+        let mut board = Board::new();
+        let ant = Piece::new_from(Bug::Ant, Color::White, 1);
+        board.insert(moved_at, ant, true);
+        board.insert(
+            pillbug_at,
+            Piece::new_from(Bug::Pillbug, Color::Black, 0),
+            true,
+        );
+        board.insert(third, Piece::new_from(Bug::Queen, Color::Black, 0), true);
+
+        // Surround the Black Queen: two of its neighbours are already taken by the triangle, so
+        // four fillers finish the job and decide the game for White.
+        let fillers = [
+            Piece::new_from(Bug::Grasshopper, Color::White, 1),
+            Piece::new_from(Bug::Grasshopper, Color::White, 2),
+            Piece::new_from(Bug::Grasshopper, Color::White, 3),
+            Piece::new_from(Bug::Spider, Color::White, 1),
+        ];
+        let mut filler = fillers.into_iter();
+        for around in third.positions_around() {
+            if board.occupied(around) {
+                continue;
+            }
+            board.insert(around, filler.next().expect("four cells to fill"), true);
+        }
+        // `game_result` reports Unknown until both Queens are on the board.
+        board.insert(
+            third.to(Direction::SE).to(Direction::SE),
+            Piece::new_from(Bug::Queen, Color::White, 0),
+            true,
+        );
+        assert_eq!(board.game_result(), GameResult::Winner(Color::White));
+
+        board.set_stunned(moved_at, ant, false, Color::White);
+        assert_eq!(
+            board.stunned, None,
+            "a decided game has no legal moves left to restrict"
+        );
+    }
+
+    /// A piece that ended up on a stack cannot be thrown, and cannot have been the thrown piece
+    /// either, because a throw always lands on an empty cell.
+    #[test]
+    fn set_stunned_ignores_a_stacked_piece() {
+        let (moved_at, pillbug_at, third) = triangle(Position::new(10, 10));
+        let mut board = Board::new();
+        board.insert(moved_at, Piece::new_from(Bug::Queen, Color::White, 0), true);
+        let beetle = Piece::new_from(Bug::Beetle, Color::White, 1);
+        board.insert(moved_at, beetle, true);
+        board.insert(
+            pillbug_at,
+            Piece::new_from(Bug::Pillbug, Color::Black, 0),
+            true,
+        );
+        board.insert(third, Piece::new_from(Bug::Queen, Color::Black, 0), true);
+
+        board.set_stunned(moved_at, beetle, false, Color::White);
+        assert_eq!(
+            board.stunned, None,
+            "a Beetle on top of a stack cannot be thrown"
+        );
+    }
+
+    /// The restriction keys off whose turn it was, not the moved piece's colour - they differ
+    /// when a Pillbug throws an enemy piece.
+    #[test]
+    fn set_stunned_depends_on_whose_turn_it_was() {
+        let (moved_at, pillbug_at, third) = triangle(Position::new(10, 10));
+        let mut board = Board::new();
+        let ant = Piece::new_from(Bug::Ant, Color::Black, 1);
+        board.insert(moved_at, ant, true);
+        board.insert(
+            pillbug_at,
+            Piece::new_from(Bug::Pillbug, Color::Black, 0),
+            true,
+        );
+        // A Queen, so there is no *White* ability piece anywhere near.
+        board.insert(third, Piece::new_from(Bug::Queen, Color::White, 0), true);
+        // Without a Black Queen, Black could not move the Ant anyway and the test proves nothing.
+        board.insert(
+            third.to(Direction::SE),
+            Piece::new_from(Bug::Queen, Color::Black, 0),
+            true,
+        );
+        assert!(board.queen_played(Color::Black) && board.queen_played(Color::White));
+
+        // White threw Black's Ant: Black is about to move and Black's own Pillbug is right there.
+        board.set_stunned(moved_at, ant, false, Color::White);
+        assert_eq!(
+            board.stunned,
+            Some(ant),
+            "a thrown piece may not move at all on its owner's turn"
+        );
+
+        // Black moved its own Ant: only White could be restricted, and White has nothing to do it.
+        board.set_stunned(moved_at, ant, false, Color::Black);
+        assert_eq!(
+            board.stunned, None,
+            "White has no ability piece adjacent, so nothing is restricted"
+        );
+    }
+
+    /// A pass leaves no restriction, so `stunned` must clear with `last_moved` - a stale stun
+    /// stops the hash matching the same position reached without one.
+    #[test]
+    fn pass_clears_stunned() {
+        for entry in std::fs::read_dir("./test_pgns/valid/").expect("valid dir") {
+            let path = entry.expect("PGN").path();
+            let history = History::from_filepath(path.clone()).expect("valid PGN");
+            let tournament = history
+                .moves
+                .iter()
+                .take(2)
+                .all(|(piece, _)| piece.parse::<Piece>().expect("piece").bug() != Bug::Queen);
+            let mut state = State::new(history.game_type, tournament);
+
+            for (ply, (piece, position)) in history.moves.iter().enumerate() {
+                state
+                    .play_turn_from_history(piece, position)
+                    .unwrap_or_else(|err| panic!("{}: ply {ply}: {err}", path.display()));
+                assert!(
+                    !(state.board.stunned.is_some() && state.board.hasher.stunned.is_none()),
+                    "{}: ply {ply}: board.stunned outlived the hash it came from",
+                    path.display()
+                );
+            }
+        }
+    }
+
+    /// Plies 80/84/88 are one position: the adjacent ability piece is surrounded and can throw
+    /// nothing. An earlier fix asked only whether one was adjacent, and lost this draw.
+    #[test]
+    fn game_with_a_vacuous_restriction_is_drawn() {
+        let state = replay("./test_pgns/regressions/vacuous_restriction.pgn");
+        assert_eq!(state.repeating_moves, vec![80, 84, 88]);
+        assert_eq!(state.game_status, GameStatus::Finished(GameResult::Draw));
+    }
+
+    /// End to end. A repetition the old rule missed entirely: the game carried on to a win after
+    /// the position had already occurred three times.
+    #[test]
+    fn game_the_old_rule_missed_is_drawn() {
+        let state = replay("./test_pgns/regressions/missed_repetition.pgn");
+        assert_eq!(state.repeating_moves, vec![25, 29, 33]);
+        assert_eq!(state.game_status, GameStatus::Finished(GameResult::Draw));
+    }
+
+    /// Replay a PGN as far as it goes; a threefold draw stops it before the recorded end.
+    fn replay(path: &str) -> State {
+        let history = History::from_filepath(path.into()).expect("valid PGN");
+        let tournament = history
+            .moves
+            .iter()
+            .take(2)
+            .all(|(piece, _)| piece.parse::<Piece>().expect("piece").bug() != Bug::Queen);
+        let mut state = State::new(history.game_type, tournament);
+        for (piece, position) in history.moves.iter() {
+            if state.play_turn_from_history(piece, position).is_err() {
+                break;
+            }
+        }
+        state
+    }
+    /// `set_stunned` asked only `Bug::has_move`, so a thrown Pillbug that can still throw kept
+    /// no stun - a restricted position sharing an unrestricted hash, i.e. a false draw.
+    #[test]
+    fn set_stunned_counts_a_thrown_ability_pieces_special_action() {
+        let state = replay_uhp("./test_pgns/regressions/thrown_pillbug_ability.uhp");
+        assert_eq!(state.turn, 14);
+        assert_eq!(state.turn_color, Color::White);
+
+        let pillbug = Piece::new_from(Bug::Pillbug, Color::White, 0);
+        let at = state
+            .board
+            .position_of_piece(pillbug)
+            .expect("Pillbug is on the board");
+
+        // The Pillbug was thrown, cannot walk, but can still use its ability.
+        assert_eq!(state.board.last_moved, Some((pillbug, at)));
+        assert!(!state.board.is_pinned(pillbug));
+        assert!(!Bug::has_move(at, &state.board));
+        assert!(Bug::has_available_ability(at, &state.board));
+
+        // So the restriction is real: clearing `last_moved` gives White strictly more to do.
+        let restricted = legal_targets(&state.board, Color::White);
+        let mut unrestricted_board = state.board.clone();
+        unrestricted_board.last_moved = None;
+        let unrestricted = legal_targets(&unrestricted_board, Color::White);
+        assert!(
+            restricted.len() < unrestricted.len(),
+            "the throw should be suppressed while the Pillbug is last_moved"
+        );
+
+        assert_eq!(state.board.stunned, Some(pillbug));
+    }
+
+    /// Every legal `piece -> target` as a flat, sorted list, so two move maps can be compared.
+    fn legal_targets(board: &Board, color: Color) -> Vec<String> {
+        let mut targets: Vec<String> = board
+            .moves(color)
+            .into_iter()
+            .flat_map(|((piece, _), destinations)| {
+                destinations
+                    .into_iter()
+                    .map(move |to| format!("{piece}->{},{}", to.q, to.r))
+            })
+            .collect();
+        targets.sort();
+        targets
+    }
+
+    /// Replay a UHP fixture the way a stored game is reconstructed.
+    fn replay_uhp(path: &str) -> State {
+        let input = std::fs::read_to_string(path).expect("fixture is readable");
+        let history = History::from_uhp_str(&input).expect("valid UHP");
+        State::new_from_history(&history).expect("legal history")
+    }
+    /// Before their Queen is down the opponent cannot move anything, so a restriction on them
+    /// takes nothing away - marking one splits identical positions in the hash.
+    #[test]
+    fn set_stunned_ignores_restrictions_before_the_next_players_queen() {
+        let state = replay_uhp("./test_pgns/regressions/pre_queen_vacuous_stun.uhp");
+        assert_eq!(state.turn, 6);
+        assert_eq!(state.turn_color, Color::White);
+        assert!(!state.board.queen_played(Color::White));
+
+        // Nothing to lose: White has no board move with the restriction and none without it.
+        let restricted = legal_targets(&state.board, Color::White);
+        let mut unrestricted_board = state.board.clone();
+        unrestricted_board.last_moved = None;
+        let unrestricted = legal_targets(&unrestricted_board, Color::White);
+        assert!(restricted.is_empty());
+        assert!(unrestricted.is_empty());
+
+        assert_eq!(state.board.stunned, None);
+    }
+    /// Same rule, own-move branch, from a real game: the thrown piece belongs to the player who
+    /// cannot move yet, so the restriction never removed an action.
+    #[test]
+    fn set_stunned_ignores_a_piece_thrown_before_its_owners_queen() {
+        let state = replay_uhp("./test_pgns/regressions/pre_queen_thrown_piece.uhp");
+        assert_eq!(state.turn, 7);
+        assert_eq!(state.turn_color, Color::Black);
+        assert!(!state.board.queen_played(Color::Black));
+
+        let ladybug = Piece::new_from(Bug::Ladybug, Color::Black, 0);
+        let at = state
+            .board
+            .position_of_piece(ladybug)
+            .expect("Ladybug is on the board");
+        assert_eq!(state.board.last_moved, Some((ladybug, at)));
+
+        // Black has no board move to lose, restriction or not.
+        let restricted = legal_targets(&state.board, Color::Black);
+        let mut unrestricted_board = state.board.clone();
+        unrestricted_board.last_moved = None;
+        assert!(restricted.is_empty());
+        assert!(legal_targets(&unrestricted_board, Color::Black).is_empty());
+
+        assert_eq!(state.board.stunned, None);
     }
 }
