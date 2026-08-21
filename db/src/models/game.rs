@@ -502,6 +502,9 @@ impl Game {
             ))
             .get_result(conn)
             .await?;
+        // `games.hashes` needs no rewrite: this finish plays no move, so the array the last one
+        // stored is still current. A rehash is the one thing that empties it mid-game, and
+        // `hash_backfill` refills it on the next boot.
         let ctx = GameFinishContext::from_finished_game(&game);
         if let Ok(state) = State::new_from_str(&game.history, &game.game_type) {
             GameHash::insert_for_game(game.id, &state.hashes, &state.history.moves, &ctx, conn)
