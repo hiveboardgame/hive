@@ -458,6 +458,37 @@ async fn backfill_cursor_pagination_works() {
     assert!(third_batch.is_empty());
 }
 
+/// Without the delete, the `on_conflict_do_nothing` insert would keep stale hashes at existing
+/// turns and report success - a hash-algorithm change would silently survive its own backfill.
+#[tokio::test(flavor = "multi_thread")]
+async fn insert_for_game_replaces_stale_rows_and_trims_extinct_turns() {
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.unwrap();
+    let (game, _, _) = setup_game(&mut conn).await;
+
+    // Three stale rows, as an old hash algorithm would have left them.
+    let ctx = test_ctx(Some(1500.0), Some(1600.0));
+    let stale = GameHash::from_engine_hashes(game.id, &[111, 222, 333], &[], &ctx);
+    GameHash::insert_batch(&stale, &mut conn).await.unwrap();
+
+    GameHash::insert_for_game(game.id, &[901, 902], &[], &ctx, &mut conn)
+        .await
+        .unwrap();
+
+    let mut rows: Vec<(i32, i64)> = gh_schema::table
+        .filter(gh_schema::game_id.eq(game.id))
+        .select((gh_schema::turn, gh_schema::hash))
+        .load(&mut conn)
+        .await
+        .unwrap();
+    rows.sort();
+    assert_eq!(
+        rows,
+        vec![(0, 901), (1, 902)],
+        "old hashes replaced at turns 0 and 1, stale turn 2 removed"
+    );
+}
+
 // ---------------------------------------------------------------------------
 // Integration test — full backfill flow (replay + set_hashes + game_hashes)
 // ---------------------------------------------------------------------------
@@ -765,4 +796,222 @@ async fn setup_game_with_history(
     .unwrap();
 
     (game, white, black)
+}
+
+// ---------------------------------------------------------------------------
+// Integration tests — the backfill pass as the boot job runs it
+// ---------------------------------------------------------------------------
+
+/// Mirrors `apis/src/jobs/hash_backfill.rs`: cursor batches, one txn per game, failures skipped.
+async fn run_backfill_pass(pool: &db_lib::DbPool, batch_size: i64) -> u64 {
+    use diesel_async::AsyncConnection;
+    let mut conn = get_conn(pool).await.unwrap();
+    let mut last_id = None;
+    let mut total = 0u64;
+    loop {
+        let batch = Game::find_needing_hash_backfill(last_id, batch_size, &mut conn)
+            .await
+            .unwrap();
+        if batch.is_empty() {
+            break;
+        }
+        for game in &batch {
+            last_id = Some(game.id);
+            let Ok(state) = State::new_from_str(&game.history, &game.game_type) else {
+                continue;
+            };
+            let new_hashes: Vec<Option<i64>> =
+                state.hashes.iter().map(|h| Some(*h as i64)).collect();
+            let ctx = GameFinishContext::from_finished_game(game);
+            conn.transaction(async |conn| {
+                Game::set_hashes(game.id, new_hashes, conn).await?;
+                GameHash::insert_for_game(game.id, &state.hashes, &state.history.moves, &ctx, conn)
+                    .await?;
+                Ok::<_, db_lib::db_error::DbError>(())
+            })
+            .await
+            .unwrap();
+            total += 1;
+        }
+    }
+    total
+}
+
+async fn finish(game: &Game, conn: &mut db_lib::DbConn<'_>) {
+    diesel::update(games::table.find(game.id))
+        .set(games::finished.eq(true))
+        .execute(conn)
+        .await
+        .unwrap();
+}
+
+async fn all_hash_rows(conn: &mut db_lib::DbConn<'_>) -> Vec<(uuid::Uuid, i32, i64)> {
+    let mut rows: Vec<(uuid::Uuid, i32, i64)> = gh_schema::table
+        .select((gh_schema::game_id, gh_schema::turn, gh_schema::hash))
+        .load(conn)
+        .await
+        .unwrap();
+    rows.sort();
+    rows
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn backfill_pass_is_idempotent() {
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.unwrap();
+    for (w, b) in [("ip1", "ip2"), ("ip3", "ip4"), ("ip5", "ip6")] {
+        let (game, _, _) = setup_game_with_history(w, b, "wQ;bQ /wQ;wA1 wQ-;", &mut conn).await;
+        finish(&game, &mut conn).await;
+    }
+    assert_eq!(run_backfill_pass(&db.pool, 2).await, 3);
+    let after_first = all_hash_rows(&mut conn).await;
+    assert!(!after_first.is_empty());
+
+    assert_eq!(
+        run_backfill_pass(&db.pool, 2).await,
+        0,
+        "nothing left to select"
+    );
+    assert_eq!(
+        all_hash_rows(&mut conn).await,
+        after_first,
+        "rows unchanged"
+    );
+}
+
+/// "Empty hashes" is the queue and the cursor is never persisted, so a fresh pass just resumes.
+#[tokio::test(flavor = "multi_thread")]
+async fn backfill_resumes_after_an_interrupted_pass() {
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.unwrap();
+    for (w, b) in [
+        ("rp1", "rp2"),
+        ("rp3", "rp4"),
+        ("rp5", "rp6"),
+        ("rp7", "rp8"),
+    ] {
+        let (game, _, _) = setup_game_with_history(w, b, "wQ;bQ /wQ;", &mut conn).await;
+        finish(&game, &mut conn).await;
+    }
+    // The "crash": process exactly one batch of two, then stop.
+    let batch = Game::find_needing_hash_backfill(None, 2, &mut conn)
+        .await
+        .unwrap();
+    assert_eq!(batch.len(), 2);
+    for game in &batch {
+        let state = State::new_from_str(&game.history, &game.game_type).unwrap();
+        let new_hashes: Vec<Option<i64>> = state.hashes.iter().map(|h| Some(*h as i64)).collect();
+        Game::set_hashes(game.id, new_hashes, &mut conn)
+            .await
+            .unwrap();
+    }
+    let outstanding = Game::find_needing_hash_backfill(None, 100, &mut conn)
+        .await
+        .unwrap();
+    assert_eq!(outstanding.len(), 2, "half the queue survives the crash");
+
+    assert_eq!(
+        run_backfill_pass(&db.pool, 2).await,
+        2,
+        "the next boot drains the rest"
+    );
+    assert!(Game::find_needing_hash_backfill(None, 100, &mut conn)
+        .await
+        .unwrap()
+        .is_empty());
+}
+
+/// A record that continued past a threefold (grandfathered under the old rule) must still
+/// backfill - replay may not re-referee it.
+#[tokio::test(flavor = "multi_thread")]
+async fn backfill_handles_games_recorded_past_a_repetition() {
+    use hive_lib::{Direction, Piece};
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.unwrap();
+
+    // Two out-and-home cycles return to the ply-4 position twice (threefold at ply 12),
+    // then one move past it.
+    let mut record = State::new(GameType::MLP, false);
+    record.set_replaying(true);
+    for (piece, position) in [("wQ", ""), ("bQ", "-wQ"), ("wA1", "wQ-"), ("bA1", "-bQ")] {
+        record.play_turn_from_history(piece, position).unwrap();
+    }
+    let wa: Piece = "wA1".parse().unwrap();
+    let ba: Piece = "bA1".parse().unwrap();
+    let wa_home = record.board.position_of_piece(wa).unwrap();
+    let ba_home = record.board.position_of_piece(ba).unwrap();
+    let wa_away = record
+        .board
+        .position_of_piece("wQ".parse().unwrap())
+        .unwrap()
+        .to(Direction::NE);
+    let ba_away = record
+        .board
+        .position_of_piece("bQ".parse().unwrap())
+        .unwrap()
+        .to(Direction::SW);
+    for _ in 0..2 {
+        for (piece, target) in [(wa, wa_away), (ba, ba_away), (wa, wa_home), (ba, ba_home)] {
+            record.play_turn_from_position(piece, target).unwrap();
+        }
+    }
+    record.play_turn_from_position(wa, wa_away).unwrap();
+    assert!(
+        !record.repeating_moves.is_empty(),
+        "the fixture really repeats"
+    );
+
+    let history = record
+        .history
+        .moves
+        .iter()
+        .map(|(piece, position)| {
+            if position.is_empty() {
+                piece.clone()
+            } else {
+                format!("{piece} {position}")
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(";")
+        + ";";
+    let (game, _, _) = setup_game_with_history("gp1", "gp2", &history, &mut conn).await;
+    finish(&game, &mut conn).await;
+
+    assert_eq!(run_backfill_pass(&db.pool, 10).await, 1);
+    let reloaded: Game = games::table.find(game.id).first(&mut conn).await.unwrap();
+    assert_eq!(
+        reloaded.hashes(),
+        record.hashes,
+        "hashes equal the record's own"
+    );
+}
+
+/// An unreplayable game stays in the queue; the final recount is what stops "done" from lying.
+#[tokio::test(flavor = "multi_thread")]
+async fn backfill_skips_unreplayable_games_and_leaves_them_outstanding() {
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.unwrap();
+    let (good, _, _) = setup_game_with_history("sk1", "sk2", "wQ;bQ /wQ;", &mut conn).await;
+    finish(&good, &mut conn).await;
+    let (bad, _, _) = setup_game_with_history("sk3", "sk4", "wQ;INVALID;", &mut conn).await;
+    finish(&bad, &mut conn).await;
+
+    assert_eq!(
+        run_backfill_pass(&db.pool, 10).await,
+        1,
+        "only the good game processes"
+    );
+    let outstanding = Game::find_needing_hash_backfill(None, 100, &mut conn)
+        .await
+        .unwrap();
+    assert_eq!(outstanding.len(), 1);
+    assert_eq!(outstanding[0].id, bad.id, "the bad game stays in the queue");
+    let bad_rows: i64 = gh_schema::table
+        .filter(gh_schema::game_id.eq(bad.id))
+        .count()
+        .get_result(&mut conn)
+        .await
+        .unwrap();
+    assert_eq!(bad_rows, 0, "no partial rows for the skipped game");
 }

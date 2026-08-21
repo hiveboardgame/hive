@@ -1,3 +1,44 @@
+//! Fills in `games.hashes` and the `game_hashes` rows for finished games that have none. Runs on
+//! every boot and stops at once when there is nothing to do.
+//!
+//! # Recomputing every hash
+//!
+//! Needed whenever the hash changes meaning. Stale hashes are worse than missing ones: the archive
+//! filter and the opening explorer silently return nothing, and analysis refuses to open the game
+//! ("inconsistent position hash").
+//!
+//! An empty `games.hashes` is what marks a game as outstanding, so clearing the column queues the
+//! recompute.
+//!
+//! 1. Stop **every** instance - an old-version writer would store old-algorithm data after the
+//!    clear, and a new-version one would have its fresh rows truncated by it.
+//! 2. Run, once:
+//!
+//!    ```sql
+//!    BEGIN;
+//!    TRUNCATE game_hashes;
+//!    UPDATE games SET hashes = '{}' WHERE history <> '';
+//!    COMMIT;
+//!    ```
+//!
+//!    All games with history, not only finished ones: a stale array breaks analysis on an
+//!    in-flight game, and a timeout or resignation ends it without ever rewriting the column -
+//!    leaving it non-empty, invisible to this job, and permanent.
+//!
+//!    `TRUNCATE` rather than the per-game delete: a game this job cannot replay would keep its
+//!    wrong rows.
+//! 3. Start **one** instance and watch `hash_backfill:` in the logs; every booting instance runs
+//!    its own unlocked copy, so more only multiply the replay load.
+//! 4. Verify, then scale back up:
+//!
+//!    ```sql
+//!    SELECT count(*) FROM games WHERE finished AND history <> '' AND hashes = '{}';
+//!    ```
+//!
+//! Because "empty" means "not done", a crash or deploy mid-pass just resumes. Do not re-run the
+//! SQL while a pass is active: the cursor only moves forward, so games re-cleared behind it wait
+//! for the next boot.
+
 use db_lib::{
     db_error::DbError,
     get_conn,
@@ -85,6 +126,18 @@ pub fn run(pool: DbPool) {
             log::info!("hash_backfill: {total}/{remaining}");
         }
 
-        log::info!("hash_backfill: done ({total} games processed)");
+        // The cursor only moves forward, so games skipped over a transient error are still
+        // outstanding - "done" must not say otherwise to the operator watching the migration.
+        match get_conn(&pool).await {
+            Ok(mut conn) => match Game::count_needing_hash_backfill(&mut conn).await {
+                Ok(0) => log::info!("hash_backfill: done ({total} games processed)"),
+                Ok(outstanding) => log::warn!(
+                    "hash_backfill: pass ended with {outstanding} games outstanding \
+                     ({total} processed); they will be retried on the next boot"
+                ),
+                Err(e) => log::warn!("hash_backfill: final recount failed: {e}"),
+            },
+            Err(_) => log::warn!("hash_backfill: no connection for the final recount"),
+        }
     });
 }
