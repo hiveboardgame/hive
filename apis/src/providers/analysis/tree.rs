@@ -240,6 +240,11 @@ impl AnalysisArena {
             || (State::new(game_type, false), 1),
             |(index, checkpoint)| (checkpoint.restore(game_type), index + 1),
         );
+        // A HOP root has occurred once and checkpoints carry no counts, so count it here. No
+        // double count: the loop below skips `path[0]`.
+        if let Some(root_hash) = self.node(self.root).and_then(|node| node.hash) {
+            *state.hashes_count.entry(root_hash).or_default() += 1;
+        }
         let context_end = replay_start.saturating_sub(1);
         if context_end > 0 {
             let mut moves = Vec::with_capacity(context_end);
@@ -263,7 +268,10 @@ impl AnalysisArena {
             };
             state.hashes = hashes;
             for hash in &state.hashes {
-                *state.hashes_count.entry(*hash).or_default() += 1;
+                // Saturating, as in `State::three_fold_repetition`: an analysis line can shuffle
+                // a position as often as it likes, and a wrapped count would un-detect it.
+                let count = state.hashes_count.entry(*hash).or_default();
+                *count = count.saturating_add(1);
             }
             if state
                 .hashes

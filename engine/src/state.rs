@@ -31,6 +31,10 @@ pub struct State {
 }
 
 impl State {
+    pub fn queen_required_now(&self, color: Color) -> bool {
+        self.board.queen_required(color)
+    }
+
     pub fn new(game_type: GameType, tournament: bool) -> State {
         State {
             game_id: 1,
@@ -49,6 +53,72 @@ impl State {
             tournament,
             repeating_moves: Vec::new(),
         }
+    }
+
+    /// Playable state from a bare position: synthetic turn counter, reserves from the board.
+    /// `hashes` stays empty to remain index-aligned with the (also empty) `history.moves`.
+    /// A side without its Queen has only ever placed, so its pieces are exactly its turns: a
+    /// fourth means the deadline came and went, and turns alternate so the opponent can only
+    /// ever be one ahead.
+    fn reachable(board: &Board) -> Result<(), GameError> {
+        for color in [Color::White, Color::Black] {
+            if board.queen_played(color) {
+                continue;
+            }
+            let placed = board.played_by(color);
+            if placed > 3 {
+                return Err(GameError::UnreachablePosition {
+                    reason: format!("{color} placed {placed} pieces without a Queen"),
+                });
+            }
+            let opponent = board.played_by(color.opposite_color());
+            if opponent > placed + 1 {
+                return Err(GameError::UnreachablePosition {
+                    reason: format!(
+                        "{} has {opponent} pieces against {color}'s {placed}",
+                        color.opposite_color()
+                    ),
+                });
+            }
+        }
+        Ok(())
+    }
+
+    pub fn new_from_position(
+        board: Board,
+        game_type: GameType,
+        to_move: Color,
+    ) -> Result<State, GameError> {
+        Self::reachable(&board)?;
+        let mut turn = board.played;
+        if turn.is_multiple_of(2) != (to_move == Color::White) {
+            turn += 1;
+        }
+        let game_status = match board.game_result() {
+            GameResult::Unknown if board.played == 0 => GameStatus::NotStarted,
+            GameResult::Unknown => GameStatus::InProgress,
+            finished => GameStatus::Finished(finished),
+        };
+        // The root has occurred once; without counting it, two returns read as two occurrences
+        // and the draw never fires.
+        let root = crate::canonical_hash::canonical_hash(&board, to_move, board.stunned);
+        Ok(State {
+            game_id: 1,
+            board,
+            hashes: Vec::new(),
+            hashes_count: HashMap::from([(root, 1)]),
+            history: History {
+                game_type,
+                ..History::new()
+            },
+            turn,
+            turn_color: to_move,
+            players: (Player::new(Color::White), Player::new(Color::Black)),
+            game_status,
+            game_type,
+            tournament: false,
+            repeating_moves: Vec::new(),
+        })
     }
 
     pub fn get_board(&self) -> Board {
@@ -273,12 +343,15 @@ impl State {
         // cleared alongside `last_moved`, or it describes a stun that no longer exists.
         self.board.stunned = None;
         self.board.last_move = (None, None);
-        self.three_fold_repetition();
+        // `pass` has already flipped `turn_color`, so it is the side to move now.
+        self.three_fold_repetition(self.turn_color);
     }
 
     fn next_turn(&mut self) {
         self.turn += 1;
-        if self.turn == 1 {
+        // By status, not `turn == 1`: a state built by `new_from_position` can start at turn 1
+        // (empty board, Black to move) and would skip that transition forever.
+        if self.game_status == GameStatus::NotStarted {
             self.game_status = GameStatus::InProgress;
         }
         match self.board.game_result() {
@@ -382,7 +455,7 @@ impl State {
                 "Can't spawn Queen. Game uses tournament rules",
             ));
         }
-        if piece.bug() != Bug::Queen && self.board.queen_required(self.turn, piece.color()) {
+        if piece.bug() != Bug::Queen && self.queen_required_now(piece.color()) {
             return Err(Self::invalid_move_error(
                 piece,
                 "Reserve",
@@ -423,22 +496,15 @@ impl State {
             self.turn_spawn(piece, target_position)?
         }
         self.update_history(piece, target_position);
-        self.three_fold_repetition();
+        self.three_fold_repetition(self.turn_color.opposite_color());
         debug_assert!(self.board.check());
         self.next_turn();
         Ok(())
     }
 
-    /// Record the position that has just been reached and adjudicate a draw on its third
-    /// occurrence. The hash is a pure function of the position, so this needs no move details.
-    pub fn three_fold_repetition(&mut self) {
-        // `turn` is pre-increment for a move but post-increment for a pass; the history length is
-        // recorded before this call on both paths, so it is the consistent oracle.
-        let to_move = if self.history.moves.len().is_multiple_of(2) {
-            Color::White
-        } else {
-            Color::Black
-        };
+    /// Record the reached position; third occurrence draws. `to_move` is a parameter because
+    /// neither `turn` parity nor history length derives it reliably on every path.
+    pub fn three_fold_repetition(&mut self, to_move: Color) {
         let hash = crate::canonical_hash::canonical_hash(&self.board, to_move, self.board.stunned);
         self.hashes.push(hash);
         *self.hashes_count.entry(hash).or_default() += 1;

@@ -2,6 +2,7 @@ use super::{
     context::{AnalysisContext, AnalysisPreviewSnapshot},
     document::{
         arena_from_wire,
+        root_hash,
         wire_nodes,
         AnalysisDocument,
         LoadError,
@@ -16,7 +17,7 @@ use super::{
 };
 use crate::providers::{
     annotations::AnnotationSet,
-    game_state::{GameStateStore, GameStateStoreFields},
+    game_state::{state_hop, GameStateStore, GameStateStoreFields},
 };
 use hive_lib::{Color, GameType, State};
 use leptos::prelude::*;
@@ -682,6 +683,7 @@ fn versioned_document_round_trip_preserves_ids_selection_and_annotations() {
             (NodeId::ROOT, AnnotationSet::default()),
             (selected, AnnotationSet::default()),
         ]),
+        start_hop: None,
     };
     let json = serde_json::to_string(&document).unwrap();
     let round_trip = LoadedAnalysis::from_json(&json).unwrap();
@@ -829,7 +831,8 @@ fn versioned_documents_require_every_move_hash() {
             NodeId(1),
             GameType::MLP,
             HashMap::new(),
-            true
+            true,
+            None
         ),
         Err(LoadError::Invalid(message)) if message.contains("missing its position hash")
     ));
@@ -1064,4 +1067,278 @@ fn compact_checkpoint_replays_only_the_remaining_suffix() {
         .unwrap();
 
     assert_eq!(from_checkpoint, from_root);
+}
+
+/// The root carries a checkpoint holding the loaded position - that is what lets
+/// `AnalysisArena::replay` pick it up with no special case of its own.
+#[test]
+fn hop_rooted_analysis_replays_moves_onto_the_loaded_position() {
+    let hop = "base,QA-a,w";
+    let loaded = LoadedAnalysis::from_hop(hop).expect("valid HOP");
+
+    assert_eq!(loaded.playable.board.played, 3);
+    assert_eq!(loaded.playable.turn_color, Color::White);
+    assert!(
+        loaded.playable.turn.is_multiple_of(2),
+        "White to move implies an even turn"
+    );
+    assert!(loaded.state.start_hop.is_some(), "the root HOP is recorded");
+    assert!(
+        loaded
+            .state
+            .checkpoints
+            .contains_key(&loaded.state.arena.root),
+        "the root carries a checkpoint holding the loaded position"
+    );
+
+    // No ordinary root has a hash: this one has no move to take one from, and the explorer needs it.
+    let root_hash = loaded
+        .state
+        .arena
+        .node(loaded.state.arena.root)
+        .and_then(|node| node.hash);
+    assert_eq!(
+        root_hash,
+        Some(hive_lib::hop::to_hash(hop).expect("hashable") as u64)
+    );
+
+    let replayed = loaded
+        .state
+        .arena
+        .replay(
+            &[loaded.state.arena.root],
+            loaded.state.game_type,
+            &loaded.state.checkpoints,
+        )
+        .expect("root replays");
+    assert_eq!(replayed.board.played, 3);
+
+    let blank = super::store::AnalysisState::blank(loaded.state.game_type);
+    let bare = blank
+        .arena
+        .replay(&[blank.arena.root], blank.game_type, &blank.checkpoints)
+        .expect("root replays");
+    assert_eq!(bare.board.played, 0);
+}
+
+/// The HOP root's occurrence must survive `AnalysisArena::replay` - checkpoints carry no
+/// counts, so clicking away and back used to drop the threefold.
+#[test]
+fn replay_keeps_the_hop_root_counted() {
+    let hop = "base,QA-a,w";
+    let loaded = LoadedAnalysis::from_hop(hop).expect("valid HOP");
+    let root_hash = hive_lib::hop::to_hash(hop).expect("hashable") as u64;
+
+    assert_eq!(
+        loaded.playable.hashes_count.get(&root_hash),
+        Some(&1),
+        "the loaded position counts itself"
+    );
+
+    let replayed = loaded
+        .state
+        .arena
+        .replay(
+            &[loaded.state.arena.root],
+            loaded.state.game_type,
+            &loaded.state.checkpoints,
+        )
+        .expect("root replays");
+
+    assert_eq!(
+        replayed.hashes_count, loaded.playable.hashes_count,
+        "reconstructing the root must not lose the occurrence it started with"
+    );
+}
+
+/// The counterpart: an ordinary analysis is rooted at the empty board, which is not a position
+/// anyone reached, so there is nothing to count and the root carries no hash to count it by.
+#[test]
+fn replay_counts_nothing_for_an_ordinary_root() {
+    let arena = AnalysisArena::blank();
+    let replayed = arena
+        .replay(&[arena.root], GameType::MLP, &HashMap::new())
+        .expect("root replays");
+    assert!(
+        replayed.hashes_count.is_empty(),
+        "an empty board has not occurred: {:?}",
+        replayed.hashes_count
+    );
+}
+
+/// Trusting a legacy document's saved hashes broke every previously exported analysis the
+/// moment the hash algorithm changed. The moves are the record; hashes get recomputed.
+#[test]
+fn legacy_document_with_stale_hashes_loads_and_recomputes_them() {
+    let input = serde_json::json!({
+        "current_node": null,
+        "tree": {
+            "nodes": [
+                {
+                    "node_id": 0,
+                    "value": { "turn": 1, "piece": "wG1", "position": "" },
+                    "parent": null
+                },
+                {
+                    "node_id": 1,
+                    "value": { "turn": 2, "piece": "bP", "position": "\\wG1" },
+                    "parent": 0
+                }
+            ]
+        },
+        // Stale on purpose: no hash algorithm ever produced these for this line.
+        "hashes": { "11111": 0, "22222": 1 },
+        "annotations": {}
+    });
+
+    let loaded = LoadedAnalysis::from_json(&input.to_string())
+        .expect("stale hashes are derived data, not grounds for rejection");
+
+    let mut state = State::new(GameType::MLP, false);
+    state.play_turn_from_history("wG1", "").unwrap();
+    let first = *state.hashes.last().unwrap();
+    state.play_turn_from_history("bP", "\\wG1").unwrap();
+    let second = *state.hashes.last().unwrap();
+    assert_eq!(
+        loaded.state.arena.node(NodeId(1)).unwrap().hash,
+        Some(first)
+    );
+    assert_eq!(
+        loaded.state.arena.node(NodeId(2)).unwrap().hash,
+        Some(second)
+    );
+    assert_eq!(
+        loaded.state.arena.node(NodeId::ROOT).unwrap().hash,
+        root_hash(None),
+        "the root is the empty board and hashes like one"
+    );
+}
+
+/// The root's hash is derived from the start HOP, never trusted from the wire - stored root
+/// hashes go stale exactly like legacy per-node hashes do.
+#[test]
+fn versioned_root_hash_is_derived_not_trusted() {
+    let hop = "base,QA-a,w";
+    let loaded = LoadedAnalysis::from_hop(hop).expect("valid HOP");
+    let mut nodes = wire_nodes(&loaded.state.arena);
+    // Tamper with the stored root hash, as a stale export after a hash change would.
+    for node in nodes.iter_mut() {
+        if node.id == loaded.state.arena.root {
+            node.position_hash = Some(0xDEAD_BEEF);
+        }
+    }
+    let document = AnalysisDocument {
+        format: ANALYSIS_FORMAT.to_string(),
+        version: ANALYSIS_VERSION,
+        game_type: loaded.state.game_type,
+        root_id: loaded.state.arena.root,
+        selected_node_id: loaded.state.arena.root,
+        nodes,
+        annotations: HashMap::new(),
+        start_hop: loaded.state.start_hop.clone(),
+    };
+    let round_trip = LoadedAnalysis::from_json(&serde_json::to_string(&document).unwrap()).unwrap();
+    assert_eq!(
+        round_trip
+            .state
+            .arena
+            .node(round_trip.state.arena.root)
+            .unwrap()
+            .hash,
+        Some(hive_lib::hop::to_hash(hop).unwrap() as u64),
+        "the root hash comes from the HOP, not from the wire"
+    );
+}
+
+/// We never rotate anything, so claiming an orientation for a board the user has since changed
+/// would be a lie.
+#[test]
+fn the_pasted_orientation_comes_back_only_at_the_root() {
+    let loaded = LoadedAnalysis::from_hop("QA-a,w3").unwrap();
+    assert_eq!(loaded.state.start_hop.as_deref(), Some("A+a1-Q,w3"));
+    assert_eq!(state_hop(&loaded.playable), "A+a1-Q,w");
+}
+
+/// A versioned document's start HOP has to agree with the document's own game type - we wrote
+/// both, so a mismatch means the file is corrupt.
+#[test]
+fn versioned_start_hop_must_match_the_document_game_type() {
+    let loaded = LoadedAnalysis::from_hop("base,QA-a,w").expect("valid HOP");
+    let document = AnalysisDocument {
+        format: ANALYSIS_FORMAT.to_string(),
+        version: ANALYSIS_VERSION,
+        // The HOP says base; the document claims MLP.
+        game_type: GameType::MLP,
+        root_id: loaded.state.arena.root,
+        selected_node_id: loaded.state.arena.root,
+        nodes: wire_nodes(&loaded.state.arena),
+        annotations: HashMap::new(),
+        start_hop: loaded.state.start_hop.clone(),
+    };
+    let result = LoadedAnalysis::from_json(&serde_json::to_string(&document).unwrap());
+    assert!(
+        result.is_err(),
+        "a game-type mismatch inside a versioned document must be rejected"
+    );
+}
+
+/// Canonicalization can renumber pieces, so a continuation recorded against the input frame
+/// would point at a different piece on reload.
+#[test]
+fn hop_rooted_documents_survive_canonicalization() {
+    let owner = Owner::new();
+    owner.with(|| {
+        // `AqQA,w` canonicalizes to `A+QqA,w`, which assigns the Ant numbers from the other end.
+        let loaded = LoadedAnalysis::from_hop("AqQA,w").unwrap();
+        let game_state = GameStateStore::new();
+        game_state.reset_with_state(loaded.playable);
+        let store = AnalysisStore::new(loaded.state);
+        let appended = game_state
+            .state()
+            .try_update(|state| {
+                let prev = state.history.moves.len();
+                state.play_turn_from_history("wG1", "wA2-").unwrap();
+                state.history.moves[prev..]
+                    .iter()
+                    .cloned()
+                    .zip(state.hashes[prev..].iter().copied())
+                    .collect::<Vec<_>>()
+            })
+            .unwrap();
+        let saved_hash = appended.first().map(|(_, hash)| *hash);
+        store.append_moves(appended, game_state);
+        let json = store.to_json().unwrap();
+        let reloaded = LoadedAnalysis::from_json(&json)
+            .unwrap_or_else(|e| panic!("a saved HOP analysis must reload: {e}"));
+        assert_eq!(
+            reloaded.state.arena.node(NodeId(1)).and_then(|n| n.hash),
+            saved_hash,
+            "the continuation must reach the same position after reload",
+        );
+    });
+}
+
+/// The rule reads the board, so this pins the restore bringing the pieces back intact.
+#[test]
+fn checkpoint_restore_keeps_the_queen_deadline() {
+    let loaded = LoadedAnalysis::from_hop("A+G+S-a-g-s,w").unwrap();
+    let g2: hive_lib::Piece = "wG2".parse().unwrap();
+    let mut live = loaded.playable.clone();
+    let spawn = live.board.spawnable_positions(Color::White).next().unwrap();
+    assert!(live.play_turn_from_position(g2, spawn).is_err());
+    let mut restored = loaded
+        .state
+        .arena
+        .replay(
+            &[loaded.state.arena.root],
+            loaded.state.game_type,
+            &loaded.state.checkpoints,
+        )
+        .unwrap();
+    let spawn = restored
+        .board
+        .spawnable_positions(Color::White)
+        .next()
+        .unwrap();
+    assert!(restored.play_turn_from_position(g2, spawn).is_err());
 }

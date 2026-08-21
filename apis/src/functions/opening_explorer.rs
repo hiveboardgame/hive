@@ -3,13 +3,11 @@ use leptos::prelude::*;
 use server_fn::codec;
 use shared_types::ExplorerFilters;
 
-/// Opening explorer for a single position, identified by its canonical board hash. `hash == 0`
-/// is the empty board: the response lists the opening roots (first moves) instead of running a
-/// self-join. Per-request work is DB-only (the opening roots are computed from the engine, which
-/// is deterministic and cheap).
+/// `None` means nothing is selected: list the opening roots rather than self-join. An explicit
+/// `Option`, not a 0 sentinel - the empty board with Black to move hashes to literally 0.
 #[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn opening_explorer(
-    hash: i64,
+    hash: Option<i64>,
     filters: ExplorerFilters,
 ) -> Result<ExplorerResponse, ServerFnError> {
     use crate::{functions::db::pool, responses::GameResponse};
@@ -24,7 +22,7 @@ pub async fn opening_explorer(
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
 
-    if hash == 0 {
+    let Some(hash) = hash else {
         // Empty board: aggregate each deterministic opening root via the single-hash aggregate.
         let mut moves = Vec::new();
         for (piece, position, root_hash) in State::opening_hashes(filters.game_type) {
@@ -55,7 +53,7 @@ pub async fn opening_explorer(
             top_games: Vec::new(),
             recent_games: Vec::new(),
         });
-    }
+    };
 
     let moves = GameHash::next_moves(hash, &filters, Some(SUGGESTIONS), &mut conn)
         .await

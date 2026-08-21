@@ -628,10 +628,8 @@ fn fixture_05_edge_axis_mirror_stun() {
     assert_eq!(stun_cell(23), (17, 16), "mirror-paired cell");
     assert_eq!(stun_cell(27), (17, 15));
 
-    // The claim this fixture exists to make: the draw at ply 27 is CORRECT, i.e. one position
-    // really did occur three times. Checked against the independent oracle - same board up to
-    // the 12 hex symmetries, same side to move, same available moves for that side. Ply 23 is
-    // the reflection of 19 and 27, so pooling it is the ruling working, not a collision.
+    // Ply 23 is the reflection of 19 and 27: pooling it is the mirror ruling working, not a
+    // collision, so the draw at 27 is correct.
     let a = position_identity(&replay_uhp_prefix(path, 19));
     let b = position_identity(&replay_uhp_prefix(path, 23));
     let c = position_identity(&replay_uhp_prefix(path, 27));

@@ -410,3 +410,111 @@ fn axis_unwrap_agrees_with_walking() {
         "axis unwrapping disagrees with walking the hive"
     );
 }
+
+/// A deterministic per-game pseudo-random stream (splitmix64), so a failure reproduces exactly.
+fn sampler(nanoid: &str) -> impl FnMut() -> u64 {
+    let mut state = nanoid.bytes().fold(0xcbf29ce484222325u64, |acc, b| {
+        (acc ^ b as u64).wrapping_mul(0x100000001b3)
+    });
+    move || {
+        state = state.wrapping_add(0x9e3779b97f4a7c15);
+        let mut z = state;
+        z = (z ^ (z >> 30)).wrapping_mul(0xbf58476d1ce4e5b9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94d049bb133111eb);
+        z ^ (z >> 31)
+    }
+}
+
+/// HOP round trips on real games. Re-serialising byte-identically is the load-bearing part:
+/// it catches a different board that happens to hash the same.
+#[test]
+#[ignore = "needs MLP_GAMES_CSV"]
+fn hop_round_trips_across_the_corpus() {
+    use crate::hop::{from_position, parse, to_hash};
+
+    let limit: usize = env::var("GAME_LIMIT")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(usize::MAX);
+    let games = load("MLP_GAMES_CSV");
+
+    let (mut games_checked, mut checked) = (0usize, 0usize);
+    let mut failures: Vec<String> = Vec::new();
+
+    for row in games[1..].iter().take(limit) {
+        let nanoid = &row[0];
+        let Ok(history) = History::new_from_str(&row[3]) else {
+            continue;
+        };
+        if history.moves.is_empty() {
+            continue;
+        }
+
+        // Three random plies plus the last position of the game.
+        let mut next = sampler(nanoid);
+        let mut wanted: Vec<usize> = (0..3)
+            .map(|_| next() as usize % history.moves.len())
+            .collect();
+        wanted.push(history.moves.len() - 1);
+
+        let mut state = State::new(GameType::MLP, tournament_from(&history));
+        games_checked += 1;
+
+        for (ply, (piece, pos)) in history.moves.iter().enumerate() {
+            if state.play_turn_from_history(piece, pos).is_err() {
+                break;
+            }
+            if !wanted.contains(&ply) || state.board.played == 0 {
+                continue;
+            }
+            let to_move = if ply.is_multiple_of(2) {
+                Color::Black
+            } else {
+                Color::White
+            };
+
+            let hop = from_position(&state.board, state.game_type, to_move);
+            let restored = match parse(&hop) {
+                Ok(restored) => restored,
+                Err(e) => {
+                    failures.push(format!("{nanoid} ply {ply}: {hop}: does not parse: {e}"));
+                    continue;
+                }
+            };
+            checked += 1;
+
+            let expected = state.hashes[ply];
+            let actual = to_hash(&hop).expect("already parsed") as u64;
+            if actual != expected {
+                failures.push(format!(
+                    "{nanoid} ply {ply}: {hop}: hashed {actual}, played {expected}"
+                ));
+            }
+            let again = from_position(&restored.board, restored.game_type, restored.to_move);
+            if again != hop {
+                failures.push(format!(
+                    "{nanoid} ply {ply}: {hop} re-serialised as {again}"
+                ));
+            }
+            if restored.to_move != to_move || restored.game_type != state.game_type {
+                failures.push(format!(
+                    "{nanoid} ply {ply}: {hop}: got {:?}/{:?}",
+                    restored.game_type, restored.to_move
+                ));
+            }
+        }
+    }
+
+    println!(
+        "games: {games_checked}, round trips: {checked}, failures: {}",
+        failures.len()
+    );
+    for failure in failures.iter().take(10) {
+        println!("  {failure}");
+    }
+    assert!(
+        failures.is_empty(),
+        "{} HOP round trips failed",
+        failures.len()
+    );
+}

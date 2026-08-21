@@ -169,19 +169,24 @@ pub(super) fn HistoryRow(row: VisibleRow, value: Option<MoveDelta>) -> impl Into
             ""
         }
     };
+    // A HOP records no move count, so there is no absolute move one - number moves as offsets
+    // from the loaded position. Untracked: loading a HOP remounts every row anyway.
+    let hop_rooted = analysis.store.is_hop_rooted_untracked();
+    let turn_prefix = if hop_rooted { "+" } else { "" };
+    let root_label = if hop_rooted { "HOP" } else { "0." };
     let label = move || {
         value
             .as_ref()
             .map(|value| {
                 format!(
-                    "{}. {} {}{}",
+                    "{turn_prefix}{}. {} {}{}",
                     value.turn,
                     value.piece,
                     value.position,
                     rep()
                 )
             })
-            .unwrap_or_else(|| String::from("0."))
+            .unwrap_or_else(|| String::from(root_label))
     };
     let height = format!("{}px", super::history::ROW_HEIGHT);
     let padding = format!("{}px", row.indent.saturating_mul(16));

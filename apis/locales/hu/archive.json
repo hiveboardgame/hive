@@ -42,5 +42,8 @@
   "last_page": "Utolsó oldal",
   "permalink": "Közvetlen link",
   "no_games_found": "No games found.",
-  "loading_games": "Loading games..."
+  "loading_games": "Loading games...",
+  "position": "Pozíció (HOP vagy hash)",
+  "position_placeholder": "Illessz be egy HOP-ot vagy pozíció-hasht",
+  "copied": "Másolva!"
 }
