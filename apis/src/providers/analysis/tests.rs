@@ -2,7 +2,6 @@ use super::{
     context::{AnalysisContext, AnalysisPreviewSnapshot},
     document::{
         arena_from_wire,
-        root_hash,
         wire_nodes,
         AnalysisDocument,
         LoadError,
@@ -1207,11 +1206,7 @@ fn legacy_document_with_stale_hashes_loads_and_recomputes_them() {
         loaded.state.arena.node(NodeId(2)).unwrap().hash,
         Some(second)
     );
-    assert_eq!(
-        loaded.state.arena.node(NodeId::ROOT).unwrap().hash,
-        root_hash(None),
-        "the root is the empty board and hashes like one"
-    );
+    assert_eq!(loaded.state.arena.node(NodeId::ROOT).unwrap().hash, None);
 }
 
 /// The root's hash is derived from the start HOP, never trusted from the wire - stored root
@@ -1282,6 +1277,225 @@ fn versioned_start_hop_must_match_the_document_game_type() {
     );
 }
 
+/// A threefold at ply 6, then both sides place an Ant: a record that continued past a repetition.
+/// The final ply is not itself a repetition, so nothing here is a draw.
+fn continued_after_repetition() -> Vec<(String, String)> {
+    [
+        ("wQ", ""),
+        ("bQ", "wQ/"),
+        ("wQ", "bQ\\"),
+        ("bQ", "wQ/"),
+        ("wQ", "bQ\\"),
+        ("bQ", "wQ/"),
+        ("wA1", "-wQ"),
+        ("bA1", "bQ-"),
+    ]
+    .into_iter()
+    .map(|(piece, position)| (piece.to_string(), position.to_string()))
+    .collect()
+}
+
+/// The pure shuffle: ply 7 completes a threefold with nothing recorded after it - the game
+/// ended there, so wherever reconstruction hands this position out, it must be a draw.
+fn drawn_on_the_final_ply() -> Vec<(String, String)> {
+    [
+        ("wQ", ""),
+        ("bQ", "wQ/"),
+        ("wQ", "bQ\\"),
+        ("bQ", "wQ/"),
+        ("wQ", "bQ\\"),
+        ("bQ", "wQ/"),
+        ("wQ", "bQ\\"),
+    ]
+    .into_iter()
+    .map(|(piece, position)| (piece.to_string(), position.to_string()))
+    .collect()
+}
+
+fn document_for(loaded: &LoadedAnalysis) -> AnalysisDocument {
+    AnalysisDocument {
+        format: ANALYSIS_FORMAT.to_string(),
+        version: ANALYSIS_VERSION,
+        game_type: loaded.state.game_type,
+        root_id: loaded.state.arena.root,
+        selected_node_id: selected_node_from_path(&loaded.state.selected_path),
+        nodes: wire_nodes(&loaded.state.arena),
+        annotations: HashMap::new(),
+        start_hop: loaded.state.start_hop.clone(),
+    }
+}
+
+#[test]
+fn analysis_reconstructs_a_history_that_continues_past_a_repetition() {
+    let moves = continued_after_repetition();
+    let loaded = LoadedAnalysis::from_moves(GameType::Base, &moves, &[], 8)
+        .expect("a record that played on must still load");
+    assert_eq!(loaded.state.arena.nodes.len(), 9);
+
+    // The final ply is no repetition, so the position is open and play is live again.
+    let mut playable = loaded.playable;
+    assert_eq!(playable.turn, 8);
+    assert_eq!(playable.game_status, hive_lib::GameStatus::InProgress);
+    playable
+        .play_turn_from_history("wA2", "-wA1")
+        .expect("play continues from the reconstructed record");
+}
+
+/// The same record through the saved-document path: `validate` replays every branch itself.
+#[test]
+fn saved_document_with_a_continued_branch_loads() {
+    let moves = continued_after_repetition();
+    let loaded = LoadedAnalysis::from_moves(GameType::Base, &moves, &[], 8).unwrap();
+    let round_trip =
+        LoadedAnalysis::from_json(&serde_json::to_string(&document_for(&loaded)).unwrap())
+            .expect("a saved analysis that played on must still load");
+    assert_eq!(round_trip.state.arena.nodes.len(), 9);
+    assert_eq!(
+        round_trip.playable.game_status,
+        hive_lib::GameStatus::InProgress
+    );
+}
+
+/// The same record through `AnalysisArena::replay`, which every tree navigation uses.
+#[test]
+fn replay_walks_a_path_that_continues_past_a_repetition() {
+    let moves = continued_after_repetition();
+    let loaded = LoadedAnalysis::from_moves(GameType::Base, &moves, &[], 8).unwrap();
+    let selected = selected_node_from_path(&loaded.state.selected_path);
+    let path = loaded.state.arena.path_to(selected).unwrap();
+    let state = loaded
+        .state
+        .arena
+        .replay(&path, GameType::Base, &HashMap::new())
+        .expect("navigation must reach every recorded ply");
+    assert_eq!(state.turn, 8);
+    // The markers survive the trip even though the repetition sits mid-record.
+    assert_eq!(state.repeating_moves, vec![1, 3, 5]);
+}
+
+/// A UHP that continued past a repetition used to silently truncate at the draw.
+#[test]
+fn uhp_import_keeps_moves_past_a_repetition() {
+    let owner = Owner::new();
+    owner.with(|| {
+        let game_state = GameStateStore::new();
+        let store = AnalysisStore::new_blank(game_state, GameType::Base);
+        let uhp = r"Base;InProgress;White[5];wQ;bQ wQ/;wQ bQ\;bQ wQ/;wQ bQ\;bQ wQ/;wA1 -wQ;bA1 bQ-";
+        store.load_uhp(game_state, uhp, None).expect("valid UHP");
+        assert_eq!(
+            store.0.arena().with_untracked(|arena| arena.nodes.len()),
+            9,
+            "all eight plies load; nothing is truncated at the threefold"
+        );
+    });
+}
+
+/// A threefold with nothing recorded after it ended the game, so reloading must not reopen
+/// it. All three reconstruction paths agree.
+#[test]
+fn a_final_ply_threefold_reloads_as_drawn() {
+    let drawn = hive_lib::GameStatus::Finished(hive_lib::GameResult::Draw);
+    let moves = drawn_on_the_final_ply();
+
+    let loaded = LoadedAnalysis::from_moves(GameType::Base, &moves, &[], 7).unwrap();
+    assert_eq!(loaded.playable.game_status, drawn, "linear import");
+
+    let round_trip =
+        LoadedAnalysis::from_json(&serde_json::to_string(&document_for(&loaded)).unwrap()).unwrap();
+    assert_eq!(round_trip.playable.game_status, drawn, "saved document");
+
+    let selected = selected_node_from_path(&loaded.state.selected_path);
+    let path = loaded.state.arena.path_to(selected).unwrap();
+    let state = loaded
+        .state
+        .arena
+        .replay(&path, GameType::Base, &HashMap::new())
+        .unwrap();
+    assert_eq!(state.game_status, drawn, "navigation replay");
+}
+
+/// Stepping child-by-child is navigation of the record too: it must cross a grandfathered
+/// repetition instead of adjudicating mid-record and refusing the next recorded move.
+#[test]
+fn stepping_through_a_grandfathered_repetition_does_not_wedge() {
+    let owner = Owner::new();
+    owner.with(|| {
+        let game_state = GameStateStore::new();
+        let store = AnalysisStore::new_blank(game_state, GameType::Base);
+        let uhp = r"Base;InProgress;White[5];wQ;bQ wQ/;wQ bQ\;bQ wQ/;wQ bQ\;bQ wQ/;wA1 -wQ;bA1 bQ-";
+        store.load_uhp(game_state, uhp, Some(0)).expect("valid UHP");
+        assert_eq!(store.selected_node_id_untracked(), NodeId::ROOT);
+
+        for step in 1..=8_u64 {
+            assert!(
+                store.select_node(NodeId(step), game_state),
+                "stepping onto recorded node {step} must work"
+            );
+        }
+        assert_eq!(
+            game_state
+                .state()
+                .with_untracked(|state| state.game_status.clone()),
+            hive_lib::GameStatus::InProgress,
+            "the record continued, so nothing along it is adjudicated"
+        );
+    });
+}
+
+/// Checkpoints carry neither `repeating_moves` nor the plies before them, so a repetition buried
+/// in the checkpointed context used to lose its history markers when navigating beyond it.
+#[test]
+fn markers_survive_a_checkpoint_that_is_not_itself_repeated() {
+    let moves = continued_after_repetition();
+    let loaded = LoadedAnalysis::from_moves(GameType::Base, &moves, &[], 8).unwrap();
+
+    // A checkpoint at ply 7: after the repetition, on a position that never repeated.
+    let at_seven = LoadedAnalysis::from_moves(GameType::Base, &moves, &[], 7).unwrap();
+    let checkpoints = HashMap::from([(NodeId(7), PositionCheckpoint::capture(&at_seven.playable))]);
+
+    let path = loaded.state.arena.path_to(NodeId(8)).unwrap();
+    let state = loaded
+        .state
+        .arena
+        .replay(&path, GameType::Base, &checkpoints)
+        .expect("checkpointed navigation replays");
+    assert_eq!(
+        state.repeating_moves,
+        vec![1, 3, 5],
+        "the repetition markers come from the full hash sequence, not just the replayed tail"
+    );
+}
+
+/// The adjacent-step shortcut is only an optimisation: when it fails (here the state is already
+/// Finished) navigation must fall back to a full replay instead of wedging.
+#[test]
+fn stepping_falls_back_to_replay_when_the_current_state_is_finished() {
+    let owner = Owner::new();
+    owner.with(|| {
+        let game_state = GameStateStore::new();
+        let store = AnalysisStore::new_blank(game_state, GameType::Base);
+        let uhp = r"Base;InProgress;White[5];wQ;bQ wQ/;wQ bQ\;bQ wQ/;wQ bQ\;bQ wQ/;wA1 -wQ;bA1 bQ-";
+        store.load_uhp(game_state, uhp, Some(6)).expect("valid UHP");
+
+        // Live play can finish the state on a node the record continues past.
+        game_state.state().update(|state| {
+            state.game_status = hive_lib::GameStatus::Finished(hive_lib::GameResult::Draw);
+        });
+
+        assert!(
+            store.select_node(NodeId(7), game_state),
+            "the shortcut cannot play on a finished state; the replay fallback must"
+        );
+        assert_eq!(
+            game_state
+                .state()
+                .with_untracked(|state| state.game_status.clone()),
+            hive_lib::GameStatus::InProgress,
+            "the fallback reconstructed the record's own semantics"
+        );
+    });
+}
+
 /// Canonicalization can renumber pieces, so a continuation recorded against the input frame
 /// would point at a different piece on reload.
 #[test]
@@ -1341,4 +1555,134 @@ fn checkpoint_restore_keeps_the_queen_deadline() {
         .next()
         .unwrap();
     assert!(restored.play_turn_from_position(g2, spawn).is_err());
+}
+
+/// With the root counted, the second return home is a threefold; the draw must survive
+/// navigating away and back.
+#[test]
+fn hop_root_threefold_survives_navigation() {
+    use hive_lib::{GameResult, GameStatus};
+    let owner = Owner::new();
+    owner.with(|| {
+        // wA1 - wQ - bQ - bA1 in a row; the end ants swing out and home again.
+        let loaded = LoadedAnalysis::from_hop("AQqa,w").unwrap();
+        let game_state = GameStateStore::new();
+        game_state.reset_with_state(loaded.playable);
+        let store = AnalysisStore::new(loaded.state);
+        let wa: hive_lib::Piece = "wA1".parse().unwrap();
+        let wq: hive_lib::Piece = "wQ".parse().unwrap();
+        let ba: hive_lib::Piece = "bA1".parse().unwrap();
+        let bq: hive_lib::Piece = "bQ".parse().unwrap();
+        let pos = |piece: hive_lib::Piece| {
+            game_state
+                .state()
+                .with_untracked(|s| s.board.position_of_piece(piece).unwrap())
+        };
+        let play = |piece: hive_lib::Piece, target: hive_lib::Position| {
+            game_state.state().with_untracked(|s| {
+                let legal = s
+                    .board
+                    .moves(s.turn_color)
+                    .into_iter()
+                    .find(|((p, _), _)| *p == piece)
+                    .is_some_and(|(_, targets)| targets.contains(&target));
+                assert!(legal, "{piece} -> {target} must be legal");
+            });
+            let appended = game_state
+                .state()
+                .try_update(|state| {
+                    let prev = state.history.moves.len();
+                    state.play_turn_from_position(piece, target).unwrap();
+                    state.history.moves[prev..]
+                        .iter()
+                        .cloned()
+                        .zip(state.hashes[prev..].iter().copied())
+                        .collect::<Vec<_>>()
+                })
+                .unwrap();
+            store.append_moves(appended, game_state);
+        };
+        let (wa_home, ba_home) = (pos(wa), pos(ba));
+        // Opposite sides of the row, so the dances never touch - whatever orientation the
+        // canonical HOP frame loads in.
+        let side_cell = |own: hive_lib::Position, enemy: hive_lib::Position, north: bool| {
+            game_state.state().with_untracked(|s| {
+                let cells = own
+                    .positions_around()
+                    .filter(|c| !s.board.occupied(*c))
+                    .filter(|c| enemy.positions_around().all(|e| e != *c));
+                if north {
+                    cells.min_by_key(|c| (c.r, c.q)).unwrap()
+                } else {
+                    cells.max_by_key(|c| (c.r, c.q)).unwrap()
+                }
+            })
+        };
+        let wa_away = side_cell(pos(wq), pos(bq), true);
+        let ba_away = side_cell(pos(bq), pos(wq), false);
+        for _ in 0..2 {
+            play(wa, wa_away);
+            play(ba, ba_away);
+            play(wa, wa_home);
+            play(ba, ba_home);
+        }
+        assert_eq!(
+            game_state.state().with_untracked(|s| s.game_status.clone()),
+            GameStatus::Finished(GameResult::Draw),
+            "the second return to the root is a threefold, live",
+        );
+        let leaf = store.selected_node_id_untracked();
+        assert!(store.select_node(NodeId::ROOT, game_state));
+        assert!(store.select_node(leaf, game_state));
+        assert_eq!(
+            game_state.state().with_untracked(|s| s.game_status.clone()),
+            GameStatus::Finished(GameResult::Draw),
+            "the draw must survive navigating away and back",
+        );
+    });
+}
+
+/// Deleting the continuation turns the grandfathered repetition node into the line's end;
+/// the installed state must show the draw at once, not after the next navigation.
+#[test]
+fn deleting_past_a_threefold_adjudicates_the_new_leaf() {
+    use hive_lib::{Direction, GameResult, GameStatus, State};
+    let owner = Owner::new();
+    owner.with(|| {
+        // Record a 13-ply line: 4 placements, two out-and-home cycles returning to the ply-4
+        // position (threefold at ply 12, grandfathered), then one move past it.
+        let mut rec = State::new(GameType::MLP, false);
+        rec.set_replaying(true);
+        for (piece, position) in [("wQ", ""), ("bQ", "-wQ"), ("wA1", "wQ-"), ("bA1", "-bQ")] {
+            rec.play_turn_from_history(piece, position).unwrap();
+        }
+        let wa: hive_lib::Piece = "wA1".parse().unwrap();
+        let wq: hive_lib::Piece = "wQ".parse().unwrap();
+        let ba: hive_lib::Piece = "bA1".parse().unwrap();
+        let bq: hive_lib::Piece = "bQ".parse().unwrap();
+        let wa_home = rec.board.position_of_piece(wa).unwrap();
+        let ba_home = rec.board.position_of_piece(ba).unwrap();
+        let wa_away = rec.board.position_of_piece(wq).unwrap().to(Direction::NE);
+        let ba_away = rec.board.position_of_piece(bq).unwrap().to(Direction::SW);
+        for _ in 0..2 {
+            for (piece, target) in [(wa, wa_away), (ba, ba_away), (wa, wa_home), (ba, ba_home)] {
+                rec.play_turn_from_position(piece, target).unwrap();
+            }
+        }
+        rec.play_turn_from_position(wa, wa_away).unwrap();
+        let moves = rec.history.moves.clone();
+        assert_eq!(moves.len(), 13);
+
+        let loaded = LoadedAnalysis::from_moves(GameType::MLP, &moves, &[], 13).unwrap();
+        let game_state = GameStateStore::new();
+        game_state.reset_with_state(loaded.playable);
+        let store = AnalysisStore::new(loaded.state);
+        assert!(store.delete_subtree(NodeId(13), game_state));
+        assert_eq!(store.selected_node_id_untracked(), NodeId(12));
+        assert_eq!(
+            game_state.state().with_untracked(|s| s.game_status.clone()),
+            GameStatus::Finished(GameResult::Draw),
+            "the repetition node became the line's end; the installed state must show the draw",
+        );
+    });
 }

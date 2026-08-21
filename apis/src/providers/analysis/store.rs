@@ -20,7 +20,7 @@ use crate::{
     responses::GameResponse,
 };
 use hive_lib::{GameType, History, State};
-use leptos::{prelude::*, reactive::effect::batch};
+use leptos::{logging::log, prelude::*, reactive::effect::batch};
 use reactive_stores::Store;
 use std::{
     collections::{HashMap, HashSet},
@@ -45,10 +45,7 @@ pub(super) struct AnalysisState {
 
 impl AnalysisState {
     pub(super) fn blank(game_type: GameType) -> Self {
-        let mut arena = AnalysisArena::blank();
-        if let Some(node) = arena.nodes.get_mut(&arena.root) {
-            node.hash = super::document::root_hash(None);
-        }
+        let arena = AnalysisArena::blank();
         Self {
             visible_rows: Vec::new(),
             arena,
@@ -350,35 +347,50 @@ impl AnalysisStore {
                     .flatten()
             })
         });
+        // Best-effort optimisation: any failure falls through to the full replay below.
         if let Some(delta) = adjacent_delta {
-            let mut path = self.0.selected_path().get_untracked();
-            if path.last().copied() != Some(selected) {
-                return false;
-            }
-            path.push(node_id);
-            let rebuild_rows = self.selection_changes_visible_rows(&path);
-            let mut played = false;
-            batch(|| {
-                played = game_state
-                    .state()
-                    .try_update(|state| {
-                        state
-                            .play_turn_from_history(&delta.piece, &delta.position)
-                            .is_ok()
-                    })
-                    .unwrap_or(false);
+            let path = {
+                let mut path = self.0.selected_path().get_untracked();
+                (path.last().copied() == Some(selected)).then(|| {
+                    path.push(node_id);
+                    path
+                })
+            };
+            if let Some(path) = path {
+                let rebuild_rows = self.selection_changes_visible_rows(&path);
+                let child_is_leaf = self.0.arena().with_untracked(|arena| {
+                    arena
+                        .node(node_id)
+                        .is_none_or(|node| node.children.is_empty())
+                });
+                let mut played = false;
+                batch(|| {
+                    played = game_state
+                        .state()
+                        .try_update(|state| {
+                            // Walking the record must not re-referee it, or navigation wedges
+                            // on a grandfathered repetition; a leaf threefold stays a draw.
+                            let ok = state
+                                .replay_turns([(delta.piece.as_str(), delta.position.as_str())])
+                                .is_ok();
+                            if ok && child_is_leaf {
+                                state.finish_repetition_at_final_ply();
+                            }
+                            ok
+                        })
+                        .unwrap_or(false);
+                    if played {
+                        self.0.selected_path().set(path);
+                        game_state.move_info().update(|move_info| move_info.reset());
+                    }
+                });
                 if played {
-                    self.0.selected_path().set(path);
-                    game_state.move_info().update(|move_info| move_info.reset());
+                    if rebuild_rows {
+                        self.rebuild_visible_rows();
+                    }
+                    return true;
                 }
-            });
-            if !played {
-                return false;
             }
-            if rebuild_rows {
-                self.rebuild_visible_rows();
-            }
-            return true;
         }
         let Some((path, state)) = self.0.with_untracked(|analysis| {
             let path = analysis.arena.path_to(node_id)?;
@@ -410,10 +422,16 @@ impl AnalysisStore {
         if base_path.last().copied() != Some(base_selected) {
             return;
         }
-        let plan = self
-            .0
-            .with_untracked(|analysis| plan_append(analysis, &moves, base_selected, &base_path));
+        let plan = self.0.with_untracked(|analysis| {
+            plan_append(analysis, &moves, base_selected, &base_path, true).or_else(|| {
+                // The board has already committed these moves, so dropping them desyncs it
+                // from the tree; a duplicate line is the lesser evil.
+                log!("analysis append could not reuse a matching line; recording a new one");
+                plan_append(analysis, &moves, base_selected, &base_path, false)
+            })
+        });
         let Some(plan) = plan else {
+            log!("analysis append preflight failed; the played moves were not recorded");
             return;
         };
         let AppendPlan {
@@ -553,8 +571,18 @@ impl AnalysisStore {
                     checkpoints.remove(id);
                 }
             });
-            if let Some((replacement_id, path, state)) = replacement {
+            if let Some((replacement_id, path, mut state)) = replacement {
                 debug_assert_eq!(path.last().copied(), Some(replacement_id));
+                // The replacement was replayed before the removal, when it still had a child;
+                // if the deletion just made it the line's end, a threefold there is its end.
+                let now_a_leaf = self.0.arena().with_untracked(|arena| {
+                    arena
+                        .node(replacement_id)
+                        .is_none_or(|node| node.children.is_empty())
+                });
+                if now_a_leaf {
+                    state.finish_repetition_at_final_ply();
+                }
                 self.0.selected_path().set(path);
                 game_state.state().set(state);
                 game_state.move_info().update(|move_info| move_info.reset());
@@ -658,12 +686,14 @@ struct AppendPlan {
     normalized_state: Option<State>,
 }
 
-/// Reused matches carry a different lineage, so the board is normalized by replaying the path.
+/// `allow_shared` permits reuse whose lineage differs from the played moves, which needs a tree
+/// replay to normalize; off, only Exact children reuse, which can never fail to replay.
 fn plan_append(
     analysis: &AnalysisState,
     moves: &[((String, String), u64)],
     base_selected: NodeId,
     base_path: &[NodeId],
+    allow_shared: bool,
 ) -> Option<AppendPlan> {
     let arena = &analysis.arena;
     let mut selected = base_selected;
@@ -682,12 +712,16 @@ fn plan_append(
         };
         let id = match arena.matching_child(selected, &value, *hash) {
             Some(ChildMatch::Exact(id)) => id,
-            Some(ChildMatch::Canonical(id)) => {
+            Some(ChildMatch::Canonical(id)) if allow_shared => {
                 reused_other_lineage = true;
                 id
             }
+            Some(ChildMatch::Canonical(_)) => break,
             None => {
-                let Some(id) = arena.transposition(*hash, turn) else {
+                let Some(id) = allow_shared
+                    .then(|| arena.transposition(*hash, turn))
+                    .flatten()
+                else {
                     break;
                 };
                 path = arena.path_to(id)?;
@@ -711,8 +745,16 @@ fn plan_append(
     let mut normalized_state = None;
     if reused_other_lineage {
         let mut state = arena.replay(&path, analysis.game_type, &analysis.checkpoints)?;
-        for ((piece, position), _) in moves.iter().skip(matched_count) {
-            state.play_turn_from_history(piece, position).ok()?;
+        let remaining: Vec<(&str, &str)> = moves
+            .iter()
+            .skip(matched_count)
+            .map(|((piece, position), _)| (piece.as_str(), position.as_str()))
+            .collect();
+        if !remaining.is_empty() {
+            // Recorded moves, so replayed rather than re-refereed; the tail ends the recorded
+            // line, so a threefold there is its end.
+            state.replay_turns(remaining).ok()?;
+            state.finish_repetition_at_final_ply();
         }
         normalized_state = Some(state);
     }

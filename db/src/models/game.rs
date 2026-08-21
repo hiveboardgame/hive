@@ -63,6 +63,17 @@ fn compute_timeout_at(
     Some(last + chrono::Duration::nanoseconds(running_nanos))
 }
 
+/// `Repetition` only when the repetition is what ended it: replay records repetitions without
+/// adjudicating, so a grandfathered game can carry an earlier one and still end any other way.
+fn conclusion_for(status: &GameStatus, repeating_moves: &[usize], plies: usize) -> Conclusion {
+    let ended_by_repetition = hive_lib::threefold_on_final_ply(repeating_moves, plies);
+    match status {
+        GameStatus::Finished(GameResult::Draw) if ended_by_repetition => Conclusion::Repetition,
+        GameStatus::Finished(GameResult::Draw | GameResult::Winner(_)) => Conclusion::Board,
+        _ => Conclusion::Unknown,
+    }
+}
+
 #[derive(Debug)]
 struct TimeInfo {
     white_time_left: Option<i64>,
@@ -782,13 +793,11 @@ impl Game {
             String::new()
         };
 
-        let mut new_conclusion = match &time_info.new_game_status {
-            GameStatus::Finished(GameResult::Draw | GameResult::Winner(_)) => Conclusion::Board,
-            _ => Conclusion::Unknown,
-        };
-        if state.repeating_moves.len() > 2 {
-            new_conclusion = Conclusion::Repetition;
-        }
+        let new_conclusion = conclusion_for(
+            &time_info.new_game_status,
+            &state.repeating_moves,
+            state.hashes.len(),
+        );
 
         let next_player = if state.turn.is_multiple_of(2) {
             self.white_id
@@ -1629,5 +1638,66 @@ impl Game {
             .execute(conn)
             .await?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::conclusion_for;
+    use hive_lib::{Color, GameResult, GameStatus};
+    use shared_types::Conclusion;
+
+    /// The final occurrence is the final ply (index 33 of 34), so the repetition ended the game.
+    #[test]
+    fn a_threefold_draw_concludes_as_a_repetition() {
+        assert_eq!(
+            conclusion_for(&GameStatus::Finished(GameResult::Draw), &[25, 29, 33], 34),
+            Conclusion::Repetition
+        );
+    }
+
+    /// The regression: replay populates `repeating_moves` without adjudicating, so a suppressed
+    /// earlier repetition must not relabel a game that actually ended some other way.
+    #[test]
+    fn an_earlier_repetition_does_not_relabel_a_win() {
+        assert_eq!(
+            conclusion_for(
+                &GameStatus::Finished(GameResult::Winner(Color::White)),
+                &[25, 29, 33],
+                60
+            ),
+            Conclusion::Board
+        );
+    }
+
+    /// The subtler half: a draw can also be a Board conclusion (both Queens surrounded), so
+    /// `Draw` plus a repetition in the list is still not enough.
+    #[test]
+    fn an_earlier_repetition_does_not_relabel_a_board_draw() {
+        assert_eq!(
+            conclusion_for(&GameStatus::Finished(GameResult::Draw), &[25, 29, 33], 60),
+            Conclusion::Board
+        );
+    }
+
+    #[test]
+    fn a_draw_that_was_not_a_repetition_is_still_a_board_result() {
+        assert_eq!(
+            conclusion_for(&GameStatus::Finished(GameResult::Draw), &[], 40),
+            Conclusion::Board
+        );
+        // Two occurrences is not a threefold, even ending on the repeated position.
+        assert_eq!(
+            conclusion_for(&GameStatus::Finished(GameResult::Draw), &[10, 14], 15),
+            Conclusion::Board
+        );
+    }
+
+    #[test]
+    fn an_unfinished_game_has_no_conclusion() {
+        assert_eq!(
+            conclusion_for(&GameStatus::InProgress, &[25, 29, 33], 34),
+            Conclusion::Unknown
+        );
     }
 }
