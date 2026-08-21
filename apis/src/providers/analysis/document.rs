@@ -129,6 +129,7 @@ impl LoadedAnalysis {
         let mut arena = AnalysisArena::blank();
         let mut checkpoints = HashMap::new();
         let mut parent = NodeId::ROOT;
+        let mut game_line = vec![NodeId::ROOT];
         let mut current_state = State::new(game_type, false);
         let mut selected = (selected_count == 0).then_some(NodeId::ROOT);
         let mut playable = None;
@@ -171,6 +172,7 @@ impl LoadedAnalysis {
                 checkpoints.insert(id, PositionCheckpoint::capture(&current_state));
             }
             parent = id;
+            game_line.push(id);
             valid_count = depth;
             if depth == selected_count {
                 selected = Some(id);
@@ -207,6 +209,7 @@ impl LoadedAnalysis {
             game_type,
             annotations: HashMap::new(),
             document_generation: 0,
+            game_line,
         };
         state.rebuild_visible_rows();
         Ok(Self { state, playable })
@@ -475,6 +478,8 @@ impl LoadedAnalysis {
             game_type,
             annotations,
             document_generation: 0,
+            // Documents carry no import provenance, so `?move=N` uses the first-child walk.
+            game_line: Vec::new(),
         };
         state.rebuild_visible_rows();
         Ok(Self {

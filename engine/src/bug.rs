@@ -529,6 +529,17 @@ impl Bug {
         Bug::crawl(position, board)
     }
 
+    /// For [`Board::set_stunned`]: proximity alone is no restriction - an ability piece with
+    /// nowhere to throw to, or a pinned/gated neighbour, removes no move.
+    pub(crate) fn could_throw_ignoring_last_moved(
+        ability: Position,
+        thrown: Position,
+        board: &Board,
+    ) -> bool {
+        Bug::pillbug_throw_targets(ability, board).next().is_some()
+            && Bug::pillbug_throw_sources(ability, board).any(|source| source == thrown)
+    }
+
     fn pillbug_throw_targets(
         position: Position,
         board: &Board,

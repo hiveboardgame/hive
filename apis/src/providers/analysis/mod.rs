@@ -6,7 +6,7 @@ mod tests;
 mod tree;
 mod view;
 
-pub use context::AnalysisContext;
+pub use context::{AnalysisContext, AnalysisPreviewSnapshot};
 pub use document::LoadError;
 pub use store::AnalysisStore;
 pub use tree::{MoveDelta, NodeId};

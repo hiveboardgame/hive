@@ -3,7 +3,7 @@ use crate::{
     components::atoms::{bug_tile::BugTile, rating::icon_for_speed},
     functions::opening_explorer::opening_explorer,
     providers::{
-        analysis::{AnalysisContext, NodeId},
+        analysis::{AnalysisContext, AnalysisPreviewSnapshot},
         game_state::{GameStateStore, GameStateStoreFields},
         ApiRequestsProvider,
     },
@@ -76,29 +76,6 @@ struct RowHandlers {
     white_to_move: bool,
 }
 
-#[derive(Clone)]
-pub struct AnalysisPreviewSnapshot {
-    node_id: NodeId,
-    state: State,
-}
-
-pub fn reset_analysis_preview(
-    preview_snapshot: RwSignal<Option<AnalysisPreviewSnapshot>>,
-    analysis: AnalysisContext,
-    game_state: GameStateStore,
-) {
-    let Some(snapshot) = preview_snapshot.try_update(Option::take).flatten() else {
-        return;
-    };
-
-    if analysis.store.selected_node_id_untracked() == snapshot.node_id {
-        batch(|| {
-            game_state.state().set(snapshot.state);
-            game_state.move_info().update(|move_info| move_info.reset());
-        });
-    }
-}
-
 /// White/draw/black result bar for an aggregated position.
 #[component]
 fn ResultBar(white: i64, draws: i64, black: i64, total: i64) -> impl IntoView {
@@ -127,12 +104,11 @@ fn ResultBar(white: i64, draws: i64, black: i64, total: i64) -> impl IntoView {
 }
 
 #[component]
-pub fn OpeningExplorer(
-    preview_snapshot: RwSignal<Option<AnalysisPreviewSnapshot>>,
-) -> impl IntoView {
+pub fn OpeningExplorer() -> impl IntoView {
     let analysis = expect_context::<AnalysisContext>();
     let game_state = expect_context::<GameStateStore>();
     let api = expect_context::<ApiRequestsProvider>().0;
+    let preview_snapshot = analysis.preview;
 
     let game_type = analysis.store.game_type_untracked();
     let filters = RwSignal::new(ExplorerFilters::new(game_type));
@@ -152,17 +128,22 @@ pub fn OpeningExplorer(
     );
 
     let reset_preview = Callback::new(move |_: ()| {
-        reset_analysis_preview(preview_snapshot, analysis, game_state);
+        analysis.reset_preview(game_state);
     });
 
     // Preview a suggested move: apply it to the real position and show it on the board/reserve.
     let preview_move = Callback::new(move |(piece, position): (Piece, Position)| {
-        let base = match preview_snapshot.get_untracked() {
+        let generation = analysis.store.document_generation_untracked();
+        let live = preview_snapshot
+            .get_untracked()
+            .filter(|snapshot| snapshot.generation == generation);
+        let base = match live {
             Some(snapshot) => snapshot.state,
             None => {
                 let snap = AnalysisPreviewSnapshot {
                     node_id: analysis.store.selected_node_id_untracked(),
                     state: game_state.state().get_untracked(),
+                    generation,
                 };
                 preview_snapshot.set(Some(snap.clone()));
                 snap.state
@@ -180,7 +161,7 @@ pub fn OpeningExplorer(
     // Play a suggested move. First undo any active preview so we commit from the real position
     // (the board is showing the previewed state while hovered), then play it the normal way.
     let play_move = Callback::new(move |(piece, position): (Piece, Position)| {
-        reset_analysis_preview(preview_snapshot, analysis, game_state);
+        analysis.reset_preview(game_state);
         game_state.move_info().update(|move_info| {
             move_info.active = Some((piece, PieceType::Move));
             move_info.target_position = Some(position);

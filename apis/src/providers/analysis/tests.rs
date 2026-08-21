@@ -1,4 +1,5 @@
 use super::{
+    context::{AnalysisContext, AnalysisPreviewSnapshot},
     document::{
         arena_from_wire,
         wire_nodes,
@@ -17,7 +18,7 @@ use crate::providers::{
     annotations::AnnotationSet,
     game_state::{GameStateStore, GameStateStoreFields},
 };
-use hive_lib::{Color, GameType, State};
+use hive_lib::{Color, GameResult, GameStatus, GameType, State};
 use leptos::prelude::*;
 use std::collections::{HashMap, HashSet};
 
@@ -335,6 +336,290 @@ fn hash_equivalent_child_restores_the_existing_orientation() {
         assert!(store.select_node(child, game_state));
         game_state.state().with_untracked(|state| {
             assert_eq!(state.history.moves, existing_moves);
+        });
+    });
+}
+
+/// Convergence is tree-wide: equal depth and equal hash, not just a sibling.
+
+/// From TbkRypoWaw ply 56, which supplies a real four-ply cycle. The two-ply `m` commutes with
+/// it, so `[m, cycle]` and `[cycle, m]` reach one position at one depth, having passed through
+/// it twice and once.
+const TRANSPOSITION_PREFIX: &str = r"wL ;bL wL-;wM -wL;bM bL-;wA1 wM\;bQ \bM;wQ /wM;bA1 bL\;wA2 \wL;bP bQ/;wA2 bA1\;bA2 bP-;wP \wQ;bA3 \bP;wA1 -bA3;bG1 \bA2;wA3 wM\;bA2 wA3\;wM bM-;bS1 bG1\;wB1 wM\;bA2 wB1\;wB2 \wA3;bG1 bP\;wB2 wL;bS1 bA2/;wG1 \wA3;bA2 wA3\;wG1 \bS1;bB1 /bA2;wB1 wM;bM wB1;wB2 bL;bB1 wQ\;wG2 \wA3;bB1 wQ;wP -bB1;bB1 wP;wB2 bQ;bS2 bA2\;wG2 bS2\;bG2 /bB1;wS1 /wA1;bG2 \wQ;wS1 \bA3;bS1 wA2-;wS2 \wA1;bS1 wG1\;wA1 bS1\;bG2 wQ\;wS2 \bL;bG2 \wQ;wB2 bP;bG3 /bA2;wA1 /bG3;bS1 wA2-";
+const TRANSPOSITION_CYCLE: &str = r"wA1 -bG3;bG2 wQ\;wA1 /bG3;bG2 \wQ";
+const TRANSPOSITION_M: &str = r"wB2 bA3;bM bG1";
+
+fn plies(text: &str) -> Vec<(String, String)> {
+    text.split_terminator(';')
+        .map(|mov| {
+            let (piece, position) = mov.split_once(' ').expect("piece and position");
+            (piece.to_string(), position.to_string())
+        })
+        .collect()
+}
+
+#[test]
+fn a_transposed_line_counts_only_its_own_visits() {
+    let owner = Owner::new();
+    owner.with(|| {
+        let prefix = plies(TRANSPOSITION_PREFIX);
+        let cycle = plies(TRANSPOSITION_CYCLE);
+        let m = plies(TRANSPOSITION_M);
+
+        let mut line_a = prefix.clone();
+        line_a.extend(m.iter().cloned());
+        line_a.extend(cycle.iter().cloned());
+        let loaded = LoadedAnalysis::from_moves(GameType::MLP, &line_a, &[], prefix.len()).unwrap();
+        let game_state = GameStateStore::new();
+        game_state.reset_with_state(loaded.playable);
+        let store = AnalysisStore::new(loaded.state);
+
+        let play = |moves: &[(String, String)]| {
+            for (piece, position) in moves {
+                let hash = game_state
+                    .state()
+                    .try_update(|state| {
+                        state.play_turn_from_history(piece, position).unwrap();
+                        state.hashes.last().copied().unwrap()
+                    })
+                    .unwrap();
+                store.append_moves(vec![((piece.clone(), position.clone()), hash)], game_state);
+            }
+        };
+
+        // Line B off the same ancestor, arriving at the position line A already holds.
+        play(&cycle);
+        play(&m);
+        play(&cycle);
+        game_state.state().with_untracked(|state| {
+            let position = *state.hashes.last().expect("a position was reached");
+            assert_eq!(
+                state.hashes_count.get(&position),
+                Some(&2),
+                "line B has been here twice; line A's extra visit is not its own"
+            );
+            assert_eq!(state.game_status, GameStatus::InProgress);
+        });
+
+        // A third visit is a threefold on anyone's count.
+        play(&cycle);
+        game_state.state().with_untracked(|state| {
+            let position = *state.hashes.last().expect("a position was reached");
+            assert_eq!(state.hashes_count.get(&position), Some(&3));
+            assert_eq!(state.game_status, GameStatus::Finished(GameResult::Draw));
+        });
+    });
+}
+
+/// Sharing the node would hand this line the other one's hash history, and every repetition
+/// count is read off that history - a threefold here is not a threefold there.
+#[test]
+fn transposed_move_order_records_its_own_branch() {
+    let owner = Owner::new();
+    owner.with(|| {
+        // Two arms off the queen: the east ant and the north-east grasshopper commute, so the
+        // two orders share plies 1-2 and 5, and differ at plies 3-4.
+        let line_a = [
+            ("wQ", ""),
+            ("bQ", "-wQ"),
+            ("wA1", "wQ-"),
+            ("bA1", "-bQ"),
+            ("wG1", "wQ/"),
+        ];
+        let line_b = [
+            ("wQ", ""),
+            ("bQ", "-wQ"),
+            ("wG1", "wQ/"),
+            ("bA1", "-bQ"),
+            ("wA1", "wQ-"),
+        ];
+        let moves_a: Vec<(String, String)> = line_a
+            .iter()
+            .map(|(piece, position)| (piece.to_string(), position.to_string()))
+            .collect();
+        let loaded = LoadedAnalysis::from_moves(GameType::MLP, &moves_a, &[], 0).unwrap();
+        let convergence_target = NodeId(5);
+        let node_count = loaded.state.arena.nodes.len();
+        let game_state = GameStateStore::new();
+        game_state.reset_with_state(loaded.playable);
+        let store = AnalysisStore::new(loaded.state);
+
+        let mut played_hashes = Vec::new();
+        for (piece, position) in line_b {
+            let hash = game_state
+                .state()
+                .try_update(|state| {
+                    state.play_turn_from_history(piece, position).unwrap();
+                    state.hashes.last().copied().unwrap()
+                })
+                .unwrap();
+            played_hashes.push(hash);
+            store.append_moves(
+                vec![((piece.to_string(), position.to_string()), hash)],
+                game_state,
+            );
+        }
+
+        // All three divergent plies became real nodes, ply 5 included.
+        assert_eq!(
+            store.0.selected_path().get_untracked(),
+            vec![
+                NodeId(0),
+                NodeId(1),
+                NodeId(2),
+                NodeId(6),
+                NodeId(7),
+                NodeId(8)
+            ],
+        );
+        store.0.arena().with_untracked(|arena| {
+            assert_eq!(arena.nodes.len(), node_count + 3);
+            // The transposition is still recognised - the two ply-5 nodes are the same
+            // position - it just no longer collapses the two lineages onto one node.
+            assert_eq!(
+                arena.node(convergence_target).unwrap().hash,
+                arena.node(NodeId(8)).unwrap().hash,
+            );
+        });
+        game_state.state().with_untracked(|state| {
+            assert_eq!(state.hashes, played_hashes);
+        });
+    });
+}
+
+/// Promotion reorders children, but `?move=N` still resolves through the imported line.
+#[test]
+fn select_main_ply_resolves_through_the_imported_game_after_promotion() {
+    let owner = Owner::new();
+    owner.with(|| {
+        let moves: Vec<(String, String)> =
+            [("wQ", ""), ("bQ", "-wQ"), ("wA1", "wQ-"), ("bA1", "-bQ")]
+                .iter()
+                .map(|(piece, position)| (piece.to_string(), position.to_string()))
+                .collect();
+        let loaded = LoadedAnalysis::from_moves(GameType::MLP, &moves, &[], 4).unwrap();
+        let game_state = GameStateStore::new();
+        game_state.reset_with_state(loaded.playable);
+        let store = AnalysisStore::new(loaded.state);
+
+        // Branch a variation at ply 2 and promote it to the main line.
+        assert!(store.select_node(NodeId(2), game_state));
+        let hash = game_state
+            .state()
+            .try_update(|state| {
+                state.play_turn_from_history("wG1", "wQ/").unwrap();
+                state.hashes.last().copied().unwrap()
+            })
+            .unwrap();
+        store.append_moves(
+            vec![(("wG1".to_string(), "wQ/".to_string()), hash)],
+            game_state,
+        );
+        let variation = store.selected_node_id_untracked();
+        assert_ne!(variation, NodeId(3));
+        store.promote_current_variation(true);
+        store.0.arena().with_untracked(|arena| {
+            assert_eq!(
+                arena.node(NodeId(2)).unwrap().children.first().copied(),
+                Some(variation),
+                "the variation now leads the first-child chain",
+            );
+        });
+
+        assert!(store.select_main_ply(Some(3), game_state));
+        assert_eq!(
+            store.selected_node_id_untracked(),
+            NodeId(3),
+            "?move=3 is the game's third ply, not the promoted variation",
+        );
+        assert!(store.select_main_ply(None, game_state));
+        assert_eq!(store.selected_node_id_untracked(), NodeId(4));
+    });
+}
+
+/// An orphaned preview must be undone by the next navigation, never trusted as state.
+#[test]
+fn navigation_undoes_an_orphaned_explorer_preview() {
+    let owner = Owner::new();
+    owner.with(|| {
+        let moves: Vec<(String, String)> = [("wQ", ""), ("bQ", "-wQ")]
+            .iter()
+            .map(|(piece, position)| (piece.to_string(), position.to_string()))
+            .collect();
+        let loaded = LoadedAnalysis::from_moves(GameType::MLP, &moves, &[], 1).unwrap();
+        let game_state = GameStateStore::new();
+        game_state.reset_with_state(loaded.playable);
+        let store = AnalysisStore::new(loaded.state);
+        let analysis = AnalysisContext::new(
+            store,
+            Callback::new(|_| {}),
+            Callback::new(|_| {}),
+            Callback::new(|_| {}),
+        );
+
+        let real = game_state.state().get_untracked();
+        analysis.preview.set(Some(AnalysisPreviewSnapshot {
+            node_id: store.selected_node_id_untracked(),
+            state: real,
+            generation: store.document_generation_untracked(),
+        }));
+        game_state
+            .state()
+            .update(|state| state.play_turn_from_history("bA1", "wQ-").unwrap());
+
+        // The fast path applies the recorded delta, so without the reset it bakes in the preview.
+        assert!(analysis.select_node(NodeId(2), game_state));
+        game_state.state().with_untracked(|state| {
+            assert_eq!(state.history.moves, moves);
+        });
+    });
+}
+
+#[test]
+fn a_preview_from_the_previous_document_is_never_restored() {
+    let owner = Owner::new();
+    owner.with(|| {
+        let moves: Vec<(String, String)> = [("wQ", ""), ("bQ", "-wQ")]
+            .iter()
+            .map(|(piece, position)| (piece.to_string(), position.to_string()))
+            .collect();
+        let first = LoadedAnalysis::from_moves(GameType::MLP, &moves, &[], 2).unwrap();
+        let game_state = GameStateStore::new();
+        game_state.reset_with_state(first.playable);
+        let store = AnalysisStore::new(first.state);
+        let analysis = AnalysisContext::new(
+            store,
+            Callback::new(|_| {}),
+            Callback::new(|_| {}),
+            Callback::new(|_| {}),
+        );
+
+        // Hovering an explorer row snapshots the real state; the row then unmounts silently.
+        analysis.preview.set(Some(AnalysisPreviewSnapshot {
+            node_id: store.selected_node_id_untracked(),
+            state: game_state.state().get_untracked(),
+            generation: store.document_generation_untracked(),
+        }));
+
+        let other: Vec<(String, String)> = [("wS1", ""), ("bS1", "-wS1")]
+            .iter()
+            .map(|(piece, position)| (piece.to_string(), position.to_string()))
+            .collect();
+        let second = LoadedAnalysis::from_moves(GameType::MLP, &other, &[], 2).unwrap();
+        let json = AnalysisStore::new(second.state).to_json().unwrap();
+        store.load_json(game_state, &json).unwrap();
+        assert_eq!(
+            store.selected_node_id_untracked(),
+            NodeId(2),
+            "the id must collide, or the test proves nothing"
+        );
+
+        analysis.reset_preview(game_state);
+        game_state.state().with_untracked(|state| {
+            assert_eq!(
+                state.history.moves, other,
+                "restored the old document's state"
+            );
         });
     });
 }

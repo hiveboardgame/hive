@@ -36,6 +36,12 @@ impl FromStr for Piece {
                         order = ord;
                     }
                 }
+                if order > 3 {
+                    return Err(GameError::ParsingError {
+                        found: s.to_string(),
+                        typ: "piece".to_string(),
+                    });
+                }
                 match bug {
                     Bug::Ant | Bug::Beetle | Bug::Grasshopper | Bug::Spider if order == 0 => {
                         return Err(GameError::ParsingError {
@@ -93,6 +99,14 @@ impl fmt::Display for Piece {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A forged identifier like `wA9` must error, not panic the bitfield constructor.
+    #[test]
+    fn out_of_range_orders_error_instead_of_panicking() {
+        for forged in ["wA9", "bG4", "wS8", "bB7"] {
+            assert!(forged.parse::<Piece>().is_err(), "{forged} must not parse");
+        }
+    }
 
     #[test]
     fn test_piece_order() {

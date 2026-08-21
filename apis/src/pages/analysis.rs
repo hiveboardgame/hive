@@ -5,10 +5,8 @@ use crate::{
         molecules::{game_info::GameInfo, user_with_rating::UserWithRating},
         organisms::{
             analysis::{
-                reset_analysis_preview,
                 AnalysisMobileHistoryControls,
                 AnalysisMobileTabs,
-                AnalysisPreviewSnapshot,
                 AnalysisSidebar,
                 GameDetailsPanel,
                 VariationList,
@@ -104,7 +102,6 @@ pub fn Analysis() -> impl IntoView {
     });
     let uhp_string = Memo::new(move |_| queries.get().get("uhp"));
     let vertical = expect_context::<OrientationSignal>().orientation_vertical;
-    let preview_snapshot = RwSignal::new(None::<AnalysisPreviewSnapshot>);
     let state = game_state.state();
     let turn_color = Memo::new(move |_| state.with(|state| state.turn_color));
     let mobile_bottom_color = RwSignal::new(turn_color.get_untracked());
@@ -168,9 +165,7 @@ pub fn Analysis() -> impl IntoView {
     provide_context(AnnotationsSignal::analysis(analysis));
     let hiveground_interaction = analysis_hiveground_interaction();
 
-    use_analysis_history_keyboard_navigation(analysis, move || {
-        reset_analysis_preview(preview_snapshot, analysis, game_state);
-    });
+    use_analysis_history_keyboard_navigation(analysis);
 
     let game_response = game_state.game_response();
     let has_game_response = Memo::new(move |_| game_response.with(Option::is_some));
@@ -266,7 +261,7 @@ pub fn Analysis() -> impl IntoView {
     let complete_load = Callback::new(
         move |(source, result): (AnalysisSource, Result<(), String>)| match result {
             Ok(()) => {
-                preview_snapshot.set(None);
+                analysis.preview.set(None);
                 analysis.sync_reserve_from_game_state(game_state);
                 load_state.set(AnalysisLoadState::Ready(source));
             }
@@ -297,7 +292,7 @@ pub fn Analysis() -> impl IntoView {
             let is_ready = requested_source
                 .with_untracked(|source| load_state.with_untracked(|state| state.is_ready(source)));
             if is_ready {
-                reset_analysis_preview(preview_snapshot, analysis, game_state);
+                analysis.reset_preview(game_state);
                 if analysis_store.select_main_ply(*ply, game_state) {
                     analysis.sync_reserve_from_game_state(game_state);
                 }
@@ -454,7 +449,6 @@ pub fn Analysis() -> impl IntoView {
                                                 <AnalysisSidebar
                                                     interaction=hiveground_interaction
                                                     history_board
-                                                    preview_snapshot
                                                 />
                                             </div>
                                         }
@@ -473,7 +467,6 @@ pub fn Analysis() -> impl IntoView {
                                     <AnalysisMobileTabs
                                         interaction=hiveground_interaction
                                         history_board
-                                        preview_snapshot
                                     />
                                 </Show>
                             }
