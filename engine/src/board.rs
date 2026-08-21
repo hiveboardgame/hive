@@ -968,33 +968,29 @@ impl Board {
     /// Stun only when the restriction removes a legal move - it feeds the hash, and a vacuous
     /// stun splits identical positions. `mover` != `piece.color()` when a Pillbug throws.
     pub fn set_stunned(&mut self, position: Position, piece: Piece, spawn: bool, mover: Color) {
-        // A spawn never touches an enemy piece: at Black's first placement White's lone piece
-        // cannot be both the Pillbug and the Queen needed to move it.
+        // A spawn never touches an enemy piece.
         if spawn {
             self.stunned = None;
             return;
         }
-        // A stacked piece cannot be thrown (the Pillbug only moves unstacked pieces) and cannot
-        // be the piece just thrown, since a throw lands on an empty cell.
+        // Stacked pieces cannot be thrown, and a throw lands on empty cells.
         if self.level(position) > 1 {
             self.stunned = None;
             return;
         }
-        // A decided game has no moves left to restrict, and identical final positions must not
-        // hash apart. Threefolds end at State level, invisible here.
+        // A decided game has no moves left to restrict (threefolds end at State level).
         if self.game_result() != GameResult::Unknown {
             self.stunned = None;
             return;
         }
         let opponent = mover.opposite_color();
-        // No board moves (or throws) before the Queen is down, so nothing to restrict.
+        // No board moves before the Queen is down.
         if !self.queen_played(opponent) {
             self.stunned = None;
             return;
         }
 
-        // A thrown opponent piece may not act at all, so movement and ability are separate
-        // losses and have to be asked separately.
+        // A thrown opponent piece may not act at all, so movement and ability are separate losses.
         let is_the_opponents_piece = piece.color() == opponent;
         let loses_its_own_move =
             is_the_opponents_piece && !self.is_pinned(piece) && Bug::has_move(position, self);
@@ -2054,5 +2050,27 @@ mod tests {
                 .unwrap_or_else(|err| panic!("ply {ply}: {err}"));
         }
         assert_eq!(state.hashes.len(), history.moves.len());
+    }
+    /// Replay has to apply every recorded move even though the engine now finds the repetition
+    /// mid-game, otherwise the game can't be loaded at all.
+    #[test]
+    fn a_recorded_game_replays_whole_even_if_it_repeats() {
+        let history =
+            History::from_filepath("./test_pgns/regressions/missed_repetition.pgn".into())
+                .expect("valid PGN");
+        let state = State::new_from_history(&history).expect("a record must always reconstruct");
+
+        assert_eq!(
+            state.turn,
+            history.moves.len(),
+            "every recorded move should have been applied"
+        );
+        assert_eq!(
+            state.game_status,
+            GameStatus::Finished(GameResult::Winner(Color::White)),
+            "the recorded result stands"
+        );
+        // The repetition is still noticed, it just does not overrule what was played.
+        assert_eq!(state.repeating_moves, vec![25, 29, 33]);
     }
 }

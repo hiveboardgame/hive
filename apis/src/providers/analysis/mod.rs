@@ -1,5 +1,7 @@
 mod context;
 mod document;
+#[cfg(test)]
+mod fuzz_tests;
 mod store;
 #[cfg(test)]
 mod tests;
