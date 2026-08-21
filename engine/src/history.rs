@@ -67,8 +67,11 @@ impl History {
         }
     }
 
-    pub fn new_from_str(moves: &str) -> Result<Self, GameError> {
-        let mut history = History::new();
+    pub fn new_from_str(moves: &str, game_type: GameType) -> Result<Self, GameError> {
+        let mut history = History {
+            game_type,
+            ..History::new()
+        };
         if moves.is_empty() {
             return Ok(history);
         }

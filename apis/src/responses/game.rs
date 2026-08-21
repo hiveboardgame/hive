@@ -228,8 +228,7 @@ impl GameResponse {
     }
 
     pub async fn from_model(game: &Game, conn: &mut DbConn<'_>) -> Result<Self> {
-        let history = Box::new(History::new_from_str(&game.history)?);
-        let state = Box::new(State::new_from_history(&history)?);
+        let state = Box::new(State::new_from_str(&game.history, &game.game_type)?);
         GameResponse::new_from(game, state, conn).await
     }
 
@@ -284,8 +283,7 @@ impl GameResponse {
 
             let tournament = game.tournament_id.and_then(|tid| tournaments_map.get(&tid));
 
-            let history = Box::new(History::new_from_str(&game.history)?);
-            let state = Box::new(State::new_from_history(&history)?);
+            let state = Box::new(State::new_from_str(&game.history, &game.game_type)?);
 
             result.push(Self::new_from_batch(&game, state, white_player, black_player, tournament.cloned()).await?);
         }

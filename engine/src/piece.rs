@@ -10,9 +10,8 @@ pub struct Piece {
     pub color: Color,
     #[bits(3)]
     pub bug: Bug,
-    /// order is the numeric value of the piece when represented
-    /// in Universal Hive Protocol for example "wB2" has order 1 but
-    /// "wQ" has order 0
+    /// The UHP number: `wB2` has order 2, `wQ` has order 0. Ordered bugs number from 1, so 0
+    /// means "no number", not "the first one".
     #[bits(2)]
     pub order: usize,
     #[bits(1)]
@@ -84,6 +83,15 @@ impl Piece {
     pub fn is_color(&self, color: Color) -> bool {
         color == self.color()
     }
+
+    /// `Piece` deserializes from a raw byte, so the wire can spell an order-zero Ant or a set
+    /// padding bit - neither of which is a piece.
+    pub fn is_well_formed(&self) -> bool {
+        if self.invalid() || (self.bug().has_order() && self.order() == 0) {
+            return false;
+        }
+        u8::from(*self) == u8::from(Piece::new_from(self.bug(), self.color(), self.order()))
+    }
 }
 
 impl fmt::Display for Piece {
@@ -106,6 +114,30 @@ mod tests {
         for forged in ["wA9", "bG4", "wS8", "bB7"] {
             assert!(forged.parse::<Piece>().is_err(), "{forged} must not parse");
         }
+    }
+
+    /// A piece that cannot be re-read makes the recorded game unreplayable.
+    #[test]
+    fn every_well_formed_piece_survives_a_round_trip() {
+        let mut checked = 0;
+        for raw in 0u8..=255 {
+            let piece = Piece::from(raw);
+            if !piece.is_well_formed() {
+                continue;
+            }
+            checked += 1;
+            let text = piece.to_string();
+            assert_eq!(
+                text.parse::<Piece>().ok(),
+                Some(piece),
+                "{raw:#04x} renders as {text}, which does not parse back"
+            );
+        }
+        assert_eq!(
+            checked,
+            2 * (4 * 3 + 4),
+            "wrong number of legal identifiers"
+        );
     }
 
     #[test]

@@ -85,6 +85,14 @@ web-sys = { workspace = true }
 [build-dependencies]
 leptos_i18n_build = { workspace = true }
 
+# The integration tests are `#![cfg(feature = "ssr")]`; these only add the pieces the test
+# database harness needs on top of what `ssr` already pulls in.
+[dev-dependencies]
+diesel-async = { workspace = true, features = ["migrations"] }
+diesel_migrations = { workspace = true }
+dotenvy = { workspace = true }
+nanoid = { workspace = true }
+
 [features]
 hydrate = ["leptos/hydrate", "leptos_i18n/hydrate", "leptos_i18n_build/hydrate"]
 csr = ["leptos/csr", "leptos_i18n/csr", "leptos_i18n_build/csr"]
