@@ -42,5 +42,8 @@
   "last_page": "Ultima pagină",
   "permalink": "Link permanent",
   "no_games_found": "No games found.",
-  "loading_games": "Loading games..."
+  "loading_games": "Loading games...",
+  "position": "Poziție (HOP sau hash)",
+  "position_placeholder": "Lipește un HOP sau un hash de poziție",
+  "copied": "Copiat!"
 }

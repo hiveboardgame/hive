@@ -7,7 +7,7 @@ use crate::{
     i18n::*,
 };
 use chrono::{DateTime, NaiveDate, Utc};
-use hive_lib::Color;
+use hive_lib::{hop, Color};
 use leptos::prelude::*;
 use leptos_icons::Icon;
 use shared_types::{GameSortKey, GameSpeed, GamesQueryOptions, ResultFilter};
@@ -16,6 +16,88 @@ use std::{collections::HashSet, str::FromStr};
 const FIELD_BLOCK_CLASS: &str = "space-y-1.5";
 const ARCHIVE_DISABLED_FIELD_CLASS: &str =
     "cursor-not-allowed bg-odd-light/70 dark:bg-surface-muted";
+
+/// The position field as a raw hash (either signedness, both get pasted) or a HOP string;
+/// `Ok(None)` means empty field, no filter.
+fn parse_position_input(input: &str) -> Result<Option<i64>, hop::HopError> {
+    let trimmed = input.trim();
+    if trimmed.is_empty() {
+        return Ok(None);
+    }
+    if let Ok(hash) = trimmed.parse::<i64>() {
+        return Ok(Some(hash));
+    }
+    if let Ok(hash) = trimmed.parse::<u64>() {
+        return Ok(Some(hash as i64));
+    }
+    hop::to_hash(trimmed).map(Some)
+}
+
+#[component]
+fn ArchivePositionField(
+    draft_options: RwSignal<GamesQueryOptions>,
+    /// Owned by the page: Search must see them, or a HOP that failed to parse silently
+    /// becomes "no filter" and the search runs across the whole archive.
+    raw: RwSignal<String>,
+    error: RwSignal<Option<String>>,
+) -> impl IntoView {
+    let i18n = use_i18n();
+
+    // Follow an external hash change, but leave the user's own text alone when it already
+    // resolves to it. Memoed: every keystroke elsewhere mutates `draft_options`.
+    let position_hash = Memo::new(move |_| draft_options.with(|o| o.position_hash));
+    Effect::new(move |_| {
+        let hash = position_hash.get();
+        let current = parse_position_input(&raw.get_untracked()).ok().flatten();
+        if current != hash {
+            error.set(None);
+            raw.set(hash.map(|h| h.to_string()).unwrap_or_default());
+        }
+    });
+
+    view! {
+        <div class=FIELD_BLOCK_CLASS>
+            <label class="ui-field-label" for="archive-position">
+                {t!(i18n, archive.position)}
+            </label>
+            <input
+                id="archive-position"
+                class=move || {
+                    let mut base = "ui-field-input font-mono text-xs".to_string();
+                    if error.with(Option::is_some) {
+                        base.push_str(" border-ladybug-red focus:border-ladybug-red");
+                    }
+                    base
+                }
+                placeholder=move || t_string!(i18n, archive.position_placeholder)
+                prop:value=raw
+                aria-invalid=move || error.with(Option::is_some).to_string()
+                aria-describedby=move || {
+                    error.with(Option::is_some).then_some("archive-position-error")
+                }
+                // Quiet while typing: a HOP is invalid for most of the time it takes to type one.
+                on:input=move |ev| {
+                    let val = event_target_value(&ev);
+                    raw.set(val.clone());
+                    error.set(None);
+                    draft_options
+                        .update(|o| o.position_hash = parse_position_input(&val).ok().flatten());
+                }
+                // Fires on blur / Enter, i.e. once the input is meant to be complete.
+                on:change=move |ev| {
+                    if let Err(e) = parse_position_input(&event_target_value(&ev)) {
+                        error.set(Some(e.to_string()));
+                    }
+                }
+            />
+            <Show when=move || error.with(Option::is_some)>
+                <p id="archive-position-error" class="ui-field-error" aria-live="polite">
+                    {move || error.get()}
+                </p>
+            </Show>
+        </div>
+    }
+}
 
 fn date_to_input(date: Option<DateTime<Utc>>) -> String {
     date.map(|d| d.format("%Y-%m-%d").to_string())
@@ -445,9 +527,30 @@ fn ArchiveAdvancedFilters(
     }
 }
 
+/// An unparsable HOP leaves `position_hash` as `None`, indistinguishable from an empty field,
+/// so a typo would search the whole archive unfiltered. Every search path goes through this.
+pub fn guarded_search(
+    position_raw: RwSignal<String>,
+    position_error: RwSignal<Option<String>>,
+    on_search: Callback<()>,
+) -> Callback<()> {
+    Callback::new(
+        move |()| match parse_position_input(&position_raw.get_untracked()) {
+            Ok(_) => {
+                position_error.set(None);
+                on_search.run(());
+            }
+            Err(e) => position_error.set(Some(e.to_string())),
+        },
+    )
+}
+
 #[component]
 pub fn ArchiveSearchForm(
     draft_options: RwSignal<GamesQueryOptions>,
+    position_raw: RwSignal<String>,
+    position_error: RwSignal<Option<String>>,
+    /// Already guarded via [`guarded_search`].
     on_search: Callback<()>,
 ) -> impl IntoView {
     let i18n = use_i18n();
@@ -456,10 +559,16 @@ pub fn ArchiveSearchForm(
     let username_placeholder =
         Signal::derive(move || t_string!(i18n, archive.username_placeholder).to_string())
             .get_untracked();
+    let search = on_search;
 
     view! {
         <div class="flex-shrink-0 px-4 pb-4 w-full sm:px-6">
             <div class="p-4 mx-auto space-y-4 max-w-5xl sm:p-6 ui-panel">
+                <ArchivePositionField
+                    draft_options=draft_options
+                    raw=position_raw
+                    error=position_error
+                />
                 <div class="grid grid-cols-1 gap-4 items-start sm:gap-6 md:grid-cols-2">
                     <div class="space-y-3">
                         <div class="space-y-2">
@@ -539,15 +648,12 @@ pub fn ArchiveSearchForm(
                             {t!(i18n, archive.more_filters)}
                         </summary>
                         <div class="space-y-3 border-t ui-panel-body border-black/10 dark:border-white/10">
-                            <ArchiveAdvancedFilters
-                                draft_options=draft_options
-                                on_search=on_search
-                            />
+                            <ArchiveAdvancedFilters draft_options=draft_options on_search=search />
                         </div>
                     </details>
 
                     <div class="hidden md:block">
-                        <ArchiveAdvancedFilters draft_options=draft_options on_search=on_search />
+                        <ArchiveAdvancedFilters draft_options=draft_options on_search=search />
                     </div>
                 </div>
 
@@ -555,7 +661,7 @@ pub fn ArchiveSearchForm(
                     <button
                         type="button"
                         class="w-full sm:w-auto ui-button ui-button-primary ui-button-md"
-                        on:click=move |_| on_search.run(())
+                        on:click=move |_| search.run(())
                     >
                         {t!(i18n, archive.search)}
                     </button>

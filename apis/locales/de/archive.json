@@ -42,5 +42,8 @@
   "last_page": "Letzte Seite",
   "permalink": "Permalink",
   "no_games_found": "No games found.",
-  "loading_games": "Loading games..."
+  "loading_games": "Loading games...",
+  "position": "Position (HOP oder Hash)",
+  "position_placeholder": "HOP oder Positions-Hash einfügen",
+  "copied": "Kopiert!"
 }

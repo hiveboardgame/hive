@@ -1,10 +1,22 @@
 use crate::{
-    components::organisms::{
-        analysis::{atoms::HistoryRow, AnalysisHistoryControls, DownloadTree, LoadTree},
-        reserve::{Alignment, Reserve},
+    components::{
+        atoms::copy_button::CopyButton,
+        organisms::{
+            analysis::{
+                atoms::HistoryRow,
+                AnalysisHistoryControls,
+                DownloadTree,
+                LoadHop,
+                LoadTree,
+            },
+            reserve::{Alignment, Reserve},
+        },
     },
     hiveground::HivegroundInteraction,
-    providers::analysis::AnalysisContext,
+    providers::{
+        analysis::AnalysisContext,
+        game_state::{state_hop, GameStateStore, GameStateStoreFields},
+    },
 };
 use hive_lib::{Board, Color};
 use leptos::{html, leptos_dom::helpers::request_animation_frame, prelude::*};
@@ -96,6 +108,11 @@ pub fn History(
             }
         });
     });
+    // A memo, not a derived signal: serializing a HOP walks the board from every cell and
+    // heading. Tracks only engine state, so selection clicks do not re-run the walk.
+    let game_state = expect_context::<GameStateStore>();
+    let hop = Memo::new(move |_| game_state.state().with(state_hop));
+
     let viewbox_str = "-32 -40 250 120";
     view! {
         <div class="flex flex-col gap-3 min-h-0 size-full">
@@ -120,11 +137,12 @@ pub fn History(
                     />
                 </div>
             </Show>
-            <div class="flex gap-2 items-center w-full">
+            <div class="grid grid-flow-col auto-cols-fr gap-2 w-full">
                 <Show when=move || row_count.get() != 0>
                     <DownloadTree />
                 </Show>
                 <LoadTree />
+                <LoadHop />
             </div>
             <div class="grid gap-2 w-full grid-cols-[repeat(auto-fit,minmax(7rem,1fr))]">
                 <button
@@ -179,6 +197,9 @@ pub fn History(
                         />
                     </div>
                 </div>
+            </div>
+            <div class="w-full shrink-0">
+                <CopyButton label="HOP" value=hop />
             </div>
         </div>
     }

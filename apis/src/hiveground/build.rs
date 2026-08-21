@@ -504,7 +504,8 @@ fn reserve_piece_active(state: &State, interactivity: &ReserveInteractivity, pie
     if state.tournament && piece.bug() == Bug::Queen && state.turn < 2 {
         return false;
     };
-    if state.board.queen_required(state.turn, state.turn_color) && piece.bug() != Bug::Queen {
+    // Through `State`, which knows whether the deadline applies at all (HOP loads have none).
+    if state.queen_required_now(state.turn_color) && piece.bug() != Bug::Queen {
         return false;
     };
     if matches!(
@@ -540,6 +541,116 @@ mod tests {
 
     fn piece(piece: &str) -> Piece {
         piece.parse().expect("test piece parses")
+    }
+
+    /// One-directional on purpose: an offered piece with no legal target is only noise, but a
+    /// greyed-out piece the engine would spawn is a lie.
+    #[test]
+    fn reserve_never_hides_an_engine_legal_spawn() {
+        // SplitMix64, as in the fuzz harnesses.
+        let mut rng_state: u64 = 0xbee5;
+        let mut rng = move |bound: usize| {
+            rng_state = rng_state.wrapping_add(0x9e3779b97f4a7c15);
+            let mut z = rng_state;
+            z = (z ^ (z >> 30)).wrapping_mul(0xbf58476d1ce4e5b9);
+            z = (z ^ (z >> 27)).wrapping_mul(0x94d049bb133111eb);
+            ((z ^ (z >> 31)) % bound as u64) as usize
+        };
+        for _ in 0..40 {
+            let mut state = hive_lib::State::new(GameType::MLP, false);
+            for _ in 0..rng(30) {
+                let color = state.turn_color;
+                let mut options: Vec<(Piece, Position)> = Vec::new();
+                for ((piece, _), targets) in state.board.moves(color) {
+                    for target in targets {
+                        options.push((piece, target));
+                    }
+                }
+                let spawns: Vec<Position> = state.board.spawnable_positions(color).collect();
+                for pieces in state.board.reserve(color, state.game_type).values() {
+                    if let Some(piece) = pieces.first().and_then(|p| p.parse::<Piece>().ok()) {
+                        if piece.bug() == Bug::Queen && !state.queen_allowed() {
+                            continue;
+                        }
+                        if piece.bug() != Bug::Queen && state.queen_required_now(color) {
+                            continue;
+                        }
+                        for &target in &spawns {
+                            options.push((piece, target));
+                        }
+                    }
+                }
+                if options.is_empty() {
+                    break;
+                }
+                let (piece, target) = options[rng(options.len())];
+                state.play_turn_from_position(piece, target).unwrap();
+            }
+            if matches!(
+                state.game_status,
+                GameStatus::Finished(_) | GameStatus::Adjudicated
+            ) {
+                continue;
+            }
+            let interactivity = ReserveInteractivity {
+                viewing_past_turn: false,
+                status: state.game_status.clone(),
+                user_color: None,
+                tournament: state.tournament,
+                analysis: true,
+            };
+            let color = state.turn_color;
+            let spawns: Vec<Position> = state.board.spawnable_positions(color).collect();
+            for pieces in state.board.reserve(color, state.game_type).values() {
+                let Some(piece) = pieces.first().and_then(|p| p.parse::<Piece>().ok()) else {
+                    continue;
+                };
+                let engine_accepts = spawns.iter().any(|&target| {
+                    let mut probe = state.clone();
+                    probe.play_turn_from_position(piece, target).is_ok()
+                });
+                if engine_accepts {
+                    assert!(
+                        reserve_piece_active(&state, &interactivity, piece),
+                        "reserve hides {piece}, which the engine would spawn ({:?})",
+                        state.history.moves
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn reserve_matches_the_engine_queen_policy_for_loaded_positions() {
+        let position = hive_lib::hop::parse("A+G+S-a-g-s,w").expect("valid HOP");
+        let state = hive_lib::State::new_from_position(
+            position.board,
+            position.game_type,
+            position.to_move,
+        )
+        .expect("a reachable position");
+        let g2 = piece("wG2");
+        let spawn = state
+            .board
+            .spawnable_positions(Color::White)
+            .next()
+            .expect("a spawnable cell");
+        assert!(
+            state.clone().play_turn_from_position(g2, spawn).is_err(),
+            "White has placed three and owes the queen"
+        );
+        let interactivity = ReserveInteractivity {
+            viewing_past_turn: false,
+            status: GameStatus::InProgress,
+            user_color: None,
+            tournament: false,
+            analysis: true,
+        };
+        assert!(
+            !reserve_piece_active(&state, &interactivity, g2),
+            "the reserve must grey out a spawn the engine refuses",
+        );
+        assert!(reserve_piece_active(&state, &interactivity, piece("wQ")));
     }
 
     fn board_with_stacks(stacks: Vec<(Position, Vec<&str>)>) -> Board {
@@ -1088,9 +1199,13 @@ mod tests {
 
     #[test]
     fn reserve_model_queen_required_disables_non_queen_pieces() {
-        let mut state = State::new(GameType::Base, false);
-        state.turn_color = Color::White;
-        state.turn = 6;
+        let position = hive_lib::hop::parse("base,A+G+S-a-g-s,w").expect("valid HOP");
+        let state = hive_lib::State::new_from_position(
+            position.board,
+            position.game_type,
+            position.to_move,
+        )
+        .expect("a reachable position");
 
         let model = reserve_model(&state, reserve_options());
 

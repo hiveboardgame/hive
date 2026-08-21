@@ -13,6 +13,8 @@ pub enum GameError {
     },
     #[error("Found {found:?} which is not a valid {typ}")]
     ParsingError { found: String, typ: String },
+    #[error("No game reaches this position: {reason}")]
+    UnreachablePosition { reason: String },
     #[error("Result {reported_result:?} doesn't match board endstate {actual_result:?}")]
     ResultMismatch {
         reported_result: GameResult,

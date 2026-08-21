@@ -65,6 +65,12 @@ impl Stacks {
         let position = Position { q, r };
         self.positions.get(&position).unwrap_or(&Vec::new()).clone()
     }
+
+    pub fn get_ref(&self, q: i32, r: i32) -> &[Piece] {
+        self.positions
+            .get(&Position { q, r })
+            .map_or(&[], Vec::as_slice)
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -744,7 +750,10 @@ impl Board {
 
     pub fn spawnable_positions(&self, color: Color) -> impl Iterator<Item = Position> + '_ {
         let game_result = self.game_result();
-        std::iter::once(Position::initial_spawn_position())
+        // Only an empty board needs the seed; later it duplicates a negative-space cell
+        // whenever the spawn position is empty but touches the hive.
+        let seed = (self.played == 0).then(Position::initial_spawn_position);
+        seed.into_iter()
             .chain(self.negative_space())
             .filter(move |pos| self.spawnable_with_game_result(color, *pos, &game_result))
     }
@@ -753,14 +762,18 @@ impl Board {
         self.piece_already_played(Piece::new_from(Bug::Queen, color, 0))
     }
 
-    pub fn queen_required(&self, turn: usize, color: Color) -> bool {
-        if turn == 6 && color == Color::White && !self.queen_played(Color::White) {
-            return true;
-        }
-        if turn == 7 && color == Color::Black && !self.queen_played(Color::Black) {
-            return true;
-        }
-        false
+    /// A side that has not played its queen has never moved or passed, so its pieces on the
+    /// board are exactly its turns taken - true of a loaded position as much as a played one.
+    pub fn queen_required(&self, color: Color) -> bool {
+        !self.queen_played(color) && self.played_by(color) == 3
+    }
+
+    pub fn played_by(&self, color: Color) -> usize {
+        let start = 24 * color as usize;
+        self.positions[start..start + 24]
+            .iter()
+            .filter(|position| position.is_some())
+            .count()
     }
 
     pub fn update_pinned(&mut self) {
@@ -955,29 +968,33 @@ impl Board {
     /// Stun only when the restriction removes a legal move - it feeds the hash, and a vacuous
     /// stun splits identical positions. `mover` != `piece.color()` when a Pillbug throws.
     pub fn set_stunned(&mut self, position: Position, piece: Piece, spawn: bool, mover: Color) {
-        // A spawn never touches an enemy piece.
+        // A spawn never touches an enemy piece: at Black's first placement White's lone piece
+        // cannot be both the Pillbug and the Queen needed to move it.
         if spawn {
             self.stunned = None;
             return;
         }
-        // Stacked pieces cannot be thrown, and a throw lands on empty cells.
+        // A stacked piece cannot be thrown (the Pillbug only moves unstacked pieces) and cannot
+        // be the piece just thrown, since a throw lands on an empty cell.
         if self.level(position) > 1 {
             self.stunned = None;
             return;
         }
-        // A decided game has no moves left to restrict (threefolds end at State level).
+        // A decided game has no moves left to restrict, and identical final positions must not
+        // hash apart. Threefolds end at State level, invisible here.
         if self.game_result() != GameResult::Unknown {
             self.stunned = None;
             return;
         }
         let opponent = mover.opposite_color();
-        // No board moves before the Queen is down.
+        // No board moves (or throws) before the Queen is down, so nothing to restrict.
         if !self.queen_played(opponent) {
             self.stunned = None;
             return;
         }
 
-        // A thrown opponent piece may not act at all, so movement and ability are separate losses.
+        // A thrown opponent piece may not act at all, so movement and ability are separate
+        // losses and have to be asked separately.
         let is_the_opponents_piece = piece.color() == opponent;
         let loses_its_own_move =
             is_the_opponents_piece && !self.is_pinned(piece) && Bug::has_move(position, self);

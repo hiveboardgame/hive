@@ -42,5 +42,8 @@
   "last_page": "Последняя страница",
   "permalink": "Прямая ссылка",
   "no_games_found": "No games found.",
-  "loading_games": "Loading games..."
+  "loading_games": "Loading games...",
+  "position": "Позиция (HOP или хеш)",
+  "position_placeholder": "Вставьте HOP или хеш позиции",
+  "copied": "Скопировано!"
 }
