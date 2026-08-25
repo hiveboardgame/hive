@@ -562,3 +562,106 @@ fn every_stored_game_still_replays() {
         failures.len()
     );
 }
+
+/// How wide do real hives get? A 16-wide storage window only pays if most games stay inside.
+#[test]
+#[ignore = "corpus statistics; set MLP_GAMES_CSV"]
+fn hive_extent_statistics() {
+    use crate::history::History;
+
+    // Occupied residues as a bitmask -> hive width in cells: 32 minus the widest circular
+    // empty run (a connected hive always leaves one).
+    fn width(mask: u32) -> usize {
+        if mask == 0 {
+            return 0;
+        }
+        let mut widest = 0i32;
+        let mut run = 0i32;
+        // Doubled scan handles the wrap-around run.
+        for bit in 0..64 {
+            if mask & (1 << (bit % 32)) == 0 {
+                run += 1;
+                widest = widest.max(run.min(32));
+            } else {
+                run = 0;
+            }
+        }
+        32 - widest as usize
+    }
+
+    let games = load("MLP_GAMES_CSV");
+    let mut histogram = [0u64; 33];
+    let mut crossing_plies: Vec<usize> = Vec::new();
+    let mut ply_total = 0u64;
+    let mut replayed = 0u64;
+    for row in games[1..].iter() {
+        let Ok(history) = History::new_from_str(&row[3]) else {
+            continue;
+        };
+        let mut state = State::new(GameType::MLP, false);
+        state.set_replaying(true);
+        let mut max_extent = 0usize;
+        let mut crossed_at = None;
+        let mut ok = true;
+        for (ply, (piece, pos)) in history.moves.iter().enumerate() {
+            if state.play_turn_from_history(piece, pos).is_err() {
+                ok = false;
+                break;
+            }
+            let (mut q_mask, mut r_mask) = (0u32, 0u32);
+            for p in state.board.positions.iter().flatten() {
+                q_mask |= 1 << p.q;
+                r_mask |= 1 << p.r;
+            }
+            let extent = width(q_mask).max(width(r_mask));
+            max_extent = max_extent.max(extent);
+            if crossed_at.is_none() && extent > 12 {
+                crossed_at = Some(ply);
+            }
+        }
+        if !ok {
+            continue;
+        }
+        replayed += 1;
+        ply_total += history.moves.len() as u64;
+        histogram[max_extent.min(32)] += 1;
+        if let Some(ply) = crossed_at {
+            crossing_plies.push(ply);
+        }
+    }
+
+    println!(
+        "games replayed: {replayed}, avg plies: {}",
+        ply_total / replayed.max(1)
+    );
+    println!("per-game max hive extent (cells, either axis):");
+    let mut cumulative = 0u64;
+    for (extent, count) in histogram.iter().enumerate() {
+        if *count == 0 {
+            continue;
+        }
+        cumulative += count;
+        println!(
+            "  {extent:>2}: {count:>7}  (cum {:>5.1}%)",
+            100.0 * cumulative as f64 / replayed as f64
+        );
+    }
+    for trigger in [10, 11, 12, 13, 14] {
+        let growing: u64 = histogram[trigger + 1..].iter().sum();
+        println!(
+            "trigger >{trigger}: {growing} games would resize ({:.1}%)",
+            100.0 * growing as f64 / replayed as f64
+        );
+    }
+    crossing_plies.sort_unstable();
+    if !crossing_plies.is_empty() {
+        let p = |q: f64| crossing_plies[((crossing_plies.len() - 1) as f64 * q) as usize];
+        println!(
+            "first crossing of >12 at ply: p10={} p50={} p90={} (of {} crossing games)",
+            p(0.1),
+            p(0.5),
+            p(0.9),
+            crossing_plies.len()
+        );
+    }
+}

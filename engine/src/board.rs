@@ -112,7 +112,7 @@ impl Default for Board {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct Board {
     pub board: TorusArray<BugStack>,
     pub neighbor_count: TorusArray<u8>,
@@ -126,6 +126,23 @@ pub struct Board {
     // number of pieces present on the board
     pub played: usize,
 }
+
+/// Storage size is not part of the hive; derived fields follow from the compared ones.
+impl PartialEq for Board {
+    fn eq(&self, other: &Self) -> bool {
+        self.played == other.played
+            && self.last_moved == other.last_moved
+            && self.last_move == other.last_move
+            && self.stunned == other.stunned
+            && self.positions == other.positions
+            && self.pinned == other.pinned
+            && self
+                .all_taken_positions()
+                .all(|at| self.board.get(at) == other.board.get(at))
+    }
+}
+
+impl Eq for Board {}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 /// Everything needed to put a board back exactly as it was.
@@ -154,6 +171,121 @@ impl Board {
         }
     }
 
+    pub fn storage_cells(&self) -> usize {
+        self.board.cells()
+    }
+
+    /// One-way; shrinking happens by rebuilding in [`Self::recenter`].
+    pub fn grow_storage(&mut self) {
+        self.board.grow();
+        self.neighbor_count.grow();
+    }
+
+    /// An insert touches its neighbour ring too; grow before anything aliases.
+    fn ensure_storage_for(&mut self, position: Position) {
+        const INNER: std::ops::RangeInclusive<i32> =
+            (crate::torus_array::SMALL_OFFSET + 1)..=(crate::torus_array::SMALL_OFFSET + 14);
+        if self.board.is_small() && (!INNER.contains(&position.q) || !INNER.contains(&position.r)) {
+            self.grow_storage();
+        }
+    }
+
+    /// `Board::all_positions` would visit cells small storage cannot address.
+    pub fn scan_positions(&self) -> impl Iterator<Item = Position> {
+        let (start, end) = if self.board.is_small() {
+            (
+                crate::torus_array::SMALL_OFFSET,
+                crate::torus_array::SMALL_OFFSET + crate::torus_array::SMALL_SIZE,
+            )
+        } else {
+            (0, BOARD_SIZE)
+        };
+        (start..end)
+            .cartesian_product(start..end)
+            .map(|(q, r)| Position { q, r })
+    }
+
+    /// Translate the hive back to the middle, unwrapped whole across the seam. Hashes and
+    /// notation are translation-invariant; only raw coordinates - the renderer's input - move.
+    pub fn recenter(&mut self) {
+        if self.played == 0 {
+            return;
+        }
+        let (mut q_mask, mut r_mask) = (0u32, 0u32);
+        for position in self.positions.iter().flatten() {
+            q_mask |= 1 << position.q;
+            r_mask |= 1 << position.r;
+        }
+        let (q_origin, r_origin) = (
+            crate::canonical_hash::axis_origin(q_mask),
+            crate::canonical_hash::axis_origin(r_mask),
+        );
+        let (mut q_width, mut r_width) = (0, 0);
+        for position in self.positions.iter().flatten() {
+            q_width = q_width.max((position.q - q_origin).rem_euclid(BOARD_SIZE));
+            r_width = r_width.max((position.r - r_origin).rem_euclid(BOARD_SIZE));
+        }
+        let centre = Position::initial_spawn_position();
+        // A hive up to 12 wide (delta 11) fits the small window with its probe margins.
+        let fits_small = q_width.max(r_width) <= 11;
+        let (q_start, r_start) = if fits_small {
+            (
+                (centre.q - q_width / 2).clamp(10, 21 - q_width),
+                (centre.r - r_width / 2).clamp(10, 21 - r_width),
+            )
+        } else {
+            (centre.q - q_width / 2, centre.r - r_width / 2)
+        };
+        let translate = |at: Position| {
+            Position::new(
+                q_start + (at.q - q_origin).rem_euclid(BOARD_SIZE),
+                r_start + (at.r - r_origin).rem_euclid(BOARD_SIZE),
+            )
+        };
+        let mut centered = Board::new();
+        if !fits_small {
+            centered.grow_storage();
+        }
+        for at in self.all_taken_positions() {
+            let stack = self.board.get(at);
+            for piece in &stack.pieces[..stack.len()] {
+                centered.insert(translate(at), *piece, true);
+            }
+        }
+        centered.last_moved = self.last_moved.map(|(piece, at)| (piece, translate(at)));
+        centered.last_move = (
+            self.last_move.0.map(translate),
+            self.last_move.1.map(translate),
+        );
+        centered.stunned = self.stunned;
+        *self = centered;
+    }
+
+    /// A freshly recentered hive answers false, so recentering cannot retrigger itself.
+    pub fn needs_recentering(&self) -> bool {
+        if self.played == 0 {
+            return false;
+        }
+        let comfort = if self.board.is_small() {
+            10..=21
+        } else {
+            2..=BOARD_SIZE - 2
+        };
+        let (mut q_min, mut q_max, mut r_min, mut r_max) = (i32::MAX, i32::MIN, i32::MAX, i32::MIN);
+        let mut outside = false;
+        for p in self.positions.iter().flatten() {
+            outside |= !comfort.contains(&p.q) || !comfort.contains(&p.r);
+            q_min = q_min.min(p.q);
+            q_max = q_max.max(p.q);
+            r_min = r_min.min(p.r);
+            r_max = r_max.max(p.r);
+        }
+        // Shrink as soon as the hive fits - storage must be a function of the hive alone,
+        // or a snapshot restore recenters on a different cadence than live play.
+        let fits_small = (q_max - q_min).max(r_max - r_min) <= 11;
+        outside || self.board.is_small() != fits_small
+    }
+
     pub fn snapshot(&self) -> BoardSnapshot {
         let mut pieces = Vec::with_capacity(self.played);
         for position in self.all_taken_positions() {
@@ -173,7 +305,19 @@ impl Board {
 
     pub fn from_snapshot(snapshot: &BoardSnapshot) -> Self {
         let mut board = Self::new();
+        // Size the storage as live play would; `ensure_storage_for` stays as the hostile net.
+        let (mut q_min, mut q_max, mut r_min, mut r_max) = (i32::MAX, i32::MIN, i32::MAX, i32::MIN);
+        for (position, _) in &snapshot.pieces {
+            q_min = q_min.min(position.q);
+            q_max = q_max.max(position.q);
+            r_min = r_min.min(position.r);
+            r_max = r_max.max(position.r);
+        }
+        if !snapshot.pieces.is_empty() && (q_max - q_min).max(r_max - r_min) > 11 {
+            board.grow_storage();
+        }
         for (position, piece) in &snapshot.pieces {
+            board.ensure_storage_for(*position);
             if board.board.get(*position).is_empty() {
                 board.neighbor_count_add(*position);
             }
@@ -786,7 +930,8 @@ impl Board {
     pub fn calculate_pinned(&self) -> Vec<DfsInfo> {
         // Connectivity is position-based, so stacked positions contribute only their bottom piece.
         let mut dfs_info = Vec::with_capacity(self.played);
-        let mut dfs_indexes = TorusArray::new(MISSING_DFS_INDEX);
+        // Indexed at occupied cells, so it must cover the board's window.
+        let mut dfs_indexes = TorusArray::new_like(&self.board, MISSING_DFS_INDEX);
 
         for (i, maybe_pos) in self.positions.iter().enumerate() {
             let Some(pos) = maybe_pos else {
@@ -958,7 +1103,8 @@ impl Board {
     }
 
     pub fn negative_space(&self) -> impl Iterator<Item = Position> + '_ {
-        Self::all_positions().filter(move |pos| self.is_negative_space(*pos))
+        self.scan_positions()
+            .filter(move |pos| self.is_negative_space(*pos))
     }
 
     pub fn is_negative_space(&self, position: Position) -> bool {
@@ -1022,6 +1168,7 @@ impl Board {
         update_pinned: bool,
         mover: Color,
     ) {
+        self.ensure_storage_for(position);
         self.last_moved = Some((piece, position));
         let stack = self.board.get_mut(position);
         stack.push_piece(piece);
@@ -1127,22 +1274,120 @@ mod tests {
     use crate::{game_status::GameStatus, history::History, state::State};
     use std::collections::HashSet;
 
-    fn assert_snapshot_equivalent(actual: &State, expected: &State) {
-        let mut actual_board = actual.board.clone();
-        for position in Board::all_positions() {
-            let actual_stack = actual_board.board.get(position);
-            let expected_stack = expected.board.board.get(position);
-            assert_eq!(actual_stack.size, expected_stack.size, "{position}");
-            assert_eq!(actual_stack.pieces, expected_stack.pieces, "{position}");
-            if actual_stack.is_empty() {
-                *actual_board.board.get_mut(position) = expected_stack.clone();
-            }
-        }
-        assert_eq!(actual_board, expected.board);
+    #[test]
+    fn a_fresh_board_uses_small_storage() {
+        assert_eq!(Board::new().storage_cells(), 256);
+    }
 
-        let mut actual_state = actual.clone();
-        actual_state.board = expected.board.clone();
-        assert_eq!(actual_state, *expected);
+    /// Direct construction outside the small window must grow, not alias.
+    #[test]
+    fn an_out_of_window_insert_grows_the_storage() {
+        let mut board = Board::new();
+        board.insert(
+            Position::new(30, 16),
+            "wQ".parse().expect("test piece"),
+            true,
+        );
+        assert_eq!(board.storage_cells(), 1024);
+        assert!(board.top_piece(Position::new(30, 16)).is_some());
+    }
+
+    #[test]
+    fn equality_ignores_the_storage_size() {
+        let mut small = Board::new();
+        small.insert(
+            Position::new(16, 16),
+            "wQ".parse().expect("test piece"),
+            true,
+        );
+        small.insert(
+            Position::new(17, 16),
+            "bQ".parse().expect("test piece"),
+            true,
+        );
+        let mut grown = small.clone();
+        grown.grow_storage();
+        assert_eq!(small.storage_cells(), 256);
+        assert_eq!(grown.storage_cells(), 1024);
+        assert_eq!(small, grown);
+        assert_eq!(Board::from_snapshot(&grown.snapshot()), small);
+    }
+
+    /// Shrink on recenter once the hive fits again, so play, undo, and restore agree.
+    #[test]
+    fn recentering_shrinks_a_grown_board_once_the_hive_fits_again() {
+        let mut board = Board::new();
+        board.grow_storage();
+        board.insert(
+            Position::new(16, 16),
+            "wQ".parse().expect("test piece"),
+            true,
+        );
+        board.insert(
+            Position::new(17, 16),
+            "bQ".parse().expect("test piece"),
+            true,
+        );
+        assert!(board.needs_recentering());
+        board.recenter();
+        assert_eq!(board.storage_cells(), 256);
+        assert!(!board.needs_recentering());
+    }
+
+    #[test]
+    fn from_snapshot_matches_the_live_storage_size() {
+        let mut board = Board::new();
+        board.grow_storage();
+        let pieces = [
+            "wA1", "wA2", "wA3", "wB1", "wB2", "wG1", "wG2", "wG3", "wS1", "wS2", "wQ", "wM", "wL",
+        ];
+        for (piece, q) in pieces.iter().zip(9..=21) {
+            board.insert(
+                Position::new(q, 16),
+                piece.parse().expect("test piece"),
+                true,
+            );
+        }
+        let restored = Board::from_snapshot(&board.snapshot());
+        assert_eq!(restored.storage_cells(), 1024);
+        assert_eq!(restored, board);
+    }
+
+    #[test]
+    fn recenter_pulls_a_seam_straddling_hive_back_to_the_middle() {
+        let mut board = Board::new();
+        for (q, r, piece) in [
+            (30, 16, "wQ"),
+            (31, 16, "wA1"),
+            (0, 16, "bQ"),
+            (1, 16, "bA1"),
+        ] {
+            board.insert(
+                Position::new(q, r),
+                piece.parse().expect("test piece"),
+                true,
+            );
+        }
+        let before =
+            crate::canonical_hash::canonical_hash(&board, crate::color::Color::White, None);
+        board.recenter();
+        for position in board.all_taken_positions() {
+            assert!(
+                (2..=30).contains(&position.q) && (2..=30).contains(&position.r),
+                "still hugging the seam at {position}"
+            );
+        }
+        assert_eq!(
+            crate::canonical_hash::canonical_hash(&board, crate::color::Color::White, None),
+            before,
+            "recentering is a pure translation"
+        );
+    }
+
+    fn assert_snapshot_equivalent(actual: &State, expected: &State) {
+        // Board equality is by content, so no empty-stack normalisation is needed.
+        assert_eq!(actual.board, expected.board);
+        assert_eq!(*actual, *expected);
     }
 
     #[test]
