@@ -21,6 +21,8 @@ mod history;
 pub mod hop;
 mod mid_move_board;
 #[cfg(test)]
+mod perft_tests;
+#[cfg(test)]
 mod pgn_corpus_tests;
 mod piece;
 mod player;
