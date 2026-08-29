@@ -563,6 +563,70 @@ fn every_stored_game_still_replays() {
     );
 }
 
+/// The one corpus check against ground truth rather than a rule we also wrote.
+/// The CSVs are separate exports, so a history predating its result is reported, not asserted.
+#[test]
+#[ignore = "needs MLP_GAMES_CSV and MLP_RESULTS_CSV"]
+fn board_results_match_the_recorded_winner() {
+    let results = load("MLP_RESULTS_CSV");
+    let recorded: HashMap<&str, (&str, &str)> = results[1..]
+        .iter()
+        .filter(|row| row.len() >= 3)
+        .map(|row| (row[0].as_str(), (row[1].as_str(), row[2].as_str())))
+        .collect();
+    let games = load("MLP_GAMES_CSV");
+
+    let (mut checked, mut draws) = (0usize, 0usize);
+    let (mut disagreements, mut short_records): (Vec<String>, Vec<String>) =
+        (Vec::new(), Vec::new());
+
+    for row in games[1..].iter() {
+        // Only board conclusions: a timeout or resignation ends a game the position does not.
+        let Some((status, "Board")) = recorded.get(row[0].as_str()) else {
+            continue;
+        };
+        let state = match State::new_from_str(&row[3], "Base+MLP") {
+            Ok(state) => state,
+            Err(e) => {
+                disagreements.push(format!("{}: does not replay: {e}", row[0]));
+                continue;
+            }
+        };
+        checked += 1;
+        if *status == "Finished(½-½)" {
+            draws += 1;
+        }
+        let ours = state.game_status.to_string();
+        if ours == *status {
+            continue;
+        }
+        // A record that ends before the win cannot be replayed into one. Only the position
+        // can say so: if a queen is surrounded here, we missed it and that is our bug.
+        if ours == "InProgress"
+            && state.board.game_result() == crate::game_result::GameResult::Unknown
+        {
+            short_records.push(row[0].clone());
+            continue;
+        }
+        disagreements.push(format!("{}: recorded {status}, replayed {ours}", row[0]));
+    }
+
+    println!("board-concluded games checked: {checked} (both queens surrounded: {draws})");
+    println!(
+        "  records ending before the win (history export predates the result): {} {:?}",
+        short_records.len(),
+        short_records
+    );
+    for disagreement in disagreements.iter().take(10) {
+        println!("  {disagreement}");
+    }
+    assert!(
+        disagreements.is_empty(),
+        "{} games end differently than recorded",
+        disagreements.len()
+    );
+}
+
 /// How wide do real hives get? A 16-wide storage window only pays if most games stay inside.
 #[test]
 #[ignore = "corpus statistics; set MLP_GAMES_CSV"]
