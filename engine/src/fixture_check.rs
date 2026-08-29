@@ -61,6 +61,70 @@ fn replay_uhp(path: &str) -> State {
     State::new_from_history(&history).expect("legal history")
 }
 
+/// `Board::game_result` answers from `neighbor_count`, a counter maintained incrementally as
+/// pieces move; an oracle sharing it would let a drifting counter make the engine and its own
+/// check agree on the same wrong answer.
+pub(crate) fn surrounded_queens(board: &Board) -> GameResult {
+    let mut surrounded = Vec::new();
+    for color in [Color::White, Color::Black] {
+        let queen = Piece::new_from(crate::bug::Bug::Queen, color, 0);
+        let Some(at) = board.position_of_piece(queen) else {
+            continue;
+        };
+        if crate::direction::Direction::all()
+            .into_iter()
+            .all(|direction| board.level(at.to(direction)) > 0)
+        {
+            surrounded.push(color);
+        }
+    }
+    match surrounded[..] {
+        [] => GameResult::Unknown,
+        [color] => GameResult::Winner(color.opposite_color()),
+        _ => GameResult::Draw,
+    }
+}
+
+/// The corpus winner check is data-dependent and ignored, so the oracle it leans on is proved
+/// here, on games that live in the repo. These are final positions, not recorded results:
+/// `descend.pgn` carries `[Result "1-0"]` over a board nobody has won yet, which is the same
+/// gap the corpus reports as a short record.
+#[test]
+fn the_oracle_reads_the_same_winner_as_the_engine() {
+    let expected = [
+        ("base_with_pass.pgn", GameResult::Winner(Color::White)),
+        ("pass.pgn", GameResult::Winner(Color::White)),
+        ("piece_as_destination.pgn", GameResult::Winner(Color::White)),
+        (
+            "q_first_missing_result.pgn",
+            GameResult::Winner(Color::White),
+        ),
+        ("m_with_pass.pgn", GameResult::Winner(Color::Black)),
+        ("no_p_game.pgn", GameResult::Winner(Color::Black)),
+        ("p_game.pgn", GameResult::Winner(Color::Black)),
+        ("pass2.pgn", GameResult::Winner(Color::Black)),
+        ("plm_draw.pgn", GameResult::Draw),
+        ("descend.pgn", GameResult::Unknown),
+        ("direction_as_destination.pgn", GameResult::Unknown),
+        ("ladybug_bug_regression.pgn", GameResult::Unknown),
+        ("shuriken.pgn", GameResult::Unknown),
+    ];
+    for (name, want) in &expected {
+        let path = format!("./test_pgns/valid/{name}");
+        let history = History::from_pgn_str(&fixture(&path)).expect("valid PGN");
+        let state = State::new_from_history(&history).expect("legal history");
+        assert_eq!(&surrounded_queens(&state.board), want, "{name}: oracle");
+        assert_eq!(&state.board.game_result(), want, "{name}: engine");
+    }
+    assert_eq!(
+        expected.len(),
+        std::fs::read_dir("./test_pgns/valid")
+            .expect("fixture directory")
+            .count(),
+        "a checked-in game is missing from the table"
+    );
+}
+
 fn replay_uhp_prefix(path: &str, plies: usize) -> State {
     let history = History::from_uhp_str(&fixture(path)).expect("valid UHP");
     let tournament =
