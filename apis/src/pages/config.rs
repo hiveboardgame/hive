@@ -5,6 +5,7 @@ use crate::{
         molecules::panel::Panel,
         organisms::{
             background_color_toggle::BackgroundColorToggle,
+            clock_warnings::ClockWarnings,
             confirm_mode_toggle::ConfirmModeToggle,
             darkmode_toggle::{DarkModeToggle, DarkModeToggleVariant},
             preselect_toggle::PreSelectToggle,
@@ -147,8 +148,11 @@ pub fn Config() -> impl IntoView {
                                 </div>
                             </div>
                         </div>
+
                     </Panel>
                 </div>
+
+                <ClockWarnings />
             </div>
         </PageShell>
     }

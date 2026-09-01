@@ -5,6 +5,7 @@ mod config_options;
 mod game_action;
 mod game_display;
 mod game_reaction;
+
 mod markdown;
 mod move_info;
 mod overlay_paint;
@@ -39,6 +40,8 @@ pub use game_display::{
     TournamentLink,
 };
 pub use game_reaction::GameReaction;
+pub use shared_types::FlashStyle;
+
 pub use markdown::markdown_to_html;
 pub use move_info::MoveInfo;
 pub use overlay_paint::OverlayPaint;

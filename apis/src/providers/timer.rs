@@ -30,6 +30,9 @@ impl TimerSignal {
             self.signal.update(|timer| {
                 timer.white_time_left = Some(hb.white_time_left);
                 timer.black_time_left = Some(hb.black_time_left);
+                timer.server_white_time_left = Some(hb.white_time_left);
+                timer.server_black_time_left = Some(hb.black_time_left);
+                timer.server_synced_at = Some(Utc::now());
             });
         }
     }
@@ -39,8 +42,12 @@ impl TimerSignal {
             game.game_id.clone_into(&mut timer.game_id);
             timer.finished = game.finished;
             timer.turn = game.turn;
-            timer.white_time_left = game.white_time_left;
-            timer.black_time_left = game.black_time_left;
+            let (white_time_left, black_time_left) = live_time_left(game);
+            timer.white_time_left = white_time_left;
+            timer.black_time_left = black_time_left;
+            timer.server_white_time_left = white_time_left;
+            timer.server_black_time_left = black_time_left;
+            timer.server_synced_at = Some(Utc::now());
             timer.time_increment = game
                 .time_increment
                 .map(|inc| Duration::from_secs(inc as u64));
@@ -49,6 +56,34 @@ impl TimerSignal {
             timer.time_base = game.time_base.map(|base| Duration::from_secs(base as u64));
             timer.set_timed_out_color(timeout_loser(game));
         });
+    }
+}
+
+// GameResponse sends the clock as of the last move, the heartbeat as of now.
+fn live_time_left(game: &GameResponse) -> (Option<Duration>, Option<Duration>) {
+    let stored = (game.white_time_left, game.black_time_left);
+    if game.game_status != GameStatus::InProgress {
+        return stored;
+    }
+    let Some(elapsed) = game
+        .last_interaction
+        .and_then(|last| Utc::now().signed_duration_since(last).to_std().ok())
+    else {
+        return stored;
+    };
+    running_clock(stored.0, stored.1, game.turn, elapsed)
+}
+
+fn running_clock(
+    white: Option<Duration>,
+    black: Option<Duration>,
+    turn: usize,
+    elapsed: Duration,
+) -> (Option<Duration>, Option<Duration>) {
+    if turn.is_multiple_of(2) {
+        (white.map(|left| left.saturating_sub(elapsed)), black)
+    } else {
+        (white, black.map(|left| left.saturating_sub(elapsed)))
     }
 }
 
@@ -110,6 +145,9 @@ pub struct Timer {
     pub turn: usize,
     pub white_time_left: Option<Duration>,
     pub black_time_left: Option<Duration>,
+    pub server_white_time_left: Option<Duration>,
+    pub server_black_time_left: Option<Duration>,
+    pub server_synced_at: Option<DateTime<Utc>>,
     pub time_base: Option<Duration>,
     pub time_increment: Option<Duration>,
     pub time_mode: TimeMode,
@@ -126,6 +164,9 @@ impl Timer {
             turn: 0,
             white_time_left: None,
             black_time_left: None,
+            server_white_time_left: None,
+            server_black_time_left: None,
+            server_synced_at: None,
             time_base: None,
             time_increment: None,
             time_mode: TimeMode::Untimed,
@@ -140,16 +181,21 @@ impl Timer {
         .unwrap_or_default()
     }
 
-    pub fn warning_trigger(&self) -> Option<Duration> {
-        let increment = self.time_increment.unwrap_or_default();
-        match self.time_mode {
-            TimeMode::RealTime => self.time_base.map(|b| b / 10 + increment * 2),
-            _ => None,
+    // The ticked clock drifts and stalls in background tabs; warnings read the
+    // last server value forward instead.
+    pub fn warning_time_left(&self, color: Color) -> Option<Duration> {
+        let synced = match color {
+            Color::White => self.server_white_time_left,
+            Color::Black => self.server_black_time_left,
+        }?;
+        if (color == Color::White) != self.turn.is_multiple_of(2) {
+            return Some(synced);
         }
-    }
-    pub fn warning_refresh(&self) -> Option<Duration> {
-        self.warning_trigger()
-            .and_then(|trigger| self.time_increment.map(|increment| trigger + increment * 2))
+        let elapsed = Utc::now()
+            .signed_duration_since(self.server_synced_at?)
+            .to_std()
+            .ok()?;
+        Some(synced.saturating_sub(elapsed))
     }
 
     pub fn update_for_view(&mut self, response: &GameResponse, view: &BoardView) {
@@ -191,5 +237,39 @@ impl Timer {
 impl Default for Timer {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::running_clock;
+    use std::time::Duration;
+
+    fn secs(n: u64) -> Option<Duration> {
+        Some(Duration::from_secs(n))
+    }
+
+    #[test]
+    fn only_the_side_to_move_is_charged() {
+        let (white, black) = running_clock(secs(30), secs(45), 4, Duration::from_secs(26));
+        assert_eq!(white, secs(4));
+        assert_eq!(black, secs(45));
+
+        let (white, black) = running_clock(secs(30), secs(45), 5, Duration::from_secs(26));
+        assert_eq!(white, secs(30));
+        assert_eq!(black, secs(19));
+    }
+
+    #[test]
+    fn overrun_saturates_at_zero() {
+        let (white, _) = running_clock(secs(3), secs(45), 0, Duration::from_secs(90));
+        assert_eq!(white, Some(Duration::ZERO));
+    }
+
+    #[test]
+    fn untimed_clocks_stay_none() {
+        let (white, black) = running_clock(None, None, 4, Duration::from_secs(26));
+        assert_eq!(white, None);
+        assert_eq!(black, None);
     }
 }

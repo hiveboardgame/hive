@@ -34,3 +34,4 @@ pub mod title;
 pub mod toggle_controls;
 pub mod uninvite_button;
 pub mod unread_badge;
+pub mod warning_flash;

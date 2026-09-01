@@ -6,8 +6,10 @@ mod auth_context;
 mod challenge_params;
 pub mod challenges;
 pub mod chat;
+pub mod clock_warning_draft;
 pub mod config;
 mod direct_challenge;
+pub mod flash;
 pub mod game_state;
 mod game_updater;
 pub mod games;
@@ -31,8 +33,10 @@ pub use challenge_params::{
     ChallengeParams,
     ChallengeParamsStoreFields,
 };
+pub use clock_warning_draft::{provide_clock_warning_draft, ClockWarningDraft};
 pub use config::{provide_config, Config};
 pub use direct_challenge::{provide_direct_challenge, DirectChallengeOpener, DirectChallengeState};
+pub use flash::{provide_flash, FlashSignal};
 pub use game_state::provide_game_state;
 pub use game_updater::{provide_server_updates, UpdateNotifier};
 pub use games_search_context::{

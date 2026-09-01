@@ -326,6 +326,7 @@ diesel::table! {
         lang -> Nullable<Text>,
         email_verified -> Bool,
         pending_email -> Nullable<Text>,
+        time_warnings -> Nullable<Jsonb>,
     }
 }
 

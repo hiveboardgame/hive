@@ -3,6 +3,7 @@ mod challenge;
 mod chat_capabilities;
 mod chat_message;
 mod conclusion;
+mod flash_style;
 mod game_speed;
 mod game_start;
 mod games_query_options;
@@ -23,6 +24,7 @@ mod telemetry;
 mod tiebreaker;
 mod time_info;
 mod time_mode;
+mod time_warning;
 mod tournament_details;
 mod tournament_game_result;
 mod tournament_mode;
@@ -43,6 +45,7 @@ pub use chat_message::{
     MAX_CHAT_MESSAGE_LENGTH,
 };
 pub use conclusion::Conclusion;
+pub use flash_style::FlashStyle;
 pub use game_speed::GameSpeed;
 pub use game_start::GameStart;
 pub use games_query_options::{
@@ -81,6 +84,16 @@ pub use telemetry::{PushMetrics, TelemetryRange, TelemetryRow, TELEMETRY_COLUMN_
 pub use tiebreaker::Tiebreaker;
 pub use time_info::TimeInfo;
 pub use time_mode::{CorrespondenceMode, TimeMode};
+pub use time_warning::{
+    default_time_warnings,
+    rearm_margin,
+    sanitize_time_warnings,
+    trigger_at,
+    Repeat,
+    TimeWarning,
+    WarningTrigger,
+    MAX_TIME_WARNINGS,
+};
 pub use tournament_details::TournamentDetails;
 pub use tournament_game_result::TournamentGameResult;
 pub use tournament_mode::TournamentMode;

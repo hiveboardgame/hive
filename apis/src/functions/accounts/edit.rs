@@ -1,6 +1,7 @@
 use crate::responses::AccountResponse;
 use leptos::prelude::*;
-use shared_types::Takeback;
+use server_fn::codec;
+use shared_types::{Takeback, TimeWarning};
 
 #[server]
 pub async fn edit_account(
@@ -50,5 +51,16 @@ pub async fn edit_lang(lang: String) -> Result<(), ServerFnError> {
     let mut conn = get_conn(&pool).await?;
     let user = User::find_active_by_uuid(&uuid().await?, &mut conn).await?;
     user.set_lang(&lang, &mut conn).await?;
+    Ok(())
+}
+
+#[server(input = codec::Cbor, output = codec::Cbor)]
+pub async fn edit_time_warnings(warnings: Vec<TimeWarning>) -> Result<(), ServerFnError> {
+    use crate::functions::{auth::identity::uuid, db::pool};
+    use db_lib::{get_conn, models::User};
+    let pool = pool().await?;
+    let mut conn = get_conn(&pool).await?;
+    let user = User::find_active_by_uuid(&uuid().await?, &mut conn).await?;
+    user.set_time_warnings(&warnings, &mut conn).await?;
     Ok(())
 }

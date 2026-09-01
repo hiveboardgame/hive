@@ -51,8 +51,10 @@ use crate::{
         provide_api_requests,
         provide_auth,
         provide_challenge_params,
+        provide_clock_warning_draft,
         provide_config,
         provide_direct_challenge,
+        provide_flash,
         provide_game_state,
         provide_notifications,
         provide_ping,
@@ -94,6 +96,8 @@ pub fn App() -> impl IntoView {
 
     //These dont expect any other context, can be provided in any order
     provide_ping();
+    provide_clock_warning_draft();
+    provide_flash();
     provide_referer();
     provide_server_updates();
     provide_schedules();

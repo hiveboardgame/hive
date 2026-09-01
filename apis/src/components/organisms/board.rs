@@ -1,5 +1,5 @@
 use crate::{
-    common::{position_from_svg, SvgPos, TileDesign},
+    common::{position_from_svg, FlashStyle, SvgPos, TileDesign},
     components::{
         layouts::base_layout::OrientationSignal,
         molecules::{
@@ -10,6 +10,7 @@ use crate::{
         },
     },
     hiveground::HivegroundInteraction,
+    hooks::flash_pulse::use_flash_pulse,
     providers::{
         analysis::AnalysisContext,
         annotations::{AnnotationColor, AnnotationTool, AnnotationsSignal, MarkerShape},
@@ -196,11 +197,17 @@ pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>)
     });
     let game_status = Memo::new(move |_| state.with(|state| state.game_status.clone()));
     let game_id_slice = game_state.game_id();
+    let board_flashing = use_flash_pulse(FlashStyle::Board);
     let board_style = move || {
-        if orientation_signal.orientation_vertical.get() {
+        let layout = if orientation_signal.orientation_vertical.get() {
             "flex relative grow min-h-0"
         } else {
             "relative col-start-1 row-start-1 col-span-8 row-span-6"
+        };
+        if board_flashing.get() {
+            format!("{layout} warning-flash-board")
+        } else {
+            layout.to_string()
         }
     };
     let history_style = move || match board_view.get() {

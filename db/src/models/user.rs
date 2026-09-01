@@ -23,6 +23,7 @@ use crate::{
             },
             lang,
             takeback,
+            time_warnings,
         },
     },
     DbConn,
@@ -48,7 +49,15 @@ use hive_lib::GameControl;
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use shared_types::{GameId, GameSpeed, Takeback, TournamentId, TournamentStatus};
+use shared_types::{
+    sanitize_time_warnings,
+    GameId,
+    GameSpeed,
+    Takeback,
+    TimeWarning,
+    TournamentId,
+    TournamentStatus,
+};
 use uuid::Uuid;
 
 const MAX_USERNAME_LENGTH: usize = 20;
@@ -175,6 +184,7 @@ pub struct User {
     pub lang: Option<String>,
     pub email_verified: bool,
     pub pending_email: Option<String>,
+    pub time_warnings: Option<serde_json::Value>,
 }
 
 impl User {
@@ -253,6 +263,29 @@ impl User {
         let tb = tb.to_string();
         diesel::update(self)
             .set(takeback.eq(tb.to_string()))
+            .execute(conn)
+            .await?;
+        Ok(())
+    }
+
+    pub fn time_warning_stages(&self) -> Option<Vec<TimeWarning>> {
+        let stored = self.time_warnings.as_ref()?;
+        let stages: Vec<TimeWarning> = serde_json::from_value(stored.clone()).ok()?;
+        Some(sanitize_time_warnings(stages))
+    }
+
+    pub async fn set_time_warnings(
+        &self,
+        warnings: &[TimeWarning],
+        conn: &mut DbConn<'_>,
+    ) -> Result<(), DbError> {
+        let stages = sanitize_time_warnings(warnings.to_vec());
+        let encoded = serde_json::to_value(&stages).map_err(|e| DbError::InvalidInput {
+            info: "time warnings could not be encoded".to_string(),
+            error: e.to_string(),
+        })?;
+        diesel::update(self)
+            .set(time_warnings.eq(Some(encoded)))
             .execute(conn)
             .await?;
         Ok(())

@@ -971,3 +971,75 @@ html[data-display-mode="standalone"] {
     -webkit-mask-image: none;
   }
 }
+
+@keyframes warning-flash-pulse {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes warning-flash-ring {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(220 38 38 / 0);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgb(220 38 38 / 0.75);
+  }
+}
+
+@keyframes warning-flash-cell {
+  0%,
+  100% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: rgb(220 38 38 / 0.85);
+  }
+}
+
+@keyframes warning-flash-settle {
+  0% {
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* 0.4s x 3 keeps this at 2.5 flashes/sec, under the photosensitivity limit. */
+
+/* Edge vignette, not a full-screen fill: catches peripheral vision without
+   blanking the board you are trying to look at. */
+.warning-flash-overlay {
+  background: radial-gradient(
+    ellipse at center,
+    rgb(220 38 38 / 0) 42%,
+    rgb(220 38 38 / 0.16) 68%,
+    rgb(220 38 38 / 0.45) 100%
+  );
+  animation: warning-flash-pulse 0.5s ease-in-out 2;
+}
+
+.warning-flash-board {
+  animation: warning-flash-ring 0.4s ease-in-out 3;
+}
+
+.warning-flash-timer {
+  animation: warning-flash-cell 0.4s ease-in-out 3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .warning-flash-overlay,
+  .warning-flash-board,
+  .warning-flash-timer {
+    animation: warning-flash-settle 1.2s ease-out 1;
+  }
+}

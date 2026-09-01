@@ -6,6 +6,7 @@ use web_sys::{
     js_sys::{ArrayBuffer, Math::random},
     AudioBuffer,
     AudioContext,
+    OscillatorType,
     Response,
 };
 
@@ -14,6 +15,8 @@ pub enum SoundType {
     Turn,
     NewGame,
     LowTime,
+    Critical,
+    Tick,
 }
 
 #[derive(Clone)]
@@ -39,10 +42,15 @@ impl Sounds {
         };
         let random = (random() * 1e18) as u64;
         if let Some(Ok(s)) = self.client_data.get_untracked().as_ref() {
+            if kind == SoundType::Critical || kind == SoundType::Tick {
+                let beeps = if kind == SoundType::Tick { 1 } else { BEEPS };
+                let _ = play_beeps(&s.ctx, beeps);
+                return;
+            }
             let (buffer, offset, duration) = match kind {
                 SoundType::Turn => (&s.turn, (random % 20) as f64, 1.0),
                 SoundType::NewGame => (&s.new, 0.0, 3.0),
-                SoundType::LowTime => (&s.low, 0.0, 2.0),
+                SoundType::LowTime | SoundType::Critical | SoundType::Tick => (&s.low, 0.0, 2.0),
             };
             let source = s.ctx.create_buffer_source().unwrap();
             source.set_buffer(Some(buffer));
@@ -55,6 +63,37 @@ impl Sounds {
                 .unwrap();
         }
     }
+}
+
+const BEEPS: usize = 3;
+const BEEP_HZ: f32 = 1180.0;
+const BEEP_LENGTH: f64 = 0.09;
+const BEEP_GAP: f64 = 0.07;
+const BEEP_PEAK: f32 = 0.22;
+
+// The mp3s carry their own mastering; an oscillator at unity is far louder than
+// any of them, and starting one without a ramp clicks.
+fn play_beeps(ctx: &AudioContext, beeps: usize) -> Result<(), JsValue> {
+    let start = ctx.current_time();
+    for index in 0..beeps {
+        let at = start + index as f64 * (BEEP_LENGTH + BEEP_GAP);
+        let oscillator = ctx.create_oscillator()?;
+        oscillator.set_type(OscillatorType::Sine);
+        oscillator.frequency().set_value(BEEP_HZ);
+
+        let gain = ctx.create_gain()?;
+        let envelope = gain.gain();
+        envelope.set_value(0.0);
+        envelope.set_value_at_time(0.0, at)?;
+        envelope.linear_ramp_to_value_at_time(BEEP_PEAK, at + 0.012)?;
+        envelope.exponential_ramp_to_value_at_time(0.0001, at + BEEP_LENGTH)?;
+
+        oscillator.connect_with_audio_node(&gain)?;
+        gain.connect_with_audio_node(&ctx.destination())?;
+        oscillator.start_with_when(at)?;
+        oscillator.stop_with_when(at + BEEP_LENGTH + 0.02)?;
+    }
+    Ok(())
 }
 
 async fn load_audio_buffer(ctx: &AudioContext, url: &str) -> Result<AudioBuffer, JsValue> {

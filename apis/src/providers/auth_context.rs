@@ -333,6 +333,7 @@ mod tests {
                 takeback: Takeback::Always,
                 lang: None,
             },
+            time_warnings: Vec::new(),
         }
     }
 

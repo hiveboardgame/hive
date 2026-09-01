@@ -1,6 +1,7 @@
 use crate::{
     common::{CurrentConfirm, GameReaction, PieceType},
     components::{
+        atoms::warning_flash::WarningFlashOverlay,
         layouts::base_layout::{ControlsSignal, OrientationSignal},
         molecules::{
             analysis_and_download::AnalysisAndDownload,
@@ -20,10 +21,13 @@ use crate::{
     },
     functions::games::get::get_game_from_nanoid,
     hiveground::{live_hiveground_interaction, selected_history_board, HivegroundInteraction},
-    hooks::history_nav::{
-        scroll_move_into_view,
-        sync_play_move_query,
-        use_play_history_keyboard_navigation,
+    hooks::{
+        history_nav::{
+            scroll_move_into_view,
+            sync_play_move_query,
+            use_play_history_keyboard_navigation,
+        },
+        time_warnings::{use_time_warnings, WarningClock},
     },
     providers::{
         annotations::AnnotationsSignal,
@@ -33,6 +37,7 @@ use crate::{
         websocket::{ConnectionReadyState, WebsocketContext},
         ApiRequestsProvider,
         AuthContext,
+        FlashSignal,
         SoundType,
         Sounds,
         UpdateNotifier,
@@ -41,7 +46,7 @@ use crate::{
 use hive_lib::{Board as HiveBoard, Color, GameControl, GameStatus, Turn};
 use leptos::{prelude::*, reactive::effect::batch, task::spawn_local_scoped_with_cancellation};
 use leptos_router::hooks::{use_params_map, use_query_map};
-use shared_types::{GameId, GameStart};
+use shared_types::{default_time_warnings, GameId, GameStart, Repeat, TimeWarning, WarningTrigger};
 use uuid::Uuid;
 
 #[component]
@@ -56,6 +61,7 @@ pub fn Play() -> impl IntoView {
     let config = expect_context::<Config>().0;
     let api = expect_context::<ApiRequestsProvider>();
     let game_updater = expect_context::<UpdateNotifier>();
+    let flash = expect_context::<FlashSignal>();
     let sounds = expect_context::<Sounds>();
     let ws = expect_context::<WebsocketContext>();
     let controls_signal = expect_context::<ControlsSignal>();
@@ -146,6 +152,60 @@ pub fn Play() -> impl IntoView {
     );
 
     let board_view = game_state.board_view();
+
+    use_time_warnings(
+        WarningClock {
+            time_left: Signal::derive(move || {
+                let color = user_color.get()?;
+                timer.signal.with(|t| t.warning_time_left(color))
+            }),
+            time_base: Signal::derive(move || timer.signal.with(|t| t.time_base)),
+            increment: Signal::derive(move || timer.signal.with(|t| t.time_increment)),
+            time_mode: Signal::derive(move || timer.signal.with(|t| t.time_mode)),
+            speed: Signal::derive(move || {
+                game_response.with(|response| response.as_ref().map(|game| game.speed))
+            }),
+            turn: Signal::derive(move || timer.signal.with(|t| t.turn)),
+            active: Signal::derive(move || {
+                let Some(color) = user_color.get() else {
+                    return false;
+                };
+                !board_view.get().is_history()
+                    && timer.signal.with(|t| {
+                        !t.finished && (color == Color::White) == t.turn.is_multiple_of(2)
+                    })
+                    && game_response.with(|response| {
+                        response
+                            .as_ref()
+                            .is_some_and(|game| game.game_status == GameStatus::InProgress)
+                    })
+            }),
+            stages: Signal::derive(move || {
+                auth_context
+                    .user
+                    .with(|user| user.as_ref().map(|account| account.time_warnings.clone()))
+                    .unwrap_or_else(default_time_warnings)
+            }),
+        },
+        {
+            let sounds = sounds.clone();
+            Callback::new(move |warning: TimeWarning| {
+                if warning.sound {
+                    sounds.play_sound(if warning.repeat == Repeat::EverySecond {
+                        SoundType::Tick
+                    } else {
+                        match warning.at {
+                            WarningTrigger::Proportional => SoundType::LowTime,
+                            WarningTrigger::Remaining(_) => SoundType::Critical,
+                        }
+                    });
+                }
+                if warning.flash {
+                    flash.fire(warning.flash_styles.clone());
+                }
+            })
+        },
+    );
     let timer_display_key = Memo::new(move |_| {
         let board_view = board_view.get();
         let response = game_response.with(|game_response| {
@@ -392,6 +452,7 @@ pub fn Play() -> impl IntoView {
 
     view! {
         <div class=page_class style=page_height_style>
+            <WarningFlashOverlay />
             <div class=move || format!("h-full {}", parent_container_style())>
                 <Show
                     when=vertical

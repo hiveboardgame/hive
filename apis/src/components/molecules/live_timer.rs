@@ -1,10 +1,12 @@
-use crate::providers::{
-    game_state::{GameStateStore, GameStateStoreFields},
-    timer::TimerSignal,
-    ApiRequestsProvider,
-    AuthContext,
-    SoundType,
-    Sounds,
+use crate::{
+    common::FlashStyle,
+    hooks::flash_pulse::use_flash_pulse,
+    providers::{
+        game_state::{GameStateStore, GameStateStoreFields},
+        timer::TimerSignal,
+        ApiRequestsProvider,
+        AuthContext,
+    },
 };
 use hive_lib::{Color, GameStatus};
 use leptos::prelude::*;
@@ -23,8 +25,6 @@ use std::time::Duration;
 #[component]
 pub fn LiveTimer(side: Signal<Color>, #[prop(optional)] compact: bool) -> impl IntoView {
     let game_state = expect_context::<GameStateStore>();
-    let sounds = expect_context::<Sounds>();
-    let auth_context = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
     let params = use_params_map();
     let game_id = move || {
@@ -34,7 +34,6 @@ pub fn LiveTimer(side: Signal<Color>, #[prop(optional)] compact: bool) -> impl I
             .map(|s| GameId(s.to_owned()))
             .unwrap_or_default()
     };
-    let user_color = game_state.user_color_as_signal(auth_context.identity);
     let game_response = game_state.game_response();
     let in_progress = Memo::new(move |_| {
         game_response.with(|game_response| {
@@ -43,6 +42,9 @@ pub fn LiveTimer(side: Signal<Color>, #[prop(optional)] compact: bool) -> impl I
                 .is_some_and(|gr| gr.game_status == GameStatus::InProgress)
         })
     });
+    let auth_context = expect_context::<AuthContext>();
+    let user_color = game_state.user_color_as_signal(auth_context.identity);
+    let timer_flashing = use_flash_pulse(FlashStyle::Timer);
     let timer = expect_context::<TimerSignal>().signal;
     let tick_rate = Duration::from_millis(100);
     let Pausable { pause, resume, .. } = use_interval_fn_with_options(
@@ -68,33 +70,6 @@ pub fn LiveTimer(side: Signal<Color>, #[prop(optional)] compact: bool) -> impl I
         })
     });
     let time_is_zero = Signal::derive(move || timer.with(|t| t.time_left(side()).is_zero()));
-    let user_needs_warning = Signal::derive(move || {
-        user_color().is_some_and(|color| {
-            timer.with(|t| {
-                t.warning_trigger().is_some_and(|trigger_at| {
-                    if color == side() && !t.finished {
-                        t.time_left(color) < trigger_at
-                    } else {
-                        false
-                    }
-                })
-            })
-        })
-    });
-    let should_refresh_warning = Signal::derive(move || {
-        user_color().is_some_and(|color| {
-            timer.with(|t| {
-                t.warning_refresh().is_some_and(|refresh_at| {
-                    if color == side() && !t.finished {
-                        t.time_left(color) > refresh_at
-                    } else {
-                        false
-                    }
-                })
-            })
-        })
-    });
-
     //For styling timer updated by history navigation
     let timed_out = Signal::derive(move || {
         timer.with(|t| {
@@ -128,20 +103,6 @@ pub fn LiveTimer(side: Signal<Color>, #[prop(optional)] compact: bool) -> impl I
         WatchOptions::default().immediate(true),
     );
 
-    let _ = whenever_with_options(
-        user_needs_warning,
-        move |_, _, issued| {
-            let issued = issued.unwrap_or_default();
-            if issued {
-                !should_refresh_warning()
-            } else {
-                sounds.play_sound(SoundType::LowTime);
-                true
-            }
-        },
-        WatchOptions::default().immediate(true),
-    );
-
     let timer_text_class = if compact {
         "px-1 font-mono text-[0.95rem] leading-none tabular-nums whitespace-nowrap"
     } else {
@@ -151,8 +112,13 @@ pub fn LiveTimer(side: Signal<Color>, #[prop(optional)] compact: bool) -> impl I
     view! {
         <div class=move || {
             format!(
-                "flex resize h-full min-w-0 select-none items-center justify-center {timer_text_class} {}",
+                "flex resize h-full min-w-0 select-none items-center justify-center {timer_text_class} {} {}",
                 if timed_out() { "bg-ladybug-red" } else { "" },
+                if timer_flashing() && user_color() == Some(side()) {
+                    "warning-flash-timer"
+                } else {
+                    ""
+                },
             )
         }>
             {move || {
