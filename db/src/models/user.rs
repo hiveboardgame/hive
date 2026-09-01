@@ -48,7 +48,7 @@ use hive_lib::GameControl;
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use shared_types::{GameId, GameSpeed, Takeback, TournamentId, TournamentStatus};
+use shared_types::{GameId, GameSpeed, LeaderboardKind, Takeback, TournamentId, TournamentStatus};
 use uuid::Uuid;
 
 const MAX_USERNAME_LENGTH: usize = 20;
@@ -175,6 +175,27 @@ pub struct User {
     pub lang: Option<String>,
     pub email_verified: bool,
     pub pending_email: Option<String>,
+}
+
+struct RankingGate {
+    min_played: i64,
+    max_deviation: f64,
+}
+
+impl RankingGate {
+    fn for_kind(kind: LeaderboardKind) -> Self {
+        if kind.is_bots() {
+            Self {
+                min_played: 1,
+                max_deviation: f64::MAX,
+            }
+        } else {
+            Self {
+                min_played: 0,
+                max_deviation: shared_types::RANKABLE_DEVIATION,
+            }
+        }
+    }
 }
 
 impl User {
@@ -555,20 +576,27 @@ impl User {
     }
 
     pub async fn get_top_users(
+        kind: LeaderboardKind,
         game_speed: &GameSpeed,
         maybe_user: Option<Uuid>,
         limit: i64,
         conn: &mut DbConn<'_>,
     ) -> Result<Vec<(User, Rating, i64)>, DbError> {
         let speed = game_speed.to_string();
+        let gate = RankingGate::for_kind(kind);
+
         let mut top = Self::assign_ranks(
             users::table
                 .inner_join(ratings::table)
                 .filter(users::deleted.eq(false))
-                .filter(ratings::deviation.le(shared_types::RANKABLE_DEVIATION))
+                .filter(users::bot.eq(kind.is_bots()))
                 .filter(ratings::speed.eq(speed.clone()))
+                .filter(ratings::played.ge(gate.min_played))
+                .filter(ratings::deviation.le(gate.max_deviation))
                 .select((User::as_select(), Rating::as_select()))
                 .order_by(rating.desc())
+                .then_order_by(ratings::played.desc())
+                .then_order_by(users::id.asc())
                 .limit(limit)
                 .load::<(User, Rating)>(conn)
                 .await?,
@@ -585,8 +613,10 @@ impl User {
         let viewer_row = match users::table
             .inner_join(ratings::table)
             .filter(users::deleted.eq(false))
-            .filter(ratings::deviation.le(shared_types::RANKABLE_DEVIATION))
+            .filter(users::bot.eq(kind.is_bots()))
             .filter(ratings::speed.eq(speed))
+            .filter(ratings::played.ge(gate.min_played))
+            .filter(ratings::deviation.le(gate.max_deviation))
             .select((
                 User::as_select(),
                 Rating::as_select(),
@@ -603,9 +633,7 @@ impl User {
             Err(_) => return Ok(top),
         };
 
-        if viewer_row.2 > limit {
-            top.push(viewer_row);
-        }
+        top.push(viewer_row);
 
         Ok(top)
     }

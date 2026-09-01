@@ -36,7 +36,7 @@ use crate::{
         rules::Rules,
         rules_summary::RulesSummary,
         strategy::Strategy,
-        top_players::TopPlayers,
+        top_players::{TopBots, TopPlayers},
         tournament::Tournament,
         tournament_create::TournamentCreate,
         tournaments::{HostingTournaments, JoinedTournaments, Tournaments, TournamentsByStatus},
@@ -178,6 +178,7 @@ pub fn App() -> impl IntoView {
                         <Route path=path!("/register") view=|| view! { <Register /> } />
                         <Route path=path!("/archive") view=|| view! { <GameSearch /> } />
                         <Route path=path!("/top_players") view=|| view! { <TopPlayers /> } />
+                        <Route path=path!("/top_bots") view=|| view! { <TopBots /> } />
                         <Route path=path!("/login") view=|| view! { <Login /> } />
                         <Route
                             path=path!("/forgot-password")

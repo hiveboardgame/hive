@@ -4,7 +4,8 @@
         "title": "Communauté",
         "resources": "Ressources",
         "faq": "FAQ",
-        "top_players": "Meilleurs joueurs"
+        "top_players": "Meilleurs joueurs",
+        "top_bots": "Meilleurs bots"
     },
     "learn": {
         "rules_summary": "Résumé des règles",
