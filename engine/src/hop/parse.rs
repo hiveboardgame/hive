@@ -6,9 +6,9 @@ use std::{
 };
 
 use crate::{
-    board::{Board, BOARD_SIZE},
+    board::Board,
     bug::Bug,
-    canonical_hash::{axis_origin, canonical_hash},
+    canonical_hash::canonical_hash,
     color::Color,
     direction::Direction,
     game_type::GameType,
@@ -395,7 +395,7 @@ impl Walk {
         self.scopes.last().expect("scope stack is never empty")
     }
 
-    fn finish(self) -> Result<Board, HopError> {
+    fn finish(mut self) -> Result<Board, HopError> {
         if !self.placed_any {
             return Err(HopError::NoStartBug);
         }
@@ -405,40 +405,11 @@ impl Walk {
         if self.scopes.len() != 1 {
             return Err(HopError::UnbalancedParens);
         }
-        let translate = recentering(&self.board);
-        let mut board = Board::new();
-        for at in self.board.all_taken_positions() {
-            let stack = self.board.board.get(at);
-            for piece in &stack.pieces[..stack.size as usize] {
-                board.insert(translate(at), *piece, true);
-            }
-        }
-        board.last_moved = self.marked.map(|(piece, at)| (piece, translate(at)));
-        Ok(board)
-    }
-}
-
-/// The serializer's spiral can walk a long hive off the torus edge, so it comes back in pieces.
-/// Unwrap each axis at its guaranteed gap, as the hash does, and centre on the spawn position.
-fn recentering(board: &Board) -> impl Fn(Position) -> Position {
-    let (mut q_mask, mut r_mask) = (0u32, 0u32);
-    for position in board.positions.iter().flatten() {
-        q_mask |= 1 << position.q;
-        r_mask |= 1 << position.r;
-    }
-    let (q_origin, r_origin) = (axis_origin(q_mask), axis_origin(r_mask));
-    let (mut q_width, mut r_width) = (0, 0);
-    for position in board.positions.iter().flatten() {
-        q_width = q_width.max((position.q - q_origin).rem_euclid(BOARD_SIZE));
-        r_width = r_width.max((position.r - r_origin).rem_euclid(BOARD_SIZE));
-    }
-    let centre = Position::initial_spawn_position();
-    let (q_start, r_start) = (centre.q - q_width / 2, centre.r - r_width / 2);
-    move |at: Position| {
-        Position::new(
-            q_start + (at.q - q_origin).rem_euclid(BOARD_SIZE),
-            r_start + (at.r - r_origin).rem_euclid(BOARD_SIZE),
-        )
+        // The walk runs wherever the serializer's spiral leads, so a long hive wraps the
+        // torus; recentering lands it whole and translates the `!` mark with it.
+        self.board.last_moved = self.marked;
+        self.board.recenter();
+        Ok(self.board)
     }
 }
 

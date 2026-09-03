@@ -545,6 +545,11 @@ impl State {
         self.three_fold_repetition(self.turn_color.opposite_color());
         debug_assert!(self.board.check());
         self.next_turn();
+        // The renderer draws raw coordinates, so keep the hive clear of the torus seam.
+        // Deterministic, so every replay path recenters at the same plies.
+        if self.board.needs_recentering() {
+            self.board.recenter();
+        }
         Ok(())
     }
 
@@ -638,6 +643,81 @@ mod tests {
             State::new(GameType::MLP, false).history.game_type,
             GameType::MLP
         );
+    }
+
+    /// Small storage is only worth it if a whole opening fits inside it.
+    #[test]
+    fn an_opening_stays_on_small_storage() {
+        let mut state = State::new(GameType::MLP, false);
+        for (piece, position) in [
+            ("wQ", ""),
+            ("bQ", "-wQ"),
+            ("wA1", "wQ-"),
+            ("bA1", "-bQ"),
+            ("wG1", "wQ/"),
+            ("bG1", "\\bQ"),
+            ("wS1", "wA1-"),
+            ("bS1", "-bA1"),
+        ] {
+            state.play_turn_from_history(piece, position).unwrap();
+        }
+        assert_eq!(state.board.storage_cells(), 256);
+    }
+
+    /// Without the grow, an outgrown hive wraps and reads another cell's contents.
+    #[test]
+    fn play_grows_the_storage_when_the_hive_outgrows_the_small_window() {
+        let mut board = Board::new();
+        let pieces = [
+            "wQ", "wA1", "wA2", "wA3", "wG1", "wG2", "bQ", "bA1", "bA2", "bA3", "bG1", "bG2",
+        ];
+        for (offset, piece) in pieces.iter().enumerate() {
+            board.insert(
+                Position::new(10 + offset as i32, 16),
+                piece.parse().expect("test piece"),
+                true,
+            );
+        }
+        let mut state = State::new_from_position(board, GameType::MLP, Color::White)
+            .expect("a hand-built hive is reachable");
+        assert_eq!(state.board.storage_cells(), 256, "twelve wide still fits");
+        state
+            .play_turn_from_position("wG3".parse().expect("test piece"), Position::new(9, 16))
+            .expect("extending the row is legal");
+        assert_eq!(
+            state.board.storage_cells(),
+            1024,
+            "thirteen wide no longer fits the small window with probe margins"
+        );
+    }
+
+    /// Play must keep the hive clear of the seam; only the renderer's pixels would notice.
+    #[test]
+    fn play_recenters_a_hive_that_reaches_the_seam() {
+        let mut board = Board::new();
+        for (q, r, piece) in [
+            (30, 16, "wQ"),
+            (31, 16, "wA1"),
+            (0, 16, "bQ"),
+            (1, 16, "bA1"),
+        ] {
+            board.insert(
+                Position::new(q, r),
+                piece.parse().expect("test piece"),
+                true,
+            );
+        }
+        let mut state = State::new_from_position(board, GameType::MLP, Color::White)
+            .expect("a hand-built hive is reachable");
+        state
+            .play_turn_from_position("wG1".parse().expect("test piece"), Position::new(30, 15))
+            .expect("a plain spawn next to White's own pieces");
+        for position in state.board.all_taken_positions() {
+            assert!(
+                (2..=30).contains(&position.q) && (2..=30).contains(&position.r),
+                "still hugging the seam at {position}"
+            );
+        }
     }
 
     /// A record cannot say whether queens-first was banned or unplayed, so keep our own flag.

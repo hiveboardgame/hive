@@ -371,6 +371,7 @@ impl Bug {
         board: &Board,
         keep_scanning: &mut impl FnMut(Position) -> bool,
     ) -> bool {
+        let mut state = TorusArray::new_like(&board.board, (false, false));
         let board = MidMoveBoard::new(board, position);
         let mut unexplored = None;
         for pos in Bug::crawl_negative_space(position, &board) {
@@ -385,7 +386,6 @@ impl Bug {
             return true;
         };
 
-        let mut state = TorusArray::new((false, false));
         state.set(position, (true, true));
         for pos in &unexplored {
             state.set(*pos, (true, true));

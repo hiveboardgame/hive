@@ -153,6 +153,23 @@ fn check_boundaries(state: &State, seed: u64) {
         context()
     );
 
+    if state.board.storage_cells() == 256 {
+        for p in state.board.positions.iter().flatten() {
+            assert!(
+                (10..=21).contains(&p.q) && (10..=21).contains(&p.r),
+                "small storage but hive outside the window ({})",
+                context()
+            );
+        }
+    }
+    for p in state.board.positions.iter().flatten() {
+        assert!(
+            (2..=30).contains(&p.q) && (2..=30).contains(&p.r),
+            "hive hugs the seam ({})",
+            context()
+        );
+    }
+
     // Undo means "the state minus its last ply" - nothing more.
     if !state.history.moves.is_empty() {
         let mut expected = State::new(state.game_type, state.tournament);
