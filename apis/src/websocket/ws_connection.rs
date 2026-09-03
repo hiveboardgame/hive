@@ -5,22 +5,27 @@ use super::{
     ws_hub::WsHub,
     WebsocketData,
 };
-use crate::common::{
-    ClientRequest,
-    ExternalServerError,
-    GameAction,
-    ServerResult,
-    SubscriptionError,
+use crate::{
+    api::v1::auth::{decode::jwt_decode, jwt_secret::JwtSecret},
+    common::{
+        ClientRequest,
+        ExternalServerError,
+        GameAction,
+        ServerMessage,
+        ServerResult,
+        SubscriptionError,
+    },
+    responses::UserResponse,
 };
 use actix_ws::{AggregatedMessage, AggregatedMessageStream, Session};
 use codee::{binary::MsgpackSerdeCodec, Decoder};
-use db_lib::DbPool;
+use db_lib::{get_conn, models::User, DbPool};
 use futures_util::StreamExt;
 use indoc::printdoc;
 use shared_types::{ConversationKey, GameThread, SimpleUser};
 use std::{
     cell::Cell,
-    sync::Arc,
+    sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
 use uuid::Uuid;
@@ -37,7 +42,7 @@ struct DisconnectGuard {
     hub: Arc<WsHub>,
     telemetry: Arc<WsTelemetry>,
     socket_id: Uuid,
-    user: SimpleUser,
+    identity: Arc<Mutex<SimpleUser>>,
     reason: Cell<DisconnectReason>,
 }
 
@@ -50,31 +55,51 @@ impl DisconnectGuard {
 impl Drop for DisconnectGuard {
     fn drop(&mut self) {
         self.telemetry.record_disconnect(self.reason.get());
-        self.hub.on_disconnect(self.socket_id, self.user.clone());
+        // Read after any `Auth` swap, so cleanup unbinds the user the socket ended as.
+        let user = self
+            .identity
+            .lock()
+            .expect("identity mutex poisoned")
+            .clone();
+        self.hub.on_disconnect(self.socket_id, user);
     }
+}
+
+/// The four services every frame handler needs. They are built once per connection and
+/// never vary, so they travel as one rather than as four repeated parameters.
+pub struct Deps {
+    pub hub: Arc<WsHub>,
+    pub data: Arc<WebsocketData>,
+    pub pool: DbPool,
+    pub jwt_secret: Arc<JwtSecret>,
 }
 
 pub async fn reader_task(
     mut session: Session,
     mut msg_stream: AggregatedMessageStream,
     socket: SocketTx,
-    hub: Arc<WsHub>,
-    data: Arc<WebsocketData>,
-    pool: DbPool,
+    deps: Deps,
     user: SimpleUser,
 ) {
+    let Deps {
+        hub,
+        data,
+        pool,
+        jwt_secret,
+    } = deps;
     Arc::clone(&hub).on_connect(
         socket.socket_id,
         socket.tx.clone(),
         socket.format,
         user.clone(),
     );
+    let identity = Arc::new(Mutex::new(user));
 
     let guard = DisconnectGuard {
         hub: Arc::clone(&hub),
         telemetry: data.telemetry.clone(),
         socket_id: socket.socket_id,
-        user: user.clone(),
+        identity: Arc::clone(&identity),
         reason: Cell::new(DisconnectReason::Close),
     };
 
@@ -107,7 +132,7 @@ pub async fn reader_task(
                 }
                 Some(Ok(AggregatedMessage::Binary(bytes))) => {
                     last_hb = Instant::now();
-                    handle_binary(&bytes, &hub, &socket, &data, &pool, &user).await;
+                    handle_binary(&bytes, &hub, &socket, &data, &pool, &jwt_secret, &identity).await;
                 }
                 Some(Ok(AggregatedMessage::Close(_))) => break,
                 None => {
@@ -116,7 +141,8 @@ pub async fn reader_task(
                 }
                 Some(Ok(AggregatedMessage::Text(text))) => {
                     last_hb = Instant::now();
-                    handle_text(&text, &hub, &socket, &data, &pool, &user).await;
+                    handle_text(&text, &hub, &socket, &data, &pool, &jwt_secret, &identity)
+                        .await;
                 }
                 Some(Err(_)) => {
                     guard.set_reason(DisconnectReason::StreamErr);
@@ -136,14 +162,15 @@ async fn handle_binary(
     socket: &SocketTx,
     data: &Arc<WebsocketData>,
     pool: &DbPool,
-    user: &SimpleUser,
+    jwt_secret: &Arc<JwtSecret>,
+    identity: &Arc<Mutex<SimpleUser>>,
 ) {
     data.telemetry.record_message_received(bytes.len());
 
     let Ok(request) = MsgpackSerdeCodec::decode(bytes) else {
         return;
     };
-    handle_request(request, hub, socket, data, pool, user).await;
+    handle_request(request, hub, socket, data, pool, jwt_secret, identity).await;
 }
 
 async fn handle_text(
@@ -152,14 +179,15 @@ async fn handle_text(
     socket: &SocketTx,
     data: &Arc<WebsocketData>,
     pool: &DbPool,
-    user: &SimpleUser,
+    jwt_secret: &Arc<JwtSecret>,
+    identity: &Arc<Mutex<SimpleUser>>,
 ) {
     data.telemetry.record_message_received(text.len());
 
     let Ok(request) = serde_json::from_str(text) else {
         return;
     };
-    handle_request(request, hub, socket, data, pool, user).await;
+    handle_request(request, hub, socket, data, pool, jwt_secret, identity).await;
 }
 
 async fn handle_request(
@@ -168,8 +196,16 @@ async fn handle_request(
     socket: &SocketTx,
     data: &Arc<WebsocketData>,
     pool: &DbPool,
-    user: &SimpleUser,
+    jwt_secret: &Arc<JwtSecret>,
+    identity: &Arc<Mutex<SimpleUser>>,
 ) {
+    if let ClientRequest::Auth(token) = request {
+        handle_auth(&token, hub, socket, pool, jwt_secret, identity).await;
+        return;
+    }
+
+    let user = identity.lock().expect("identity mutex poisoned").clone();
+
     // Unwatch needs hub access and no DB — handle it here before RequestHandler.
     if let ClientRequest::Game {
         ref game_id,
@@ -322,6 +358,94 @@ fn should_log_request_error(err: &RequestHandlerError) -> bool {
     )
 }
 
+async fn send_direct(hub: &Arc<WsHub>, socket: &SocketTx, message: ServerMessage) {
+    let message = ServerResult::Ok(Box::new(message));
+    hub.dispatch_out(
+        &MessageDestination::Direct(socket.clone()),
+        &mut Outbound::typed(&message),
+    )
+    .await;
+}
+
+async fn handle_auth(
+    token: &str,
+    hub: &Arc<WsHub>,
+    socket: &SocketTx,
+    pool: &DbPool,
+    jwt_secret: &Arc<JwtSecret>,
+    identity: &Arc<Mutex<SimpleUser>>,
+) {
+    let failed = |hub: &Arc<WsHub>, socket: &SocketTx| {
+        let hub = hub.clone();
+        let socket = socket.clone();
+        async move {
+            send_direct(
+                &hub,
+                &socket,
+                ServerMessage::Error("Auth failed".to_string()),
+            )
+            .await;
+        }
+    };
+
+    let Ok(email) = jwt_decode(token, &jwt_secret.decoding) else {
+        failed(hub, socket).await;
+        return;
+    };
+    let Ok(mut conn) = get_conn(pool).await else {
+        failed(hub, socket).await;
+        return;
+    };
+    let Ok(user) = User::find_for_login(&email, &mut conn).await else {
+        failed(hub, socket).await;
+        return;
+    };
+    // The same gate the HTTP bot API applies, so the socket cannot become a second way in
+    // for a token the HTTP side would refuse.
+    if !user.bot {
+        failed(hub, socket).await;
+        return;
+    }
+
+    let authenticated = SimpleUser {
+        user_id: user.id,
+        username: user.username.clone(),
+        admin: user.admin,
+        authed: true,
+    };
+
+    // Built before the identity swap: a failure here must leave the socket anonymous,
+    // matching the "Auth failed" we send back.
+    let Ok(user_response) = UserResponse::from_model(&user, &mut conn).await else {
+        failed(hub, socket).await;
+        return;
+    };
+
+    let previous = {
+        let mut guard = identity.lock().expect("identity mutex poisoned");
+        std::mem::replace(&mut *guard, authenticated.clone())
+    };
+
+    // The ack goes out before the re-bind so it precedes every message the new
+    // registration produces, including the loader snapshot and our own Online.
+    send_direct(hub, socket, ServerMessage::Authenticated(user_response)).await;
+
+    // Re-bind under the real user keeping socket_id and tx, so fanouts that route by socket
+    // survive the swap.
+    hub.on_disconnect(socket.socket_id, previous);
+    Arc::clone(hub).on_connect(
+        socket.socket_id,
+        socket.tx.clone(),
+        socket.format,
+        authenticated,
+    );
+
+    // The cookie path gets a snapshot on connect; a bot authenticating later would otherwise
+    // sit blind until something changed.
+    hub.send_lobby_snapshot(&mut conn, user.id, socket, Some(&user))
+        .await;
+}
+
 #[cfg(test)]
 mod tests {
     use super::external_server_error;
@@ -430,5 +554,116 @@ mod tests {
                 error: ChatSendError::ClientIdConflict,
             },
         );
+    }
+
+    #[actix_rt::test]
+    async fn a_successful_auth_is_acked_before_anything_else() {
+        use crate::{
+            api::v1::auth::{
+                encode::{jwt_encode, Bot},
+                jwt_secret::JwtSecret,
+            },
+            common::{ServerMessage, ServerResult},
+            responses::UserResponse,
+            websocket::{
+                live_test_pool,
+                messages::{SocketFormat, SocketTx},
+                ws_hub::{WsHub, SOCKET_BUFFER_CAPACITY},
+                WebsocketData,
+            },
+        };
+        use db_lib::{
+            get_conn,
+            models::{NewUser, User},
+        };
+        use shared_types::SimpleUser;
+        use std::sync::{Arc, Mutex};
+
+        let Some(pool) = live_test_pool().await else {
+            eprintln!("skipped: no reachable TEST_DATABASE_URL");
+            return;
+        };
+        let mut conn = get_conn(&pool).await.expect("test database connection");
+        let username = format!("ackbot{}", &Uuid::new_v4().simple().to_string()[..8]);
+        let email = format!("{username}@example.com");
+        let mut new_user = NewUser::new(&username, "password", &email).expect("valid bot user");
+        new_user.bot = true;
+        let user = User::create(new_user, &mut conn)
+            .await
+            .expect("bot user is created");
+
+        let jwt_secret = Arc::new(JwtSecret::new("test-secret".to_string()));
+        let token = jwt_encode(
+            Bot {
+                email,
+                password: "password".to_string(),
+            },
+            &jwt_secret.encoding,
+        )
+        .expect("token encodes");
+
+        let hub = WsHub::new(Arc::new(WebsocketData::default()), pool.clone());
+        let (tx, mut rx) = tokio::sync::mpsc::channel(SOCKET_BUFFER_CAPACITY);
+        let socket = SocketTx {
+            socket_id: Uuid::new_v4(),
+            format: SocketFormat::Json,
+            tx,
+        };
+        let identity = Arc::new(Mutex::new(SimpleUser {
+            user_id: Uuid::new_v4(),
+            username: "anonymous".to_string(),
+            admin: false,
+            authed: false,
+        }));
+
+        super::handle_auth(&token, &hub, &socket, &pool, &jwt_secret, &identity).await;
+
+        assert!(identity.lock().expect("identity mutex poisoned").authed);
+        let first = rx.recv().await.expect("the ack is sent");
+        let decoded: ServerResult = serde_json::from_slice(&first).expect("the ack is JSON");
+        let ServerResult::Ok(message) = decoded else {
+            panic!("the ack is not an error");
+        };
+        let ServerMessage::Authenticated(UserResponse { uid, .. }) = *message else {
+            panic!("a bot learns it is authenticated before any other frame: {message:?}");
+        };
+        assert_eq!(uid, user.id);
+    }
+
+    #[tokio::test]
+    async fn a_junk_token_leaves_the_socket_anonymous() {
+        use crate::{
+            api::v1::auth::jwt_secret::JwtSecret,
+            websocket::{messages::SocketTx, ws_hub::WsHub, WebsocketData},
+        };
+        use shared_types::SimpleUser;
+        use std::sync::{Arc, Mutex};
+
+        let pool = db_lib::get_pool("postgresql://test:test@127.0.0.1:9/test")
+            .await
+            .expect("bb8 pool builds without connecting");
+        let data = Arc::new(WebsocketData::default());
+        let hub = WsHub::new(data.clone(), pool.clone());
+        let (tx, _rx) = tokio::sync::mpsc::channel(8);
+        let socket = SocketTx {
+            socket_id: Uuid::new_v4(),
+            format: crate::websocket::messages::SocketFormat::Msgpack,
+            tx,
+        };
+        let anonymous = SimpleUser {
+            user_id: Uuid::nil(),
+            username: "anonymous".to_string(),
+            admin: false,
+            authed: false,
+        };
+        let identity = Arc::new(Mutex::new(anonymous.clone()));
+        let jwt_secret = Arc::new(JwtSecret::new("test-secret".to_string()));
+
+        // Decoding fails before any database access, so the unreachable pool is never touched.
+        super::handle_auth("not-a-jwt", &hub, &socket, &pool, &jwt_secret, &identity).await;
+
+        let after = identity.lock().expect("identity mutex poisoned").clone();
+        assert!(!after.authed);
+        assert_eq!(after.user_id, anonymous.user_id);
     }
 }
