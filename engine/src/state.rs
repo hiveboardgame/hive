@@ -37,7 +37,10 @@ impl State {
             board: Board::new(),
             hashes: Vec::new(),
             hashes_count: HashMap::new(),
-            history: History::new(),
+            history: History {
+                game_type,
+                ..History::new()
+            },
             turn: 0,
             turn_color: Color::White,
             players: (Player::new(Color::White), Player::new(Color::Black)),
@@ -92,7 +95,9 @@ impl State {
             .map(|(piece, mov)| format!("{piece} {mov}"))
             .collect::<Vec<String>>()
             .join(";");
-        if let Ok(new) = Self::new_from_str(&moves, &self.game_type.to_string()) {
+        if let Ok(mut new) = Self::new_from_str(&moves, &self.game_type.to_string()) {
+            // The record cannot say whether queens-first was banned or merely unplayed.
+            new.tournament = self.tournament;
             *self = new;
         }
     }
@@ -226,6 +231,14 @@ impl State {
         position: Position,
     ) -> Result<(), GameError> {
         self.play_turn(piece, position)?;
+        // A game-ending move leaves the loser shut out; auto-passing then records a phantom
+        // ply that `Game::update_gamestate` would store.
+        if matches!(
+            self.game_status,
+            GameStatus::Finished(_) | GameStatus::Adjudicated
+        ) {
+            return Ok(());
+        }
         if self.board.is_shutout(self.turn_color, self.game_type) {
             self.pass();
         }
@@ -256,6 +269,9 @@ impl State {
         self.turn_color = self.turn_color.opposite_color();
         self.turn += 1;
         self.board.last_moved = None;
+        // A pass moves no piece, so there is no last-move restriction to carry: `stunned` must be
+        // cleared alongside `last_moved`, or it describes a stun that no longer exists.
+        self.board.stunned = None;
         self.board.last_move = (None, None);
         self.three_fold_repetition(None, None, None);
     }
@@ -311,8 +327,13 @@ impl State {
                 "This move isn't valid.",
             ));
         }
-        self.board
-            .move_piece(piece, current_position, target_position, self.turn)?;
+        self.board.move_piece(
+            piece,
+            current_position,
+            target_position,
+            self.turn,
+            self.turn_color,
+        )?;
         self.board.last_move = (Some(current_position), Some(target_position));
         Ok(())
     }
@@ -457,6 +478,31 @@ fn is_absolute_position(position: &str) -> bool {
 mod tests {
     use super::*;
     use std::collections::HashSet;
+
+    /// UHP headers and tree replay read it; two call sites hand-patched the Base default.
+    #[test]
+    fn a_new_state_stamps_its_history_with_the_game_type() {
+        assert_eq!(
+            State::new(GameType::MLP, false).history.game_type,
+            GameType::MLP
+        );
+    }
+
+    /// A record cannot say whether queens-first was banned or unplayed, so keep our own flag.
+    #[test]
+    fn undo_keeps_the_tournament_flag() {
+        let mut state = State::new(GameType::Base, false);
+        state.play_turn_from_history("wS1", "").unwrap();
+        state.play_turn_from_history("bS1", "wS1-").unwrap();
+        state.play_turn_from_history("wQ", "-wS1").unwrap();
+        let mut undone = state.clone();
+        undone.undo();
+        assert_eq!(undone.turn, 2);
+        assert!(
+            !undone.tournament,
+            "a casual game stays casual through undo"
+        );
+    }
 
     #[test]
     fn tests_iniital_hash() {

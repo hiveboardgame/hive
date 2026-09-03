@@ -50,7 +50,7 @@ pub(crate) fn navigate_analysis_history(
         return false;
     };
 
-    if analysis.store.select_node(updated_node_id, game_state) {
+    if analysis.select_node(updated_node_id, game_state) {
         analysis.sync_reserve_later_from_game_state(game_state);
         true
     } else {
@@ -58,10 +58,7 @@ pub(crate) fn navigate_analysis_history(
     }
 }
 
-pub(crate) fn use_analysis_history_keyboard_navigation(
-    analysis: AnalysisContext,
-    before_navigate: impl Fn() + 'static,
-) {
+pub(crate) fn use_analysis_history_keyboard_navigation(analysis: AnalysisContext) {
     let game_state = expect_context::<GameStateStore>();
     use_history_arrow_keyboard_navigation(
         AnalysisHistoryNavigation::Previous,
@@ -70,7 +67,6 @@ pub(crate) fn use_analysis_history_keyboard_navigation(
             if !can_navigate_analysis_history(analysis.store, action) {
                 return;
             }
-            before_navigate();
             navigate_analysis_history(action, analysis, game_state);
         },
     );

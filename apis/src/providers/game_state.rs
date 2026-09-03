@@ -119,6 +119,10 @@ impl GameStateStore {
     }
 
     pub fn move_active(&self, analysis: Option<AnalysisContext>, api: ApiRequests) {
+        // Committing while a preview shows would bake the previewed move into the tree.
+        if let Some(analysis) = analysis {
+            analysis.reset_preview(*self);
+        }
         let (active, position) = self.move_info().with_untracked(|move_info| {
             (
                 move_info.active.map(|(piece, _)| piece),

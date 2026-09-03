@@ -19,7 +19,7 @@ use crate::{
     },
     responses::GameResponse,
 };
-use hive_lib::{GameType, History};
+use hive_lib::{GameType, History, State};
 use leptos::{prelude::*, reactive::effect::batch};
 use reactive_stores::Store;
 use std::{
@@ -37,6 +37,8 @@ pub(super) struct AnalysisState {
     pub(super) game_type: GameType,
     pub(super) annotations: HashMap<NodeId, AnnotationSet>,
     pub(super) document_generation: u64,
+    /// `?move=N` resolves against this, since "Promote variation" reorders the first-child chain.
+    pub(super) game_line: Vec<NodeId>,
 }
 
 impl AnalysisState {
@@ -51,6 +53,7 @@ impl AnalysisState {
             game_type,
             annotations: HashMap::new(),
             document_generation: 0,
+            game_line: Vec::new(),
         }
     }
 
@@ -188,6 +191,10 @@ impl AnalysisStore {
         self.0.document_generation().get()
     }
 
+    pub fn document_generation_untracked(&self) -> u64 {
+        self.0.document_generation().get_untracked()
+    }
+
     pub fn game_type_untracked(&self) -> GameType {
         self.0.game_type().get_untracked()
     }
@@ -282,7 +289,18 @@ impl AnalysisStore {
     }
 
     pub fn select_main_ply(&self, raw_ply: Option<usize>, game_state: GameStateStore) -> bool {
-        let target = self.0.arena().with_untracked(|arena| {
+        let target = self.0.with_untracked(|analysis| {
+            let arena = &analysis.arena;
+            // The imported chain is the authority; "Promote variation" reorders the children.
+            let line = &analysis.game_line;
+            if !line.is_empty() {
+                let last = line.len() - 1;
+                let index = raw_ply.unwrap_or(last).min(last);
+                let target = line[index];
+                if arena.nodes.contains_key(&target) {
+                    return Some(target);
+                }
+            }
             let requested = raw_ply.unwrap_or(usize::MAX);
             let mut current = arena.root;
             let mut depth = 0;
@@ -366,62 +384,26 @@ impl AnalysisStore {
         if moves.is_empty() {
             return;
         }
-        let game_type = self.game_type_untracked();
-        let mut selected = self.selected_node_id_untracked();
-        let mut path = self.0.selected_path().get_untracked();
-        if path.last().copied() != Some(selected) {
+        let base_selected = self.selected_node_id_untracked();
+        let base_path = self.0.selected_path().get_untracked();
+        if base_path.last().copied() != Some(base_selected) {
             return;
         }
-        let mut starting_depth = 0;
-        let mut depth = 0;
-        let mut matched_count = 0;
-        let mut new_variation_parent = None;
-        let mut normalized_state = None;
-        let prepared = self.0.with_untracked(|analysis| {
-            let arena = &analysis.arena;
-            starting_depth = arena.node(selected)?.depth;
-            starting_depth.checked_add(moves.len())?;
-            depth = starting_depth;
-            let mut reused_canonical_orientation = false;
-            for ((piece, position), hash) in &moves {
-                let turn = depth.checked_add(1)?;
-                let value = MoveDelta {
-                    turn,
-                    piece: piece.clone(),
-                    position: position.clone(),
-                };
-                let Some(child_match) = arena.matching_child(selected, &value, *hash) else {
-                    break;
-                };
-                let id = match child_match {
-                    ChildMatch::Exact(id) => id,
-                    ChildMatch::Canonical(id) => {
-                        reused_canonical_orientation = true;
-                        id
-                    }
-                };
-                selected = id;
-                depth = turn;
-                matched_count += 1;
-                path.push(id);
-            }
-            let new_count = u64::try_from(moves.len().saturating_sub(matched_count)).ok()?;
-            arena.next_id.checked_add(new_count)?;
-            if matched_count < moves.len() && arena.node(selected)?.children.len() == 1 {
-                new_variation_parent = Some(selected);
-            }
-            if reused_canonical_orientation {
-                let mut state = arena.replay(&path, game_type, &analysis.checkpoints)?;
-                for ((piece, position), _) in moves.iter().skip(matched_count) {
-                    state.play_turn_from_history(piece, position).ok()?;
-                }
-                normalized_state = Some(state);
-            }
-            Some(())
-        });
-        if prepared.is_none() {
+        let plan = self
+            .0
+            .with_untracked(|analysis| plan_append(analysis, &moves, base_selected, &base_path));
+        let Some(plan) = plan else {
             return;
-        }
+        };
+        let AppendPlan {
+            mut path,
+            mut selected,
+            starting_depth,
+            mut depth,
+            matched_count,
+            new_variation_parent,
+            normalized_state,
+        } = plan;
         let checkpoint = (starting_depth / CHECKPOINT_STRIDE
             != (starting_depth + moves.len()) / CHECKPOINT_STRIDE)
             .then(|| {
@@ -642,4 +624,84 @@ impl AnalysisStore {
                 })
         })
     }
+}
+
+/// Computed read-only in the preflight, so the mutation below can never half-apply.
+struct AppendPlan {
+    path: Vec<NodeId>,
+    selected: NodeId,
+    starting_depth: usize,
+    depth: usize,
+    matched_count: usize,
+    new_variation_parent: Option<NodeId>,
+    normalized_state: Option<State>,
+}
+
+/// Reused matches carry a different lineage, so the board is normalized by replaying the path.
+fn plan_append(
+    analysis: &AnalysisState,
+    moves: &[((String, String), u64)],
+    base_selected: NodeId,
+    base_path: &[NodeId],
+) -> Option<AppendPlan> {
+    let arena = &analysis.arena;
+    let mut selected = base_selected;
+    let mut path = base_path.to_vec();
+    let starting_depth = arena.node(selected)?.depth;
+    starting_depth.checked_add(moves.len())?;
+    let mut depth = starting_depth;
+    let mut matched_count = 0;
+    let mut reused_other_lineage = false;
+    for ((piece, position), hash) in moves {
+        let turn = depth.checked_add(1)?;
+        let value = MoveDelta {
+            turn,
+            piece: piece.clone(),
+            position: position.clone(),
+        };
+        let id = match arena.matching_child(selected, &value, *hash) {
+            Some(ChildMatch::Exact(id)) => id,
+            Some(ChildMatch::Canonical(id)) => {
+                reused_other_lineage = true;
+                id
+            }
+            None => {
+                let Some(id) = arena.transposition(*hash, turn) else {
+                    break;
+                };
+                path = arena.path_to(id)?;
+                reused_other_lineage = true;
+                selected = id;
+                depth = turn;
+                matched_count += 1;
+                continue;
+            }
+        };
+        selected = id;
+        depth = turn;
+        matched_count += 1;
+        path.push(id);
+    }
+    let new_count = u64::try_from(moves.len().saturating_sub(matched_count)).ok()?;
+    arena.next_id.checked_add(new_count)?;
+    let new_variation_parent = (matched_count < moves.len()
+        && arena.node(selected)?.children.len() == 1)
+        .then_some(selected);
+    let mut normalized_state = None;
+    if reused_other_lineage {
+        let mut state = arena.replay(&path, analysis.game_type, &analysis.checkpoints)?;
+        for ((piece, position), _) in moves.iter().skip(matched_count) {
+            state.play_turn_from_history(piece, position).ok()?;
+        }
+        normalized_state = Some(state);
+    }
+    Some(AppendPlan {
+        path,
+        selected,
+        starting_depth,
+        depth,
+        matched_count,
+        new_variation_parent,
+        normalized_state,
+    })
 }

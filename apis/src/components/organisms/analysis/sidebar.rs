@@ -1,6 +1,6 @@
 use crate::{
     components::organisms::{
-        analysis::{AnalysisHistoryControls, AnalysisPreviewSnapshot, History, OpeningExplorer},
+        analysis::{AnalysisHistoryControls, History, OpeningExplorer},
         reserve::{Alignment, Reserve},
     },
     hiveground::HivegroundInteraction,
@@ -55,7 +55,6 @@ fn AnalysisTabList(tab: RwSignal<AnalysisTab>) -> impl IntoView {
 pub fn AnalysisSidebar(
     interaction: HivegroundInteraction,
     history_board: Memo<Board>,
-    preview_snapshot: RwSignal<Option<AnalysisPreviewSnapshot>>,
 ) -> impl IntoView {
     let tab = RwSignal::new(AnalysisTab::History);
     let reserve_class =
@@ -86,7 +85,7 @@ pub fn AnalysisSidebar(
                                 history_board
                             />
                         </div>
-                        <OpeningExplorer preview_snapshot />
+                        <OpeningExplorer />
                     </div>
                 </Show>
             </div>
@@ -103,7 +102,6 @@ pub fn AnalysisMobileHistoryControls() -> impl IntoView {
 pub fn AnalysisMobileTabs(
     interaction: HivegroundInteraction,
     history_board: Memo<Board>,
-    preview_snapshot: RwSignal<Option<AnalysisPreviewSnapshot>>,
 ) -> impl IntoView {
     let tab = RwSignal::new(AnalysisTab::History);
 
@@ -115,7 +113,7 @@ pub fn AnalysisMobileTabs(
                     <History mobile=true interaction history_board />
                 </Show>
                 <Show when=move || tab() == AnalysisTab::Explorer>
-                    <OpeningExplorer preview_snapshot />
+                    <OpeningExplorer />
                 </Show>
             </div>
         </div>
