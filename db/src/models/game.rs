@@ -384,6 +384,19 @@ impl Game {
         Ok((white, black))
     }
 
+    /// Between timeout-sweep ticks a row can be past its clock but not yet finalized, so a
+    /// caller that skips this hands out a game the next action will reject as over.
+    pub async fn settle_all(raw: Vec<Game>, conn: &mut DbConn<'_>) -> Result<Vec<Game>, DbError> {
+        let mut settled = Vec::with_capacity(raw.len());
+        for game in raw {
+            let game = game.check_time(conn).await?;
+            if !game.finished {
+                settled.push(game);
+            }
+        }
+        Ok(settled)
+    }
+
     pub async fn check_time(&self, conn: &mut DbConn<'_>) -> Result<Game, DbError> {
         let game_id = self.id;
         conn.transaction::<_, DbError, _>(async move |tc| {

@@ -96,14 +96,5 @@ async fn get_games(bot: User, selector: GameSelector, pool: Data<DbPool>) -> Res
         GameSelector::Ongoing => bot.get_ongoing_games(&mut conn).await?,
         GameSelector::Pending => bot.get_games_with_notifications(&mut conn).await?,
     };
-    // Between sweep ticks a row can be past timeout but not yet finalized;
-    // check_time settles it so the bot never sees a stale ongoing/pending game.
-    let mut out = Vec::with_capacity(raw.len());
-    for game in raw {
-        let g = game.check_time(&mut conn).await?;
-        if !g.finished {
-            out.push(g);
-        }
-    }
-    Ok(out)
+    Ok(Game::settle_all(raw, &mut conn).await?)
 }

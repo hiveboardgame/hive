@@ -120,6 +120,13 @@ pub enum ServerMessage {
     UserSettings(UserSettingsUpdate),
     UserStatus(UserUpdate),
     RedirectLink(String),
+    UserProfile(UserResponse),
+    /// The only frame that proves a token was accepted. A `LobbySnapshot` does not: one is
+    /// sent to unauthenticated sockets too, and the ping job writes to every socket each
+    /// second, so a client cannot infer auth from whatever happens to arrive first.
+    AuthOk {
+        username: String,
+    },
 }
 
 /// Authoritative best-effort lobby state sent on connect and Resync.
@@ -169,6 +176,10 @@ pub enum GameUpdate {
     OwnGameRemoved(GameId),
     Tv(GameResponse),
     Heartbeat(HeartbeatResponse),
+    Fetched(GameResponse),
+    /// Every unfinished game the requester plays, answering `GetOngoingGames`. Unlike
+    /// `Urgent` it is not filtered to games awaiting their move.
+    Ongoing(Vec<GameResponse>),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

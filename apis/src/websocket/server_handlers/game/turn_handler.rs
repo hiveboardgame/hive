@@ -11,20 +11,28 @@ use crate::{
         Reaction,
     },
 };
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use db_lib::{
     get_conn,
     models::{Game, User},
     DbPool,
 };
 use diesel_async::AsyncConnection;
-use hive_lib::{GameError, State, Turn};
+use hive_lib::{GameError, Piece, Position, State, Turn};
 use shared_types::{GameId, TimeMode};
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 use uuid::Uuid;
 
+/// Bots send notation and the server resolves it against the replayed board, exactly as
+/// `POST /api/v1/bot/games/play` does. The browser sends a resolved `Turn` because it runs
+/// the engine itself; nothing else can.
+pub enum TurnInput {
+    Structured(Turn),
+    Notation(String),
+}
+
 pub struct TurnHandler {
-    turn: Turn,
+    input: TurnInput,
     pool: DbPool,
     user_id: Uuid,
     username: String,
@@ -35,7 +43,7 @@ pub struct TurnHandler {
 
 impl TurnHandler {
     pub fn new(
-        turn: Turn,
+        input: TurnInput,
         game: &Game,
         username: &str,
         user_id: Uuid,
@@ -48,16 +56,38 @@ impl TurnHandler {
             user_id,
             username: username.to_owned(),
             pool: pool.clone(),
-            turn,
+            input,
             data,
             hub,
         }
     }
 
+    fn resolve(&self, state: &State) -> Result<Turn> {
+        let notation = match &self.input {
+            TurnInput::Structured(turn) => return Ok(turn.clone()),
+            TurnInput::Notation(notation) => notation,
+        };
+        if state.turn == 0 {
+            return Ok(Turn::Move(
+                Piece::from_str(notation)?,
+                Position::initial_spawn_position(),
+            ));
+        }
+        let (piece, position) = notation
+            .split_once(' ')
+            .ok_or_else(|| anyhow!("Invalid move format: expected 'piece position'"))?;
+        Ok(Turn::Move(
+            Piece::from_str(piece)?,
+            Position::from_string(position, &state.board)?,
+        ))
+    }
+
     pub async fn handle(&self) -> Result<HandlerOutput> {
         let mut conn = get_conn(&self.pool).await?;
         self.users_turn()?;
-        let (piece, position) = match self.turn {
+        let mut state = State::new_from_str(&self.game.history, &self.game.game_type)?;
+        let turn = self.resolve(&state)?;
+        let (piece, position) = match turn {
             Turn::Move(piece, position) => (piece, position),
             Turn::Shutout => Err(GameError::InvalidTurn {
                 username: self.username.to_owned(),
@@ -65,7 +95,6 @@ impl TurnHandler {
                 turn: format!("{}", self.game.turn),
             })?,
         };
-        let mut state = State::new_from_str(&self.game.history, &self.game.game_type)?;
         if let Err(err) = state.play_turn_from_position(piece, position) {
             log::warn!(
                 "invalid websocket turn game={} user={} username={} db_turn={} request_turn={} error={} board=\n{}",
@@ -73,7 +102,7 @@ impl TurnHandler {
                 self.user_id,
                 self.username,
                 self.game.turn,
-                self.turn,
+                turn,
                 err,
                 state.board,
             );
@@ -133,7 +162,7 @@ impl TurnHandler {
             gar: GameActionResponse {
                 game_id: GameId(game.nanoid.to_owned()),
                 game: (*response).clone(),
-                game_action: GameReaction::Turn(self.turn.clone()),
+                game_action: GameReaction::Turn(turn.clone()),
                 user_id: self.user_id.to_owned(),
                 username: self.username.to_owned(),
             },

@@ -35,6 +35,8 @@ pub fn handle_game(game_update: GameUpdate) {
         GameUpdate::Heartbeat(hb) => {
             game_updater.heartbeat.set(hb);
         }
+        // `GetGame` and `GetOngoingGames` are bot requests, and bots do not run this client.
+        GameUpdate::Fetched(_) | GameUpdate::Ongoing(_) => {}
     }
 }
 
