@@ -3,7 +3,7 @@ use super::{
     tree::{AnalysisArena, AnalysisNode, MoveDelta, NodeId, PositionCheckpoint, CHECKPOINT_STRIDE},
 };
 use crate::providers::annotations::AnnotationSet;
-use hive_lib::{GameError, GameType, History, State};
+use hive_lib::{hop, GameError, GameType, History, State};
 use serde::{Deserialize, Serialize};
 use std::{
     borrow::Cow,
@@ -36,6 +36,9 @@ pub(super) struct AnalysisDocument {
     pub(super) nodes: Vec<WireNode>,
     #[serde(default)]
     pub(super) annotations: HashMap<NodeId, AnnotationSet>,
+    /// The HOP root, when the analysis started from a bare position; `None` is the empty board.
+    #[serde(default)]
+    pub(super) start_hop: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -68,8 +71,6 @@ pub(super) fn wire_nodes(arena: &AnalysisArena) -> Vec<WireNode> {
 struct LegacyDocument {
     current_node: Option<LegacyNode>,
     tree: LegacyTree,
-    #[serde(default)]
-    hashes: HashMap<u64, i32>,
     #[serde(default = "default_game_type")]
     game_type: GameType,
     #[serde(default)]
@@ -209,7 +210,49 @@ impl LoadedAnalysis {
             game_type,
             annotations: HashMap::new(),
             document_generation: 0,
+            start_hop: None,
             game_line,
+        };
+        state.rebuild_visible_rows();
+        Ok(Self { state, playable })
+    }
+
+    /// The canonical form is stored *and* played from: canonicalization renumbers pieces, and
+    /// continuations are recorded against those names, so the input frame would betray them.
+    pub(super) fn from_hop(input: &str) -> Result<Self, LoadError> {
+        let position = hop::parse(input).map_err(|error| LoadError::Move(error.to_string()))?;
+        let canonical = hop::from_position_oriented(
+            &position.board,
+            position.game_type,
+            position.to_move,
+            position.orientation,
+        );
+        let position =
+            hop::parse(&canonical).map_err(|error| LoadError::Move(error.to_string()))?;
+        let game_type = position.game_type;
+        let playable = State::new_from_position(position.board, game_type, position.to_move)
+            .map_err(|error| LoadError::Move(error.to_string()))?;
+
+        let mut arena = AnalysisArena::blank();
+        // Every other node takes its hash from the move that reached it; the root has no move,
+        // and the opening explorer needs one.
+        if let Some(node) = arena.nodes.get_mut(&arena.root) {
+            node.hash = root_hash(Some(&canonical));
+        }
+        let mut checkpoints = HashMap::new();
+        checkpoints.insert(arena.root, PositionCheckpoint::capture(&playable));
+
+        let mut state = AnalysisState {
+            selected_path: vec![arena.root],
+            arena,
+            checkpoints,
+            collapsed: HashSet::new(),
+            visible_rows: Vec::new(),
+            game_type,
+            annotations: HashMap::new(),
+            document_generation: 0,
+            start_hop: Some(canonical),
+            game_line: Vec::new(),
         };
         state.rebuild_visible_rows();
         Ok(Self { state, playable })
@@ -247,6 +290,7 @@ impl LoadedAnalysis {
             document.game_type,
             document.annotations,
             true,
+            document.start_hop,
         )
     }
 
@@ -279,12 +323,8 @@ impl LoadedAnalysis {
                 .checked_add(1)
                 .ok_or_else(|| LoadError::Invalid("node ID overflow".to_string()))?;
         }
-        let mut hashes_by_node = HashMap::new();
-        for (hash, legacy_id) in legacy.hashes {
-            if let Some(id) = id_map.get(&legacy_id) {
-                hashes_by_node.insert(*id, hash);
-            }
-        }
+        // Legacy `hashes` are not even deserialized: pre-algorithm-change values would make
+        // `validate` reject every legacy document. The moves are the record.
         let mut wire_nodes = vec![WireNode {
             id: NodeId::ROOT,
             parent: None,
@@ -323,7 +363,7 @@ impl LoadedAnalysis {
                 parent,
                 children,
                 move_delta: legacy_node.value.clone(),
-                position_hash: hashes_by_node.get(&id).copied(),
+                position_hash: None,
             });
         }
         if let Some(root) = explicit_root
@@ -361,9 +401,11 @@ impl LoadedAnalysis {
             legacy.game_type,
             annotations,
             false,
+            None,
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn from_wire(
         root_id: NodeId,
         wire_nodes: Vec<WireNode>,
@@ -371,9 +413,17 @@ impl LoadedAnalysis {
         game_type: GameType,
         annotations: HashMap<NodeId, AnnotationSet>,
         is_versioned: bool,
+        start_hop: Option<String>,
     ) -> Result<Self, LoadError> {
         let arena = arena_from_wire(root_id, wire_nodes, is_versioned)?;
-        Self::validate(arena, selected, game_type, annotations, is_versioned)
+        Self::validate(
+            arena,
+            selected,
+            game_type,
+            annotations,
+            is_versioned,
+            start_hop,
+        )
     }
 
     pub(super) fn validate(
@@ -382,6 +432,7 @@ impl LoadedAnalysis {
         game_type: GameType,
         annotations: HashMap<NodeId, AnnotationSet>,
         is_versioned: bool,
+        start_hop: Option<String>,
     ) -> Result<Self, LoadError> {
         if !arena.nodes.contains_key(&selected) {
             return Err(LoadError::Invalid(format!(
@@ -395,9 +446,35 @@ impl LoadedAnalysis {
                 id.get()
             )));
         }
-        let mut playable = (selected == arena.root).then(|| State::new(game_type, false));
+        // We wrote the versioned root HOP ourselves, so a mismatch means the file is corrupt;
+        // legacy documents predate HOP roots.
+        if is_versioned {
+            if let Some(hop_str) = start_hop.as_deref() {
+                let position = hop::parse(hop_str).map_err(|error| {
+                    LoadError::Invalid(format!("start position does not parse: {error}"))
+                })?;
+                if position.game_type != game_type {
+                    return Err(LoadError::Invalid(format!(
+                        "start position is {} but the document says {game_type}",
+                        position.game_type
+                    )));
+                }
+            }
+        }
+        // Derived from the HOP, never trusted from the wire - stored root hashes go stale
+        // whenever the hash algorithm changes.
+        if let Some(node) = arena.nodes.get_mut(&arena.root) {
+            node.hash = root_hash(start_hop.as_deref());
+        }
+        // Parked on the root as a checkpoint: `replay` always starts its checkpoint search at
+        // the root, so a HOP-rooted tree needs no special case there.
+        let root = root_state(game_type, start_hop.as_deref());
         let mut checkpoints = HashMap::new();
-        let mut stack = vec![(arena.root, State::new(game_type, false))];
+        if start_hop.is_some() {
+            checkpoints.insert(arena.root, PositionCheckpoint::capture(&root));
+        }
+        let mut playable = (selected == arena.root).then(|| root.clone());
+        let mut stack = vec![(arena.root, root)];
         while let Some((parent_id, parent_state)) = stack.pop() {
             let children = arena
                 .node(parent_id)
@@ -478,6 +555,7 @@ impl LoadedAnalysis {
             game_type,
             annotations,
             document_generation: 0,
+            start_hop,
             // Documents carry no import provenance, so `?move=N` uses the first-child walk.
             game_line: Vec::new(),
         };
@@ -676,4 +754,22 @@ fn normalize_uhp_metadata(input: &str) -> Cow<'_, str> {
     } else {
         Cow::Borrowed(input)
     }
+}
+
+/// A saved analysis should still open when its HOP no longer parses or is no longer reachable.
+pub(super) fn root_state(game_type: GameType, start_hop: Option<&str>) -> State {
+    start_hop
+        .and_then(|hop| hop::parse(hop).ok())
+        .and_then(|position| {
+            State::new_from_position(position.board, position.game_type, position.to_move).ok()
+        })
+        .unwrap_or_else(|| State::new(game_type, false))
+}
+
+/// The root has no move to take a hash from, and the opening explorer needs one. The parser
+/// rederives any pillbug stun from `!`, so this matches what the engine records.
+pub(super) fn root_hash(start_hop: Option<&str>) -> Option<u64> {
+    hop::to_hash(start_hop.unwrap_or(",w"))
+        .ok()
+        .map(|hash| hash as u64)
 }

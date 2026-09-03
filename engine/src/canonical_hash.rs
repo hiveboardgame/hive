@@ -69,7 +69,7 @@ pub(crate) struct Cells {
 
 /// A connected hive of <=28 cells projects to a contiguous residue interval, so a 32-wide axis
 /// always has exactly one maximal gap - cut there to unwrap. Returns the interval's left edge.
-fn axis_origin(mask: u32) -> i32 {
+pub(crate) fn axis_origin(mask: u32) -> i32 {
     debug_assert!(mask != 0);
     let residues = || (0..BOARD_SIZE).filter(move |bit| mask & (1 << bit) != 0);
     let last = residues().next_back().expect("non-empty");

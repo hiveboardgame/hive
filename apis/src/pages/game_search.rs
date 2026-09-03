@@ -1,6 +1,9 @@
 use crate::{
     functions::games::get::get_batch_from_options,
-    pages::archive::{form::ArchiveSearchForm, list::ArchiveGameList},
+    pages::archive::{
+        form::{guarded_search, ArchiveSearchForm},
+        list::ArchiveGameList,
+    },
 };
 use leptos::{prelude::*, task::spawn_local};
 use leptos_router::{
@@ -187,6 +190,11 @@ pub fn GameSearch() -> impl IntoView {
         let start_search = start_search;
         move |_| start_search(())
     });
+    // The position field's raw text and error live at the page level so every search path -
+    // the form's buttons and the list's page-size selector - shares one parse guard.
+    let position_raw = RwSignal::new(String::new());
+    let position_error = RwSignal::new(None::<String>);
+    let on_search_cb = guarded_search(position_raw, position_error, on_search_cb);
 
     let on_page_change_cb = Callback::new({
         let navigate = navigate.clone();
@@ -211,7 +219,12 @@ pub fn GameSearch() -> impl IntoView {
 
     view! {
         <div class="flex overflow-y-auto flex-col pt-12 w-full min-h-screen max-h-screen sm:pt-14 bg-light dark:bg-app-dark">
-            <ArchiveSearchForm draft_options=draft_options on_search=on_search_cb />
+            <ArchiveSearchForm
+                draft_options=draft_options
+                position_raw=position_raw
+                position_error=position_error
+                on_search=on_search_cb
+            />
 
             <div class="flex-1 px-4 pb-8 mx-auto w-full max-w-screen-2xl sm:px-6">
                 <div class="space-y-4">

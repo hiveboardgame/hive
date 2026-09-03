@@ -37,13 +37,18 @@ pub(super) struct AnalysisState {
     pub(super) game_type: GameType,
     pub(super) annotations: HashMap<NodeId, AnnotationSet>,
     pub(super) document_generation: u64,
+    /// `None` is the ordinary empty-board root. See [`super::document::root_state`].
+    pub(super) start_hop: Option<String>,
     /// `?move=N` resolves against this, since "Promote variation" reorders the first-child chain.
     pub(super) game_line: Vec<NodeId>,
 }
 
 impl AnalysisState {
     pub(super) fn blank(game_type: GameType) -> Self {
-        let arena = AnalysisArena::blank();
+        let mut arena = AnalysisArena::blank();
+        if let Some(node) = arena.nodes.get_mut(&arena.root) {
+            node.hash = super::document::root_hash(None);
+        }
         Self {
             visible_rows: Vec::new(),
             arena,
@@ -53,6 +58,7 @@ impl AnalysisState {
             game_type,
             annotations: HashMap::new(),
             document_generation: 0,
+            start_hop: None,
             game_line: Vec::new(),
         }
     }
@@ -120,6 +126,12 @@ impl AnalysisStore {
         Ok(())
     }
 
+    pub fn load_hop(&self, game_state: GameStateStore, input: &str) -> Result<(), LoadError> {
+        let loaded = LoadedAnalysis::from_hop(input)?;
+        self.install_loaded(game_state, loaded);
+        Ok(())
+    }
+
     pub fn load_json(&self, game_state: GameStateStore, input: &str) -> Result<(), LoadError> {
         let loaded = LoadedAnalysis::from_json(input)?;
         self.install_loaded(game_state, loaded);
@@ -171,6 +183,7 @@ impl AnalysisStore {
             selected_node_id: self.selected_node_id_untracked(),
             nodes,
             annotations: self.0.annotations().get_untracked(),
+            start_hop: self.0.start_hop().get_untracked(),
         };
         Ok(serde_json::to_string(&document)?)
     }
@@ -204,6 +217,14 @@ impl AnalysisStore {
         self.0
             .arena()
             .with_untracked(|arena| selected == arena.root)
+    }
+
+    pub fn is_hop_rooted_untracked(&self) -> bool {
+        self.0.start_hop().with_untracked(Option::is_some)
+    }
+
+    pub fn start_hop_untracked(&self) -> Option<String> {
+        self.0.start_hop().get_untracked()
     }
 
     pub fn selected_hash(&self) -> Option<u64> {

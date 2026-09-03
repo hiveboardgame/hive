@@ -21,6 +21,12 @@ pub fn VariationList(#[prop(optional)] extend_tw_classes: &'static str) -> impl 
         )
     };
     let moves = move || {
+        // A HOP records no move count, so number moves as offsets - as the history list does.
+        let turn_prefix = if analysis.store.is_hop_rooted_untracked() {
+            "+"
+        } else {
+            ""
+        };
         alternate_moves.with(|moves| {
             moves
                 .iter()
@@ -30,7 +36,7 @@ pub fn VariationList(#[prop(optional)] extend_tw_classes: &'static str) -> impl 
                     position,
                 })| {
                     let node_id = *node_id;
-                    let move_text = format!("{turn}. {piece} {position}");
+                    let move_text = format!("{turn_prefix}{turn}. {piece} {position}");
                     view! {
                         <div
                             class="flex items-center px-2 h-6 font-mono text-xs whitespace-nowrap rounded transition-colors cursor-pointer active:scale-95 dark:hover:bg-pillbug-teal/15 hover:bg-blue-light/70"

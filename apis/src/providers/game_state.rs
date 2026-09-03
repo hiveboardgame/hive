@@ -4,7 +4,7 @@ use crate::{
     common::{MoveInfo, PieceType},
     responses::GameResponse,
 };
-use hive_lib::{Color, GameControl, GameStatus, GameType, Piece, Position, State, Turn};
+use hive_lib::{hop, Color, GameControl, GameStatus, GameType, Piece, Position, State, Turn};
 use leptos::{logging::log, prelude::*, reactive::effect::batch};
 use reactive_stores::Store;
 use shared_types::{GameId, Takeback};
@@ -425,6 +425,17 @@ impl GameState {
             game_response: None,
         }
     }
+}
+
+/// The empty board (`,w`) serializes too, so copying never hands the user something we refuse.
+/// Side to move comes from the turn counter: `turn_color` stays on the mover at a win.
+pub fn state_hop(state: &State) -> String {
+    let side_to_move = if state.turn.is_multiple_of(2) {
+        Color::White
+    } else {
+        Color::Black
+    };
+    hop::from_position(&state.board, state.game_type, side_to_move)
 }
 
 fn takeback_allowed_for_response(game_response: &GameResponse) -> bool {

@@ -9,7 +9,7 @@ use crate::{
     },
     responses::ExplorerResponse,
 };
-use hive_lib::{Color, GameStatus, GameType, Piece, Position, State};
+use hive_lib::{hop, Color, GameStatus, GameType, Piece, Position, State};
 use leptos::{prelude::*, reactive::effect::batch};
 use leptos_icons::*;
 use shared_types::{
@@ -122,9 +122,23 @@ pub fn OpeningExplorer() -> impl IntoView {
             .with_untracked(|state| (local_moves(state), state.turn_color == Color::White))
     });
 
+    // `game_hashes` only holds positions a move led to, so the pre-game position can never match.
+    let at_pre_game = Memo::new(move |_| {
+        let _document = analysis.store.document_generation();
+        analysis.store.is_at_start()
+            && analysis
+                .store
+                .start_hop_untracked()
+                .is_none_or(|hop| hop::parse(&hop).is_ok_and(|p| p.board.played == 0))
+    });
     let resource = Resource::new(
-        move || (selected_hash.get(), filters.get()),
-        |(hash, filters)| async move { opening_explorer(hash.unwrap_or(0) as i64, filters).await },
+        move || {
+            (
+                explorer_position_key(selected_hash.get(), at_pre_game.get()),
+                filters.get(),
+            )
+        },
+        |(hash, filters)| async move { opening_explorer(hash, filters).await },
     );
 
     let reset_preview = Callback::new(move |_: ()| {
@@ -169,8 +183,8 @@ pub fn OpeningExplorer() -> impl IntoView {
         game_state.move_active(Some(analysis), api.get_untracked());
     });
 
-    // The archive URL for the current position ("Search this position"), or None at the empty
-    // board. Recomputed when the position/filters change (the suggestions closure reruns then).
+    // "Search this position" URL; hashed from the position, not the tree, so it also works at
+    // a HOP root where no move has been played.
     let search_href = move || {
         let hash: u64 = selected_hash.get_untracked()?;
         let expansions = match filters.with_untracked(|f| f.game_type) {
@@ -567,5 +581,40 @@ fn FilterControls(filters: RwSignal<ExplorerFilters>) -> impl IntoView {
                 </label>
             </div>
         </div>
+    }
+}
+
+/// `None` asks for the opening roots. An explicit `Option`, not a 0 sentinel: the empty board
+/// with Black to move canonically hashes to literally 0.
+fn explorer_position_key(selected: Option<u64>, at_pre_game: bool) -> Option<i64> {
+    if at_pre_game {
+        return None;
+    }
+    selected.map(|hash| hash as i64)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn black_to_move_empty_root_is_not_the_opening_sentinel() {
+        let empty_black = hive_lib::hop::to_hash(",b").expect("hashable") as u64;
+        assert_eq!(empty_black, 0, "precondition: the collision is real");
+        assert_ne!(
+            explorer_position_key(Some(empty_black), false),
+            explorer_position_key(None, false),
+            "a real position hash must be distinguishable from the sentinel",
+        );
+    }
+
+    #[test]
+    fn a_pasted_empty_board_asks_for_the_opening_roots() {
+        let pasted = hive_lib::hop::to_hash(",w").expect("hashable") as u64;
+        assert_eq!(explorer_position_key(Some(pasted), true), None);
+        assert_eq!(
+            explorer_position_key(Some(pasted), false),
+            Some(pasted as i64)
+        );
     }
 }

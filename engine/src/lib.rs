@@ -10,13 +10,18 @@ mod direction;
 mod dsl;
 #[cfg(test)]
 mod fixture_check;
+#[cfg(test)]
+mod fuzz_tests;
 mod game_control;
 mod game_error;
 mod game_result;
 mod game_status;
 mod game_type;
 mod history;
+pub mod hop;
 mod mid_move_board;
+#[cfg(test)]
+mod pgn_corpus_tests;
 mod piece;
 mod player;
 mod position;
