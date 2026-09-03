@@ -162,6 +162,17 @@ impl GameHash {
         Ok(())
     }
 
+    /// [`Self::insert_batch`] is `on_conflict_do_nothing`, so a rewrite without this would report
+    /// success and keep the old hashes.
+    pub async fn delete_for_game(game_id: Uuid, conn: &mut DbConn<'_>) -> Result<(), DbError> {
+        diesel::delete(game_hashes::table.filter(game_hashes::game_id.eq(game_id)))
+            .execute(conn)
+            .await?;
+        Ok(())
+    }
+
+    /// Replace a game's hashes. Call inside a transaction with [`Game::set_hashes`] so the array on
+    /// `games` and the rows here cannot disagree.
     pub async fn insert_for_game(
         game_id: Uuid,
         hashes: &[u64],
@@ -169,6 +180,7 @@ impl GameHash {
         ctx: &GameFinishContext,
         conn: &mut DbConn<'_>,
     ) -> Result<(), DbError> {
+        Self::delete_for_game(game_id, conn).await?;
         let entries = Self::from_engine_hashes(game_id, hashes, moves, ctx);
         Self::insert_batch(&entries, conn).await
     }
