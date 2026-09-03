@@ -57,7 +57,7 @@ async fn send_messages_batch(hub: &Arc<WsHub>, messages: Vec<InternalServerMessa
 }
 
 fn create_game_action_response(
-    game_response: GameResponse,
+    game_response: Arc<GameResponse>,
     action: GameReaction,
     bot: &User,
 ) -> GameActionResponse {
@@ -73,7 +73,7 @@ fn create_game_action_response(
 fn maybe_add_tv_update(
     messages: &mut Vec<InternalServerMessage>,
     hub: &Arc<WsHub>,
-    game_response: &GameResponse,
+    game_response: &Arc<GameResponse>,
     is_final: bool,
 ) {
     if game_response.time_mode == TimeMode::RealTime
@@ -103,7 +103,7 @@ pub async fn send_turn_messages(
         message: ServerMessage::Game(Box::new(GameUpdate::Urgent(game_responses))),
     });
 
-    let response = GameResponse::from_model(game, &mut conn).await?;
+    let response = Arc::new(GameResponse::from_model(game, &mut conn).await?);
     let action_response =
         create_game_action_response(response, GameReaction::Turn(played_turn), bot);
 
@@ -170,7 +170,7 @@ pub async fn send_challenge_messages(
     }
 
     // Add game creation message
-    let game_response = GameResponse::from_model(game, &mut conn).await?;
+    let game_response = Arc::new(GameResponse::from_model(game, &mut conn).await?);
     let user_id = get_opponent_id(game, bot);
     let action_response = create_game_action_response(game_response, GameReaction::New, bot);
 
@@ -283,7 +283,7 @@ pub async fn send_control_messages(
     let mut messages = Vec::new();
     let mut conn = get_conn(pool).await?;
 
-    let game_response = GameResponse::from_model(game, &mut conn).await?;
+    let game_response = Arc::new(GameResponse::from_model(game, &mut conn).await?);
     let action_response =
         create_game_action_response(game_response, GameReaction::Control(game_control), bot);
 

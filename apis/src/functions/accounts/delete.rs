@@ -50,6 +50,9 @@ pub async fn delete_account(password: String) -> Result<(), ServerFnError> {
 }
 
 #[cfg(feature = "ssr")]
+use std::sync::Arc;
+
+#[cfg(feature = "ssr")]
 async fn send_soft_delete_updates(
     hub: &crate::websocket::WsHub,
     report: db_lib::models::SoftDeleteReport,
@@ -126,9 +129,11 @@ async fn send_soft_delete_updates(
         conn: &mut db_lib::DbConn<'_>,
     ) -> Result<GameFinalize, leptos::prelude::ServerFnError> {
         let game_id = GameId(game.nanoid.clone());
-        let game_response = GameResponse::from_model(&game, conn)
-            .await
-            .map_err(leptos::prelude::ServerFnError::new)?;
+        let game_response = Arc::new(
+            GameResponse::from_model(&game, conn)
+                .await
+                .map_err(leptos::prelude::ServerFnError::new)?,
+        );
         if deleted_row {
             hub.mark_deleted_game_pending(game_id.clone(), game.white_id, game.black_id);
         }
