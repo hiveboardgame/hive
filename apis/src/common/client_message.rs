@@ -152,4 +152,30 @@ mod tests {
             r#"{"Game":{"game_id":"abc","action":{"Play":"wA1 -bQ"}}}"#
         );
     }
+
+    /// The busiest frame a bot sends, and the one the Python client hard-codes.
+    #[test]
+    fn a_create_challenge_frame_matches_the_documented_shape() {
+        use crate::common::ChallengeAction;
+        use hive_lib::{ColorChoice, GameType};
+        use shared_types::{ChallengeDetails, ChallengeVisibility, TimeMode};
+
+        let request = ClientRequest::Challenge(ChallengeAction::Create(ChallengeDetails {
+            rated: true,
+            game_type: GameType::MLP,
+            visibility: ChallengeVisibility::Public,
+            opponent: None,
+            color_choice: ColorChoice::Random,
+            time_mode: TimeMode::RealTime,
+            time_base: Some(300),
+            time_increment: Some(3),
+            band_upper: None,
+            band_lower: None,
+        }));
+
+        assert_eq!(
+            serde_json::to_string(&request).expect("encodes"),
+            r#"{"Challenge":{"Create":{"rated":true,"game_type":"MLP","visibility":"Public","opponent":null,"color_choice":"Random","time_mode":"RealTime","time_base":300,"time_increment":3,"band_upper":null,"band_lower":null}}}"#
+        );
+    }
 }
