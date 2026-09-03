@@ -720,6 +720,20 @@ mod tests {
         }
     }
 
+    /// The db labels stored games with this, and nothing in the engine exercised it.
+    #[test]
+    fn a_record_ends_on_a_threefold_only_on_its_final_ply() {
+        assert!(threefold_on_final_ply(&[10, 20, 30], 31));
+        // Repeated, but the game carried on afterwards.
+        assert!(!threefold_on_final_ply(&[10, 20, 30], 40));
+        // Two occurrences is not a threefold, wherever they sit.
+        assert!(!threefold_on_final_ply(&[20, 30], 31));
+        assert!(!threefold_on_final_ply(&[10, 20, 30], 30));
+        assert!(!threefold_on_final_ply(&[10, 20, 30], 32));
+        assert!(!threefold_on_final_ply(&[], 0));
+        assert!(!threefold_on_final_ply(&[10, 20, 30], 0));
+    }
+
     /// A record cannot say whether queens-first was banned or unplayed, so keep our own flag.
     #[test]
     fn undo_keeps_the_tournament_flag() {
