@@ -1,10 +1,9 @@
+use super::messages::Outbound;
 use crate::{
     common::{LobbySnapshot, ServerMessage, ServerResult},
     responses::{ChallengeResponse, GameResponse, ScheduleResponse, UserResponse},
     websocket::{messages::SocketTx, WsHub},
 };
-use bytes::Bytes;
-use codee::{binary::MsgpackSerdeCodec, Encoder};
 use db_lib::{
     models::{Challenge, Game, Schedule, Tournament, TournamentInvitation, User},
     DbConn,
@@ -67,9 +66,7 @@ impl WsHub {
             Err(SocketDisconnected) => return,
         };
         let message = ServerResult::Ok(Box::new(ServerMessage::LobbySnapshot(Box::new(snapshot))));
-        if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-            self.send_own_state_via_tx(&socket.tx, &Bytes::from(serialized));
-        }
+        self.send_own_state_via_tx(&socket.tx, socket.format, &mut Outbound::typed(&message));
     }
 
     fn ensure_socket_connected(

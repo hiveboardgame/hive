@@ -292,7 +292,10 @@ mod tests {
     use super::*;
     use crate::{
         common::{ChatSendRequest, ClientRequest, SubscriptionAttempt},
-        websocket::{messages::SocketTx, WebsocketData},
+        websocket::{
+            messages::{SocketFormat, SocketTx},
+            WebsocketData,
+        },
     };
     use shared_types::ConversationKey;
     use tokio::sync::mpsc;
@@ -310,6 +313,7 @@ mod tests {
             hub,
             SocketTx {
                 socket_id: Uuid::new_v4(),
+                format: SocketFormat::Msgpack,
                 tx,
             },
             user,
