@@ -67,7 +67,8 @@ web-push = { workspace = true, optional = true }
 web-time = { workspace = true }
 url = { workspace = true, optional = true }
 reactive_stores = { workspace = true }
-serde = { workspace = true, features = ["derive"] }
+# rc: websocket messages carry Arc<GameResponse>, so one fanout shares one allocation.
+serde = { workspace = true, features = ["derive", "rc"] }
 serde_json = { workspace = true }
 server_fn = { workspace = true }
 sha2 = { workspace = true, optional = true }

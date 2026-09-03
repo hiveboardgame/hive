@@ -747,7 +747,7 @@ impl WsHub {
             black_id: finalized.black_id,
             gar: crate::common::GameActionResponse {
                 game_action: crate::common::GameReaction::TimedOut,
-                game: (*game_response).clone(),
+                game: game_response.clone(),
                 game_id: game_id.clone(),
                 user_id: finalized.current_player_id,
                 username: loser.username,
@@ -756,7 +756,7 @@ impl WsHub {
         self.dispatch_reaction(reaction).await;
         if game_response.time_mode == TimeMode::RealTime && self.should_send_tv(&game_id, true) {
             self.data.telemetry.inc_tv_broadcast();
-            let payload = ServerMessage::Game(Box::new(GameUpdate::Tv((*game_response).clone())));
+            let payload = ServerMessage::Game(Box::new(GameUpdate::Tv(game_response.clone())));
             let result = ServerResult::Ok(Box::new(payload));
             self.dispatch_out(&MessageDestination::Global, &mut Outbound::typed(&result))
                 .await;

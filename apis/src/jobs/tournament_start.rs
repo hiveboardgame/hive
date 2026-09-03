@@ -56,6 +56,7 @@ pub fn run(pool: DbPool, hub: Data<Arc<WsHub>>) {
                                 let game_responses =
                                     GameResponse::from_games_batch(games, tc).await?;
                                 for game in game_responses {
+                                    let game = Arc::new(game);
                                     messages.push(InternalServerMessage {
                                         destination: MessageDestination::User(
                                             game.white_player.uid,
@@ -81,7 +82,7 @@ pub fn run(pool: DbPool, hub: Data<Arc<WsHub>>) {
                                                 game: game.clone(),
                                                 game_id: game.game_id.clone(),
                                                 user_id: game.black_player.uid,
-                                                username: game.black_player.username,
+                                                username: game.black_player.username.clone(),
                                             }),
                                         )),
                                     });

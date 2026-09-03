@@ -8,6 +8,7 @@ use anyhow::Result;
 use db_lib::{db_error::DbError, get_conn, models::Tournament, DbPool};
 use diesel_async::AsyncConnection;
 use shared_types::TournamentId;
+use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct StartHandler {
@@ -68,6 +69,7 @@ impl StartHandler {
 
         let game_responses = GameResponse::from_games_batch(games, &mut conn).await?;
         for game in game_responses {
+            let game = Arc::new(game);
             messages.push(InternalServerMessage {
                 destination: MessageDestination::User(game.white_player.uid),
                 message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
@@ -86,7 +88,7 @@ impl StartHandler {
                     game: game.clone(),
                     game_id: game.game_id.clone(),
                     user_id: game.black_player.uid,
-                    username: game.black_player.username,
+                    username: game.black_player.username.clone(),
                 }))),
             });
         }

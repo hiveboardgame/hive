@@ -51,7 +51,7 @@ impl TimeoutHandler {
                 destination: MessageDestination::Global,
                 message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
                     game_action: GameReaction::TimedOut,
-                    game: (*game_response).clone(),
+                    game: game_response.clone(),
                     game_id: GameId(self.game.nanoid.clone()),
                     user_id: self.user_id,
                     username: self.username.clone(),
