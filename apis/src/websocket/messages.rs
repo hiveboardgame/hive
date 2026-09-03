@@ -4,7 +4,8 @@ use shared_types::{GameId, TournamentId};
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
-use crate::common::{GameActionResponse, GameUpdate, ServerMessage};
+use crate::common::{GameActionResponse, GameUpdate, ServerMessage, ServerResult};
+use codee::{binary::MsgpackSerdeCodec, Decoder, Encoder};
 
 #[derive(thiserror::Error, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum AuthError {
@@ -149,9 +150,18 @@ impl From<Vec<InternalServerMessage>> for HandlerOutput {
     }
 }
 
+/// Bots ask for JSON with `/ws/?format=json` so they never have to reproduce rmp-serde's
+/// representation by hand.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SocketFormat {
+    Msgpack,
+    Json,
+}
+
 #[derive(Clone, Debug)]
 pub struct SocketTx {
     pub socket_id: Uuid,
+    pub format: SocketFormat,
     pub tx: mpsc::Sender<Bytes>,
 }
 
@@ -171,4 +181,129 @@ pub enum MessageDestination {
         tournament_id: TournamentId,
         audience: TournamentAudience,
     },
+}
+
+enum Source<'a> {
+    Typed(&'a ServerResult),
+    Encoded(Bytes),
+}
+
+/// Both fields are lazy and live for a single dispatch, so a fanout of browsers encodes
+/// msgpack once and never touches `serde_json`. `Encoded` is the fallback for producers that
+/// still hand over bytes: those are the only ones that pay a decode, and only when a JSON
+/// socket is in the fanout.
+pub struct Outbound<'a> {
+    source: Source<'a>,
+    msgpack: Option<Bytes>,
+    json: Option<Bytes>,
+}
+
+impl<'a> Outbound<'a> {
+    pub fn typed(message: &'a ServerResult) -> Self {
+        Self {
+            source: Source::Typed(message),
+            msgpack: None,
+            json: None,
+        }
+    }
+
+    pub fn encoded(bytes: Bytes) -> Self {
+        Self {
+            source: Source::Encoded(bytes),
+            msgpack: None,
+            json: None,
+        }
+    }
+
+    pub fn bytes(&mut self, format: SocketFormat) -> Option<&Bytes> {
+        match format {
+            SocketFormat::Msgpack => {
+                if self.msgpack.is_none() {
+                    self.msgpack = match &self.source {
+                        Source::Typed(message) => {
+                            MsgpackSerdeCodec::encode(*message).ok().map(Bytes::from)
+                        }
+                        Source::Encoded(bytes) => Some(bytes.clone()),
+                    };
+                }
+                self.msgpack.as_ref()
+            }
+            SocketFormat::Json => {
+                if self.json.is_none() {
+                    self.json = match &self.source {
+                        Source::Typed(message) => serde_json::to_vec(message).ok().map(Bytes::from),
+                        Source::Encoded(bytes) => MsgpackSerdeCodec::decode(bytes)
+                            .ok()
+                            .and_then(|message: ServerResult| serde_json::to_vec(&message).ok())
+                            .map(Bytes::from),
+                    };
+                }
+                self.json.as_ref()
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod outbound_tests {
+    use super::*;
+
+    fn message() -> ServerResult {
+        ServerResult::Ok(Box::new(ServerMessage::Error("boom".to_string())))
+    }
+
+    #[test]
+    fn a_msgpack_socket_gets_exactly_what_it_got_before() {
+        let message = message();
+        let expected = Bytes::from(MsgpackSerdeCodec::encode(&message).expect("encodes"));
+
+        assert_eq!(
+            Outbound::typed(&message).bytes(SocketFormat::Msgpack),
+            Some(&expected)
+        );
+    }
+
+    #[test]
+    fn each_format_is_encoded_once_and_reused() {
+        let message = message();
+        let mut outbound = Outbound::typed(&message);
+
+        let first = outbound.bytes(SocketFormat::Json).cloned();
+        let second = outbound.bytes(SocketFormat::Json).cloned();
+
+        assert_eq!(first, second);
+        assert_ne!(first, outbound.bytes(SocketFormat::Msgpack).cloned());
+    }
+
+    #[test]
+    fn an_unmigrated_producers_bytes_pass_through_untouched() {
+        let encoded = Bytes::from(MsgpackSerdeCodec::encode(&message()).expect("encodes"));
+
+        assert_eq!(
+            Outbound::encoded(encoded.clone()).bytes(SocketFormat::Msgpack),
+            Some(&encoded)
+        );
+    }
+
+    #[test]
+    fn an_unmigrated_producers_bytes_still_reach_a_json_socket() {
+        let encoded = Bytes::from(MsgpackSerdeCodec::encode(&message()).expect("encodes"));
+        let mut outbound = Outbound::encoded(encoded);
+
+        let json = outbound
+            .bytes(SocketFormat::Json)
+            .expect("transcodes")
+            .clone();
+
+        assert_eq!(
+            json,
+            Bytes::from(serde_json::to_vec(&message()).expect("encodes"))
+        );
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct SocketHandle {
+    pub tx: mpsc::Sender<Bytes>,
+    pub format: SocketFormat,
 }

@@ -82,6 +82,9 @@ wasm-bindgen = { workspace = true }
 wasm-bindgen-futures = { workspace = true }
 web-sys = { workspace = true }
 
+[dev-dependencies]
+dotenvy = { workspace = true }
+
 [build-dependencies]
 leptos_i18n_build = { workspace = true }
 
