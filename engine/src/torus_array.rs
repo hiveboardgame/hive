@@ -42,6 +42,13 @@ where
         scratch
     }
 
+    fn assert_on_board(position: Position) {
+        debug_assert!(
+            (0..BOARD_SIZE).contains(&position.q) && (0..BOARD_SIZE).contains(&position.r),
+            "position off the board: {position}"
+        );
+    }
+
     fn in_window(position: Position) -> bool {
         (SMALL_OFFSET..SMALL_OFFSET + SMALL_SIZE).contains(&position.q)
             && (SMALL_OFFSET..SMALL_OFFSET + SMALL_SIZE).contains(&position.r)
@@ -58,6 +65,7 @@ where
     }
 
     pub fn get(&self, position: Position) -> &T {
+        Self::assert_on_board(position);
         match &self.storage {
             // Writes are guarded to the window, so outside it is empty by construction.
             Storage::Small(_) if !Self::in_window(position) => &self.default,
@@ -67,6 +75,7 @@ where
     }
 
     pub fn get_mut(&mut self, position: Position) -> &mut T {
+        Self::assert_on_board(position);
         debug_assert!(
             !self.is_small() || Self::in_window(position),
             "small-storage write outside the window: {position}"

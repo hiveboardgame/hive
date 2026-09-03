@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fmt::Display, path::PathBuf, str::FromStr};
 
 use crate::{
-    board::Board,
+    board::{Board, BOARD_SIZE},
     bug::Bug,
     color::Color,
     game_error::GameError,
@@ -526,6 +526,19 @@ impl State {
     }
 
     fn play_turn(&mut self, piece: Piece, target_position: Position) -> Result<(), GameError> {
+        // `Position` derives Deserialize over its public fields, so a websocket turn can carry
+        // coordinates `Position::new` would never produce, and they index straight past the board.
+        if !(0..BOARD_SIZE).contains(&target_position.q)
+            || !(0..BOARD_SIZE).contains(&target_position.r)
+        {
+            return Err(GameError::InvalidMove {
+                piece: piece.to_string(),
+                from: "NA".to_string(),
+                to: target_position.to_string(),
+                turn: self.turn,
+                reason: "Position is off the board".to_string(),
+            });
+        }
         if let GameStatus::Finished(_) | GameStatus::Adjudicated = self.game_status {
             return Err(GameError::InvalidMove {
                 piece: piece.to_string(),
@@ -634,6 +647,20 @@ mod tests {
                 "{raw:#04x} ({piece}) reached the board"
             );
         }
+    }
+
+    #[test]
+    fn a_turn_off_the_board_is_refused() {
+        let mut state = State::new(GameType::MLP, false);
+        let wa1 = "wA1".parse().expect("test piece");
+        let error = state
+            .play_turn_from_position(wa1, Position { q: 48, r: 47 })
+            .expect_err("an off-board target cannot be played");
+        assert!(
+            matches!(error, GameError::InvalidMove { ref reason, .. }
+                if reason == "Position is off the board"),
+            "rejected for the wrong reason: {error}"
+        );
     }
 
     /// UHP headers and tree replay read it; two call sites hand-patched the Base default.
