@@ -8,7 +8,7 @@ use crate::responses::{
 };
 use serde::{Deserialize, Serialize};
 use shared_types::{ChallengeId, ChatMessageContainer, ConversationKey, GameId, TournamentId};
-use std::{collections::HashMap, fmt, time::Duration};
+use std::{collections::HashMap, fmt, sync::Arc, time::Duration};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -174,9 +174,9 @@ pub enum GameUpdate {
     /// draw offered). Client merges into the local `own` map.
     Urgent(Vec<GameResponse>),
     OwnGameRemoved(GameId),
-    Tv(GameResponse),
+    Tv(Arc<GameResponse>),
     Heartbeat(HeartbeatResponse),
-    Fetched(GameResponse),
+    Fetched(Arc<GameResponse>),
     /// Every unfinished game the requester plays, answering `GetOngoingGames`. Unlike
     /// `Urgent` it is not filtered to games awaiting their move.
     Ongoing(Vec<GameResponse>),
@@ -185,7 +185,9 @@ pub enum GameUpdate {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameActionResponse {
     pub game_action: GameReaction,
-    pub game: GameResponse,
+    /// Shared, not owned: one response fans out to both players and every spectator, and
+    /// `get_or_build_response` already hands it over behind an `Arc`.
+    pub game: Arc<GameResponse>,
     pub game_id: GameId,
     pub user_id: Uuid,
     pub username: String,
