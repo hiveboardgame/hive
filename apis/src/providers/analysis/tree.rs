@@ -273,26 +273,46 @@ impl AnalysisArena {
                 let count = state.hashes_count.entry(*hash).or_default();
                 *count = count.saturating_add(1);
             }
-            if state
-                .hashes
-                .last()
-                .and_then(|hash| state.hashes_count.get(hash))
-                .is_some_and(|count| *count > 2)
-            {
-                let repeated_hash = *state.hashes.last()?;
-                state.repeating_moves = state
-                    .hashes
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(index, hash)| (*hash == repeated_hash).then_some(index))
-                    .collect();
-            }
         }
+        // A path that continued past a repetition must still replay (see `State::replaying`).
+        let mut replay_moves = Vec::new();
         for id in path.iter().copied().skip(replay_start) {
             let delta = self.node(id)?.value.as_ref()?;
-            state
-                .play_turn_from_history(&delta.piece, &delta.position)
-                .ok()?;
+            replay_moves.push((delta.piece.as_str(), delta.position.as_str()));
+        }
+        state.replay_turns(replay_moves).ok()?;
+        // The checkpointed context was never replayed, so the markers must come from the full
+        // hash sequence - otherwise a repetition buried in the checkpoint loses them.
+        let mut seen: HashMap<u64, u8> = HashMap::new();
+        // A HOP root occurred once but sits in no hash list; without seeding it here, a
+        // threefold formed with the root loses its markers on a checkpointed rebuild.
+        if let Some(root_hash) = self.node(self.root).and_then(|node| node.hash) {
+            seen.insert(root_hash, 1);
+        }
+        let mut repeated = None;
+        for hash in &state.hashes {
+            let count = seen.entry(*hash).or_default();
+            *count = count.saturating_add(1);
+            if *count > 2 {
+                repeated = Some(*hash);
+            }
+        }
+        if let Some(repeated) = repeated {
+            state.repeating_moves = state
+                .hashes
+                .iter()
+                .enumerate()
+                .filter_map(|(index, hash)| (*hash == repeated).then_some(index))
+                .collect();
+        }
+        // A threefold with nothing recorded after it was the game's end, not a grandfathered
+        // continuation - reaching it by navigation must show the draw.
+        let target_is_leaf = path
+            .last()
+            .and_then(|id| self.node(*id))
+            .is_none_or(|node| node.children.is_empty());
+        if target_is_leaf {
+            state.finish_repetition_at_final_ply();
         }
         Some(state)
     }

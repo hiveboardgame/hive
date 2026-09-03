@@ -221,7 +221,10 @@ impl History {
 
         let declared_result = std::mem::take(&mut history.result);
         match State::replay_history(&history) {
-            Ok(state) => {
+            Ok(mut state) => {
+                // Replay is suppressed (`State::replaying`), so a threefold on the final ply
+                // never reaches `game_status` - but it is still the game's result.
+                state.finish_repetition_at_final_ply();
                 history.result = match state.game_status {
                     GameStatus::Finished(result) => result,
                     _ => GameResult::Unknown,
@@ -396,6 +399,16 @@ mod tests {
         let history = History::from_uhp_str(RESULT_MISMATCH_GAME).expect("mismatch resilience");
         assert_eq!(history.moves.len(), 2);
         assert_eq!(history.result, GameResult::Unknown);
+    }
+
+    /// Suppressed replay never sets `game_status`, so a UHP that ends on its third repetition
+    /// used to come back `Unknown` instead of `Draw`.
+    #[test]
+    fn computes_a_draw_for_a_final_ply_threefold() {
+        let uhp =
+            std::fs::read_to_string("./test_pgns/regressions/shuffle_check.uhp").expect("fixture");
+        let history = History::from_uhp_str(&uhp).expect("valid UHP");
+        assert_eq!(history.result, GameResult::Draw);
     }
 
     #[test]

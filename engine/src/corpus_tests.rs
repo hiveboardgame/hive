@@ -518,3 +518,47 @@ fn hop_round_trips_across_the_corpus() {
         failures.len()
     );
 }
+
+/// Every finished game must reconstruct - a record is reproduced, not re-refereed, even where
+/// the corrected detection now finds a mid-game repetition.
+#[test]
+#[ignore = "needs MLP_GAMES_CSV"]
+fn every_stored_game_still_replays() {
+    let limit: usize = env::var("GAME_LIMIT")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(usize::MAX);
+    let games = load("MLP_GAMES_CSV");
+    let (mut replayed, mut repeated) = (0usize, 0usize);
+    let mut failures: Vec<String> = Vec::new();
+
+    for row in games[1..].iter().take(limit) {
+        match State::new_from_str(&row[3], "Base+MLP") {
+            Ok(state) => {
+                replayed += 1;
+                if !state.repeating_moves.is_empty() {
+                    repeated += 1;
+                }
+                if state.turn != state.history.moves.len() {
+                    failures.push(format!(
+                        "{}: replayed {} of {} plies",
+                        row[0],
+                        state.turn,
+                        state.history.moves.len()
+                    ));
+                }
+            }
+            Err(e) => failures.push(format!("{}: {e}", row[0])),
+        }
+    }
+
+    println!("replayed in full: {replayed}, of which repeat a position: {repeated}");
+    for failure in failures.iter().take(10) {
+        println!("  {failure}");
+    }
+    assert!(
+        failures.is_empty(),
+        "{} games do not replay",
+        failures.len()
+    );
+}

@@ -28,9 +28,50 @@ pub struct State {
     pub game_type: GameType,
     pub tournament: bool,
     pub repeating_moves: Vec<usize>,
+    /// Withholds the repetition verdict while replaying a stored history: adjudicating mid-record
+    /// would refuse the next recorded move and make the game unloadable. Repetitions still count.
+    replaying: bool,
 }
 
 impl State {
+    /// For replayers outside the engine, such as the analysis tree. Switch it off before live
+    /// play continues, or new threefolds are never adjudicated.
+    pub fn set_replaying(&mut self, replaying: bool) {
+        self.replaying = replaying;
+    }
+
+    /// Restores live adjudication afterwards even when a move fails. A final position with
+    /// nothing recorded after it still needs [`Self::finish_repetition_at_final_ply`].
+    pub fn replay_turns<'a>(
+        &mut self,
+        moves: impl IntoIterator<Item = (&'a str, &'a str)>,
+    ) -> Result<(), GameError> {
+        self.replaying = true;
+        let result = moves
+            .into_iter()
+            .try_for_each(|(piece, position)| self.play_turn_from_history(piece, position));
+        self.replaying = false;
+        result
+    }
+
+    /// Re-applies the verdict `replaying` withheld - only where nothing was recorded after this
+    /// position; a record that continued past its repetition stays grandfathered.
+    pub fn finish_repetition_at_final_ply(&mut self) {
+        if matches!(
+            self.game_status,
+            GameStatus::Finished(_) | GameStatus::Adjudicated
+        ) {
+            return;
+        }
+        let ended_in_threefold = self
+            .hashes
+            .last()
+            .is_some_and(|hash| self.hashes_count.get(hash).is_some_and(|count| *count > 2));
+        if ended_in_threefold {
+            self.game_status = GameStatus::Finished(GameResult::Draw);
+        }
+    }
+
     pub fn queen_required_now(&self, color: Color) -> bool {
         self.board.queen_required(color)
     }
@@ -52,6 +93,7 @@ impl State {
             game_type,
             tournament,
             repeating_moves: Vec::new(),
+            replaying: false,
         }
     }
 
@@ -118,6 +160,7 @@ impl State {
             game_type,
             tournament: false,
             repeating_moves: Vec::new(),
+            replaying: false,
         })
     }
 
@@ -201,6 +244,8 @@ impl State {
             .filter_map(|(piece, _)| piece.parse::<Piece>().ok())
             .any(|piece| piece.bug() == Bug::Queen);
         let mut state = State::new(history.game_type, tournament);
+        // Reconstructing a record, not refereeing it. See `State::replaying`.
+        state.replaying = true;
         for (current_turn, (piece, pos)) in history.moves.iter().enumerate() {
             state
                 .play_turn_from_history(piece, pos)
@@ -224,6 +269,7 @@ impl State {
                     .map_err(|error| (0, error.into()))?;
             }
         }
+        state.replaying = false;
         match history.result {
             GameResult::Winner(color) => {
                 state.game_status = GameStatus::Finished(GameResult::Winner(color))
@@ -507,11 +553,16 @@ impl State {
     pub fn three_fold_repetition(&mut self, to_move: Color) {
         let hash = crate::canonical_hash::canonical_hash(&self.board, to_move, self.board.stunned);
         self.hashes.push(hash);
-        *self.hashes_count.entry(hash).or_default() += 1;
+        // Saturating: replay does not adjudicate (see `replaying`), so a record could revisit a
+        // position past 255 - and a wrapped count would un-detect its repetition.
+        let count = self.hashes_count.entry(hash).or_default();
+        *count = count.saturating_add(1);
         self.history.record_hash(hash);
         if let Some(count) = self.hashes_count.get(&hash) {
             if *count > 2 {
-                self.game_status = GameStatus::Finished(GameResult::Draw);
+                if !self.replaying {
+                    self.game_status = GameStatus::Finished(GameResult::Draw);
+                }
                 let mut moves = Vec::new();
                 for (index, history_hash) in self.history.hashes.iter().enumerate() {
                     if hash == *history_hash {
@@ -545,6 +596,13 @@ impl State {
         //     }
         // }
     }
+}
+
+/// For labeling stored records (the db's conclusion); the engine judges from occurrence counts
+/// instead, since a HOP root occurrence has no index here.
+pub fn threefold_on_final_ply(repeating_moves: &[usize], plies: usize) -> bool {
+    // At least three occurrences: the engine never records fewer, but stored data might.
+    repeating_moves.len() > 2 && plies > 0 && repeating_moves.last() == Some(&(plies - 1))
 }
 
 fn is_absolute_position(position: &str) -> bool {

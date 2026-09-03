@@ -132,6 +132,8 @@ impl LoadedAnalysis {
         let mut parent = NodeId::ROOT;
         let mut game_line = vec![NodeId::ROOT];
         let mut current_state = State::new(game_type, false);
+        // A record that continued past a repetition must still reconstruct (see `State::replaying`).
+        current_state.set_replaying(true);
         let mut selected = (selected_count == 0).then_some(NodeId::ROOT);
         let mut playable = None;
         let mut valid_count = 0;
@@ -182,7 +184,7 @@ impl LoadedAnalysis {
                 }
             }
         }
-        let (selected, playable) = if keep_valid_prefix && selected_count > valid_count {
+        let (selected, mut playable) = if keep_valid_prefix && selected_count > valid_count {
             (parent, current_state)
         } else {
             let selected = selected
@@ -198,6 +200,15 @@ impl LoadedAnalysis {
             };
             (selected, playable)
         };
+        // Play from here is live again, and a threefold with nothing recorded after it ended the
+        // game - reloading must not reopen it.
+        playable.set_replaying(false);
+        let selected_is_leaf = arena
+            .node(selected)
+            .is_none_or(|node| node.children.is_empty());
+        if selected_is_leaf {
+            playable.finish_repetition_at_final_ply();
+        }
         let selected_path = arena
             .path_to(selected)
             .ok_or_else(|| LoadError::Invalid("selected node is unreachable".to_string()))?;
@@ -468,11 +479,13 @@ impl LoadedAnalysis {
         }
         // Parked on the root as a checkpoint: `replay` always starts its checkpoint search at
         // the root, so a HOP-rooted tree needs no special case there.
-        let root = root_state(game_type, start_hop.as_deref());
+        let mut root = root_state(game_type, start_hop.as_deref());
         let mut checkpoints = HashMap::new();
         if start_hop.is_some() {
             checkpoints.insert(arena.root, PositionCheckpoint::capture(&root));
         }
+        // A branch that continued past a repetition must still validate (see `State::replaying`).
+        root.set_replaying(true);
         let mut playable = (selected == arena.root).then(|| root.clone());
         let mut stack = vec![(arena.root, root)];
         while let Some((parent_id, parent_state)) = stack.pop() {
@@ -560,12 +573,19 @@ impl LoadedAnalysis {
             game_line: Vec::new(),
         };
         state.rebuild_visible_rows();
-        Ok(Self {
-            state,
-            playable: playable.ok_or_else(|| {
-                LoadError::Invalid("selected node was not reconstructed".to_string())
-            })?,
-        })
+        let mut playable = playable
+            .ok_or_else(|| LoadError::Invalid("selected node was not reconstructed".to_string()))?;
+        // Play from here is live again, and a threefold with nothing recorded after it ended the
+        // game - reloading must not reopen it.
+        playable.set_replaying(false);
+        let selected_is_leaf = state
+            .arena
+            .node(selected)
+            .is_none_or(|node| node.children.is_empty());
+        if selected_is_leaf {
+            playable.finish_repetition_at_final_ply();
+        }
+        Ok(Self { state, playable })
     }
 }
 
@@ -769,7 +789,5 @@ pub(super) fn root_state(game_type: GameType, start_hop: Option<&str>) -> State 
 /// The root has no move to take a hash from, and the opening explorer needs one. The parser
 /// rederives any pillbug stun from `!`, so this matches what the engine records.
 pub(super) fn root_hash(start_hop: Option<&str>) -> Option<u64> {
-    hop::to_hash(start_hop.unwrap_or(",w"))
-        .ok()
-        .map(|hash| hash as u64)
+    hop::to_hash(start_hop?).ok().map(|hash| hash as u64)
 }
