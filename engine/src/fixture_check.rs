@@ -414,6 +414,19 @@ const HEX_SYMMETRIES: [[i32; 4]; 12] = [
 /// Identity up to the 12 hex symmetries and translation: raw coordinates would split congruent
 /// positions and hide a genuine threefold. Layout and moves transform together, into one frame.
 fn position_identity(state: &State) -> String {
+    identity(state, true)
+}
+
+/// The layout half of [`position_identity`]: a sound pre-filter (identical positions are
+/// congruent layouts, not vice versa), so layout groups are candidates needing refinement.
+fn layout_identity(state: &State) -> String {
+    identity(state, false)
+}
+
+/// A legal move under a symmetry transform: `(from, to, piece)` in axial coordinates.
+type OrientedMove = ((i32, i32), (i32, i32), u8);
+
+fn identity(state: &State, with_moves: bool) -> String {
     let mut cells: Vec<((i32, i32), u32)> = Vec::new();
     for pos in Board::all_positions() {
         let stack = state.board.board.get(pos);
@@ -421,16 +434,20 @@ fn position_identity(state: &State) -> String {
             cells.push(((pos.q, pos.r), stack.simple()));
         }
     }
-    let moves: Vec<((i32, i32), (i32, i32), u8)> = state
-        .board
-        .moves(state.turn_color)
-        .into_iter()
-        .flat_map(|((piece, from), targets)| {
-            targets
-                .into_iter()
-                .map(move |to| ((from.q, from.r), (to.q, to.r), piece.simple()))
-        })
-        .collect();
+    let moves: Vec<OrientedMove> = if with_moves {
+        state
+            .board
+            .moves(state.turn_color)
+            .into_iter()
+            .flat_map(|((piece, from), targets)| {
+                targets
+                    .into_iter()
+                    .map(move |to| ((from.q, from.r), (to.q, to.r), piece.simple()))
+            })
+            .collect()
+    } else {
+        Vec::new()
+    };
 
     let mut best: Option<String> = None;
     for [a, b, c, d] in HEX_SYMMETRIES {
@@ -453,7 +470,7 @@ fn position_identity(state: &State) -> String {
         let mut layout: Vec<((i32, i32), u32)> =
             turned.iter().map(|(p, s)| (shift(*p), *s)).collect();
         layout.sort_unstable();
-        let mut available: Vec<((i32, i32), (i32, i32), u8)> = moves
+        let mut available: Vec<OrientedMove> = moves
             .iter()
             .map(|(from, to, piece)| (shift(map(*from)), shift(map(*to)), *piece))
             .collect();
@@ -532,4 +549,378 @@ fn moves_of(state: &State, color: Color) -> Vec<String> {
         .collect();
     out.sort();
     out
+}
+
+#[test]
+fn fixture_03_location_blind_stun() {
+    let path = "./test_pgns/regressions/location_blind_stun.uhp";
+    let state = replay_uhp(path);
+    report("03 location_blind_stun", &state);
+    assert_eq!(state.hashes.len(), 25, "all 25 plies replay");
+    assert!(state.repeating_moves.is_empty(), "the false draw is gone");
+
+    let occ1 = replay_uhp_prefix(path, 17);
+    let occ2 = replay_uhp_prefix(path, 21);
+    let occ3 = replay_uhp_prefix(path, 25);
+    let p_cell = crate::position::Position::new(17, 15);
+    let q_cell = crate::position::Position::new(16, 17);
+    let stun_cell = |s: &State| s.board.position_of_piece(s.board.stunned.unwrap()).unwrap();
+    assert_eq!(stun_cell(&occ1), p_cell);
+    assert_eq!(stun_cell(&occ2), q_cell);
+    assert_eq!(stun_cell(&occ3), p_cell);
+    println!(
+        "  stun cells P/Q/P, hashes {:x} {:x} {:x}",
+        occ1.hashes.last().unwrap(),
+        occ2.hashes.last().unwrap(),
+        occ3.hashes.last().unwrap()
+    );
+    assert_eq!(occ1.hashes.last(), occ3.hashes.last(), "P-stuns pool");
+    assert_ne!(occ1.hashes.last(), occ2.hashes.last(), "Q-stun splits off");
+
+    // What is TRUE of the position, owing nothing to the code under test.
+    assert_eq!(layout_of(&occ1), layout_of(&occ2), "same layout");
+    assert_eq!(layout_of(&occ1), layout_of(&occ3), "same layout");
+    assert_eq!(occ1.turn_color, Color::Black);
+    assert_eq!(occ2.turn_color, Color::Black);
+    assert_eq!(occ3.turn_color, Color::Black);
+
+    let (m1, m2, m3) = (
+        moves_of(&occ1, Color::Black),
+        moves_of(&occ2, Color::Black),
+        moves_of(&occ3, Color::Black),
+    );
+    assert_eq!(m1, m3, "occ1 and occ3 really are the same position");
+    assert_ne!(
+        m1, m2,
+        "occ2 must differ, or the pooled draw would have been correct"
+    );
+
+    // ...and therefore, over the whole game, nothing occurs three times.
+    let census = repetition_census(path, 25);
+    assert_eq!(
+        census.most, 2,
+        "no position occurs three times, so any draw here is false"
+    );
+}
+
+#[test]
+fn fixture_05_edge_axis_mirror_stun() {
+    let path = "./test_pgns/regressions/edge_axis_mirror_stun.uhp";
+    let state = replay_uhp(path);
+    report("05 edge_axis_mirror_stun", &state);
+    // A genuine threefold: the draw must fire on time, at ply 27.
+    assert_eq!(state.repeating_moves, vec![18, 22, 26], "draws on time");
+    assert_eq!(state.hashes[18], state.hashes[22]);
+    assert_eq!(state.hashes[18], state.hashes[26]);
+
+    let stun_cell = |plies| {
+        let s = replay_uhp_prefix(path, plies);
+        let c = s.board.position_of_piece(s.board.stunned.unwrap()).unwrap();
+        (c.q, c.r)
+    };
+    println!(
+        "  stun cells at 19/23/27: {:?} {:?} {:?}",
+        stun_cell(19),
+        stun_cell(23),
+        stun_cell(27)
+    );
+    assert_eq!(stun_cell(19), (17, 15));
+    assert_eq!(stun_cell(23), (17, 16), "mirror-paired cell");
+    assert_eq!(stun_cell(27), (17, 15));
+
+    // The claim this fixture exists to make: the draw at ply 27 is CORRECT, i.e. one position
+    // really did occur three times. Checked against the independent oracle - same board up to
+    // the 12 hex symmetries, same side to move, same available moves for that side. Ply 23 is
+    // the reflection of 19 and 27, so pooling it is the ruling working, not a collision.
+    let a = position_identity(&replay_uhp_prefix(path, 19));
+    let b = position_identity(&replay_uhp_prefix(path, 23));
+    let c = position_identity(&replay_uhp_prefix(path, 27));
+    assert_eq!(a, b, "ply 23 is the same position as ply 19, mirrored");
+    assert_eq!(a, c, "ply 27 is the same position as ply 19");
+
+    let census = repetition_census(path, 27);
+    assert_eq!(census.most, 3, "a genuine threefold, so the draw is right");
+    assert!(
+        census.repeated.contains(&vec![19, 23, 27]),
+        "and it is the one at plies 19/23/27: {:?}",
+        census.repeated
+    );
+}
+
+/// The layout of witness 05 really is symmetric about the edge-type axis through wP, which is
+/// what made it the red team's counterexample.
+#[test]
+fn fixture_05_layout_is_edge_axis_symmetric() {
+    let state = replay_uhp_prefix("./test_pgns/regressions/edge_axis_mirror_stun.uhp", 19);
+    let mut layout = std::collections::BTreeMap::new();
+    for pos in Board::all_positions() {
+        let bs = state.board.board.get(pos);
+        if !bs.is_empty() {
+            layout.insert((pos.q, pos.r), bs.simple());
+        }
+    }
+    let sigma = |c: (i32, i32)| {
+        let (q, r) = (c.0 - 16, c.1 - 16);
+        (q + 16, -q - r + 16)
+    };
+    assert!(
+        layout
+            .iter()
+            .all(|(c, s)| layout.get(&sigma(*c)) == Some(s)),
+        "layout must be symmetric under the edge-type reflection"
+    );
+    assert_eq!(sigma((17, 15)), (17, 16), "sigma pairs the two stun cells");
+}
+
+// ---- corpus validation ---------------------------------------------------------------------
+
+fn read_csv(text: &str) -> Vec<Vec<String>> {
+    let mut rows = Vec::new();
+    let mut row = Vec::new();
+    let mut field = String::new();
+    let mut quoted = false;
+    let mut chars = text.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            '"' if quoted => {
+                if chars.peek() == Some(&'"') {
+                    chars.next();
+                    field.push('"');
+                } else {
+                    quoted = false;
+                }
+            }
+            '"' => quoted = true,
+            ',' if !quoted => row.push(std::mem::take(&mut field)),
+            '\n' if !quoted => {
+                row.push(std::mem::take(&mut field));
+                rows.push(std::mem::take(&mut row));
+            }
+            '\r' if !quoted => {}
+            c => field.push(c),
+        }
+    }
+    if !field.is_empty() || !row.is_empty() {
+        row.push(field);
+        rows.push(row);
+    }
+    rows
+}
+
+/// Every engine-drawn threefold in the corpus, confirmed by the oracle at the claimed plies -
+/// the symmetry-aware check `corpus_tests::detected_repetitions_are_real` cannot make.
+#[test]
+#[ignore = "needs MLP_GAMES_CSV"]
+fn corpus_every_detected_draw_is_a_real_threefold() {
+    let path = std::env::var("MLP_GAMES_CSV").expect("set MLP_GAMES_CSV");
+    let text = std::fs::read_to_string(&path).expect("readable corpus");
+    let games = read_csv(&text);
+    let limit: usize = std::env::var("GAME_LIMIT")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(usize::MAX);
+
+    let (mut drawn, mut confirmed, mut plies_matched) = (0usize, 0usize, 0usize);
+    let mut false_draws: Vec<String> = Vec::new();
+    let mut ply_mismatch: Vec<String> = Vec::new();
+
+    for row in games[1..].iter().take(limit) {
+        let Ok(history) = History::new_from_str(&row[3]) else {
+            continue;
+        };
+        let tournament = history
+            .moves
+            .iter()
+            .take(2)
+            .all(|(p, _)| p.parse::<Piece>().map(|p| p.bug()) != Ok(crate::bug::Bug::Queen));
+
+        let mut state = State::new(crate::game_type::GameType::MLP, tournament);
+        for (piece, pos) in history.moves.iter() {
+            if state.play_turn_from_history(piece, pos).is_err() {
+                break;
+            }
+        }
+        if state.repeating_moves.len() < 3 {
+            continue;
+        }
+        drawn += 1;
+
+        // Census this game with the independent oracle.
+        let mut replay = State::new(crate::game_type::GameType::MLP, tournament);
+        let mut groups: std::collections::HashMap<String, Vec<usize>> =
+            std::collections::HashMap::new();
+        for (ply, (piece, pos)) in history.moves.iter().enumerate() {
+            if replay.play_turn_from_history(piece, pos).is_err() {
+                break;
+            }
+            groups
+                .entry(position_identity(&replay))
+                .or_default()
+                .push(ply);
+        }
+        let most = groups.values().map(Vec::len).max().unwrap_or(0);
+        if most >= 3 {
+            confirmed += 1;
+            // The engine's claimed plies should themselves be one of the >=3 groups.
+            let claimed: Vec<usize> = state.repeating_moves.clone();
+            if groups.values().any(|g| {
+                g.len() >= 3 && claimed.iter().all(|c| g.contains(c)) && claimed.len() >= 3
+            }) {
+                plies_matched += 1;
+            } else {
+                ply_mismatch.push(format!("{} claimed {claimed:?}", row[0]));
+            }
+        } else {
+            false_draws.push(format!("{} most={most}", row[0]));
+        }
+    }
+
+    println!("games the engine drew by repetition: {drawn}");
+    println!("  oracle confirms a real threefold:  {confirmed}");
+    println!("  and at the very plies claimed:     {plies_matched}");
+    println!("  FALSE DRAWS:                       {}", false_draws.len());
+    for g in false_draws.iter().take(20) {
+        println!("    {g}");
+    }
+    for g in ply_mismatch.iter().take(20) {
+        println!("    ply mismatch: {g}");
+    }
+    assert!(false_draws.is_empty(), "false draws: {false_draws:?}");
+}
+
+/// The engine must draw exactly the games where a position occurs three times. Layout pre-filter
+/// first: move generation at ~5M plies would be needlessly slow.
+#[test]
+#[ignore = "needs MLP_GAMES_CSV"]
+fn corpus_engine_and_oracle_agree_on_every_game() {
+    let path = std::env::var("MLP_GAMES_CSV").expect("set MLP_GAMES_CSV");
+    let text = std::fs::read_to_string(&path).expect("readable corpus");
+    let games = read_csv(&text);
+    let limit: usize = std::env::var("GAME_LIMIT")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(usize::MAX);
+
+    let (mut checked, mut agreed, mut drawn, mut refined) = (0usize, 0usize, 0usize, 0usize);
+    let mut engine_drew_oracle_did_not: Vec<String> = Vec::new();
+    let mut oracle_found_engine_missed: Vec<String> = Vec::new();
+    let mut near_miss: Vec<String> = Vec::new();
+
+    for row in games[1..].iter().take(limit) {
+        let Ok(history) = History::new_from_str(&row[3]) else {
+            continue;
+        };
+        let tournament = history
+            .moves
+            .iter()
+            .take(2)
+            .all(|(p, _)| p.parse::<Piece>().map(|p| p.bug()) != Ok(crate::bug::Bug::Queen));
+        let new = || State::new(crate::game_type::GameType::MLP, tournament);
+
+        // Pass 1: replay once, keyed on layout only.
+        let mut state = new();
+        let mut by_layout: std::collections::HashMap<String, Vec<usize>> =
+            std::collections::HashMap::new();
+        for (played, (piece, pos)) in history.moves.iter().enumerate() {
+            if state.play_turn_from_history(piece, pos).is_err() {
+                break;
+            }
+            by_layout
+                .entry(layout_identity(&state))
+                .or_default()
+                .push(played);
+            if matches!(state.game_status, GameStatus::Finished(_)) {
+                break;
+            }
+        }
+        checked += 1;
+        let engine_drew = state.repeating_moves.len() >= 3;
+        if engine_drew {
+            drawn += 1;
+        }
+
+        // Pass 2: refine only the layout groups that could possibly hold a threefold.
+        let candidates: Vec<Vec<usize>> = by_layout
+            .into_values()
+            .filter(|plies| plies.len() >= 3)
+            .collect();
+        let mut oracle_threefold = false;
+        if !candidates.is_empty() {
+            refined += 1;
+            let wanted: std::collections::HashSet<usize> =
+                candidates.iter().flatten().copied().collect();
+            let mut replay = new();
+            let mut by_position: std::collections::HashMap<String, usize> =
+                std::collections::HashMap::new();
+            for (ply, (piece, pos)) in history.moves.iter().enumerate() {
+                if replay.play_turn_from_history(piece, pos).is_err() {
+                    break;
+                }
+                if wanted.contains(&ply) {
+                    let count = by_position.entry(position_identity(&replay)).or_default();
+                    *count += 1;
+                    if *count >= 3 {
+                        oracle_threefold = true;
+                    }
+                }
+                if matches!(replay.game_status, GameStatus::Finished(_)) {
+                    break;
+                }
+            }
+        }
+
+        // Layout and side to move are equal by construction, so only `last_moved` can make
+        // the move sets differ.
+        if !candidates.is_empty() && !oracle_threefold {
+            // Report plies 1-based, the way the site numbers moves.
+            let mut groups: Vec<Vec<usize>> = candidates
+                .iter()
+                .map(|g| g.iter().map(|p| p + 1).collect())
+                .collect();
+            groups.sort();
+            near_miss.push(format!("{:<14} plies {groups:?}", row[0]));
+        }
+
+        if engine_drew == oracle_threefold {
+            agreed += 1;
+        } else if engine_drew {
+            engine_drew_oracle_did_not.push(row[0].clone());
+        } else {
+            oracle_found_engine_missed.push(row[0].clone());
+        }
+    }
+
+    println!("games replayed:                    {checked}");
+    println!("  engine called a threefold:       {drawn}");
+    println!("  needed the expensive refinement: {refined}");
+    println!("  engine and oracle agree:         {agreed}");
+    println!(
+        "  layout repeated 3x but NOT a threefold: {}",
+        near_miss.len()
+    );
+    for g in near_miss.iter() {
+        println!("    {g}");
+    }
+    println!(
+        "  FALSE DRAWS (engine yes, oracle no): {}",
+        engine_drew_oracle_did_not.len()
+    );
+    for g in engine_drew_oracle_did_not.iter().take(20) {
+        println!("    {g}");
+    }
+    println!(
+        "  MISSED DRAWS (oracle yes, engine no): {}",
+        oracle_found_engine_missed.len()
+    );
+    for g in oracle_found_engine_missed.iter().take(20) {
+        println!("    {g}");
+    }
+    assert!(
+        engine_drew_oracle_did_not.is_empty(),
+        "false draws: {engine_drew_oracle_did_not:?}"
+    );
+    assert!(
+        oracle_found_engine_missed.is_empty(),
+        "missed draws: {oracle_found_engine_missed:?}"
+    );
 }

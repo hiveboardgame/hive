@@ -86,6 +86,25 @@ fn load(var: &str) -> Vec<Vec<String>> {
     read_csv(&fs::read_to_string(&path).expect("readable CSV"))
 }
 
+/// Draws the site awarded that were never threefolds: the old hash keyed the stun by piece type
+/// with no cell, so positions restricting different same-type pieces collided.
+const RECORDED_BUT_NOT_A_REPETITION: [&str; 1] = ["iIPQLORgQUe9"];
+
+/// Real threefolds recorded as something else. Each verified by [`detected_repetitions_are_real`],
+/// which checks this list by default.
+const REAL_BUT_RECORDED_OTHERWISE: [&str; 10] = [
+    "9DvlsAQscx",
+    "pEIOqmy3yl",
+    "5xgBXFQQOaYv",
+    "kO59eNBcVk8a",
+    "oBy-nMA9bw21",
+    "CW9_kQ29tO1N",
+    "Kg2iccu9y8Dp",
+    "C_vgtOD3YAZd",
+    "ySoi7lraT6Xc",
+    "rsIv-Nbc0xL5",
+];
+
 /// The recorded `conclusion` is ground truth - comparing code against code cannot say which
 /// side is right.
 #[test]
@@ -102,6 +121,8 @@ fn threefold_detection_matches_recorded_conclusions() {
     let (mut joined, mut hit, mut missed, mut extra) = (0, 0, 0, 0);
     let mut missed_examples: Vec<String> = Vec::new();
     let mut extra_examples: Vec<String> = Vec::new();
+    let (mut unexplained_missed, mut unexplained_extra): (Vec<String>, Vec<String>) =
+        (Vec::new(), Vec::new());
 
     for row in games[1..].iter() {
         let Some((status, conclusion)) = recorded.get(row[0].as_str()) else {
@@ -128,11 +149,17 @@ fn threefold_detection_matches_recorded_conclusions() {
                 if missed_examples.len() < 10 {
                     missed_examples.push(format!("{} ({status})", row[0]));
                 }
+                if !RECORDED_BUT_NOT_A_REPETITION.contains(&row[0].as_str()) {
+                    unexplained_missed.push(row[0].clone());
+                }
             }
             (false, true) => {
                 extra += 1;
                 if extra_examples.len() < 20 {
                     extra_examples.push(format!("{} db={conclusion}/{status}", row[0]));
+                }
+                if !REAL_BUT_RECORDED_OTHERWISE.contains(&row[0].as_str()) {
+                    unexplained_extra.push(row[0].clone());
                 }
             }
             (false, false) => {}
@@ -150,23 +177,46 @@ fn threefold_detection_matches_recorded_conclusions() {
         println!("    extra: {example}");
     }
 
-    assert_eq!(missed, 0, "a recorded threefold draw was not detected");
+    // Both lists are disagreements with production, and both are asserted exactly. Counting only
+    // the misses would let a new false draw slip through as one more line of output.
+    assert!(
+        unexplained_missed.is_empty(),
+        "a recorded threefold draw was not detected: {unexplained_missed:?}"
+    );
+    assert!(
+        unexplained_extra.is_empty(),
+        "a repetition we now detect that nobody has verified: {unexplained_extra:?}"
+    );
+    assert_eq!(
+        missed,
+        RECORDED_BUT_NOT_A_REPETITION.len(),
+        "a known-wrong draw stopped reproducing - if it is genuinely fixed, drop it from the list"
+    );
+    assert_eq!(
+        extra,
+        REAL_BUT_RECORDED_OTHERWISE.len(),
+        "a known missed repetition stopped reproducing - if genuinely fixed, drop it from the list"
+    );
 }
 
-/// Verify claimed repetitions with an oracle owing nothing to the hash: identical layout
-/// (same-type pieces interchangeable) and identical legal moves.
+/// An oracle owing nothing to the hash: identical layout and legal moves. Defaults to
+/// [`REAL_BUT_RECORDED_OTHERWISE`], so that allowlist is checked rather than trusted.
 #[test]
-#[ignore = "needs MLP_GAMES_CSV and GAMES"]
+#[ignore = "needs MLP_GAMES_CSV"]
 fn detected_repetitions_are_real() {
-    let wanted: Vec<String> = env::var("GAMES")
-        .expect("set GAMES to a comma separated list of nanoids")
-        .split(',')
-        .map(str::to_string)
-        .collect();
+    let wanted: Vec<String> = match env::var("GAMES") {
+        Ok(list) => list.split(',').map(str::to_string).collect(),
+        Err(_) => REAL_BUT_RECORDED_OTHERWISE
+            .iter()
+            .map(|id| id.to_string())
+            .collect(),
+    };
     let games = load("MLP_GAMES_CSV");
     let mut bogus = Vec::new();
+    let mut seen = 0usize;
 
     for row in games[1..].iter().filter(|r| wanted.contains(&r[0])) {
+        seen += 1;
         let history = History::new_from_str(&row[3]).expect("history");
 
         // Pass one: what does the engine claim?
@@ -239,4 +289,124 @@ fn detected_repetitions_are_real() {
     }
 
     assert!(bogus.is_empty(), "not a real repetition: {bogus:?}");
+    // A typo'd nanoid, or an export that no longer carries these games, would otherwise verify
+    // nothing and say so in green.
+    assert_eq!(
+        seen,
+        wanted.len(),
+        "only {seen} of {} requested games were found in the export",
+        wanted.len()
+    );
+}
+
+/// No two distinct positions in the corpus share a hash - checked against the canonical form,
+/// which separates a mixing collision from a geometry disagreement.
+#[test]
+#[ignore = "needs MLP_GAMES_CSV"]
+fn canonical_hash_is_position_identity() {
+    use crate::canonical_hash::{canonical_form, canonical_hash};
+
+    /// Everything the hash may depend on; the stun sits inside the cells - a separate
+    /// `stunned.simple()` term would blind the oracle to the very bug it exists to catch.
+    type Form = (Vec<(i32, i32, u32)>, Color);
+
+    let limit: usize = env::var("GAME_LIMIT")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(5000);
+    let games = load("MLP_GAMES_CSV");
+
+    let mut by_form: HashMap<Form, u64> = HashMap::new();
+    let mut by_hash: HashMap<u64, Form> = HashMap::new();
+    let (mut checked, mut split, mut collided) = (0usize, 0usize, 0usize);
+
+    for row in games[1..].iter().take(limit) {
+        let Ok(history) = History::new_from_str(&row[3]) else {
+            continue;
+        };
+        let mut state = State::new(GameType::MLP, tournament_from(&history));
+
+        for (ply, (piece, pos)) in history.moves.iter().enumerate() {
+            if state.play_turn_from_history(piece, pos).is_err() {
+                break;
+            }
+            if state.board.played < 2 {
+                continue;
+            }
+            let to_move = if ply.is_multiple_of(2) {
+                Color::Black
+            } else {
+                Color::White
+            };
+            let Some(cells) = canonical_form(&state.board, state.board.stunned) else {
+                continue;
+            };
+            let form: Form = (cells, to_move);
+            let hash = canonical_hash(&state.board, to_move, state.board.stunned);
+            checked += 1;
+
+            match by_form.get(&form) {
+                Some(&seen) if seen != hash => split += 1,
+                None => {
+                    by_form.insert(form.clone(), hash);
+                }
+                _ => {}
+            }
+            match by_hash.get(&hash) {
+                Some(seen) if *seen != form => collided += 1,
+                None => {
+                    by_hash.insert(hash, form);
+                }
+                _ => {}
+            }
+        }
+    }
+
+    println!("positions checked:  {checked}");
+    println!("distinct positions: {}", by_form.len());
+    println!("distinct hashes:    {}", by_hash.len());
+    println!("same position, two hashes (split):    {split}");
+    println!("two positions, same hash (collision): {collided}");
+
+    assert_eq!(split, 0, "a position must always hash the same");
+    assert_eq!(collided, 0, "distinct positions must not share a hash");
+    assert_eq!(
+        by_form.len(),
+        by_hash.len(),
+        "positions and hashes must correspond one to one"
+    );
+}
+
+/// The axis-gap unwrapping must agree with walking the hive, cell for cell. Injectivity alone would
+/// not catch geometry that is wrong but consistently wrong.
+#[test]
+#[ignore = "needs MLP_GAMES_CSV"]
+fn axis_unwrap_agrees_with_walking() {
+    let games = load("MLP_GAMES_CSV");
+    let (mut compared, mut disagreed) = (0usize, 0usize);
+
+    for row in games[1..].iter().take(2000) {
+        let Ok(history) = History::new_from_str(&row[3]) else {
+            continue;
+        };
+        let mut state = State::new(GameType::MLP, tournament_from(&history));
+        for (piece, pos) in history.moves.iter() {
+            if state.play_turn_from_history(piece, pos).is_err() {
+                break;
+            }
+            if state.board.played < 2 {
+                continue;
+            }
+            compared += 1;
+            if !crate::canonical_hash::forms_agree(&state.board, state.board.stunned) {
+                disagreed += 1;
+            }
+        }
+    }
+
+    println!("positions compared: {compared}, disagreements: {disagreed}");
+    assert_eq!(
+        disagreed, 0,
+        "axis unwrapping disagrees with walking the hive"
+    );
 }

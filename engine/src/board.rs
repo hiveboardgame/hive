@@ -7,15 +7,13 @@ use crate::{
     game_error::GameError,
     game_result::GameResult,
     game_type::GameType,
-    hasher::Hasher,
     piece::Piece,
-    position::{CircleIter, Position, Rotation},
+    position::Position,
     torus_array::TorusArray,
 };
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use std::{
-    cmp::Ordering,
     collections::HashMap,
     fmt::{self, Write},
 };
@@ -121,21 +119,16 @@ pub struct Board {
     pinned: [bool; 48],
     // number of pieces present on the board
     pub played: usize,
-    pub hasher: Hasher,
-    pub smallest: Option<(Piece, Position)>,
-    pub eigen_direction: Option<Direction>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+/// Everything needed to put a board back exactly as it was.
 pub struct BoardSnapshot {
     pieces: Vec<(Position, Piece)>,
     last_moved: Option<(Piece, Position)>,
     last_move: (Option<Position>, Option<Position>),
     stunned: Option<Piece>,
     pinned: [bool; 48],
-    hasher: Hasher,
-    smallest: Option<(Piece, Position)>,
-    eigen_direction: Option<Direction>,
 }
 
 impl Board {
@@ -152,9 +145,6 @@ impl Board {
             positions: [None; 48],
             pinned: [false; 48],
             played: 0,
-            hasher: Hasher::new(),
-            smallest: None,
-            eigen_direction: None,
         }
     }
 
@@ -172,9 +162,6 @@ impl Board {
             last_move: self.last_move,
             stunned: self.stunned,
             pinned: self.pinned,
-            hasher: self.hasher.clone(),
-            smallest: self.smallest,
-            eigen_direction: self.eigen_direction,
         }
     }
 
@@ -192,31 +179,6 @@ impl Board {
         board.stunned = snapshot.stunned;
         board.pinned = snapshot.pinned;
         board.played = snapshot.pieces.len();
-        board.hasher = snapshot.hasher.clone();
-        board.smallest = snapshot.smallest;
-        board.eigen_direction = snapshot.eigen_direction;
-        if board.played == 1 {
-            let stack = board.board.get_mut(Position::initial_spawn_position());
-            for rotation in [Rotation::C, Rotation::CC] {
-                stack.set_index(rotation, 0);
-            }
-        } else if let (Some((_, smallest_position)), Some(eigen_direction)) =
-            (board.smallest, board.eigen_direction)
-        {
-            for rotation in [Rotation::C, Rotation::CC] {
-                let mut indexed = 0;
-                for (index, position) in
-                    CircleIter::new(smallest_position, eigen_direction, rotation).enumerate()
-                {
-                    let stack = board.board.get_mut(position);
-                    stack.set_index(rotation, index);
-                    indexed += stack.len();
-                    if indexed == board.played {
-                        break;
-                    }
-                }
-            }
-        }
         board
     }
 
@@ -354,177 +316,6 @@ impl Board {
         path.set_extension("png");
         pixmap.save_png(path)?;
         Ok(())
-    }
-
-    // this always gets called as a last step
-    pub fn hash_move(
-        &mut self,
-        piece: Piece,
-        from: Option<Position>,
-        to: Position,
-        turn: usize,
-    ) -> u64 {
-        if self.played == 1 {
-            let bs = self.board.get_mut(Position::initial_spawn_position());
-            bs.set_index(Rotation::C, 0);
-            bs.set_index(Rotation::CC, 0);
-            self.smallest = Some((piece, to));
-            self.hasher.update(bs, Some(0), Rotation::C);
-            self.hasher.update(bs, Some(0), Rotation::CC);
-            self.hasher.finish_turn(self.stunned);
-            return self.hasher.hash;
-        }
-        let mut smallest_unchanged = true;
-        let smallest = self.get_smallest(piece, to);
-        if self.smallest != smallest {
-            self.smallest = smallest;
-            smallest_unchanged = false;
-        }
-        let eigen_direction = self.eigen_direction();
-        if self.eigen_direction == Some(eigen_direction) && smallest_unchanged {
-            // IF THIS IS A MOVE SO CLEAR THE FROM
-            if let Some(from) = from {
-                let mut stack = self.board.get(from).clone();
-                self.hasher.update(&stack, None, Rotation::C);
-                self.hasher.update(&stack, None, Rotation::CC);
-                stack.push_piece(piece);
-                self.hasher.update(&stack, None, Rotation::C);
-                self.hasher.update(&stack, None, Rotation::CC);
-            }
-
-            let mut stack = self.board.get(to).clone();
-            if stack.has_index() {
-                let top_piece = stack.pop_piece();
-                debug_assert_eq!(piece, top_piece);
-                self.hasher.update(&stack, None, Rotation::C);
-                self.hasher.update(&stack, None, Rotation::CC);
-            }
-
-            let smallest_position = self.smallest.unwrap().1;
-            let clockwise = CircleIter::new(smallest_position, eigen_direction, Rotation::C);
-            let counter_clockwise =
-                CircleIter::new(smallest_position, eigen_direction, Rotation::CC);
-            let (c_index, cc_index) = (
-                clockwise.take_while(|pos| *pos != to).count(),
-                counter_clockwise.take_while(|pos| *pos != to).count(),
-            );
-            let stack = self.board.get_mut(to);
-            stack.set_index(Rotation::C, c_index);
-            stack.set_index(Rotation::CC, cc_index);
-            self.hasher.update(stack, Some(c_index as u32), Rotation::C);
-            self.hasher
-                .update(stack, Some(cc_index as u32), Rotation::CC);
-        } else {
-            self.eigen_direction = Some(eigen_direction);
-            self.hasher.clear(turn);
-            let smallest_position = self.smallest.unwrap().1;
-            for rotation in [Rotation::C, Rotation::CC] {
-                let mut hashed = 0_usize;
-                for (index, position) in
-                    CircleIter::new(smallest_position, eigen_direction, rotation).enumerate()
-                {
-                    let bs = self.board.get_mut(position);
-                    bs.set_index(rotation, index);
-                    if !bs.is_empty() {
-                        self.hasher.update(bs, Some(index as u32), rotation);
-                        hashed += bs.size as usize;
-                    }
-                    if hashed == self.played {
-                        break;
-                    }
-                }
-            }
-        }
-        self.hasher.finish_turn(self.stunned)
-    }
-
-    pub fn ring_is_empty(&self, mut position: Position, ring: usize) -> bool {
-        for _ in 0..ring {
-            position = position.to(Direction::W);
-        }
-        let mut direction = Direction::W.next_direction(Rotation::C);
-        for _ in 0..6 {
-            direction = direction.next_direction(Rotation::C);
-            for _ in 0..ring {
-                if !self.board.get(position).is_empty() {
-                    return false;
-                };
-                position = position.to(direction);
-            }
-        }
-        true
-    }
-
-    pub fn walk_ring(
-        &self,
-        mut direction: Direction,
-        mut position: Position,
-        ring: usize,
-        revolution: Rotation,
-    ) -> String {
-        let mut found = String::new();
-        for _ in 0..ring {
-            position = position.to(direction);
-        }
-        direction = direction.next_direction(revolution);
-        for _ in 0..6 {
-            direction = direction.next_direction(revolution);
-            for _ in 0..ring {
-                found.push(self.board.get(position).to_char());
-                position = position.to(direction);
-            }
-        }
-        found
-    }
-
-    pub fn eigen_direction(&self) -> Direction {
-        let (_, smallest_position) = self.smallest.unwrap();
-        let mut candidates = Vec::new();
-        for position in self.positions_taken_around(smallest_position) {
-            let candidate = self.board.get(position).smallest().unwrap();
-            if candidates.is_empty() {
-                candidates.push((candidate, position));
-            } else {
-                match candidate
-                    .simple()
-                    .cmp(&candidates.first().unwrap().0.simple())
-                {
-                    Ordering::Less => candidates = vec![(candidate, position)],
-                    Ordering::Equal => candidates.push((candidate, position)),
-                    Ordering::Greater => {}
-                }
-            }
-        }
-        if candidates.len() > 1 {
-            return self.eigen_direction_tie_breaker(2);
-        }
-        smallest_position.direction(candidates.first().unwrap().1)
-    }
-
-    pub fn eigen_direction_tie_breaker(&self, ring: usize) -> Direction {
-        let (_smallest_piece, smallest_position) = self.smallest.unwrap();
-        let mut h: HashMap<String, Vec<Direction>> = HashMap::new();
-        let mut backup: HashMap<String, Vec<Direction>> = HashMap::new();
-        for dir in Direction::all().iter() {
-            let c = self.walk_ring(*dir, smallest_position, ring, Rotation::C);
-            let cc = self.walk_ring(*dir, smallest_position, ring, Rotation::CC);
-            if c < cc {
-                h.entry(c).or_default().push(*dir);
-            } else {
-                h.entry(cc).or_default().push(*dir);
-            }
-        }
-        if self.ring_is_empty(smallest_position, ring + 1) {
-            backup.clone_from(&h);
-        }
-        h.retain(|_, dirs| dirs.len() == 1);
-        if !h.is_empty() {
-            *h[h.keys().min().unwrap()].first().unwrap()
-        } else if backup.is_empty() {
-            self.eigen_direction_tie_breaker(ring + 1)
-        } else {
-            *backup[backup.keys().min().unwrap()].first().unwrap()
-        }
     }
 
     pub fn find_sextant(&self, from: Position, to: Piece) -> Direction {
@@ -1159,36 +950,6 @@ impl Board {
 
     pub fn is_negative_space(&self, position: Position) -> bool {
         !self.occupied(position) && *self.neighbor_count.get(position) > 0
-    }
-
-    pub fn get_smallest(&mut self, piece: Piece, position: Position) -> Option<(Piece, Position)> {
-        if matches!(self.smallest, Some((piece, _)) if piece == *WHITE_QUEEN) {
-            return Some((*WHITE_QUEEN, self.position_of_piece(*WHITE_QUEEN).unwrap()));
-        }
-        if let Some((current_piece, current_position)) = self.smallest {
-            return match piece.simple().cmp(&current_piece.simple()) {
-                Ordering::Less => Some((piece, position)),
-                Ordering::Greater => self.smallest,
-                Ordering::Equal => {
-                    // To make this unique in the case an equal piece gets played, we go with the
-                    // one with the bigger neighbors
-                    if self
-                        .neighbors(current_position)
-                        .map(|bs| bs.simple())
-                        .reduce(|acc, e| acc + e)
-                        < self
-                            .neighbors(position)
-                            .map(|bs| bs.simple())
-                            .reduce(|acc, e| acc + e)
-                    {
-                        Some((piece, position))
-                    } else {
-                        self.smallest
-                    }
-                }
-            };
-        }
-        Some((piece, position))
     }
 
     /// Stun only when the restriction removes a legal move - it feeds the hash, and a vacuous
@@ -2033,10 +1794,56 @@ mod tests {
         );
     }
 
-    /// A pass leaves no restriction, so `stunned` must clear with `last_moved` - a stale stun
-    /// stops the hash matching the same position reached without one.
+    /// hivegame.com/game/9ZBIYwl6Fu is the only known game with a pass after a live stun, so
+    /// only this fixture makes the invariant bite.
     #[test]
     fn pass_clears_stunned() {
+        use crate::canonical_hash::canonical_hash;
+
+        let history = History::from_uhp_str(
+            &std::fs::read_to_string("./test_pgns/regressions/pass_after_a_stun.uhp")
+                .expect("fixture"),
+        )
+        .expect("valid UHP");
+        let mut state = State::new(history.game_type, true);
+        let mut stunned_before_the_pass = None;
+        for (ply, (piece, position)) in history.moves.iter().enumerate() {
+            if ply == 35 {
+                stunned_before_the_pass = state.board.stunned;
+                assert_eq!(piece, "pass", "ply 35 of the fixture is the pass");
+            }
+            state
+                .play_turn_from_history(piece, position)
+                .unwrap_or_else(|err| panic!("ply {ply}: {err}"));
+            if ply == 35 {
+                break;
+            }
+        }
+
+        let stunned = stunned_before_the_pass.expect("the move before the pass left a stun");
+        assert_eq!(stunned, Piece::new_from(Bug::Ant, Color::White, 1));
+        assert_eq!(
+            state.board.stunned, None,
+            "the pass must not carry the stun forward"
+        );
+
+        // Ply 35 is odd, so White is to move once it has been played.
+        let recorded = *state.hashes.last().expect("a hash per ply");
+        assert_eq!(
+            recorded,
+            canonical_hash(&state.board, Color::White, None),
+            "the pass position must hash as unrestricted"
+        );
+        assert_ne!(
+            recorded,
+            canonical_hash(&state.board, Color::White, Some(stunned)),
+            "and a carried stun would have been a different position, which is the whole bug"
+        );
+    }
+
+    /// The same invariant over the corpus: weak alone, but it covers games nobody hand-picked.
+    #[test]
+    fn no_pass_in_the_corpus_leaves_a_stun() {
         for entry in std::fs::read_dir("./test_pgns/valid/").expect("valid dir") {
             let path = entry.expect("PGN").path();
             let history = History::from_filepath(path.clone()).expect("valid PGN");
@@ -2047,15 +1854,23 @@ mod tests {
                 .all(|(piece, _)| piece.parse::<Piece>().expect("piece").bug() != Bug::Queen);
             let mut state = State::new(history.game_type, tournament);
 
+            let mut passes = 0;
             for (ply, (piece, position)) in history.moves.iter().enumerate() {
                 state
                     .play_turn_from_history(piece, position)
                     .unwrap_or_else(|err| panic!("{}: ply {ply}: {err}", path.display()));
-                assert!(
-                    !(state.board.stunned.is_some() && state.board.hasher.stunned.is_none()),
-                    "{}: ply {ply}: board.stunned outlived the hash it came from",
-                    path.display()
-                );
+                if piece == "pass" {
+                    passes += 1;
+                    assert!(
+                        state.board.stunned.is_none(),
+                        "{}: ply {ply}: a pass left a stun behind",
+                        path.display()
+                    );
+                }
+            }
+            // The corpus contains passes; if it stopped, this test would silently prove nothing.
+            if path.to_string_lossy().contains("pass") {
+                assert!(passes > 0, "{}: expected a pass", path.display());
             }
         }
     }
@@ -2078,6 +1893,21 @@ mod tests {
         assert_eq!(state.game_status, GameStatus::Finished(GameResult::Draw));
     }
 
+    /// hivegame.com/game/iIPQLORgQUe9: the restricted Ant sat on a different cell at ply 35, but
+    /// a stun keyed by piece type collided all three - the site drew a game that never repeated.
+    #[test]
+    fn game_drawn_on_a_stunned_ant_that_was_not_the_same_ant() {
+        let state = replay("./test_pgns/regressions/false_draw_by_stunned_cell.pgn");
+        assert!(
+            state.repeating_moves.is_empty(),
+            "not a repetition: {:?}",
+            state.repeating_moves
+        );
+        assert_ne!(state.game_status, GameStatus::Finished(GameResult::Draw));
+        // The whole game is there, so the draw is absent because we replayed past it.
+        assert_eq!(state.turn, 46);
+    }
+
     /// Replay a PGN as far as it goes; a threefold draw stops it before the recorded end.
     fn replay(path: &str) -> State {
         let history = History::from_filepath(path.into()).expect("valid PGN");
@@ -2094,6 +1924,7 @@ mod tests {
         }
         state
     }
+
     /// `set_stunned` asked only `Bug::has_move`, so a thrown Pillbug that can still throw kept
     /// no stun - a restricted position sharing an unrestricted hash, i.e. a false draw.
     #[test]
@@ -2191,5 +2022,20 @@ mod tests {
         assert!(legal_targets(&unrestricted_board, Color::Black).is_empty());
 
         assert_eq!(state.board.stunned, None);
+    }
+
+    /// A 694-ply game drifts the hive across the 32x32 torus; axis unwrapping must hash every
+    /// ply however far it drifts.
+    #[test]
+    fn long_drifting_game_hashes_throughout() {
+        let history =
+            History::from_filepath("./test_pgns/regressions/torus_wrap.pgn".into()).expect("PGN");
+        let mut state = State::new(GameType::MLP, true);
+        for (ply, (piece, position)) in history.moves.iter().enumerate() {
+            state
+                .play_turn_from_history(piece, position)
+                .unwrap_or_else(|err| panic!("ply {ply}: {err}"));
+        }
+        assert_eq!(state.hashes.len(), history.moves.len());
     }
 }

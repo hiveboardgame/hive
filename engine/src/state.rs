@@ -57,10 +57,10 @@ impl State {
 
     pub fn new_from_str(moves: &str, game_type: &str) -> Result<Self, GameError> {
         let game_type = GameType::from_str(game_type)?;
-        let history = History::new_from_str(moves)?;
-        let mut state = State::new_from_history(&history)?;
-        state.game_type = game_type;
-        Ok(state)
+        let mut history = History::new_from_str(moves)?;
+        // Replay consults the game type (piece inventory), so set it before, not after.
+        history.game_type = game_type;
+        Self::new_from_history(&history)
     }
 
     /// The opening "roots" for a game type: one entry per distinct bug White can open with
@@ -273,7 +273,7 @@ impl State {
         // cleared alongside `last_moved`, or it describes a stun that no longer exists.
         self.board.stunned = None;
         self.board.last_move = (None, None);
-        self.three_fold_repetition(None, None, None);
+        self.three_fold_repetition();
     }
 
     fn next_turn(&mut self) {
@@ -347,6 +347,18 @@ impl State {
     }
 
     pub fn turn_spawn(&mut self, piece: Piece, target_position: Position) -> Result<(), GameError> {
+        // A forged identifier (wB3, wM in Base, an order-zero Ant) must never reach the board:
+        // it would be recorded in the history and refused on reload.
+        let inventory = piece.bug().count(self.game_type);
+        if !piece.is_well_formed() || inventory == 0 || piece.order() > inventory {
+            return Err(Self::invalid_move_error(
+                piece,
+                "Reserve",
+                target_position,
+                self.turn,
+                format!("{piece} is not part of this game."),
+            ));
+        }
         if !piece.is_color(self.turn_color) {
             let reason = format!(
                 "It is {}'s turn, but {} tried to spawn a piece.",
@@ -411,24 +423,23 @@ impl State {
             self.turn_spawn(piece, target_position)?
         }
         self.update_history(piece, target_position);
-        self.three_fold_repetition(Some(piece), origin_position, Some(target_position));
+        self.three_fold_repetition();
         debug_assert!(self.board.check());
         self.next_turn();
         Ok(())
     }
 
-    pub fn three_fold_repetition(
-        &mut self,
-        piece: Option<Piece>,
-        origin_position: Option<Position>,
-        target_position: Option<Position>,
-    ) {
-        let hash = if let (Some(piece), Some(target_position)) = (piece, target_position) {
-            self.board
-                .hash_move(piece, origin_position, target_position, self.turn)
+    /// Record the position that has just been reached and adjudicate a draw on its third
+    /// occurrence. The hash is a pure function of the position, so this needs no move details.
+    pub fn three_fold_repetition(&mut self) {
+        // `turn` is pre-increment for a move but post-increment for a pass; the history length is
+        // recorded before this call on both paths, so it is the consistent oracle.
+        let to_move = if self.history.moves.len().is_multiple_of(2) {
+            Color::White
         } else {
-            self.board.hasher.finish_turn(None)
+            Color::Black
         };
+        let hash = crate::canonical_hash::canonical_hash(&self.board, to_move, self.board.stunned);
         self.hashes.push(hash);
         *self.hashes_count.entry(hash).or_default() += 1;
         self.history.record_hash(hash);
@@ -479,6 +490,23 @@ mod tests {
     use super::*;
     use std::collections::HashSet;
 
+    #[test]
+    fn a_forged_piece_off_the_wire_is_refused() {
+        for raw in 0u8..=255 {
+            let piece = Piece::from(raw);
+            if piece.is_well_formed() {
+                continue;
+            }
+            let mut state = State::new(GameType::MLP, false);
+            assert!(
+                state
+                    .play_turn_from_position(piece, Position::initial_spawn_position())
+                    .is_err(),
+                "{raw:#04x} ({piece}) reached the board"
+            );
+        }
+    }
+
     /// UHP headers and tree replay read it; two call sites hand-patched the Base default.
     #[test]
     fn a_new_state_stamps_its_history_with_the_game_type() {
@@ -504,13 +532,37 @@ mod tests {
         );
     }
 
+    /// The inventory check consults the game type, so setting it after replay rejects every
+    /// expansion piece.
+    #[test]
+    fn new_from_str_replays_under_the_requested_game_type() {
+        let state = State::new_from_str("wL ;bL wL-", "Base+MLP").unwrap();
+        assert_eq!(state.turn, 2);
+    }
+
+    /// A third Beetle or a Mosquito in Base must be refused, not spawned.
+    #[test]
+    fn forged_reserve_pieces_are_rejected() {
+        let mut state = State::new(GameType::Base, false);
+        state.play_turn_from_history("wQ", "").unwrap();
+        state.play_turn_from_history("bQ", "-wQ").unwrap();
+        assert!(
+            state.play_turn_from_history("wB3", "wQ-").is_err(),
+            "wB3 exceeds the Beetle inventory"
+        );
+        assert!(
+            state.play_turn_from_history("wM", "wQ-").is_err(),
+            "the Mosquito is not part of Base"
+        );
+    }
+
     #[test]
     fn tests_iniital_hash() {
         let mut h = HashSet::new();
         for p in ["wA1", "wB1", "wG1", "wS1", "wQ", "wM", "wL", "wP"] {
             let mut s = State::new(GameType::MLP, false);
             let _ = s.play_turn_from_history(p, ".");
-            h.insert(s.board.hasher.hash);
+            h.insert(s.hashes.last().copied().expect("a hash per ply"));
         }
         assert_eq!(h.len(), 8);
     }
