@@ -1,10 +1,13 @@
 use std::sync::Arc;
 
-use crate::websocket::{
-    messages::{SocketFormat, SocketTx},
-    ws_connection::reader_task,
-    ws_hub::{WsHub, SOCKET_BUFFER_CAPACITY},
-    WebsocketData,
+use crate::{
+    api::v1::auth::jwt_secret::JwtSecret,
+    websocket::{
+        messages::{SocketFormat, SocketTx},
+        ws_connection::{reader_task, Deps},
+        ws_hub::{WsHub, SOCKET_BUFFER_CAPACITY},
+        WebsocketData,
+    },
 };
 use actix_identity::Identity;
 use actix_web::{
@@ -28,6 +31,7 @@ pub async fn start_connection(
     pool: Data<DbPool>,
     identity: Option<Identity>,
     data: Data<WebsocketData>,
+    jwt_secret: Data<JwtSecret>,
 ) -> Result<HttpResponse, Error> {
     let user = resolve_identity(identity, &pool).await;
 
@@ -88,8 +92,18 @@ pub async fn start_connection(
     let hub = hub.get_ref().clone();
     let data = Arc::clone(&data);
     let pool = pool.get_ref().clone();
+    let jwt_secret = jwt_secret.into_inner();
     actix_web::rt::spawn(reader_task(
-        session, msg_stream, socket, hub, data, pool, user,
+        session,
+        msg_stream,
+        socket,
+        Deps {
+            hub,
+            data,
+            pool,
+            jwt_secret,
+        },
+        user,
     ));
 
     Ok(response)

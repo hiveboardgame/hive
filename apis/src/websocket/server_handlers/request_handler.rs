@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use super::{
+    bot_read::{BotRead, BotReadHandler},
     challenges::handler::ChallengeHandler,
     chat::{
         handler::{ChatHandler, ChatHandlerError},
@@ -129,6 +130,17 @@ impl RequestHandler {
         }
     }
 
+    async fn bot_read(&self, read: BotRead) -> Result<HandlerOutput> {
+        Ok(BotReadHandler::new(
+            read,
+            self.received_from.clone(),
+            self.user_id,
+            self.data.clone(),
+            &self.pool,
+        )
+        .handle()
+        .await?)
+    }
     async fn chat_connection(&self, context: &'static str) -> Result<DbConn<'_>> {
         db_lib::get_conn(&self.pool).await.map_err(|error| {
             RequestHandlerError::InternalError(
@@ -233,7 +245,9 @@ impl RequestHandler {
                 game_id,
             } => {
                 match game_action {
-                    GameAction::Turn(_) | GameAction::Control(_) => self.ensure_auth()?,
+                    GameAction::Turn(_) | GameAction::Play(_) | GameAction::Control(_) => {
+                        self.ensure_auth()?
+                    }
                     _ => {}
                 };
                 GameActionHandler::new(
@@ -271,6 +285,24 @@ impl RequestHandler {
                 HandlerOutput::empty()
             }
             ClientRequest::Away => UserStatusHandler::new().await?.handle().await?.into(),
+            // Consumed by `handle_binary` before dispatch; this arm is unreachable.
+            ClientRequest::Auth(_) => HandlerOutput::empty(),
+            ClientRequest::GetGame(game_id) => {
+                self.ensure_auth()?;
+                self.bot_read(BotRead::Game(game_id)).await?
+            }
+            ClientRequest::GetPendingGames => {
+                self.ensure_auth()?;
+                self.bot_read(BotRead::PendingGames).await?
+            }
+            ClientRequest::GetUser(id) => {
+                self.ensure_auth()?;
+                self.bot_read(BotRead::User(id)).await?
+            }
+            ClientRequest::GetUsername(name) => {
+                self.ensure_auth()?;
+                self.bot_read(BotRead::Username(name)).await?
+            }
             ClientRequest::Schedule(action) => {
                 match action {
                     crate::common::ScheduleAction::TournamentPublic(_) => {}
@@ -297,7 +329,7 @@ mod tests {
             WebsocketData,
         },
     };
-    use shared_types::ConversationKey;
+    use shared_types::{ConversationKey, GameId};
     use tokio::sync::mpsc;
 
     async fn test_handler(command: ClientRequest, user: SimpleUser) -> RequestHandler {
@@ -390,5 +422,141 @@ mod tests {
 
         assert_eq!(request.body, "validbody");
         assert_eq!(request.turn, None);
+    }
+
+    fn anonymous() -> SimpleUser {
+        SimpleUser {
+            user_id: Uuid::nil(),
+            username: "anonymous".to_string(),
+            authed: false,
+            admin: false,
+        }
+    }
+
+    fn bot() -> SimpleUser {
+        SimpleUser {
+            user_id: Uuid::new_v4(),
+            username: "bot".to_string(),
+            authed: true,
+            admin: false,
+        }
+    }
+
+    #[tokio::test]
+    async fn bot_reads_are_denied_before_database_access() {
+        for command in [
+            ClientRequest::GetGame(GameId("somebody-elses".to_string())),
+            ClientRequest::GetPendingGames,
+            ClientRequest::GetUser(Uuid::new_v4()),
+        ] {
+            let handler = test_handler(command, anonymous()).await;
+            assert!(matches!(
+                handler.handle().await,
+                Err(RequestHandlerError::AuthError(AuthError::Unauthorized))
+            ));
+        }
+    }
+
+    /// The pool never connects, so reaching the database is the assertion: nothing rejected
+    /// the caller for not being a player.
+    #[tokio::test]
+    async fn reading_a_game_does_not_require_being_a_player() {
+        let handler = test_handler(
+            ClientRequest::GetGame(GameId("somebody-elses".to_string())),
+            bot(),
+        )
+        .await;
+
+        assert!(!matches!(
+            handler.handle().await,
+            Err(RequestHandlerError::AuthError(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn reading_a_game_requires_authentication() {
+        let handler = test_handler(
+            ClientRequest::GetGame(GameId("somebody-elses".to_string())),
+            anonymous(),
+        )
+        .await;
+        assert!(matches!(
+            handler.handle().await,
+            Err(RequestHandlerError::AuthError(AuthError::Unauthorized))
+        ));
+    }
+
+    #[tokio::test]
+    async fn reading_pending_games_requires_authentication() {
+        let handler = test_handler(ClientRequest::GetPendingGames, anonymous()).await;
+        assert!(matches!(
+            handler.handle().await,
+            Err(RequestHandlerError::AuthError(AuthError::Unauthorized))
+        ));
+    }
+
+    #[tokio::test]
+    async fn reading_a_user_by_uuid_requires_authentication() {
+        let handler = test_handler(ClientRequest::GetUser(Uuid::new_v4()), anonymous()).await;
+        assert!(matches!(
+            handler.handle().await,
+            Err(RequestHandlerError::AuthError(AuthError::Unauthorized))
+        ));
+    }
+
+    #[tokio::test]
+    async fn reading_a_user_by_username_requires_authentication() {
+        let handler = test_handler(
+            ClientRequest::GetUsername("someone".to_string()),
+            anonymous(),
+        )
+        .await;
+        assert!(matches!(
+            handler.handle().await,
+            Err(RequestHandlerError::AuthError(AuthError::Unauthorized))
+        ));
+    }
+
+    #[tokio::test]
+    async fn reading_a_user_by_username_does_not_require_being_that_user() {
+        let handler = test_handler(
+            ClientRequest::GetUsername("someone-else".to_string()),
+            bot(),
+        )
+        .await;
+        assert!(!matches!(
+            handler.handle().await,
+            Err(RequestHandlerError::AuthError(_))
+        ));
+    }
+
+    /// A revoked user keeps a live socket, so every read has to re-check, not trust the
+    /// identity the connection was opened with.
+    #[tokio::test]
+    async fn reads_are_denied_to_a_revoked_user() {
+        let user = bot();
+        let handler = test_handler(ClientRequest::GetPendingGames, user.clone()).await;
+        handler.hub.revoke_user(user.user_id);
+        assert!(matches!(
+            handler.handle().await,
+            Err(RequestHandlerError::AuthError(AuthError::Unauthorized))
+        ));
+    }
+
+    /// `Play` is `Turn` for clients that cannot run the engine, so it needs the same gate.
+    #[tokio::test]
+    async fn playing_by_notation_requires_authentication() {
+        let handler = test_handler(
+            ClientRequest::Game {
+                game_id: GameId("some-game".to_string()),
+                action: crate::common::GameAction::Play("wA1 -bQ".to_string()),
+            },
+            anonymous(),
+        )
+        .await;
+        assert!(matches!(
+            handler.handle().await,
+            Err(RequestHandlerError::AuthError(AuthError::Unauthorized))
+        ));
     }
 }

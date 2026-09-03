@@ -1,3 +1,4 @@
+pub mod bot_read;
 pub mod challenges;
 pub mod chat;
 pub mod game;
