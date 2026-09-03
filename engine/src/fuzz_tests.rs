@@ -57,10 +57,40 @@ fn play_random_action(state: &mut State, rng: &mut Rng) -> bool {
     ) {
         return false;
     }
-    let color = state.turn_color;
-    if state.board.is_shutout(color, state.game_type) {
+    let shutout = state.board.is_shutout(state.turn_color, state.game_type);
+    let options = legal_actions(state);
+    // Either direction is a bug: a stalled turn, or a pass for a player who could move.
+    assert_eq!(
+        shutout,
+        options.is_empty(),
+        "is_shutout disagrees with the legal actions [{}]",
+        moves_string(state)
+    );
+    if shutout {
         return state.play_turn_from_history("pass", "").is_ok();
     }
+    let (piece, target) = options[rng.pick(options.len())];
+    let before = state.history.moves.len();
+    state
+        .play_turn_from_position(piece, target)
+        .expect("an option offered by the engine must play");
+    assert_hive_is_connected(state);
+    // Play auto-passes a shut-out opponent, and undo hands back the position it passed for:
+    // a pass for a player who had moves is the failure this catches.
+    if state.history.moves.len() > before + 1 {
+        let mut probe = state.clone();
+        probe.undo();
+        assert!(
+            legal_actions(&probe).is_empty(),
+            "auto-passed a player who had moves [{}]",
+            moves_string(&probe)
+        );
+    }
+    true
+}
+
+fn legal_actions(state: &State) -> Vec<(Piece, Position)> {
+    let color = state.turn_color;
     let mut options: Vec<(Piece, Position)> = Vec::new();
     for ((piece, _), targets) in state.board.moves(color) {
         for target in targets {
@@ -81,14 +111,30 @@ fn play_random_action(state: &mut State, rng: &mut Rng) -> bool {
             }
         }
     }
-    if options.is_empty() {
-        return false;
+    options
+}
+
+/// Recomputed from scratch, so the engine's connectivity cannot vouch for itself.
+fn assert_hive_is_connected(state: &State) {
+    let occupied: std::collections::HashSet<Position> = state.board.all_taken_positions().collect();
+    let Some(&start) = occupied.iter().next() else {
+        return;
+    };
+    let mut seen = std::collections::HashSet::from([start]);
+    let mut queue = vec![start];
+    while let Some(position) = queue.pop() {
+        for neighbor in position.positions_around() {
+            if occupied.contains(&neighbor) && seen.insert(neighbor) {
+                queue.push(neighbor);
+            }
+        }
     }
-    let (piece, target) = options[rng.pick(options.len())];
-    state
-        .play_turn_from_position(piece, target)
-        .expect("an option offered by the engine must play");
-    true
+    assert_eq!(
+        seen.len(),
+        occupied.len(),
+        "the hive is split into pieces [{}]",
+        moves_string(state)
+    );
 }
 
 fn random_game(seed: u64) -> State {
