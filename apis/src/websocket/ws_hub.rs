@@ -1,5 +1,13 @@
 use super::{
-    messages::{GameSpectatorAudience, MessageDestination, SocketTx, TournamentAudience},
+    messages::{
+        GameSpectatorAudience,
+        MessageDestination,
+        Outbound,
+        SocketFormat,
+        SocketHandle,
+        SocketTx,
+        TournamentAudience,
+    },
     server_handlers::chat::limits::{ChatLimitError, ChatRateLimits},
     telemetry::{
         read_proc_vm_bytes,
@@ -18,7 +26,6 @@ use crate::{
 };
 use bytes::Bytes;
 use chrono::Utc;
-use codee::{binary::MsgpackSerdeCodec, Encoder};
 use dashmap::{DashMap, DashSet};
 use db_lib::{
     get_conn,
@@ -77,7 +84,7 @@ pub struct WsHub {
     /// `user_id → (socket_id → Sender)`. Outer DashMap shards on user_id;
     /// inner DashMap shards on socket_id. We never hold outer write while holding
     /// any inner lock, which keeps the two-level locking deadlock-free.
-    pub(in crate::websocket) sessions: DashMap<Uuid, DashMap<Uuid, mpsc::Sender<Bytes>>>,
+    pub(in crate::websocket) sessions: DashMap<Uuid, DashMap<Uuid, SocketHandle>>,
     membership: RwLock<Membership>,
     pub(crate) data: Arc<WebsocketData>,
     pub(in crate::websocket) pool: DbPool,
@@ -370,7 +377,13 @@ impl WsHub {
 
     /// Synchronously register a new socket and trigger the async user-state load.
     /// Consumes a clone of the Arc so the spawned load task can keep `self` alive.
-    pub fn on_connect(self: Arc<Self>, socket_id: Uuid, tx: mpsc::Sender<Bytes>, user: SimpleUser) {
+    pub fn on_connect(
+        self: Arc<Self>,
+        socket_id: Uuid,
+        tx: mpsc::Sender<Bytes>,
+        format: SocketFormat,
+        user: SimpleUser,
+    ) {
         let user_id = user.user_id;
         let lobby = Self::lobby();
         // Lock order: membership write → outer DashMap shard. on_disconnect uses
@@ -381,7 +394,13 @@ impl WsHub {
             let was_empty = {
                 let user_entry = self.sessions.entry(user_id).or_default();
                 let empty = user_entry.is_empty();
-                user_entry.insert(socket_id, tx);
+                user_entry.insert(
+                    socket_id,
+                    SocketHandle {
+                        tx: tx.clone(),
+                        format,
+                    },
+                );
                 empty
             };
             m.fanout
@@ -428,7 +447,7 @@ impl WsHub {
             let Some(tx) = self
                 .sessions
                 .get(&user_id)
-                .and_then(|socks| socks.get(&socket_id).map(|t| t.clone()))
+                .and_then(|socks| socks.get(&socket_id).map(|handle| handle.tx.clone()))
             else {
                 return;
             };
@@ -503,9 +522,7 @@ impl WsHub {
                 user: None,
                 username: user.username,
             })));
-            if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                self.fanout_lobby(&Bytes::from(serialized), DestKind::Global);
-            }
+            self.fanout_lobby(&mut Outbound::typed(&message), DestKind::Global);
         }
     }
 
@@ -574,23 +591,31 @@ impl WsHub {
     // ─── dispatch ─────────────────────────────────────────────────────────────
 
     pub async fn dispatch(&self, dest: &MessageDestination, bytes: Bytes) {
+        self.dispatch_out(dest, &mut Outbound::encoded(bytes)).await;
+    }
+
+    pub(in crate::websocket) async fn dispatch_out(
+        &self,
+        dest: &MessageDestination,
+        out: &mut Outbound<'_>,
+    ) {
         let dest_kind = DestKind::from(dest);
         self.data.telemetry.record_dispatch(dest_kind);
 
         match dest {
             MessageDestination::Direct(socket) => {
-                self.send_via_tx(&socket.tx, DestKind::Direct, &bytes);
+                self.send_via_tx_with_format(&socket.tx, socket.format, DestKind::Direct, out);
             }
             MessageDestination::User(user_id) => {
-                self.send_to_user(user_id, DestKind::User, &bytes);
+                self.send_to_user(user_id, DestKind::User, out);
             }
             MessageDestination::Global => {
-                self.fanout_lobby(&bytes, DestKind::Global);
+                self.fanout_lobby(out, DestKind::Global);
             }
             MessageDestination::Game(game_id) => {
                 let socket_pairs = self.sockets_in_game(game_id);
                 for (uid, sid) in socket_pairs {
-                    self.send_to_socket(&uid, &sid, DestKind::Game, &bytes);
+                    self.send_to_socket(&uid, &sid, DestKind::Game, out);
                 }
             }
             MessageDestination::GameSpectators {
@@ -634,7 +659,7 @@ impl WsHub {
                     socket_pairs.retain(|(user_id, _)| user_id != white_id && user_id != black_id);
                 }
                 for (uid, sid) in socket_pairs {
-                    self.send_to_socket(&uid, &sid, DestKind::GameSpectators, &bytes);
+                    self.send_to_socket(&uid, &sid, DestKind::GameSpectators, out);
                 }
             }
             MessageDestination::Tournament {
@@ -666,7 +691,7 @@ impl WsHub {
                     }
                 }
                 for (user_id, socket_id) in socket_pairs {
-                    self.send_to_socket(&user_id, &socket_id, DestKind::Tournament, &bytes);
+                    self.send_to_socket(&user_id, &socket_id, DestKind::Tournament, out);
                 }
             }
         }
@@ -686,24 +711,21 @@ impl WsHub {
         } = reaction;
         let payload = ServerMessage::Game(Box::new(GameUpdate::Reaction(gar)));
         let result = ServerResult::Ok(Box::new(payload));
-        let Ok(serialized) = MsgpackSerdeCodec::encode(&result) else {
-            return;
-        };
-        let bytes = Bytes::from(serialized);
-        // Send to both players (every tab gets the update) and to anyone
-        // spectating who isn't a player. Bytes::clone is O(1).
-        self.dispatch(&MessageDestination::User(white_id), bytes.clone())
+        // One `Outbound` across all three fanouts, so each format is encoded once no matter
+        // how many sockets or which languages they speak.
+        let mut out = Outbound::typed(&result);
+        self.dispatch_out(&MessageDestination::User(white_id), &mut out)
             .await;
-        self.dispatch(&MessageDestination::User(black_id), bytes.clone())
+        self.dispatch_out(&MessageDestination::User(black_id), &mut out)
             .await;
-        self.dispatch(
+        self.dispatch_out(
             &MessageDestination::GameSpectators {
                 game_id,
                 white_id,
                 black_id,
                 audience: GameSpectatorAudience::GameViewers,
             },
-            bytes,
+            &mut out,
         )
         .await;
     }
@@ -736,10 +758,8 @@ impl WsHub {
             self.data.telemetry.inc_tv_broadcast();
             let payload = ServerMessage::Game(Box::new(GameUpdate::Tv((*game_response).clone())));
             let result = ServerResult::Ok(Box::new(payload));
-            if let Ok(serialized) = MsgpackSerdeCodec::encode(&result) {
-                self.dispatch(&MessageDestination::Global, Bytes::from(serialized))
-                    .await;
-            }
+            self.dispatch_out(&MessageDestination::Global, &mut Outbound::typed(&result))
+                .await;
         }
         if let Err(e) = notify_game_ended(finalized, GameEndReason::Timeout, conn).await {
             error!("notify game ended (timeout) {}: {e}", finalized.nanoid);
@@ -799,9 +819,7 @@ impl WsHub {
                 nonce,
                 value: self.data.pings.value(user_id),
             }));
-            if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                self.send_to_user(&user_id, DestKind::User, &Bytes::from(serialized));
-            }
+            self.send_to_user(&user_id, DestKind::User, &mut Outbound::typed(&message));
         }
     }
 
@@ -930,12 +948,9 @@ impl WsHub {
             let message = ServerResult::Ok(Box::new(ServerMessage::Game(Box::new(
                 GameUpdate::Heartbeat(hb),
             ))));
-            let Ok(serialized) = MsgpackSerdeCodec::encode(&message) else {
-                continue;
-            };
-            let bytes = Bytes::from(serialized);
+            let mut out = Outbound::typed(&message);
             for (user_id, socket_id) in socket_pairs {
-                self.send_to_socket(&user_id, &socket_id, DestKind::Game, &bytes);
+                self.send_to_socket(&user_id, &socket_id, DestKind::Game, &mut out);
             }
         }
     }
@@ -947,7 +962,16 @@ impl WsHub {
     /// of cleanup, and reaping here would orphan a still-live socket whose
     /// queue is just temporarily full. The bounded queue prevents OOM;
     /// the message itself is dropped on Full/Closed.
-    fn send_via_tx(&self, tx: &mpsc::Sender<Bytes>, dest: DestKind, bytes: &Bytes) -> SendOutcome {
+    fn send_via_tx_with_format(
+        &self,
+        tx: &mpsc::Sender<Bytes>,
+        format: SocketFormat,
+        dest: DestKind,
+        out: &mut Outbound<'_>,
+    ) -> SendOutcome {
+        let Some(bytes) = out.bytes(format).cloned() else {
+            return SendOutcome::Closed;
+        };
         let outcome = match tx.try_send(bytes.clone()) {
             Ok(_) => SendOutcome::Ok,
             Err(mpsc::error::TrySendError::Full(_)) => SendOutcome::Full,
@@ -969,14 +993,18 @@ impl WsHub {
     pub(in crate::websocket) fn send_own_state_via_tx(
         &self,
         tx: &mpsc::Sender<Bytes>,
-        bytes: &Bytes,
+        format: SocketFormat,
+        out: &mut Outbound<'_>,
     ) {
-        if !matches!(self.send_via_tx(tx, DestKind::User, bytes), SendOutcome::Ok) {
+        if !matches!(
+            self.send_via_tx_with_format(tx, format, DestKind::User, out),
+            SendOutcome::Ok
+        ) {
             self.data.telemetry.inc_own_state_drop();
         }
     }
 
-    fn send_to_user(&self, user_id: &Uuid, dest: DestKind, bytes: &Bytes) {
+    fn send_to_user(&self, user_id: &Uuid, dest: DestKind, out: &mut Outbound<'_>) {
         if self.is_user_revoked(*user_id) {
             return;
         }
@@ -984,29 +1012,36 @@ impl WsHub {
             return;
         };
         for entry in sockets.iter() {
-            self.send_via_tx(entry.value(), dest, bytes);
+            let handle = entry.value();
+            self.send_via_tx_with_format(&handle.tx, handle.format, dest, out);
         }
     }
 
     /// Send to one specific socket. Used for game-scoped dispatch where only the
     /// subscribed socket (not all of the user's tabs) should receive the message.
-    fn send_to_socket(&self, user_id: &Uuid, socket_id: &Uuid, dest: DestKind, bytes: &Bytes) {
+    fn send_to_socket(
+        &self,
+        user_id: &Uuid,
+        socket_id: &Uuid,
+        dest: DestKind,
+        out: &mut Outbound<'_>,
+    ) {
         if self.is_user_revoked(*user_id) {
             return;
         }
         let Some(sockets) = self.sessions.get(user_id) else {
             return;
         };
-        let Some(tx) = sockets.get(socket_id) else {
+        let Some(handle) = sockets.get(socket_id) else {
             return;
         };
-        self.send_via_tx(&tx, dest, bytes);
+        self.send_via_tx_with_format(&handle.tx, handle.format, dest, out);
     }
 
-    fn fanout_lobby(&self, bytes: &Bytes, dest: DestKind) {
+    fn fanout_lobby(&self, out: &mut Outbound<'_>, dest: DestKind) {
         let socket_pairs = self.sockets_in_game(&Self::lobby());
         for (uid, sid) in socket_pairs {
-            self.send_to_socket(&uid, &sid, dest, bytes);
+            self.send_to_socket(&uid, &sid, dest, out);
         }
     }
 
@@ -1257,13 +1292,23 @@ impl WsHub {
     /// Returns the receiver for the socket's outbound channel.
     #[cfg(test)]
     fn register_socket(&self, user_id: Uuid, socket_id: Uuid) -> mpsc::Receiver<Bytes> {
+        self.register_socket_as(user_id, socket_id, SocketFormat::Msgpack)
+    }
+
+    #[cfg(test)]
+    fn register_socket_as(
+        &self,
+        user_id: Uuid,
+        socket_id: Uuid,
+        format: SocketFormat,
+    ) -> mpsc::Receiver<Bytes> {
         let (tx, rx) = mpsc::channel(SOCKET_BUFFER_CAPACITY);
         let lobby = Self::lobby();
         let mut m = self.membership.write().unwrap_or_else(|p| p.into_inner());
         self.sessions
             .entry(user_id)
             .or_default()
-            .insert(socket_id, tx);
+            .insert(socket_id, SocketHandle { tx, format });
         m.fanout
             .games_sockets
             .entry(lobby.clone())
@@ -1369,9 +1414,7 @@ impl WsHub {
                                     user: Some(user_response),
                                     username: user.username.clone(),
                                 })));
-                            if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                                self.fanout_lobby(&Bytes::from(serialized), DestKind::Global);
-                            }
+                            self.fanout_lobby(&mut Outbound::typed(&message), DestKind::Global);
                         }
                     }
                     Some(user_model)
@@ -1385,7 +1428,11 @@ impl WsHub {
             None
         };
 
-        let socket = SocketTx { socket_id, tx };
+        let socket = SocketTx {
+            socket_id,
+            format: SocketFormat::Msgpack,
+            tx,
+        };
         self.send_lobby_snapshot(&mut conn, user_id, &socket, user_model.as_ref())
             .await;
     }
@@ -1481,6 +1528,7 @@ mod tests {
         let (target_tx, mut target_rx) = mpsc::channel(8);
         let socket_tx = SocketTx {
             socket_id: Uuid::new_v4(),
+            format: SocketFormat::Msgpack,
             tx: target_tx,
         };
 
@@ -2169,11 +2217,23 @@ mod tests {
         let user_dest = DestKind::User as usize;
 
         for _ in 0..SOCKET_BUFFER_CAPACITY {
-            hub.send_own_state_via_tx(&tx, &Bytes::from_static(b"a"));
+            hub.send_own_state_via_tx(
+                &tx,
+                SocketFormat::Msgpack,
+                &mut Outbound::encoded(Bytes::from_static(b"a")),
+            );
         }
-        hub.send_own_state_via_tx(&tx, &Bytes::from_static(b"b"));
+        hub.send_own_state_via_tx(
+            &tx,
+            SocketFormat::Msgpack,
+            &mut Outbound::encoded(Bytes::from_static(b"b")),
+        );
         drop(rx);
-        hub.send_own_state_via_tx(&tx, &Bytes::from_static(b"c"));
+        hub.send_own_state_via_tx(
+            &tx,
+            SocketFormat::Msgpack,
+            &mut Outbound::encoded(Bytes::from_static(b"c")),
+        );
 
         assert_eq!(
             hub.data.telemetry.recipient_sends_ok[user_dest].load(Ordering::Relaxed),
@@ -2225,6 +2285,51 @@ mod tests {
                 .load(Ordering::Relaxed),
             0,
             "on_game_finished must not increment games_finalized_total",
+        );
+    }
+
+    #[tokio::test]
+    async fn one_message_reaches_each_socket_in_its_own_language() {
+        let hub = make_hub().await;
+        let uid = Uuid::new_v4();
+        let mut browser = hub.register_socket_as(uid, Uuid::new_v4(), SocketFormat::Msgpack);
+        let mut bot = hub.register_socket_as(uid, Uuid::new_v4(), SocketFormat::Json);
+
+        let message = ServerResult::Ok(Box::new(ServerMessage::Error("boom".to_string())));
+        hub.dispatch_out(
+            &MessageDestination::User(uid),
+            &mut Outbound::typed(&message),
+        )
+        .await;
+
+        let to_browser = browser.recv().await.expect("browser is sent to");
+        let to_bot = bot.recv().await.expect("bot is sent to");
+
+        assert_ne!(to_browser, to_bot);
+        assert_eq!(
+            to_bot,
+            Bytes::from(serde_json::to_vec(&message).expect("encodes"))
+        );
+        assert!(
+            serde_json::from_slice::<serde_json::Value>(&to_browser).is_err(),
+            "the browser must still get msgpack, not JSON"
+        );
+    }
+
+    #[tokio::test]
+    async fn an_unmigrated_producer_still_reaches_a_json_socket() {
+        let hub = make_hub().await;
+        let uid = Uuid::new_v4();
+        let mut bot = hub.register_socket_as(uid, Uuid::new_v4(), SocketFormat::Json);
+
+        let message = ServerResult::Ok(Box::new(ServerMessage::Error("boom".to_string())));
+        use codee::{binary::MsgpackSerdeCodec, Encoder};
+        let encoded = Bytes::from(MsgpackSerdeCodec::encode(&message).expect("encodes"));
+        hub.dispatch(&MessageDestination::User(uid), encoded).await;
+
+        assert_eq!(
+            bot.recv().await.expect("bot is sent to"),
+            Bytes::from(serde_json::to_vec(&message).expect("encodes"))
         );
     }
 }

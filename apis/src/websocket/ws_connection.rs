@@ -1,5 +1,5 @@
 use super::{
-    messages::{MessageDestination, SocketTx},
+    messages::{MessageDestination, Outbound, SocketTx},
     server_handlers::request_handler::{RequestHandler, RequestHandlerError},
     telemetry::{DisconnectReason, WsTelemetry},
     ws_hub::WsHub,
@@ -13,8 +13,7 @@ use crate::common::{
     SubscriptionError,
 };
 use actix_ws::{AggregatedMessage, AggregatedMessageStream, Session};
-use bytes::Bytes;
-use codee::{binary::MsgpackSerdeCodec, Decoder, Encoder};
+use codee::{binary::MsgpackSerdeCodec, Decoder};
 use db_lib::DbPool;
 use futures_util::StreamExt;
 use indoc::printdoc;
@@ -64,7 +63,12 @@ pub async fn reader_task(
     pool: DbPool,
     user: SimpleUser,
 ) {
-    Arc::clone(&hub).on_connect(socket.socket_id, socket.tx.clone(), user.clone());
+    Arc::clone(&hub).on_connect(
+        socket.socket_id,
+        socket.tx.clone(),
+        socket.format,
+        user.clone(),
+    );
 
     let guard = DisconnectGuard {
         hub: Arc::clone(&hub),
@@ -110,7 +114,10 @@ pub async fn reader_task(
                     guard.set_reason(DisconnectReason::StreamErr);
                     break;
                 }
-                Some(Ok(AggregatedMessage::Text(_))) => {}
+                Some(Ok(AggregatedMessage::Text(text))) => {
+                    last_hb = Instant::now();
+                    handle_text(&text, &hub, &socket, &data, &pool, &user).await;
+                }
                 Some(Err(_)) => {
                     guard.set_reason(DisconnectReason::StreamErr);
                     break;
@@ -133,11 +140,36 @@ async fn handle_binary(
 ) {
     data.telemetry.record_message_received(bytes.len());
 
-    let request: Result<ClientRequest, _> = MsgpackSerdeCodec::decode(bytes);
-    let Ok(request) = request else {
+    let Ok(request) = MsgpackSerdeCodec::decode(bytes) else {
         return;
     };
+    handle_request(request, hub, socket, data, pool, user).await;
+}
 
+async fn handle_text(
+    text: &str,
+    hub: &Arc<WsHub>,
+    socket: &SocketTx,
+    data: &Arc<WebsocketData>,
+    pool: &DbPool,
+    user: &SimpleUser,
+) {
+    data.telemetry.record_message_received(text.len());
+
+    let Ok(request) = serde_json::from_str(text) else {
+        return;
+    };
+    handle_request(request, hub, socket, data, pool, user).await;
+}
+
+async fn handle_request(
+    request: ClientRequest,
+    hub: &Arc<WsHub>,
+    socket: &SocketTx,
+    data: &Arc<WebsocketData>,
+    pool: &DbPool,
+    user: &SimpleUser,
+) {
     // Unwatch needs hub access and no DB — handle it here before RequestHandler.
     if let ClientRequest::Game {
         ref game_id,
@@ -161,10 +193,9 @@ async fn handle_binary(
         Ok(output) => {
             for message in output.messages {
                 let destination = message.destination;
-                let serialized = ServerResult::Ok(Box::new(message.message));
-                if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
-                    hub.dispatch(&destination, Bytes::from(serialized)).await;
-                }
+                let message = ServerResult::Ok(Box::new(message.message));
+                hub.dispatch_out(&destination, &mut Outbound::typed(&message))
+                    .await;
             }
             // Reactions: one serialize, one Bytes allocation, refcount-cloned
             // across the three fanouts (both players + spectators). Dispatch
@@ -195,13 +226,11 @@ async fn handle_binary(
                 };
             }
             let message = ServerResult::Err(external_server_error(&request, &err));
-            if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                hub.dispatch(
-                    &MessageDestination::Direct(socket.clone()),
-                    Bytes::from(serialized),
-                )
-                .await;
-            }
+            hub.dispatch_out(
+                &MessageDestination::Direct(socket.clone()),
+                &mut Outbound::typed(&message),
+            )
+            .await;
         }
     }
 }
