@@ -120,6 +120,7 @@ pub enum ServerMessage {
     UserSettings(UserSettingsUpdate),
     UserStatus(UserUpdate),
     RedirectLink(String),
+    UserProfile(UserResponse),
 }
 
 /// Authoritative best-effort lobby state sent on connect and Resync.
@@ -169,6 +170,7 @@ pub enum GameUpdate {
     OwnGameRemoved(GameId),
     Tv(GameResponse),
     Heartbeat(HeartbeatResponse),
+    Fetched(GameResponse),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -9,6 +9,7 @@ pub enum GameAction {
     Control(GameControl),
     Join,
     Turn(Turn),
+    Play(String),
     Unwatch,
 }
 
@@ -20,6 +21,7 @@ impl fmt::Display for GameAction {
             GameAction::Join => write!(f, "Join"),
             GameAction::Start => write!(f, "Start"),
             GameAction::Turn(ref turn) => write!(f, "{turn}"),
+            GameAction::Play(ref notation) => write!(f, "{notation}"),
             GameAction::Unwatch => write!(f, "Unwatch"),
         }
     }
