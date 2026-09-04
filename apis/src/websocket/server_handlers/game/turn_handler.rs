@@ -161,7 +161,7 @@ impl TurnHandler {
             black_id: game.black_id,
             gar: GameActionResponse {
                 game_id: GameId(game.nanoid.to_owned()),
-                game: (*response).clone(),
+                game: response.clone(),
                 game_action: GameReaction::Turn(turn.clone()),
                 user_id: self.user_id.to_owned(),
                 username: self.username.to_owned(),
@@ -176,7 +176,7 @@ impl TurnHandler {
             self.data.telemetry.inc_tv_broadcast();
             messages.push(InternalServerMessage {
                 destination: MessageDestination::Global,
-                message: ServerMessage::Game(Box::new(GameUpdate::Tv((*response).clone()))),
+                message: ServerMessage::Game(Box::new(GameUpdate::Tv(response.clone()))),
             });
         };
         // If this turn finalized the game, signal the dispatcher to run

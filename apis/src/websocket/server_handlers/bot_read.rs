@@ -57,7 +57,7 @@ impl BotReadHandler {
             BotRead::Game(game_id) => {
                 let game = Game::find_by_game_id(game_id, &mut conn).await?;
                 let response = self.data.get_or_build_response(&game, &mut conn).await?;
-                ServerMessage::Game(Box::new(GameUpdate::Fetched((*response).clone())))
+                ServerMessage::Game(Box::new(GameUpdate::Fetched(response.clone())))
             }
             BotRead::PendingGames => {
                 let user = User::find_active_by_uuid(&self.user_id, &mut conn).await?;

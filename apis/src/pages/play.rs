@@ -298,7 +298,7 @@ pub fn Play() -> impl IntoView {
                                 }
 
                                 game_state.game_control_pending().set(None);
-                                game_state.set_game_response(gar.game.clone());
+                                game_state.set_game_response((*gar.game).clone());
                                 if history_changed {
                                     match turn {
                                         Turn::Move(piece, position) => {

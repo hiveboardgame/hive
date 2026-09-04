@@ -15,6 +15,7 @@ use db_lib::{db_error::DbError, get_conn, models::Tournament, DbPool};
 use diesel_async::AsyncConnection;
 use hive_lib::GameControl;
 use shared_types::{GameId, TournamentGameResult, TournamentId};
+use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct AbandonHandler {
@@ -96,6 +97,7 @@ impl AbandonHandler {
                 _ => unreachable!("Tournament game should have a winner when player abandons"),
             };
             let game_control = GameControl::Resign(color);
+            let game_response = Arc::new(game_response);
             let white_id = game_response.white_player.uid;
             let black_id = game_response.black_player.uid;
             reactions.push(Reaction {
