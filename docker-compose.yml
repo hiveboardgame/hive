@@ -26,7 +26,8 @@ services:
     depends_on:
       - postgres
     working_dir: /app
-    entrypoint: ["/bin/bash", "-c", "./dev-container/wait-for-it.sh -t 3 postgres:5432 -- ./dev-container/start_app.sh"]
+    entrypoint: ["/bin/bash", "-c", "./dev-container/wait-for-it.sh -t 3 postgres:5432 -- ./dev-container/start_app.sh \"$@\"", "--"]
+    command: ${HIVE_APP_ARGS:-}
     volumes:
       - .:/app
       - target:/app/target/
@@ -39,3 +40,9 @@ services:
     environment:
       DATABASE_URL: postgres://hive-dev@postgres:5432/hive-local
       TEST_DATABASE_URL: postgres://hive-dev@postgres:5432/hive-test
+      TEST_MODE_DOCKER: ${TEST_MODE_DOCKER:-false}
+    healthcheck:
+      test: [ "CMD-SHELL", "curl --fail --silent http://localhost:3000/ >/dev/null" ]
+      interval: 5s
+      timeout: 5s
+      retries: 180

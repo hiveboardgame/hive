@@ -1,0 +1,100 @@
+name: Test run
+
+on:
+  workflow_dispatch:
+  # Temporary pre-main trigger: remove after validating this branch in Actions.
+  push:
+    branches:
+      - testware_finally
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  deploy_and_test:
+    name: Test run
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apis/end2end/package-lock.json
+      - name: "Deploy: build images and create Docker containers"
+        env:
+          TEST_MODE_DOCKER: "true"
+        run: docker compose create --build
+      - name: "Deploy: start the Hive test stack"
+        env:
+          TEST_MODE_DOCKER: "true"
+        run: docker compose start
+      - name: "Deploy: stream hive-app-1 logs while waiting for readiness"
+        shell: bash
+        run: |
+          docker compose logs --follow --no-color --no-log-prefix app &
+          log_stream_pid=$!
+          trap 'kill "$log_stream_pid" 2>/dev/null || true' EXIT
+          docker compose start --wait --wait-timeout 900
+      - name: "Deploy: show stack status"
+        if: ${{ !cancelled() }}
+        run: docker compose ps --all
+      - name: "Deploy: collect diagnostics"
+        if: ${{ !cancelled() }}
+        run: |
+          docker compose ps --all > deploy-compose-status.log
+          docker compose logs --no-color > deploy-compose.log
+      - name: "Deploy: upload diagnostics"
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-artifacts
+          path: |
+            deploy-compose-status.log
+            deploy-compose.log
+          if-no-files-found: warn
+          retention-days: 1
+      - name: "Test: install Playwright dependencies"
+        working-directory: apis/end2end
+        run: |
+          npm ci
+          npx playwright install --with-deps
+      - name: "Test: run smoke specification"
+        id: playwright_tests
+        working-directory: apis/end2end
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+        # TODO(e2e): Restore challenges.spec.ts and gameplay.spec.ts after smoke validation.
+        run: npx playwright test tests/smoke.spec.ts
+      - name: "Test: publish Playwright results"
+        if: ${{ !cancelled() && steps.playwright_tests.outcome != 'skipped' }}
+        uses: dorny/test-reporter@v3
+        with:
+          name: Playwright test results
+          path: apis/end2end/test-results/junit.xml
+          reporter: java-junit
+          use-actions-summary: "true"
+      - name: "Test: collect final diagnostics"
+        if: ${{ !cancelled() }}
+        run: |
+          docker compose ps --all > test-compose-status.log
+          docker compose logs --no-color > test-compose.log
+      - name: "Test: upload report, traces, and diagnostics"
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-artifacts
+          path: |
+            apis/end2end/playwright-report/
+            apis/end2end/test-results/
+            test-compose-status.log
+            test-compose.log
+          if-no-files-found: warn
+          retention-days: 1
+      - name: "Cleanup: stop the Hive test stack"
+        if: always()
+        run: docker compose down --volumes --remove-orphans

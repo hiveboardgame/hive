@@ -33,7 +33,14 @@ const config = defineConfig({
    */
   workers: 1,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: "html",
+  reporter: process.env.CI
+    ? [
+        ["list", { printSteps: true, printFailuresInline: true }],
+        ["html", { open: "never" }],
+        ["github"],
+        ["junit", { outputFile: "test-results/junit.xml", includeProjectInTestName: true }],
+      ]
+    : "html",
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Maximum time each action such as `click()` can take. Defaults to 0 (no limit). */
