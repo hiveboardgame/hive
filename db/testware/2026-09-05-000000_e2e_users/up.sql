@@ -1,30 +1,9 @@
--- Local development testware. Edit this file to evolve the seeded data.
+-- End-to-end fixture accounts. These values are intentionally stable so test
+-- data can reference them. The password for every account is `password`.
 --
--- Login credentials:
---   admin_1 / password  (administrator)
---   user_1  / password
---   user_2  / password
---
--- The UUIDs are stable so future fixture rows can safely reference these users.
--- The shared password uses the fixed Argon2id hash below and is for local
--- development only.
-
-DO $$
-DECLARE
-    statement text;
-BEGIN
-    SELECT 'TRUNCATE TABLE ' ||
-        string_agg(format('%I.%I', schemaname, tablename), ', ') ||
-        ' RESTART IDENTITY CASCADE'
-    INTO statement
-    FROM pg_tables
-    WHERE schemaname = 'public'
-        AND tablename <> '__diesel_schema_migrations';
-
-    IF statement IS NOT NULL THEN
-        EXECUTE statement;
-    END IF;
-END $$;
+-- This migration is kept outside db/migrations so application deployments do
+-- not receive fixture data. Apply it explicitly with:
+--   diesel migration run --migration-dir testware
 
 INSERT INTO users (
     id,
@@ -119,15 +98,3 @@ VALUES
     ('00000000-0000-4000-8000-000000000001'),
     ('00000000-0000-4000-8000-000000000002'),
     ('00000000-0000-4000-8000-000000000003');
-
--- These singleton rows are inserted by migrations but are removed by a full
--- truncate. Restore them so the admin banner and email maintenance work.
-INSERT INTO home_banner (title, content, display)
-VALUES (
-    'Welcome to Hive!',
-    'This is the default banner for new users. You can edit it in the admin panel.',
-    false
-);
-
-INSERT INTO email_state (id)
-VALUES (1);

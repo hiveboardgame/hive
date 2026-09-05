@@ -26,8 +26,7 @@ services:
     depends_on:
       - postgres
     working_dir: /app
-    entrypoint: ["/bin/bash", "-c", "./dev-container/wait-for-it.sh -t 3 postgres:5432 -- ./dev-container/start_app.sh \"$@\"", "--"]
-    command: ${HIVE_APP_ARGS:-}
+    entrypoint: ["/bin/bash", "-c", "./dev-container/wait-for-it.sh -t 3 postgres:5432 -- ./dev-container/start_app.sh"]
     volumes:
       - .:/app
       - target:/app/target/

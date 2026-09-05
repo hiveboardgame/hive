@@ -12,8 +12,7 @@ RUN apt-get update && \
       build-essential \
       libssl-dev \
       libpq5 \
-      libpq-dev \
-      postgresql-client && \
+      libpq-dev && \
     rm -rf /var/lib/apt/lists/*
 
 RUN wget --progress=dot:giga https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-unknown-linux-musl.tgz && \

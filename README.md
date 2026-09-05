@@ -90,16 +90,16 @@ This creates both `hive-local` and `hive-test`.
 ### Local testware reset
 
 With PostgreSQL running and the Diesel CLI installed, reset the local development
-database and load the editable fixture with:
+database and run the fixture migrations with:
 
 ```sh
 ./scripts/reset-testware.sh
 ```
 
-This command applies pending migrations and permanently removes all application
-data from `hive-local`. It refuses any other database name. The fixture lives in
-[`db/testware.sql`](db/testware.sql) and initially creates these development-only
-accounts (each with password `password`):
+This command permanently removes all application data from `hive-local`, rebuilds
+it from the schema migrations, then applies the versioned fixture migrations in
+[`db/testware`](db/testware). It refuses any other database name. The fixture
+initially creates these development-only accounts (each with password `password`):
 
 | Username | Email | Role |
 | --- | --- | --- |

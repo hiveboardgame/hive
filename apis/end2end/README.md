@@ -11,9 +11,10 @@ module from `/usr/lib/node_modules`.
 
 ## Run
 
-Start Hive from the repository root in one terminal:
+Load the E2E fixture, then start Hive from the repository root in one terminal:
 
 ```sh
+./scripts/reset-testware.sh
 cargo leptos watch --hot-reload
 ```
 
