@@ -166,6 +166,8 @@ pub fn ChallengeRow(
             </Show>
             <Show when=move || action_flags.with(|flags| flags.cancel)>
                 <button
+                    title="Cancel Challenge"
+                    aria-label="Cancel Challenge"
                     on:click=move |_| {
                         api.get().challenges_cancel(challenge_ids_to_cancel());
                     }
@@ -176,6 +178,8 @@ pub fn ChallengeRow(
             </Show>
             <Show when=move || action_flags.with(|flags| flags.accept)>
                 <button
+                    title="Accept Challenge"
+                    aria-label="Accept Challenge"
                     on:click=move |_| {
                         api.get().challenge_accept(challenge_id.get_value());
                     }
@@ -186,6 +190,8 @@ pub fn ChallengeRow(
             </Show>
             <Show when=move || action_flags.with(|flags| flags.decline)>
                 <button
+                    title="Decline Challenge"
+                    aria-label="Decline Challenge"
                     on:click=move |_| {
                         api.get().challenges_cancel(challenge_ids_to_cancel());
                     }

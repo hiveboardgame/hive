@@ -5,6 +5,25 @@ use crate::{
 use hive_lib::{Piece, Position};
 use leptos::prelude::*;
 
+fn accessible_piece_label(piece: Piece, piece_type: PieceType) -> String {
+    let order = if piece.order() == 0 {
+        String::new()
+    } else {
+        format!(" {}", piece.order())
+    };
+    let location = match piece_type {
+        PieceType::Board | PieceType::Covered | PieceType::History => "on board",
+        PieceType::Reserve | PieceType::Inactive => "in reserve",
+        PieceType::Move | PieceType::Spawn => "move preview",
+    };
+
+    format!(
+        "{:?} {}{order} {location}",
+        piece.color(),
+        piece.bug().name(),
+    )
+}
+
 #[component]
 pub fn PieceGlyph(
     position: Position,
@@ -73,8 +92,13 @@ pub fn Piece(
     paint: Memo<PiecePaint>,
     interaction: HivegroundInteraction,
 ) -> impl IntoView {
+    let aria_label = accessible_piece_label(piece, piece_type);
     view! {
-        <g on:click=move |evt| interaction.click_piece(evt, piece, position, piece_type)>
+        <g
+            role="button"
+            aria-label=aria_label
+            on:click=move |evt| interaction.click_piece(evt, piece, position, piece_type)
+        >
             <PieceGlyph position level paint />
         </g>
     }

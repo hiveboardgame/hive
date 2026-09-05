@@ -13,8 +13,13 @@ pub fn Target(
     level: Signal<usize>,
     interaction: HivegroundInteraction,
 ) -> impl IntoView {
+    let aria_label = format!("Move to board position {}, {}", position.q, position.r);
     view! {
-        <g on:click=move |evt| interaction.click_target(evt, position)>
+        <g
+            role="button"
+            aria-label=aria_label
+            on:click=move |evt| interaction.click_target(evt, position)
+        >
             <OverlayGlyph position level paint />
         </g>
     }
