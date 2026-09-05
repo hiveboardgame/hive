@@ -16,9 +16,25 @@ lazy_static! {
 
 /// Position represented via [odd-r horizontal](https://www.redblobgames.com/grids/hexagons/#coordinates-offset) coordinates
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, PartialOrd, Ord, Deserialize, Serialize)]
+#[serde(from = "WirePosition")]
 pub struct Position {
     pub q: i32,
     pub r: i32,
+}
+
+/// Deserializing `Position` directly would bypass `Position::new`, and `TorusArray` indexes
+/// `r * BOARD_SIZE + q` unclamped - an unwrapped coordinate reads past the board. The fields
+/// match `Position` so the wire format does not change.
+#[derive(Deserialize)]
+struct WirePosition {
+    q: i32,
+    r: i32,
+}
+
+impl From<WirePosition> for Position {
+    fn from(WirePosition { q, r }: WirePosition) -> Self {
+        Position::new(q, r)
+    }
 }
 
 #[derive(Debug)]
@@ -250,6 +266,47 @@ impl Position {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn from_wire(q: i32, r: i32) -> Position {
+        use serde::de::value::{Error, MapDeserializer};
+        Position::deserialize(MapDeserializer::<_, Error>::new(
+            [("q", q), ("r", r)].into_iter(),
+        ))
+        .expect("deserializes")
+    }
+
+    #[test]
+    fn deserialization_wraps_coordinates_onto_the_board() {
+        let position = from_wire(48, 47);
+        assert_eq!(position, Position::new(48, 47));
+        assert!(
+            (0..BOARD_SIZE).contains(&position.q) && (0..BOARD_SIZE).contains(&position.r),
+            "{position} is off the board"
+        );
+    }
+
+    #[test]
+    fn deserialization_wraps_negative_coordinates() {
+        let position = from_wire(-1, -5);
+        assert_eq!(position, Position::new(-1, -5));
+        assert!((0..BOARD_SIZE).contains(&position.q) && (0..BOARD_SIZE).contains(&position.r));
+    }
+
+    #[test]
+    fn a_deserialized_position_cannot_index_past_the_board() {
+        for (q, r) in [(48, 47), (-1, -5), (i32::MAX, i32::MIN)] {
+            let position = from_wire(q, r);
+            let index = position.r * BOARD_SIZE + position.q;
+            assert!(
+                (0..BOARD_SIZE * BOARD_SIZE).contains(&index),
+                "({q}, {r}) became {position}, index {index}"
+            );
+        }
+        assert_eq!(
+            *crate::torus_array::TorusArray::new(0_u8).get(from_wire(48, 47)),
+            0
+        );
+    }
 
     #[test]
     fn tests_direction_and_to() {
