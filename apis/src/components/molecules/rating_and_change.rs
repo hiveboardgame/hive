@@ -4,7 +4,6 @@ use crate::{
 };
 use hive_lib::Color;
 use leptos::prelude::*;
-use std::cmp::Ordering;
 
 #[component]
 pub fn RatingAndChange(
@@ -18,15 +17,15 @@ pub fn RatingAndChange(
 
         Color::Black => (ratings.black_rating_change, ratings.black_rating),
     };
-    let (sign, style) = match rating_change.cmp(&0_i64) {
-        Ordering::Equal => ("+", "text-pillbug-teal"),
-        Ordering::Less => ("", "text-ladybug-red"),
-        Ordering::Greater => ("+", "text-grasshopper-green"),
-    };
+    let (sign, style, magnitude) = rating_change_appearance(rating_change);
+    let precise = format!("{rating_change:+.2}");
 
     view! {
         <p class=extend_tw_classes>{rating}</p>
-        <p class=move || { style }>{sign} {rating_change}</p>
+        <p class=format!("{style} cursor-help") title=precise>
+            {sign}
+            {magnitude}
+        </p>
     }
 }
 
@@ -55,4 +54,15 @@ pub fn RatingAndChangeDynamic(
                 })
         }}
     }
+}
+
+fn rating_change_appearance(change: f64) -> (&'static str, &'static str, i64) {
+    let (sign, style) = if change < 0.0 {
+        ("-", "text-ladybug-red")
+    } else if change > 0.0 {
+        ("+", "text-grasshopper-green")
+    } else {
+        ("+", "text-pillbug-teal")
+    };
+    (sign, style, change.abs().round() as i64)
 }
