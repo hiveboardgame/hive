@@ -233,20 +233,25 @@ impl State {
     }
 
     fn update_history(&mut self, piece: Piece, target_position: Position) {
+        let (piece_str, pos_str) = self.move_notation(piece, target_position);
+        self.history.record_move(piece_str, pos_str);
+    }
+
+    /// Compute the history notation for playing `piece` to `target_position` from the current
+    /// board, without mutating any state. Used both by `update_history` and by callers (e.g. the
+    /// opening explorer) that need notation for a hypothetical move against a board they hold,
+    /// independent of whatever orientation that move's stored/canonical notation was authored in.
+    pub fn move_notation(&self, piece: Piece, target_position: Position) -> (String, String) {
         if self.board.positions.into_iter().flatten().count() == 1 {
-            self.history.record_move(piece.to_string(), "".to_string());
-            return;
+            return (piece.to_string(), "".to_string());
         }
         if let Some(destination_piece) = self.board.under_piece(target_position) {
-            self.history
-                .record_move(piece.to_string(), destination_piece.to_string());
-            return;
+            return (piece.to_string(), destination_piece.to_string());
         }
         if let Some((neighbor_piece, neighbor_pos)) = self.board.get_neighbor(target_position) {
             let dir = neighbor_pos.direction(target_position);
             let pos = dir.to_history_string(neighbor_piece.to_string());
-            self.history.record_move(piece.to_string(), pos);
-            return;
+            return (piece.to_string(), pos);
         }
         unreachable!()
     }
@@ -467,5 +472,28 @@ mod tests {
             h.insert(s.board.hasher.hash);
         }
         assert_eq!(h.len(), 8);
+    }
+
+    /// `move_notation` must reproduce exactly what `update_history` (via `play_turn_from_position`)
+    /// records, since the opening explorer relies on it to regenerate notation for a hypothetical
+    /// move without mutating the state it's evaluating.
+    #[test]
+    fn move_notation_matches_recorded_history() {
+        let mut s = State::new(GameType::Base, false);
+        s.play_turn_from_history("wA1", ".").unwrap();
+        s.play_turn_from_history("bA1", "wA1-").unwrap();
+
+        // A fresh spawn: exercises the `get_neighbor`/direction-glyph branch.
+        let color = s.turn_color;
+        let piece: Piece = "wA2".parse().unwrap();
+        let target = s.board.spawnable_positions(color).next().unwrap();
+
+        let expected = s.move_notation(piece, target);
+
+        let mut played = s.clone();
+        played.play_turn_from_position(piece, target).unwrap();
+        let recorded = played.history.moves.last().cloned().unwrap();
+
+        assert_eq!(expected, recorded);
     }
 }
