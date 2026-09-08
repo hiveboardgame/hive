@@ -42,7 +42,12 @@ async fn main() -> std::io::Result<()> {
     let addr = conf.leptos_options.site_addr;
     let routes = generate_route_list(App);
 
-    simple_logger::init_with_level(log::Level::Warn).expect("couldn't initialize logging");
+    // The backfill's info-level lifecycle lines are how a hash migration is supervised.
+    simple_logger::SimpleLogger::new()
+        .with_level(log::LevelFilter::Warn)
+        .with_module_level("apis::jobs::hash_backfill", log::LevelFilter::Info)
+        .init()
+        .expect("couldn't initialize logging");
 
     let config = DbConfig::from_env().expect("Failed to load config from env");
     pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../db/migrations");

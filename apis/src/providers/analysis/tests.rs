@@ -1147,8 +1147,8 @@ fn compact_checkpoint_replays_only_the_remaining_suffix() {
     assert_eq!(from_checkpoint, from_root);
 }
 
-/// The root carries a checkpoint holding the loaded position - that is what lets
-/// `AnalysisArena::replay` pick it up with no special case of its own.
+/// Moves in a HOP-rooted analysis replay onto the loaded position - the root checkpoint is
+/// what `replay` finds without a special case.
 #[test]
 fn hop_rooted_analysis_replays_moves_onto_the_loaded_position() {
     let hop = "base,QA-a,w";
@@ -1788,8 +1788,7 @@ fn a_shutout_start_position_keeps_the_pasted_root() {
     });
 }
 
-/// With the root counted, the second return home is a threefold; the draw must survive
-/// navigating away and back.
+/// The root counts as an occurrence, so the second return home is already a threefold.
 #[test]
 fn hop_root_threefold_survives_navigation() {
     use hive_lib::{GameResult, GameStatus};
@@ -1873,8 +1872,8 @@ fn hop_root_threefold_survives_navigation() {
     });
 }
 
-/// Deleting the continuation turns the grandfathered repetition node into the line's end;
-/// the installed state must show the draw at once, not after the next navigation.
+/// Deleting the continuation makes the grandfathered repetition the line's end, so the draw
+/// must show at once rather than after the next navigation.
 #[test]
 fn deleting_past_a_threefold_adjudicates_the_new_leaf() {
     use hive_lib::{Direction, GameResult, GameStatus, State};
