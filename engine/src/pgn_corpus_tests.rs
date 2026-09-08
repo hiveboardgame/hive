@@ -67,15 +67,24 @@ fn hash_corpus_games_replay() {
     }
 }
 
-/// These games record moves past a threefold: replay adjudicates the draw, then refuses the
-/// next recorded move, so reconstructing them fails.
+/// Games that repeat and play on must replay in full (see `State::replaying`) with the
+/// repetition still detected - replay-only would pass if detection died entirely.
 #[test]
-fn games_that_repeat_are_refused_by_replay() {
+fn games_that_repeat_replay_in_full_and_are_still_detected() {
     for file in pgns_in("./test_pgns/hash/invalid/") {
-        assert!(
-            replay(&file).is_err(),
-            "{} repeats a position and plays on, so replay should refuse it",
+        let history = History::from_filepath(file.clone()).expect("valid PGN");
+        let state = replay_expecting_success(&file);
+        assert_eq!(
+            state.turn,
+            history.moves.len(),
+            "{}: every recorded move should have been applied",
             file.display()
+        );
+        assert!(
+            state.repeating_moves.len() > 2,
+            "{}: the repetition should still be detected, got {:?}",
+            file.display(),
+            state.repeating_moves
         );
     }
 }
@@ -154,11 +163,16 @@ fn the_hash_is_a_pure_function_of_the_board() {
             piece.parse::<Piece>().expect("piece").bug() != crate::bug::Bug::Queen
         });
         let mut state = State::new(history.game_type, tournament);
+        // A record, not live play: without this a grandfathered threefold adjudicates
+        // mid-replay, the next move errors, and every later ply silently escapes validation.
+        state.set_replaying(true);
 
         for (ply, (piece, position)) in history.moves.iter().enumerate() {
-            if state.play_turn_from_history(piece, position).is_err() {
-                break;
-            }
+            state
+                .play_turn_from_history(piece, position)
+                .unwrap_or_else(|error| {
+                    panic!("{}: ply {ply} failed to replay: {error}", file.display())
+                });
             // The side to move follows the ply, not `turn_color`, which the engine leaves on the
             // mover when a move ends the game.
             let to_move = if ply.is_multiple_of(2) {

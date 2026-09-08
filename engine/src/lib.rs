@@ -45,6 +45,6 @@ pub use history::History;
 pub use piece::Piece;
 pub use player::Player;
 pub use position::Position;
-pub use state::State;
+pub use state::{threefold_on_final_ply, State};
 pub use svg_position::SvgPosition;
 pub use turn::Turn;
