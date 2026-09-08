@@ -15,6 +15,13 @@ use wasm_bindgen::JsCast;
 const MIN_SEARCH_LENGTH: usize = 2;
 const MAX_SUGGESTIONS: usize = 10;
 
+/// Usernames are ASCII (`db`'s `valid_username_char`), so the ASCII fold is exact.
+fn sorted_by_username(users: BTreeMap<String, UserResponse>) -> Vec<(String, UserResponse)> {
+    let mut users: Vec<_> = users.into_iter().collect();
+    users.sort_by_cached_key(|(username, _)| username.to_ascii_lowercase());
+    users
+}
+
 #[component]
 pub fn UserSearch(
     #[prop(optional)] placeholder: Option<String>,
@@ -99,15 +106,11 @@ pub fn UserSearch(
     let has_search_query = Signal::derive(move || pattern_len() >= MIN_SEARCH_LENGTH);
     let visible_users = Signal::derive(move || {
         if !has_search_query() {
-            fallback_users.map(|f| f()).unwrap_or_default()
+            sorted_by_username(fallback_users.map(|f| f()).unwrap_or_default())
         } else {
-            user_search
-                .get()
-                .flatten()
-                .unwrap_or_default()
-                .into_iter()
-                .take(MAX_SUGGESTIONS)
-                .collect::<BTreeMap<_, _>>()
+            let mut users = sorted_by_username(user_search.get().flatten().unwrap_or_default());
+            users.truncate(MAX_SUGGESTIONS);
+            users
         }
     });
 
@@ -277,5 +280,56 @@ pub fn UserSearch(
                 </Show>
             </Transition>
         </div>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use shared_types::Takeback;
+    use std::collections::HashMap;
+    use uuid::Uuid;
+
+    fn users(names: &[&str]) -> BTreeMap<String, UserResponse> {
+        names
+            .iter()
+            .map(|name| {
+                let user = UserResponse {
+                    username: (*name).to_string(),
+                    uid: Uuid::new_v4(),
+                    patreon: false,
+                    bot: false,
+                    admin: false,
+                    deleted: false,
+                    ratings: HashMap::new(),
+                    takeback: Takeback::default(),
+                    lang: None,
+                };
+                ((*name).to_string(), user)
+            })
+            .collect()
+    }
+
+    fn order(names: &[&str]) -> Vec<String> {
+        sorted_by_username(users(names))
+            .into_iter()
+            .map(|(username, _)| username)
+            .collect()
+    }
+
+    #[test]
+    fn case_does_not_split_the_list() {
+        assert_eq!(
+            order(&["Zed", "alice", "Bob", "charlie"]),
+            vec!["alice", "Bob", "charlie", "Zed"],
+        );
+    }
+
+    #[test]
+    fn underscore_sorts_between_digits_and_letters() {
+        assert_eq!(
+            order(&["_ghost", "9lives", "Amy", "-dash"]),
+            vec!["-dash", "9lives", "_ghost", "Amy"],
+        );
     }
 }
