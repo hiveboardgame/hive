@@ -86,6 +86,10 @@ impl UserResponse {
 
     pub async fn from_uuids(ids: &[Uuid], conn: &mut DbConn<'_>) -> Result<HashMap<Uuid, Self>> {
         let users = User::find_by_uuids(ids, conn).await?;
+        Self::from_models(&users, conn).await
+    }
+
+    pub async fn from_models(users: &[User], conn: &mut DbConn<'_>) -> Result<HashMap<Uuid, Self>> {
         if users.is_empty() {
             return Ok(HashMap::new());
         }
@@ -102,10 +106,10 @@ impl UserResponse {
 
         let mut result = HashMap::new();
         for user in users {
-            let user_rating_rows = ratings_by_user.get(&user.id).ok_or_else(|| {
-                anyhow::anyhow!("Ratings not found for user {}", user.id)
-            })?;
-            let user_response = Self::from_model_with_ratings(&user, user_rating_rows)?;
+            let user_rating_rows = ratings_by_user
+                .get(&user.id)
+                .ok_or_else(|| anyhow::anyhow!("Ratings not found for user {}", user.id))?;
+            let user_response = Self::from_model_with_ratings(user, user_rating_rows)?;
             result.insert(user.id, user_response);
         }
         Ok(result)

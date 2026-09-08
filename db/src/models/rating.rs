@@ -94,6 +94,33 @@ pub struct Rating {
     pub speed: String,
 }
 
+#[derive(Clone, Copy)]
+struct CounterDeltas {
+    won: i64,
+    lost: i64,
+    drawn: i64,
+}
+
+impl CounterDeltas {
+    const DRAW: Self = Self {
+        won: 0,
+        lost: 0,
+        drawn: 1,
+    };
+
+    const WIN: Self = Self {
+        won: 1,
+        lost: 0,
+        drawn: 0,
+    };
+
+    const LOSS: Self = Self {
+        won: 0,
+        lost: 1,
+        drawn: 0,
+    };
+}
+
 impl Rating {
     fn normalized_game_speed(game_speed: GameSpeed) -> String {
         match game_speed {
@@ -121,8 +148,7 @@ impl Rating {
             .await?)
     }
 
-    // Must be called inside the game-finalization transaction so these row locks
-    // are held until the derived rating writes are complete.
+    // Must run inside the game-finalization transaction to hold these row locks.
     pub(crate) async fn update(
         rated: bool,
         game_speed: String,
@@ -151,15 +177,8 @@ impl Rating {
             (second_rating, first_rating)
         };
 
-        let (white_change, black_change) = match game_result {
-            GameResult::Draw => Rating::draw(rated, &white_rating, &black_rating, conn).await,
-            GameResult::Winner(color) => {
-                Rating::winner(rated, color, &white_rating, &black_rating, conn).await
-            }
-            GameResult::Unknown => unreachable!(
-                "This function should not be called when there's no concrete game result"
-            ),
-        }?;
+        let (white_change, black_change) =
+            Rating::apply_result(rated, game_result, &white_rating, &black_rating, conn).await?;
         Ok((
             white_rating.rating,
             black_rating.rating,
@@ -223,125 +242,72 @@ impl Rating {
         )
     }
 
-    async fn draw(
-        rated: bool,
-        white_rating: &Rating,
-        black_rating: &Rating,
+    async fn apply_side(
+        side: &Rating,
+        glicko: Option<Glicko2Rating>,
+        deltas: CounterDeltas,
         conn: &mut PooledConnection<'_, AsyncDieselConnectionManager<AsyncPgConnection>>,
-    ) -> Result<(Option<f64>, Option<f64>), DbError> {
-        if rated {
-            let (white_glicko, black_glicko, white_rating_change, black_rating_change) =
-                Rating::calculate_glicko2(white_rating, black_rating, GameResult::Draw);
-            diesel::update(ratings::table.find(black_rating.id))
-                .set((
-                    updated_at.eq(Utc::now()),
-                    played.eq(played + 1),
-                    draw.eq(draw + 1),
-                    rating.eq(black_glicko.rating),
-                    deviation.eq(black_glicko.deviation),
-                    volatility.eq(black_glicko.volatility),
-                ))
-                .execute(conn)
-                .await?;
-
-            diesel::update(ratings::table.find(white_rating.id))
-                .set((
-                    updated_at.eq(Utc::now()),
-                    played.eq(played + 1),
-                    draw.eq(draw + 1),
-                    rating.eq(white_glicko.rating),
-                    deviation.eq(white_glicko.deviation),
-                    volatility.eq(white_glicko.volatility),
-                ))
-                .execute(conn)
-                .await?;
-            Ok((Some(white_rating_change), Some(black_rating_change)))
-        } else {
-            diesel::update(ratings::table.find(black_rating.id))
-                .set((
-                    updated_at.eq(Utc::now()),
-                    played.eq(played + 1),
-                    draw.eq(draw + 1),
-                ))
-                .execute(conn)
-                .await?;
-
-            diesel::update(ratings::table.find(white_rating.id))
-                .set((
-                    updated_at.eq(Utc::now()),
-                    played.eq(played + 1),
-                    draw.eq(draw + 1),
-                ))
-                .execute(conn)
-                .await?;
-            Ok((None, None))
+    ) -> Result<(), DbError> {
+        let counters = (
+            played.eq(played + 1),
+            won.eq(won + deltas.won),
+            lost.eq(lost + deltas.lost),
+            draw.eq(draw + deltas.drawn),
+        );
+        match glicko {
+            Some(glicko) => {
+                diesel::update(ratings::table.find(side.id))
+                    .set((
+                        counters,
+                        updated_at.eq(Utc::now()),
+                        rating.eq(glicko.rating),
+                        deviation.eq(glicko.deviation),
+                        volatility.eq(glicko.volatility),
+                    ))
+                    .execute(conn)
+                    .await?;
+            }
+            None => {
+                diesel::update(ratings::table.find(side.id))
+                    .set(counters)
+                    .execute(conn)
+                    .await?;
+            }
         }
+        Ok(())
     }
 
-    async fn winner(
+    async fn apply_result(
         rated: bool,
-        winner: Color,
+        game_result: GameResult,
         white_rating: &Rating,
         black_rating: &Rating,
         conn: &mut PooledConnection<'_, AsyncDieselConnectionManager<AsyncPgConnection>>,
     ) -> Result<(Option<f64>, Option<f64>), DbError> {
-        let (white_won, white_lost) = {
-            if winner == Color::White {
-                (1, 0)
-            } else {
-                (0, 1)
-            }
+        let (white_deltas, black_deltas) = match game_result {
+            GameResult::Draw => (CounterDeltas::DRAW, CounterDeltas::DRAW),
+            GameResult::Winner(Color::White) => (CounterDeltas::WIN, CounterDeltas::LOSS),
+            GameResult::Winner(Color::Black) => (CounterDeltas::LOSS, CounterDeltas::WIN),
+            GameResult::Unknown => unreachable!(
+                "This function should not be called when there's no concrete game result"
+            ),
         };
 
-        if rated {
-            let (white_glicko, black_glicko, white_rating_change, black_rating_change) =
-                Rating::calculate_glicko2(white_rating, black_rating, GameResult::Winner(winner));
+        let computed =
+            rated.then(|| Rating::calculate_glicko2(white_rating, black_rating, game_result));
+        let (white_glicko, black_glicko, white_change, black_change) = match computed {
+            Some((white_glicko, black_glicko, white_change, black_change)) => (
+                Some(white_glicko),
+                Some(black_glicko),
+                Some(white_change),
+                Some(black_change),
+            ),
+            None => (None, None, None, None),
+        };
 
-            diesel::update(ratings::table.find(white_rating.id))
-                .set((
-                    updated_at.eq(Utc::now()),
-                    played.eq(played + 1),
-                    won.eq(won + white_won),
-                    lost.eq(lost + white_lost),
-                    rating.eq(white_glicko.rating),
-                    deviation.eq(white_glicko.deviation),
-                    volatility.eq(white_glicko.volatility),
-                ))
-                .execute(conn)
-                .await?;
+        Self::apply_side(white_rating, white_glicko, white_deltas, conn).await?;
+        Self::apply_side(black_rating, black_glicko, black_deltas, conn).await?;
 
-            diesel::update(ratings::table.find(black_rating.id))
-                .set((
-                    updated_at.eq(Utc::now()),
-                    played.eq(played + 1),
-                    won.eq(won + white_lost),
-                    lost.eq(lost + white_won),
-                    rating.eq(black_glicko.rating),
-                    deviation.eq(black_glicko.deviation),
-                    volatility.eq(black_glicko.volatility),
-                ))
-                .execute(conn)
-                .await?;
-            Ok((Some(white_rating_change), Some(black_rating_change)))
-        } else {
-            diesel::update(ratings::table.find(white_rating.id))
-                .set((
-                    played.eq(played + 1),
-                    won.eq(won + white_won),
-                    lost.eq(lost + white_lost),
-                ))
-                .execute(conn)
-                .await?;
-
-            diesel::update(ratings::table.find(black_rating.id))
-                .set((
-                    played.eq(played + 1),
-                    won.eq(won + white_lost),
-                    lost.eq(lost + white_won),
-                ))
-                .execute(conn)
-                .await?;
-            Ok((None, None))
-        }
+        Ok((white_change, black_change))
     }
 }

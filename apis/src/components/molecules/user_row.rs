@@ -42,12 +42,12 @@ pub fn UserRow(
         let display: Vec<_> = actions
             .into_iter()
             .filter_map(|action| match action {
+                // TODO: Allow users to direct challenge the bot once it can manage its own time
+                UserAction::Challenge if user.bot => None,
                 UserAction::Challenge => {
                     let opponent = username.get_value();
-                    let disabled = user.bot;
-                    // TODO: Allow users to direct challenge the bot once it can manage its own time
                     Some(EitherOf5::A(
-                        view! { <DirectChallengeButton user_id opponent disabled /> },
+                        view! { <DirectChallengeButton user_id opponent /> },
                     ))
                 }
                 UserAction::Invite(tournament_id) => Some(EitherOf5::B(

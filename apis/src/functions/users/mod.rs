@@ -2,6 +2,8 @@ use crate::responses::UserResponse;
 use leptos::prelude::*;
 use server_fn::codec;
 use shared_types::GameSpeed;
+#[cfg(feature = "ssr")]
+use shared_types::LeaderboardKind;
 use uuid::Uuid;
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
@@ -24,8 +26,9 @@ pub async fn username_taken(username: String) -> Result<bool, ServerFnError> {
     Ok(User::username_exists(&username, &mut conn).await?)
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
-pub async fn get_top_users(
+#[cfg(feature = "ssr")]
+async fn leaderboard(
+    kind: LeaderboardKind,
     game_speed: GameSpeed,
     limit: i64,
 ) -> Result<Vec<(usize, UserResponse)>, ServerFnError> {
@@ -38,17 +41,43 @@ pub async fn get_top_users(
     let mut conn = get_conn(&pool).await?;
     let maybe_user = uuid().await.ok();
     let top_users: Vec<(User, Rating, i64)> =
-        User::get_top_users(&game_speed, maybe_user, limit, &mut conn).await?;
-    let mut results: Vec<(usize, UserResponse)> = Vec::new();
-    for (user, _rating, rank) in top_users.iter() {
-        results.push((
-            *rank as usize,
-            UserResponse::from_model(user, &mut conn)
-                .await
-                .map_err(ServerFnError::new)?,
-        ))
-    }
-    Ok(results)
+        User::get_top_users(kind, &game_speed, maybe_user, limit, &mut conn).await?;
+    let users: Vec<User> = top_users.iter().map(|(user, _, _)| user.clone()).collect();
+    let mut responses = UserResponse::from_models(&users, &mut conn)
+        .await
+        .map_err(ServerFnError::new)?;
+    top_users
+        .iter()
+        .map(|(user, rating, rank)| {
+            responses
+                .remove(&user.id)
+                .map(|response| (*rank as usize, response))
+                .ok_or_else(|| {
+                    log::warn!(
+                        "Leaderboard row for user {} at speed {} could not be resolved; ratings has no unique (user_uid, speed) constraint",
+                        user.id,
+                        rating.speed
+                    );
+                    ServerFnError::new(format!("Duplicate leaderboard row for user {}", user.id))
+                })
+        })
+        .collect()
+}
+
+#[server(input = codec::Cbor, output = codec::Cbor)]
+pub async fn get_top_users(
+    game_speed: GameSpeed,
+    limit: i64,
+) -> Result<Vec<(usize, UserResponse)>, ServerFnError> {
+    leaderboard(LeaderboardKind::Humans, game_speed, limit).await
+}
+
+#[server(input = codec::Cbor, output = codec::Cbor)]
+pub async fn get_top_bots(
+    game_speed: GameSpeed,
+    limit: i64,
+) -> Result<Vec<(usize, UserResponse)>, ServerFnError> {
+    leaderboard(LeaderboardKind::Bots, game_speed, limit).await
 }
 
 #[server(input = codec::Cbor, output = codec::Cbor)]

@@ -4,33 +4,34 @@ use crate::{
         atoms::rating::icon_for_speed,
         molecules::{empty_state::EmptyState, user_row::UserRow},
     },
-    functions::users::get_top_users,
+    functions::users::{get_top_bots, get_top_users},
     providers::AuthContext,
 };
 use leptos::{either::Either, logging::log, prelude::*};
 use leptos_icons::Icon;
-use shared_types::GameSpeed;
+use shared_types::{GameSpeed, LeaderboardKind};
 
 #[component]
-pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
+pub fn Leaderboard(speed: GameSpeed, kind: LeaderboardKind) -> impl IntoView {
     let speed = Signal::derive(move || speed);
     let auth_context = expect_context::<AuthContext>();
-    let top_users = LocalResource::new({
-        let auth_context = auth_context.clone();
-        move || {
-            let _viewer_id = auth_context
-                .user
-                .with(|account| account.as_ref().map(|account| account.id));
-            async move { get_top_users(speed(), 10).await }
+    let viewer = Memo::new(move |_| {
+        auth_context.user.with(|account| {
+            account
+                .as_ref()
+                .map(|account| (account.id, account.user.bot))
+        })
+    });
+    let top_users = LocalResource::new(move || {
+        let _viewer = viewer.get();
+        async move {
+            if kind.is_bots() {
+                get_top_bots(speed(), 10).await
+            } else {
+                get_top_users(speed(), 10).await
+            }
         }
     });
-    Effect::watch(
-        auth_context.logout.version(),
-        move |_, _, _| {
-            top_users.refetch();
-        },
-        false,
-    );
     view! {
         <Transition>
             {move || {
@@ -49,14 +50,11 @@ pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
                         }
                         Ok(users) => {
                             let is_empty = users.is_empty();
-                            let show_unranked_placeholder = auth_context
-                                .user
-                                .with(|account| {
-                                    account
-                                        .as_ref()
-                                        .is_some_and(|account| {
-                                            !users.iter().any(|(_, user)| user.uid == account.id)
-                                        })
+                            let show_unranked_placeholder = viewer
+                                .get()
+                                .is_some_and(|(id, bot)| {
+                                    bot == kind.is_bots()
+                                        && !users.iter().any(|(_, user)| user.uid == id)
                                 });
                             let users = StoredValue::new(users);
                             Either::Right(
