@@ -19,6 +19,7 @@ async fn main() -> std::io::Result<()> {
     use api::v1::auth::get_identity_handler::get_identity;
     use api::v1::auth::jwt_secret::JwtSecret;
     use api::v1::bot::users::api_get_user;
+    use api::v1::health::{health, health_ready};
     use actix_files::Files;
     use actix_identity::IdentityMiddleware;
     use actix_session::{storage::CookieSessionStore, SessionMiddleware};
@@ -160,6 +161,9 @@ async fn main() -> std::io::Result<()> {
             .service(Files::new("/assets", site_root.as_ref()))
             // serve the favicon from /favicon.ico
             .service(favicon)
+            .service(health)
+            .service(health_ready)
+            .service(health_ready)
             .service(start_connection)
             .service(functions::pwa::cache)
             .service(functions::web_push_http::vapid_public_key)
@@ -220,6 +224,11 @@ async fn main() -> std::io::Result<()> {
             .wrap(Compress::default())
     })
     .bind(&addr)?
+    // Actix defaults to 30s, and it spends all of it: a WebSocket never closes
+    // on its own, so every one of them waits out the full timeout. That is dead
+    // time during which the outgoing slot still holds clients that cannot see
+    // events raised on the incoming one.
+    .shutdown_timeout(5)
     .run()
     .await
 }

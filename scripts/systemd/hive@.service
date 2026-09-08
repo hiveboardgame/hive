@@ -1,0 +1,23 @@
+[Unit]
+Description=Hive game server (%i)
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=drone
+Group=drone
+WorkingDirectory=/home/drone/hive
+# Production secrets live outside the repo checkout: the repo's own .env is a
+# *tracked* file holding dev/localhost values, so writing prod secrets there
+# leaves the server's working tree permanently dirty (breaking `git pull`) and
+# one `git add -A` away from publishing them.
+EnvironmentFile=/etc/hive/prod.env
+EnvironmentFile=/etc/hive/common.env
+EnvironmentFile=/etc/hive/%i.env
+ExecStart=/home/drone/hive/bin/%i/hive
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=45
+
+[Install]
+WantedBy=multi-user.target

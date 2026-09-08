@@ -1,0 +1,65 @@
+# The blue-green pieces of /etc/nginx/sites-enabled/default. This file is a
+# record of what was spliced in, not something to include directly.
+
+# 1) At http scope, above every server block. The include file is deliberately
+#    NOT under conf.d/: Debian's nginx.conf already has
+#    `include /etc/nginx/conf.d/*.conf;` inside `http { }`, so a file there
+#    holding a bare `server 127.0.0.1:3000;` would also be parsed at http scope,
+#    where it is not a valid directive — `nginx -t` fails and the reload does
+#    nothing.
+upstream hive_active {
+    include /etc/nginx/hive-upstream.conf;
+}
+
+# 2) A loopback-only front, at http scope.
+# 3) Both the hivegame.com and hive.leex.dev server blocks get these two
+#    locations. They replace `proxy_pass http://localhost:3000` and
+#    `try_files $uri $uri/ =404;` respectively. Certbot's SSL lines and
+#    hivegame.com's /download/rules.pdf stay as they are.
+
+# The readiness body names the failing dependency and quotes the database error
+# verbatim. deploy.sh reads it straight off the slot's port, so nothing outside
+# the box needs it.
+location = /health/ready {
+    allow 127.0.0.1;
+    deny all;
+    proxy_pass http://hive_active;
+    proxy_set_header Host $host;
+}
+
+location / {
+    proxy_pass http://hive_active;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection 'upgrade';
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_cache_bypass $http_upgrade;
+    proxy_read_timeout 3600s;
+    proxy_send_timeout 3600s;
+}
+
+# Loopback-only front for on-box API clients (hive-hydra), so they follow the
+# active slot instead of pinning a colour. hive-hydra.prod.yaml hardcodes
+# localhost:3000, which is the *blue* slot — after a deploy flips to green,
+# port 3000 is stopped and the bots go dark until the next deploy flips back.
+server {
+    listen 127.0.0.1:3999;
+    server_name _;
+
+    location / {
+        proxy_pass http://hive_active;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+}
+
+# 4) Seed the include file that deploy.sh rewrites on every deploy:
+#       echo "server 127.0.0.1:3000;" | sudo tee /etc/nginx/hive-upstream.conf

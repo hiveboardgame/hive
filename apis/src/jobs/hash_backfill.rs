@@ -27,8 +27,8 @@
 //!
 //!    `TRUNCATE` rather than the per-game delete: a game this job cannot replay would keep its
 //!    wrong rows.
-//! 3. Start **one** instance and watch `hash_backfill:` in the logs; every booting instance runs
-//!    its own unlocked copy, so more only multiply the replay load.
+//! 3. Start the instances and watch `hash_backfill:` in the logs. A session-scoped advisory lock
+//!    means only one runs the pass; the others wait briefly for it and then stand down.
 //! 4. Verify, then scale back up:
 //!
 //!    ```sql
@@ -53,26 +53,73 @@ use db_lib::{
 };
 use diesel_async::AsyncConnection;
 use hive_lib::State;
+use std::time::Duration;
 
 const BATCH_SIZE: i64 = 200;
+const LOCK_RETRY_EVERY: Duration = Duration::from_secs(10);
+const LOCK_WAIT_MAX: Duration = Duration::from_secs(300);
 
 pub fn run(pool: DbPool) {
     actix_rt::spawn(async move {
-        let Ok(mut conn) = get_conn(&pool).await else {
+        let Ok(conn) = get_conn(&pool).await else {
             log::error!("hash_backfill: failed to get connection");
             return;
         };
-        let remaining = match Game::count_needing_hash_backfill(&mut conn).await {
+
+        // Held for the whole pass, which is why it is session- and not
+        // transaction-scoped. Two instances overlap on every blue/green deploy
+        // and each would replay the same games from the same cursor; during a
+        // rehash they would also be running different hash algorithms, which is
+        // what the module docs mean by "start one instance".
+        //
+        // Retried rather than skipped once: the holder is normally the outgoing
+        // slot, which is stopped a few seconds later, possibly mid-pass. Giving
+        // up on the first refusal would strand the remaining games until some
+        // unrelated restart happened to pick them up.
+        let mut lock_conn = conn;
+        let mut waited = Duration::from_secs(0);
+        loop {
+            match crate::jobs::try_advisory_session_lock(
+                &mut lock_conn,
+                crate::jobs::HASH_BACKFILL_LOCK,
+            )
+            .await
+            {
+                Ok(true) => break,
+                Ok(false) => {
+                    if waited >= LOCK_WAIT_MAX {
+                        log::warn!(
+                            "hash_backfill: another instance has held the lock for \
+                             {}s; giving up until the next boot",
+                            waited.as_secs()
+                        );
+                        return;
+                    }
+                    if waited.is_zero() {
+                        log::info!("hash_backfill: another instance holds the lock; waiting");
+                    }
+                    actix_rt::time::sleep(LOCK_RETRY_EVERY).await;
+                    waited += LOCK_RETRY_EVERY;
+                }
+                Err(e) => {
+                    log::error!("hash_backfill: could not take the lock: {e}");
+                    return;
+                }
+            }
+        }
+
+        let remaining = match Game::count_needing_hash_backfill(&mut lock_conn).await {
             Ok(n) => n,
             Err(e) => {
                 log::error!("hash_backfill: count failed: {e}");
+                unlock(&mut lock_conn).await;
                 return;
             }
         };
-        drop(conn);
 
         if remaining == 0 {
             log::info!("hash_backfill: nothing to do");
+            unlock(&mut lock_conn).await;
             return;
         }
         log::info!("hash_backfill: {remaining} games to process");
@@ -134,16 +181,18 @@ pub fn run(pool: DbPool) {
 
         // The cursor only moves forward, so games skipped over a transient error are still
         // outstanding - "done" must not say otherwise to the operator watching the migration.
-        match get_conn(&pool).await {
-            Ok(mut conn) => match Game::count_needing_hash_backfill(&mut conn).await {
-                Ok(0) => log::info!("hash_backfill: done ({total} games processed)"),
-                Ok(outstanding) => log::warn!(
-                    "hash_backfill: pass ended with {outstanding} games outstanding \
-                     ({total} processed); they will be retried on the next boot"
-                ),
-                Err(e) => log::warn!("hash_backfill: final recount failed: {e}"),
-            },
-            Err(_) => log::warn!("hash_backfill: no connection for the final recount"),
+        match Game::count_needing_hash_backfill(&mut lock_conn).await {
+            Ok(0) => log::info!("hash_backfill: done ({total} games processed)"),
+            Ok(outstanding) => log::warn!(
+                "hash_backfill: pass ended with {outstanding} games outstanding \
+                 ({total} processed); they will be retried on the next boot"
+            ),
+            Err(e) => log::warn!("hash_backfill: final recount failed: {e}"),
         }
+        unlock(&mut lock_conn).await;
     });
+}
+
+async fn unlock(conn: &mut db_lib::DbConn<'_>) {
+    crate::jobs::advisory_session_unlock(conn, crate::jobs::HASH_BACKFILL_LOCK).await;
 }
