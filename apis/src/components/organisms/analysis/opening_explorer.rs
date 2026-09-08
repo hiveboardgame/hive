@@ -32,6 +32,8 @@ use std::{collections::HashMap, str::FromStr};
 /// transformed to match the current board.
 fn local_moves(state: &State) -> HashMap<u64, (Piece, Position, String)> {
     let mut map = HashMap::new();
+    // A played move appends its position hash and notation at this same index, even when an
+    // automatic pass appends another entry afterwards.
     let base_len = state.hashes.len();
     let color = state.turn_color;
     for ((piece, _from), targets) in state.board.moves(color) {
@@ -39,8 +41,11 @@ fn local_moves(state: &State) -> HashMap<u64, (Piece, Position, String)> {
             let mut s = state.clone();
             if s.play_turn_from_position(piece, target).is_ok() {
                 // Use the move hash, not the auto-pass hash that may follow it.
-                if let Some(&h) = s.hashes.get(base_len) {
-                    let label = notation_label(&s, piece, target);
+                if let (Some(&h), Some(label)) =
+                    (s.hashes.get(base_len), recorded_move_label(&s, base_len))
+                {
+                    // Keep the pre-move target for playing on `state`; only the cloned board's
+                    // coordinates may have changed when the engine recentered it.
                     map.entry(h).or_insert((piece, target, label));
                 }
             }
@@ -53,8 +58,9 @@ fn local_moves(state: &State) -> HashMap<u64, (Piece, Position, String)> {
             for &target in &spawns {
                 let mut s = state.clone();
                 if s.play_turn_from_position(piece, target).is_ok() {
-                    if let Some(&h) = s.hashes.get(base_len) {
-                        let label = notation_label(&s, piece, target);
+                    if let (Some(&h), Some(label)) =
+                        (s.hashes.get(base_len), recorded_move_label(&s, base_len))
+                    {
                         map.entry(h).or_insert((piece, target, label));
                     }
                 }
@@ -64,14 +70,14 @@ fn local_moves(state: &State) -> HashMap<u64, (Piece, Position, String)> {
     map
 }
 
-/// Render a move's notation as `"<piece> <pos>"`, matching `History`'s own display join
-/// (`piece pos`), from a board state where the move has already been played.
-fn notation_label(state_after_move: &State, piece: Piece, target: Position) -> String {
-    let (piece_str, pos_str) = state_after_move.move_notation(piece, target);
+/// Render the notation recorded while the move was played. The engine may recenter the board
+/// afterwards, so recomputing it from the move's original raw coordinates is not safe.
+fn recorded_move_label(state_after_move: &State, move_index: usize) -> Option<String> {
+    let (piece_str, pos_str) = state_after_move.history.moves.get(move_index)?;
     if pos_str.is_empty() {
-        piece_str
+        Some(piece_str.clone())
     } else {
-        format!("{piece_str} {pos_str}")
+        Some(format!("{piece_str} {pos_str}"))
     }
 }
 
@@ -622,6 +628,47 @@ fn explorer_position_key(selected: Option<u64>, at_pre_game: bool) -> Option<i64
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn recorded_label_survives_recentering_after_the_move() {
+        let mut board = hive_lib::Board::new();
+        for (q, piece) in [(30, "wQ"), (31, "wA1"), (0, "bQ"), (1, "bA1")] {
+            board.insert(
+                Position::new(q, 16),
+                piece.parse().expect("test piece"),
+                true,
+            );
+        }
+        let mut state =
+            State::new_from_position(board, GameType::MLP, Color::White).expect("test position");
+        let move_index = state.history.moves.len();
+        let piece = "wG1".parse().expect("test piece");
+        let original_target = Position::new(30, 15);
+
+        state
+            .play_turn_from_position(piece, original_target)
+            .expect("legal move");
+
+        assert_ne!(
+            state.board.position_of_piece(piece),
+            Some(original_target),
+            "the move must trigger recentering for this regression"
+        );
+        assert_eq!(
+            recorded_move_label(&state, move_index),
+            state
+                .history
+                .moves
+                .get(move_index)
+                .map(|(piece, position)| {
+                    if position.is_empty() {
+                        piece.clone()
+                    } else {
+                        format!("{piece} {position}")
+                    }
+                })
+        );
+    }
 
     #[test]
     fn black_to_move_empty_root_is_not_the_opening_sentinel() {
