@@ -1274,6 +1274,79 @@ mod tests {
     use crate::{game_status::GameStatus, history::History, state::State};
     use std::collections::HashSet;
 
+    fn queens_under_siege(surrounded: &[Color]) -> Board {
+        let mut board = Board::new();
+        let (white_at, black_at) = (Position::new(16, 16), Position::new(17, 16));
+        board.insert(white_at, "wQ".parse().expect("test piece"), true);
+        board.insert(black_at, "bQ".parse().expect("test piece"), true);
+        let mut fillers = [
+            "wA1", "wA2", "wA3", "wG1", "wG2", "wG3", "wS1", "wS2", "bA1", "bA2", "bA3", "bG1",
+            "bG2", "bG3",
+        ]
+        .into_iter();
+        for (queen, color) in [(white_at, Color::White), (black_at, Color::Black)] {
+            let ring: Vec<Position> = queen
+                .positions_around()
+                .filter(|p| board.top_piece(*p).is_none())
+                .collect();
+            let take = if surrounded.contains(&color) {
+                ring.len()
+            } else {
+                ring.len() - 1
+            };
+            for position in ring.into_iter().take(take) {
+                let piece = fillers.next().expect("enough fillers");
+                board.insert(position, piece.parse().expect("test piece"), true);
+            }
+        }
+        board
+    }
+
+    /// The corpus checks this over 104k real games, but only when the CSVs are on hand.
+    #[test]
+    fn a_surrounded_queen_loses_for_its_owner() {
+        assert_eq!(
+            queens_under_siege(&[Color::White]).game_result(),
+            GameResult::Winner(Color::Black)
+        );
+        assert_eq!(
+            queens_under_siege(&[Color::Black]).game_result(),
+            GameResult::Winner(Color::White)
+        );
+    }
+
+    #[test]
+    fn the_game_is_a_draw_only_when_both_queens_are_surrounded() {
+        assert_eq!(
+            queens_under_siege(&[Color::White, Color::Black]).game_result(),
+            GameResult::Draw
+        );
+        assert_eq!(queens_under_siege(&[]).game_result(), GameResult::Unknown);
+    }
+
+    #[test]
+    fn the_queen_comes_due_on_the_fourth_placement() {
+        let mut board = Board::new();
+        for (offset, piece) in ["wA1", "wA2", "wA3"].into_iter().enumerate() {
+            assert!(!board.queen_required(Color::White));
+            board.insert(
+                Position::new(16 + offset as i32, 16),
+                piece.parse().expect("test piece"),
+                true,
+            );
+        }
+        assert!(board.queen_required(Color::White));
+        assert!(!board.queen_required(Color::Black));
+
+        board.insert(
+            Position::new(19, 16),
+            "wQ".parse().expect("test piece"),
+            true,
+        );
+        assert!(!board.queen_required(Color::White));
+    }
+
+    /// The diet's premise: the middle window is all an opening needs.
     #[test]
     fn a_fresh_board_uses_small_storage() {
         assert_eq!(Board::new().storage_cells(), 256);
@@ -1290,6 +1363,62 @@ mod tests {
         );
         assert_eq!(board.storage_cells(), 1024);
         assert!(board.top_piece(Position::new(30, 16)).is_some());
+    }
+
+    /// Equality has to be able to say "no", and on every field it compares - the snapshot
+    /// oracles are `assert_eq!` on boards, so an equality that cannot fail proves nothing.
+    #[test]
+    fn boards_that_differ_anywhere_are_not_equal() {
+        let mut base = Board::new();
+        base.insert(
+            Position::new(16, 16),
+            "wQ".parse().expect("test piece"),
+            true,
+        );
+        base.insert(
+            Position::new(17, 16),
+            "bQ".parse().expect("test piece"),
+            true,
+        );
+        base.last_moved = Some(("bQ".parse().expect("test piece"), Position::new(17, 16)));
+        base.last_move = (Some(Position::new(17, 15)), Some(Position::new(17, 16)));
+        base.stunned = Some("wQ".parse().expect("test piece"));
+
+        let mut moved = base.clone();
+        moved.last_moved = Some(("bQ".parse().expect("test piece"), Position::new(16, 15)));
+        assert_ne!(base, moved, "last_moved must count");
+
+        let mut travelled = base.clone();
+        travelled.last_move = (Some(Position::new(15, 15)), Some(Position::new(17, 16)));
+        assert_ne!(base, travelled, "last_move must count");
+
+        let mut unstunned = base.clone();
+        unstunned.stunned = None;
+        assert_ne!(base, unstunned, "stunned must count");
+
+        let mut pinned = base.clone();
+        pinned.pinned[0] = !pinned.pinned[0];
+        assert_ne!(base, pinned, "pinned must count");
+
+        let mut relocated = base.clone();
+        relocated.positions[0] = Some(Position::new(20, 20));
+        assert_ne!(base, relocated, "positions must count");
+
+        let mut extra = base.clone();
+        extra.insert(
+            Position::new(18, 16),
+            "bA1".parse().expect("test piece"),
+            true,
+        );
+        assert_ne!(base, extra, "an extra piece must count");
+
+        // A stack differing only above the top piece: same positions, different contents.
+        let mut stacked = base.clone();
+        stacked
+            .board
+            .get_mut(Position::new(16, 16))
+            .push_piece("bB1".parse().expect("test piece"));
+        assert_ne!(base, stacked, "stack contents must count");
     }
 
     #[test]
@@ -1311,6 +1440,67 @@ mod tests {
         assert_eq!(grown.storage_cells(), 1024);
         assert_eq!(small, grown);
         assert_eq!(Board::from_snapshot(&grown.snapshot()), small);
+    }
+
+    /// The clamp keeps wrong placements inside the window, so assert where the hive lands, not
+    /// just that it fits. Both axes get extent, or one axis only ever runs at width zero.
+    #[test]
+    fn recentering_puts_the_hive_in_the_middle() {
+        let centre = Position::initial_spawn_position();
+        for (q_len, r_len) in [(1usize, 1usize), (5, 1), (1, 5), (4, 3), (3, 8)] {
+            let mut board = Board::new();
+            let pieces = [
+                "wA1", "wA2", "wA3", "wG1", "wG2", "wG3", "wS1", "wS2", "bA1", "bA2", "bA3", "bG1",
+                "bG2",
+            ];
+            let cells = (0..q_len)
+                .map(|q| (q, 0))
+                .chain((1..r_len).map(|r| (0, r)))
+                .collect::<Vec<_>>();
+            for ((q, r), piece) in cells.into_iter().zip(pieces) {
+                board.insert(
+                    Position::new(11 + q as i32, 12 + r as i32),
+                    piece.parse().expect("test piece"),
+                    true,
+                );
+            }
+            board.recenter();
+            let (q_min, q_max) = (
+                board
+                    .all_taken_positions()
+                    .map(|p| p.q)
+                    .min()
+                    .expect("hive"),
+                board
+                    .all_taken_positions()
+                    .map(|p| p.q)
+                    .max()
+                    .expect("hive"),
+            );
+            let (r_min, r_max) = (
+                board
+                    .all_taken_positions()
+                    .map(|p| p.r)
+                    .min()
+                    .expect("hive"),
+                board
+                    .all_taken_positions()
+                    .map(|p| p.r)
+                    .max()
+                    .expect("hive"),
+            );
+            // Integer halving lands the box on the centre or one cell before it.
+            assert!(
+                (centre.q - q_min) - (q_max - centre.q) <= 1
+                    && (q_max - centre.q) - (centre.q - q_min) <= 1,
+                "hive {q_len}x{r_len} is off-centre on q: {q_min}..={q_max}"
+            );
+            assert!(
+                (centre.r - r_min) - (r_max - centre.r) <= 1
+                    && (r_max - centre.r) - (centre.r - r_min) <= 1,
+                "hive {q_len}x{r_len} is off-centre on r: {r_min}..={r_max}"
+            );
+        }
     }
 
     /// Shrink on recenter once the hive fits again, so play, undo, and restore agree.
