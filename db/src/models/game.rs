@@ -13,7 +13,7 @@ use ::nanoid::nanoid;
 use chrono::{DateTime, Datelike, TimeZone, Utc};
 use diesel::{prelude::*, ExpressionMethods, Insertable};
 use diesel_async::{AsyncConnection, RunQueryDsl};
-use hive_lib::{Color, GameControl, GameResult, GameStatus, GameType, History, State};
+use hive_lib::{Color, GameControl, GameResult, GameStatus, GameType, State};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use shared_types::{
@@ -1097,13 +1097,11 @@ impl Game {
             new_history.push(';');
         };
 
-        let his = History::new_from_str(&new_history).map_err(|e| DbError::InvalidInput {
-            info: String::from("Could not recover History from history string."),
-            error: e.to_string(),
-        })?;
-        let state = State::new_from_history(&his).map_err(|e| DbError::InvalidInput {
-            info: String::from("Could not recover State from History."),
-            error: e.to_string(),
+        let state = State::new_from_str(&new_history, &self.game_type).map_err(|e| {
+            DbError::InvalidInput {
+                info: String::from("Could not recover State from history string."),
+                error: e.to_string(),
+            }
         })?;
         let new_game_status = state.game_status.to_string();
         let next_player = if self.current_player_id == self.black_id {

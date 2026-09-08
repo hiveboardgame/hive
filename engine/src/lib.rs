@@ -1,6 +1,7 @@
 mod board;
 mod bug;
 mod bug_stack;
+mod canonical_hash;
 mod color;
 #[cfg(test)]
 mod corpus_tests;
@@ -14,7 +15,6 @@ mod game_error;
 mod game_result;
 mod game_status;
 mod game_type;
-mod hasher;
 mod history;
 mod mid_move_board;
 mod piece;

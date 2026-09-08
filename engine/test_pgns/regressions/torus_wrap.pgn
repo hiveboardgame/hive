@@ -1,0 +1,702 @@
+[GameType "Base+MLP"]
+[Date ""]
+[Event "hivegame.com"]
+[Site "hivegame.com/game/7tCO-CRnmhi7"]
+[Round ""]
+[White ""]
+[Black ""]
+[Result "*"]
+
+1. wL 
+2. bP \wL
+3. wM wL\
+4. bQ \bP
+5. wQ wM-
+6. bA1 bP/
+7. wA1 /wL
+8. bA1 wQ/
+9. wA2 wA1\
+10. bB1 bA1-
+11. wA2 bB1/
+12. bB2 \bA1
+13. wA1 \bB2
+14. bA2 /bQ
+15. wP /wM
+16. bA3 \bA2
+17. wS1 \wP
+18. bA2 -wS1
+19. wB1 wM\
+20. bA3 wA2-
+21. wA3 wP\
+22. bM /bQ
+23. wB1 \wQ
+24. bA2 wQ\
+25. wB1 bB2
+26. bA3 wA3\
+27. wB2 /wS1
+28. bS1 \bM
+29. wB2 wM\
+30. bM /wA1
+31. wL \wA1
+32. bS1 -wS1
+33. wB2 bM\
+34. bG1 -bS1
+35. wB2 bM
+36. bG2 bA2\
+37. wL bP\
+38. bG2 wB2\
+39. wM \bQ
+40. bL bA2\
+41. wA1 bL-
+42. bG3 \bS1
+43. wG1 \wA2
+44. bG3 bS1\
+45. wG1 wA2\
+46. bS2 bG1\
+47. wA2 /bS2
+48. bA3 /wA3
+49. wS2 wA1/
+50. bA3 wA3\
+51. wS2 bL\
+52. bA3 /wA3
+53. wA1 bA3\
+54. bG3 \bS1
+55. wG2 wA1-
+56. bG3 bS1\
+57. wG2 /bA3
+58. bG1 bS2\
+59. wA2 -bS2
+60. bG1 \bS2
+61. bG3 wL\
+62. wL \wS1
+63. wS1 \bA3
+64. bG2 wG1-
+65. wA3 bG2\
+66. bS2 \wG2
+67. wA1 bA3-
+68. bS2 bG1\
+69. wA2 /bS2
+70. bG1 wL\
+71. bG3 wP\
+72. pass 
+73. wS1 /wG2
+74. pass 
+75. wB2 bP
+76. pass 
+77. wA1 bA3\
+78. pass 
+79. wS1 wA1-
+80. pass 
+81. wS1 /bL
+82. pass 
+83. wS1 wS2-
+84. pass 
+85. wS1 bA1\
+86. pass 
+87. wQ bM\
+88. pass 
+89. wQ wB2\
+90. pass 
+91. wQ wP/
+92. pass 
+93. wB2 wL
+94. pass 
+95. wB2 bG1
+96. pass 
+97. wB2 wP
+98. pass 
+99. wB2 bG3
+100. pass 
+101. wQ \bA3
+102. pass 
+103. wQ \wG2
+104. pass 
+105. wB1 bM
+106. pass 
+107. wB1 bP
+108. pass 
+109. wB1 bQ
+110. pass 
+111. wM wB1
+112. pass 
+113. wM bP
+114. pass 
+115. wM bM
+116. pass 
+117. wM bP
+118. pass 
+119. wM wL
+120. pass 
+121. wM bG1
+122. pass 
+123. wA1 \bS2
+124. pass 
+125. wQ \bA3
+126. pass 
+127. wQ bS1\
+128. pass 
+129. wQ bS2\
+130. pass 
+131. wA2 bA3\
+132. pass 
+133. wQ /bS2
+134. pass 
+135. wM bS1
+136. pass 
+137. wA2 \wB1
+138. pass 
+139. wB1 bP
+140. pass 
+141. wB1 wL
+142. pass 
+143. wB1 bG1
+144. pass 
+145. wM bS1\
+146. pass 
+147. bS1 wM\
+148. pass 
+149. wP bS2\
+150. pass 
+151. wQ /wA1
+152. pass 
+153. wA1 bA3\
+154. pass 
+155. wP \wG2
+156. pass 
+157. bA3 bS2\
+158. pass 
+159. wA1 /bA3
+160. pass 
+161. wG2 \bS2
+162. pass 
+163. wA1 wQ\
+164. pass 
+165. wP wA1\
+166. pass 
+167. wA1 bA3\
+168. pass 
+169. wP wQ\
+170. pass 
+171. wQ wP\
+172. pass 
+173. wP /wG2
+174. pass 
+175. wA1 /wQ
+176. pass 
+177. wG2 bA3\
+178. pass 
+179. wP \bS2
+180. pass 
+181. wA1 \wQ
+182. pass 
+183. wG2 \wP
+184. pass 
+185. wG2 \wA1
+186. pass 
+187. bS2 \wM
+188. pass 
+189. wM bA3
+190. pass 
+191. wM wP\
+192. pass 
+193. wG2 \wP
+194. pass 
+195. wG2 bA3\
+196. pass 
+197. bA3 bS2\
+198. pass 
+199. wA1 \bS2
+200. pass 
+201. wP wM\
+202. pass 
+203. wQ /wG2
+204. pass 
+205. wQ wG2\
+206. pass 
+207. wQ bS1\
+208. pass 
+209. wG2 wB1\
+210. pass 
+211. bS1 /wM
+212. pass 
+213. bS1 \wM
+214. pass 
+215. wA1 \bS1
+216. pass 
+217. wB2 wG2
+218. pass 
+219. wB2 wB1
+220. pass 
+221. wB2 bS2
+222. pass 
+223. wB2 bS1
+224. pass 
+225. bA3 /wB2
+226. pass 
+227. wB2 bA3
+228. pass 
+229. wP wB2\
+230. pass 
+231. wM /wB2
+232. pass 
+233. wP \wM
+234. pass 
+235. wM \wB2
+236. pass 
+237. wA1 wB2\
+238. pass 
+239. wB2 wP\
+240. pass 
+241. bA3 \bS1
+242. pass 
+243. wA1 \bA3
+244. pass 
+245. wB2 wM\
+246. pass 
+247. wB2 bS1
+248. pass 
+249. wB2 bA3
+250. pass 
+251. wP \wM
+252. pass 
+253. wA1 wM\
+254. pass 
+255. wM \wB2
+256. pass 
+257. wP wB2/
+258. pass 
+259. wA1 bG3\
+260. pass 
+261. wQ /wG2
+262. pass 
+263. wQ bS2\
+264. pass 
+265. wQ bS1\
+266. pass 
+267. wQ /bS1
+268. pass 
+269. wB2 bS1
+270. pass 
+271. wB2 bS2
+272. pass 
+273. wB2 wL
+274. pass 
+275. wB2 bP
+276. pass 
+277. wB1 wB2\
+278. pass 
+279. wL bS1\
+280. pass 
+281. wA1 \wQ
+282. bG3 \bG1
+283. wB1 bG3
+284. pass 
+285. wP \bS2
+286. pass 
+287. bS2 \wB1
+288. pass 
+289. wB1 bS2
+290. pass 
+291. bS1 \wP
+292. pass 
+293. wB1 bS1
+294. pass 
+295. wP bA3\
+296. pass 
+297. wA1 /wM
+298. pass 
+299. wM wA1\
+300. pass 
+301. wA1 \bA3
+302. pass 
+303. wL wB1\
+304. pass 
+305. wP \wM
+306. pass 
+307. wQ bA3\
+308. pass 
+309. wA1 \wB1
+310. pass 
+311. bA3 /wA1
+312. pass 
+313. wP -bA3
+314. pass 
+315. wM bA3\
+316. pass 
+317. wL \bA3
+318. pass 
+319. wP /bA3
+320. pass 
+321. wA1 \wP
+322. pass 
+323. wP wB1\
+324. pass 
+325. wM /bA2
+326. pass 
+327. bS2 bA3\
+328. pass 
+329. wQ /bS2
+330. pass 
+331. wA1 /bG1
+332. pass 
+333. wG2 \bG3
+334. pass 
+335. wG2 bS2\
+336. pass 
+337. wA1 /wL
+338. bG1 \bG3
+339. bG3 wP\
+340. pass 
+341. wA1 bG3\
+342. pass 
+343. wG2 -wQ
+344. pass 
+345. wM \wQ
+346. pass 
+347. wG2 \wB1
+348. pass 
+349. wA1 /wM
+350. bG3 \wG2
+351. wA1 \bG3
+352. pass 
+353. wG2 /wM
+354. pass 
+355. wA1 bS2\
+356. bG3 \wM
+357. wA1 -bG3
+358. pass 
+359. wP bS2\
+360. pass 
+361. wQ wB1\
+362. pass 
+363. wP wM\
+364. pass 
+365. wG2 \wB1
+366. pass 
+367. wB1 bA3
+368. pass 
+369. wB1 bG3
+370. pass 
+371. bS2 wA1\
+372. pass 
+373. wA1 -bS2
+374. pass 
+375. wP bS2\
+376. pass 
+377. wQ bA3\
+378. pass 
+379. wM wA1\
+380. pass 
+381. wQ wB1\
+382. pass 
+383. wA1 \bS2
+384. pass 
+385. wP \wM
+386. pass 
+387. wA1 bS2\
+388. pass 
+389. bS2 wP/
+390. pass 
+391. wA1 \bS2
+392. pass 
+393. wM \wP
+394. pass 
+395. wP bS2\
+396. pass 
+397. wQ wM\
+398. bA3 \bB1
+399. wM bA3/
+400. bA1 /wQ
+401. wM -bA1
+402. pass 
+403. wP wQ\
+404. pass 
+405. wP bA1\
+406. pass 
+407. wP wM\
+408. pass 
+409. wA1 bA1\
+410. pass 
+411. wB1 bS2
+412. pass 
+413. wB1 wQ
+414. pass 
+415. wB1 wQ\
+416. pass 
+417. wP \bA1
+418. pass 
+419. bA1 \wQ
+420. pass 
+421. wA1 \bA1
+422. pass 
+423. wB1 wQ
+424. pass 
+425. wB1 bS2
+426. pass 
+427. wQ \wP
+428. pass 
+429. wM bA1\
+430. pass 
+431. wP wB1\
+432. pass 
+433. wM bG3\
+434. pass 
+435. wP wL\
+436. pass 
+437. wG2 bS1\
+438. pass 
+439. wM \bS1
+440. pass 
+441. wL wP\
+442. pass 
+443. wG2 bG3\
+444. pass 
+445. wB1 bG3
+446. pass 
+447. wB1 wP
+448. pass 
+449. wB1 bS1
+450. pass 
+451. wB1 bG1
+452. pass 
+453. wP \wB1
+454. bQ wA2-
+455. wA1 bQ/
+456. pass 
+457. wM wA2\
+458. pass 
+459. wA2 wA1\
+460. pass 
+461. wP \wM
+462. pass 
+463. wA2 bQ\
+464. pass 
+465. wM \bQ
+466. pass 
+467. wB1 wB2
+468. pass 
+469. wB1 wA2
+470. pass 
+471. wB1 wA1\
+472. pass 
+473. bQ wP\
+474. pass 
+475. wB1 wA2
+476. pass 
+477. wB1 wB2
+478. pass 
+479. wB1 bG1
+480. pass 
+481. wA1 wM\
+482. pass 
+483. bQ \wB1
+484. pass 
+485. wM \bQ
+486. pass 
+487. wA1 wP\
+488. pass 
+489. wP \bS1
+490. pass 
+491. bQ \wL
+492. pass 
+493. wL wB1\
+494. pass 
+495. wL bS1\
+496. pass 
+497. wM \wB1
+498. pass 
+499. wA1 /bL
+500. pass 
+501. wA2 -bA2
+502. pass 
+503. wP \wB2
+504. pass 
+505. wM \bM
+506. pass 
+507. wB1 wB2
+508. pass 
+509. wB1 bM
+510. pass 
+511. wP \bB2
+512. pass 
+513. wM wP/
+514. pass 
+515. wB2 wB1
+516. pass 
+517. wB2 bB2
+518. pass 
+519. wM \bA3
+520. pass 
+521. wP bA3/
+522. pass 
+523. wM wP\
+524. pass 
+525. wA3 wS2/
+526. bG2 wB2\
+527. bB1 wG1/
+528. pass 
+529. wA3 bB1-
+530. pass 
+531. wP \bB1
+532. pass 
+533. wG1 \wM
+534. pass 
+535. wA2 \wP
+536. pass 
+537. wP bA3\
+538. bG2 wS1\
+539. wA1 -bA2
+540. bG2 -wA1
+541. wA2 wM\
+542. bG2 wS1\
+543. wA2 bG2-
+544. pass 
+545. wB2 bA3
+546. pass 
+547. wB2 wP
+548. pass 
+549. wB2 wS1
+550. pass 
+551. wB2 bG2
+552. pass 
+553. wG1 wM\
+554. pass 
+555. wG1 wP\
+556. pass 
+557. wS1 wM\
+558. pass 
+559. wM \wB2
+560. pass 
+561. wG1 \bA2
+562. pass 
+563. bA2 wP\
+564. pass 
+565. bA2 \wS1
+566. pass 
+567. wS1 wP\
+568. pass 
+569. wA3 bB1/
+570. pass 
+571. wS1 wA3\
+572. pass 
+573. wA2 /bL
+574. pass 
+575. wA1 \wA2
+576. pass 
+577. wG1 wP\
+578. pass 
+579. wB1 bB2
+580. pass 
+581. wB1 bA3
+582. pass 
+583. wB1 bA2
+584. pass 
+585. wM wB1\
+586. pass 
+587. wP wM\
+588. pass 
+589. wB1 bB1
+590. pass 
+591. wA3 wB1\
+592. pass 
+593. wM wG1\
+594. pass 
+595. wS2 wP\
+596. pass 
+597. wS2 bA2\
+598. pass 
+599. wG1 wA3\
+600. pass 
+601. wA2 wS1\
+602. pass 
+603. wA1 \wB1
+604. bL wP\
+605. wA1 bL\
+606. pass 
+607. wA2 /wB2
+608. pass 
+609. wS2 \wM
+610. pass 
+611. wG1 \wB2
+612. pass 
+613. wS2 wB2\
+614. pass 
+615. wA1 bL-
+616. pass 
+617. wB2 wM
+618. pass 
+619. wB2 bL
+620. pass 
+621. wS2 wA1\
+622. pass 
+623. wG1 bG2\
+624. bG2 wS2/
+625. wA2 bG2/
+626. pass 
+627. wG1 wM\
+628. pass 
+629. wG1 wA3\
+630. pass 
+631. wG1 \wB1
+632. pass 
+633. wM wA3\
+634. pass 
+635. wA2 bG2-
+636. pass 
+637. wP \bG2
+638. pass 
+639. wS2 wA2-
+640. pass 
+641. wS2 wP/
+642. pass 
+643. wS2 wS1\
+644. pass 
+645. wS1 \wG1
+646. pass 
+647. wA1 /wB2
+648. pass 
+649. wA2 wB2\
+650. bG2 \wS2
+651. wA3 wM\
+652. pass 
+653. wA2 bG2/
+654. pass 
+655. wM wA2-
+656. pass 
+657. wA1 \wM
+658. pass 
+659. wB2 wA3
+660. bL wP/
+661. wA1 bL-
+662. pass 
+663. wB2 wP
+664. pass 
+665. wB2 bL
+666. pass 
+667. wM wA2\
+668. pass 
+669. wS2 wB2\
+670. pass 
+671. wA3 \wA1
+672. pass 
+673. wP bG2\
+674. pass 
+675. wA3 wS2\
+676. pass 
+677. wP wM/
+678. pass 
+679. wA2 /wB2
+680. pass 
+681. wB2 wA1
+682. pass 
+683. wS1 \wM
+684. pass 
+685. wG1 wB1\
+686. pass 
+687. wG1 \wP
+688. pass 
+689. wG1 wP-
+690. pass 
+691. wQ /bA1
+692. pass 
+693. wG1 \bG2
