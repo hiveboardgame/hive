@@ -292,3 +292,76 @@ fn hostile_documents_only_error() {
         }
     });
 }
+
+/// ANALYSIS_DOC_JSON=../doc.json cargo test -p apis --release exported_document -- --ignored --nocapture
+#[test]
+#[ignore = "needs ANALYSIS_DOC_JSON pointing at an exported analysis document"]
+fn exported_document_reconstructs_every_node() {
+    let path = std::env::var("ANALYSIS_DOC_JSON").expect("set ANALYSIS_DOC_JSON");
+    let json = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {path}: {e}"));
+    let analysis = LoadedAnalysis::from_json(&json)
+        .expect("document loads")
+        .state;
+    let no_checkpoints = std::collections::HashMap::new();
+    let mut ids: Vec<NodeId> = analysis.arena.nodes.keys().copied().collect();
+    ids.sort_unstable();
+    let (mut small_nodes, mut big_nodes, mut max_extent, mut deepest) = (0usize, 0usize, 0, 0);
+    for id in ids {
+        let node_path = analysis.arena.path_to(id).expect("nodes hang off the root");
+        let state = analysis
+            .arena
+            .replay(&node_path, analysis.game_type, &analysis.checkpoints)
+            .unwrap_or_else(|| panic!("node {id:?} must replay with checkpoints"));
+        let scratch = analysis
+            .arena
+            .replay(&node_path, analysis.game_type, &no_checkpoints)
+            .unwrap_or_else(|| panic!("node {id:?} must replay from scratch"));
+        assert_eq!(
+            state, scratch,
+            "checkpointed reconstruction diverged at node {id:?}"
+        );
+        let (mut q_min, mut q_max, mut r_min, mut r_max) = (i32::MAX, i32::MIN, i32::MAX, i32::MIN);
+        for p in state.board.positions.iter().flatten() {
+            assert!(
+                (2..=30).contains(&p.q) && (2..=30).contains(&p.r),
+                "hive hugs the seam at node {id:?}"
+            );
+            q_min = q_min.min(p.q);
+            q_max = q_max.max(p.q);
+            r_min = r_min.min(p.r);
+            r_max = r_max.max(p.r);
+        }
+        if state.board.positions.iter().flatten().next().is_some() {
+            let extent = (q_max - q_min).max(r_max - r_min);
+            max_extent = max_extent.max(extent);
+            deepest = deepest.max(state.turn);
+            let small = state.board.storage_cells() == 256;
+            assert_eq!(
+                small,
+                extent <= 11,
+                "storage does not match the hive extent ({extent}) at node {id:?}"
+            );
+            if small {
+                for p in state.board.positions.iter().flatten() {
+                    assert!(
+                        (10..=21).contains(&p.q) && (10..=21).contains(&p.r),
+                        "small storage but hive outside the window at node {id:?}"
+                    );
+                }
+                small_nodes += 1;
+            } else {
+                big_nodes += 1;
+            }
+            hop::parse(&state_hop(&state))
+                .unwrap_or_else(|e| panic!("position at node {id:?} must reload: {e}"));
+        }
+    }
+    println!(
+        "nodes: {} (small {small_nodes}, big {big_nodes}), max extent {max_extent}, deepest ply {deepest}",
+        analysis.arena.nodes.len()
+    );
+    assert!(
+        big_nodes > 0,
+        "the document was expected to outgrow the small storage"
+    );
+}
