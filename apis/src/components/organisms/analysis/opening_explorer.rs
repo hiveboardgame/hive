@@ -23,10 +23,14 @@ use shared_types::{
 };
 use std::{collections::HashMap, str::FromStr};
 
-/// Map every legal move from `state` to the canonical hash of the resulting position. This lets
-/// the client translate a server suggestion (keyed by the resulting hash) back into a concrete
-/// local move, independent of the rotational frame the suggestion's notation was authored in.
-fn local_moves(state: &State) -> HashMap<u64, (Piece, Position)> {
+/// Map every legal move from `state` to the canonical hash of the resulting position, together
+/// with the move's notation regenerated fresh against the current (correctly-oriented) board.
+/// This lets the client translate a server suggestion (keyed by the resulting hash) back into a
+/// concrete local move and label, independent of the rotational frame the suggestion's notation
+/// was authored in — the server's `piece`/`position` strings are only a display label from
+/// whichever orientation the underlying game happened to be recorded in, and are not
+/// transformed to match the current board.
+fn local_moves(state: &State) -> HashMap<u64, (Piece, Position, String)> {
     let mut map = HashMap::new();
     let base_len = state.hashes.len();
     let color = state.turn_color;
@@ -36,7 +40,8 @@ fn local_moves(state: &State) -> HashMap<u64, (Piece, Position)> {
             if s.play_turn_from_position(piece, target).is_ok() {
                 // Use the move hash, not the auto-pass hash that may follow it.
                 if let Some(&h) = s.hashes.get(base_len) {
-                    map.entry(h).or_insert((piece, target));
+                    let label = notation_label(&s, piece, target);
+                    map.entry(h).or_insert((piece, target, label));
                 }
             }
         }
@@ -49,13 +54,25 @@ fn local_moves(state: &State) -> HashMap<u64, (Piece, Position)> {
                 let mut s = state.clone();
                 if s.play_turn_from_position(piece, target).is_ok() {
                     if let Some(&h) = s.hashes.get(base_len) {
-                        map.entry(h).or_insert((piece, target));
+                        let label = notation_label(&s, piece, target);
+                        map.entry(h).or_insert((piece, target, label));
                     }
                 }
             }
         }
     }
     map
+}
+
+/// Render a move's notation as `"<piece> <pos>"`, matching `History`'s own display join
+/// (`piece pos`), from a board state where the move has already been played.
+fn notation_label(state_after_move: &State, piece: Piece, target: Position) -> String {
+    let (piece_str, pos_str) = state_after_move.move_notation(piece, target);
+    if pos_str.is_empty() {
+        piece_str
+    } else {
+        format!("{piece_str} {pos_str}")
+    }
 }
 
 fn pct(part: i64, total: i64) -> f64 {
@@ -236,7 +253,7 @@ pub fn OpeningExplorer() -> impl IntoView {
 fn render_response(
     response: ExplorerResponse,
     handlers: RowHandlers,
-    local: &HashMap<u64, (Piece, Position)>,
+    local: &HashMap<u64, (Piece, Position, String)>,
     search_href: Option<String>,
 ) -> impl IntoView {
     let header = response.position_total;
@@ -253,7 +270,7 @@ fn render_response(
         .into_iter()
         .filter(|m| m.total > 0)
         .map(|m| {
-            let local_move = local.get(&(m.next_hash as u64)).copied();
+            let local_move = local.get(&(m.next_hash as u64)).cloned();
             move_row(m, local_move, handlers)
         })
         .collect_view();
@@ -402,33 +419,42 @@ fn top_game_row(g: crate::responses::GameResponse) -> impl IntoView {
 
 fn move_row(
     m: ExplorerMove,
-    local_move: Option<(Piece, Position)>,
+    local_move: Option<(Piece, Position, String)>,
     handlers: RowHandlers,
 ) -> impl IntoView {
-    let label = if m.position.is_empty() {
-        m.piece.clone()
-    } else {
-        format!("{} {}", m.piece, m.position)
-    };
+    // Prefer the label regenerated from the local, correctly-oriented board (matches the move
+    // that gets played); fall back to the server's representative label — which may have been
+    // authored in a different board orientation — only when we can't map the suggestion onto a
+    // local move at all.
+    let label = local_move
+        .as_ref()
+        .map(|(_, _, label)| label.clone())
+        .unwrap_or_else(|| {
+            if m.position.is_empty() {
+                m.piece.clone()
+            } else {
+                format!("{} {}", m.piece, m.position)
+            }
+        });
     let total = m.total;
     let (white, draws, black) = (m.white_wins, m.draws, m.black_wins);
     let mover_wins = if handlers.white_to_move { white } else { black };
     let score = pct(mover_wins, total); // win share; draws shown separately in the bar
-                                        // Prefer the locally-derived piece (matches the move that gets played); fall back to the
-                                        // server's representative label when we can't map the suggestion onto a local move.
     let icon_piece = local_move
-        .map(|(piece, _)| piece)
+        .as_ref()
+        .map(|(piece, _, _)| *piece)
         .or_else(|| Piece::from_str(&m.piece).ok());
+    let play_move = local_move.as_ref().map(|(piece, pos, _)| (*piece, *pos));
     view! {
         <tr
             class="border-t transition-colors cursor-pointer border-black/10 dark:border-white/10 dark:hover:bg-pillbug-teal/15 hover:bg-blue-light/70"
             on:click=move |_| {
-                if let Some(mv) = local_move {
+                if let Some(mv) = play_move {
                     handlers.play.run(mv);
                 }
             }
             on:mouseenter=move |_| {
-                if let Some(mv) = local_move {
+                if let Some(mv) = play_move {
                     handlers.preview.run(mv);
                 }
             }
