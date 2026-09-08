@@ -2,9 +2,13 @@ mod board;
 mod bug;
 mod bug_stack;
 mod color;
+#[cfg(test)]
+mod corpus_tests;
 mod dfs_info;
 mod direction;
 mod dsl;
+#[cfg(test)]
+mod fixture_check;
 mod game_control;
 mod game_error;
 mod game_result;

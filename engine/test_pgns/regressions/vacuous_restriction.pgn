@@ -1,0 +1,98 @@
+[GameType "Base+MLP"]
+[Date ""]
+[Event "hivegame.com"]
+[Site "hivegame.com/game/lYtE84YtiA_9"]
+[Round ""]
+[White ""]
+[Black ""]
+[Result "1/2-1/2"]
+
+1. wL 
+2. bP -wL
+3. wP wL-
+4. bQ \bP
+5. wQ wP\
+6. bS1 /bP
+7. wS1 \wP
+8. bS1 /wQ
+9. wS1 \bQ
+10. bA1 /bS1
+11. wM wQ/
+12. bA1 wM/
+13. wA1 wM\
+14. bA1 wA1\
+15. wB1 -wS1
+16. bM bA1\
+17. wB1 /wS1
+18. bM -wB1
+19. wB2 wS1/
+20. bM wB1
+21. wB2 bQ/
+22. bA1 wB2/
+23. wA2 \wM
+24. bA2 /bM
+25. wA1 /bA2
+26. bS2 /bS1
+27. wA2 /bS2
+28. bA3 \bA1
+29. wA3 \wM
+30. bA3 wM-
+31. wA3 \bA1
+32. bB1 bS1\
+33. wA2 bB1\
+34. bS2 wA2\
+35. wS2 \wM
+36. bS2 wQ\
+37. wG1 wA3/
+38. bL bA3\
+39. wG1 \wB2
+40. bA1 wL\
+41. wQ \bA3
+42. bG1 /bL
+43. wB2 bQ
+44. bA1 \wS2
+45. wA3 wG1\
+46. bB2 /bP
+47. wG2 wA3/
+48. bA1 wG2/
+49. wG1 wA3\
+50. bM wB2
+51. wG3 \wB1
+52. wG1 bP\
+53. wG3 wB1\
+54. bA1 \wS2
+55. wA1 -bA2
+56. bB2 wG1
+57. wG2 bA2\
+58. wG3 /bP
+59. wG2 \bA2
+60. bB2 wL
+61. wQ wS2/
+62. bA1 \wQ
+63. wA1 \wB1
+64. bS1 /wA2
+65. wS1 wA3-
+66. bB2 bP
+67. wA1 \bM
+68. bA2 wQ-
+69. wG2 wA3\
+70. bB2 wG1
+71. wS1 \wA1
+72. bG2 bB2\
+73. wS1 /wB1
+74. bG3 bL\
+75. wS1 /wG3
+76. bB2 bP
+77. wB1 \wG3
+78. bA2 wS1\
+79. wG2 \wB1
+80. bB2 wB1
+81. wA3 \wL
+82. bB2 wG2
+83. wA1 \wA3
+84. bB2 wB1
+85. wA1 \bM
+86. bA2 -wS1
+87. wA1 \wA3
+88. bA2 wS1\
+89. wA1 \bM

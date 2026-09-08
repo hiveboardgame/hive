@@ -154,7 +154,7 @@ pub(super) fn HistoryRow(row: VisibleRow, value: Option<MoveDelta>) -> impl Into
     let is_current = Memo::new(move |_| analysis.store.selected_node_id() == node_id);
     let variations_open = Memo::new(move |_| analysis.store.variations_open(node_id));
     let onclick = move |_| {
-        analysis.store.select_node(node_id, game_state);
+        analysis.select_node(node_id, game_state);
         analysis.sync_reserve_from_game_state(game_state);
     };
     let history_index = value.as_ref().and_then(|value| value.turn.checked_sub(1));
