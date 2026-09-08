@@ -203,8 +203,14 @@ pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>)
             "relative col-start-1 row-start-1 col-span-8 row-span-6"
         }
     };
-    let history_style =
-        move || board_history_style(board_view.get(), game_status.get(), last_turn(), in_analysis);
+    let history_style = move || {
+        board_history_style(
+            board_view.get(),
+            game_status.get(),
+            last_turn(),
+            in_analysis,
+        )
+    };
 
     let viewbox_string =
         move || viewbox_signal.with(|vb| format!("{} {} {} {}", vb.x, vb.y, vb.width, vb.height));
