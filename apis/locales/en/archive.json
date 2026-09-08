@@ -18,6 +18,8 @@
   "expansions": "Expansions",
   "with_expansions": "With expansions",
   "base_only": "Base only",
+  "position": "Position (HOP or hash)",
+  "position_placeholder": "Paste a HOP or a position hash",
   "rating_range": "Rating range",
   "min": "Min",
   "max": "Max",
