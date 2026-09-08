@@ -203,19 +203,8 @@ pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>)
             "relative col-start-1 row-start-1 col-span-8 row-span-6"
         }
     };
-    let history_style = move || match board_view.get() {
-        BoardView::Live => "",
-        BoardView::History { .. } => match game_status.get() {
-            GameStatus::Finished(_) | GameStatus::Adjudicated => "",
-            _ => {
-                if last_turn() {
-                    ""
-                } else {
-                    "sepia-[.75]"
-                }
-            }
-        },
-    };
+    let history_style =
+        move || board_history_style(board_view.get(), game_status.get(), last_turn(), in_analysis);
 
     let viewbox_string =
         move || viewbox_signal.with(|vb| format!("{} {} {} {}", vb.x, vb.y, vb.width, vb.height));
@@ -881,6 +870,32 @@ fn setup_stack_expansion_events(
     });
 }
 
+/// A non-final history position is dimmed with a sepia filter to signal it isn't live play -
+/// except in analysis, which is always browsing non-live positions and must never dim.
+fn board_history_style(
+    view: BoardView,
+    game_status: GameStatus,
+    last_turn: bool,
+    in_analysis: bool,
+) -> &'static str {
+    if in_analysis {
+        return "";
+    }
+    match view {
+        BoardView::Live => "",
+        BoardView::History { .. } => match game_status {
+            GameStatus::Finished(_) | GameStatus::Adjudicated => "",
+            _ => {
+                if last_turn {
+                    ""
+                } else {
+                    "sepia-[.75]"
+                }
+            }
+        },
+    }
+}
+
 fn stack_expansion_reset_key(
     view: BoardView,
     state: &State,
@@ -985,4 +1000,69 @@ fn will_svg_be_visible(g_ref: NodeRef<svg::G>, viewbox: &ViewBoxControls) -> boo
         && (bbox_mid_x < viewbox_right)
         && (bbox_mid_y > viewbox.y)
         && (bbox_mid_y < viewbox_bottom)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::board_history_style;
+    use crate::providers::game_state::BoardView;
+    use hive_lib::{Color, GameResult, GameStatus};
+
+    #[test]
+    fn analysis_never_dims_a_non_final_history_position() {
+        assert_eq!(
+            board_history_style(
+                BoardView::History { turn: Some(3) },
+                GameStatus::InProgress,
+                false,
+                true,
+            ),
+            "",
+            "analysis must never sepia-dim the board, even mid-history",
+        );
+    }
+
+    #[test]
+    fn live_play_dims_a_non_final_history_position() {
+        assert_eq!(
+            board_history_style(
+                BoardView::History { turn: Some(3) },
+                GameStatus::InProgress,
+                false,
+                false,
+            ),
+            "sepia-[.75]",
+            "live play must still dim a non-final history position",
+        );
+    }
+
+    #[test]
+    fn live_play_does_not_dim_the_last_turn_or_a_finished_game() {
+        assert_eq!(
+            board_history_style(
+                BoardView::History { turn: Some(5) },
+                GameStatus::InProgress,
+                true,
+                false,
+            ),
+            "",
+        );
+        assert_eq!(
+            board_history_style(
+                BoardView::History { turn: Some(3) },
+                GameStatus::Finished(GameResult::Winner(Color::White)),
+                false,
+                false,
+            ),
+            "",
+        );
+    }
+
+    #[test]
+    fn live_view_never_dims() {
+        assert_eq!(
+            board_history_style(BoardView::Live, GameStatus::InProgress, false, false),
+            "",
+        );
+    }
 }
