@@ -51,6 +51,7 @@ jobs:
         working-directory: apis/end2end
         env:
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+          PLAYWRIGHT_DATABASE_URL: postgres://hive-dev@127.0.0.1:5433/hive-local
         run: npx playwright test tests/challenges.spec.ts tests/gameplay.spec.ts
       - name: Save the Playwright HTML report, traces, and server logs as a downloadable artifact
         id: e2e_artifacts

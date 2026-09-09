@@ -1,4 +1,4 @@
-import type { Page } from "playwright/test";
+import type { Page } from "@playwright/test";
 
 const diagnosticsByPage = new WeakMap<Page, string[]>();
 

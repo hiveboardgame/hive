@@ -6,12 +6,19 @@
   "scripts": {
     "test": "playwright test",
     "test:reporter": "playwright test --config=reporters/playwright.config.ts",
-    "test:unit": "playwright test --config=unit/playwright.config.ts"
+    "test:unit": "playwright test --config=unit/playwright.config.ts",
+    "test:pool": "playwright test --config=integration/playwright.config.ts",
+    "test:recovery": "playwright test --config=integration/recovery.config.ts",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@playwright/test": "^1.63.0"
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.5.0",
+    "@types/pg": "^8.23.1",
+    "pg": "^8.23.0",
+    "typescript": "^7.0.2"
   }
 }

@@ -1,4 +1,4 @@
-import type { Page } from "playwright/test";
+import type { Page } from "@playwright/test";
 
 export async function dismissOnboardingBanners(page: Page) {
   // Onboarding prompts can appear after hydration and cover mobile reserves.

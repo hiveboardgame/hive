@@ -1,5 +1,5 @@
-import { expect, test, type BrowserContext, type Route } from "playwright/test";
-import { stripSecureCookiesForWebKit } from "../tests/test_utils/session_cookies";
+import { expect, test, type BrowserContext, type Route } from "@playwright/test";
+import { stripSecureCookiesForWebKit } from "../support/browser/session_cookies";
 
 function contextFor(browserName: string) {
   const routes: Array<(url: URL) => boolean> = [];
