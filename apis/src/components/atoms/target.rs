@@ -13,8 +13,11 @@ pub fn Target(
     level: Signal<usize>,
     interaction: HivegroundInteraction,
 ) -> impl IntoView {
+    let aria_label = format!("Move to board position {}, {}", position.q, position.r);
     view! {
         <g
+            role="button"
+            aria-label=aria_label
             data-hg-target-q=position.q
             data-hg-target-r=position.r
             on:click=move |evt| interaction.click_target(evt, position)
