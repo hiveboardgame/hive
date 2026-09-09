@@ -1,0 +1,31 @@
+name: Save the Playwright report and server diagnostics as a downloadable artifact
+description: Collect Docker diagnostics and upload them with the Playwright report.
+
+outputs:
+  artifact-url:
+    description: Download URL for the report and diagnostics artifact.
+    value: ${{ steps.upload.outputs.artifact-url }}
+
+runs:
+  using: composite
+  steps:
+    - name: Collect container status
+      shell: bash
+      run: docker compose ps --all > test-compose-status.log 2>&1
+    - name: Collect server logs
+      if: ${{ !cancelled() }}
+      shell: bash
+      run: |
+        docker compose logs --no-color > test-compose.log 2>&1
+    - name: Upload the HTML report, traces, and server diagnostics as one artifact
+      id: upload
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@v7.0.1
+      with:
+        name: e2e-results
+        path: |
+          apis/end2end/playwright-report/
+          test-compose-status.log
+          test-compose.log
+        retention-days: 7
+        if-no-files-found: error
