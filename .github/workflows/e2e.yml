@@ -1,0 +1,67 @@
+name: Test run
+
+on:
+  workflow_dispatch:
+  # Temporary branch-validation trigger; remove after validation in Actions.
+  push:
+    branches:
+      - testware_finally
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  deploy_and_test:
+    name: Test run
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      TEST_MODE_DOCKER: "true"
+    steps:
+      - name: Check out the revision under test
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.sha }}
+      - name: Set up Node.js and cache npm dependencies
+        uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '24.21.0'
+          cache: npm
+          cache-dependency-path: apis/end2end/package-lock.json
+      - name: Build Docker images and create the Hive test containers
+        run: docker compose create --build
+      - name: Start the Hive test stack and wait for healthy services
+        shell: bash
+        run: |
+          docker compose up --detach
+          docker compose logs --follow --no-color --no-log-prefix app &
+          log_stream_pid=$!
+          trap 'kill "$log_stream_pid" 2>/dev/null || true' EXIT
+          docker compose up --wait --wait-timeout 1200
+      - name: Install npm dependencies and Playwright browsers
+        working-directory: apis/end2end
+        run: |
+          npm ci
+          npx playwright install --with-deps
+      - name: Run challenge and gameplay tests across browsers
+        id: playwright_tests
+        working-directory: apis/end2end
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+        run: npx playwright test tests/challenges.spec.ts tests/gameplay.spec.ts
+      - name: Save the Playwright HTML report, traces, and server logs as a downloadable artifact
+        id: e2e_artifacts
+        if: ${{ !cancelled() }}
+        uses: ./.github/hive-test-stack-diagnostics
+      - name: Show pass/fail results and the report download link in the GitHub Actions summary
+        if: ${{ !cancelled() && steps.playwright_tests.outcome != 'skipped' }}
+        working-directory: apis/end2end
+        env:
+          PLAYWRIGHT_REPORT_URL: ${{ steps.e2e_artifacts.outputs.artifact-url }}
+        run: node reporters/publish-summary.mjs
+      - name: Remove the Hive test containers and volumes
+        if: always()
+        run: docker compose down --volumes --remove-orphans

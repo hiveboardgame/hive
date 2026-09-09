@@ -1,0 +1,7 @@
+-- All fixture-owned records reference these users and use ON DELETE CASCADE.
+DELETE FROM users
+WHERE id IN (
+    '00000000-0000-4000-8000-000000000001',
+    '00000000-0000-4000-8000-000000000002',
+    '00000000-0000-4000-8000-000000000003'
+);
