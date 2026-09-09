@@ -1,7 +1,7 @@
-import { test } from "playwright/test";
+import { test } from "@playwright/test";
 import { acceptChallenge, createDirectChallenge } from "./challenges";
-import { showControlsIfMobile } from "./game_controls";
-import type { Player } from "./player";
+import { showControlsIfMobile } from "./controls";
+import type { Player } from "../browser/player";
 
 export async function startGame({ white, black, isMobileLayout }: {
   white: Player;
@@ -9,7 +9,7 @@ export async function startGame({ white, black, isMobileLayout }: {
   isMobileLayout: boolean;
 }) {
   await test.step(`Create a white challenge for ${black.username}`, async () => {
-    await createDirectChallenge(white.page, black.username, "White");
+    await createDirectChallenge(white, black, "White");
   }, { box: true });
 
   await test.step(`Accept ${white.username}'s challenge as ${black.username}`, async () => {

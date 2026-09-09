@@ -1,4 +1,4 @@
-import { expect, test } from "playwright/test";
+import { expect, test } from "@playwright/test";
 
 test.describe("Home page", () => {
   // Include the 45-second hydration wait and the remaining navigation checks.

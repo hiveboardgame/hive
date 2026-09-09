@@ -1,8 +1,8 @@
-import { expect, test } from "./fixtures";
-import { boardPiece, expectPieceAt, movePiece, placePiece } from "./test_utils/board";
-import { confirmControl } from "./test_utils/game_controls";
-import { chatControl, historyControl, reviewHistory, showTab } from "./test_utils/game_panels";
-import { startGame } from "./test_utils/game_setup";
+import { expect, test } from "../support/fixtures";
+import { boardPiece, expectPieceAt, movePiece, placePiece } from "../support/game/board";
+import { confirmControl } from "../support/game/controls";
+import { chatControl, historyControl, reviewHistory, showTab } from "../support/game/panels";
+import { startGame } from "../support/game/setup";
 
 const boardPositions = {
   openingAnt: "16, 16",
@@ -168,8 +168,8 @@ test.describe("Gameplay", () => {
     }, { box: true });
 
     await test.step("Exchange chat messages", async () => {
-      const firstMessage = "Hello from user_1";
-      const secondMessage = "Hello from user_2";
+      const firstMessage = `Hello from ${players.userOne.username}`;
+      const secondMessage = `Hello from ${players.userTwo.username}`;
       const userOneChatControl = chatControl(whitePage);
       const userTwoChatControl = chatControl(blackPage);
       const unreadAlert = /ui-button-danger|ui-header-action-alert/;
@@ -210,7 +210,7 @@ test.describe("Gameplay", () => {
       await confirmControl(whitePage, "Resign");
       for (const player of [whitePage, blackPage]) {
         await expect(
-          player.getByText("user_2 won by resignation", { exact: true }),
+          player.getByText(`${players.userTwo.username} won by resignation`, { exact: true }),
         ).toBeVisible();
       }
     }, { box: true });

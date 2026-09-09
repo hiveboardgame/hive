@@ -1,13 +1,13 @@
-import { expect, type Page, test } from "playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { dismissOnboardingBanners } from "./onboarding";
 import { stripSecureCookiesForWebKit } from "./session_cookies";
 
-export async function signIn(page: Page, username: string) {
+export async function signIn(page: Page, username: string, applicationURL: string) {
   await dismissOnboardingBanners(page);
   // WebKit refuses to store Secure cookies served over HTTP, even on localhost.
   await stripSecureCookiesForWebKit(
     page.context(),
-    new URL("/login", test.info().project.use.baseURL).href,
+    applicationURL,
   );
   await page.goto("/login");
   await page.getByLabel("Email").fill(`${username}@example.test`);

@@ -1,4 +1,4 @@
-import type { Page } from "playwright/test";
+import type { Page } from "@playwright/test";
 
 export async function confirmControl(page: Page, title: string) {
   const control = page.getByTitle(title);

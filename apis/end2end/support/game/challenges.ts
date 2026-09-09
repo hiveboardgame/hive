@@ -1,23 +1,26 @@
-import { expect, type Page } from "playwright/test";
-import type { Player } from "./player";
+import { expect, type Page } from "@playwright/test";
+import { publicTimeControl } from "../accounts/catalog";
+import type { Player } from "../browser/player";
 
 export type ChallengeColor = "White" | "Black" | "Random";
 
 export async function createDirectChallenge(
-  page: Page,
-  opponentUsername: string,
+  { page }: Player,
+  opponent: Player,
   color: ChallengeColor,
 ) {
-  await page.goto(`/@/${opponentUsername}`);
+  await page.goto(`/@/${opponent.username}`);
   await expect(page.getByRole("link", { name: "Login", exact: true })).toBeHidden();
   const challenge = page.getByTitle("Challenge to a game");
   await expect(challenge).toBeVisible();
   await challenge.click();
-  await expect(page.getByText(`Opponent: ${opponentUsername}`)).toBeVisible();
+  await expect(page.getByText(`Opponent: ${opponent.username}`)).toBeVisible();
   await page.getByTitle(color, { exact: true }).click();
 }
 
-export async function createPublicChallenge(page: Page, timeControl: string) {
+export async function createPublicChallenge(player: Player) {
+  const { page } = player;
+  const timeControl = publicTimeControl(player);
   await page.goto("/");
   await page.getByRole("button", { name: timeControl, exact: true }).click();
 }
@@ -40,12 +43,12 @@ export async function acceptChallenge({ challenger, opponent }: {
   await expect(opponent.page).toHaveURL(challenger.page.url());
 }
 
-export async function declineChallenge(page: Page, challengerUsername: string) {
-  await challengeFrom(page, challengerUsername)
+export async function declineChallenge({ page }: Player, challenger: Player) {
+  await challengeFrom(page, challenger.username)
     .getByRole("button", { name: "Decline Challenge", exact: true }).click();
 }
 
-export async function cancelChallenge(page: Page, creatorUsername: string) {
-  await challengeFrom(page, creatorUsername)
+export async function cancelChallenge(creator: Player) {
+  await challengeFrom(creator.page, creator.username)
     .getByRole("button", { name: "Cancel Challenge", exact: true }).click();
 }

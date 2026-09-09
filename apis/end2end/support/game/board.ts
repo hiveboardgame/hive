@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page } from "playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 
 export function boardPiece(page: Page, pieceName: string): Locator {
   return page.getByRole("button", { name: `${pieceName} on board`, exact: true });

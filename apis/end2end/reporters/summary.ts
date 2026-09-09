@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { stripVTControlCharacters } from "node:util";
 
 export type Status = "passed" | "failed" | "flaky" | "skipped" | "timed out"
@@ -112,8 +113,18 @@ function stepLines(steps: Step[], depth = 0): string {
     + stepLines(step.children, depth + 1)).join("");
 }
 
+function caseAnchor(scenario: Scenario) {
+  return `steps-${createHash("sha256").update(JSON.stringify([scenario.key, scenario.project])).digest("hex")}`;
+}
+
+function caseResult(scenario: Scenario) {
+  const duration = scenario.attempts.reduce((total, attempt) => total + attempt.duration, 0);
+  return `${labels[scenario.status]}${scenario.attempts.length ? ` · ${time(duration)}` : ""}`;
+}
+
 function details(summary: Summary, scenario: Scenario) {
-  return `<details>\n<summary>${labels[scenario.status]} — ${escapeText(scenario.feature)}: ${escapeText(scenario.title)} · ${projectName(scenario.project)}</summary>\n\n`
+  return `<details>\n<summary>${projectName(scenario.project)} · ${caseResult(scenario)}</summary>\n\n`
+    + `<a name="${caseAnchor(scenario)}"></a>\n\n`
     + `${sourceLink(summary, scenario.location)}\n\n`
     + (scenario.attempts.length ? scenario.attempts.map(attempt =>
       attemptHeading(attempt)
@@ -123,58 +134,87 @@ function details(summary: Summary, scenario: Scenario) {
     + "</details>\n\n";
 }
 
+function testDetails(summary: Summary, cases: Scenario[]) {
+  const first = cases[0];
+  const ordered = [...cases].sort((a, b) => summary.projects.indexOf(a.project) - summary.projects.indexOf(b.project));
+  return `<details>\n<summary>${escapeText(first.feature)}: ${escapeText(first.title)}</summary>\n\n`
+    + ordered.map(scenario => details(summary, scenario)).join("")
+    + "</details>\n\n";
+}
+
+function matrix(summary: Summary, feature: string, scenarios: Scenario[], included?: Set<string>) {
+  const rows = Map.groupBy(scenarios, scenario => scenario.key);
+  return `### ${escapeText(feature)}\n\n`
+    + `| Scenario | ${summary.projects.map(projectName).join(" | ")} |\n`
+    + `| --- | ${summary.projects.map(() => "---").join(" | ")} |\n`
+    + [...rows.values()].map(cases => {
+      const cells = summary.projects.map(project => {
+        const scenario = cases.find(candidate => candidate.project === project);
+        if (!scenario) return "— Not selected";
+        const result = caseResult(scenario);
+        // GitHub prefixes custom anchor names during Markdown sanitization.
+        // Target the rendered name so native navigation reveals closed details.
+        return !included || included.has(scenario.key)
+          ? `[${result}](#user-content-${caseAnchor(scenario)})`
+          : `${result} · Details omitted`;
+      });
+      return `| ${escapeText(cases[0].title)} | ${cells.join(" | ")} |\n`;
+    }).join("") + "\n";
+}
+
 export function renderSummary(summary: Summary, maxBytes = 900_000) {
   const counts = Object.keys(labels).map(status => {
     const count = summary.scenarios.filter(scenario => scenario.status === status).length;
     return `${count} ${status}`;
   });
   const scenarioCount = new Set(summary.scenarios.map(scenario => scenario.key)).size;
-  const sections = [
-    `# Playwright results: ${escapeText(summary.status)}\n\n`
+  const sections: { text: string; key?: string; render?: (included: Set<string>) => string }[] = [
+    { text: `# Playwright results: ${escapeText(summary.status)}\n\n`
       + `**${scenarioCount} scenarios · ${summary.scenarios.length} browser/layout cases · ${time(summary.duration)} elapsed**\n\n`
       + `${counts.join(" · ")}\n\n`
       + `Coverage: ${summary.projects.map(projectName).join(", ") || "No projects executed"}.\n\n`
-      + "Case durations include all attempts. Step durations are nested and must not be added together.\n\n",
+      + "Case durations include all attempts. Step durations are nested and must not be added together.\n\n"
+      + "Select a matrix result to open its test and browser/layout steps.\n\n" },
   ];
   if (summary.errors.length) {
-    sections.push("## Run errors\n\n" + errorQuotes(summary.errors));
+    sections.push({ text: "## Run errors\n\n" + errorQuotes(summary.errors) });
   }
   const problems = summary.scenarios.filter(needsAttention);
-  if (problems.length) sections.push("## Needs attention\n\n", ...problems.map(scenario => attention(summary, scenario)));
+  if (problems.length) sections.push({ text: "## Needs attention\n\n" }, ...problems.map(scenario => ({ text: attention(summary, scenario) })));
 
   // Use source identity as well as titles: equally named tests in different
   // files or describe groups must never overwrite each other in the matrix.
   const features = Map.groupBy(summary.scenarios, scenario => scenario.feature);
-  sections.push("## Scenario matrix\n\n");
+  sections.push({ text: "## Scenario matrix\n\n" });
   for (const [feature, scenarios] of features) {
-    const rows = Map.groupBy(scenarios, scenario => scenario.key);
-    sections.push(`### ${escapeText(feature)}\n\n`
-      + `| Scenario | ${summary.projects.map(projectName).join(" | ")} |\n`
-      + `| --- | ${summary.projects.map(() => "---").join(" | ")} |\n`
-      + [...rows.values()].map(cases => {
-        const cells = summary.projects.map(project => {
-          const scenario = cases.find(candidate => candidate.project === project);
-          if (!scenario) return "— Not selected";
-          const duration = scenario.attempts.reduce((total, attempt) => total + attempt.duration, 0);
-          return `${labels[scenario.status]}${scenario.attempts.length ? ` · ${time(duration)}` : ""}`;
-        });
-        return `| ${escapeText(cases[0].title)} | ${cells.join(" | ")} |\n`;
-      }).join("") + "\n");
+    sections.push({
+      text: matrix(summary, feature, scenarios),
+      render: included => matrix(summary, feature, scenarios, included),
+    });
   }
-  sections.push("## Executed steps\n\n");
-  // Keep failure/retry details ahead of successful detail blocks when bounded.
-  const ordered = [...problems, ...summary.scenarios.filter(scenario => !needsAttention(scenario))];
-  sections.push(...ordered.map(scenario => details(summary, scenario)));
+  sections.push({ text: "## Executed steps\n\n" });
+  // Keep whole tests together and prioritize groups with failures or retries.
+  const groups = [...Map.groupBy(summary.scenarios, scenario => scenario.key).values()];
+  const priority = (cases: Scenario[]) => cases.some(scenario => needsAttention(scenario) || scenario.attempts.length > 1);
+  groups.sort((a, b) => Number(priority(b)) - Number(priority(a)));
+  sections.push(...groups.map(cases => ({ text: testDetails(summary, cases), key: cases[0].key })));
 
   const notice = "\n**Summary shortened to fit GitHub. Download the complete Playwright HTML report for omitted details.**\n";
-  let output = "";
+  const retained: typeof sections = [];
+  const included = new Set<string>();
+  let bytes = Buffer.byteLength(notice);
   let omitted = false;
   for (const section of sections) {
-    if (Buffer.byteLength(output) + Buffer.byteLength(section) + Buffer.byteLength(notice) > maxBytes) {
+    if (bytes + Buffer.byteLength(section.text) > maxBytes) {
       omitted = true;
       continue;
     }
-    output += section;
+    retained.push(section);
+    bytes += Buffer.byteLength(section.text);
+    if (section.key !== undefined) included.add(section.key);
   }
+  // Reserve linked cells above; replacing an unavailable link with the shorter
+  // omission label cannot exceed that budget or leave a dangling destination.
+  const output = retained.map(section => section.render ? section.render(included) : section.text).join("");
   return output + (omitted ? notice : "");
 }

@@ -1,16 +1,17 @@
-import { defineConfig, devices } from "playwright/test";
+import { defineConfig, devices } from "@playwright/test";
 
 // Start the Hive server before running the suite.
 export default defineConfig({
   testDir: "./tests",
+  outputDir: "./test-results/e2e-tests",
   /* A development HiveGame.wasm bundle is large and must hydrate first. */
   timeout: 15_000,
   expect: { timeout: 5000 },
-  /* Tests share user_1 and user_2, so their server-side state must not overlap. */
-  fullyParallel: false,
+  /* Authenticated tests reserve one or two exclusive accounts from the shared pools. */
+  fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: 1,
+  workers: 4,
   reporter: process.env.CI
     ? [
         ["list", { printSteps: true, printFailuresInline: true }],
@@ -41,7 +42,6 @@ export default defineConfig({
       use: {
         ...devices["Desktop Firefox"],
         viewport: devices["Pixel 5"].viewport,
-        screen: devices["Pixel 5"].screen,
       },
     },
     { name: "webkit-mobile", use: { ...devices["iPhone 12"] } },

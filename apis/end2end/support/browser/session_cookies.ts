@@ -1,6 +1,6 @@
-import type { BrowserContext } from "playwright/test";
+import type { BrowserContext } from "@playwright/test";
 
-const instrumentedContexts = new WeakMap<BrowserContext, Promise<void>>();
+const instrumentedContexts = new WeakMap<BrowserContext, ReturnType<BrowserContext["route"]>>();
 
 function cookieKey(name: string, domain: string, path: string) {
   return JSON.stringify([name, domain.replace(/^\./, "").toLowerCase(), path]);
