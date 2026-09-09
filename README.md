@@ -12,18 +12,13 @@ It also inclides [Hive-hydra](hive-hydra/README.md), an application to integrate
 
 #### 1. Setup the Rust Toolchain
 - Install the [Rust toolchain](https://www.rust-lang.org/tools/install).
-- Set the default toolchain to nightly from the project root:
+- Install the toolchain, formatter, and WebAssembly target pinned by
+  `rust-toolchain.toml` from the project root:
 ```sh
-rustup override set nightly
+rustup show
 ```
-- Alternatively set the default toolchain to nightly globally:
-```sh 
-rustup default nightly
-```
-- Add the WebAssembly target:
-```sh
-rustup target add wasm32-unknown-unknown
-```
+If this checkout already has a directory override, remove it with
+`rustup override unset` so the pinned toolchain can take effect.
 
 #### 2. Install Leptos
 ```sh
