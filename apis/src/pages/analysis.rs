@@ -88,7 +88,10 @@ impl AnalysisLoadState {
 
 #[component]
 pub fn Analysis() -> impl IntoView {
-    let game_state = expect_context::<GameStateStore>();
+    // Play can reset the app's store while this page is still unmounting. Keep
+    // analysis state local so that reset cannot queue work on its departing board.
+    let game_state = GameStateStore::new();
+    provide_context(game_state);
     let auth_context = expect_context::<AuthContext>();
     let history_board = selected_history_board(game_state);
     let params = use_params_map();

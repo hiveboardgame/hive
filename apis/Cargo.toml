@@ -22,7 +22,7 @@ argon2 = { workspace = true, optional = true }
 bytes = { workspace = true, optional = true }
 cfg-if = { workspace = true }
 dashmap = { workspace = true, optional = true }
-futures-util = { workspace = true, optional = true }
+futures-util = { workspace = true }
 chrono.workspace = true
 codee = { workspace = true }
 console_error_panic_hook = { workspace = true }
@@ -106,7 +106,6 @@ ssr = [
   "dep:argon2",
   "dep:bytes",
   "dep:dashmap",
-  "dep:futures-util",
   "dep:tokio",
   "dep:tokio-util",
   "dep:db",

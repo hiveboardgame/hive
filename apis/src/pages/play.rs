@@ -38,8 +38,9 @@ use crate::{
         UpdateNotifier,
     },
 };
+use futures_util::future::{AbortHandle, Abortable};
 use hive_lib::{Board as HiveBoard, Color, GameControl, GameStatus, Turn};
-use leptos::{prelude::*, reactive::effect::batch, task::spawn_local_scoped_with_cancellation};
+use leptos::{prelude::*, reactive::effect::batch, task::spawn_local};
 use leptos_router::hooks::{use_params_map, use_query_map};
 use shared_types::{GameId, GameStart};
 use uuid::Uuid;
@@ -59,7 +60,15 @@ pub fn Play() -> impl IntoView {
     let sounds = expect_context::<Sounds>();
     let ws = expect_context::<WebsocketContext>();
     let controls_signal = expect_context::<ControlsSignal>();
-    let play_owner = Owner::current().expect("Play must run inside a reactive owner");
+    // Keep cancellation on the page without letting the fetch retain its owner.
+    let pending_game_request = StoredValue::new(None::<AbortHandle>);
+    let cancel_game_request = move || {
+        pending_game_request.update_value(|request| {
+            if let Some(handle) = request.take() {
+                handle.abort();
+            }
+        });
+    };
     let ws_ready = ws.ready_state;
     let params = use_params_map();
     let queries = use_query_map();
@@ -191,6 +200,7 @@ pub fn Play() -> impl IntoView {
     // (route change away from the game page). Without this, the socket stays
     // in games_sockets for the lifetime of the WebSocket session.
     on_cleanup(move || {
+        cancel_game_request();
         let current_game_id = game_id.get_untracked();
         if !current_game_id.0.is_empty() {
             api.0.get().unwatch(current_game_id);
@@ -214,6 +224,7 @@ pub fn Play() -> impl IntoView {
             // The app-scoped store can retain state across page mounts, while
             // parameter-only navigation can reuse this component.
             if route_changed {
+                cancel_game_request();
                 batch(|| {
                     game_state.full_reset();
                     timer.signal.set(Default::default());
@@ -233,27 +244,35 @@ pub fn Play() -> impl IntoView {
 
             let requested_game_id = next_game_id.clone();
             api.0.get().join(requested_game_id.clone());
-            play_owner.with(|| {
-                spawn_local_scoped_with_cancellation(async move {
-                    let game = get_game_from_nanoid(requested_game_id.clone()).await;
-                    if let Ok(game) = game {
-                        if requested_game_id != game_id.get_untracked() {
-                            return;
-                        }
-                        batch(|| {
-                            game_state.reset_from_response(&game);
-                            timer.update_from(&game);
-                            let url_number = move_number.get_untracked();
-                            let state_turn = game_state.state().with_untracked(|state| state.turn);
-                            if let Some(url_number) =
-                                url_number.filter(|turn| *turn < state_turn.saturating_sub(1))
-                            {
-                                game_state.show_history_turn(url_number);
-                                controls_signal.hidden.set(false);
-                                tab.set(TabView::History);
-                            }
-                        });
-                    };
+            // Reconnection can start a new fetch for the same game. Cancel the
+            // previous request so an older response cannot overwrite this one.
+            cancel_game_request();
+            let (abort_handle, abort_registration) = AbortHandle::new_pair();
+            pending_game_request.set_value(Some(abort_handle));
+            spawn_local(async move {
+                let result = Abortable::new(
+                    get_game_from_nanoid(requested_game_id.clone()),
+                    abort_registration,
+                )
+                .await;
+                let Ok(Ok(game)) = result else {
+                    return;
+                };
+                if requested_game_id != game_id.get_untracked() {
+                    return;
+                }
+                batch(|| {
+                    game_state.reset_from_response(&game);
+                    timer.update_from(&game);
+                    let url_number = move_number.get_untracked();
+                    let state_turn = game_state.state().with_untracked(|state| state.turn);
+                    if let Some(url_number) =
+                        url_number.filter(|turn| *turn < state_turn.saturating_sub(1))
+                    {
+                        game_state.show_history_turn(url_number);
+                        controls_signal.hidden.set(false);
+                        tab.set(TabView::History);
+                    }
                 });
             });
         },
