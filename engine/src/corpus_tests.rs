@@ -91,9 +91,16 @@ fn load(var: &str) -> Vec<Vec<String>> {
 /// with no cell, so positions restricting different same-type pieces collided.
 const RECORDED_BUT_NOT_A_REPETITION: [&str; 1] = ["iIPQLORgQUe9"];
 
-/// Real threefolds recorded as something else. Each verified by [`detected_repetitions_are_real`],
-/// which checks this list by default.
-const REAL_BUT_RECORDED_OTHERWISE: [&str; 10] = [
+/// Real threefolds the site recorded as something else, every one of them finished before #791
+/// deployed on 2026-09-08. A pass left `stunned` set, and the stun is part of the position hash,
+/// so a repeated layout hashed differently and the draw was never called - the games played on
+/// and ended however they ended. Each is verified by [`detected_repetitions_are_real`], which
+/// checks this list by default rather than trusting it.
+///
+/// A fresh export naming a game that is not here has not necessarily earned a place on the list:
+/// check when it finished first. Anything after that deploy means #791 left a case uncovered and
+/// wants chasing, not appending.
+const REAL_BUT_RECORDED_OTHERWISE: [&str; 17] = [
     "9DvlsAQscx",
     "pEIOqmy3yl",
     "5xgBXFQQOaYv",
@@ -104,6 +111,14 @@ const REAL_BUT_RECORDED_OTHERWISE: [&str; 10] = [
     "C_vgtOD3YAZd",
     "ySoi7lraT6Xc",
     "rsIv-Nbc0xL5",
+    // Absent from the July export, so they only surfaced once the corpus was re-exported.
+    "16ET7oko9hfm",
+    "a9KV3-VqUesu",
+    "d8GozdYcnnlW",
+    "Kf5gOiHZgU3y",
+    "uDiN9w5jGpyG",
+    "UzhwNojW7Qml",
+    "xQEySLPl1O9H",
 ];
 
 /// The recorded `conclusion` is ground truth - comparing code against code cannot say which
