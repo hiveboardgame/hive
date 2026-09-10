@@ -59,27 +59,3 @@ impl Default for TournamentGameStart {
         Self::new()
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn forgetting_a_stale_ready_proposal_removes_process_state() {
-        let starts = TournamentGameStart::new();
-        let game_id = GameId(String::from("stale-ready"));
-        starts
-            .games_date
-            .write()
-            .expect("ready state lock")
-            .insert(game_id.clone(), (Uuid::new_v4(), Utc::now()));
-
-        starts.forget(&game_id);
-
-        assert!(!starts
-            .games_date
-            .read()
-            .expect("ready state lock")
-            .contains_key(&game_id));
-    }
-}

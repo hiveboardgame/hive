@@ -1,12 +1,35 @@
 use super::model::LegacyRankGroup;
 use anyhow::{bail, Result};
 use hive_lib::Color;
-use shared_types::{Tiebreaker, TournamentGameResult};
+use shared_types::TournamentGameResult;
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap, HashSet},
     iter,
+    str::FromStr,
 };
 use uuid::Uuid;
+
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
+pub(super) enum LegacyTiebreaker {
+    RawPoints,
+    HeadToHead,
+    WinsAsBlack,
+    SonnebornBerger,
+}
+
+impl FromStr for LegacyTiebreaker {
+    type Err = String;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "RawPoints" => Ok(Self::RawPoints),
+            "HeadToHead" => Ok(Self::HeadToHead),
+            "WinsAsBlack" => Ok(Self::WinsAsBlack),
+            "SonnebornBerger" => Ok(Self::SonnebornBerger),
+            _ => Err(format!("unsupported legacy tiebreaker {value:?}")),
+        }
+    }
+}
 
 #[derive(Clone, Debug)]
 struct Pairing {
@@ -16,14 +39,14 @@ struct Pairing {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct LegacyStandings {
+pub(super) struct LegacyStandings {
     players: BTreeSet<Uuid>,
     pairings: BTreeMap<Uuid, Vec<Pairing>>,
-    scores: BTreeMap<Uuid, HashMap<Tiebreaker, f32>>,
+    scores: BTreeMap<Uuid, HashMap<LegacyTiebreaker, f32>>,
 }
 
 impl LegacyStandings {
-    pub fn add_result(
+    pub(super) fn add_result(
         &mut self,
         white: Uuid,
         black: Uuid,
@@ -47,21 +70,21 @@ impl LegacyStandings {
         Ok(())
     }
 
-    pub fn rank_groups(&mut self, configured: &[Tiebreaker]) -> Result<Vec<LegacyRankGroup>> {
+    pub(super) fn rank_groups(
+        &mut self,
+        configured: &[LegacyTiebreaker],
+    ) -> Result<Vec<LegacyRankGroup>> {
         let mut seen = HashSet::new();
-        let plan = iter::once(Tiebreaker::RawPoints)
+        let plan = iter::once(LegacyTiebreaker::RawPoints)
             .chain(configured.iter().copied())
             .filter(|criterion| seen.insert(*criterion))
             .collect::<Vec<_>>();
         for criterion in plan.iter().copied() {
             match criterion {
-                Tiebreaker::RawPoints => self.compute_raw_points(),
-                Tiebreaker::HeadToHead => self.compute_head_to_head(&plan),
-                Tiebreaker::WinsAsBlack => self.compute_wins_as_black(),
-                Tiebreaker::SonnebornBerger => self.compute_sonneborn_berger(),
-                unsupported => {
-                    bail!("legacy standings contain unsupported criterion {unsupported}")
-                }
+                LegacyTiebreaker::RawPoints => self.compute_raw_points(),
+                LegacyTiebreaker::HeadToHead => self.compute_head_to_head(&plan),
+                LegacyTiebreaker::WinsAsBlack => self.compute_wins_as_black(),
+                LegacyTiebreaker::SonnebornBerger => self.compute_sonneborn_berger(),
             }
         }
 
@@ -102,7 +125,7 @@ impl LegacyStandings {
                     | TournamentGameResult::Winner(_) => 0.0,
                 })
                 .sum();
-            self.set_score(player, Tiebreaker::RawPoints, score);
+            self.set_score(player, LegacyTiebreaker::RawPoints, score);
         }
     }
 
@@ -119,7 +142,7 @@ impl LegacyStandings {
                         && pairing.result == TournamentGameResult::Winner(Color::Black)
                 })
                 .count() as f32;
-            self.set_score(player, Tiebreaker::WinsAsBlack, score);
+            self.set_score(player, LegacyTiebreaker::WinsAsBlack, score);
         }
     }
 
@@ -128,7 +151,7 @@ impl LegacyStandings {
         for player in players.iter().copied() {
             let mut score = 0.0_f32;
             for opponent in players.iter().copied().filter(|other| *other != player) {
-                let opponent_points = self.score(opponent, Tiebreaker::RawPoints);
+                let opponent_points = self.score(opponent, LegacyTiebreaker::RawPoints);
                 for pairing in self.pairings_between(player, opponent) {
                     score += match pairing.result {
                         TournamentGameResult::Draw => 0.5 * opponent_points,
@@ -144,14 +167,14 @@ impl LegacyStandings {
                     };
                 }
             }
-            self.set_score(player, Tiebreaker::SonnebornBerger, score);
+            self.set_score(player, LegacyTiebreaker::SonnebornBerger, score);
         }
     }
 
-    fn compute_head_to_head(&mut self, plan: &[Tiebreaker]) {
+    fn compute_head_to_head(&mut self, plan: &[LegacyTiebreaker]) {
         let position = plan
             .iter()
-            .position(|criterion| *criterion == Tiebreaker::HeadToHead)
+            .position(|criterion| *criterion == LegacyTiebreaker::HeadToHead)
             .unwrap_or(0);
         let prior = &plan[..position];
         let mut scores = BTreeMap::<Uuid, f32>::new();
@@ -168,7 +191,7 @@ impl LegacyStandings {
             for player in group {
                 self.set_score(
                     player,
-                    Tiebreaker::HeadToHead,
+                    LegacyTiebreaker::HeadToHead,
                     scores.get(&player).copied().unwrap_or_default(),
                 );
             }
@@ -212,7 +235,7 @@ impl LegacyStandings {
             .filter(move |pairing| pairing.white == second || pairing.black == second)
     }
 
-    fn grouped_by(&self, criteria: &[Tiebreaker]) -> Vec<Vec<Uuid>> {
+    fn grouped_by(&self, criteria: &[LegacyTiebreaker]) -> Vec<Vec<Uuid>> {
         let mut scored = self
             .players
             .iter()
@@ -247,7 +270,7 @@ impl LegacyStandings {
         groups
     }
 
-    fn score(&self, player: Uuid, criterion: Tiebreaker) -> f32 {
+    fn score(&self, player: Uuid, criterion: LegacyTiebreaker) -> f32 {
         self.scores
             .get(&player)
             .and_then(|scores| scores.get(&criterion))
@@ -255,7 +278,7 @@ impl LegacyStandings {
             .unwrap_or_default()
     }
 
-    fn set_score(&mut self, player: Uuid, criterion: Tiebreaker, score: f32) {
+    fn set_score(&mut self, player: Uuid, criterion: LegacyTiebreaker, score: f32) {
         self.scores
             .entry(player)
             .or_default()
@@ -291,7 +314,7 @@ mod tests {
             .unwrap();
 
         let groups = standings
-            .rank_groups(&[Tiebreaker::RawPoints, Tiebreaker::HeadToHead])
+            .rank_groups(&[LegacyTiebreaker::RawPoints, LegacyTiebreaker::HeadToHead])
             .unwrap();
         assert_eq!(groups[0].user_ids, vec![first]);
         assert_eq!(groups[1].user_ids, vec![second]);
@@ -327,7 +350,7 @@ mod tests {
             .unwrap();
 
         let groups = standings
-            .rank_groups(&[Tiebreaker::RawPoints, Tiebreaker::HeadToHead])
+            .rank_groups(&[LegacyTiebreaker::RawPoints, LegacyTiebreaker::HeadToHead])
             .unwrap();
         assert_eq!(groups[0].user_ids, vec![first]);
         assert_eq!(groups[1].user_ids, vec![second]);
@@ -348,7 +371,7 @@ mod tests {
             .unwrap();
 
         let groups = standings
-            .rank_groups(&[Tiebreaker::HeadToHead, Tiebreaker::WinsAsBlack])
+            .rank_groups(&[LegacyTiebreaker::HeadToHead, LegacyTiebreaker::WinsAsBlack])
             .unwrap();
         assert_eq!(groups[0].user_ids, vec![first]);
         assert_eq!(groups[1].user_ids, vec![second]);
@@ -371,19 +394,12 @@ mod tests {
             .add_result(second, third, TournamentGameResult::Winner(Color::White))
             .unwrap();
 
-        let groups = standings.rank_groups(&[Tiebreaker::RawPoints]).unwrap();
+        let groups = standings
+            .rank_groups(&[LegacyTiebreaker::RawPoints])
+            .unwrap();
         assert_eq!(groups[0].competition_rank, 1);
         assert_eq!(groups[0].user_ids, vec![first, second]);
         assert_eq!(groups[1].competition_rank, 3);
         assert_eq!(groups[1].user_ids, vec![third]);
-    }
-
-    #[test]
-    fn unsupported_legacy_criterion_fails_closed() {
-        let mut standings = LegacyStandings::default();
-        standings
-            .add_result(player(21), player(22), TournamentGameResult::Draw)
-            .unwrap();
-        assert!(standings.rank_groups(&[Tiebreaker::Buchholz]).is_err());
     }
 }

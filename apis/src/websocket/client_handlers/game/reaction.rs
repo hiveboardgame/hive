@@ -109,7 +109,7 @@ pub fn navigate_to_actionable_game(game: &GameResponse, ready_started: bool) {
         };
         let game_path = format!("/game/{}", game.game_id);
         let arena_path = game.tournament.as_ref().and_then(|tournament| {
-            (tournament.format() == Format::Arena)
+            (tournament.format == Format::Arena)
                 .then(|| format!("/tournament/{}", tournament.tournament_id.0))
         });
         let navigate = use_navigate();

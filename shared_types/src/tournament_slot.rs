@@ -34,6 +34,8 @@ pub enum SlotKey {
 pub enum Resolution {
     Result(GameOutcome),
     Withdrawal(GameOutcome),
+    // Compact MessagePack needs the null content element for an adjacent unit variant.
+    #[serde(serialize_with = "serde::Serializer::serialize_unit")]
     Clinched,
 }
 
@@ -51,8 +53,17 @@ pub struct Slot {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use codee::{binary::MsgpackSerdeCodec, Decoder, Encoder};
     use serde_json::json;
     use tournamint::swiss::SwissLeg;
+
+    #[test]
+    fn clinched_slot_resolution_round_trips_through_the_websocket_codec() {
+        let resolution = Resolution::Clinched;
+        let bytes = MsgpackSerdeCodec::encode(&resolution).unwrap();
+        let decoded: Resolution = MsgpackSerdeCodec::decode(&bytes).unwrap();
+        assert_eq!(decoded, resolution);
+    }
 
     #[test]
     fn slot_key_json_is_stable() {

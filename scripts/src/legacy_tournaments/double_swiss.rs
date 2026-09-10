@@ -1,5 +1,5 @@
 use super::{
-    legacy_standings::LegacyStandings,
+    legacy_standings::{LegacyStandings, LegacyTiebreaker},
     model::{
         AcceptedRatingPlan,
         AcceptedSwissRoundPlan,
@@ -52,7 +52,6 @@ use shared_types::{
         SwissGameId,
         SwissLeg,
     },
-    Tiebreaker,
     TimeMode,
     TournamentGameResult,
 };
@@ -347,8 +346,10 @@ fn legacy_clock(tournament: &LegacyTournamentRow) -> Result<Clock, AuditDiagnost
         })
 }
 
-fn legacy_criteria(tournament: &LegacyTournamentRow) -> Result<Vec<Tiebreaker>, AuditDiagnostic> {
-    let mut criteria = vec![Tiebreaker::RawPoints];
+fn legacy_criteria(
+    tournament: &LegacyTournamentRow,
+) -> Result<Vec<LegacyTiebreaker>, AuditDiagnostic> {
+    let mut criteria = vec![LegacyTiebreaker::RawPoints];
     for stored in &tournament.tiebreaker {
         let Some(stored) = stored.as_deref() else {
             return Err(failure(
@@ -357,19 +358,9 @@ fn legacy_criteria(tournament: &LegacyTournamentRow) -> Result<Vec<Tiebreaker>, 
                 "legacy tiebreaker array contains NULL",
             ));
         };
-        let criterion = match stored {
-            "RawPoints" => Tiebreaker::RawPoints,
-            "HeadToHead" => Tiebreaker::HeadToHead,
-            "WinsAsBlack" => Tiebreaker::WinsAsBlack,
-            "SonnebornBerger" => Tiebreaker::SonnebornBerger,
-            unknown => {
-                return Err(failure(
-                    tournament,
-                    "legacy_double_swiss_unknown_tiebreaker",
-                    format!("legacy tiebreaker {unknown:?} has no deliberate conversion"),
-                ));
-            }
-        };
+        let criterion = LegacyTiebreaker::from_str(stored).map_err(|error| {
+            failure(tournament, "legacy_double_swiss_unknown_tiebreaker", error)
+        })?;
         if !criteria.contains(&criterion) {
             criteria.push(criterion);
         }
@@ -377,26 +368,31 @@ fn legacy_criteria(tournament: &LegacyTournamentRow) -> Result<Vec<Tiebreaker>, 
     Ok(criteria)
 }
 
-fn double_swiss_configuration(clock: Clock, rounds: NonZeroU32, criteria: &[Tiebreaker]) -> Config {
+fn double_swiss_configuration(
+    clock: Clock,
+    rounds: NonZeroU32,
+    criteria: &[LegacyTiebreaker],
+) -> Config {
     let match_points = MatchPointSystem::STANDARD;
     let standings = criteria
         .iter()
         .map(|criterion| match criterion {
-            Tiebreaker::RawPoints => SwissCriterion::PrimaryScore,
-            Tiebreaker::HeadToHead => SwissCriterion::DirectEncounter(DirectEncounterOptions {
-                score_basis: ScoreBasis::Primary,
-                forfeits: DirectEncounterForfeitPolicy::IncludeAsScored,
-                repeated_encounters: RepeatedEncounterPolicy::Sum,
-            }),
-            Tiebreaker::WinsAsBlack => SwissCriterion::GamesWonWithBlack,
-            Tiebreaker::SonnebornBerger => {
+            LegacyTiebreaker::RawPoints => SwissCriterion::PrimaryScore,
+            LegacyTiebreaker::HeadToHead => {
+                SwissCriterion::DirectEncounter(DirectEncounterOptions {
+                    score_basis: ScoreBasis::Primary,
+                    forfeits: DirectEncounterForfeitPolicy::IncludeAsScored,
+                    repeated_encounters: RepeatedEncounterPolicy::Sum,
+                })
+            }
+            LegacyTiebreaker::WinsAsBlack => SwissCriterion::GamesWonWithBlack,
+            LegacyTiebreaker::SonnebornBerger => {
                 SwissCriterion::SonnebornBerger(SonnebornBergerOptions {
                     score_basis: ScoreBasis::Primary,
                     cut_lowest: 0,
                     unplayed: UnplayedRoundPolicy::FideMarch2026,
                 })
             }
-            _ => unreachable!("legacy criteria were validated before configuration mapping"),
         })
         .collect();
     Config {
@@ -929,7 +925,7 @@ fn legacy_rank_groups(
     tournament: &LegacyTournamentRow,
     roster: &[Participant],
     games: &[NormalizedGame<'_>],
-    criteria: &[Tiebreaker],
+    criteria: &[LegacyTiebreaker],
 ) -> Result<Vec<LegacyRankGroup>, AuditDiagnostic> {
     let expected_users = roster
         .iter()

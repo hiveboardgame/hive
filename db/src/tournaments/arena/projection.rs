@@ -147,11 +147,10 @@ fn projected_arena_results(
         let award = arena_game
             .award
             .ok_or_else(|| invalid_persisted("Arena terminal is missing its persisted award"))?;
-        let game = &arena_game.game;
         let white = fact.pairing.white();
-        let (outcome, no_start_absent) =
+        let outcome =
             match fact.result {
-                ArenaTerminalResult::Played(outcome) => (GameOutcome::Played(outcome), None),
+                ArenaTerminalResult::Played(outcome) => GameOutcome::Played(outcome),
                 ArenaTerminalResult::NoStart { absent } => {
                     let (white_result, black_result) = if absent == white {
                         (
@@ -168,14 +167,7 @@ fn projected_arena_results(
                         .map_err(|error| DbError::InternalError {
                             reason: format!("could not construct Arena no-start outcome: {error}"),
                         })?;
-                    (
-                        GameOutcome::Adjudicated(adjudicated),
-                        Some(if absent == white {
-                            game.white_id
-                        } else {
-                            game.black_id
-                        }),
-                    )
+                    GameOutcome::Adjudicated(adjudicated)
                 }
             };
         results.push(ArenaResultSnapshot {
@@ -185,7 +177,6 @@ fn projected_arena_results(
             points: award.awarded_points,
             doubled: award.doubled,
             ratings: terminal.ratings.map(Some),
-            no_start_absent,
         });
     }
     Ok(results)

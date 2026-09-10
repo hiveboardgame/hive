@@ -55,9 +55,7 @@ fn live_arena_elapsed(
 // TODO: i18n once copy is approved.
 fn progress_text(progress: &TournamentCardProgress, arena_elapsed_seconds: Option<u32>) -> String {
     match progress {
-        TournamentCardProgress::Entrants {
-            current, minimum, ..
-        } => {
+        TournamentCardProgress::Entrants { current, minimum } => {
             if current >= minimum {
                 String::from("Ready to start")
             } else {

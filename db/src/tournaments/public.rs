@@ -207,7 +207,6 @@ async fn load_in_snapshot(
                         exit_stage: None,
                     })
                     .collect(),
-                reset_required: false,
             },
             player_stats: Vec::new(),
         },

@@ -2,7 +2,6 @@
   "unavailable": "Torneig no disponible.",
   "not_found": "No s'ha trobat el torneig.",
   "format": {
-    "label": "Format",
     "round_robin": "Tots contra tots",
     "swiss": "Suís",
     "double_swiss": "Suís doble",
@@ -11,7 +10,6 @@
     "arena": "Arena"
   },
   "creation": {
-    "entry_and_advanced": "Restriccions d'accés i opcions avançades",
     "choose_format": "Tria un format i centra't en les opcions que hi són rellevants.",
     "arena_description": "Un esdeveniment continu i cronometrat en què els jugadors s'aparellen a mesura que acaben les partides.",
     "swiss_title": "Suís",
@@ -37,104 +35,37 @@
         "realtime": "{{minutes}}+{{increment}}"
       }
     },
-    "automatic_progression": "Progressió automàtica",
-    "automatic_progression_help": "Publica automàticament les rondes i els partits i acaba el torneig quan tots els resultats estiguin complets. La política d'inici es configura per separat.",
     "arena_length_minutes": "Durada de l'arena (minuts)",
     "invalid_configuration": "La configuració de torneig seleccionada no és vàlida."
-  },
-  "progress": {
-    "next_round": "Ronda següent",
-    "next_wave": "Publica els partits següents",
-    "finish": "Finalitza el torneig"
   },
   "arena": {
     "live_title": "Arenes en curs",
     "time_left": "Temps restant",
-    "over": "acabada",
-    "you": "Tu",
-    "entrant_summary": "{{position}} · {{points}} punts · {{games}} partides",
     "players_active": "{{count}} jugant",
     "join": "Uneix-t'hi",
     "pause": "Pausa",
     "resume": "Reprèn",
-    "leave": "Surt",
     "view": "Mostra",
-    "pause_title": "Deixa de rebre emparellaments. Una partida ja iniciada continua comptant.",
-    "resume_title": "Torna al grup d'emparellament.",
-    "leave_title": "Surt definitivament. La puntuació aconseguida es conserva.",
-    "no_games_played": "No s'ha jugat cap partida."
+    "resume_title": "Torna al grup d'emparellament."
   },
   "finished_standings": {
-    "title": "Classificació final",
-    "empty": "No s'ha registrat cap classificació.",
     "position": "Pos.",
     "player": "Jugador",
-    "score": "Puntuació",
-    "games": "Partides",
-        "record": "V-E-D",
-    "criteria": {
-      "points": "Punts",
-      "pairing_number": "Núm. d'aparellament",
-      "progressive": "Progressiu",
-      "sonneborn_berger": "Sonneborn-Berger",
-      "koya": "Koya",
-      "number_of_wins": "Victòries",
-      "games_won": "Partides guanyades",
-      "games_won_with_black": "Victòries amb negres",
-      "primary_score": "Puntuació principal",
-      "game_points": "Punts de partida",
-      "match_points": "Punts d'enfrontament",
-      "buchholz": "Buchholz",
-      "performance": "Rendiment",
-      "arena_rating": "Valoració d'Arena"
-    },
-    "counts": {
-            "scored_results": "Resultats puntuats"
-    }
+    "games": "Partides"
   },
   "list": {
-    "active": "Actius",
-    "mine": "Els meus",
     "search": "Nom del torneig",
-    "mine_active": "Torneigs actius",
-    "mine_history": "Historial de tornejos",
-    "empty_active": "Ara mateix no hi ha cap torneig actiu.",
-    "empty_mine_active": "No tens cap torneig actiu.",
-    "empty_mine_history": "No tens cap torneig acabat a l'historial.",
     "empty_finished": "Encara no s'ha registrat cap torneig acabat.",
     "no_results": "No hi ha cap torneig amb aquest nom.",
-    "progress_entrants": "{{current}} participants · mínim {{minimum}} · capacitat {{capacity}}",
-    "progress_arena": "{{elapsed}} de {{duration}} minuts",
-    "progress_games": "{{resolved}} de {{total}} partides resoltes",
-    "progress_rounds": "{{completed}} de {{total}} rondes completades",
-    "progress_swiss": "{{completed}} de {{total}} rondes · ronda actual {{games}}/{{round_games}}",
-    "progress_nodes": "{{decided}} de {{total}} partits del quadre decidits",
-        "progress_complete": "Complet",
         "empty_upcoming": "Ara mateix no hi ha cap torneig proper.",
         "empty_in_progress": "Ara mateix no hi ha cap torneig en curs.",
-        "empty_mine": "No t'has unit ni has organitzat cap torneig.",
-        "date_starts": "Comença",
-        "date_started": "Va començar",
-        "date_finished": "Va acabar",
-        "invited": "Convidat",
-        "organizing": "Organitzant",
-        "mixed_time_controls": "Controls de temps mixtos",
         "title": "Tornejos",
         "subtitle": "Explora tornejos propers, actius i completats.",
-        "future": "Futurs",
-        "in_progress": "En curs",
-        "completed": "Completats",
-        "joined": "T'hi has unit",
-        "hosting": "Organitzant",
         "search_placeholder": "Cerca tornejos pel nom",
         "loading": "S'estan carregant els tornejos…",
         "error": "Error en carregar els tornejos"
   },
   "admin": {
-    "players": "Jugadors",
-    "invitees": "Convidats",
-    "declined": "Invitacions rebutjades",
-    "invite_players": "Convida jugadors",
     "invite_placeholder": "Convida un jugador",
     "invite_action": "Convida al torneig",
     "kick_action": "Expulsa el jugador del torneig",
@@ -155,76 +86,30 @@
   },
   "detail": {
     "markdown": "Markdown",
-        "started_at": "Iniciat",
-        "finished_at": "Finalitzat",
     "start_worker_pending": "El torneig començarà aviat."
   },
   "view": {
     "manage": {
-      "lifecycle": "Cicle de vida",
-      "players_and_invitations": "Jugadors i invitacions",
-      "description": "Descripció",
-      "progression": "Progressió",
-      "match_administration": "Administració de partides",
-      "danger_zone": "Zona de perill",
-      "delete_confirmation": "Vols suprimir aquest torneig? Aquesta acció no es pot desfer.",
       "description_pending": "S’està actualitzant la descripció…",
       "description_error": "No s’ha pogut actualitzar la descripció."
     },
-    "tabs": { "label": "Seccions del torneig", "overview": "Visió general", "detailed_standings": "Classificació detallada", "scheduling": "Programació", "manage": "Gestiona" },
-    "context": { "tv_title": "TV del torneig", "waiting": "Esperant la propera partida del torneig", "no_start": "No iniciada — s'ha esgotat el temps d'obertura", "played_as_white": "Ha jugat amb blanques", "played_as_black": "Ha jugat amb negres" },
-    "player_details": { "rating": "Valoració", "winner": "Guanyador", "runner_up": "Finalista", "eliminated_semifinal": "Eliminat a les semifinals", "eliminated_quarterfinal": "Eliminat als quarts de final", "eliminated_round": "Eliminat a la ronda {{round}}" },
     "common": {
       "versus": "vs"
     },
     "bracket": {
-      "stage": { "quarterfinals": "Quarts de final", "semifinals": "Semifinals" },
-      "match_number": "Partit {{match_number}}",
-      "match_details": "Detalls del partit",
-      "match_two_if_needed": "Partit 2 si cal",
       "completion": {
-        "nodes_in_progress": "Partits en curs",
-        "next_wave_ready": "Partits preparats per publicar"
-      },
-      "source": {
-        "previous_winner": "Guanyador del partit anterior",
-        "previous_loser": "Perdedor del partit anterior"
+        "nodes_in_progress": "Partits en curs"
       }
     },
-    "encounters": { "forfeit": "incompareixença" },
     "slots": {
       "record_result": "Registra el resultat",
-      "double_forfeit_help": "El 0-0 registra una doble incompareixença; cap jugador rep punts.",
-      "sections": {
-        "needs_response": "Necessita la teva resposta",
-        "scheduled": "Programades",
-        "needs_time": "Necessita una hora",
-        "later": "Més endavant / encara no publicades",
-        "completed": "Completades",
-        "all_matches": "Totes les partides"
-      },
-      "schedule_agreed_time": "Hora acordada",
-      "schedule_alternatives": "Altres horaris ({{count}})",
-      "schedule_proposed_by": "Proposat per {{proposer}}",
-      "schedule_use_time": "Utilitza aquesta hora",
-      "schedule_choose_instead": "Tria aquesta en lloc de l'actual",
-      "schedule_offer_another": "Ofereix una altra hora",
-      "schedule_relative_now": "ara",
-      "schedule_relative_days": "d'aquí a {{count}} d",
-      "schedule_relative_hours": "d'aquí a {{count}} h",
-      "schedule_relative_minutes": "d'aquí a {{count}} min"
+      "double_forfeit_help": "El 0-0 registra una doble incompareixença; cap jugador rep punts."
     },
     "withdrawal": {
       "self_confirmation": "Vols retirar-te d’aquest torneig? Aquesta acció no es pot desfer.",
       "entrant_confirmation": "Vols retirar aquest participant? Aquesta acció no es pot desfer."
     },
     "arena": {
-      "you_are_playing": "Estàs jugant — obre la partida",
-      "pairings_closed": "Els aparellaments del torneig ja estan tancats.",
-      "paused_notice": "Estàs en pausa. Reprèn quan vulguis tornar a jugar.",
-      "stand_by": "Espera, {{username}} — el pròxim aparellament apareixerà aquí.",
-      "standings": "Classificació de l'arena",
-      "recent_results": "Resultats recents",
       "close": "Tanca",
       "current_game": "Partida actual",
       "online": "En línia",
@@ -232,15 +117,7 @@
       "on_fire": "En ratxa",
       "win_rate": "Percentatge de victòries",
       "berserk_rate": "Percentatge de berserk",
-      "average_opponent": "Mitjana dels rivals",
-      "top_games": "Partides destacades"
-    },
-    "swiss": {
-      "pairing_number": "#{{number}}"
+      "average_opponent": "Mitjana dels rivals"
     }
-  },
-  "tiebreakers": {
-    "head_to_head": "Partides guanyades entre jugadors empatats",
-    "sonneborn_berger": "Suma de punts dels oponents contra els quals vas puntuar"
   }
 }

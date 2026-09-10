@@ -1,5 +1,5 @@
 use super::{
-    legacy_standings::LegacyStandings,
+    legacy_standings::{LegacyStandings, LegacyTiebreaker},
     model::{
         AuditDiagnostic,
         FinalOutcomePlan,
@@ -44,7 +44,6 @@ use shared_types::{
         SlotKey,
     },
     Conclusion,
-    Tiebreaker,
     TimeMode,
     TournamentGameResult,
 };
@@ -454,26 +453,18 @@ fn tournament_clock(tournament: &LegacyTournamentRow) -> Result<Clock, String> {
 
 fn standings_plan(legacy: &[Option<String>]) -> Result<Vec<RoundRobinCriterion>, String> {
     let mut mapped = vec![RoundRobinCriterion::PrimaryScore];
-    for criterion in legacy {
-        let criterion = match criterion.as_deref() {
-            Some("RawPoints") => RoundRobinCriterion::PrimaryScore,
-            Some("HeadToHead") => RoundRobinCriterion::DirectEncounter(DirectEncounterOptions {
-                forfeits: DirectEncounterForfeitPolicy::IncludeAsScored,
-                repeated_encounters: RepeatedEncounterPolicy::Sum,
-            }),
-            Some("WinsAsBlack") => RoundRobinCriterion::GamesWonWithBlack,
-            Some("SonnebornBerger") => {
+    for criterion in parse_legacy_tiebreakers(legacy)? {
+        let criterion = match criterion {
+            LegacyTiebreaker::RawPoints => RoundRobinCriterion::PrimaryScore,
+            LegacyTiebreaker::HeadToHead => {
+                RoundRobinCriterion::DirectEncounter(DirectEncounterOptions {
+                    forfeits: DirectEncounterForfeitPolicy::IncludeAsScored,
+                    repeated_encounters: RepeatedEncounterPolicy::Sum,
+                })
+            }
+            LegacyTiebreaker::WinsAsBlack => RoundRobinCriterion::GamesWonWithBlack,
+            LegacyTiebreaker::SonnebornBerger => {
                 RoundRobinCriterion::SonnebornBerger(SonnebornBergerOptions { cut_lowest: 0 })
-            }
-            Some(other) => {
-                return Err(format!(
-                    "unsupported legacy Round Robin criterion {other:?}"
-                ));
-            }
-            None => {
-                return Err(String::from(
-                    "legacy Round Robin criteria contain a NULL entry",
-                ));
             }
         };
         if !mapped.contains(&criterion) {
@@ -483,22 +474,14 @@ fn standings_plan(legacy: &[Option<String>]) -> Result<Vec<RoundRobinCriterion>,
     Ok(mapped)
 }
 
-fn parse_legacy_tiebreakers(legacy: &[Option<String>]) -> Result<Vec<Tiebreaker>, String> {
+fn parse_legacy_tiebreakers(legacy: &[Option<String>]) -> Result<Vec<LegacyTiebreaker>, String> {
     legacy
         .iter()
         .map(|criterion| {
             let criterion = criterion
                 .as_deref()
                 .ok_or_else(|| String::from("legacy tiebreakers contain a NULL entry"))?;
-            let parsed = Tiebreaker::from_str(criterion)
-                .map_err(|error| format!("invalid legacy tiebreaker: {error}"))?;
-            match parsed {
-                Tiebreaker::RawPoints
-                | Tiebreaker::HeadToHead
-                | Tiebreaker::WinsAsBlack
-                | Tiebreaker::SonnebornBerger => Ok(parsed),
-                other => Err(format!("unsupported legacy tiebreaker {other}")),
-            }
+            LegacyTiebreaker::from_str(criterion)
         })
         .collect()
 }

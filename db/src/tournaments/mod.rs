@@ -69,7 +69,6 @@ pub(crate) struct ArenaResultSnapshot {
     pub points: [Score; 2],
     pub doubled: [bool; 2],
     pub ratings: [Option<u32>; 2],
-    pub no_start_absent: Option<Uuid>,
 }
 
 mod capabilities;

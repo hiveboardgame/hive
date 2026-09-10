@@ -18,6 +18,7 @@ pub struct ScheduleResponse {
     pub status: ScheduleOfferStatus,
     pub selected_time: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
+    // TODO: Consider whether resolved_at and resolved_by are useful for the tournament manage page.
     pub resolved_at: Option<DateTime<Utc>>,
     pub resolved_by: Option<Uuid>,
     pub notified: bool,

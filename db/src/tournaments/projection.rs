@@ -67,8 +67,6 @@ use super::{
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct PlayerRecord {
     player: Uuid,
-    games_played: u32,
-    matches_played: Option<u32>,
     wins: u32,
     draws: u32,
     losses: u32,
@@ -277,8 +275,6 @@ fn fixed_player_stats(
                     rating.opponent_total,
                     rating.games,
                 )?,
-                games_played: record.games_played,
-                matches_played: record.matches_played,
                 wins: record.wins,
                 draws: record.draws,
                 losses: record.losses,
@@ -297,8 +293,6 @@ pub(crate) fn round_robin_player_stats(
         .iter()
         .map(|summary| PlayerRecord {
             player: player_uuid(state, summary.player),
-            games_played: summary.games_played,
-            matches_played: summary.matches_played,
             wins: summary.wins,
             draws: summary.draws,
             losses: summary.losses,
@@ -311,19 +305,12 @@ pub(crate) fn swiss_player_stats(
     state: &TournamentState,
     projected: &SwissFactsProjection,
 ) -> Result<Vec<PlayerStatsResponse>, DbError> {
-    let double_swiss = matches!(
-        &state.configuration.format,
-        FormatConfig::Swiss(configuration)
-            if matches!(configuration.system, SwissSystem::DoubleSwiss(_))
-    );
     let counts = projected
         .projection
         .players
         .iter()
         .map(|summary| PlayerRecord {
             player: player_uuid(state, summary.player),
-            games_played: summary.games_played,
-            matches_played: double_swiss.then_some(summary.matches_played),
             wins: summary.game_wins,
             draws: summary.game_draws,
             losses: summary.game_losses,
@@ -343,8 +330,6 @@ pub(crate) fn elimination_player_stats(
         .zip(&state.memberships)
         .map(|(counts, membership)| PlayerRecord {
             player: membership.user_id,
-            games_played: counts.games_played,
-            matches_played: Some(counts.matches_played),
             wins: counts.wins,
             draws: counts.draws,
             losses: counts.losses,
@@ -513,7 +498,6 @@ pub(crate) fn swiss_projection(
                         slots,
                         completion: encounter.completion.map(|completion| {
                             SwissMatchCompletionResponse {
-                                dispositions: completion.dispositions,
                                 aggregate: completion.aggregate,
                                 game_points: completion.game_points,
                                 match_points: completion.match_points,
@@ -710,7 +694,6 @@ pub(crate) fn elimination_projection(
         nodes,
         complete: projected.projection.complete,
         player_results,
-        reset_required: projected.projection.reset_required,
     })
 }
 
@@ -737,7 +720,6 @@ pub(crate) fn arena_projection(
                 outcome: result.map(|result| result.outcome),
                 awarded_points: result.map(|result| result.points),
                 doubled: result.map(|result| result.doubled),
-                no_start_absent: result.and_then(|result| result.no_start_absent),
             })
         })
         .collect::<Result<Vec<_>, DbError>>()?;
@@ -890,7 +872,6 @@ pub(crate) fn arena_player_stats(
             let performance = metrics.performance;
             Ok(ArenaPlayerStatsResponse {
                 player: membership.user_id,
-                points: metrics.points,
                 performance_rating: performance
                     .map(|performance| {
                         rounded_signed_rating(performance.numerator(), performance.denominator())
@@ -904,14 +885,10 @@ pub(crate) fn arena_player_stats(
                 performance_games: performance.map_or(0, |performance| performance.denominator()),
                 arena_rating: metrics.arena_rating,
                 games_scored: metrics.games_scored,
-                games_played: metrics.games_played,
-                no_starts: metrics.no_starts,
                 wins: metrics.wins,
                 draws: metrics.draws,
                 losses: metrics.losses,
-                current_streak: metrics.current_streak,
                 on_fire: metrics.on_fire,
-                best_streak: metrics.best_streak,
                 berserks: metrics.berserks,
                 paused: matches!(membership.pairing_intent()?, Some(PairingIntent::Paused)),
             })

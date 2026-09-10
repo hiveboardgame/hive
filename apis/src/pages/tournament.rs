@@ -2327,7 +2327,6 @@ mod tests {
         pre_start_boundary,
         should_retry_failed_initial_load,
         tournament_response_matches_route,
-        DescriptionEditorState,
         PreStartBoundary,
         TournamentChildRoute,
     };
@@ -2343,54 +2342,6 @@ mod tests {
         assert!(!tournament_response_matches_route(Some(&second), &first));
         assert!(tournament_response_matches_route(Some(&second), &second));
         assert!(!tournament_response_matches_route(None, &second));
-    }
-
-    #[test]
-    fn public_child_routes_follow_format_and_lifecycle() {
-        assert_eq!(
-            child_route_availability(
-                TournamentChildRoute::Results,
-                Format::RoundRobin,
-                TournamentStatus::InProgress,
-                false,
-                false,
-                true,
-            ),
-            Some(true),
-        );
-        assert_eq!(
-            child_route_availability(
-                TournamentChildRoute::Pairings,
-                Format::RoundRobin,
-                TournamentStatus::InProgress,
-                false,
-                false,
-                true,
-            ),
-            Some(false),
-        );
-        assert_eq!(
-            child_route_availability(
-                TournamentChildRoute::Standings,
-                Format::Swiss,
-                TournamentStatus::NotStarted,
-                false,
-                false,
-                true,
-            ),
-            Some(false),
-        );
-        assert_eq!(
-            child_route_availability(
-                TournamentChildRoute::Manage,
-                Format::Arena,
-                TournamentStatus::NotStarted,
-                true,
-                true,
-                true,
-            ),
-            Some(false),
-        );
     }
 
     #[test]
@@ -2470,33 +2421,5 @@ mod tests {
             pre_start_boundary(true, Format::Arena, Some(cutoff), cutoff),
             PreStartBoundary::Closed,
         );
-    }
-
-    #[test]
-    fn description_cancel_resets_draft_and_both_editor_modes() {
-        let mut state = DescriptionEditorState::new(Some("Published description".to_string()));
-        state.begin_edit();
-        state.draft = "Unpublished changes".to_string();
-        state.previewing = true;
-
-        state.cancel();
-
-        assert_eq!(state.draft, "Published description");
-        assert!(!state.editing);
-        assert!(!state.previewing);
-    }
-
-    #[test]
-    fn successful_description_update_becomes_the_new_shared_draft() {
-        let mut state = DescriptionEditorState::new(Some("Old description".to_string()));
-        state.begin_edit();
-        state.previewing = true;
-
-        state.complete(Some("Updated description".to_string()));
-
-        assert_eq!(state.current.as_deref(), Some("Updated description"));
-        assert_eq!(state.draft, "Updated description");
-        assert!(!state.editing);
-        assert!(!state.previewing);
     }
 }

@@ -1988,10 +1988,7 @@ async fn swiss_snapshot_uses_accepted_ratings_for_adjudicated_metrics() {
             .ok()
             .map(|rating| rating + 500),
     );
-    assert_eq!(
-        (white.games_played, white.wins, white.draws, white.losses),
-        (0, 1, 0, 0)
-    );
+    assert_eq!((white.wins, white.draws, white.losses), (1, 0, 0));
     let black = snapshot
         .player_stats
         .iter()
@@ -2007,10 +2004,7 @@ async fn swiss_snapshot_uses_accepted_ratings_for_adjudicated_metrics() {
             .ok()
             .map(|rating| rating - 500),
     );
-    assert_eq!(
-        (black.games_played, black.wins, black.draws, black.losses),
-        (0, 0, 0, 1)
-    );
+    assert_eq!((black.wins, black.draws, black.losses), (0, 0, 1));
 }
 
 #[tokio::test(flavor = "multi_thread")]

@@ -125,7 +125,6 @@ pub struct EliminationState {
     pub(crate) nodes: Vec<EliminationNode>,
     pub(crate) complete: bool,
     pub(crate) player_results: Vec<EliminationPlayerResultResponse>,
-    pub(crate) reset_required: bool,
     pub(crate) withdrawable_entrants: HashSet<Uuid>,
     #[store(key: Uuid = |(slot_id, _)| *slot_id)]
     pub(crate) slots: HashMap<Uuid, SlotResponse>,
@@ -443,7 +442,6 @@ impl TournamentState {
                 current.nodes().set(next.nodes);
                 current.complete().set(next.complete);
                 current.player_results().set(next.player_results);
-                current.reset_required().set(next.reset_required);
                 current
                     .withdrawable_entrants()
                     .set(next.withdrawable_entrants);
@@ -651,7 +649,6 @@ fn format_state(
             nodes,
             complete,
             player_results,
-            reset_required,
             withdrawable_entrants,
         } => {
             let mut slots = HashMap::new();
@@ -695,7 +692,6 @@ fn format_state(
                 nodes,
                 complete,
                 player_results,
-                reset_required,
                 withdrawable_entrants,
                 slots,
             }))
@@ -942,7 +938,6 @@ mod tests {
             outcome: None,
             awarded_points: None,
             doubled: None,
-            no_start_absent: None,
         }
     }
 

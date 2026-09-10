@@ -19,7 +19,7 @@ use db_lib::{
         TournamentUser,
         User,
     },
-    schema::{games as games_table, tournaments, tournaments_organizers},
+    schema::{games as games_table, tournaments},
     tournaments::{arena, fixed_field},
     DbConn,
 };
@@ -257,27 +257,6 @@ pub async fn arm_due(conn: &mut DbConn<'_>, confirmed: &str, app_url: &str) -> R
     Ok(())
 }
 
-pub async fn ensure_max_round_robin(
-    conn: &mut DbConn<'_>,
-    confirmed: &str,
-    app_url: &str,
-) -> Result<()> {
-    confirm_local_database(conn, confirmed).await?;
-    let (tournament, created) = conn
-        .transaction::<_, anyhow::Error, _>(async move |tc| {
-            ensure_max_round_robin_transaction(tc).await
-        })
-        .await
-        .context("maximum Round Robin fixture transaction rolled back")?;
-    println!(
-        "{} {MAX_ROUND_ROBIN_FIXTURE_NAME}: {}/tournament/{}",
-        if created { "Created" } else { "Verified" },
-        app_url.trim_end_matches('/'),
-        tournament.nanoid,
-    );
-    Ok(())
-}
-
 async fn acquire_operator_lock(conn: &mut DbConn<'_>) -> Result<()> {
     sql_query("select pg_advisory_xact_lock($1)")
         .bind::<BigInt, _>(OPERATOR_LOCK_KEY)
@@ -297,38 +276,6 @@ async fn seed_transaction(conn: &mut DbConn<'_>, seed: u64) -> Result<(Vec<QaUse
     ensure_fixture_registry(conn).await?;
     refuse_conflicts(conn).await?;
     insert_fixture_data(conn, seed).await
-}
-
-async fn ensure_max_round_robin_transaction(conn: &mut DbConn<'_>) -> Result<(Tournament, bool)> {
-    acquire_operator_lock(conn).await?;
-    let organizer = synthetic_organizer(conn).await?;
-    let candidate_ids = tournaments_organizers::table
-        .inner_join(tournaments::table)
-        .filter(tournaments_organizers::organizer_id.eq(organizer.id))
-        .filter(tournaments::name.eq(MAX_ROUND_ROBIN_FIXTURE_NAME))
-        .select(tournaments::id)
-        .load::<Uuid>(conn)
-        .await?;
-    ensure!(
-        candidate_ids.len() <= 1,
-        "multiple {MAX_ROUND_ROBIN_FIXTURE_NAME:?} fixtures exist for the synthetic organizer"
-    );
-    if let Some(id) = candidate_ids.into_iter().next() {
-        let tournament = Tournament::find(id, conn).await?;
-        assert_max_round_robin_fixture(&tournament, conn).await?;
-        return Ok((tournament, false));
-    }
-
-    let mut players = Vec::with_capacity(MAX_ROUND_ROBIN_ENTRANTS);
-    for index in 1..=MAX_ROUND_ROBIN_ENTRANTS {
-        let username = format!("{ACCOUNT_PREFIX}player_{index:02}");
-        let player = User::find_by_username(&username, conn)
-            .await
-            .with_context(|| format!("synthetic player {username:?} is missing"))?;
-        players.push(player.id);
-    }
-    let tournament = finish_max_round_robin(organizer.id, &players, conn).await?;
-    Ok((tournament, true))
 }
 
 async fn cleanup_transaction(conn: &mut DbConn<'_>) -> Result<CleanupSummary> {
@@ -3318,7 +3265,7 @@ mod tests {
     use super::*;
     use db_lib::{
         get_conn,
-        schema::{ratings, users},
+        schema::{ratings, tournaments_organizers, users},
     };
 
     mod test_database {

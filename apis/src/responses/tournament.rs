@@ -65,7 +65,6 @@ pub enum TournamentCardProgress {
     Entrants {
         current: u32,
         minimum: u32,
-        capacity: Option<u32>,
     },
     Arena {
         elapsed_seconds: u32,
@@ -890,9 +889,6 @@ fn tournament_card_progress(
             current: players,
             minimum: u32::try_from(tournament.min_seats)
                 .expect("validated tournament minimum seats are nonnegative"),
-            capacity: tournament.seats.map(|seats| {
-                u32::try_from(seats).expect("validated tournament capacity is nonnegative")
-            }),
         });
     }
 

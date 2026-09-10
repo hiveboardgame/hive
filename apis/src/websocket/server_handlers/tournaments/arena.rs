@@ -476,7 +476,6 @@ mod tests {
     use chrono::{DateTime, Utc};
     use hive_lib::GameStatus;
     use shared_types::{
-        tournament::Score,
         tournament_view::{
             ArenaGameResponse,
             ArenaPlayerStatsResponse,
@@ -510,27 +509,21 @@ mod tests {
             outcome: None,
             awarded_points: None,
             doubled: None,
-            no_start_absent: None,
         }
     }
 
     fn arena_stats(player: Uuid) -> ArenaPlayerStatsResponse {
         ArenaPlayerStatsResponse {
             player,
-            points: Score::new(0),
             performance_rating: None,
             average_opponent_rating: None,
             performance_games: 0,
             arena_rating: Some(1_500),
             games_scored: 0,
-            games_played: 0,
-            no_starts: 0,
             wins: 0,
             draws: 0,
             losses: 0,
-            current_streak: 0,
             on_fire: false,
-            best_streak: 0,
             berserks: 0,
             paused: false,
         }

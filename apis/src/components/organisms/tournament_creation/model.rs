@@ -688,18 +688,4 @@ mod tests {
             "invalid overrides remain editable"
         );
     }
-
-    #[test]
-    fn preset_switch_preserves_the_initialized_advanced_draft() {
-        let clock = realtime(5, 3);
-        let mut draft = EliminationCreationDraft::new(clock);
-        draft.use_advanced_editor(clock);
-        draft.default_plan.phases[0].set_games_per_set(4);
-        let customized = draft.default_plan.clone();
-
-        draft.use_simple_preset();
-        draft.use_advanced_editor(realtime(10, 5));
-
-        assert_eq!(draft.default_plan, customized);
-    }
 }

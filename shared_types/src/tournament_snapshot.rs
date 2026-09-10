@@ -1,61 +1,14 @@
-use serde::{
-    de::{DeserializeOwned, Error as DeError},
-    Deserialize,
-    Deserializer,
-    Serialize,
-};
-use serde_json::Value as JsonValue;
+use serde::{Deserialize, Serialize};
 use tournamint::{elimination::EliminationNodeId, standings::CriterionValue, Score};
 use uuid::Uuid;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
-#[serde(
-    tag = "kind",
-    content = "value",
-    rename_all = "snake_case",
-    deny_unknown_fields
-)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub enum Value {
     Score(Score),
     Integer(u64),
     SignedInteger(i64),
     NotApplicable,
-}
-
-impl<'de> Deserialize<'de> for Value {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        #[derive(Deserialize)]
-        #[serde(rename_all = "snake_case")]
-        enum Kind {
-            Score,
-            Integer,
-            SignedInteger,
-            NotApplicable,
-        }
-
-        #[derive(Deserialize)]
-        #[serde(deny_unknown_fields)]
-        struct WireValue {
-            kind: Kind,
-            value: Option<JsonValue>,
-        }
-
-        let WireValue { kind, value } = WireValue::deserialize(deserializer)?;
-        match kind {
-            Kind::Score => with_json_content(value, "value", Self::Score),
-            Kind::Integer => with_json_content(value, "value", Self::Integer),
-            Kind::SignedInteger => with_json_content(value, "value", Self::SignedInteger),
-            Kind::NotApplicable => match value {
-                None | Some(JsonValue::Null) => Ok(Self::NotApplicable),
-                Some(_) => Err(DeError::custom(
-                    "unexpected value for not-applicable standing",
-                )),
-            },
-        }
-    }
 }
 
 impl From<CriterionValue> for Value {
@@ -66,21 +19,6 @@ impl From<CriterionValue> for Value {
             CriterionValue::NotApplicable => Self::NotApplicable,
         }
     }
-}
-
-fn with_json_content<T, U, E>(
-    content: Option<JsonValue>,
-    field: &'static str,
-    into_value: impl FnOnce(T) -> U,
-) -> Result<U, E>
-where
-    T: DeserializeOwned,
-    E: DeError,
-{
-    let content = content.ok_or_else(|| E::missing_field(field))?;
-    serde_json::from_value(content)
-        .map(into_value)
-        .map_err(E::custom)
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -157,4 +95,55 @@ pub enum Resolution {
     Walkover { winner: Uuid, withdrawn: Uuid },
     Vacancy,
     SkippedConditionalBranch,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Group, Placement, Row, Snapshot, Value};
+    use codee::{binary::MsgpackSerdeCodec, Decoder, Encoder};
+    use tournamint::Score;
+    use uuid::Uuid;
+
+    fn standings_with_all_value_kinds() -> Snapshot {
+        Snapshot {
+            groups: vec![Group {
+                placement: Placement::CompetitionRank(1),
+                rows: vec![Row {
+                    user_id: Uuid::nil(),
+                    primary_score: Value::Score(Score::new(u32::MAX)),
+                    games_played: 0,
+                    matches_played: None,
+                    wins: 0,
+                    draws: 0,
+                    losses: 0,
+                    counts: vec![],
+                    values: vec![
+                        Value::Integer(u64::MAX),
+                        Value::SignedInteger(i64::MIN),
+                        Value::SignedInteger(i64::MAX),
+                        Value::NotApplicable,
+                    ],
+                }],
+                separated_by: None,
+            }],
+        }
+    }
+
+    #[test]
+    fn standings_with_not_applicable_values_round_trip_through_the_websocket_codec() {
+        let standings = standings_with_all_value_kinds();
+        let bytes = MsgpackSerdeCodec::encode(&standings).unwrap();
+        let decoded: Snapshot = MsgpackSerdeCodec::decode(&bytes).unwrap();
+        assert_eq!(decoded, standings);
+    }
+
+    #[test]
+    fn standings_preserve_integer_bounds_through_json_storage() {
+        let standings = standings_with_all_value_kinds();
+        let value = serde_json::to_value(&standings).unwrap();
+        let text = serde_json::to_string(&value).unwrap();
+        let stored: serde_json::Value = serde_json::from_str(&text).unwrap();
+        let decoded: Snapshot = serde_json::from_value(stored).unwrap();
+        assert_eq!(decoded, standings);
+    }
 }

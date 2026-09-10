@@ -59,7 +59,7 @@ pub fn ControlButtons() -> impl IntoView {
             let is_arena = game
                 .tournament
                 .as_ref()
-                .is_some_and(|tournament| tournament.format() == Format::Arena);
+                .is_some_and(|tournament| tournament.format == Format::Arena);
             if !is_arena {
                 return false;
             }

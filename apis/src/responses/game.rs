@@ -1,10 +1,13 @@
-use crate::responses::{user::UserResponse, TournamentAbstractResponse};
+use crate::responses::user::UserResponse;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Duration as ChronoDuration, Utc};
 use hive_lib::{Bug, GameControl, GameResult, GameStatus, GameType, History, Position, State};
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "ssr")]
+use shared_types::GamesQueryOptions;
 use shared_types::{
     clock::Clock,
+    tournament::Format,
     BatchToken,
     Conclusion,
     GameId,
@@ -12,17 +15,23 @@ use shared_types::{
     GameStart,
     TimeMode,
     TournamentGameResult,
+    TournamentId,
 };
-#[cfg(feature = "ssr")]
-use shared_types::{GamesQueryOptions, TournamentId};
 use std::{cmp::Ordering, collections::HashMap, time::Duration};
 use uuid::Uuid;
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct GameTournamentSummary {
+    pub tournament_id: TournamentId,
+    pub name: String,
+    pub format: Format,
+}
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct GameResponse {
     pub uuid: Uuid,
     pub game_id: GameId,
-    pub tournament: Option<TournamentAbstractResponse>,
+    pub tournament: Option<GameTournamentSummary>,
     pub current_player_id: Uuid,
     pub turn: usize,
     pub finished: bool,
@@ -198,23 +207,14 @@ use hive_lib::{
 };
 use std::{collections::HashSet, str::FromStr};
 
-fn tournament_abstract(tournament: &Tournament) -> Result<TournamentAbstractResponse> {
-    Ok(TournamentAbstractResponse {
-        tournament_id: TournamentId(tournament.nanoid.clone()),
-        name: tournament.name.clone(),
-        players: 0,
-        joined: false,
-        invited: false,
-        organizing: false,
-        seats: tournament.seats,
-        invite_only: tournament.invite_only,
-        configuration: tournament.configuration().clone(),
-        band_upper: tournament.band_upper,
-        band_lower: tournament.band_lower,
-        starts_at: tournament.starts_at,
-        started_at: tournament.started_at,
-        finished_at: tournament.finished_at,
-    })
+impl From<&Tournament> for GameTournamentSummary {
+    fn from(tournament: &Tournament) -> Self {
+        Self {
+            tournament_id: TournamentId(tournament.nanoid.clone()),
+            name: tournament.name.clone(),
+            format: tournament.configuration().format.kind(),
+        }
+    }
 }
 
 impl GameResponse {
@@ -281,7 +281,7 @@ impl GameResponse {
                     tournaments_map
                         .get(&id)
                         .ok_or_else(|| anyhow::anyhow!("Tournament {id} not found"))
-                        .and_then(tournament_abstract)
+                        .map(GameTournamentSummary::from)
                 })
                 .transpose()?;
 
@@ -307,7 +307,7 @@ impl GameResponse {
         let white_player = UserResponse::from_uuid(&game.white_id, conn).await?;
         let black_player = UserResponse::from_uuid(&game.black_id, conn).await?;
         let tournament = match game.tournament_id {
-            Some(id) => Some(tournament_abstract(&Tournament::find(id, conn).await?)?),
+            Some(id) => Some(GameTournamentSummary::from(&Tournament::find(id, conn).await?)),
             None => None,
         };
 
@@ -319,7 +319,7 @@ impl GameResponse {
         state: Box<State>,
         white_player: UserResponse,
         black_player: UserResponse,
-        tournament: Option<TournamentAbstractResponse>,
+        tournament: Option<GameTournamentSummary>,
     ) -> Result<Self> {
         let game_status = GameStatus::from_str(&game.game_status)?;
         let game_speed = GameSpeed::from_str(&game.speed)?;

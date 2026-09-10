@@ -28,11 +28,7 @@ use chrono::{DateTime, Utc};
 use hive_lib::GameStatus;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
-use tournamint::{
-    round_robin::RoundRobinCompletedMatchProjection,
-    swiss::MatchDisposition,
-    MatchScore,
-};
+use tournamint::{round_robin::RoundRobinCompletedMatchProjection, MatchScore};
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -62,7 +58,6 @@ pub enum TournamentFormatResponse {
         nodes: Vec<EliminationNodeResponse>,
         complete: bool,
         player_results: Vec<EliminationPlayerResultResponse>,
-        reset_required: bool,
         withdrawable_entrants: HashSet<Uuid>,
     },
 }
@@ -105,26 +100,20 @@ pub struct ArenaGameResponse {
     pub outcome: Option<GameOutcome>,
     pub awarded_points: Option<[Score; 2]>,
     pub doubled: Option<[bool; 2]>,
-    pub no_start_absent: Option<Uuid>,
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize, Debug, Eq, PartialEq)]
 pub struct ArenaPlayerStatsResponse {
     pub player: Uuid,
-    pub points: Score,
     pub performance_rating: Option<i32>,
     pub average_opponent_rating: Option<u32>,
     pub performance_games: u32,
     pub arena_rating: Option<i32>,
     pub games_scored: u32,
-    pub games_played: u32,
-    pub no_starts: u32,
     pub wins: u32,
     pub draws: u32,
     pub losses: u32,
-    pub current_streak: u32,
     pub on_fire: bool,
-    pub best_streak: u32,
     pub berserks: u32,
     pub paused: bool,
 }
@@ -134,8 +123,6 @@ pub struct PlayerStatsResponse {
     pub player: Uuid,
     pub performance_rating: Option<i32>,
     pub average_opponent_rating: Option<u32>,
-    pub games_played: u32,
-    pub matches_played: Option<u32>,
     pub wins: u32,
     pub draws: u32,
     pub losses: u32,
@@ -180,7 +167,6 @@ pub struct SwissEncounterResponse {
 
 #[derive(Clone, Copy, Serialize, Deserialize, Debug, Eq, PartialEq)]
 pub struct SwissMatchCompletionResponse {
-    pub dispositions: [MatchDisposition; 2],
     pub aggregate: [MatchScore; 2],
     pub game_points: [Score; 2],
     pub match_points: [Score; 2],

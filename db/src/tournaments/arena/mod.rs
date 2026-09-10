@@ -1191,9 +1191,9 @@ mod tests {
             "patch and snapshot preserve the same frozen statistics"
         );
         assert!(projected_games.is_empty());
-        assert!(projected_player_stats.iter().all(|stats| {
-            stats.games_scored == 0 && stats.games_played == 0 && stats.no_starts == 0
-        }));
+        assert!(projected_player_stats
+            .iter()
+            .all(|stats| stats.games_scored == 0));
         let durable = Game::find_by_uuid(&game.id, &mut conn)
             .await
             .expect("excluded no-start Game remains durable");

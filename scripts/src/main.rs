@@ -51,15 +51,6 @@ enum SyntheticTournamentCommand {
         #[arg(long, default_value = "http://localhost:3000")]
         app_url: String,
     },
-    /// Add or verify the finished 16-player, six-repeat Round Robin fixture.
-    EnsureMaxRoundRobin {
-        #[arg(long)]
-        confirm_database_name: String,
-        #[arg(long)]
-        database_url: Option<String>,
-        #[arg(long, default_value = "http://localhost:3000")]
-        app_url: String,
-    },
     /// Delete only tournaments and accounts owned by the synthetic marker.
     Cleanup {
         #[arg(long)]
@@ -199,19 +190,6 @@ async fn main() -> Result<()> {
             } => {
                 let mut conn = common::setup_database(database_url).await?;
                 synthetic_tournaments::arm_due(&mut conn, &confirm_database_name, &app_url).await
-            }
-            SyntheticTournamentCommand::EnsureMaxRoundRobin {
-                confirm_database_name,
-                database_url,
-                app_url,
-            } => {
-                let mut conn = common::setup_database(database_url).await?;
-                synthetic_tournaments::ensure_max_round_robin(
-                    &mut conn,
-                    &confirm_database_name,
-                    &app_url,
-                )
-                .await
             }
             SyntheticTournamentCommand::Cleanup {
                 confirm_database_name,
