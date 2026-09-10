@@ -233,3 +233,29 @@ fn a_ply_moves_only_the_piece_it_moved() {
         }
     }
 }
+
+/// A six-piece hive of ants and queens shuffled eleven cells east of the spawn in forty plies.
+/// `center_coordinates` used to answer with the spawn under eight pieces - harmless only while
+/// recentering dragged small hives back there - so the camera opened on empty board.
+#[test]
+fn the_centre_follows_a_small_hive_that_travels() {
+    let history =
+        History::from_filepath("./test_pgns/regressions/travelling_small_hive.pgn".into())
+            .expect("PGN");
+    let state = State::new_from_history(&history).expect("replays");
+    let cells: Vec<_> = state.board.all_taken_positions().collect();
+    assert!(
+        cells.len() < 8,
+        "the shortcut only ever applied under eight pieces"
+    );
+
+    let q = cells.iter().map(|at| at.q);
+    let r = cells.iter().map(|at| at.r);
+    let (q_min, q_max) = (q.clone().min().expect("hive"), q.max().expect("hive"));
+    let (r_min, r_max) = (r.clone().min().expect("hive"), r.max().expect("hive"));
+    let centre = state.board.center_coordinates();
+    assert!(
+        (q_min..=q_max).contains(&centre.q) && (r_min..=r_max).contains(&centre.r),
+        "centre {centre} is outside the hive it should be centred on"
+    );
+}

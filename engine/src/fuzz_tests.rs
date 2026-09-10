@@ -385,11 +385,14 @@ fn a_treadmilling_hive_drags_the_window_with_it() {
         ) {
             break;
         }
-        let options = legal_actions(&state);
+        let mut options = legal_actions(&state);
         if options.is_empty() {
             assert!(state.play_turn_from_history("pass", "").is_ok());
             continue;
         }
+        // `legal_actions` walks a HashMap, so ties would be broken by whatever order this run
+        // happened to produce and the treadmill would wander somewhere different each time.
+        options.sort_by_key(|(piece, target)| (piece.to_string(), target.q, target.r));
         // Greedily drag the hive east every ply; a game that draws itself proves nothing.
         let mut best: Option<(i32, Piece, Position)> = None;
         for (piece, target) in options {

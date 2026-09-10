@@ -9,7 +9,7 @@ use crate::{
     game_type::GameType,
     piece::Piece,
     position::Position,
-    window_array::{WindowArray, MARGIN, SMALL_SIZE},
+    window_array::{WindowArray, INITIAL_ORIGIN, MARGIN, SMALL_SIZE},
 };
 use itertools::Itertools;
 use lazy_static::lazy_static;
@@ -244,9 +244,10 @@ impl Board {
     fn frame_for((q_min, q_max, r_min, r_max): (i32, i32, i32, i32)) -> (Position, bool) {
         let (q_width, r_width) = (q_max - q_min, r_max - r_min);
         // 28 pieces in a line is the widest a connected hive gets, and big storage has exactly
-        // that many cells inside its margins. Anything wider is a hand-built board: the window
-        // it asks for cannot hold it, and `reframe` would drop whatever fell outside.
-        debug_assert!(
+        // that many cells inside its margins. Anything wider is a hand-built board asking for a
+        // window that cannot hold it; refusing loudly beats reframing and dropping whatever fell
+        // outside, which is what a release build did while this was only a debug assertion.
+        assert!(
             q_width.max(r_width) <= BOARD_SIZE - 2 * MARGIN - 1,
             "hive spans {q_width}x{r_width}, wider than any window"
         );
@@ -275,6 +276,52 @@ impl Board {
             return;
         };
         self.set_frame(Self::frame_for(extent));
+    }
+
+    /// Translate the whole hive to the frame a spawn-centred board would put it in.
+    ///
+    /// The one place a piece is allowed to move without a move being played, and only for a
+    /// board nobody is looking at yet. HOP carries no coordinates of its own, so where a parsed
+    /// hive lands is whatever the serializer's spiral walked into; documents saved before this
+    /// existed key their annotations to the frame recentering used to produce, and would
+    /// otherwise point at the wrong pieces. Live play uses `reframe`, which never moves a piece.
+    pub fn normalise_to_spawn(&mut self) {
+        let Some((q_min, q_max, r_min, r_max)) = self.hive_extent() else {
+            return;
+        };
+        let centre = Position::initial_spawn_position();
+        let (q_width, r_width) = (q_max - q_min, r_max - r_min);
+        let small = q_width.max(r_width) <= SMALL_SIZE - 2 * MARGIN - 1;
+        // The window a fresh board opens on, which is the frame these coordinates were saved in.
+        let low = INITIAL_ORIGIN.q + MARGIN;
+        let high = INITIAL_ORIGIN.q + SMALL_SIZE - MARGIN - 1;
+        let start = |mid: i32, width: i32| {
+            if small {
+                (mid - width / 2).clamp(low, high - width)
+            } else {
+                mid - width / 2
+            }
+        };
+        let (dq, dr) = (
+            start(centre.q, q_width) - q_min,
+            start(centre.r, r_width) - r_min,
+        );
+        if (dq, dr) == (0, 0) {
+            return;
+        }
+        let shift = |at: Position| Position {
+            q: at.q + dq,
+            r: at.r + dr,
+        };
+        let snapshot = self.snapshot();
+        let mut moved = Board::new();
+        for (at, piece) in &snapshot.pieces {
+            moved.insert(shift(*at), *piece, true);
+        }
+        moved.last_moved = self.last_moved.map(|(piece, at)| (piece, shift(at)));
+        moved.last_move = (self.last_move.0.map(shift), self.last_move.1.map(shift));
+        moved.stunned = self.stunned;
+        *self = moved;
     }
 
     /// A freshly reframed hive answers false, so reframing cannot retrigger itself.
@@ -1068,8 +1115,11 @@ impl Board {
                 )
             },
         );
-        //center won't shift much if any in the first few moves
-        if positions < 8 {
+        // A hive with nothing on it has no centre; anything else is centred on what it holds.
+        // This used to shortcut to the spawn under eight pieces, safe only while recentering
+        // dragged every hive back there. A small hive can now shuffle a long way from spawn,
+        // and the camera stayed behind - see regressions/travelling_small_hive.pgn.
+        if positions == 0 {
             return Position::initial_spawn_position();
         }
 
@@ -1532,6 +1582,21 @@ mod tests {
         let restored = Board::from_snapshot(&board.snapshot());
         assert_eq!(restored.storage_cells(), 1024);
         assert_eq!(restored, board);
+    }
+
+    /// No window holds a hive this wide, so the frame would have to leave pieces outside it.
+    /// A release build used to reframe anyway and drop them, reporting a piece count for cells
+    /// that read empty; refusing is the only honest answer.
+    #[test]
+    #[should_panic(expected = "wider than any window")]
+    fn a_hive_too_wide_for_any_window_is_refused() {
+        let mut board = Board::new();
+        board.insert(Position::new(0, 0), "wQ".parse().expect("test piece"), true);
+        board.insert(
+            Position::new(30, 0),
+            "bQ".parse().expect("test piece"),
+            true,
+        );
     }
 
     /// The whole point of the window: the renderer draws these coordinates, so a reframe that

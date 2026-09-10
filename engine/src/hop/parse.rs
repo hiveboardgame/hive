@@ -413,9 +413,11 @@ impl Walk {
         if self.scopes.len() != 1 {
             return Err(HopError::UnbalancedParens);
         }
-        // The walk runs wherever the serializer's spiral leads, so a long hive can end up far
-        // from the spawn; reframing sizes the window around wherever it landed.
+        // The walk runs wherever the serializer's spiral leads, so the coordinates it produces
+        // are an artefact of the spiral. Normalising makes them a function of the hive alone,
+        // which is what saved annotations are keyed to.
         self.board.last_moved = self.marked;
+        self.board.normalise_to_spawn();
         self.board.reframe();
         Ok(self.board)
     }
