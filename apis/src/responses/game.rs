@@ -1,11 +1,10 @@
-use crate::responses::user::UserResponse;
+use crate::responses::{user::UserResponse, TournamentAbstractResponse};
 use anyhow::{Context, Result};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration as ChronoDuration, Utc};
 use hive_lib::{Bug, GameControl, GameResult, GameStatus, GameType, History, Position, State};
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "ssr")]
-use shared_types::GamesQueryOptions;
 use shared_types::{
+    clock::Clock,
     BatchToken,
     Conclusion,
     GameId,
@@ -14,25 +13,10 @@ use shared_types::{
     TimeMode,
     TournamentGameResult,
 };
+#[cfg(feature = "ssr")]
+use shared_types::{GamesQueryOptions, TournamentId};
 use std::{cmp::Ordering, collections::HashMap, time::Duration};
 use uuid::Uuid;
-
-#[derive(Clone, Serialize, Deserialize, Debug)]
-#[allow(dead_code)]
-pub struct GameAbstractResponse {
-    pub tournament: Option<TournamentAbstractResponse>,
-    pub game_id: GameId,
-    pub white_rating: Option<f64>,
-    pub black_rating: Option<f64>,
-    pub white_rating_change: Option<f64>,
-    pub black_rating_change: Option<f64>,
-    pub history: Vec<(String, String)>,
-    pub time_mode: TimeMode,
-    pub time_base: Option<i32>,
-    pub time_increment: Option<i32>,
-    pub speed: GameSpeed,
-    pub conclusion: Conclusion,
-}
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct GameResponse {
@@ -64,14 +48,21 @@ pub struct GameResponse {
     pub speed: GameSpeed,
     pub black_time_left: Option<Duration>,
     pub white_time_left: Option<Duration>,
+    /// Berserk halves that player's starting clock and drops their increment
+    /// entirely, so both sides' timers depend on these.
+    pub white_berserked: bool,
+    pub black_berserked: bool,
     pub last_interaction: Option<DateTime<Utc>>,
+    pub finished_at: Option<DateTime<Utc>>,
+    /// The separate first-move deadline while an Arena game is waiting for
+    /// each player's opening move. Ordinary clocks remain held while present.
+    pub arena_move_due_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub hashes: Vec<u64>,
     pub conclusion: Conclusion,
     pub repetitions: Vec<usize>,
     pub game_start: GameStart,
-    pub game_speed: GameSpeed,
     pub move_times: Vec<Option<i64>>,
     pub tournament_game_result: TournamentGameResult,
 }
@@ -89,6 +80,8 @@ impl PartialEq for GameResponse {
             && self.turn == other.turn
             && self.finished == other.finished
             && self.last_interaction == other.last_interaction
+            && self.finished_at == other.finished_at
+            && self.arena_move_due_at == other.arena_move_due_at
     }
 }
 
@@ -107,6 +100,11 @@ impl PartialOrd for GameResponse {
 impl Eq for GameResponse {}
 
 impl GameResponse {
+    pub fn time_control(&self) -> Option<Clock> {
+        Clock::from_time_parts(self.time_mode, self.time_base, self.time_increment)
+            .expect("game response time control is validated when constructed")
+    }
+
     pub fn recorded_time_left(&self, turn: usize) -> Option<Duration> {
         self.move_times
             .get(turn)
@@ -155,38 +153,23 @@ impl GameResponse {
         .expect("Partial state to be valid, as the full game was")
     }
 
-    pub fn organizer_can_adjudicate(&self) -> bool {
-        matches!(
-            self.conclusion,
-            Conclusion::Unknown | Conclusion::Committee | Conclusion::Forfeit
-        ) && self.turn == 0
-            && self.history.is_empty()
-            && self.game_start == GameStart::Ready
-            && matches!(
-                self.game_status,
-                GameStatus::NotStarted | GameStatus::Adjudicated
-            )
-    }
-
-    pub fn time_left(&self) -> Result<std::time::Duration> {
-        if self.turn < 2 {
-            return Ok(std::time::Duration::from_nanos(u64::MAX));
+    pub fn time_left(&self) -> Result<Duration> {
+        let clock_is_held = self.game_status == GameStatus::NotStarted
+            || (self.game_start == GameStart::Arena && self.turn < 2);
+        if clock_is_held {
+            return Ok(Duration::from_nanos(u64::MAX));
         }
         if self.time_mode == TimeMode::Untimed {
             return Ok(self
                 .updated_at
-                .signed_duration_since(DateTime::<chrono::Utc>::MIN_UTC)
+                .signed_duration_since(DateTime::<Utc>::MIN_UTC)
                 .to_std()?);
         }
         if let Some(interaction) = self.last_interaction {
             let left = if self.turn.is_multiple_of(2) {
-                chrono::Duration::from_std(
-                    self.white_time_left.context("white_time_left not some")?,
-                )
+                ChronoDuration::from_std(self.white_time_left.context("white_time_left not some")?)
             } else {
-                chrono::Duration::from_std(
-                    self.black_time_left.context("black_time_left not some")?,
-                )
+                ChronoDuration::from_std(self.black_time_left.context("black_time_left not some")?)
             }
             .context("Could not convert to chrono::TimeDelta")?;
             let future = interaction
@@ -194,34 +177,47 @@ impl GameResponse {
                 .context("Time overflowed")?;
             let now = Utc::now();
             if now > future {
-                return Ok(std::time::Duration::from_nanos(0));
+                return Ok(Duration::from_nanos(0));
             } else {
                 return Ok(future.signed_duration_since(now).to_std()?);
             }
         }
-        Ok(std::time::Duration::from_nanos(u64::MAX))
+        Ok(Duration::from_nanos(u64::MAX))
     }
 }
 
 use cfg_if::cfg_if;
 
-use super::tournament::TournamentAbstractResponse;
 cfg_if! { if #[cfg(feature = "ssr")] {
 use db_lib::{
-    models::Game,
+    models::{Game, Tournament},
     DbConn,
 };
 use hive_lib::{
     Color, GameStatus::Finished, Piece,
 };
-use std::{str::FromStr, collections::HashSet};
+use std::{collections::HashSet, str::FromStr};
+
+fn tournament_abstract(tournament: &Tournament) -> Result<TournamentAbstractResponse> {
+    Ok(TournamentAbstractResponse {
+        tournament_id: TournamentId(tournament.nanoid.clone()),
+        name: tournament.name.clone(),
+        players: 0,
+        joined: false,
+        invited: false,
+        organizing: false,
+        seats: tournament.seats,
+        invite_only: tournament.invite_only,
+        configuration: tournament.configuration().clone(),
+        band_upper: tournament.band_upper,
+        band_lower: tournament.band_lower,
+        starts_at: tournament.starts_at,
+        started_at: tournament.started_at,
+        finished_at: tournament.finished_at,
+    })
+}
 
 impl GameResponse {
-    pub async fn new_from_uuid(game_id: Uuid, conn: &mut DbConn<'_>) -> Result<Self> {
-        let game = Game::find_by_uuid(&game_id, conn).await?;
-        GameResponse::from_model(&game, conn).await
-    }
-
     pub async fn new_from_game_id(game_id: &GameId, conn: &mut DbConn<'_>) -> Result<Self> {
         let game = Game::find_by_game_id(game_id, conn).await?;
         GameResponse::from_model(&game, conn).await
@@ -252,25 +248,23 @@ impl GameResponse {
 
     pub async fn from_games_batch(games: Vec<Game>, conn: &mut DbConn<'_>) -> Result<Vec<Self>> {
         let mut user_ids = HashSet::new();
-        let mut tournament_ids = HashSet::new();
-
         for game in &games {
             user_ids.insert(game.white_id);
             user_ids.insert(game.black_id);
-            if let Some(tournament_id) = game.tournament_id {
-                tournament_ids.insert(tournament_id);
-            }
         }
 
+        let tournament_ids = games
+            .iter()
+            .filter_map(|game| game.tournament_id)
+            .collect::<HashSet<_>>();
+        let tournament_ids_vec = tournament_ids.iter().copied().collect::<Vec<_>>();
         let user_ids_vec: Vec<Uuid> = user_ids.into_iter().collect();
-        let tournament_ids_vec: Vec<Uuid> = tournament_ids.into_iter().collect();
 
         let users_map = UserResponse::from_uuids(&user_ids_vec, conn).await?;
-        let tournaments_map = if !tournament_ids_vec.is_empty() {
-            TournamentAbstractResponse::from_uuids(&tournament_ids_vec, conn).await?
-        } else {
-            HashMap::new()
-        };
+        let mut tournaments_map = HashMap::new();
+        for tournament in Tournament::find_by_uuids(&tournament_ids_vec, conn).await? {
+            tournaments_map.insert(tournament.id, tournament);
+        }
 
         let mut result = Vec::new();
         for game in games {
@@ -281,11 +275,25 @@ impl GameResponse {
                 anyhow::anyhow!("Black player not found for game {}", game.id)
             })?;
 
-            let tournament = game.tournament_id.and_then(|tid| tournaments_map.get(&tid));
+            let tournament = game
+                .tournament_id
+                .map(|id| {
+                    tournaments_map
+                        .get(&id)
+                        .ok_or_else(|| anyhow::anyhow!("Tournament {id} not found"))
+                        .and_then(tournament_abstract)
+                })
+                .transpose()?;
 
             let state = Box::new(State::new_from_str(&game.history, &game.game_type)?);
 
-            result.push(Self::new_from_batch(&game, state, white_player, black_player, tournament.cloned()).await?);
+            result.push(Self::new_from_batch(
+                &game,
+                state,
+                white_player,
+                black_player,
+                tournament,
+            )?);
         }
 
         Ok(result)
@@ -298,24 +306,26 @@ impl GameResponse {
     ) -> Result<Self> {
         let white_player = UserResponse::from_uuid(&game.white_id, conn).await?;
         let black_player = UserResponse::from_uuid(&game.black_id, conn).await?;
-        let tournament = if let Some(tournament_id) = game.tournament_id {
-            Some(TournamentAbstractResponse::from_uuid(&tournament_id, conn).await?)
-        } else {
-            None
+        let tournament = match game.tournament_id {
+            Some(id) => Some(tournament_abstract(&Tournament::find(id, conn).await?)?),
+            None => None,
         };
 
-        Self::new_from_batch(game, state, white_player, black_player, tournament).await
+        Self::new_from_batch(game, state, white_player, black_player, tournament)
     }
 
-    async fn new_from_batch(
+    fn new_from_batch(
         game: &Game,
         state: Box<State>,
         white_player: UserResponse,
         black_player: UserResponse,
         tournament: Option<TournamentAbstractResponse>,
     ) -> Result<Self> {
+        let game_status = GameStatus::from_str(&game.game_status)?;
+        let game_speed = GameSpeed::from_str(&game.speed)?;
+        let game_type = GameType::from_str(&game.game_type)?;
         let (white_rating, black_rating, white_rating_change, black_rating_change) = {
-            if let Finished(_) = GameStatus::from_str(&game.game_status)? {
+            if matches!(&game_status, Finished(_)) {
                 (
                     game.white_rating,
                     game.black_rating,
@@ -324,8 +334,8 @@ impl GameResponse {
                 )
             } else {
                 (
-                    Some(white_player.rating_for_speed(&GameSpeed::from_str(&game.speed)?) as f64),
-                    Some(black_player.rating_for_speed(&GameSpeed::from_str(&game.speed)?) as f64),
+                    Some(white_player.rating_for_speed(&game_speed) as f64),
+                    Some(black_player.rating_for_speed(&game_speed) as f64),
                     None,
                     None,
                 )
@@ -333,14 +343,16 @@ impl GameResponse {
         };
         let white_time_left = game.white_time_left.map(|nanos| Duration::from_nanos(nanos as u64));
         let black_time_left = game.black_time_left.map(|nanos| Duration::from_nanos(nanos as u64));
+        let time_mode = TimeMode::from_str(&game.time_mode)?;
+        Clock::from_time_parts(time_mode, game.time_base, game.time_increment)?;
         Ok(Self {
             uuid: game.id,
             game_id: GameId(game.nanoid.clone()),
             tournament,
-            game_status: GameStatus::from_str(&game.game_status)?,
+            game_status,
             current_player_id: game.current_player_id,
             finished: game.finished,
-            game_type: GameType::from_str(&game.game_type)?,
+            game_type,
             tournament_queen_rule: game.tournament_queen_rule,
             turn: state.turn,
             hashes: game.hashes(),
@@ -354,10 +366,10 @@ impl GameResponse {
             rated: game.rated,
             reserve_black: state
                 .board
-                .reserve(Color::Black, game.game_type.parse().expect("Gametype parsed")),
+                .reserve(Color::Black, game_type),
             reserve_white: state
                 .board
-                .reserve(Color::White, game.game_type.parse().expect("Gametype parsed")),
+                .reserve(Color::White, game_type),
             history: state.history.moves.clone(),
             game_control_history: Self::gc_history(&game.game_control_history),
             white_rating,
@@ -366,17 +378,20 @@ impl GameResponse {
             black_rating_change,
             white_time_left,
             black_time_left,
-            time_mode: TimeMode::from_str(&game.time_mode)?,
+            white_berserked: game.white_berserked,
+            black_berserked: game.black_berserked,
+            time_mode,
             time_base: game.time_base,
             time_increment: game.time_increment,
             last_interaction: game.last_interaction,
-            speed: GameSpeed::from_str(&game.speed)?,
+            finished_at: game.finished_at,
+            arena_move_due_at: game.arena_move_due_at,
+            speed: game_speed,
             created_at: game.created_at,
             updated_at: game.updated_at,
             conclusion: Conclusion::from_str(&game.conclusion)?,
             repetitions: state.repeating_moves.clone(),
             game_start: GameStart::from_str(&game.game_start)?,
-            game_speed: GameSpeed::from_base_increment(game.time_base, game.time_increment),
             move_times: game.move_times.clone(),
             tournament_game_result: TournamentGameResult::from_str(&game.tournament_game_result)?,
         })

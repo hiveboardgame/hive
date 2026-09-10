@@ -6,6 +6,7 @@ use super::{
     WebsocketData,
 };
 use crate::common::{
+    ChatSendError,
     ClientRequest,
     ExternalServerError,
     GameAction,
@@ -158,51 +159,55 @@ async fn handle_binary(
     );
 
     match handler.handle().await {
-        Ok(output) => {
-            for message in output.messages {
-                let destination = message.destination;
-                let serialized = ServerResult::Ok(Box::new(message.message));
-                if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
-                    hub.dispatch(&destination, Bytes::from(serialized)).await;
-                }
-            }
-            // Reactions: one serialize, one Bytes allocation, refcount-cloned
-            // across the three fanouts (both players + spectators). Dispatch
-            // after `messages` so urgent state updates land first.
-            for reaction in output.reactions {
-                hub.dispatch_reaction(reaction).await;
-            }
-            // Finalize after dispatch so the opponent received the final
-            // move/control via still-populated membership.
-            for finalize in output.finalize_games {
-                hub.finalize_game(&finalize.game_id, finalize.white_id, finalize.black_id);
-            }
-        }
-        Err(err) => {
-            if matches!(err, RequestHandlerError::RateLimited(_)) {
-                hub.data.telemetry.record_chat_rate_limit_rejection();
-            }
-            if should_log_request_error(&err) {
-                let request_summary = request_log_summary(&request);
-                printdoc! {r#"
-                    -----------------ERROR-----------------
-                      Request: {}
-                      Error:   {:?}
-                      User:    {} {}
-                    ------------------END------------------
-                    "#,
-                    request_summary, err, user.username, user.user_id
-                };
-            }
-            let message = ServerResult::Err(external_server_error(&request, &err));
-            if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                hub.dispatch(
-                    &MessageDestination::Direct(socket.clone()),
-                    Bytes::from(serialized),
+        Ok(mut output) => {
+            let request_error = output.request_error.take();
+            hub.dispatch_handler_output(output).await;
+            if let Some(error) = request_error {
+                dispatch_request_error(
+                    hub,
+                    socket,
+                    &request,
+                    user,
+                    RequestHandlerError::InternalError(error),
                 )
                 .await;
             }
         }
+        Err(err) => {
+            dispatch_request_error(hub, socket, &request, user, err).await;
+        }
+    }
+}
+
+async fn dispatch_request_error(
+    hub: &Arc<WsHub>,
+    socket: &SocketTx,
+    request: &ClientRequest,
+    user: &SimpleUser,
+    err: RequestHandlerError,
+) {
+    if matches!(err, RequestHandlerError::RateLimited(_)) {
+        hub.data.telemetry.record_chat_rate_limit_rejection();
+    }
+    if should_log_request_error(&err) {
+        let request_summary = request_log_summary(request);
+        printdoc! {r#"
+            -----------------ERROR-----------------
+              Request: {}
+              Error:   {:?}
+              User:    {} {}
+            ------------------END------------------
+            "#,
+            request_summary, err, user.username, user.user_id
+        };
+    }
+    let message = ServerResult::Err(external_server_error(request, &err));
+    if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
+        hub.dispatch(
+            &MessageDestination::Direct(socket.clone()),
+            Bytes::from(serialized),
+        )
+        .await;
     }
 }
 
@@ -242,6 +247,7 @@ fn external_server_error(
                 },
                 RequestHandlerError::InternalError(_) => crate::common::ChatSendError::Unavailable,
                 RequestHandlerError::AuthError(_) => crate::common::ChatSendError::Unavailable,
+                RequestHandlerError::TournamentNameTaken => ChatSendError::Unavailable,
             };
             ExternalServerError::ChatSend {
                 key: request.key.clone(),
@@ -259,6 +265,7 @@ fn external_server_error(
                 }
                 RequestHandlerError::InternalError(_)
                 | RequestHandlerError::ChatClientIdConflict => SubscriptionError::Unavailable,
+                RequestHandlerError::TournamentNameTaken => SubscriptionError::Unavailable,
             };
             ExternalServerError::ChatSubscribe {
                 attempt: subscription.clone(),

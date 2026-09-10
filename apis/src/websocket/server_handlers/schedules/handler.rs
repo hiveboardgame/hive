@@ -1,22 +1,23 @@
 use crate::{
-    common::{
-        ScheduleAction::{self, Accept, Cancel, Propose, TournamentOwn, TournamentPublic},
-        ScheduleUpdate,
-        ServerMessage,
-    },
+    common::ScheduleAction,
     notifications::{notify, Event},
     responses::ScheduleResponse,
-    websocket::messages::{InternalServerMessage, MessageDestination},
+    websocket::{
+        messages::{HandlerOutput, InternalServerMessage},
+        server_handlers::{
+            game::tournament_progression::schedule_response_update_messages,
+            tournaments::append_public_slot_patches,
+        },
+    },
 };
 use anyhow::Result;
 use db_lib::{
     get_conn,
-    models::{Game, NewSchedule, Schedule, Tournament},
+    models::{ScheduleOffer, Tournament, TournamentSlot},
     DbPool,
 };
 use diesel_async::AsyncConnection;
-use shared_types::GameId;
-use std::{collections::HashMap, vec};
+use shared_types::{ScheduleOfferStatus, TournamentStatus};
 use uuid::Uuid;
 
 pub struct ScheduleHandler {
@@ -26,117 +27,111 @@ pub struct ScheduleHandler {
 }
 
 impl ScheduleHandler {
-    pub async fn new(user_id: Uuid, action: ScheduleAction, pool: &DbPool) -> Result<Self> {
-        Ok(Self {
+    pub fn new(user_id: Uuid, action: ScheduleAction, pool: &DbPool) -> Self {
+        Self {
             pool: pool.clone(),
             user_id,
             action,
-        })
+        }
     }
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let mut conn = get_conn(&self.pool).await?;
-        let (update, destinations) = conn
-            .transaction::<_, anyhow::Error, _>(async move |tc| {
-                Ok(match self.action.clone() {
-                    Accept(id) => {
-                        let mut schedule = Schedule::from_id(id, tc).await?;
-                        let proposer_id = schedule.proposer_id;
-                        schedule.accept(self.user_id, tc).await?;
-                        let schedule = ScheduleResponse::from_model(schedule, tc).await?;
-
-                        notify(Event::ScheduleAccept {
-                            recipient: proposer_id,
-                            opponent: schedule.opponent_username.clone(),
-                            game_nanoid: schedule.game_id.0.clone(),
-                            when: schedule.start_t,
-                        });
-
-                        (
-                            ScheduleUpdate::Accepted(schedule),
-                            vec![MessageDestination::Global],
-                        )
-                    }
-                    Cancel(id) => {
-                        let mut schedule = Schedule::from_id(id, tc).await?;
-                        schedule.cancel(self.user_id, tc).await?;
-                        let schedule = ScheduleResponse::from_model(schedule, tc).await?;
-                        (
-                            ScheduleUpdate::Deleted(schedule),
-                            vec![MessageDestination::Global],
-                        )
-                    }
-                    Propose(date, game_id) => {
-                        let schedule = NewSchedule::new(self.user_id, &game_id, date, tc).await?;
-                        let schedule = Schedule::create(schedule, self.user_id, tc).await?;
-                        let opponent_id = schedule.opponent_id;
-                        let schedule_response = ScheduleResponse::from_model(schedule, tc).await?;
-
-                        notify(Event::SchedulePropose {
-                            recipient: opponent_id,
-                            proposer: schedule_response.proposer_username.clone(),
-                            game_nanoid: schedule_response.game_id.0.clone(),
-                            when: schedule_response.start_t,
-                        });
-
-                        let destinations = vec![
-                            MessageDestination::User(self.user_id),
-                            MessageDestination::User(opponent_id),
-                        ];
-                        (ScheduleUpdate::Proposed(schedule_response), destinations)
-                    }
-                    TournamentPublic(id) => {
-                        let tournament = Tournament::from_nanoid(&id.to_string(), tc).await?;
-                        let game_ids =
-                            Game::get_ongoing_ids_for_tournament(tournament.id, tc).await?;
-
-                        let mut all_schedules = HashMap::new();
-                        for id in game_ids {
-                            let game_schedules = Schedule::all_from_nanoid(id.clone(), tc).await?;
-                            let mut game_schedules_map = HashMap::new();
-                            for schedule in game_schedules {
-                                let response = ScheduleResponse::from_model(schedule, tc).await?;
-                                game_schedules_map.insert(response.id, response);
-                            }
-                            all_schedules.insert(GameId(id), game_schedules_map);
-                        }
-                        (
-                            ScheduleUpdate::TournamentSchedules(all_schedules),
-                            vec![MessageDestination::User(self.user_id)],
-                        )
-                    }
-                    TournamentOwn(id) => {
-                        let tournament = Tournament::from_nanoid(&id.to_string(), tc).await?;
-                        let game_ids = Game::get_ongoing_ids_for_tournament_by_user(
-                            tournament.id,
-                            self.user_id,
-                            tc,
-                        )
+        let (responses, notification, public_slots) = conn
+            .transaction::<_, anyhow::Error, _>(async move |tc| match self.action.clone() {
+                ScheduleAction::Propose {
+                    candidate_times,
+                    tournament_id,
+                    slot_id,
+                } => {
+                    let tournament = Tournament::find_by_tournament_id(&tournament_id, tc).await?;
+                    let offers = ScheduleOffer::propose(
+                        self.user_id,
+                        tournament.id,
+                        slot_id,
+                        candidate_times,
+                        tc,
+                    )
+                    .await?;
+                    let responses = ScheduleResponse::from_models_batch(offers, tc).await?;
+                    let pending = responses
+                        .iter()
+                        .find(|response| response.status == ScheduleOfferStatus::Pending)
+                        .ok_or_else(|| anyhow::anyhow!("new schedule offer is not pending"))?;
+                    let notification = Event::SchedulePropose {
+                        recipient: pending.opponent_id,
+                        proposer: pending.proposer_username.clone(),
+                        tournament_nanoid: pending.tournament_id.0.clone(),
+                        slot_id: pending.slot_id,
+                        candidate_times: pending.candidate_times.clone(),
+                    };
+                    Ok((responses, Some(notification), None))
+                }
+                ScheduleAction::Accept {
+                    offer_id,
+                    selected_time,
+                } => {
+                    let offer =
+                        ScheduleOffer::accept(offer_id, self.user_id, selected_time, tc).await?;
+                    let tournament_id = offer.tournament_id;
+                    let slot_id = offer.tournament_slot_id;
+                    let response = ScheduleResponse::from_model(offer, tc).await?;
+                    let notification = Event::ScheduleAccept {
+                        recipient: response.proposer_id,
+                        opponent: response.opponent_username.clone(),
+                        tournament_nanoid: response.tournament_id.0.clone(),
+                        slot_id: response.slot_id,
+                        when: selected_time,
+                    };
+                    Ok((
+                        vec![response],
+                        Some(notification),
+                        Some((tournament_id, vec![slot_id])),
+                    ))
+                }
+                ScheduleAction::Decline(offer_id) => {
+                    let offer = ScheduleOffer::decline(offer_id, self.user_id, tc).await?;
+                    let response = ScheduleResponse::from_model(offer, tc).await?;
+                    Ok((vec![response], None, None))
+                }
+                ScheduleAction::Withdraw(offer_id) => {
+                    let offer = ScheduleOffer::withdraw(offer_id, self.user_id, tc).await?;
+                    let response = ScheduleResponse::from_model(offer, tc).await?;
+                    Ok((vec![response], None, None))
+                }
+                ScheduleAction::SetDeadline {
+                    tournament_id,
+                    slot_ids,
+                    deadline_at,
+                } => {
+                    let tournament = Tournament::find_by_tournament_id(&tournament_id, tc).await?;
+                    tournament
+                        .ensure_user_is_organizer_or_admin(&self.user_id, tc)
                         .await?;
-                        let mut all_schedules = HashMap::new();
-                        for id in game_ids {
-                            let game_schedules = Schedule::all_from_nanoid(id.clone(), tc).await?;
-                            let mut game_schedules_map = HashMap::new();
-                            for schedule in game_schedules {
-                                let response = ScheduleResponse::from_model(schedule, tc).await?;
-                                game_schedules_map.insert(response.id, response);
-                            }
-                            all_schedules.insert(GameId(id), game_schedules_map);
-                        }
-                        (
-                            ScheduleUpdate::OwnTournamentSchedules(all_schedules),
-                            vec![MessageDestination::User(self.user_id)],
-                        )
+                    if tournament.status() != TournamentStatus::InProgress {
+                        return Err(anyhow::anyhow!(
+                            "deadlines can only be changed while a tournament is in progress"
+                        ));
                     }
-                })
+                    TournamentSlot::set_deadline_for_slots(
+                        tournament.id,
+                        &slot_ids,
+                        deadline_at,
+                        tc,
+                    )
+                    .await?;
+                    Ok((Vec::new(), None, Some((tournament.id, slot_ids))))
+                }
             })
             .await?;
-        Ok(destinations
-            .into_iter()
-            .map(|d| InternalServerMessage {
-                destination: d.clone(),
-                message: ServerMessage::Schedule(update.clone()),
-            })
-            .collect())
+
+        if let Some(notification) = notification {
+            notify(notification);
+        }
+        let mut output = HandlerOutput::from(schedule_response_update_messages(responses));
+        if let Some((tournament_id, slot_ids)) = public_slots {
+            append_public_slot_patches(tournament_id, &slot_ids, &mut output, &mut conn).await;
+        }
+        Ok(output.messages)
     }
 }

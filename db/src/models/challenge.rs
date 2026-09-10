@@ -13,7 +13,14 @@ use diesel::{dsl::exists, prelude::*, select};
 use diesel_async::RunQueryDsl;
 use nanoid::nanoid;
 use serde::Serialize;
-use shared_types::{ChallengeDetails, ChallengeError, ChallengeId, ChallengeVisibility, TimeMode};
+use shared_types::{
+    ChallengeDetails,
+    ChallengeError,
+    ChallengeId,
+    ChallengeVisibility,
+    Clock,
+    TimeMode,
+};
 use uuid::Uuid;
 
 fn validate_opponent_visibility(
@@ -70,45 +77,12 @@ impl NewChallenge {
         d: &ChallengeDetails,
         conn: &mut DbConn<'_>,
     ) -> Result<Self, DbError> {
-        match d.time_mode {
-            TimeMode::Untimed => {
-                if d.time_base.is_some() || d.time_increment.is_some() {
-                    return Err(DbError::InvalidInput {
-                        info: String::from("Untimed game has time_base or time_increment"),
-                        error: format!(
-                            "time_base: {:?}, time_increment: {:?}",
-                            d.time_base, d.time_increment
-                        ),
-                    });
-                }
+        Clock::from_time_parts(d.time_mode, d.time_base, d.time_increment).map_err(|error| {
+            DbError::InvalidInput {
+                info: "Invalid time control".to_string(),
+                error: error.to_string(),
             }
-            TimeMode::RealTime => {
-                if d.time_base.is_none() || d.time_increment.is_none() {
-                    return Err(DbError::InvalidInput {
-                        info: String::from("Realtime game is missing time_base or time_increment"),
-                        error: format!(
-                            "time_base: {:?}, time_increment: {:?}",
-                            d.time_base, d.time_increment
-                        ),
-                    });
-                }
-            }
-            TimeMode::Correspondence => {
-                if (d.time_base.is_some() && d.time_increment.is_some())
-                    || (d.time_base.is_none() && d.time_increment.is_none())
-                {
-                    return Err(DbError::InvalidInput {
-                        info: String::from(
-                            "Correspondence game has wrong time_base or time_increment",
-                        ),
-                        error: format!(
-                            "time_base: {:?}, time_increment: {:?}",
-                            d.time_base, d.time_increment
-                        ),
-                    });
-                }
-            }
-        }
+        })?;
         validate_opponent_visibility(challenger_id, opponent_id, &d.visibility)?;
         let mut nanoid: String;
         loop {
@@ -163,6 +137,16 @@ pub struct Challenge {
 }
 
 impl Challenge {
+    pub fn time_control(&self) -> Result<Option<Clock>, DbError> {
+        let mode = self.time_mode.parse::<TimeMode>()?;
+        Clock::from_time_parts(mode, self.time_base, self.time_increment).map_err(|error| {
+            DbError::InvalidInput {
+                info: "Invalid persisted challenge time control".to_string(),
+                error: error.to_string(),
+            }
+        })
+    }
+
     pub fn validate_accepting_user(&self, user_id: Uuid) -> Result<(), ChallengeError> {
         if self.challenger_id == user_id {
             return Err(ChallengeError::OwnChallenge);

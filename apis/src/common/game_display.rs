@@ -4,28 +4,12 @@ use crate::{
 };
 use hive_lib::{Color, GameResult, GameStatus};
 use leptos_i18n::I18nContext;
-use shared_types::{Conclusion, PrettyString, TimeInfo, TimeMode, TournamentGameResult};
+use shared_types::{Conclusion, PrettyString, TournamentGameResult};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TournamentLink {
     pub name: String,
     pub href: String,
-}
-
-pub fn untimed_time_info() -> TimeInfo {
-    TimeInfo {
-        mode: TimeMode::Untimed,
-        base: None,
-        increment: None,
-    }
-}
-
-pub fn game_time_info(game: &GameResponse) -> TimeInfo {
-    TimeInfo {
-        mode: game.time_mode,
-        base: game.time_base,
-        increment: game.time_increment,
-    }
 }
 
 pub fn game_tournament_link(game: &GameResponse) -> Option<TournamentLink> {
@@ -56,7 +40,7 @@ pub fn format_game_result(
         | (GameStatus::Adjudicated, TournamentGameResult::Winner(color)) => {
             ResultSummary::Winner(*color)
         }
-        (GameStatus::Adjudicated, TournamentGameResult::DoubeForfeit) => {
+        (GameStatus::Adjudicated, TournamentGameResult::DoubleForfeit) => {
             ResultSummary::DoubleForfeit
         }
         _ => return None,
@@ -114,6 +98,8 @@ fn winner_str(
         Conclusion::Resigned => "by resignation",
         Conclusion::Board => "on the board",
         Conclusion::Committee => "by committee decision",
+        Conclusion::Withdrawal => "by withdrawal",
+        Conclusion::Forfeit => "by forfeit",
         _ => "",
     };
 

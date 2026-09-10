@@ -7,9 +7,18 @@ use diesel_async::{
 
 pub mod config;
 pub mod db_error;
+pub mod game_command;
 pub mod helpers;
 pub mod models;
 pub mod schema;
+pub mod tournaments;
+
+#[cfg(test)]
+extern crate self as db_lib;
+
+#[cfg(test)]
+#[path = "../tests/common/mod.rs"]
+mod test_support;
 
 pub const DB_POOL_MAX_SIZE: u32 = 10;
 

@@ -27,21 +27,26 @@ use diesel::prelude::*;
 use diesel_async::{AsyncConnection, RunQueryDsl};
 use hive_lib::{GameStatus, GameType};
 use shared_types::{
+    tournament::{
+        round_robin::Config as RoundRobinConfig,
+        BotAdmission,
+        Clock,
+        Config,
+        FormatConfig,
+        RealtimeClock,
+    },
     Conclusion,
     ConversationKey,
     GameId,
     GameSpeed,
     GameStart,
     GameThread,
-    ScoringMode,
-    StartMode,
-    Tiebreaker,
     TimeMode,
+    TournamentDetails,
     TournamentGameResult,
     TournamentId,
-    TournamentMode,
-    TournamentStatus,
 };
+use std::num::NonZeroU32;
 use uuid::Uuid;
 
 #[tokio::test(flavor = "multi_thread")]
@@ -832,38 +837,32 @@ async fn create_user(username: &str, conn: &mut DbConn<'_>) -> User {
 }
 
 async fn create_tournament(organizer_id: Uuid, name: &str, conn: &mut DbConn<'_>) -> Tournament {
-    Tournament::create(
-        organizer_id,
-        &NewTournament {
-            nanoid: nanoid::nanoid!(11),
-            name: name.to_string(),
-            description: String::new(),
-            scoring: ScoringMode::Game.to_string(),
-            tiebreaker: vec![Some(Tiebreaker::RawPoints.to_string())],
-            seats: 4,
-            min_seats: 2,
-            rounds: 1,
-            invite_only: false,
-            mode: TournamentMode::DoubleRoundRobin.to_string(),
-            time_mode: TimeMode::RealTime.to_string(),
-            time_base: Some(60),
-            time_increment: Some(0),
-            band_upper: None,
-            band_lower: None,
-            start_mode: StartMode::Manual.to_string(),
-            starts_at: None,
-            ends_at: None,
-            started_at: None,
-            round_duration: None,
-            status: TournamentStatus::NotStarted.to_string(),
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-            series: None,
+    let new_tournament = NewTournament::new(TournamentDetails {
+        name: name.to_string(),
+        description: Some(String::from(
+            "A deterministic tournament fixture used for chat integration behavior tests.",
+        )),
+        seats: Some(4),
+        min_seats: 2,
+        invite_only: false,
+        band_upper: None,
+        band_lower: None,
+        starts_at: None,
+        configuration: Config {
+            bot_admission: BotAdmission::HumansAndBots,
+            format: FormatConfig::RoundRobin(RoundRobinConfig::standard(
+                NonZeroU32::new(2).unwrap(),
+                Clock::Realtime(RealtimeClock {
+                    base_seconds: NonZeroU32::new(60).unwrap(),
+                    increment_seconds: 0,
+                }),
+            )),
         },
-        conn,
-    )
-    .await
-    .expect("insert tournament")
+    })
+    .expect("build tournament");
+    Tournament::create(organizer_id, &new_tournament, conn)
+        .await
+        .expect("insert tournament")
 }
 
 async fn create_game(white_id: Uuid, black_id: Uuid, conn: &mut DbConn<'_>) -> Game {
@@ -871,6 +870,7 @@ async fn create_game(white_id: Uuid, black_id: Uuid, conn: &mut DbConn<'_>) -> G
     let time_left = Some(60_000_000_000_i64);
     Game::create(
         NewGame {
+            tournament_id: None,
             nanoid: nanoid::nanoid!(12),
             current_player_id: white_id,
             black_id,
@@ -898,11 +898,15 @@ async fn create_game(white_id: Uuid, black_id: Uuid, conn: &mut DbConn<'_>) -> G
             speed: GameSpeed::Bullet.to_string(),
             hashes: Vec::new(),
             conclusion: Conclusion::Unknown.to_string(),
-            tournament_id: None,
             tournament_game_result: TournamentGameResult::Unknown.to_string(),
             game_start: GameStart::Moves.to_string(),
             move_times: Vec::new(),
             timeout_at: None,
+            tournament_slot_id: None,
+            arena_ordinal: None,
+            white_berserked: false,
+            black_berserked: false,
+            arena_move_due_at: None,
         },
         conn,
     )

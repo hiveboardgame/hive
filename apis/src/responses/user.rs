@@ -79,6 +79,25 @@ use db_lib::{
 };
 use anyhow::Result;
 impl UserResponse {
+    pub fn from_models_with_ratings(
+        users: &[User],
+        ratings: &[Rating],
+    ) -> Result<HashMap<Uuid, Self>> {
+        let mut ratings_by_user: HashMap<Uuid, HashMap<String, Rating>> = HashMap::new();
+        for rating in ratings {
+            ratings_by_user
+                .entry(rating.user_uid)
+                .or_default()
+                .insert(rating.speed.clone(), rating.clone());
+        }
+        users.iter().map(|user| {
+            let rows = ratings_by_user.get(&user.id).ok_or_else(|| {
+                anyhow::anyhow!("Ratings not found for user {}", user.id)
+            })?;
+            Ok((user.id, Self::from_model_with_ratings(user, rows)?))
+        }).collect()
+    }
+
     pub async fn from_uuid(id: &Uuid, conn: &mut DbConn<'_>) -> Result<Self> {
         let user = User::find_by_uuid(id, conn).await?;
         Self::from_model(&user, conn).await
@@ -96,23 +115,7 @@ impl UserResponse {
 
         let user_ids: Vec<Uuid> = users.iter().map(|user| user.id).collect();
         let rating_rows = Rating::for_uuids(&user_ids, conn).await?;
-        let mut ratings_by_user: HashMap<Uuid, HashMap<String, Rating>> = HashMap::new();
-        for rating in rating_rows {
-            ratings_by_user
-                .entry(rating.user_uid)
-                .or_default()
-                .insert(rating.speed.clone(), rating);
-        }
-
-        let mut result = HashMap::new();
-        for user in users {
-            let user_rating_rows = ratings_by_user
-                .get(&user.id)
-                .ok_or_else(|| anyhow::anyhow!("Ratings not found for user {}", user.id))?;
-            let user_response = Self::from_model_with_ratings(user, user_rating_rows)?;
-            result.insert(user.id, user_response);
-        }
-        Ok(result)
+        Self::from_models_with_ratings(users, &rating_rows)
     }
 
     fn from_model_with_ratings(
@@ -148,33 +151,22 @@ impl UserResponse {
     }
 
     pub async fn from_model(user: &User, conn: &mut DbConn<'_>) -> Result<Self> {
-        let mut ratings = HashMap::new();
-        for game_speed in GameSpeed::all_rated().into_iter() {
-            let rating = RatingResponse::from_user(user, &game_speed, conn).await?;
-            ratings.insert(game_speed, rating);
-        }
-        let response = UserResponse {
-            username: user.username.clone(),
-            uid: user.id,
-            patreon: user.patreon,
-            bot: user.bot,
-            admin: user.admin,
-            deleted: user.deleted,
-            takeback: Takeback::from_str_or_default(&user.takeback),
-            ratings,
-            lang: user.lang.clone(),
-        };
-        Ok(response)
+        Self::from_models(std::slice::from_ref(user), conn)
+            .await?
+            .remove(&user.id)
+            .ok_or_else(|| anyhow::anyhow!("User response not assembled for {}", user.id))
     }
     pub async fn search_usernames(pattern: &str, conn: &mut DbConn<'_>) -> Result<Vec<Self>> {
         let users = User::search_usernames(pattern, conn).await?;
-        let mut responses = Vec::with_capacity(users.len());
-
-        for user in users {
-            responses.push(UserResponse::from_model(&user, conn).await?);
-        }
-
-        Ok(responses)
+        let mut by_id = Self::from_models(&users, conn).await?;
+        users
+            .into_iter()
+            .map(|user| {
+                by_id.remove(&user.id).ok_or_else(|| {
+                    anyhow::anyhow!("User response not assembled for {}", user.id)
+                })
+            })
+            .collect()
     }
 }
 }}

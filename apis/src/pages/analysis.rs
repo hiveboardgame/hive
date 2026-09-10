@@ -482,7 +482,7 @@ pub fn Analysis() -> impl IntoView {
 }
 
 fn should_block_analysis(identity: AuthIdentity, game_response: &GameResponse) -> bool {
-    let AuthIdentity::User(user_id) = identity else {
+    let Some(user_id) = identity.user_id() else {
         return false;
     };
     game_response.rated

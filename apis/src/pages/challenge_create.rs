@@ -11,7 +11,7 @@ use crate::{
 use hive_lib::GameType;
 use leptos::prelude::*;
 use reactive_stores::Store;
-use shared_types::{ChallengeDetails, ChallengeVisibility, GameSpeed, TimeMode};
+use shared_types::{ChallengeDetails, ChallengeVisibility, Clock, GameSpeed, TimeMode};
 
 #[component]
 pub fn ChallengeCreate(#[prop(optional, into)] opponent: Signal<Option<String>>) -> impl IntoView {
@@ -27,8 +27,13 @@ pub fn ChallengeCreate(#[prop(optional, into)] opponent: Signal<Option<String>>)
         let (upper_rating, lower_rating) = auth_context.user.with(|acc_opt| {
             if let Some(account) = acc_opt {
                 let time_data = params.time_signals().get();
-                let game_speed =
-                    GameSpeed::from_base_increment(time_data.base(), time_data.increment());
+                let game_speed = Clock::from_time_parts(
+                    time_data.time_mode,
+                    time_data.base(),
+                    time_data.increment(),
+                )
+                .expect("challenge time controls are constrained by the selector")
+                .map_or(GameSpeed::Untimed, GameSpeed::from);
                 let rating = account.user.rating_for_speed(&game_speed);
 
                 let upper_slider = params.upper_slider().get();
@@ -103,7 +108,6 @@ pub fn ChallengeCreate(#[prop(optional, into)] opponent: Signal<Option<String>>)
         if t == TimeMode::Untimed {
             params.rated().set(false);
         }
-        params.time_signals().time_mode().update(|v| *v = t);
     });
     let allowed_values = vec![
         TimeMode::RealTime,

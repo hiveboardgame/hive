@@ -56,6 +56,28 @@
         "button": "Installieren",
         "ios_hint": "HiveGame installieren: Tippe auf „Teilen“ und dann auf „Zum Home-Bildschirm“."
     },
+    "actions": {
+        "dismiss": "Schließen",
+        "accept": "Annehmen",
+        "decline": "Ablehnen",
+        "view_tournament": "Turnier ansehen",
+        "view_named_tournament": "Turnier ansehen: {{name}}"
+    },
+    "schedule": {
+        "proposed": "{{proposer}} hat {{time}} als Spielzeit vorgeschlagen",
+        "accepted": "{{player}} hat deine Spielzeit für {{time}} angenommen"
+    },
+    "tournament_status": {
+        "label": "Turnier",
+        "started": "Gestartet",
+        "finished": "Beendet"
+    },
+    "tournament_invitation": {
+        "label": "Turniereinladung",
+        "players": "Spieler: {{count}}",
+        "accept": "Einladung annehmen",
+        "decline": "Einladung ablehnen"
+    },
     "push": {
         "your_turn_title": "Du bist am Zug",
         "your_turn_timed": "{{opponent}} hat gezogen · {{time_left}} übrig",

@@ -1,165 +1,236 @@
 use crate::{
-    common::{with_class, RatingChangeInfo},
-    components::molecules::{
-        rating_and_change::RatingAndChange,
-        thumbnail_pieces::ThumbnailPieces,
-        time_row::TimeRow,
+    common::{format_game_result, format_tournament_datetime, with_class, RatingChangeInfo},
+    components::{
+        atoms::color_hex::ColorHex,
+        molecules::{
+            rating_and_change::RatingAndChange,
+            thumbnail_pieces::ThumbnailPieces,
+            time_row::TimeRow,
+        },
     },
     i18n::*,
     responses::{GameResponse, UserResponse},
 };
-use hive_lib::{Color, GameStatus};
+use hive_lib::Color;
 use leptos::prelude::*;
-use shared_types::{Conclusion, GameSpeed, PrettyString, TimeInfo};
+
+#[component]
+pub fn GamePreview(
+    game: GameResponse,
+    #[prop(optional)] drawer: bool,
+    #[prop(optional)] show_time: bool,
+    #[prop(optional)] show_tournament_date: bool,
+) -> impl IntoView {
+    let i18n = use_i18n();
+    let board = game.create_state().board;
+    let time_control = game.time_control();
+    let speed = game.speed;
+    let finished = game.finished;
+    let rated = game.rated;
+    let game_id = game.game_id.clone();
+    let tournament_date = StoredValue::new(show_tournament_date.then(|| {
+        format_tournament_datetime(
+            game.finished_at
+                .or(game.last_interaction)
+                .unwrap_or(game.created_at),
+        )
+    }));
+    let ratings = StoredValue::new(RatingChangeInfo::from_game_response(&game));
+    let result_game = StoredValue::new(game.clone());
+    let white_player = StoredValue::new(game.white_player);
+    let black_player = StoredValue::new(game.black_player);
+    let username = move |player: StoredValue<UserResponse>| {
+        player.with_value(|player| {
+            if player.deleted {
+                t_string!(i18n, profile.deleted_user).to_string()
+            } else {
+                player.username.clone()
+            }
+        })
+    };
+    let rating = move |player: StoredValue<UserResponse>| {
+        player.with_value(|player| player.ratings.get(&speed).expect("Has a rating").rating)
+    };
+
+    view! {
+        <article class=with_class(
+            "ui-card-row",
+            if drawer {
+                "relative flex w-full min-w-0 flex-col items-center overflow-hidden"
+            } else {
+                "relative m-2 flex w-60 max-w-full shrink-0 flex-col items-center overflow-hidden align-top lg:mt-0 lg:mr-4 lg:mb-4 lg:ml-0 lg:inline-flex 2xl:m-2"
+            },
+        )>
+            {if drawer {
+                view! {
+                    <div class="grid gap-1 py-1.5 px-2 w-full text-sm">
+                        {[Color::White, Color::Black]
+                            .into_iter()
+                            .map(|side| {
+                                let player = if side == Color::White {
+                                    white_player
+                                } else {
+                                    black_player
+                                };
+                                view! {
+                                    <div class="grid gap-1.5 items-center h-5 grid-cols-[1rem_minmax(0,1fr)_auto]">
+                                        <ColorHex color=Signal::derive(move || side) />
+                                        <span
+                                            class="font-medium truncate"
+                                            title=move || username(player)
+                                        >
+                                            {move || username(player)}
+                                        </span>
+                                        <span class="flex gap-1 items-center text-xs shrink-0">
+                                            {if finished {
+                                                view! { <RatingAndChange ratings side /> }.into_any()
+                                            } else {
+                                                view! {
+                                                    <span class="italic text-gray-500">
+                                                        {move || rating(player)}
+                                                    </span>
+                                                }
+                                                    .into_any()
+                                            }}
+                                        </span>
+                                    </div>
+                                }
+                            })
+                            .collect_view()}
+                    </div>
+                }
+                    .into_any()
+            } else {
+                view! {
+                    <div class="grid gap-1 items-center py-1.5 px-2 w-full text-sm grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+                        <div class="flex gap-1 justify-end items-center min-w-0">
+                            <span class="font-medium truncate">
+                                {move || username(white_player)}
+                            </span>
+                            <Show
+                                when=move || finished
+                                fallback=move || {
+                                    view! {
+                                        <span class="text-xs italic text-gray-500 dark:text-gray-400 shrink-0">
+                                            {move || rating(white_player)}
+                                        </span>
+                                    }
+                                }
+                            >
+                                <span class="flex gap-1 items-center text-xs shrink-0">
+                                    <RatingAndChange ratings side=Color::White />
+                                </span>
+                            </Show>
+                        </div>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">
+                            {t!(i18n, tournaments.view.common.versus)}
+                        </span>
+                        <div class="flex gap-1 items-center min-w-0">
+                            <span class="font-medium truncate">
+                                {move || username(black_player)}
+                            </span>
+                            <Show
+                                when=move || finished
+                                fallback=move || {
+                                    view! {
+                                        <span class="text-xs italic text-gray-500 dark:text-gray-400 shrink-0">
+                                            {move || rating(black_player)}
+                                        </span>
+                                    }
+                                }
+                            >
+                                <span class="flex gap-1 items-center text-xs shrink-0">
+                                    <RatingAndChange ratings side=Color::Black />
+                                </span>
+                            </Show>
+                        </div>
+                    </div>
+                }
+                    .into_any()
+            }} <Show when=move || finished || drawer>
+                <p
+                    class=if drawer {
+                        "px-2 mb-1 h-10 text-sm leading-5 text-center line-clamp-2"
+                    } else {
+                        "px-2 pb-1 text-sm text-center"
+                    }
+                    title=move || {
+                        result_game
+                            .with_value(|game| format_game_result(i18n, game))
+                            .unwrap_or_default()
+                    }
+                >
+                    {move || {
+                        result_game
+                            .with_value(|game| format_game_result(i18n, game))
+                            .unwrap_or_default()
+                    }}
+                </p>
+            </Show> <div class="overflow-hidden w-full aspect-square shrink-0">
+                <ThumbnailPieces board=StoredValue::new(board) />
+            </div> <Show when=move || show_time || tournament_date.with_value(Option::is_some)>
+                <div class="flex flex-wrap gap-x-2 justify-center items-center py-1.5 px-2 w-full text-xs text-center">
+                    <Show when=move || show_time>
+                        <span class="uppercase">
+                            {move || {
+                                if rated {
+                                    t_string!(i18n, game.rated).to_string()
+                                } else {
+                                    t_string!(i18n, game.casual).to_string()
+                                }
+                            }}
+                        </span>
+                        <TimeRow time_control extend_tw_classes="text-xs" />
+                    </Show>
+                    {move || {
+                        tournament_date
+                            .with_value(Clone::clone)
+                            .map(|date| {
+                                view! {
+                                    <time class="text-gray-500 dark:text-gray-400">{date}</time>
+                                }
+                            })
+                    }}
+                </div>
+            </Show>
+            <a
+                class="absolute inset-0 z-10"
+                href=format!("/game/{}", game_id)
+                title=move || {
+                    result_game
+                        .with_value(|game| format_game_result(i18n, game))
+                        .unwrap_or_default()
+                }
+                aria-label=move || {
+                    format!(
+                        "{} {} {}",
+                        username(white_player),
+                        t_string!(i18n, tournaments.view.common.versus),
+                        username(black_player),
+                    )
+                }
+            ></a>
+        </article>
+    }
+}
 
 #[component]
 pub fn GamePreviews(
     #[prop(into)] games: Signal<Vec<GameResponse>>,
     #[prop(optional)] show_time: bool,
+    #[prop(optional)] show_tournament_date: bool,
+    #[prop(optional)] nowrap: bool,
 ) -> impl IntoView {
-    let i18n = use_i18n();
-    let unfinished_ratings_view = move |wp: StoredValue<UserResponse>,
-                                        bp: StoredValue<UserResponse>,
-                                        base: Option<i32>,
-                                        inc: Option<i32>| {
-        let (white_username, white_rating) = wp.with_value(|u| {
-            let username = if u.deleted {
-                t_string!(i18n, profile.deleted_user).to_string()
-            } else {
-                u.username.clone()
-            };
-            (
-                username,
-                u.ratings
-                    .get(&GameSpeed::from_base_increment(base, inc))
-                    .expect("Has a rating")
-                    .rating,
-            )
-        });
-        let (black_username, black_rating) = bp.with_value(|u| {
-            let username = if u.deleted {
-                t_string!(i18n, profile.deleted_user).to_string()
-            } else {
-                u.username.clone()
-            };
-            (
-                username,
-                u.ratings
-                    .get(&GameSpeed::from_base_increment(base, inc))
-                    .expect("Has a rating")
-                    .rating,
-            )
-        });
-        view! {
-            <div class="flex flex-wrap gap-1 justify-center p-1 text-center">
-                {format!("{white_username} {white_rating} vs {black_username} {black_rating}")}
-            </div>
-        }
+    let class = if nowrap {
+        "flex flex-row flex-nowrap min-w-max"
+    } else {
+        "flex flex-row flex-wrap justify-center w-full min-w-0 max-w-full lg:block 2xl:flex"
     };
-    let finished_ratings_view =
-        move |w_username: StoredValue<String>,
-              b_username: StoredValue<String>,
-              gs: StoredValue<GameStatus>,
-              ratings: StoredValue<RatingChangeInfo>,
-              conclusion: StoredValue<Conclusion>| {
-            let game_result = match gs.get_value() {
-                GameStatus::Finished(ref result) => result.to_string(),
-                _ => "".to_string(),
-            };
-            view! {
-                <div class="flex flex-wrap gap-1 justify-center p-1 w-full text-center">
-                    <div class="flex flex-grow gap-1 items-center w-auto min-w-0 whitespace-nowrap max-w-[fit-content]">
-                        <p>{w_username.get_value()}</p>
-                        <RatingAndChange ratings side=Color::White />
-                    </div>
-                    <div class="w-auto text-center">vs</div>
-                    <div class="flex flex-grow gap-1 items-center w-auto min-w-0 whitespace-nowrap max-w-[fit-content]">
-                        <p>{b_username.get_value()}</p>
-                        <RatingAndChange ratings side=Color::Black />
-                    </div>
 
-                </div>
-                <div class="flex gap-1">
-                    <div>{game_result.to_string()}</div>
-                    {conclusion.get_value().pretty_string()}
-                </div>
-            }
-        };
     view! {
-        <div class="flex flex-row flex-wrap justify-center w-full min-w-0 max-w-full lg:block 2xl:flex">
-            <For each=games key=|g| (g.game_id.clone(), g.turn) let:game>
-
-                {
-                    let board = game.create_state().board;
-                    let base = game.time_base;
-                    let inc = game.time_increment;
-                    let finished = move || game.finished;
-                    let rated = game.rated;
-                    let game_id = game.game_id.clone();
-                    let time_info = Signal::derive(move || TimeInfo {
-                        mode: game.time_mode,
-                        base,
-                        increment: inc,
-                    });
-                    let ratings = StoredValue::new(RatingChangeInfo::from_game_response(&game));
-                    let gs = StoredValue::new(game.game_status.clone());
-                    let conclusion = StoredValue::new(game.conclusion.clone());
-                    let w_username = StoredValue::new(
-                        if game.white_player.deleted {
-                            t_string!(i18n, profile.deleted_user).to_string()
-                        } else {
-                            game.white_player.username.clone()
-                        },
-                    );
-                    let b_username = StoredValue::new(
-                        if game.black_player.deleted {
-                            t_string!(i18n, profile.deleted_user).to_string()
-                        } else {
-                            game.black_player.username.clone()
-                        },
-                    );
-                    let white_player = StoredValue::new(game.white_player.clone());
-                    let black_player = StoredValue::new(game.black_player.clone());
-                    view! {
-                        <div class=with_class(
-                            "ui-card-row",
-                            "flex relative flex-col items-center m-2 lg:inline-flex lg:mt-0 lg:mr-4 lg:mb-4 lg:ml-0 lg:align-top 2xl:m-2 size-60",
-                        )>
-                            <div class="flex flex-col items-center w-full">
-                                <Show
-                                    when=finished
-                                    fallback=move || unfinished_ratings_view(
-                                        white_player,
-                                        black_player,
-                                        base,
-                                        inc,
-                                    )
-                                >
-
-                                    {finished_ratings_view(
-                                        w_username,
-                                        b_username,
-                                        gs,
-                                        ratings,
-                                        conclusion,
-                                    )}
-
-                                </Show>
-                            </div>
-                            <Show when=move || show_time>
-                                <div class="flex items-center">
-                                    {if rated { "RATED " } else { "CASUAL " }} <TimeRow time_info />
-                                </div>
-                            </Show>
-                            <ThumbnailPieces board=StoredValue::new(board) />
-                            <a
-                                class="absolute top-0 left-0 z-10 size-full"
-                                href=format!("/game/{}", game_id)
-                            ></a>
-                        </div>
-                    }
-                }
-
+        <div class=class>
+            <For each=games key=|game| { (game.game_id.clone(), game.updated_at) } let:game>
+                <GamePreview game show_time show_tournament_date />
             </For>
         </div>
     }

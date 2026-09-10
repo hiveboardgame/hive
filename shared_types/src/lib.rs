@@ -2,6 +2,7 @@ mod certainty;
 mod challenge;
 mod chat_capabilities;
 mod chat_message;
+pub mod clock;
 mod conclusion;
 mod game_speed;
 mod game_start;
@@ -15,20 +16,20 @@ mod opening_explorer;
 mod pretty_string;
 mod ready_user;
 mod reserved_username;
-mod scoring_mode;
+mod schedule;
 mod simple_user;
-mod standings;
-mod start_mode;
 mod takeback_conf;
 mod telemetry;
 mod tiebreaker;
-mod time_info;
 mod time_mode;
+mod tournament_configuration;
 mod tournament_details;
 mod tournament_game_result;
-mod tournament_mode;
-mod tournament_sort_order;
-mod tournament_status;
+mod tournament_progress;
+mod tournament_slot;
+mod tournament_snapshot;
+mod tournament_start_setup;
+pub mod tournament_view;
 pub use certainty::{Certainty, RANKABLE_DEVIATION};
 pub use challenge::{ChallengeDetails, ChallengeError, ChallengeVisibility};
 pub use chat_capabilities::GameChatCapabilities;
@@ -43,6 +44,7 @@ pub use chat_message::{
     GameThread,
     MAX_CHAT_MESSAGE_LENGTH,
 };
+pub use clock::{Clock, ClockPartsError, CorrespondenceClock, RealtimeClock};
 pub use conclusion::Conclusion;
 pub use game_speed::GameSpeed;
 pub use game_start::GameStart;
@@ -74,17 +76,123 @@ pub use opening_explorer::{ExplorerFilters, ExplorerMove, MIN_PLIES};
 pub use pretty_string::PrettyString;
 pub use ready_user::ReadyUser;
 pub use reserved_username::RESERVED_USERNAMES;
-pub use scoring_mode::ScoringMode;
+pub use schedule::ScheduleOfferStatus;
 pub use simple_user::SimpleUser;
-pub use standings::{PlayerScores, Standings};
-pub use start_mode::StartMode;
 pub use takeback_conf::Takeback;
 pub use telemetry::{PushMetrics, TelemetryRange, TelemetryRow, TELEMETRY_COLUMN_COUNT};
 pub use tiebreaker::Tiebreaker;
-pub use time_info::TimeInfo;
 pub use time_mode::{CorrespondenceMode, TimeMode};
-pub use tournament_details::TournamentDetails;
+pub use tournament_details::{TournamentDetails, TournamentStatus};
+pub use tournament_progress::{SlotAdminAction, SwissProgress, SwissRoundSummary};
+pub use tournament_start_setup::TournamentStartSetup;
+pub mod tournament {
+    pub use crate::{
+        clock::{Clock, ClockPartsError, CorrespondenceClock, RealtimeClock},
+        tournament_configuration::{
+            BotAdmission,
+            Config,
+            ConfigError,
+            DirectEncounterForfeitPolicy,
+            Format,
+            FormatConfig,
+            FormatParseError,
+            MatchPointSystem,
+            PointSystem,
+            ReleasePolicy,
+            RepeatedEncounterPolicy,
+            TournamentPairingNumberOrder,
+            MAX_ELIMINATION_SEATS,
+            MAX_ROUND_ROBIN_REPEATS,
+            MAX_ROUND_ROBIN_SEATS,
+            MAX_SWISS_EXTRA_ROUNDS,
+            MAX_SWISS_ROUNDS,
+            MAX_SWISS_SEATS,
+            MIN_SWISS_EXTRA_ROUNDS,
+            MIN_SWISS_ROUNDS,
+            MIN_SWISS_START_SEATS,
+        },
+        tournament_progress::{SlotAdminAction, SwissProgress, SwissRoundSummary},
+        tournament_slot::{Resolution, Slot, SlotKey},
+        TimeMode,
+    };
+    pub use tournamint::{
+        elimination::EliminationNodeId,
+        round_robin::RoundRobinGameId,
+        series::SeriesGameId,
+        swiss::{SwissGameId, SwissLeg},
+        AdjudicatedGameOutcome,
+        AdjudicatedSideResult,
+        GameOutcome,
+        PlayedGameOutcome,
+        Score,
+    };
+
+    pub mod arena {
+        pub use crate::tournament_configuration::{
+            ArenaConfig as Config,
+            PairingIntent,
+            ARENA_MAX_DURATION_SECONDS as MAX_DURATION_SECONDS,
+            ARENA_MIN_DURATION_SECONDS as MIN_DURATION_SECONDS,
+        };
+    }
+
+    pub mod round_robin {
+        pub use crate::tournament_configuration::{
+            round_robin_creation_tiebreakers as creation_tiebreakers,
+            KoyaOptions,
+            RoundRobinConfig as Config,
+            RoundRobinCriterion as Criterion,
+            RoundRobinDirectEncounterOptions as DirectEncounterOptions,
+            RoundRobinPrimaryScore as PrimaryScore,
+            RoundRobinProgressiveOptions as ProgressiveOptions,
+            RoundRobinSonnebornBergerOptions as SonnebornBergerOptions,
+        };
+    }
+
+    pub mod swiss {
+        pub use crate::tournament_configuration::{
+            swiss_creation_tiebreakers,
+            DoubleSwissConfig,
+            DoubleSwissPrimaryScore as PrimaryScore,
+            FlatAcceleration,
+            SwissAcceleration as Acceleration,
+            SwissBuchholzOptions as BuchholzOptions,
+            SwissConfig as Config,
+            SwissDirectEncounterOptions as DirectEncounterOptions,
+            SwissProgressiveOptions as ProgressiveOptions,
+            SwissRoundConfiguration as RoundConfiguration,
+            SwissScoreBasis as ScoreBasis,
+            SwissSonnebornBergerOptions as SonnebornBergerOptions,
+            SwissStandingsCriterion as Criterion,
+            SwissSystem as System,
+        };
+    }
+
+    pub mod standings {
+        pub use crate::tournament_snapshot::{Group, Placement, Row, Snapshot, Value};
+    }
+
+    pub mod elimination {
+        pub use crate::{
+            tournament_configuration::{
+                ClinchPolicy,
+                EliminationConfig as Config,
+                EliminationSeriesPhase as SeriesPhase,
+                EliminationSeriesPlan as SeriesPlan,
+                EliminationStage as Stage,
+                EliminationStageOverride as StageOverride,
+                EliminationTopology as Topology,
+                EntrantSide,
+                PlanError,
+                SetLimit,
+                MAX_ELIMINATION_COLOR_ORDER as MAX_COLOR_ORDER,
+                MAX_ELIMINATION_FINITE_SETS as MAX_FINITE_SETS,
+                MAX_ELIMINATION_GAMES_PER_SET as MAX_GAMES_PER_SET,
+                MAX_ELIMINATION_PHASES as MAX_PHASES,
+            },
+            tournament_snapshot::{Resolution, Source},
+        };
+    }
+}
+
 pub use tournament_game_result::TournamentGameResult;
-pub use tournament_mode::TournamentMode;
-pub use tournament_sort_order::TournamentSortOrder;
-pub use tournament_status::TournamentStatus;

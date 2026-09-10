@@ -1,7 +1,7 @@
 use crate::{
     common::with_class,
     components::{
-        atoms::next_game_button::NextGameButton,
+        atoms::{login_button::LoginButton, next_game_button::NextGameButton},
         molecules::chat_and_controls::ChatAndControls,
         organisms::{
             darkmode_toggle::{DarkModeToggle, DarkModeToggleVariant},
@@ -18,7 +18,7 @@ use crate::{
         },
     },
     i18n::*,
-    providers::{games::GamesSignal, AuthContext, RefererContext},
+    providers::{games::GamesSignal, AuthContext},
     responses::AccountResponse,
 };
 use leptos::{either::Either, prelude::*};
@@ -75,20 +75,13 @@ pub fn Header() -> impl IntoView {
 
 #[component]
 fn GuestActions(current_game_id: Signal<Option<GameId>>) -> impl IntoView {
-    let referrer = expect_context::<RefererContext>().pathname;
     view! {
         <div class="flex items-center mr-1 h-full">
             <ChatAndControls current_game_id />
             <SoundToggle />
             <LocaleDropdown />
             <DarkModeToggle variant=DarkModeToggleVariant::Header />
-            <a
-                class="ui-header-login-button no-link-style"
-                href="/login"
-                on:focus=move |_| set_redirect(referrer)
-            >
-                Login
-            </a>
+            <LoginButton class="ui-header-login-button no-link-style" />
         </div>
     }
 }
@@ -118,8 +111,4 @@ fn Controls(
         }
         None => Either::Right(view! { <GuestActions current_game_id /> }),
     }
-}
-
-pub fn set_redirect(referrer: StoredValue<String>) {
-    referrer.set_value(use_location().pathname.get_untracked());
 }

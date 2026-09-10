@@ -1,12 +1,11 @@
 use std::sync::Arc;
 
 use super::{
-    abandon::AbandonHandler,
     adjudicate_result::AdjudicateResultHandler,
-    bulk_adjudicate::{BulkAdjudicateHandler, BulkAdjudication},
+    arena::ArenaHandler,
+    closeout::CloseoutHandler,
     create::CreateHandler,
     delete::DeleteHandler,
-    finish::FinishHandler,
     invitation_accept::InvitationAccept,
     invitation_create::InvitationCreate,
     invitation_decline::InvitationDecline,
@@ -14,15 +13,20 @@ use super::{
     join::JoinHandler,
     kick::KickHandler,
     leave::LeaveHandler,
-    progress_to_next_round::SwissRoundHandler,
+    organizers::{self, OrganizerOperation},
     start::StartHandler,
+    withdraw::WithdrawHandler,
 };
 use crate::{
     common::TournamentAction,
-    websocket::{messages::HandlerOutput, WsHub},
+    websocket::{
+        messages::{HandlerOutput, SocketTx},
+        WsHub,
+    },
 };
 use anyhow::Result;
-use db_lib::DbPool;
+use db_lib::{get_conn, models::Tournament, DbPool};
+use shared_types::TournamentId;
 use uuid::Uuid;
 
 pub struct TournamentHandler {
@@ -30,6 +34,7 @@ pub struct TournamentHandler {
     pub pool: DbPool,
     pub user_id: Uuid,
     pub username: String,
+    pub received_from: SocketTx,
     pub hub: Arc<WsHub>,
 }
 
@@ -38,6 +43,7 @@ impl TournamentHandler {
         action: TournamentAction,
         username: &str,
         user_id: Uuid,
+        received_from: SocketTx,
         hub: Arc<WsHub>,
         pool: &DbPool,
     ) -> Self {
@@ -46,18 +52,39 @@ impl TournamentHandler {
             action,
             user_id,
             username: username.to_owned(),
+            received_from,
             hub,
+        }
+    }
+
+    async fn unsubscribe_if_no_membership(&self, user: Uuid, id: &TournamentId) {
+        let membership = async {
+            let mut conn = get_conn(&self.pool).await?;
+            let tournament = Tournament::find_by_tournament_id(id, &mut conn).await?;
+            tournament.retains_chat_access(user, &mut conn).await
+        }
+        .await;
+        match membership {
+            Ok(true) => (),
+            Ok(false) => self.hub.unsubscribe_user_from_tournament_chat(user, id),
+            Err(error) => {
+                log::warn!("Tournament {id} membership changed but chat membership could not be reloaded: {error}");
+                self.hub.unsubscribe_user_from_tournament_chat(user, id);
+            }
         }
     }
 
     pub async fn handle(&self) -> Result<HandlerOutput> {
         let output: HandlerOutput = match self.action.clone() {
-            TournamentAction::Create(details) => {
-                CreateHandler::new(*details, self.user_id, &self.pool)
-                    .handle()
-                    .await?
-                    .into()
-            }
+            TournamentAction::Create(details) => CreateHandler::new(
+                *details,
+                self.user_id,
+                self.received_from.clone(),
+                &self.pool,
+            )
+            .handle()
+            .await?
+            .into(),
             TournamentAction::Join(tournament_id) => {
                 JoinHandler::new(tournament_id, self.user_id, &self.pool)
                     .handle()
@@ -68,8 +95,8 @@ impl TournamentHandler {
                 let output = LeaveHandler::new(tournament_id.clone(), self.user_id, &self.pool)
                     .handle()
                     .await?;
-                self.hub
-                    .unsubscribe_user_from_tournament_chat(self.user_id, &tournament_id);
+                self.unsubscribe_if_no_membership(self.user_id, &tournament_id)
+                    .await;
                 output.into()
             }
             TournamentAction::Delete(tournament_id) => {
@@ -102,67 +129,122 @@ impl TournamentHandler {
                     .await?
                     .into()
             }
+            TournamentAction::OrganizerInvite(id, invitee) => {
+                organizers::handle(
+                    id,
+                    self.user_id,
+                    OrganizerOperation::Invite(invitee),
+                    &self.pool,
+                )
+                .await?
+            }
+            TournamentAction::OrganizerAccept(id) => {
+                organizers::handle(id, self.user_id, OrganizerOperation::Accept, &self.pool).await?
+            }
+            TournamentAction::OrganizerDecline(id) => {
+                organizers::handle(id, self.user_id, OrganizerOperation::Decline, &self.pool)
+                    .await?
+            }
+            TournamentAction::OrganizerRetract(id, invitee) => {
+                organizers::handle(
+                    id,
+                    self.user_id,
+                    OrganizerOperation::Retract(invitee),
+                    &self.pool,
+                )
+                .await?
+            }
+            TournamentAction::OrganizerLeave(id) => {
+                let output = organizers::handle(
+                    id.clone(),
+                    self.user_id,
+                    OrganizerOperation::Leave,
+                    &self.pool,
+                )
+                .await?;
+                self.unsubscribe_if_no_membership(self.user_id, &id).await;
+                output
+            }
+            TournamentAction::StartCancel(id, setup_id) => {
+                StartHandler::cancel(id, setup_id, self.user_id, &self.pool)
+                    .handle()
+                    .await?
+                    .into()
+            }
+            TournamentAction::StartConfirm(id, setup_id, bracket_order) => {
+                StartHandler::confirm(id, setup_id, bracket_order, self.user_id, &self.pool)
+                    .handle()
+                    .await?
+                    .into()
+            }
             TournamentAction::Kick(tournament_id, user) => {
                 let output =
                     KickHandler::new(tournament_id.clone(), self.user_id, user, &self.pool)
                         .handle()
                         .await?;
-                self.hub
-                    .unsubscribe_user_from_tournament_chat(user, &tournament_id);
+                self.unsubscribe_if_no_membership(user, &tournament_id)
+                    .await;
                 output.into()
             }
-            TournamentAction::Start(tournament_id) => {
-                StartHandler::new(tournament_id, self.user_id, &self.pool)
-                    .handle()
-                    .await?
-                    .into()
-            }
-            TournamentAction::AdjudicateResult(game_id, new_result) => {
-                AdjudicateResultHandler::new(game_id, new_result, self.user_id, &self.pool)
-                    .handle()
-                    .await?
-            }
-            TournamentAction::DoubleForfeitUnstartedGames(tournament_id) => {
-                BulkAdjudicateHandler::new(
+            TournamentAction::Start(tournament_id, intent) => StartHandler::new(
+                tournament_id,
+                intent.expected_entrant_ids,
+                self.user_id,
+                &self.pool,
+            )
+            .handle()
+            .await?
+            .into(),
+            TournamentAction::AdjudicateResult(tournament_id, intent) => {
+                AdjudicateResultHandler::new(
                     tournament_id,
+                    intent,
                     self.user_id,
-                    BulkAdjudication::DoubleForfeitUnstarted,
+                    &self.username,
+                    self.hub.clone(),
                     &self.pool,
                 )
                 .handle()
                 .await?
             }
-            TournamentAction::ResetAdjudicatedGames(tournament_id) => {
-                BulkAdjudicateHandler::new(
+            TournamentAction::CloseUnstarted(tournament_id, intent) => {
+                CloseoutHandler::new(
                     tournament_id,
+                    intent.slot_ids,
                     self.user_id,
-                    BulkAdjudication::ResetAdjudicated,
+                    &self.username,
+                    self.received_from.clone(),
+                    self.hub.clone(),
                     &self.pool,
                 )
                 .handle()
                 .await?
             }
-            TournamentAction::Abandon(tournament_id) => {
-                AbandonHandler::new(
+            TournamentAction::Withdraw(tournament_id, player) => {
+                WithdrawHandler::new(
                     tournament_id,
+                    player,
                     self.user_id,
-                    self.username.clone(),
+                    self.hub.clone(),
                     &self.pool,
                 )
                 .handle()
                 .await?
             }
-            TournamentAction::Finish(tournament_id) => {
-                FinishHandler::new(tournament_id, self.user_id, &self.pool)
+            TournamentAction::ArenaJoin(tournament_id) => {
+                ArenaHandler::join(tournament_id, self.user_id, self.hub.clone(), &self.pool)
                     .handle()
                     .await?
-                    .into()
             }
-            TournamentAction::ProgressToNextRound(tournament_id) => {
-                SwissRoundHandler::new(tournament_id, self.user_id, &self.pool)
+            TournamentAction::ArenaPause(tournament_id) => {
+                ArenaHandler::pause(tournament_id, self.user_id, self.hub.clone(), &self.pool)
                     .handle()
                     .await?
-                    .into()
+            }
+            TournamentAction::ArenaResume(tournament_id) => {
+                ArenaHandler::resume(tournament_id, self.user_id, self.hub.clone(), &self.pool)
+                    .handle()
+                    .await?
             }
         };
         // Invalidate cached recipients when an action changes membership or
@@ -175,21 +257,33 @@ impl TournamentHandler {
             TournamentAction::Join(id)
             | TournamentAction::Leave(id)
             | TournamentAction::Delete(id)
-            | TournamentAction::InvitationAccept(id) => Some(id),
+            | TournamentAction::InvitationAccept(id)
+            | TournamentAction::OrganizerAccept(id)
+            | TournamentAction::OrganizerLeave(id) => Some(id),
             TournamentAction::Kick(id, _) => Some(id),
+            // An arena admits players while it runs, so a join genuinely adds
+            // to the recipient set.
+            TournamentAction::ArenaJoin(id) => Some(id),
+            // Withdrawing does *not*: the row stays, the results stay, and the
+            // player keeps receiving the tournament's messages. Only pairing
+            // stops.
+            TournamentAction::Withdraw(_, _)
+            | TournamentAction::ArenaPause(_)
+            | TournamentAction::ArenaResume(_) => None,
             // These actions change invitations, games, or tournament state,
             // but not the players ∪ organizers recipient set.
             TournamentAction::AdjudicateResult(_, _)
-            | TournamentAction::Abandon(_)
-            | TournamentAction::DoubleForfeitUnstartedGames(_)
-            | TournamentAction::Finish(_)
-            | TournamentAction::ResetAdjudicatedGames(_)
-            | TournamentAction::Start(_)
+            | TournamentAction::CloseUnstarted(_, _)
+            | TournamentAction::StartCancel(_, _)
+            | TournamentAction::StartConfirm(_, _, _)
+            | TournamentAction::OrganizerInvite(_, _)
+            | TournamentAction::OrganizerRetract(_, _)
+            | TournamentAction::OrganizerDecline(_)
+            | TournamentAction::Start(_, _)
             | TournamentAction::Create(_)
             | TournamentAction::InvitationCreate(_, _)
             | TournamentAction::InvitationDecline(_)
-            | TournamentAction::InvitationRetract(_, _)
-            | TournamentAction::ProgressToNextRound(_) => None,
+            | TournamentAction::InvitationRetract(_, _) => None,
         };
         if let Some(id) = invalidate_id {
             self.hub.invalidate_tournament_members(id);

@@ -5,7 +5,9 @@
             "title": "Correspondance",
             "days_side_other": "{{count}} jours par face",
             "days_side_one": "{{count}} jour par face",
-            "days_move_other": "{{count}} jours par déplacement"
+            "days_move_other": "{{count}} jours par déplacement",
+            "duration_move": "{{duration}} par déplacement",
+            "duration_side": "{{duration}} par face"
         },
         "untimed": "Pas de limite de temps",
         "real_time": "Temps réel"
@@ -38,6 +40,19 @@
         "both_click": "La partie commencera lorsque vous aurez tous les deux cliqué sur « prêt » à moins de 30 secondes d'intervalle",
         "both_ready": "Ce tournoi commencera lorsque les deux joueurs seront prêts"
     },
+    "arena": {
+        "berserk": "Berserk",
+        "berserk_title": "Renoncez à l'incrément et, si possible, à la moitié du temps de base pour gagner des points d'arène supplémentaires."
+    },
+    "realtime_assignments": {
+        "title": "Parties en temps réel prêtes",
+        "challenge": "Défi en temps réel",
+        "tournament": "Partie de tournoi",
+        "arena": "Partie d'Arène",
+        "opening_due": "Le coup d'ouverture doit être joué dans {{count}} s",
+        "opening_due_now": "Le coup d'ouverture doit être joué maintenant",
+        "open_new_tab": "Ouvrir dans un nouvel onglet"
+    },
     "speeds": {
         "untimed": "Non chronométré",
         "classic": "Classique",
@@ -48,5 +63,16 @@
     },
     "rated": "Évalué",
     "played_in": "Joué dans :",
-    "casual": "Libre"
+    "casual": "Libre",
+    "tournament_result": {
+        "white_won": "Les Blancs ont gagné",
+        "draw": "Partie nulle",
+        "black_won": "Les Noirs ont gagné",
+        "white_won_by_forfeit": "Les Blancs ont gagné par forfait",
+        "black_won_by_forfeit": "Les Noirs ont gagné par forfait",
+        "adjudicated_draw": "Partie nulle par décision arbitrale",
+        "white_draw_black_forfeit_loss": "Nulle pour les Blancs ; défaite par forfait pour les Noirs",
+        "white_forfeit_loss_black_draw": "Défaite par forfait pour les Blancs ; nulle pour les Noirs",
+        "double_forfeit": "Double forfait"
+    }
 }

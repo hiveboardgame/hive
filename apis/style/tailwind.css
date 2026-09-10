@@ -35,6 +35,19 @@ html[data-display-mode="standalone"] {
   }
 }
 
+/* Tournament pages follow Lichess's shared two- and three-column shell. */
+@custom-variant tournament-two {
+  @media (width >= 900px) {
+    @slot;
+  }
+}
+
+@custom-variant tournament-three {
+  @media (width >= 1260px) {
+    @slot;
+  }
+}
+
 /* Theme tokens (pure CSS Tailwind v4) */
 @theme {
   /* Custom breakpoint */
@@ -90,6 +103,10 @@ html[data-display-mode="standalone"] {
   padding-top: calc(5rem + env(safe-area-inset-top));
 }
 
+@utility pt-page-gutter {
+  padding-top: calc(2.5rem + env(safe-area-inset-top) + 0.75rem);
+}
+
 /* Marker used by the base link selector; the declaration makes Tailwind v4 accept it. */
 @utility no-link-style {
   --hive-link-style: none;
@@ -115,6 +132,32 @@ html[data-display-mode="standalone"] {
 }
 
 @layer components {
+  .ui-wide-canvas {
+    width: 100%;
+    max-width: max(96rem, 80vw);
+    margin-inline: auto;
+  }
+
+  .ui-home-grid {
+    @apply grid grid-cols-1 items-start gap-3 sm:gap-6;
+    width: 100%;
+    max-width: 56rem;
+    margin-inline: auto;
+  }
+
+  @media (width >= 1024px) {
+    .ui-home-grid {
+      max-width: 80rem;
+      grid-template-columns: minmax(18rem, 1fr) minmax(0, 2.4fr);
+    }
+  }
+
+  @media (width >= 1536px) {
+    .ui-home-grid {
+      max-width: 106rem;
+      grid-template-columns: minmax(18rem, 1fr) minmax(0, 2.4fr) minmax(18rem, 1fr);
+    }
+  }
   /* Shared surfaces */
   .ui-app-background {
     @apply bg-light text-black dark:bg-app-dark dark:text-white;
@@ -140,7 +183,19 @@ html[data-display-mode="standalone"] {
     @apply p-3;
   }
 
-  @media (width >= 360px) {
+  /*
+   * Bracket columns. Vertical placement comes from equal-height slots — a column
+   * of four slots centres each box against the two feeding it — while the lines
+   * themselves are measured and drawn as an SVG overlay, because they start at a
+   * specific player row and can fork.
+   */
+
+
+  .ui-bracket-feed {
+    @apply relative flex flex-1 items-center;
+  }
+
+  @media (width >= 640px) {
     .ui-panel-header {
       @apply px-4 py-3;
     }
@@ -329,6 +384,9 @@ html[data-display-mode="standalone"] {
 
   /* Modal */
   .ui-modal-panel {
+    max-height: 90dvh;
+    max-width: 96vw;
+    overflow-y: auto;
     @apply m-auto rounded-lg border border-black/10 bg-even-light shadow-xl drop-shadow-xl dark:border-white/10 dark:bg-surface-panel dark:text-white;
   }
 
@@ -371,7 +429,8 @@ html[data-display-mode="standalone"] {
   }
 
   /* Rows and notices */
-  .ui-dense-table-row {
+  .ui-dense-table-row,
+  .ui-overview-standing-row {
     @apply items-center border-b border-black/5 text-center odd:bg-odd-light even:bg-even-light hover:bg-blue-light/70 dark:border-white/5 dark:odd:bg-surface-row-odd dark:even:bg-surface-row-even dark:hover:bg-pillbug-teal/15;
   }
 
@@ -581,13 +640,13 @@ html[data-display-mode="standalone"] {
     display: flex;
     justify-content: center;
     width: 100%;
-    max-width: min(100%, 40rem);
     margin-inline: auto;
     overflow: visible;
   }
 
   .quickplay-hex-grid {
-    --quickplay-hex-width: min(clamp(3.9rem, 24cqw, 9.75rem), calc(100cqw / 4));
+    /* Keep touch targets roomy on narrow screens, then use 80% of the column. */
+    --quickplay-hex-width: max(20cqw, min(24cqw, 9.6rem));
     --quickplay-hex-height: calc(var(--quickplay-hex-width) * 0.866);
     --quickplay-hex-gap: clamp(0.16rem, 1.2cqw, 0.4rem);
     --quickplay-hex-stack-tighten: 0px;
@@ -736,6 +795,21 @@ html[data-display-mode="standalone"] {
     font-size: clamp(0.5rem, 14cqw, 0.95rem);
     line-height: 1.05;
   }
+
+  /* Tournament podium uses the same rounded Hive tile silhouette as Quick Play. */
+  .tournament-podium-place {
+    @apply flex size-8 shrink-0 items-center justify-center bg-orange-700 text-sm font-bold text-white;
+    clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+  }
+
+  .tournament-podium-place[data-rank="1"] {
+    @apply bg-amber-500 text-black;
+  }
+
+  .tournament-podium-place[data-rank="2"] {
+    @apply bg-gray-400 text-black;
+  }
+
 
   /* Header component CSS */
   .ui-header-dropdown-button {

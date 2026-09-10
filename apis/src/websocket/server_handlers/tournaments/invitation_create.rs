@@ -1,11 +1,11 @@
+use super::{append_public_tournament_patches, PublicTournamentSection};
 use crate::{
     common::{ServerMessage, TournamentUpdate},
     notifications::{notify, Event},
-    websocket::messages::{InternalServerMessage, MessageDestination},
+    websocket::messages::{HandlerOutput, InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
-use db_lib::{db_error::DbError, get_conn, models::Tournament, DbPool};
-use diesel_async::AsyncConnection;
+use db_lib::{get_conn, helpers::run_serializable, models::Tournament, DbPool};
 use shared_types::TournamentId;
 use uuid::Uuid;
 
@@ -28,14 +28,23 @@ impl InvitationCreate {
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let mut conn = get_conn(&self.pool).await?;
-        let tournament = Tournament::find_by_tournament_id(&self.tournament_id, &mut conn).await?;
-        let tournament = conn
-            .transaction::<_, DbError, _>(async move |tc| {
-                tournament
-                    .create_invitation(&self.user_id, &self.invitee, tc)
-                    .await
+        let tournament_id = self.tournament_id.clone();
+        let user_id = self.user_id;
+        let invitee = self.invitee;
+        let outcome = run_serializable(&mut conn, move |tc| {
+            let tournament_id = tournament_id.clone();
+            Box::pin(async move {
+                let tournament =
+                    Tournament::find_by_tournament_id_for_update(&tournament_id, tc).await?;
+                tournament.create_invitation(&user_id, &invitee, tc).await
             })
-            .await?;
+        })
+        .await?;
+
+        if !outcome.changed {
+            return Ok(Vec::new());
+        }
+        let tournament = outcome.tournament;
 
         notify(Event::TournamentInvite {
             recipient: self.invitee,
@@ -44,15 +53,17 @@ impl InvitationCreate {
         });
 
         let response = TournamentId(tournament.nanoid.clone());
-        Ok(vec![
-            InternalServerMessage {
-                destination: MessageDestination::User(self.invitee),
-                message: ServerMessage::Tournament(TournamentUpdate::Invited(response.clone())),
-            },
-            InternalServerMessage {
-                destination: MessageDestination::Global,
-                message: ServerMessage::Tournament(TournamentUpdate::StateChanged(response)),
-            },
-        ])
+        let mut output = HandlerOutput::from(vec![InternalServerMessage {
+            destination: MessageDestination::User(self.invitee),
+            message: ServerMessage::Tournament(TournamentUpdate::Invited(response)),
+        }]);
+        append_public_tournament_patches(
+            tournament.id,
+            &[PublicTournamentSection::Memberships],
+            &mut output,
+            &mut conn,
+        )
+        .await;
+        Ok(output.messages)
     }
 }

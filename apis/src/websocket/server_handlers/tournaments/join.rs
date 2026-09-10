@@ -1,10 +1,10 @@
+use super::{append_public_tournament_patches, PublicTournamentSection};
 use crate::{
     common::{ServerMessage, TournamentUpdate},
-    websocket::messages::{InternalServerMessage, MessageDestination},
+    websocket::messages::{HandlerOutput, InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
-use db_lib::{get_conn, models::Tournament, DbPool};
-use diesel_async::AsyncConnection;
+use db_lib::{get_conn, helpers::run_serializable, models::Tournament, DbPool};
 use shared_types::TournamentId;
 use uuid::Uuid;
 
@@ -25,22 +25,35 @@ impl JoinHandler {
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let mut conn = get_conn(&self.pool).await?;
-        let tournament = Tournament::find_by_tournament_id(&self.tournament_id, &mut conn).await?;
-        let tournament = conn
-            .transaction::<_, anyhow::Error, _>(async move |tc| {
-                Ok(tournament.join(&self.user_id, tc).await?)
+        let tournament_id = self.tournament_id.clone();
+        let user_id = self.user_id;
+        let tournament = run_serializable(&mut conn, move |tc| {
+            let tournament_id = tournament_id.clone();
+            Box::pin(async move {
+                let tournament =
+                    Tournament::find_by_tournament_id_for_update(&tournament_id, tc).await?;
+                tournament.join(&user_id, tc).await
             })
-            .await?;
+        })
+        .await?;
         let response = TournamentId(tournament.nanoid.clone());
-        Ok(vec![
+        let mut output = HandlerOutput::from(vec![
             InternalServerMessage {
                 destination: MessageDestination::User(self.user_id),
                 message: ServerMessage::Tournament(TournamentUpdate::Joined(response.clone())),
             },
             InternalServerMessage {
                 destination: MessageDestination::Global,
-                message: ServerMessage::Tournament(TournamentUpdate::StateChanged(response)),
+                message: ServerMessage::Tournament(TournamentUpdate::CatalogChanged(response)),
             },
-        ])
+        ]);
+        append_public_tournament_patches(
+            tournament.id,
+            &[PublicTournamentSection::Memberships],
+            &mut output,
+            &mut conn,
+        )
+        .await;
+        Ok(output.messages)
     }
 }

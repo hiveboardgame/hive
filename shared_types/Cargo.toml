@@ -8,11 +8,20 @@ workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+reactive = ["dep:reactive_stores"]
+
 [dependencies]
+reactive_stores = { workspace = true, optional = true }
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
 hive = { path = "../engine" }
 anyhow = { workspace = true }
 itertools = { workspace = true }
+tournamint = { workspace = true, features = ["serde"] }
+
+[dev-dependencies]
+codee = { workspace = true }

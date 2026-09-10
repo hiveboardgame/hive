@@ -23,16 +23,13 @@ impl LeaveHandler {
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let mut conn = get_conn(&self.pool).await?;
-        let tournament = Tournament::find_by_tournament_id(&self.tournament_id, &mut conn).await?;
-
         let tournament = conn
             .transaction::<_, anyhow::Error, _>(async move |tc| {
+                let tournament =
+                    Tournament::find_by_tournament_id_for_update(&self.tournament_id, tc).await?;
                 Ok(tournament.leave(&self.user_id, tc).await?)
             })
             .await?;
-        Ok(membership_removed_messages(
-            TournamentId(tournament.nanoid.clone()),
-            self.user_id,
-        ))
+        Ok(membership_removed_messages(&tournament, self.user_id, &mut conn).await)
     }
 }

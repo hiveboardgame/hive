@@ -17,14 +17,19 @@ use crate::{
         SubscriptionAttempt,
         UserSettingsUpdate,
     },
-    providers::chat::Chat,
+    providers::{chat::Chat, AlertType, AlertsContext, NotificationContext},
 };
-use leptos::{logging::log, prelude::use_context};
+use leptos::{
+    logging::log,
+    prelude::{expect_context, use_context, Set},
+};
 use leptos_router::hooks::use_navigate;
 use shared_types::ConversationKey;
 
 fn handle_lobby_snapshot(snapshot: LobbySnapshotPayload) {
     handle_tournament_invitation_snapshot(snapshot.tournament_invitations);
+    expect_context::<NotificationContext>()
+        .organizer_invitations_snapshot_apply(snapshot.tournament_organizer_invitations);
     handle_schedule_notification_snapshot(snapshot.schedule_notifications);
     handle_urgent_games_snapshot(snapshot.urgent_games);
     handle_challenge_snapshot(snapshot.challenges);
@@ -107,7 +112,11 @@ pub fn handle_response(m: ServerResult) {
                         chat.handle_failed_chat_send(key, client_id, error.into());
                     }
                 }
-                ExternalServerError::Request { .. } => {}
+                ExternalServerError::Request { reason } => {
+                    if let Some(alerts) = use_context::<AlertsContext>() {
+                        alerts.last_alert.set(Some(AlertType::Error(reason)));
+                    }
+                }
             }
         }
     };

@@ -23,18 +23,13 @@ pub struct AcceptHandler {
 }
 
 impl AcceptHandler {
-    pub async fn new(
-        challenge_id: ChallengeId,
-        username: &str,
-        user_id: Uuid,
-        pool: &DbPool,
-    ) -> Result<Self> {
-        Ok(Self {
+    pub fn new(challenge_id: ChallengeId, username: &str, user_id: Uuid, pool: &DbPool) -> Self {
+        Self {
             challenge_id,
             user_id,
             username: username.to_owned(),
             pool: pool.clone(),
-        })
+        }
     }
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
@@ -53,7 +48,9 @@ impl AcceptHandler {
             Err(err) => return Err(err.into()),
         };
         challenge.validate_accepting_user(self.user_id)?;
-        let speed = GameSpeed::from_base_increment(challenge.time_base, challenge.time_increment);
+        let speed = challenge
+            .time_control()?
+            .map_or(GameSpeed::Untimed, GameSpeed::from);
         let rating = Rating::for_uuid(&self.user_id, &speed, &mut conn)
             .await?
             .rating;

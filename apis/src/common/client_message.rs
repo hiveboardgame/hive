@@ -5,7 +5,7 @@ use super::{
     TournamentAction,
 };
 use serde::{Deserialize, Serialize};
-use shared_types::{ConversationKey, GameId};
+use shared_types::{ConversationKey, GameId, TournamentId};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -23,7 +23,8 @@ pub struct SubscriptionAttempt {
     pub request_id: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// Not `Eq`, because `TournamentAction` is not — see the note there.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ClientRequest {
     Chat(ChatSendRequest),
     ChatSubscribe(SubscriptionAttempt),
@@ -36,6 +37,8 @@ pub enum ClientRequest {
     Resync,
     Schedule(ScheduleAction),
     Tournament(TournamentAction),
+    TournamentWatch(TournamentId),
+    TournamentUnwatch(TournamentId),
     // leptos-use idle or window unfocused will send
     Away, // Online and Offline are not needed because they will be handled by the WS connection
           // being established/torn down

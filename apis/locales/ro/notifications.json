@@ -56,6 +56,28 @@
         "button": "Instalează",
         "ios_hint": "Instalează HiveGame: apasă Partajează, apoi «Adaugă pe ecranul principal»."
     },
+    "actions": {
+        "dismiss": "Închide",
+        "accept": "Acceptă",
+        "decline": "Refuză",
+        "view_tournament": "Vezi turneul",
+        "view_named_tournament": "Vezi turneul: {{name}}"
+    },
+    "schedule": {
+        "proposed": "{{proposer}} a propus să jucați la {{time}}",
+        "accepted": "{{player}} a acceptat să jucați la {{time}}"
+    },
+    "tournament_status": {
+        "label": "Turneu",
+        "started": "Început",
+        "finished": "Încheiat"
+    },
+    "tournament_invitation": {
+        "label": "Invitație la turneu",
+        "players": "Jucători: {{count}}",
+        "accept": "Acceptă invitația",
+        "decline": "Refuză invitația"
+    },
     "push": {
         "your_turn_title": "E rândul tău",
         "your_turn_timed": "{{opponent}} a mutat · {{time_left}} rămase",

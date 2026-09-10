@@ -24,7 +24,7 @@ fn sorted_by_username(users: BTreeMap<String, UserResponse>) -> Vec<(String, Use
 
 #[component]
 pub fn UserSearch(
-    #[prop(optional)] placeholder: Option<String>,
+    #[prop(optional, into)] placeholder: Option<TextProp>,
     #[prop(optional)] fallback_users: Option<Signal<BTreeMap<String, UserResponse>>>,
     #[prop(optional, into)] filtered_users: Option<Signal<HashSet<String>>>,
     #[prop(optional)] value: Option<Signal<Option<String>>>,
@@ -140,11 +140,9 @@ pub fn UserSearch(
         }
     });
 
-    let input_placeholder = move || {
-        placeholder
-            .clone()
-            .unwrap_or_else(|| t_string!(i18n, home.search_players).to_string())
-    };
+    let input_placeholder = placeholder.unwrap_or_else(|| {
+        TextProp::from(move || t_string!(i18n, home.search_players).to_string())
+    });
 
     let has_select = select_callback.is_some();
     let wrapped_actions_stored = StoredValue::new(wrapped_actions);

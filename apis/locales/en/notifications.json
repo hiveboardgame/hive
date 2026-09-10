@@ -56,6 +56,28 @@
         "button": "Install",
         "ios_hint": "Install HiveGame: tap Share, then \"Add to Home Screen\"."
     },
+    "actions": {
+        "dismiss": "Dismiss",
+        "accept": "Accept",
+        "decline": "Decline",
+        "view_tournament": "View tournament",
+        "view_named_tournament": "View tournament: {{name}}"
+    },
+    "schedule": {
+        "proposed": "{{proposer}} proposed a game for {{time}}",
+        "accepted": "{{player}} accepted your game time for {{time}}"
+    },
+    "tournament_status": {
+        "label": "Tournament",
+        "started": "Started",
+        "finished": "Finished"
+    },
+    "tournament_invitation": {
+        "label": "Tournament invitation",
+        "players": "Players: {{count}}",
+        "accept": "Accept invitation",
+        "decline": "Decline invitation"
+    },
     "push": {
         "your_turn_title": "Your turn",
         "your_turn_timed": "{{opponent}} moved · {{time_left}} left",

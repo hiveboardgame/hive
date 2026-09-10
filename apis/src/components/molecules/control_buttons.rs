@@ -1,6 +1,7 @@
 use crate::{
-    common::ChallengeAction,
+    common::{ChallengeAction, GameAction},
     components::atoms::gc_button::{AcceptDenyGc, ConfirmButton},
+    i18n::*,
     providers::{
         challenges::ChallengeStateSignal,
         game_state::{GameStateStore, GameStateStoreFields},
@@ -9,16 +10,26 @@ use crate::{
         AuthIdentity,
     },
 };
-use hive_lib::{ColorChoice, GameControl};
+use hive_lib::{Color, ColorChoice, GameControl, GameStatus};
 use leptos::{either::EitherOf3, prelude::*};
+use leptos_icons::Icon;
 use leptos_router::hooks::use_navigate;
-use shared_types::{ChallengeDetails, ChallengeVisibility};
+use shared_types::{tournament::Format, ChallengeDetails, ChallengeVisibility, GameStart};
 
 const FINISHED_GAME_BUTTON_CLASS: &str =
     "ui-button m-1 h-8 min-h-8 grow rounded px-2 py-1 leading-none";
 
+fn arena_berserk_is_available(finished: bool, turn: usize, color: Color, berserked: bool) -> bool {
+    let opening_turn = match color {
+        Color::White => turn == 0,
+        Color::Black => turn <= 1,
+    };
+    !finished && opening_turn && !berserked
+}
+
 #[component]
 pub fn ControlButtons() -> impl IntoView {
+    let i18n = use_i18n();
     let game_state = expect_context::<GameStateStore>();
     let auth_context = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
@@ -40,11 +51,54 @@ pub fn ControlButtons() -> impl IntoView {
     let game_response = game_state.game_response();
     let state = game_state.state();
     let turn = Memo::new(move |_| state.with(|state| state.turn));
+    let can_berserk = Memo::new(move |_| {
+        game_response.with(|response| {
+            let Some(game) = response.as_ref() else {
+                return false;
+            };
+            let is_arena = game
+                .tournament
+                .as_ref()
+                .is_some_and(|tournament| tournament.format() == Format::Arena);
+            if !is_arena {
+                return false;
+            }
+            arena_berserk_is_available(
+                game.finished,
+                game.turn,
+                color.get(),
+                match color.get() {
+                    Color::White => game.white_berserked,
+                    Color::Black => game.black_berserked,
+                },
+            )
+        })
+    });
+    let berserk = move |_| {
+        if !can_berserk.get_untracked() {
+            return;
+        }
+        if let Some(game_id) = game_response
+            .with_untracked(|response| response.as_ref().map(|game| game.game_id.clone()))
+        {
+            api.get().game(game_id, GameAction::Berserk);
+        }
+    };
     let not_tournament = Memo::new(move |_| {
         game_response.with(|game_response| {
             game_response
                 .as_ref()
                 .is_some_and(|gr| gr.tournament.is_none())
+        })
+    });
+    let resumed_move_opening = Memo::new(move |_| {
+        game_response.with(|game_response| {
+            game_response.as_ref().is_some_and(|game| {
+                game.tournament.is_none()
+                    && game.game_start == GameStart::Moves
+                    && game.game_status == GameStatus::InProgress
+                    && game.turn < 2
+            })
         })
     });
     let takeback_allowed = Memo::new(move |_| game_state.takeback_allowed());
@@ -235,20 +289,37 @@ pub fn ControlButtons() -> impl IntoView {
             EitherOf3::C(view! {
                 <div class="flex flex-col w-full">
                     <div class="flex justify-around items-center grow shrink">
+                        <Show when=can_berserk>
+                            <button
+                                on:click=berserk
+                                title=move || {
+                                    t_string!(i18n, game.arena.berserk_title).to_string()
+                                }
+                                aria-label=move || {
+                                    t_string!(i18n, game.arena.berserk).to_string()
+                                }
+                                class="ui-button ui-button-danger ui-button-md !px-3"
+                            >
+                                <Icon icon=icondata_bs::BsLightningFill attr:class="size-5" />
+                            </button>
+                        </Show>
                         <Show when=not_tournament>
                             <div class="flex relative items-center">
                                 <ConfirmButton
                                     game_control=GameControl::Abort(color())
                                     user_id=user_id()
 
-                                    hidden=Signal::derive(move || { turn() > 1 })
+                                    hidden=Signal::derive(move || {
+                                        turn() > 1 || resumed_move_opening.get()
+                                    })
                                 />
                                 <Show when=takeback_allowed>
                                     <ConfirmButton
                                         game_control=GameControl::TakebackRequest(color())
                                         user_id=user_id()
                                         hidden=Signal::derive(move || {
-                                            pending_takeback() || turn() < 2
+                                            pending_takeback() || turn() == 0
+                                                || (turn() < 2 && !resumed_move_opening.get())
                                         })
                                     />
 
@@ -301,5 +372,16 @@ pub fn ControlButtons() -> impl IntoView {
                 </div>
             })
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn black_gets_one_more_opening_turn_than_white() {
+        assert!(!arena_berserk_is_available(false, 1, Color::White, false,));
+        assert!(arena_berserk_is_available(false, 1, Color::Black, false,));
     }
 }

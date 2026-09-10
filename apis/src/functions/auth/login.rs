@@ -7,7 +7,10 @@ pub async fn login(
     password: String,
     pathname: String,
 ) -> Result<AccountResponse, ServerFnError> {
-    use crate::functions::{auth::password::verify_password, db::pool};
+    use crate::{
+        common::safe_return_path,
+        functions::{auth::password::verify_password, db::pool},
+    };
     use actix_identity::Identity;
     use actix_web::HttpMessage;
     use db_lib::{get_conn, models::User};
@@ -19,6 +22,6 @@ pub async fn login(
     verify_password(&password, &user.password)?;
     let req: actix_web::HttpRequest = leptos_actix::extract().await?;
     Identity::login(&req.extensions(), user.id.to_string())?;
-    leptos_actix::redirect(&pathname);
+    leptos_actix::redirect(&safe_return_path(&pathname));
     AccountResponse::from_uuid(&user.id, &mut conn).await
 }

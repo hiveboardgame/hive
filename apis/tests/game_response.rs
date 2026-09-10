@@ -126,6 +126,11 @@ async fn setup_game(
             game_start: GameStart::Moves.to_string(),
             move_times: Vec::new(),
             timeout_at: time_left.map(|nanos| now + chrono::Duration::nanoseconds(nanos)),
+            tournament_slot_id: None,
+            arena_ordinal: None,
+            white_berserked: false,
+            black_berserked: false,
+            arena_move_due_at: None,
         },
         conn,
     )

@@ -21,12 +21,12 @@ pub struct CreateHandler {
 }
 
 impl CreateHandler {
-    pub async fn new(details: ChallengeDetails, user_id: Uuid, pool: &DbPool) -> Result<Self> {
-        Ok(Self {
+    pub fn new(details: ChallengeDetails, user_id: Uuid, pool: &DbPool) -> Self {
+        Self {
             details,
             user_id,
             pool: pool.clone(),
-        })
+        }
     }
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
@@ -57,28 +57,32 @@ impl CreateHandler {
                     });
                     messages.push(InternalServerMessage {
                         destination: MessageDestination::User(opponent.uid),
-                        message: ServerMessage::Challenge(ChallengeUpdate::Direct(
+                        message: ServerMessage::Challenge(ChallengeUpdate::Direct(Box::new(
                             challenge_response.clone(),
-                        )),
+                        ))),
                     });
                     messages.push(InternalServerMessage {
                         destination: MessageDestination::User(challenge_response.challenger.uid),
-                        message: ServerMessage::Challenge(ChallengeUpdate::Direct(
+                        message: ServerMessage::Challenge(ChallengeUpdate::Direct(Box::new(
                             challenge_response,
-                        )),
+                        ))),
                     });
                 }
             }
             ChallengeVisibility::Private => {
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::User(challenge_response.challenger.uid),
-                    message: ServerMessage::Challenge(ChallengeUpdate::Direct(challenge_response)),
+                    message: ServerMessage::Challenge(ChallengeUpdate::Direct(Box::new(
+                        challenge_response,
+                    ))),
                 });
             }
             ChallengeVisibility::Public => {
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::Global,
-                    message: ServerMessage::Challenge(ChallengeUpdate::Created(challenge_response)),
+                    message: ServerMessage::Challenge(ChallengeUpdate::Created(Box::new(
+                        challenge_response,
+                    ))),
                 });
             }
         }

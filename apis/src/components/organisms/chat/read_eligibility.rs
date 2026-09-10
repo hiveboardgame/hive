@@ -27,6 +27,22 @@ pub(super) fn is_element_in_scroll_view(
         && element_bounds.top() < container_bounds.bottom()
 }
 
+fn scroll_top_for_element(container_scroll_top: i32, container_top: f64, element_top: f64) -> i32 {
+    container_scroll_top.saturating_add((element_top - container_top).round() as i32)
+}
+
+pub(super) fn scroll_element_to_container_top(
+    container: &web_sys::HtmlElement,
+    element: &web_sys::HtmlElement,
+) {
+    let scroll_top = scroll_top_for_element(
+        container.scroll_top(),
+        container.get_bounding_client_rect().top(),
+        element.get_bounding_client_rect().top(),
+    );
+    container.set_scroll_top(scroll_top);
+}
+
 pub(super) fn use_bottom_visibility(bottom_ref: NodeRef<html::Div>) -> RwSignal<bool> {
     let bottom_visible = RwSignal::new(false);
     _ = use_intersection_observer_with_options(
@@ -134,4 +150,15 @@ pub(super) fn use_thread_read_eligibility(
             chat.clear_channel_visible(owner_id);
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::scroll_top_for_element;
+
+    #[test]
+    fn unread_position_is_relative_to_the_chat_container() {
+        assert_eq!(scroll_top_for_element(120, 200.0, 260.0), 180);
+        assert_eq!(scroll_top_for_element(120, 200.0, 150.0), 70);
+    }
 }

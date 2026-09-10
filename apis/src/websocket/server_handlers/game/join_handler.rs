@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use super::tournament_progression::{finish_post_commit_projection, settle_deadline};
 use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
     websocket::{
@@ -20,7 +21,7 @@ pub struct JoinHandler {
     hub: Arc<WsHub>,
     user_id: Uuid,
     username: String,
-    game: Game,
+    game_id: Uuid,
 }
 
 impl JoinHandler {
@@ -35,7 +36,7 @@ impl JoinHandler {
     ) -> Self {
         Self {
             received_from,
-            game: game.to_owned(),
+            game_id: game.id,
             user_id,
             username: username.to_owned(),
             data,
@@ -46,38 +47,53 @@ impl JoinHandler {
 
     pub async fn handle(&self) -> Result<HandlerOutput> {
         let mut conn = get_conn(&self.pool).await?;
-        let mut messages = Vec::new();
-        let game_id = GameId(self.game.nanoid.clone());
-        messages.push(InternalServerMessage {
-            destination: MessageDestination::Game(game_id.clone()),
-            message: ServerMessage::Join(self.user_id),
-        });
-        let game_response = self
-            .data
-            .get_or_build_response(&self.game, &mut conn)
-            .await?;
-        install_join_membership(
-            &self.hub,
-            self.user_id,
-            self.received_from.socket_id,
-            &game_id,
-            self.game.finished,
-        );
-        messages.push(InternalServerMessage {
-            destination: MessageDestination::Direct(self.received_from.clone()),
-            message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
-                game_id: GameId(self.game.nanoid.to_owned()),
-                game: (*game_response).clone(),
-                game_action: GameReaction::Join,
-                user_id: self.user_id.to_owned(),
-                username: self.username.to_owned(),
-            }))),
-        });
-        Ok(HandlerOutput {
-            messages,
-            reactions: Vec::new(),
-            finalize_games: Vec::new(),
-        })
+        let mut projected = settle_deadline(self.game_id, self.data.as_ref(), &mut conn).await?;
+        if projected.removed {
+            return Err(anyhow::anyhow!(
+                "deadline check removed game {}",
+                projected.game.nanoid
+            ));
+        }
+        if let Some(error) = projected.rejected.take() {
+            projected.output.request_error = Some(error.into());
+            return Ok(projected.output);
+        }
+        let game = projected.game;
+        let game_id = GameId(game.nanoid.clone());
+        let projection = async {
+            let game_response = self.data.get_or_build_response(&game, &mut conn).await?;
+            install_join_membership(
+                &self.hub,
+                self.user_id,
+                self.received_from.socket_id,
+                &game_id,
+                game.finished,
+            );
+            Ok(HandlerOutput::from(vec![
+                InternalServerMessage {
+                    destination: MessageDestination::Game(game_id.clone()),
+                    message: ServerMessage::Join(self.user_id),
+                },
+                InternalServerMessage {
+                    destination: MessageDestination::Direct(self.received_from.clone()),
+                    message: ServerMessage::Game(Box::new(GameUpdate::Reaction(
+                        GameActionResponse {
+                            game_id: game_id.clone(),
+                            game: (*game_response).clone(),
+                            game_action: GameReaction::Join,
+                            user_id: self.user_id,
+                            username: self.username.clone(),
+                        },
+                    ))),
+                },
+            ]))
+        }
+        .await;
+        Ok(finish_post_commit_projection(
+            &game.nanoid,
+            projected.output,
+            projection,
+        ))
     }
 }
 

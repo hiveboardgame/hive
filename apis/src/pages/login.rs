@@ -1,18 +1,19 @@
 use crate::{
+    common::auth_page_url,
     components::{
         layouts::page_shell::{PageShell, PageShellVariant},
         molecules::page_card::PageCard,
     },
     functions::auth::login::Login,
     i18n::*,
-    providers::{AuthContext, RefererContext},
+    providers::{use_auth_return_path, AuthContext},
 };
 use leptos::{form::ActionForm, html, prelude::*};
 
 #[component]
 pub fn Login() -> impl IntoView {
     let i18n = use_i18n();
-    let pathname = expect_context::<RefererContext>().pathname;
+    let pathname = use_auth_return_path();
     let my_input = NodeRef::<html::Input>::new();
     Effect::new(move |_| {
         let _ = my_input.get_untracked().map(|el| el.focus());
@@ -61,7 +62,7 @@ pub fn Login() -> impl IntoView {
                             placeholder="********"
                         />
                     </label>
-                    <input type="hidden" name="pathname" value=pathname.get_value() />
+                    <input type="hidden" name="pathname" value=pathname />
                     <p class="min-h-5">
                         <Show when=move || { login.value().get().is_some_and(|v| v.is_err()) }>
                             <small class="ui-field-error">
@@ -83,7 +84,7 @@ pub fn Login() -> impl IntoView {
                 {t!(
                     i18n, user_config.login.no_account_prompt,
                     < register_link > =
-                    <a class="ui-text-link" href="/register"/>
+                    <a class="ui-text-link" href=move || auth_page_url("/register", &pathname.get())/>
                 )}
             </p>
         </PageShell>

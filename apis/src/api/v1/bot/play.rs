@@ -1,9 +1,11 @@
 use crate::{
-    api::v1::{
-        auth::Auth,
-        messages::send::{send_control_messages, send_turn_messages},
+    api::v1::auth::Auth,
+    common::GameReaction,
+    websocket::{
+        server_handlers::game::{project_committed_game, GameCommandContext},
+        HandlerOutput,
+        WsHub,
     },
-    websocket::WsHub,
 };
 use actix_web::{
     post,
@@ -12,11 +14,12 @@ use actix_web::{
 };
 use anyhow::{anyhow, Result};
 use db_lib::{
+    db_error::DbError,
+    game_command::{self, Command},
     get_conn,
     models::{Game, User},
     DbPool,
 };
-use diesel_async::AsyncConnection;
 use hive_lib::{Color, GameControl, Piece, Position, State, Turn};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -42,7 +45,10 @@ pub async fn api_play(
     pool: Data<DbPool>,
     hub: Data<Arc<WsHub>>,
 ) -> HttpResponse {
-    match play_move(req, bot.clone(), pool, hub).await {
+    let mut output = HandlerOutput::empty();
+    let result = play_move(req, bot.clone(), pool, hub.clone(), &mut output).await;
+    hub.dispatch_handler_output(output).await;
+    match result {
         Ok((game, _turn)) => HttpResponse::Ok().json(json!({
           "success": true,
           "data": {
@@ -60,23 +66,43 @@ pub async fn api_play(
     }
 }
 
+fn bot_db_error(error: DbError) -> anyhow::Error {
+    match error {
+        DbError::NotFound { .. } => anyhow!("Not found"),
+        DbError::InvalidTournamentDetails { .. } => anyhow!("Invalid TournamentDetails"),
+        DbError::InternalError { .. }
+        | DbError::InvalidPersistedTournament { .. }
+        | DbError::SerializationConflict => anyhow!("Internal database error"),
+        DbError::InvalidInput { .. } => anyhow!("Invalid input"),
+        DbError::InvalidAction { .. } => anyhow!("Invalid action"),
+        DbError::TimeNotFound { .. } => anyhow!("Time not present"),
+        error => error.into(),
+    }
+}
+
+fn map_play_command_error(error: DbError) -> anyhow::Error {
+    match error {
+        DbError::GameIsOver => anyhow!("Game is finished"),
+        DbError::InvalidAction { info } if info == "It is not this player's turn" => {
+            anyhow!("Not your turn")
+        }
+        error => bot_db_error(error),
+    }
+}
+
 async fn play_move(
     play: PlayRequest,
     bot: User,
     pool: Data<DbPool>,
     hub: Data<Arc<WsHub>>,
+    output: &mut HandlerOutput,
 ) -> Result<(Game, Turn)> {
     let cloned_pool = pool.clone();
     let mut conn = get_conn(&cloned_pool).await?;
-    let game = Game::find_by_game_id(&play.game_id, &mut conn).await?;
-    if game.finished {
-        return Err(anyhow!("Game is finished"));
-    }
-    if game.current_player_id != bot.id {
-        return Err(anyhow!("Not your turn"));
-    }
-    let mut state = State::new_from_str(&game.history, &game.game_type)?;
-
+    let game = Game::find_by_game_id(&play.game_id, &mut conn)
+        .await
+        .map_err(bot_db_error)?;
+    let state = State::new_from_str(&game.history, &game.game_type)?;
     let (piece, position) = if state.turn == 0 {
         let piece = Piece::from_str(&play.piece_pos)?;
         let position = Position::initial_spawn_position();
@@ -86,38 +112,36 @@ async fn play_move(
             .piece_pos
             .split_once(' ')
             .ok_or_else(|| anyhow!("Invalid move format: expected 'piece position'"))?;
-
         let piece = Piece::from_str(piece_str)?;
         let position = Position::from_string(pos_str, &state.board)?;
         (piece, position)
     };
-
     let played_turn = Turn::Move(piece, position);
-
-    let (game, played_turn_out) = conn
-        .transaction::<_, anyhow::Error, _>(async move |tc| {
-                if let Err(err) = state.play_turn_from_position(piece, position) {
-                    log::warn!(
-                        "invalid bot turn game={} bot={} bot_username={} db_turn={} request_turn={} error={} board=\n{}",
-                        game.nanoid,
-                        bot.id,
-                        bot.username,
-                        game.turn,
-                        played_turn,
-                        err,
-                        state.board,
-                    );
-                    return Err(err.into());
-                }
-                let updated_game = game.update_gamestate(&state, 0_f64, tc).await?;
-                send_turn_messages(hub.clone(), &updated_game, &bot, &pool, played_turn.clone())
-                    .await?;
-
-                Ok((updated_game, played_turn))
-
-        })
-        .await?;
-    Ok((game, played_turn_out))
+    let outcome = game_command::execute(
+        game.id,
+        Command::Move {
+            user_id: bot.id,
+            turn: played_turn.clone(),
+            compensation: 0.0,
+        },
+        &mut conn,
+    )
+    .await
+    .map_err(map_play_command_error)?;
+    let context = GameCommandContext::bot(
+        GameReaction::Turn(played_turn.clone()),
+        bot.id,
+        bot.username.clone(),
+    );
+    let committed = project_committed_game(outcome, context, hub.data.as_ref(), &mut conn).await;
+    if committed.removed {
+        unreachable!("a bot move cannot remove its game")
+    }
+    output.append(committed.output);
+    if let Some(rejected) = committed.rejected {
+        return Err(map_play_command_error(rejected));
+    }
+    Ok((committed.game, played_turn))
 }
 
 #[post("/api/v1/bot/games/control")]
@@ -127,7 +151,10 @@ pub async fn api_control(
     pool: Data<DbPool>,
     hub: Data<Arc<WsHub>>,
 ) -> HttpResponse {
-    match handle_control(req, bot.clone(), pool, hub).await {
+    let mut output = HandlerOutput::empty();
+    let result = handle_control(req, bot.clone(), pool, hub.clone(), &mut output).await;
+    hub.dispatch_handler_output(output).await;
+    match result {
         Ok(game) => HttpResponse::Ok().json(json!({
           "success": true,
           "data": {
@@ -146,83 +173,104 @@ pub async fn api_control(
     }
 }
 
+fn bot_color(game: &Game, bot_id: uuid::Uuid) -> Result<Color> {
+    if game.white_id == bot_id {
+        Ok(Color::White)
+    } else if game.black_id == bot_id {
+        Ok(Color::Black)
+    } else {
+        Err(anyhow!("Not your game"))
+    }
+}
+
+fn control_from_request(game: &Game, bot_id: uuid::Uuid, requested: &str) -> Result<GameControl> {
+    let color = bot_color(game, bot_id)?;
+    match requested {
+        "resign" => Ok(GameControl::Resign(color)),
+        "abort" => Ok(GameControl::Abort(color)),
+        _ => Err(anyhow!("Invalid control type: {requested}")),
+    }
+}
+
+fn map_control_command_error(error: DbError, control: GameControl) -> anyhow::Error {
+    match error {
+        DbError::GameIsOver => anyhow!("Game is finished"),
+        DbError::Unauthorized => anyhow!("Not your game"),
+        DbError::InvalidAction { info } if info == "The same game control is already present" => {
+            anyhow!("Control already sent")
+        }
+        DbError::InvalidAction { info }
+            if matches!(control, GameControl::Resign(_))
+                && (info == "Game control is not allowed on this turn"
+                    || info == "An unbegun Ready tournament game cannot accept game controls") =>
+        {
+            anyhow!("Cannot resign before turn 2")
+        }
+        DbError::InvalidAction { info }
+            if matches!(control, GameControl::Abort(_))
+                && (info == "Tournament games cannot be aborted"
+                    || info == "An unbegun Ready tournament game cannot accept game controls") =>
+        {
+            anyhow!("Cannot abort tournament games")
+        }
+        DbError::InvalidAction { info }
+            if matches!(control, GameControl::Abort(_))
+                && (info == "Game control is not allowed on this turn"
+                    || info == "A started game cannot be aborted") =>
+        {
+            anyhow!("Cannot abort after turn 2")
+        }
+        error => bot_db_error(error),
+    }
+}
+
 async fn handle_control(
     req: ControlRequest,
     bot: User,
     pool: Data<DbPool>,
     hub: Data<Arc<WsHub>>,
+    output: &mut HandlerOutput,
 ) -> Result<Game> {
     let cloned_pool = pool.clone();
     let mut conn = get_conn(&cloned_pool).await?;
-    let game = Game::find_by_game_id(&req.game_id, &mut conn).await?;
-
-    if game.finished {
-        return Err(anyhow!("Game is finished"));
-    }
-
-    let bot_color = if game.white_id == bot.id {
-        Color::White
-    } else if game.black_id == bot.id {
-        Color::Black
-    } else {
-        return Err(anyhow!("Not your game"));
-    };
-
-    let game_control = match req.control.as_str() {
-        "resign" => {
-            if game.turn < 2 {
-                return Err(anyhow!("Cannot resign before turn 2"));
-            }
-            GameControl::Resign(bot_color)
-        }
-        "abort" => {
-            if game.turn >= 2 {
-                return Err(anyhow!("Cannot abort after turn 2"));
-            }
-            if game.tournament_id.is_some() {
-                return Err(anyhow!("Cannot abort tournament games"));
-            }
-            GameControl::Abort(bot_color)
-        }
-        _ => return Err(anyhow!("Invalid control type: {}", req.control)),
-    };
-
-    if let Some(last_control) = game.last_game_control() {
-        if last_control == game_control {
-            return Err(anyhow!("Control already sent"));
+    let game = Game::find_by_game_id(&req.game_id, &mut conn)
+        .await
+        .map_err(bot_db_error)?;
+    let game_control = control_from_request(&game, bot.id, &req.control)?;
+    let pending_delete =
+        if matches!(game_control, GameControl::Abort(_)) && game.tournament_id.is_none() {
+            Some(hub.as_ref().arm_pending_delete(
+                GameId(game.nanoid.clone()),
+                game.white_id,
+                game.black_id,
+            ))
+        } else {
+            None
+        };
+    let outcome = game_command::execute(
+        game.id,
+        Command::Control {
+            user_id: bot.id,
+            control: game_control,
+        },
+        &mut conn,
+    )
+    .await
+    .map_err(|error| map_control_command_error(error, game_control))?;
+    let context = GameCommandContext::bot(
+        GameReaction::Control(game_control),
+        bot.id,
+        bot.username.clone(),
+    );
+    let committed = project_committed_game(outcome, context, hub.data.as_ref(), &mut conn).await;
+    if committed.removed {
+        if let Some(guard) = pending_delete {
+            guard.disarm();
         }
     }
-
-    let updated_game = conn
-        .transaction::<_, anyhow::Error, _>(async move |tc| {
-            let pending_delete = if matches!(game_control, GameControl::Abort(_)) {
-                Some(hub.as_ref().arm_pending_delete(
-                    GameId(game.nanoid.clone()),
-                    game.white_id,
-                    game.black_id,
-                ))
-            } else {
-                None
-            };
-            let result_game = match game_control {
-                GameControl::Resign(_) => game.resign(&game_control, tc).await?,
-                GameControl::Abort(_) => {
-                    game.delete(tc).await?;
-                    let mut game_copy = game.clone();
-                    game_copy.finished = true;
-                    game_copy
-                }
-                _ => unreachable!(),
-            };
-
-            send_control_messages(hub.clone(), &result_game, &bot, &pool, game_control).await?;
-            if let Some(guard) = pending_delete {
-                guard.disarm();
-            }
-
-            Ok(result_game)
-        })
-        .await?;
-
-    Ok(updated_game)
+    output.append(committed.output);
+    if let Some(rejected) = committed.rejected {
+        return Err(map_control_command_error(rejected, game_control));
+    }
+    Ok(committed.game)
 }

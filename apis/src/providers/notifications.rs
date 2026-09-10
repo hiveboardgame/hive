@@ -1,4 +1,5 @@
-use super::snapshot::apply_snapshot_set;
+use super::{snapshot::apply_snapshot_set, SchedulesContext};
+use crate::hooks::arena_clock::use_ticking_now;
 use leptos::prelude::*;
 use shared_types::{ChallengeId, TournamentId};
 use std::collections::HashSet;
@@ -8,11 +9,13 @@ use uuid::Uuid;
 pub struct NotificationContext {
     pub challenges: RwSignal<HashSet<ChallengeId>>,
     tournament_invitations: RwSignal<HashSet<TournamentId>>,
+    tournament_organizer_invitations: RwSignal<HashSet<TournamentId>>,
     pub tournament_started: RwSignal<HashSet<TournamentId>>,
     pub tournament_finished: RwSignal<HashSet<TournamentId>>,
     schedule_proposals: RwSignal<HashSet<Uuid>>,
     schedule_acceptances: RwSignal<HashSet<Uuid>>,
     tournament_invitation_resync_dirty: StoredValue<HashSet<TournamentId>>,
+    tournament_organizer_invitation_resync_dirty: StoredValue<HashSet<TournamentId>>,
     schedule_notification_resync_dirty: StoredValue<HashSet<Uuid>>,
 }
 
@@ -27,16 +30,20 @@ impl NotificationContext {
         Self {
             challenges: RwSignal::new(HashSet::new()),
             tournament_invitations: RwSignal::new(HashSet::new()),
+            tournament_organizer_invitations: RwSignal::new(HashSet::new()),
             tournament_started: RwSignal::new(HashSet::new()),
             tournament_finished: RwSignal::new(HashSet::new()),
             schedule_proposals: RwSignal::new(HashSet::new()),
             schedule_acceptances: RwSignal::new(HashSet::new()),
             tournament_invitation_resync_dirty: StoredValue::new(HashSet::new()),
+            tournament_organizer_invitation_resync_dirty: StoredValue::new(HashSet::new()),
             schedule_notification_resync_dirty: StoredValue::new(HashSet::new()),
         }
     }
 
     pub fn begin_resync(&self) {
+        self.tournament_organizer_invitation_resync_dirty
+            .update_value(|d| d.clear());
         self.tournament_invitation_resync_dirty
             .update_value(|d| d.clear());
         self.schedule_notification_resync_dirty
@@ -46,6 +53,7 @@ impl NotificationContext {
     pub fn is_empty(&self) -> bool {
         self.challenges.with(|v| v.is_empty())
             && self.tournament_invitations.with(|v| v.is_empty())
+            && self.tournament_organizer_invitations.with(|v| v.is_empty())
             && self.tournament_started.with(|v| v.is_empty())
             && self.tournament_finished.with(|v| v.is_empty())
             && self.schedule_proposals.with(|v| v.is_empty())
@@ -54,12 +62,14 @@ impl NotificationContext {
 
     pub fn has_tournament_notifications(&self) -> bool {
         !self.tournament_invitations.with(|v| v.is_empty())
+            || !self.tournament_organizer_invitations.with(|v| v.is_empty())
             || !self.tournament_started.with(|v| v.is_empty())
             || !self.tournament_finished.with(|v| v.is_empty())
     }
 
     pub fn sorted_tournament_notification_ids(&self) -> Vec<TournamentId> {
         let mut tournament_ids = self.tournament_invitations();
+        tournament_ids.extend(self.tournament_organizer_invitations());
         tournament_ids.extend(self.tournament_started.get());
         tournament_ids.extend(self.tournament_finished.get());
         let mut tournament_ids = tournament_ids.into_iter().collect::<Vec<_>>();
@@ -69,6 +79,42 @@ impl NotificationContext {
 
     pub fn tournament_invitations(&self) -> HashSet<TournamentId> {
         self.tournament_invitations.get()
+    }
+
+    pub fn tournament_organizer_invitations(&self) -> HashSet<TournamentId> {
+        self.tournament_organizer_invitations.get()
+    }
+
+    pub fn organizer_invitation_insert(&self, id: TournamentId) {
+        self.tournament_organizer_invitation_resync_dirty
+            .update_value(|dirty| {
+                dirty.insert(id.clone());
+            });
+        self.tournament_organizer_invitations.update(|invitations| {
+            invitations.insert(id);
+        });
+    }
+
+    pub fn organizer_invitation_remove(&self, id: &TournamentId) {
+        self.tournament_organizer_invitation_resync_dirty
+            .update_value(|dirty| {
+                dirty.insert(id.clone());
+            });
+        self.tournament_organizer_invitations.update(|invitations| {
+            invitations.remove(id);
+        });
+    }
+
+    pub fn organizer_invitations_snapshot_apply(&self, invitations: Vec<TournamentId>) {
+        let dirty = self
+            .tournament_organizer_invitation_resync_dirty
+            .with_value(Clone::clone);
+        let snapshot = invitations.into_iter().collect();
+        self.tournament_organizer_invitations.update(|current| {
+            apply_snapshot_set(current, &snapshot, &dirty);
+        });
+        self.tournament_organizer_invitation_resync_dirty
+            .update_value(|d| d.clear());
     }
 
     pub fn schedule_proposals(&self) -> HashSet<Uuid> {
@@ -170,7 +216,15 @@ impl Default for NotificationContext {
 }
 
 pub fn provide_notifications() {
-    provide_context(NotificationContext::default())
+    let notifications = NotificationContext::default();
+    provide_context(notifications);
+    let schedules = expect_context::<SchedulesContext>();
+    let now = use_ticking_now();
+    Effect::new(move |_| {
+        for schedule_id in schedules.prune_expired_pending(now.get()) {
+            notifications.schedule_notification_remove(schedule_id);
+        }
+    });
 }
 
 #[cfg(test)]
@@ -183,6 +237,29 @@ mod tests {
 
     fn uuid_set(ids: impl IntoIterator<Item = Uuid>) -> HashSet<Uuid> {
         ids.into_iter().collect()
+    }
+
+    #[test]
+    fn organizer_invitation_snapshot_preserves_racing_events_without_affecting_player_invitations()
+    {
+        Owner::new().with(|| {
+            let notifications = NotificationContext::new();
+            let accepted = tournament_id("accepted");
+            let arrived = tournament_id("arrived");
+            notifications.organizer_invitation_insert(accepted.clone());
+            notifications.tournament_invitation_insert(accepted.clone());
+            notifications.begin_resync();
+            notifications.organizer_invitation_remove(&accepted);
+            notifications.organizer_invitation_insert(arrived.clone());
+            notifications.organizer_invitations_snapshot_apply(vec![accepted.clone()]);
+            assert_eq!(
+                notifications.tournament_organizer_invitations(),
+                HashSet::from([arrived])
+            );
+            assert!(notifications.tournament_invitations().contains(&accepted));
+            notifications.organizer_invitations_snapshot_apply(Vec::new());
+            assert!(notifications.tournament_organizer_invitations().is_empty());
+        });
     }
 
     #[test]

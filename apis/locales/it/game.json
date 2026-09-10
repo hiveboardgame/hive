@@ -7,7 +7,9 @@
             "days_move_one": "{{count}} giorni per mossa",
             "days_move_other": "{{count}} giorni per mossa",
             "days_side_one": "{{count}} giorno per giocatore",
-            "days_side_other": "{{count}} giorni per giocatore"
+            "days_side_other": "{{count}} giorni per giocatore",
+            "duration_move": "{{duration}} per mossa",
+            "duration_side": "{{duration}} per giocatore"
         }
     },
     "casual": "Amichevole",
@@ -41,6 +43,19 @@
         "both_ready": "Questa partita di torneo inizierà quando entrambi i giocatori sono pronti",
         "both_agree": "La partita incomincerà quando i giocatori si saranno accordati sull'orario di inizio"
     },
+    "arena": {
+        "berserk": "Berserk",
+        "berserk_title": "Rinuncia all'incremento e, quando previsto, a metà del tempo base per ottenere punti Arena extra."
+    },
+    "realtime_assignments": {
+        "title": "Partite in tempo reale pronte",
+        "challenge": "Sfida in tempo reale",
+        "tournament": "Partita di torneo",
+        "arena": "Partita Arena",
+        "opening_due": "La mossa iniziale scade tra {{count}} s",
+        "opening_due_now": "La mossa iniziale scade ora",
+        "open_new_tab": "Apri in una nuova scheda"
+    },
     "speeds": {
         "blitz": "Lampo",
         "rapid": "Semi-lampo",
@@ -48,5 +63,16 @@
         "correspondence": "Corrsipondenza",
         "untimed": "Tempo Illimitato",
         "bullet": "Bullet"
+    },
+    "tournament_result": {
+        "white_won": "Ha vinto il Bianco",
+        "draw": "Patta",
+        "black_won": "Ha vinto il Nero",
+        "white_won_by_forfeit": "Il Bianco ha vinto a forfait",
+        "black_won_by_forfeit": "Il Nero ha vinto a forfait",
+        "adjudicated_draw": "Patta assegnata",
+        "white_draw_black_forfeit_loss": "Patta per il Bianco; sconfitta a forfait per il Nero",
+        "white_forfeit_loss_black_draw": "Sconfitta a forfait per il Bianco; patta per il Nero",
+        "double_forfeit": "Doppio forfait"
     }
 }

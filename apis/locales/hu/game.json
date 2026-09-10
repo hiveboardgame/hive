@@ -5,7 +5,9 @@
             "days_move_other": "{{count}} nap lépésenként",
             "title": "Levelező",
             "days_side_other": "{{count}} nap játékosonként",
-            "days_side_one": "{{count}} nap játékosonként"
+            "days_side_one": "{{count}} nap játékosonként",
+            "duration_move": "{{duration}} lépésenként",
+            "duration_side": "{{duration}} játékosonként"
         },
         "real_time": "Valós idő",
         "untimed": "Végtelen"
@@ -41,6 +43,19 @@
         "both_click": "A játék akkor veszi kezdetét ha mindketten rákattintotok az Indulhat gombra 30 másodpercen belül",
         "both_ready": "Ez a verseny-játszma akkor veszi kezdetét ha mindkét játékos készenáll"
     },
+    "arena": {
+        "berserk": "Berserk",
+        "berserk_title": "Mondj le a bónuszidőről, és amikor alkalmazható, az alapidő feléről extra arénapontokért."
+    },
+    "realtime_assignments": {
+        "title": "Valós idejű játszmák készen állnak",
+        "challenge": "Valós idejű kihívás",
+        "tournament": "Versenyjátszma",
+        "arena": "Aréna-játszma",
+        "opening_due": "A nyitólépés határideje {{count}} mp",
+        "opening_due_now": "A nyitólépés most esedékes",
+        "open_new_tab": "Megnyitás új lapon"
+    },
     "speeds": {
         "bullet": "Bullet",
         "blitz": "Blitz",
@@ -48,5 +63,16 @@
         "classic": "Klasszikus",
         "correspondence": "Levelező",
         "untimed": "Végtelen"
+    },
+    "tournament_result": {
+        "white_won": "Világos nyert",
+        "draw": "Döntetlen",
+        "black_won": "Sötét nyert",
+        "white_won_by_forfeit": "Világos játék nélkül nyert",
+        "black_won_by_forfeit": "Sötét játék nélkül nyert",
+        "adjudicated_draw": "Megítélt döntetlen",
+        "white_draw_black_forfeit_loss": "Világos döntetlent kapott; Sötét játék nélküli vereséget",
+        "white_forfeit_loss_black_draw": "Világos játék nélküli vereséget kapott; Sötét döntetlent",
+        "double_forfeit": "Kettős játék nélküli vereség"
     }
 }

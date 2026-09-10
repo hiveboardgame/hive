@@ -56,6 +56,28 @@
         "button": "Instalar",
         "ios_hint": "Instale o HiveGame: toque em Partilhar e depois em «Adicionar ao ecrã principal»."
     },
+    "actions": {
+        "dismiss": "Fechar",
+        "accept": "Aceitar",
+        "decline": "Recusar",
+        "view_tournament": "Ver torneio",
+        "view_named_tournament": "Ver torneio: {{name}}"
+    },
+    "schedule": {
+        "proposed": "{{proposer}} propôs jogar em {{time}}",
+        "accepted": "{{player}} aceitou jogar em {{time}}"
+    },
+    "tournament_status": {
+        "label": "Torneio",
+        "started": "Iniciado",
+        "finished": "Terminado"
+    },
+    "tournament_invitation": {
+        "label": "Convite para torneio",
+        "players": "Jogadores: {{count}}",
+        "accept": "Aceitar convite",
+        "decline": "Recusar convite"
+    },
     "push": {
         "your_turn_title": "É a tua vez",
         "your_turn_timed": "{{opponent}} jogou · {{time_left}} restantes",

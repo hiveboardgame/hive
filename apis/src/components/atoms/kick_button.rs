@@ -1,39 +1,35 @@
 use crate::{
     common::TournamentAction,
+    i18n::*,
     providers::{ApiRequestsProvider, AuthContext},
-    responses::TournamentResponse,
 };
 use leptos::prelude::*;
 use leptos_icons::*;
+use shared_types::TournamentId;
 use uuid::Uuid;
 
 #[component]
-pub fn KickButton(user_id: Uuid, tournament: TournamentResponse) -> impl IntoView {
+pub fn KickButton(user_id: Uuid, tournament_id: TournamentId) -> impl IntoView {
+    let i18n = use_i18n();
     let auth_context = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
-    let tournament = StoredValue::new(tournament);
+    let tournament_id = StoredValue::new(tournament_id);
 
-    let is_organizer = move || {
-        if let Some(current_id) = auth_context.user.with(|a| a.as_ref().map(|u| u.id)) {
-            current_id != user_id
-                && tournament.with_value(|t| t.organizers.iter().any(|o| o.uid == current_id))
-        } else {
-            false
-        }
+    let can_kick = move || {
+        auth_context
+            .user
+            .with(|user| user.as_ref().is_some_and(|user| user.id != user_id))
     };
 
     let kick = move |_| {
         let api = api.get();
-        api.tournament(TournamentAction::Kick(
-            tournament.with_value(|t| t.tournament_id.clone()),
-            user_id,
-        ));
+        api.tournament(TournamentAction::Kick(tournament_id.get_value(), user_id));
     };
 
     view! {
-        <Show when=is_organizer>
+        <Show when=can_kick>
             <button
-                title="Remove from tournament"
+                title=move || t_string!(i18n, tournaments.admin.kick_action).to_string()
                 on:click=kick
                 class="mx-2 ui-button ui-button-danger ui-button-icon"
             >

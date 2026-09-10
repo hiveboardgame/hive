@@ -3,8 +3,10 @@ mod common;
 use chrono::Utc;
 use db_lib::{
     db_error::DbError,
+    game_command::{execute, Command, Outcome},
     get_conn,
     models::{Game, NewGame, NewUser, User},
+    DbConn,
 };
 use hive_lib::{Color, GameControl, GameStatus, GameType};
 use shared_types::{Conclusion, GameSpeed, GameStart, TimeMode, TournamentGameResult};
@@ -30,8 +32,7 @@ async fn takeback_replays_an_expansion_game() {
     )
     .await;
 
-    let taken_back = game
-        .accept_takeback(&GameControl::TakebackAccept(Color::Black), &mut conn)
+    let taken_back = take_back(&game, &mut conn)
         .await
         .expect("an expansion game takes back");
 
@@ -55,8 +56,7 @@ async fn takeback_replays_a_base_game() {
     )
     .await;
 
-    let taken_back = game
-        .accept_takeback(&GameControl::TakebackAccept(Color::Black), &mut conn)
+    let taken_back = take_back(&game, &mut conn)
         .await
         .expect("a base game takes back");
 
@@ -79,17 +79,16 @@ async fn takeback_rejects_a_history_the_stored_game_type_forbids() {
     )
     .await;
 
-    let error = game
-        .accept_takeback(&GameControl::TakebackAccept(Color::Black), &mut conn)
+    let error = take_back(&game, &mut conn)
         .await
         .expect_err("a Base game containing wL cannot be reconstructed");
 
-    let DbError::InvalidInput { error, .. } = &error else {
-        panic!("expected InvalidInput, got: {error:?}");
+    let DbError::InternalError { reason } = &error else {
+        panic!("expected invalid stored history, got: {error:?}");
     };
     assert!(
-        error.contains("wL is not part of this game"),
-        "expected an inventory rejection, got: {error}"
+        reason.contains("wL is not part of this game"),
+        "expected an inventory rejection, got: {reason}"
     );
 
     let unchanged = Game::find_by_uuid(&game.id, &mut conn).await.unwrap();
@@ -97,12 +96,37 @@ async fn takeback_rejects_a_history_the_stored_game_type_forbids() {
     assert_eq!(unchanged.turn, game.turn);
 }
 
+async fn take_back(game: &Game, conn: &mut DbConn<'_>) -> Result<Game, DbError> {
+    execute(
+        game.id,
+        Command::Control {
+            user_id: game.white_id,
+            control: GameControl::TakebackRequest(Color::White),
+        },
+        conn,
+    )
+    .await?;
+    let outcome = execute(
+        game.id,
+        Command::Control {
+            user_id: game.black_id,
+            control: GameControl::TakebackAccept(Color::Black),
+        },
+        conn,
+    )
+    .await?;
+    let Outcome::Applied { game, .. } = outcome else {
+        panic!("takeback acceptance must update the fixture game: {outcome:?}");
+    };
+    Ok(game)
+}
+
 async fn setup_game(
     white_name: &str,
     black_name: &str,
     game_type: GameType,
     history: &str,
-    conn: &mut db_lib::DbConn<'_>,
+    conn: &mut DbConn<'_>,
 ) -> Game {
     let white = User::create(
         NewUser::new(white_name, "password", &format!("{white_name}@test.com")).unwrap(),
@@ -155,6 +179,11 @@ async fn setup_game(
             game_start: GameStart::Moves.to_string(),
             move_times: Vec::new(),
             timeout_at: time_left.map(|nanos| now + chrono::Duration::nanoseconds(nanos)),
+            tournament_slot_id: None,
+            arena_ordinal: None,
+            white_berserked: false,
+            black_berserked: false,
+            arena_move_due_at: None,
         },
         conn,
     )

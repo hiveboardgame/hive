@@ -1,0 +1,32 @@
+[package]
+name = "script"
+version = "0.1.0"
+edition = "2021"
+
+[lints]
+workspace = true
+
+[dependencies]
+db = { path = "../db" }
+shared_types = { path = "../shared_types" }
+hive = { path = "../engine" }
+anyhow = { workspace = true }
+argon2 = { workspace = true }
+chrono = { workspace = true }
+clap = { workspace = true }
+diesel = { workspace = true }
+diesel-async = { workspace = true }
+dotenvy = { workspace = true }
+rand = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tournamint = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+diesel-async = { workspace = true, features = ["migrations"] }
+diesel_migrations = { workspace = true }

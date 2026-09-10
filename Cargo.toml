@@ -1,5 +1,5 @@
 [workspace]
-members = ["apis", "engine", "db", "shared_types", "hive-hydra"]
+members = ["apis", "engine", "db", "shared_types", "hive-hydra", "scripts"]
 resolver = "2"
 
 [workspace.lints.clippy]
@@ -83,7 +83,7 @@ web-push = { version = "0.11", default-features = false, features = ["hyper-clie
 web-time = "1.1"
 url = "2"
 serde = { version = "1" }
-serde_json = { version = "1" }
+serde_json = { version = "1", features = ["arbitrary_precision"] }
 serde_with = { version = "3.14" }
 server_fn = { version = "0.8.13", features = ["cbor"] }
 sha2 = "0.11"
@@ -92,6 +92,8 @@ skillratings = "0.29"
 thiserror = "2.0.18"
 tokio = { version = "1.49", features = ["macros", "rt-multi-thread", "sync", "time"] }
 tokio-util = "0.7"
+tracing = "0.1"
+tournamint = { path = "../tournamint" }
 uuid = { version = "1.17", features = ["v4", "js", "serde"] }
 walkdir = "2.5"
 wasm-bindgen = "0.2.126"

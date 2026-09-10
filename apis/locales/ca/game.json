@@ -7,7 +7,9 @@
             "days_move_one": "{{count}} Dia per moviment",
             "days_move_other": "{{count}} Dies per moviment",
             "days_side_one": "{{count}} Dia per jugador",
-            "days_side_other": "{{count}} Dies per jugador"
+            "days_side_other": "{{count}} Dies per jugador",
+            "duration_move": "{{duration}} per moviment",
+            "duration_side": "{{duration}} per jugador"
         }
     },
     "played_in": "Jugada a:",
@@ -39,6 +41,19 @@
         "both_ready": "Aquesta partida de torneig començarà quan els dos jugadors estiguin preparats",
         "both_click": "La partida començarà quan els dos jugadors cliqueu a \"Preparat\" amb menys de 30 segons de diferència"
     },
+    "arena": {
+        "berserk": "Berserk",
+        "berserk_title": "Renuncia a l'increment i, quan sigui aplicable, a la meitat del temps base per obtenir punts extra d'arena."
+    },
+    "realtime_assignments": {
+        "title": "Partides en temps real preparades",
+        "challenge": "Repte en temps real",
+        "tournament": "Partida de torneig",
+        "arena": "Partida d'Arena",
+        "opening_due": "El moviment inicial venç en {{count}} s",
+        "opening_due_now": "El moviment inicial venç ara",
+        "open_new_tab": "Obre en una pestanya nova"
+    },
     "speeds": {
         "rapid": "Ràpida",
         "classic": "Clàssica",
@@ -48,5 +63,16 @@
         "bullet": "Bullet"
     },
     "rated": "Puntuada",
-    "casual": "Casual"
+    "casual": "Casual",
+    "tournament_result": {
+        "white_won": "Les blanques han guanyat",
+        "draw": "Taules",
+        "black_won": "Les negres han guanyat",
+        "white_won_by_forfeit": "Les blanques han guanyat per incompareixença",
+        "black_won_by_forfeit": "Les negres han guanyat per incompareixença",
+        "adjudicated_draw": "Taules per decisió arbitral",
+        "white_draw_black_forfeit_loss": "Taules per a les blanques; derrota per incompareixença de les negres",
+        "white_forfeit_loss_black_draw": "Derrota per incompareixença de les blanques; taules per a les negres",
+        "double_forfeit": "Doble incompareixença"
+    }
 }

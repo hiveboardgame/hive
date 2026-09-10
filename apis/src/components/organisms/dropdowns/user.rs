@@ -1,10 +1,9 @@
 use crate::{
     components::{
-        atoms::unread_badge::UnreadBadge,
+        atoms::{login_button::set_redirect, unread_badge::UnreadBadge},
         molecules::{hamburger::Hamburger, ping::Ping},
         organisms::{
             darkmode_toggle::{DarkModeToggle, DarkModeToggleVariant},
-            header::set_redirect,
             logout::Logout,
         },
     },

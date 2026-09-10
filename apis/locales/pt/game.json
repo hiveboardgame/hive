@@ -6,7 +6,9 @@
             "days_move_other": "{{count}} dias por jogada",
             "days_side_one": "{{count}} dia para cada lado",
             "days_side_other": "{{count}} dias para cada lado",
-            "days_move_one": "{{count}} dia por jogada"
+            "days_move_one": "{{count}} dia por jogada",
+            "duration_move": "{{duration}} por jogada",
+            "duration_side": "{{duration}} para cada lado"
         },
         "untimed": "Sem limite de tempo"
     },
@@ -41,6 +43,19 @@
         "both_click": "O jogo irá começar quando ambos jogadores clicarem 'pronto' dentro de 30s de um do outro",
         "both_ready": "Este jogo do torneio começará quando ambos jogadores estiverem prontos"
     },
+    "arena": {
+        "berserk": "Berserk",
+        "berserk_title": "Abdique do incremento e, quando aplicável, de metade do tempo base para obter pontos extra de Arena."
+    },
+    "realtime_assignments": {
+        "title": "Partidas em tempo real prontas",
+        "challenge": "Desafio em tempo real",
+        "tournament": "Partida de torneio",
+        "arena": "Partida de Arena",
+        "opening_due": "A jogada inicial vence em {{count}} s",
+        "opening_due_now": "A jogada inicial vence agora",
+        "open_new_tab": "Abrir num novo separador"
+    },
     "speeds": {
         "bullet": "Bullet",
         "blitz": "Blitz",
@@ -48,5 +63,16 @@
         "classic": "Clássico",
         "correspondence": "Correspondência",
         "untimed": "Sem tempo"
+    },
+    "tournament_result": {
+        "white_won": "As brancas venceram",
+        "draw": "Empate",
+        "black_won": "As pretas venceram",
+        "white_won_by_forfeit": "As brancas venceram por falta de comparência",
+        "black_won_by_forfeit": "As pretas venceram por falta de comparência",
+        "adjudicated_draw": "Empate por decisão arbitral",
+        "white_draw_black_forfeit_loss": "Empate para as brancas; derrota das pretas por falta de comparência",
+        "white_forfeit_loss_black_draw": "Derrota das brancas por falta de comparência; empate para as pretas",
+        "double_forfeit": "Dupla falta de comparência"
     }
 }

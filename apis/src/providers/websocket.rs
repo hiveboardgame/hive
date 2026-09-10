@@ -21,6 +21,32 @@ pub enum ConnectionReadyState {
     Closed,
 }
 
+#[cfg(any(not(feature = "ssr"), test))]
+#[derive(Debug, Default, PartialEq, Eq)]
+struct LobbySnapshotState {
+    pending_generation: Option<u64>,
+}
+
+#[cfg(any(not(feature = "ssr"), test))]
+impl LobbySnapshotState {
+    fn begin(&mut self, generation: u64) {
+        self.pending_generation = Some(generation);
+    }
+
+    fn is_pending(&self, generation: u64) -> bool {
+        self.pending_generation == Some(generation)
+    }
+
+    fn clear(&mut self, generation: u64) -> bool {
+        if self.is_pending(generation) {
+            self.pending_generation = None;
+            true
+        } else {
+            false
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct WebsocketContext {
     pub message: Signal<Option<ServerResult>>,
@@ -105,11 +131,15 @@ mod platform {
         ClientRequest,
         ConnectionReadyState,
         ControlFn,
+        LobbySnapshotState,
         SendFn,
         ServerResult,
         WebsocketParts,
     };
-    use crate::websocket::client_handlers::response_handler::handle_response;
+    use crate::{
+        common::ServerMessage,
+        websocket::client_handlers::response_handler::handle_response,
+    };
     use codee::{binary::MsgpackSerdeCodec, Decoder, Encoder};
     use leptos::{
         ev::{online, pageshow, visibilitychange},
@@ -128,7 +158,7 @@ mod platform {
 
     const INITIAL_RECONNECT_DELAY_MS: u64 = 2_000;
     const MAX_RECONNECT_DELAY_MS: u64 = 30_000;
-    const CONNECT_TIMEOUT_MS: u64 = 10_000;
+    const LOBBY_SNAPSHOT_TIMEOUT_MS: u64 = 10_000;
     /// Window in which a second wake event (visibilitychange + pageshow on
     /// the same focus) is suppressed. Matches the server-side `RESYNC_COOLDOWN`
     /// in `ws_hub.rs` so a duplicate that slips through is still cheap.
@@ -263,8 +293,9 @@ mod platform {
         generation: StoredValue<u64>,
         reconnect_attempts: StoredValue<u64>,
         reconnect_timer: StoredValue<Option<TimeoutHandle>>,
-        connect_timeout: StoredValue<Option<TimeoutHandle>>,
+        lobby_snapshot_timeout: StoredValue<Option<TimeoutHandle>>,
         manually_closed: StoredValue<bool>,
+        lobby_snapshot: StoredValue<LobbySnapshotState>,
         /// `Some(handle)` while a recently-sent Resync still suppresses
         /// follow-ups. Set on send, cleared after `RESYNC_DEBOUNCE_MS`. Also
         /// dropped on close. Suppresses `visibilitychange`+`pageshow`
@@ -290,8 +321,9 @@ mod platform {
                 generation: StoredValue::new(0),
                 reconnect_attempts: StoredValue::new(0),
                 reconnect_timer: StoredValue::new(None),
-                connect_timeout: StoredValue::new(None),
+                lobby_snapshot_timeout: StoredValue::new(None),
                 manually_closed: StoredValue::new(false),
+                lobby_snapshot: StoredValue::new(LobbySnapshotState::default()),
                 resync_debounce_timer: StoredValue::new(None),
                 ready_state,
                 message,
@@ -308,26 +340,29 @@ mod platform {
         fn connect(&self) {
             self.manually_closed.set_value(false);
             self.clear_reconnect_timer();
-            self.clear_connect_timeout();
+            self.clear_lobby_snapshot_timeout();
             self.disconnect_current_socket();
+            self.generation.update_value(|generation| *generation += 1);
+            let generation = self.generation.get_value();
+            self.lobby_snapshot
+                .update_value(|snapshot| snapshot.begin(generation));
             // Every new socket gets a connect-time lobby snapshot from the
             // server, so clear each REPLACE-style signal's dirty window here.
             // Without this, an `add`/`remove` from the previous session would
             // leak into the new session's `snapshot_apply` and preserve a
             // stale ID forever. This covers every reconnect path: explicit
             // `reconnect_now`, the `online` listener, `schedule_reconnect`'s
-            // backoff timer, and the connect-timeout retry — all funnel
+            // backoff timer, and the snapshot-timeout retry — all funnel
             // through this method.
             self.owner.with(|| {
                 begin_resync_all();
             });
-            self.generation.update_value(|generation| *generation += 1);
-            let generation = self.generation.get_value();
 
             let socket = match WebSocket::new(&self.url) {
                 Ok(socket) => socket,
                 Err(err) => {
                     log!("Could not open websocket: {err:?}");
+                    self.clear_lobby_snapshot(generation);
                     self.ready_state.set(ConnectionReadyState::Closed);
                     self.schedule_reconnect();
                     return;
@@ -342,7 +377,6 @@ mod platform {
                 wasm_bindgen::closure::Closure::wrap(Box::new(move |_| {
                     if controls.is_current(generation) {
                         controls.clear_reconnect_timer();
-                        controls.clear_connect_timeout();
                         controls.reconnect_attempts.set_value(0);
                         controls.ready_state.set(ConnectionReadyState::Open);
                     }
@@ -367,6 +401,14 @@ mod platform {
                         let result: Result<ServerResult, _> = MsgpackSerdeCodec::decode(&bytes);
                         match result {
                             Ok(message) => {
+                                let is_lobby_snapshot = matches!(
+                                    &message,
+                                    ServerResult::Ok(message)
+                                        if matches!(
+                                            message.as_ref(),
+                                            ServerMessage::LobbySnapshot(_)
+                                        )
+                                );
                                 controls.owner.with(|| {
                                     #[cfg(debug_assertions)]
                                     let zone =
@@ -377,6 +419,9 @@ mod platform {
                                     #[cfg(debug_assertions)]
                                     drop(zone);
                                 });
+                                if is_lobby_snapshot {
+                                    controls.finish_lobby_snapshot(generation);
+                                }
                                 controls.message.set(Some(message));
                             }
                             Err(err) => {
@@ -417,16 +462,17 @@ mod platform {
                 _on_error: on_error,
                 _on_close: on_close,
             }));
-            self.start_connect_timeout(generation);
+            self.arm_lobby_snapshot_timeout(generation);
         }
 
         fn close(&self) {
             self.manually_closed.set_value(true);
             self.clear_reconnect_timer();
-            self.clear_connect_timeout();
+            self.clear_lobby_snapshot_timeout();
             self.clear_resync_debounce();
             self.reconnect_attempts.set_value(0);
             self.disconnect_current_socket();
+            self.clear_lobby_snapshot(self.generation.get_value());
             self.ready_state.set(ConnectionReadyState::Closed);
         }
 
@@ -469,16 +515,22 @@ mod platform {
                 return;
             }
             if self.socket_is_open() {
-                // Open socket: server replies to Resync without going through
-                // `connect()`, so reset the dirty windows here so an
-                // incremental update arriving during the snapshot is
-                // preserved by `snapshot_apply`.
+                if self.lobby_snapshot_pending() {
+                    return;
+                }
                 self.owner.with(|| {
                     begin_resync_all();
                 });
                 if self.send(&ClientRequest::Resync) {
+                    let generation = self.generation.get_value();
+                    self.lobby_snapshot
+                        .update_value(|snapshot| snapshot.begin(generation));
+                    self.arm_lobby_snapshot_timeout(generation);
                     self.wake_resync_epoch
                         .update(|epoch| *epoch = epoch.saturating_add(1));
+                } else {
+                    self.connect();
+                    return;
                 }
             } else {
                 // Closed: `reconnect_now` → `connect()` will call
@@ -503,9 +555,31 @@ mod platform {
         fn disconnect_current_socket(&self) {
             self.socket.update_value(|socket| {
                 if let Some(socket) = socket.take() {
+                    self.clear_lobby_snapshot(socket.generation);
                     socket.disconnect();
                 }
             });
+        }
+
+        fn lobby_snapshot_pending(&self) -> bool {
+            self.socket.with_value(|socket| {
+                socket.as_ref().is_some_and(|socket| {
+                    self.lobby_snapshot
+                        .with_value(|snapshot| snapshot.is_pending(socket.generation))
+                })
+            })
+        }
+
+        fn clear_lobby_snapshot(&self, generation: u64) -> bool {
+            self.lobby_snapshot
+                .try_update_value(|snapshot| snapshot.clear(generation))
+                .unwrap_or(false)
+        }
+
+        fn finish_lobby_snapshot(&self, generation: u64) {
+            if self.clear_lobby_snapshot(generation) {
+                self.clear_lobby_snapshot_timeout();
+            }
         }
 
         fn send(&self, message: &ClientRequest) -> bool {
@@ -546,31 +620,33 @@ mod platform {
 
         fn handle_unexpected_disconnect(&self, generation: u64) {
             if self.is_current(generation) {
-                self.clear_connect_timeout();
+                self.clear_lobby_snapshot_timeout();
+                self.clear_lobby_snapshot(generation);
                 self.ready_state.set(ConnectionReadyState::Closed);
                 self.schedule_reconnect();
             }
         }
 
-        fn start_connect_timeout(&self, generation: u64) {
+        fn arm_lobby_snapshot_timeout(&self, generation: u64) {
+            self.clear_lobby_snapshot_timeout();
             let controls = self.clone();
             match set_timeout_with_handle(
                 move || {
-                    controls.connect_timeout.set_value(None);
+                    controls.lobby_snapshot_timeout.set_value(None);
                     if controls.manually_closed.get_value() || !controls.is_current(generation) {
                         return;
                     }
-                    if controls.ready_state.get_untracked() == ConnectionReadyState::Connecting {
-                        log!("Websocket connection timed out; scheduling reconnect");
+                    if controls.lobby_snapshot_pending() {
+                        log!("Websocket lobby snapshot timed out; scheduling reconnect");
                         controls.disconnect_current_socket();
                         controls.ready_state.set(ConnectionReadyState::Closed);
                         controls.schedule_reconnect();
                     }
                 },
-                Duration::from_millis(CONNECT_TIMEOUT_MS),
+                Duration::from_millis(LOBBY_SNAPSHOT_TIMEOUT_MS),
             ) {
-                Ok(timer) => self.connect_timeout.set_value(Some(timer)),
-                Err(err) => log!("Could not schedule websocket connect timeout: {err:?}"),
+                Ok(timer) => self.lobby_snapshot_timeout.set_value(Some(timer)),
+                Err(err) => log!("Could not schedule websocket lobby snapshot timeout: {err:?}"),
             }
         }
 
@@ -615,8 +691,8 @@ mod platform {
             });
         }
 
-        fn clear_connect_timeout(&self) {
-            self.connect_timeout.update_value(|timer| {
+        fn clear_lobby_snapshot_timeout(&self) {
+            self.lobby_snapshot_timeout.update_value(|timer| {
                 if let Some(timer) = timer.take() {
                     timer.clear();
                 }
@@ -683,4 +759,44 @@ pub fn provide_websocket(url: &str) {
         reconnect_now,
         wake_resync_epoch.into(),
     ));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::LobbySnapshotState;
+
+    #[test]
+    fn outstanding_snapshot_suppresses_duplicate_wake_until_it_applies() {
+        let mut snapshot = LobbySnapshotState::default();
+        snapshot.begin(7);
+
+        assert!(snapshot.is_pending(7));
+        snapshot.clear(6);
+        assert!(
+            snapshot.is_pending(7),
+            "a stale-generation snapshot must not close the current window"
+        );
+
+        snapshot.clear(7);
+        assert!(
+            !snapshot.is_pending(7),
+            "a later wake may start a new snapshot after apply"
+        );
+    }
+
+    #[test]
+    fn reconnect_replaces_the_pending_snapshot_generation() {
+        let mut snapshot = LobbySnapshotState::default();
+        snapshot.begin(3);
+        snapshot.begin(4);
+
+        snapshot.clear(3);
+        assert!(
+            snapshot.is_pending(4),
+            "the retired connection must not clear the new connection's window"
+        );
+
+        snapshot.clear(4);
+        assert!(!snapshot.is_pending(4));
+    }
 }

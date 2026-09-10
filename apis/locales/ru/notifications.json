@@ -56,6 +56,28 @@
         "button": "Установить",
         "ios_hint": "Установите HiveGame: нажмите «Поделиться», затем «На экран Домой»."
     },
+    "actions": {
+        "dismiss": "Закрыть",
+        "accept": "Принять",
+        "decline": "Отклонить",
+        "view_tournament": "Открыть турнир",
+        "view_named_tournament": "Открыть турнир: {{name}}"
+    },
+    "schedule": {
+        "proposed": "{{proposer}} предложил(а) сыграть {{time}}",
+        "accepted": "{{player}} согласился(-ась) сыграть {{time}}"
+    },
+    "tournament_status": {
+        "label": "Турнир",
+        "started": "Начался",
+        "finished": "Завершён"
+    },
+    "tournament_invitation": {
+        "label": "Приглашение на турнир",
+        "players": "Игроки: {{count}}",
+        "accept": "Принять приглашение",
+        "decline": "Отклонить приглашение"
+    },
     "push": {
         "your_turn_title": "Ваш ход",
         "your_turn_timed": "Ход от {{opponent}} · осталось {{time_left}}",

@@ -1,8 +1,246 @@
 {
-    "tiebreakers": {
-        "raw_points": "Общие очки турнира",
-        "head_to_head": "Победы между игроками с равными очками",
-        "wins_as_black": "Победы чёрными фигурами",
-        "sonneborn_berger": "Сумма очков противников против которых вы набрали очки"
+  "unavailable": "Турнир недоступен.",
+  "not_found": "Турнир не найден.",
+  "format": {
+    "label": "Формат",
+    "round_robin": "Круговая система",
+    "swiss": "Швейцарская",
+    "double_swiss": "Двойная швейцарская",
+    "single_elimination": "Олимпийская система",
+    "double_elimination": "Двойное выбывание",
+    "arena": "Арена"
+  },
+  "creation": {
+    "entry_and_advanced": "Ограничения участия и расширенные настройки",
+    "choose_format": "Выберите формат, затем настройте важные для него параметры.",
+    "arena_description": "Непрерывный турнир на время, где новые пары создаются по мере завершения партий.",
+    "swiss_title": "Швейцарская система",
+    "swiss_description": "Игроки образуют пары на заданное число туров по швейцарской или двойной швейцарской системе.",
+    "round_robin_description": "Каждый участник играет со всеми остальными в компактной фиксированной группе.",
+    "elimination_title": "На выбывание",
+    "elimination_description": "Проведите турнир с одиночным или двойным выбыванием и настраиваемыми сериями партий.",
+    "elimination": {
+      "overrides": {
+        "cancel": "Отмена"
+      },
+      "colors": {
+        "move_left": "Переместить {{color}} на одну партию раньше",
+        "move_right": "Переместить {{color}} на одну партию позже",
+        "even_inventory": "В этом чётном сете каждый участник получает белые одинаковое число раз.",
+        "odd_advantage_first": "Нечётный сет: первый участник неизбежно получает одну дополнительную партию белыми (начинающей стороной).",
+        "odd_advantage_second": "Нечётный сет: второй участник неизбежно получает одну дополнительную партию белыми (начинающей стороной).",
+        "give_extra_first": "Отдать дополнительные белые первому участнику",
+        "give_extra_second": "Отдать дополнительные белые второму участнику",
+        "invalid_inventory": "Порядок цветов должен содержать ровно одно назначение на партию и поровну распределять белые, кроме одного дополнительного назначения в нечётном сете."
+      },
+      "clock": {
+        "realtime": "{{minutes}}+{{increment}}"
+      }
+    },
+    "automatic_progression": "Автоматическое продвижение",
+    "automatic_progression_help": "Автоматически открывает туры и матчи, а после всех результатов завершает турнир. Правило старта настраивается отдельно.",
+    "arena_length_minutes": "Длительность арены (минуты)",
+    "invalid_configuration": "Выбранная конфигурация турнира недопустима."
+  },
+  "progress": {
+    "next_round": "Следующий тур",
+    "next_wave": "Опубликовать следующие матчи",
+    "finish": "Завершить турнир"
+  },
+  "arena": {
+    "live_title": "Текущие арены",
+    "time_left": "Осталось времени",
+    "over": "завершена",
+    "you": "Вы",
+    "entrant_summary": "{{position}} · {{points}} очк. · {{games}} партий",
+    "players_active": "Играют: {{count}}",
+    "join": "Вступить",
+    "pause": "Пауза",
+    "resume": "Продолжить",
+    "leave": "Покинуть",
+    "view": "Смотреть",
+    "pause_title": "Не получать новые пары. Уже начатая партия всё равно учитывается.",
+    "resume_title": "Вернуться в пул жеребьёвки.",
+    "leave_title": "Покинуть навсегда. Набранные очки сохраняются.",
+    "no_games_played": "Не было сыграно ни одной партии."
+  },
+  "finished_standings": {
+    "title": "Итоговая таблица",
+    "empty": "Итоговая таблица не была сохранена.",
+    "position": "Место",
+    "player": "Игрок",
+    "score": "Очки",
+    "games": "Партии",
+        "record": "В-Н-П",
+    "criteria": {
+      "points": "Очки",
+      "pairing_number": "Номер жеребьёвки",
+      "progressive": "Прогрессивный",
+      "sonneborn_berger": "Зоннеборн — Бергер",
+      "koya": "Койя",
+      "number_of_wins": "Победы",
+      "games_won": "Выигранные партии",
+      "games_won_with_black": "Победы чёрными",
+      "primary_score": "Основной счёт",
+      "game_points": "Очки за партии",
+      "match_points": "Очки за матчи",
+      "buchholz": "Бухгольц",
+      "performance": "Эффективность",
+      "arena_rating": "Рейтинг Арены"
+    },
+    "counts": {
+            "scored_results": "Засчитанные результаты"
     }
+  },
+  "list": {
+    "active": "Активные",
+    "mine": "Мои",
+    "search": "Название турнира",
+    "mine_active": "Активные турниры",
+    "mine_history": "История турниров",
+    "empty_active": "Сейчас нет активных турниров.",
+    "empty_mine_active": "У вас нет активных турниров.",
+    "empty_mine_history": "В вашей истории нет завершённых турниров.",
+    "empty_finished": "Завершённых турниров пока нет.",
+    "no_results": "Турниров с таким названием нет.",
+    "progress_entrants": "{{current}} участников · минимум {{minimum}} · мест {{capacity}}",
+    "progress_arena": "{{elapsed}} из {{duration}} минут",
+    "progress_games": "{{resolved}} из {{total}} партий завершено",
+    "progress_rounds": "{{completed}} из {{total}} туров завершено",
+    "progress_swiss": "{{completed}} из {{total}} туров · текущий тур {{games}}/{{round_games}}",
+    "progress_nodes": "{{decided}} из {{total}} матчей сетки решено",
+        "progress_complete": "Завершено",
+        "empty_upcoming": "Сейчас нет предстоящих турниров.",
+        "empty_in_progress": "Сейчас нет идущих турниров.",
+        "empty_mine": "Вы не участвуете и не организуете ни одного турнира.",
+        "date_starts": "Начнётся",
+        "date_started": "Начался",
+        "date_finished": "Завершён",
+        "invited": "Приглашён",
+        "organizing": "Организатор",
+        "mixed_time_controls": "Смешанный контроль времени",
+        "title": "Турниры",
+        "subtitle": "Просматривайте предстоящие, текущие и завершённые турниры.",
+        "future": "Предстоящие",
+        "in_progress": "В процессе",
+        "completed": "Завершённые",
+        "joined": "Участвуете",
+        "hosting": "Организуете",
+        "search_placeholder": "Поиск турниров по названию",
+        "loading": "Загрузка турниров…",
+        "error": "Ошибка загрузки турниров"
+  },
+  "admin": {
+    "players": "Игроки",
+    "invitees": "Приглашённые",
+    "declined": "Отклонили приглашение",
+    "invite_players": "Пригласить игроков",
+    "invite_placeholder": "Пригласить игрока",
+    "invite_action": "Пригласить на турнир",
+    "kick_action": "Удалить игрока из турнира",
+    "uninvite_action": "Отозвать приглашение на турнир"
+  },
+  "calendar": {
+    "title": "Партии",
+    "last_updated": "Последнее обновление: {{time}}",
+    "loading": "Загрузка…",
+    "loading_games": "Загрузка предстоящих партий…",
+    "loading_help": "Получаем запланированные партии",
+    "error": "Не удалось загрузить предстоящие партии",
+    "empty": "Нет предстоящих турнирных партий",
+    "empty_help": "Запланированные партии появятся здесь",
+    "unknown_tournament": "Неизвестный турнир",
+    "join_game": "Открыть партию",
+    "watch": "Смотреть"
+  },
+  "detail": {
+    "markdown": "Markdown",
+        "started_at": "Начало",
+        "finished_at": "Завершение",
+    "start_worker_pending": "Турнир скоро начнётся."
+  },
+  "view": {
+    "manage": {
+      "lifecycle": "Жизненный цикл",
+      "players_and_invitations": "Игроки и приглашения",
+      "description": "Описание",
+      "progression": "Ход турнира",
+      "match_administration": "Управление матчами",
+      "danger_zone": "Опасная зона",
+      "delete_confirmation": "Удалить этот турнир? Это действие нельзя отменить.",
+      "description_pending": "Описание обновляется…",
+      "description_error": "Не удалось обновить описание."
+    },
+    "tabs": { "label": "Разделы турнира", "overview": "Обзор", "detailed_standings": "Подробная таблица", "scheduling": "Расписание", "manage": "Управление" },
+    "context": { "tv_title": "Турнирное ТВ", "waiting": "Ожидание следующей турнирной партии", "no_start": "Не начата — время на первый ход истекло", "played_as_white": "Играл белыми", "played_as_black": "Играл чёрными" },
+    "player_details": { "rating": "Рейтинг", "winner": "Победитель", "runner_up": "Финалист", "eliminated_semifinal": "Выбыл в полуфинале", "eliminated_quarterfinal": "Выбыл в четвертьфинале", "eliminated_round": "Выбыл в раунде {{round}}" },
+    "common": {
+      "versus": "vs"
+    },
+    "bracket": {
+      "stage": { "quarterfinals": "Четвертьфиналы", "semifinals": "Полуфиналы" },
+      "match_number": "Матч {{match_number}}",
+      "match_details": "Подробности матча",
+      "match_two_if_needed": "Матч 2, если потребуется",
+      "completion": {
+        "nodes_in_progress": "Идущие матчи",
+        "next_wave_ready": "Матчи готовы к публикации"
+      },
+      "source": {
+        "previous_winner": "Победитель предыдущего матча",
+        "previous_loser": "Проигравший предыдущего матча"
+      }
+    },
+    "encounters": { "forfeit": "техническое поражение" },
+    "slots": {
+      "record_result": "Записать результат",
+      "double_forfeit_help": "Счёт 0-0 означает двойное техническое поражение; ни один игрок не получает очков.",
+      "sections": {
+        "needs_response": "Требуется ваш ответ",
+        "scheduled": "Запланированные",
+        "needs_time": "Нужно назначить время",
+        "later": "Позже / ещё не доступны",
+        "completed": "Завершённые",
+        "all_matches": "Все партии"
+      },
+      "schedule_agreed_time": "Согласованное время",
+      "schedule_alternatives": "Альтернативы ({{count}})",
+      "schedule_proposed_by": "Предложил(а) {{proposer}}",
+      "schedule_use_time": "Использовать это время",
+      "schedule_choose_instead": "Выбрать вместо текущего",
+      "schedule_offer_another": "Предложить другое время",
+      "schedule_relative_now": "сейчас",
+      "schedule_relative_days": "через {{count}} д.",
+      "schedule_relative_hours": "через {{count}} ч.",
+      "schedule_relative_minutes": "через {{count}} мин."
+    },
+    "withdrawal": {
+      "self_confirmation": "Сняться с этого турнира? Это действие нельзя отменить.",
+      "entrant_confirmation": "Снять этого участника? Это действие нельзя отменить."
+    },
+    "arena": {
+      "you_are_playing": "Вы играете — открыть партию",
+      "pairings_closed": "Жеребьёвка турнира завершена.",
+      "paused_notice": "Вы на паузе. Возобновите участие, когда будете готовы играть.",
+      "stand_by": "Ожидайте, {{username}} — следующая пара появится здесь.",
+      "standings": "Таблица арены",
+      "recent_results": "Последние результаты",
+      "close": "Закрыть",
+      "current_game": "Текущая партия",
+      "online": "В сети",
+      "offline": "Не в сети",
+      "on_fire": "В огне",
+      "win_rate": "Процент побед",
+      "berserk_rate": "Процент берсерка",
+      "average_opponent": "Средний рейтинг соперников",
+      "top_games": "Лучшие партии"
+    },
+    "swiss": {
+      "pairing_number": "#{{number}}"
+    }
+  },
+  "tiebreakers": {
+    "head_to_head": "Победы между игроками с равными очками",
+    "sonneborn_berger": "Сумма очков противников против которых вы набрали очки"
+  }
 }

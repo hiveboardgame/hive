@@ -36,6 +36,7 @@
   "search": "Buscar",
   "games_loaded_count": "{{loaded}} games loaded / {{total}} games found",
   "page_info": "Página {{page}} de {{total_pages}} ({{start}}-{{end}} de {{total}})",
+  "pagination": "Paginación",
   "first_page": "Primera página",
   "prev_page": "Anterior",
   "next_page": "Siguiente",

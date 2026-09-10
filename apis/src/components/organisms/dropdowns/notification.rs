@@ -5,6 +5,7 @@ use crate::{
             hamburger::Hamburger,
             schedule_notification::{AcceptanceNotification, ProposalNotification},
             tournament_invitation_notification::TournamentInvitationNotification,
+            tournament_organizer_invitation_notification::TournamentOrganizerInvitationNotification,
             tournament_status_notification::TournamentStatusNotification,
         },
     },
@@ -142,17 +143,13 @@ pub fn NotificationDropdown(current_game_id: Signal<Option<GameId>>) -> impl Int
                     <For
                         each=move || {
                             schedules_context
-                                .own
+                                .notification_schedules
                                 .with(|schedules| {
                                     notifications_context
                                         .schedule_proposals()
                                         .into_iter()
                                         .filter_map(|schedule_id| {
-                                            schedules
-                                                .values()
-                                                .find_map(|game_schedules| {
-                                                    game_schedules.get(&schedule_id).cloned()
-                                                })
+                                            schedules.get(&schedule_id).cloned()
                                         })
                                         .collect::<Vec<_>>()
                                 })
@@ -161,27 +158,26 @@ pub fn NotificationDropdown(current_game_id: Signal<Option<GameId>>) -> impl Int
                         let:schedule
                     >
                         <ProposalNotification
+                            tournament_name=schedule.tournament_name
+                            slot_context=schedule.slot_context
                             schedule_id=schedule.id
                             proposer_username=schedule.proposer_username
                             tournament_id=schedule.tournament_id
-                            start_time=schedule.start_t
+                            slot_id=schedule.slot_id
+                            candidate_times=schedule.candidate_times
                         />
                     </For>
 
                     <For
                         each=move || {
                             schedules_context
-                                .own
+                                .notification_schedules
                                 .with(|schedules| {
                                     notifications_context
                                         .schedule_acceptances()
                                         .into_iter()
                                         .filter_map(|schedule_id| {
-                                            schedules
-                                                .values()
-                                                .find_map(|game_schedules| {
-                                                    game_schedules.get(&schedule_id).cloned()
-                                                })
+                                            schedules.get(&schedule_id).cloned()
                                         })
                                         .collect::<Vec<_>>()
                                 })
@@ -189,13 +185,20 @@ pub fn NotificationDropdown(current_game_id: Signal<Option<GameId>>) -> impl Int
                         key=|schedule| schedule.id
                         let:schedule
                     >
-                        <AcceptanceNotification
-                            tournament_name=schedule.tournament_name
-                            schedule_id=schedule.id
-                            accepter_username=schedule.opponent_username
-                            tournament_id=schedule.tournament_id
-                            start_time=schedule.start_t
-                        />
+                        {schedule
+                            .selected_time
+                            .map(|selected_time| {
+                                view! {
+                                    <AcceptanceNotification
+                                        tournament_name=schedule.tournament_name
+                                        schedule_id=schedule.id
+                                        accepter_username=schedule.opponent_username
+                                        tournament_id=schedule.tournament_id
+                                        slot_id=schedule.slot_id
+                                        selected_time=selected_time
+                                    />
+                                }
+                            })}
                     </For>
 
                     <Show when=has_tournament_notifications>
@@ -208,19 +211,31 @@ pub fn NotificationDropdown(current_game_id: Signal<Option<GameId>>) -> impl Int
                                     .map(|tournaments| {
                                         let invitation_ids = notifications_context
                                             .tournament_invitations();
+                                        let organizer_invitation_ids = notifications_context
+                                            .tournament_organizer_invitations();
                                         let started_ids = notifications_context
                                             .tournament_started
                                             .get();
                                         let finished_ids = notifications_context
                                             .tournament_finished
                                             .get();
-                                        let (invitations, started, finished) = tournaments
+                                        let (
+                                            invitations,
+                                            started,
+                                            finished,
+                                            organizer_invitations,
+                                        ) = tournaments
                                             .unwrap_or_default()
                                             .into_iter()
                                             .fold(
-                                                (Vec::new(), Vec::new(), Vec::new()),
+                                                (Vec::new(), Vec::new(), Vec::new(), Vec::new()),
                                                 |mut notifications, tournament| {
                                                     let tournament_id = tournament.tournament_id.clone();
+                                                    if organizer_invitation_ids.contains(&tournament_id)
+                                                        && tournament.finished_at.is_none()
+                                                    {
+                                                        notifications.3.push(tournament.clone());
+                                                    }
                                                     if invitation_ids.contains(&tournament_id) {
                                                         notifications.0.push(tournament.clone());
                                                     }
@@ -237,6 +252,13 @@ pub fn NotificationDropdown(current_game_id: Signal<Option<GameId>>) -> impl Int
                                             );
 
                                         view! {
+                                            <For
+                                                each=move || organizer_invitations.clone()
+                                                key=|tournament| tournament.tournament_id.clone()
+                                                let:tournament
+                                            >
+                                                <TournamentOrganizerInvitationNotification tournament />
+                                            </For>
                                             <For
                                                 each=move || invitations.clone()
                                                 key=|tournament| {

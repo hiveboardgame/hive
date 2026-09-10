@@ -36,6 +36,7 @@
   "search": "Поиск",
   "games_loaded_count": "{{loaded}} games loaded / {{total}} games found",
   "page_info": "Страница {{page}} из {{total_pages}} ({{start}}-{{end}} из {{total}})",
+  "pagination": "Навигация по страницам",
   "first_page": "Первая страница",
   "prev_page": "Назад",
   "next_page": "Вперёд",

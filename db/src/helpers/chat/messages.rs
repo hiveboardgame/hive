@@ -46,14 +46,14 @@ pub async fn insert_chat_message(
     let turn = persisted_chat_turn(turn)?;
     (**conn)
         .transaction::<_, DbError, _>(async move |conn| {
-            lock_active_chat_sender(conn, sender_id).await?;
+            ensure_active_chat_sender(conn, sender_id).await?;
             let channel_id = resolve_channel_id(conn, target).await?;
             insert_chat_message_in_channel(conn, channel_id, sender_id, client_id, body, turn).await
         })
         .await
 }
 
-async fn lock_active_chat_sender(
+async fn ensure_active_chat_sender(
     conn: &mut AsyncPgConnection,
     sender_id: Uuid,
 ) -> Result<(), DbError> {
@@ -61,7 +61,6 @@ async fn lock_active_chat_sender(
         .filter(users::id.eq(sender_id))
         .filter(users::deleted.eq(false))
         .select(users::id)
-        .for_update()
         .first::<Uuid>(conn)
         .await
         .map(|_| ())
@@ -129,7 +128,7 @@ pub async fn insert_chat_message_and_mark_sender_read(
     let turn = persisted_chat_turn(turn)?;
     (**conn)
         .transaction::<_, DbError, _>(async move |conn| {
-            lock_active_chat_sender(conn, sender_id).await?;
+            ensure_active_chat_sender(conn, sender_id).await?;
             let channel_id = resolve_channel_id(conn, target).await?;
             // Receipts use message IDs as read-through boundaries. Locking before allocating an
             // ID makes message ID order match commit order for receipt-tracked conversations.

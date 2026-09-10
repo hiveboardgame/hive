@@ -56,6 +56,28 @@
         "button": "Instal·la",
         "ios_hint": "Instal·la HiveGame: toca Comparteix i després «Afegeix a la pantalla d'inici»."
     },
+    "actions": {
+        "dismiss": "Descarta",
+        "accept": "Accepta",
+        "decline": "Rebutja",
+        "view_tournament": "Mostra el torneig",
+        "view_named_tournament": "Mostra el torneig: {{name}}"
+    },
+    "schedule": {
+        "proposed": "{{proposer}} ha proposat jugar el {{time}}",
+        "accepted": "{{player}} ha acceptat jugar el {{time}}"
+    },
+    "tournament_status": {
+        "label": "Torneig",
+        "started": "Iniciat",
+        "finished": "Acabat"
+    },
+    "tournament_invitation": {
+        "label": "Invitació a un torneig",
+        "players": "Jugadors: {{count}}",
+        "accept": "Accepta la invitació",
+        "decline": "Rebutja la invitació"
+    },
     "push": {
         "your_turn_title": "El teu torn",
         "your_turn_timed": "{{opponent}} ha mogut · queden {{time_left}}",

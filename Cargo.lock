@@ -511,6 +511,7 @@ dependencies = [
  "thiserror 2.0.18",
  "tokio",
  "tokio-util",
+ "tournamint",
  "url",
  "uuid",
  "walkdir",
@@ -1653,6 +1654,7 @@ dependencies = [
  "skillratings",
  "thiserror 2.0.18",
  "tokio",
+ "tournamint",
  "uuid",
 ]
 
@@ -5879,6 +5881,32 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
+name = "script"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "argon2",
+ "chrono",
+ "clap",
+ "db",
+ "diesel",
+ "diesel-async",
+ "diesel_migrations",
+ "dotenvy",
+ "hive",
+ "rand 0.10.2",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "shared_types",
+ "tokio",
+ "tournamint",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
 name = "sec1"
 version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6244,10 +6272,14 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "chrono",
+ "codee",
  "hive",
  "itertools 0.15.0",
+ "reactive_stores",
  "serde",
+ "serde_json",
  "thiserror 2.0.18",
+ "tournamint",
  "uuid",
 ]
 
@@ -6964,6 +6996,15 @@ name = "toml_writer"
 version = "1.1.2+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7d56353a2a665ad0f41a421187180aab746c8c325620617ad883a99a1cbe66d2"
+
+[[package]]
+name = "tournamint"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "smallvec",
+ "thiserror 2.0.18",
+]
 
 [[package]]
 name = "tower"

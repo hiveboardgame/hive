@@ -1,13 +1,25 @@
 use super::rating::Rating;
 use crate::{
     db_error::DbError,
-    models::{Challenge, Game, GameUser, NewRating, NotificationPreferences, Schedule},
+    helpers::run_serializable,
+    models::{
+        Challenge,
+        DeadlineSettlement,
+        Game,
+        GameUser,
+        NewRating,
+        NotificationPreferences,
+        Tournament,
+        TournamentSlot,
+        TournamentUser,
+    },
     schema::{
         challenges,
-        games::{self, current_player_id, finished, game_status, tournament_id},
+        games::{self, current_player_id, finished, game_status},
         ratings::{self, rating},
         tournaments,
         tournaments_invitations,
+        tournaments_organizer_invitations,
         tournaments_organizers,
         tournaments_users,
         users::{
@@ -25,6 +37,11 @@ use crate::{
             takeback,
         },
     },
+    tournaments::{
+        fixed_field::{self, supports_format, withdrawal},
+        settle_arena_game,
+        FixedFieldCommit,
+    },
     DbConn,
 };
 use chrono::{DateTime, Utc};
@@ -32,6 +49,7 @@ use diesel::{
     dsl::{exists, sql},
     query_dsl::BelongingToDsl,
     select,
+    sql_types::BigInt,
     BoolExpressionMethods,
     ExpressionMethods,
     Identifiable,
@@ -43,12 +61,23 @@ use diesel::{
     Selectable,
     SelectableHelper,
 };
-use diesel_async::{AsyncConnection, RunQueryDsl};
-use hive_lib::GameControl;
+use diesel_async::RunQueryDsl;
+use hive_lib::{GameControl, GameResult, GameStatus};
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use shared_types::{GameId, GameSpeed, LeaderboardKind, Takeback, TournamentId, TournamentStatus};
+use shared_types::{
+    tournament::{arena::PairingIntent, Format},
+    Conclusion,
+    GameId,
+    GameSpeed,
+    LeaderboardKind,
+    Takeback,
+    TournamentId,
+    RANKABLE_DEVIATION,
+    RESERVED_USERNAMES,
+};
+use std::collections::HashSet;
 use uuid::Uuid;
 
 const MAX_USERNAME_LENGTH: usize = 20;
@@ -103,7 +132,7 @@ fn validate_username(username: &str) -> Result<(), DbError> {
             error: reason,
         });
     }
-    if shared_types::RESERVED_USERNAMES.contains(&username.to_lowercase().as_str()) {
+    if RESERVED_USERNAMES.contains(&username.to_lowercase().as_str()) {
         return Err(DbError::InvalidInput {
             info: String::from("Pick another username."),
             error: "Username is not allowed.".to_string(),
@@ -118,13 +147,158 @@ fn validate_username(username: &str) -> Result<(), DbError> {
     Ok(())
 }
 
+fn stable_unique_uuids(ids: &[Uuid]) -> Vec<Uuid> {
+    let mut ids = ids.to_vec();
+    ids.sort_unstable();
+    ids.dedup();
+    ids
+}
+
+struct SoftDeleteTournamentSnapshot {
+    related_tournament_ids: Vec<Uuid>,
+    in_progress_membership_ids: Vec<Uuid>,
+    in_progress_participants: Vec<(Uuid, Uuid, DateTime<Utc>)>,
+}
+
+impl SoftDeleteTournamentSnapshot {
+    async fn load(user_id: Uuid, conn: &mut DbConn<'_>) -> Result<Self, DbError> {
+        let mut related_tournament_ids: Vec<Uuid> = tournaments_invitations::table
+            .filter(tournaments_invitations::invitee_id.eq(user_id))
+            .select(tournaments_invitations::tournament_id)
+            .load(conn)
+            .await?;
+        related_tournament_ids.extend(
+            tournaments_users::table
+                .filter(tournaments_users::user_id.eq(user_id))
+                .select(tournaments_users::tournament_id)
+                .load::<Uuid>(conn)
+                .await?,
+        );
+        related_tournament_ids.extend(
+            tournaments_organizers::table
+                .filter(tournaments_organizers::organizer_id.eq(user_id))
+                .select(tournaments_organizers::tournament_id)
+                .load::<Uuid>(conn)
+                .await?,
+        );
+        related_tournament_ids.extend(
+            tournaments_organizer_invitations::table
+                .filter(tournaments_organizer_invitations::invitee_id.eq(user_id))
+                .select(tournaments_organizer_invitations::tournament_id)
+                .load::<Uuid>(conn)
+                .await?,
+        );
+        related_tournament_ids.extend(
+            tournaments::table
+                .filter(
+                    sql::<diesel::sql_types::Bool>("start_setup->>'owner_id' = ")
+                        .bind::<diesel::sql_types::Text, _>(user_id.to_string()),
+                )
+                .select(tournaments::id)
+                .load::<Uuid>(conn)
+                .await?,
+        );
+        let related_tournament_ids = stable_unique_uuids(&related_tournament_ids);
+
+        let in_progress_membership_ids: Vec<Uuid> = tournaments_users::table
+            .inner_join(tournaments::table)
+            .filter(tournaments_users::user_id.eq(user_id))
+            .filter(tournaments_users::withdrawn_at.is_null())
+            .filter(tournaments::started_at.is_not_null())
+            .filter(tournaments::finished_at.is_null())
+            .order(tournaments_users::tournament_id.asc())
+            .select(tournaments_users::tournament_id)
+            .load(conn)
+            .await?;
+        let in_progress_membership_ids = stable_unique_uuids(&in_progress_membership_ids);
+        let in_progress_participants = if related_tournament_ids.is_empty() {
+            Vec::new()
+        } else {
+            tournaments_users::table
+                .inner_join(tournaments::table)
+                .filter(tournaments_users::tournament_id.eq_any(&related_tournament_ids))
+                .filter(tournaments::started_at.is_not_null())
+                .filter(tournaments::finished_at.is_null())
+                .order((
+                    tournaments_users::tournament_id.asc(),
+                    tournaments_users::user_id.asc(),
+                ))
+                .select((
+                    tournaments_users::tournament_id,
+                    tournaments_users::user_id,
+                    tournaments_users::accepted_at,
+                ))
+                .load(conn)
+                .await?
+        };
+        Ok(Self {
+            related_tournament_ids,
+            in_progress_membership_ids,
+            in_progress_participants,
+        })
+    }
+
+    fn withdrawal_instant(&self, effective_at: DateTime<Utc>) -> DateTime<Utc> {
+        self.in_progress_participants
+            .iter()
+            .map(|(_, _, accepted_at)| *accepted_at)
+            .max()
+            .map(|accepted_at| effective_at.max(accepted_at))
+            .unwrap_or(effective_at)
+    }
+}
+
+async fn lock_tournaments_for_update(
+    tournament_ids: &[Uuid],
+    conn: &mut DbConn<'_>,
+) -> Result<Vec<Tournament>, DbError> {
+    if tournament_ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    let locked: Vec<Tournament> = tournaments::table
+        .filter(tournaments::id.eq_any(tournament_ids))
+        .order(tournaments::id.asc())
+        .select(Tournament::as_select())
+        .for_update()
+        .load(conn)
+        .await?;
+    Ok(locked)
+}
+
+fn active_tournament_deletion_unavailable() -> DbError {
+    DbError::InvalidAction {
+        info: String::from(
+            "account deletion is unavailable while tournament withdrawal facts cannot be recorded",
+        ),
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct SoftDeleteReport {
     pub deleted_games: Vec<Game>,
     pub resigned_games: Vec<Game>,
     pub deleted_challenges: Vec<Challenge>,
     pub deleted_tournament_ids: Vec<TournamentId>,
+    pub changed_tournament_ids: Vec<TournamentId>,
     pub removed_membership_tournament_ids: Vec<TournamentId>,
+    pub withdrawn_tournament_ids: Vec<TournamentId>,
+    pub arena_paused_tournament_ids: Vec<TournamentId>,
+    pub tournament_terminal_games: Vec<Game>,
+    pub fixed_field_commits: Vec<FixedFieldCommit>,
+}
+
+impl SoftDeleteReport {
+    fn record_fixed_field_commit(&mut self, effects: FixedFieldCommit) {
+        if let Some(current) = self
+            .fixed_field_commits
+            .iter_mut()
+            .find(|current| current.tournament_id == effects.tournament_id)
+        {
+            current.merge(effects);
+        } else {
+            self.fixed_field_commits.push(effects);
+        }
+    }
 }
 
 #[derive(Insertable, Debug)]
@@ -192,7 +366,7 @@ impl RankingGate {
         } else {
             Self {
                 min_played: 0,
-                max_deviation: shared_types::RANKABLE_DEVIATION,
+                max_deviation: RANKABLE_DEVIATION,
             }
         }
     }
@@ -220,6 +394,68 @@ impl User {
         let username = format!("{DELETED_USERNAME_PREFIX}{user_id}");
         let email = format!("{username}@deleted.invalid");
         (username, email)
+    }
+
+    /// Refuses missing or soft-deleted accounts without using account rows as
+    /// cross-feature locks.
+    pub(crate) async fn ensure_active_ids(
+        user_ids: &[Uuid],
+        conn: &mut DbConn<'_>,
+    ) -> Result<(), DbError> {
+        Self::active_bot_ids(user_ids, conn).await.map(|_| ())
+    }
+
+    /// Validates an active account set and returns the bot subset without
+    /// taking account-row locks. Tournament release uses the subset to start a
+    /// Ready bot-versus-bot game without waiting for an impossible human
+    /// handshake.
+    pub(crate) async fn active_bot_ids(
+        user_ids: &[Uuid],
+        conn: &mut DbConn<'_>,
+    ) -> Result<HashSet<Uuid>, DbError> {
+        let user_ids = stable_unique_uuids(user_ids);
+        if user_ids.is_empty() {
+            return Ok(HashSet::new());
+        }
+        let active_users = users_table
+            .filter(users::id.eq_any(&user_ids))
+            .filter(deleted_field.eq(false))
+            .select((users::id, users::bot))
+            .load::<(Uuid, bool)>(conn)
+            .await?;
+        if active_users.len() != user_ids.len() {
+            return Err(DbError::InvalidAction {
+                info: String::from("Tournament mutation requires active users"),
+            });
+        }
+        Ok(active_users
+            .into_iter()
+            .filter_map(|(user_id, bot)| bot.then_some(user_id))
+            .collect())
+    }
+
+    /// Existing tournament entrants may be anonymized after the roster was
+    /// frozen. Only active bots can auto-ready a game; a deleted bot waits for
+    /// the organizer just like any other retained deleted entrant.
+    pub(crate) async fn tournament_bot_ids(
+        user_ids: &[Uuid],
+        conn: &mut DbConn<'_>,
+    ) -> Result<HashSet<Uuid>, DbError> {
+        let user_ids = stable_unique_uuids(user_ids);
+        let entrants = users_table
+            .filter(users::id.eq_any(&user_ids))
+            .select((users::id, users::bot, users::deleted))
+            .load::<(Uuid, bool, bool)>(conn)
+            .await?;
+        if entrants.len() != user_ids.len() {
+            return Err(DbError::InvalidAction {
+                info: String::from("Tournament entrant account is missing"),
+            });
+        }
+        Ok(entrants
+            .into_iter()
+            .filter_map(|(id, bot, deleted)| (bot && !deleted).then_some(id))
+            .collect())
     }
 
     pub async fn create(new_user: NewUser, conn: &mut DbConn<'_>) -> Result<User, DbError> {
@@ -359,19 +595,6 @@ impl User {
             .await?)
     }
 
-    pub async fn is_admin(uuid: &Uuid, conn: &mut DbConn<'_>) -> Result<bool, DbError> {
-        Ok(select(exists(
-            users_table.filter(
-                users::id
-                    .eq(uuid)
-                    .and(users::admin.eq(true))
-                    .and(deleted_field.eq(false)),
-            ),
-        ))
-        .get_result(conn)
-        .await?)
-    }
-
     pub async fn find_by_email(email: &str, conn: &mut DbConn<'_>) -> Result<User, DbError> {
         Ok(users_table
             .filter(email_field.eq(email.to_lowercase()))
@@ -397,143 +620,403 @@ impl User {
     ) -> Result<SoftDeleteReport, DbError> {
         let user_id = self.id;
         let replacement_password_hash = replacement_password_hash.to_owned();
-        conn.transaction::<_, DbError, _>(async move |tc| {
-            let user: User = users_table.find(user_id).for_update().first(tc).await?;
-            if user.deleted {
-                return Err(DbError::InvalidAction {
-                    info: String::from("Account is already deleted"),
-                });
-            }
-            let mut report = SoftDeleteReport::default();
+        run_serializable(conn, move |tc| {
+            let replacement_password_hash = replacement_password_hash.clone();
+            Box::pin(async move {
+                User::find_active_by_uuid(&user_id, tc).await?;
+                let current = SoftDeleteTournamentSnapshot::load(user_id, tc).await?;
+                let locked_tournaments =
+                    lock_tournaments_for_update(&current.related_tournament_ids, tc).await?;
+                let in_progress_membership_ids = current
+                    .in_progress_membership_ids
+                    .iter()
+                    .copied()
+                    .collect::<HashSet<_>>();
+                let in_progress_tournaments = locked_tournaments
+                    .iter()
+                    .filter(|tournament| in_progress_membership_ids.contains(&tournament.id))
+                    .cloned()
+                    .collect::<Vec<_>>();
 
-            let unfinished_games: Vec<Game> = games::table
-                .filter(
-                    games::finished
-                        .eq(false)
-                        .and(games::white_id.eq(user_id).or(games::black_id.eq(user_id))),
+                let mut report = SoftDeleteReport::default();
+
+                for tournament in &in_progress_tournaments {
+                    let configuration = tournament.configuration();
+                    if configuration.format() != Format::Arena
+                        && !supports_format(configuration.format())
+                    {
+                        return Err(active_tournament_deletion_unavailable());
+                    }
+                }
+
+                let mut initial_fixed_field_slot_ids = Vec::new();
+                for tournament in &in_progress_tournaments {
+                    if tournament.configuration().format() != Format::Arena {
+                        initial_fixed_field_slot_ids
+                            .extend(fixed_field::reconciliation_slot_ids(tournament.id, tc).await?);
+                    }
+                }
+                let initial_fixed_field_slot_ids =
+                    stable_unique_uuids(&initial_fixed_field_slot_ids);
+                TournamentSlot::find_across_tournaments_by_ids_for_update(
+                    &initial_fixed_field_slot_ids,
+                    tc,
                 )
-                .for_update()
-                .load(tc)
                 .await?;
-            let unfinished_game_ids: Vec<Uuid> =
-                unfinished_games.iter().map(|game| game.id).collect();
-            Schedule::delete_for_games(&unfinished_game_ids, tc).await?;
 
-            let deleted_challenges: Vec<Challenge> = challenges::table
-                .filter(
-                    challenges::challenger_id
-                        .eq(user_id)
-                        .or(challenges::opponent_id.eq(user_id)),
+                let mut reconciled_in_progress_tournaments = Vec::new();
+                for tournament in in_progress_tournaments {
+                    if tournament.configuration().format() == Format::Arena {
+                        reconciled_in_progress_tournaments.push(tournament);
+                        continue;
+                    }
+                    let (tournament, commit) =
+                        fixed_field::reconcile_locked(tournament, tc).await?;
+                    if let Some(commit) = commit {
+                        report.record_fixed_field_commit(commit);
+                    }
+                    if tournament.finished_at.is_none() {
+                        reconciled_in_progress_tournaments.push(tournament);
+                    }
+                }
+                let in_progress_tournaments = reconciled_in_progress_tournaments;
+
+                let mut fixed_field_withdrawals = Vec::new();
+                for tournament in &in_progress_tournaments {
+                    if tournament.configuration().format() != Format::Arena {
+                        fixed_field_withdrawals.push((
+                            TournamentId(tournament.nanoid.clone()),
+                            withdrawal::prepare(tournament.clone(), user_id, tc).await?,
+                        ));
+                    }
+                }
+                let fixed_field_slot_ids = stable_unique_uuids(
+                    &fixed_field_withdrawals
+                        .iter()
+                        .flat_map(|(_, prepared)| prepared.slot_ids().iter().copied())
+                        .collect::<Vec<_>>(),
+                );
+                let locked_slots = TournamentSlot::find_across_tournaments_by_ids_for_update(
+                    &fixed_field_slot_ids,
+                    tc,
                 )
-                .for_update()
-                .load(tc)
                 .await?;
-            let deleted_challenge_ids = deleted_challenges
-                .iter()
-                .map(|challenge| challenge.id)
-                .collect::<Vec<_>>();
-            report.deleted_challenges = deleted_challenges;
-            if !deleted_challenge_ids.is_empty() {
-                diesel::delete(
-                    challenges::table.filter(challenges::id.eq_any(deleted_challenge_ids)),
-                )
-                .execute(tc)
-                .await?;
-            }
 
-            diesel::delete(
-                tournaments_invitations::table
-                    .filter(tournaments_invitations::invitee_id.eq(user_id)),
-            )
-            .execute(tc)
-            .await?;
-
-            let not_started_organized_tournaments: Vec<(Uuid, String)> =
-                tournaments_organizers::table
-                    .inner_join(tournaments::table)
-                    .filter(tournaments_organizers::organizer_id.eq(user_id))
-                    .filter(tournaments::status.eq(TournamentStatus::NotStarted.to_string()))
-                    .select((tournaments_organizers::tournament_id, tournaments::nanoid))
+                let candidate_unfinished_game_ids: Vec<Uuid> = games::table
+                    .filter(games::finished.eq(false))
+                    .filter(games::tournament_slot_id.is_null())
+                    .filter(games::white_id.eq(user_id).or(games::black_id.eq(user_id)))
+                    .order(games::id.asc())
+                    .select(games::id)
                     .load(tc)
                     .await?;
-            let not_started_organized_tournament_ids = not_started_organized_tournaments
-                .iter()
-                .map(|(id, _)| *id)
-                .collect::<Vec<_>>();
-            report.deleted_tournament_ids = not_started_organized_tournaments
-                .into_iter()
-                .map(|(_, nanoid)| TournamentId(nanoid))
-                .collect();
-            if !not_started_organized_tournament_ids.is_empty() {
-                diesel::delete(
-                    tournaments::table
-                        .filter(tournaments::id.eq_any(not_started_organized_tournament_ids))
-                        .filter(tournaments::status.eq(TournamentStatus::NotStarted.to_string())),
-                )
-                .execute(tc)
-                .await?;
-            }
-
-            let not_started_tournaments: Vec<(Uuid, String)> = tournaments_users::table
-                .inner_join(tournaments::table)
-                .filter(tournaments_users::user_id.eq(user_id))
-                .filter(tournaments::status.eq(TournamentStatus::NotStarted.to_string()))
-                .select((tournaments_users::tournament_id, tournaments::nanoid))
-                .load(tc)
-                .await?;
-            let not_started_tournament_ids = not_started_tournaments
-                .iter()
-                .map(|(id, _)| *id)
-                .collect::<Vec<_>>();
-            report.removed_membership_tournament_ids = not_started_tournaments
-                .into_iter()
-                .map(|(_, nanoid)| TournamentId(nanoid))
-                .collect();
-            if !not_started_tournament_ids.is_empty() {
-                diesel::delete(
-                    tournaments_users::table
-                        .filter(tournaments_users::user_id.eq(user_id))
-                        .filter(
-                            tournaments_users::tournament_id.eq_any(not_started_tournament_ids),
-                        ),
-                )
-                .execute(tc)
-                .await?;
-            }
-
-            for game in unfinished_games {
-                let color = game
-                    .user_color(user_id)
-                    .ok_or_else(|| DbError::InvalidAction {
-                        info: String::from("Deleted account is not a player"),
-                    })?;
-                if game.tournament_id.is_none() && game.turn < 2 {
-                    let mut deleted_game = game.clone();
-                    deleted_game.finished = true;
-                    game.delete(tc).await?;
-                    report.deleted_games.push(deleted_game);
-                } else {
-                    let game_control = GameControl::Resign(color);
-                    let resigned_game = game.resign(&game_control, tc).await?;
-                    report.resigned_games.push(resigned_game);
+                let mut affected_game_ids = candidate_unfinished_game_ids;
+                affected_game_ids.extend(
+                    fixed_field_withdrawals
+                        .iter()
+                        .flat_map(|(_, prepared)| prepared.game_ids().iter().copied()),
+                );
+                let affected_game_ids = stable_unique_uuids(&affected_game_ids);
+                let locked_games = Game::find_by_ids_for_update(&affected_game_ids, tc).await?;
+                // A timeout can release a successor before withdrawal normalization
+                // completes, so its opponent's rating may not belong to an existing game yet.
+                let fixed_field_tournament_ids = fixed_field_withdrawals
+                    .iter()
+                    .map(|(_, prepared)| prepared.tournament_id())
+                    .collect::<HashSet<_>>();
+                let mut rating_user_ids = current
+                    .in_progress_participants
+                    .iter()
+                    .filter(|(tournament_id, _, _)| {
+                        fixed_field_tournament_ids.contains(tournament_id)
+                    })
+                    .map(|(_, participant_id, _)| *participant_id)
+                    .collect::<Vec<_>>();
+                rating_user_ids.extend(
+                    locked_games
+                        .iter()
+                        .flat_map(|game| [game.white_id, game.black_id]),
+                );
+                let rating_user_ids = stable_unique_uuids(&rating_user_ids);
+                if !rating_user_ids.is_empty() {
+                    ratings::table
+                        .filter(ratings::user_uid.eq_any(&rating_user_ids))
+                        .order((ratings::speed.asc(), ratings::user_uid.asc()))
+                        .for_update()
+                        .select(ratings::id)
+                        .load::<i32>(tc)
+                        .await?;
                 }
-            }
 
-            let (deleted_username, deleted_email) = Self::deleted_identity(user_id);
-            diesel::update(users_table.find(user_id))
-                .set((
-                    username_field.eq(&deleted_username),
-                    normalized_username.eq(&deleted_username),
-                    email_field.eq(&deleted_email),
-                    password_field.eq(replacement_password_hash),
-                    users::admin.eq(false),
-                    deleted_field.eq(true),
-                    updated_at.eq(Utc::now()),
-                ))
+                let effective_at = Utc::now();
+                let withdrawn_at = current.withdrawal_instant(effective_at);
+
+                let arena_unfinished_games = locked_games
+                    .iter()
+                    .filter_map(|game| {
+                        if !game.finished
+                            && game.tournament_slot_id.is_none()
+                            && game.arena_ordinal.is_some()
+                        {
+                            game.user_color(user_id).map(|color| (game.clone(), color))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<Vec<_>>();
+                let ordinary_games = locked_games
+                    .iter()
+                    .filter_map(|game| {
+                        if !game.finished && game.tournament_id.is_none() {
+                            game.user_color(user_id).map(|color| (game.clone(), color))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<Vec<_>>();
+
+                for tournament in in_progress_tournaments
+                    .iter()
+                    .filter(|tournament| tournament.configuration().format() == Format::Arena)
+                {
+                    TournamentUser::persist_arena_pairing_state(
+                        tournament.id,
+                        user_id,
+                        PairingIntent::Paused,
+                        None,
+                        tc,
+                    )
+                    .await?;
+                    report
+                        .arena_paused_tournament_ids
+                        .push(TournamentId(tournament.nanoid.clone()));
+                }
+                for (tournament_nanoid, prepared) in fixed_field_withdrawals {
+                    let outcome =
+                        withdrawal::apply(prepared, &locked_slots, &locked_games, withdrawn_at, tc)
+                            .await?;
+                    if outcome.applied {
+                        report
+                            .withdrawn_tournament_ids
+                            .push(tournament_nanoid.clone());
+                    }
+                    report
+                        .tournament_terminal_games
+                        .extend(outcome.terminal_games);
+                    if let Some(commit) = outcome.commit {
+                        report.record_fixed_field_commit(commit);
+                    }
+                }
+
+                for tournament in &locked_tournaments {
+                    for (game, color) in arena_unfinished_games
+                        .iter()
+                        .filter(|(game, _)| game.tournament_id == Some(tournament.id))
+                    {
+                        let (terminal, terminal_at) =
+                            match game.settle_deadline(withdrawn_at, tc).await? {
+                                DeadlineSettlement::Terminal {
+                                    game, terminal_at, ..
+                                } => (game, terminal_at),
+                                DeadlineSettlement::Active(game) => (
+                                    game.finish_game_control(
+                                        GameControl::Resign(*color),
+                                        GameResult::Winner(color.opposite_color()),
+                                        Conclusion::Resigned,
+                                        withdrawn_at,
+                                        tc,
+                                    )
+                                    .await?,
+                                    withdrawn_at,
+                                ),
+                            };
+                        settle_arena_game(tournament.id, &terminal, terminal_at, withdrawn_at, tc)
+                            .await?;
+                        report.tournament_terminal_games.push(terminal);
+                    }
+                }
+
+                let deleted_challenges: Vec<Challenge> = challenges::table
+                    .filter(
+                        challenges::challenger_id
+                            .eq(user_id)
+                            .or(challenges::opponent_id.eq(user_id)),
+                    )
+                    .order(challenges::id.asc())
+                    .for_update()
+                    .load(tc)
+                    .await?;
+                let deleted_challenge_ids = deleted_challenges
+                    .iter()
+                    .map(|challenge| challenge.id)
+                    .collect::<Vec<_>>();
+                report.deleted_challenges = deleted_challenges;
+                if !deleted_challenge_ids.is_empty() {
+                    diesel::delete(
+                        challenges::table.filter(challenges::id.eq_any(deleted_challenge_ids)),
+                    )
+                    .execute(tc)
+                    .await?;
+                }
+
+                diesel::delete(
+                    tournaments_invitations::table
+                        .filter(tournaments_invitations::invitee_id.eq(user_id)),
+                )
                 .execute(tc)
                 .await?;
 
-            Ok(report)
+                let not_started_organized_tournaments: Vec<(Uuid, String)> =
+                    tournaments_organizers::table
+                        .inner_join(tournaments::table)
+                        .filter(tournaments_organizers::organizer_id.eq(user_id))
+                        .filter(tournaments::started_at.is_null())
+                        .filter(tournaments::finished_at.is_null())
+                        .select((tournaments_organizers::tournament_id, tournaments::nanoid))
+                        .load(tc)
+                        .await?;
+                let mut exclusively_organized = Vec::new();
+                for (id, nanoid) in not_started_organized_tournaments {
+                    let another_organizer = select(exists(
+                        tournaments_organizers::table
+                            .inner_join(users::table)
+                            .filter(tournaments_organizers::tournament_id.eq(id))
+                            .filter(tournaments_organizers::organizer_id.ne(user_id))
+                            .filter(users::deleted.eq(false)),
+                    ))
+                    .get_result::<bool>(tc)
+                    .await?;
+                    if !another_organizer {
+                        exclusively_organized.push((id, nanoid));
+                    }
+                }
+                let not_started_organized_tournaments = exclusively_organized;
+                let not_started_organized_tournament_ids = not_started_organized_tournaments
+                    .iter()
+                    .map(|(id, _)| *id)
+                    .collect::<Vec<_>>();
+                report.deleted_tournament_ids = not_started_organized_tournaments
+                    .into_iter()
+                    .map(|(_, nanoid)| TournamentId(nanoid))
+                    .collect();
+                if !not_started_organized_tournament_ids.is_empty() {
+                    diesel::delete(
+                        tournaments::table
+                            .filter(tournaments::id.eq_any(not_started_organized_tournament_ids)),
+                    )
+                    .execute(tc)
+                    .await?;
+                }
+
+                diesel::delete(
+                    tournaments_organizer_invitations::table
+                        .filter(tournaments_organizer_invitations::invitee_id.eq(user_id)),
+                )
+                .execute(tc)
+                .await?;
+                let retained_rosters = locked_tournaments
+                    .iter()
+                    .filter(|tournament| {
+                        tournament
+                            .start_setup()
+                            .is_some_and(|setup| setup.active_at(withdrawn_at))
+                    })
+                    .map(|tournament| tournament.id)
+                    .collect::<Vec<_>>();
+                for tournament in &locked_tournaments {
+                    if report
+                        .deleted_tournament_ids
+                        .iter()
+                        .any(|id| id.0 == tournament.nanoid)
+                    {
+                        continue;
+                    }
+                    report
+                        .changed_tournament_ids
+                        .push(TournamentId(tournament.nanoid.clone()));
+                    if tournament
+                        .start_setup()
+                        .is_some_and(|setup| setup.owner_id == user_id)
+                    {
+                        diesel::update(tournaments::table.find(tournament.id))
+                            .set(tournaments::start_setup.eq(None::<serde_json::Value>))
+                            .execute(tc)
+                            .await?;
+                    }
+                }
+
+                let not_started_tournaments: Vec<(Uuid, String)> = tournaments_users::table
+                    .inner_join(tournaments::table)
+                    .filter(tournaments_users::user_id.eq(user_id))
+                    .filter(tournaments::started_at.is_null())
+                    .filter(tournaments::finished_at.is_null())
+                    .filter(tournaments::id.ne_all(&retained_rosters))
+                    .select((tournaments_users::tournament_id, tournaments::nanoid))
+                    .load(tc)
+                    .await?;
+                let not_started_tournament_ids = not_started_tournaments
+                    .iter()
+                    .map(|(id, _)| *id)
+                    .collect::<Vec<_>>();
+                report.removed_membership_tournament_ids = not_started_tournaments
+                    .into_iter()
+                    .map(|(_, nanoid)| TournamentId(nanoid))
+                    .collect();
+                if !not_started_tournament_ids.is_empty() {
+                    diesel::delete(
+                        tournaments_users::table
+                            .filter(tournaments_users::user_id.eq(user_id))
+                            .filter(
+                                tournaments_users::tournament_id.eq_any(not_started_tournament_ids),
+                            ),
+                    )
+                    .execute(tc)
+                    .await?;
+                }
+
+                for (game, color) in ordinary_games {
+                    let checked = match game.settle_deadline(withdrawn_at, tc).await? {
+                        DeadlineSettlement::Active(game)
+                        | DeadlineSettlement::Terminal { game, .. } => game,
+                    };
+                    if checked.finished {
+                        report.resigned_games.push(checked);
+                    } else if checked.game_status == GameStatus::NotStarted.to_string() {
+                        let mut deleted_game = checked.clone();
+                        deleted_game.finished = true;
+                        checked.delete(tc).await?;
+                        report.deleted_games.push(deleted_game);
+                    } else {
+                        let game_control = GameControl::Resign(color);
+                        let resigned_game = checked
+                            .finish_game_control(
+                                game_control,
+                                GameResult::Winner(color.opposite_color()),
+                                Conclusion::Resigned,
+                                withdrawn_at,
+                                tc,
+                            )
+                            .await?;
+                        report.resigned_games.push(resigned_game);
+                    }
+                }
+
+                let (deleted_username, deleted_email) = Self::deleted_identity(user_id);
+                diesel::update(users_table.find(user_id))
+                    .set((
+                        username_field.eq(&deleted_username),
+                        normalized_username.eq(&deleted_username),
+                        email_field.eq(&deleted_email),
+                        password_field.eq(&replacement_password_hash),
+                        users::admin.eq(false),
+                        deleted_field.eq(true),
+                        updated_at.eq(effective_at),
+                    ))
+                    .execute(tc)
+                    .await?;
+
+                Ok(report)
+            })
         })
         .await
     }
@@ -557,10 +1040,9 @@ impl User {
             .filter(current_player_id.eq(self.id))
             .filter(finished.eq(false))
             .filter(
-                tournament_id
-                    .is_not_null()
-                    .and(game_status.ne("NotStarted"))
-                    .or(tournament_id.is_null()),
+                game_status
+                    .ne("NotStarted")
+                    .or(games::tournament_slot_id.is_null()),
             )
             .get_results(conn)
             .await?)
@@ -620,7 +1102,7 @@ impl User {
             .select((
                 User::as_select(),
                 Rating::as_select(),
-                sql::<diesel::sql_types::BigInt>("RANK() OVER (ORDER BY ratings.rating DESC)"),
+                sql::<BigInt>("RANK() OVER (ORDER BY ratings.rating DESC)"),
             ))
             .order_by(ratings::rating.desc())
             .load::<(User, Rating, i64)>(conn)
@@ -637,12 +1119,22 @@ impl User {
 
         Ok(top)
     }
+}
 
-    pub async fn get_username_by_id(uuid: &Uuid, conn: &mut DbConn<'_>) -> Result<String, DbError> {
-        Ok(users_table
-            .select(users::username)
-            .filter(users::id.eq(uuid))
-            .first(conn)
-            .await?)
+#[cfg(test)]
+mod tests {
+    use super::stable_unique_uuids;
+    use uuid::Uuid;
+
+    #[test]
+    fn stable_unique_uuids_orders_and_deduplicates_identifiers() {
+        let first = Uuid::from_u128(1);
+        let second = Uuid::from_u128(2);
+        let third = Uuid::from_u128(3);
+
+        assert_eq!(
+            stable_unique_uuids(&[third, first, second, first]),
+            vec![first, second, third]
+        );
     }
 }

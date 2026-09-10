@@ -88,7 +88,8 @@ self.addEventListener('push', (event) => {
       tag: tag,
       renotify: true,
       data: { link: link },
-      actions: [{ action: 'open', title: 'View game' }],
+      // TODO: i18n once copy is approved.
+      actions: [{ action: 'open', title: 'Open' }],
     })
   );
 });

@@ -1,8 +1,246 @@
 {
-    "tiebreakers": {
-        "raw_points": "Pontos totais do torneio obtidos",
-        "head_to_head": "Jogos ganhos entre jogadores empatados",
-        "wins_as_black": "Jogos ganhos jogando com as pretas",
-        "sonneborn_berger": "Soma dos pontos dos oponentes contra os quais pontuou"
+  "unavailable": "Torneio indisponível.",
+  "not_found": "Torneio não encontrado.",
+  "format": {
+    "label": "Formato",
+    "round_robin": "Todos contra todos",
+    "swiss": "Suíço",
+    "double_swiss": "Suíço duplo",
+    "single_elimination": "Eliminação simples",
+    "double_elimination": "Eliminação dupla",
+    "arena": "Arena"
+  },
+  "creation": {
+    "entry_and_advanced": "Restrições de entrada e definições avançadas",
+    "choose_format": "Escolhe um formato e concentra-te nas definições importantes para esse formato.",
+    "arena_description": "Um evento contínuo e cronometrado em que os jogadores são emparelhados à medida que terminam as partidas.",
+    "swiss_title": "Suíço",
+    "swiss_description": "Emparelha os jogadores durante um número fixo de rondas pelo sistema suíço ou suíço duplo.",
+    "round_robin_description": "Cada participante enfrenta todos os outros num grupo fixo e compacto.",
+    "elimination_title": "Eliminação",
+    "elimination_description": "Organiza um quadro de eliminação simples ou dupla com séries de partidas configuráveis.",
+    "elimination": {
+      "overrides": {
+        "cancel": "Cancelar"
+      },
+      "colors": {
+        "move_left": "Mover {{color}} uma partida para antes",
+        "move_right": "Mover {{color}} uma partida para depois",
+        "even_inventory": "Este set par dá as Brancas o mesmo número de vezes a cada participante.",
+        "odd_advantage_first": "Set ímpar: o primeiro participante recebe inevitavelmente uma partida extra de Brancas (o lado que começa).",
+        "odd_advantage_second": "Set ímpar: o segundo participante recebe inevitavelmente uma partida extra de Brancas (o lado que começa).",
+        "give_extra_first": "Dar as Brancas extra ao primeiro participante",
+        "give_extra_second": "Dar as Brancas extra ao segundo participante",
+        "invalid_inventory": "A ordem das cores deve conter exatamente uma atribuição por partida e dividir as Brancas igualmente, exceto por uma atribuição extra num set ímpar."
+      },
+      "clock": {
+        "realtime": "{{minutes}}+{{increment}}"
+      }
+    },
+    "automatic_progression": "Progressão automática",
+    "automatic_progression_help": "Liberta automaticamente rondas e partidas e termina o torneio quando todos os resultados estiverem completos. A política de início é configurada separadamente.",
+    "arena_length_minutes": "Duração da arena (minutos)",
+    "invalid_configuration": "A configuração de torneio selecionada é inválida."
+  },
+  "progress": {
+    "next_round": "Próxima ronda",
+    "next_wave": "Liberar próximas partidas",
+    "finish": "Terminar torneio"
+  },
+  "arena": {
+    "live_title": "Arenas em curso",
+    "time_left": "Tempo restante",
+    "over": "terminada",
+    "you": "Você",
+    "entrant_summary": "{{position}} · {{points}} pts · {{games}} jogos",
+    "players_active": "{{count}} a jogar",
+    "join": "Entrar",
+    "pause": "Pausar",
+    "resume": "Retomar",
+    "leave": "Sair",
+    "view": "Ver",
+    "pause_title": "Deixe de receber emparelhamentos. Um jogo já iniciado continua a contar.",
+    "resume_title": "Volte ao grupo de emparelhamento.",
+    "leave_title": "Saia definitivamente. Os pontos obtidos continuam a contar.",
+    "no_games_played": "Nenhum jogo foi disputado."
+  },
+  "finished_standings": {
+    "title": "Classificação final",
+    "empty": "Não foi registada nenhuma classificação.",
+    "position": "Pos.",
+    "player": "Jogador",
+    "score": "Pontuação",
+    "games": "Jogos",
+        "record": "V-E-D",
+    "criteria": {
+      "points": "Pontos",
+      "pairing_number": "N.º de emparelhamento",
+      "progressive": "Progressivo",
+      "sonneborn_berger": "Sonneborn-Berger",
+      "koya": "Koya",
+      "number_of_wins": "Vitórias",
+      "games_won": "Jogos ganhos",
+      "games_won_with_black": "Vitórias com pretas",
+      "primary_score": "Pontuação principal",
+      "game_points": "Pontos de jogo",
+      "match_points": "Pontos de encontro",
+      "buchholz": "Buchholz",
+      "performance": "Desempenho",
+      "arena_rating": "Pontuação da Arena"
+    },
+    "counts": {
+            "scored_results": "Resultados pontuados"
     }
+  },
+  "list": {
+    "active": "Ativos",
+    "mine": "Os meus",
+    "search": "Nome do torneio",
+    "mine_active": "Torneios ativos",
+    "mine_history": "Histórico de torneios",
+    "empty_active": "Não há torneios ativos neste momento.",
+    "empty_mine_active": "Não tens torneios ativos.",
+    "empty_mine_history": "Não tens torneios concluídos no histórico.",
+    "empty_finished": "Ainda não foi registado nenhum torneio concluído.",
+    "no_results": "Nenhum torneio corresponde a esse nome.",
+    "progress_entrants": "{{current}} participantes · mínimo {{minimum}} · capacidade {{capacity}}",
+    "progress_arena": "{{elapsed}} de {{duration}} minutos",
+    "progress_games": "{{resolved}} de {{total}} partidas resolvidas",
+    "progress_rounds": "{{completed}} de {{total}} rondas concluídas",
+    "progress_swiss": "{{completed}} de {{total}} rondas · ronda atual {{games}}/{{round_games}}",
+    "progress_nodes": "{{decided}} de {{total}} partidas do quadro decididas",
+        "progress_complete": "Concluído",
+        "empty_upcoming": "Não há torneios futuros neste momento.",
+        "empty_in_progress": "Não há torneios em andamento neste momento.",
+        "empty_mine": "Você não entrou nem organizou nenhum torneio.",
+        "date_starts": "Começa",
+        "date_started": "Começou",
+        "date_finished": "Terminou",
+        "invited": "Convidado",
+        "organizing": "Organizando",
+        "mixed_time_controls": "Controles de tempo mistos",
+        "title": "Torneios",
+        "subtitle": "Explora torneios futuros, em andamento e concluídos.",
+        "future": "Futuros",
+        "in_progress": "Em andamento",
+        "completed": "Concluídos",
+        "joined": "Participando",
+        "hosting": "Organizando",
+        "search_placeholder": "Pesquisar torneios por nome",
+        "loading": "A carregar torneios…",
+        "error": "Erro ao carregar os torneios"
+  },
+  "admin": {
+    "players": "Jogadores",
+    "invitees": "Convidados",
+    "declined": "Convites recusados",
+    "invite_players": "Convidar jogadores",
+    "invite_placeholder": "Convidar um jogador",
+    "invite_action": "Convidar para o torneio",
+    "kick_action": "Remover jogador do torneio",
+    "uninvite_action": "Retirar convite para o torneio"
+  },
+  "calendar": {
+    "title": "Partidas",
+    "last_updated": "Última atualização: {{time}}",
+    "loading": "A carregar…",
+    "loading_games": "A carregar as próximas partidas…",
+    "loading_help": "A obter as partidas agendadas",
+    "error": "Não foi possível carregar as próximas partidas",
+    "empty": "Não há próximas partidas de torneio",
+    "empty_help": "As partidas agendadas aparecerão aqui",
+    "unknown_tournament": "Torneio desconhecido",
+    "join_game": "Entrar na partida",
+    "watch": "Assistir"
+  },
+  "detail": {
+    "markdown": "Markdown",
+        "started_at": "Iniciado",
+        "finished_at": "Terminado",
+    "start_worker_pending": "O torneio começará em breve."
+  },
+  "view": {
+    "manage": {
+      "lifecycle": "Ciclo de vida",
+      "players_and_invitations": "Jogadores e convites",
+      "description": "Descrição",
+      "progression": "Progressão",
+      "match_administration": "Administração de partidas",
+      "danger_zone": "Zona de perigo",
+      "delete_confirmation": "Eliminar este torneio? Esta ação não pode ser desfeita.",
+      "description_pending": "A atualizar a descrição…",
+      "description_error": "Não foi possível atualizar a descrição."
+    },
+    "tabs": { "label": "Secções do torneio", "overview": "Visão geral", "detailed_standings": "Classificação detalhada", "scheduling": "Agendamento", "manage": "Gerir" },
+    "context": { "tv_title": "TV do torneio", "waiting": "À espera do próximo jogo do torneio", "no_start": "Não iniciada — tempo de abertura esgotado", "played_as_white": "Jogou de Brancas", "played_as_black": "Jogou de Pretas" },
+    "player_details": { "rating": "Rating", "winner": "Vencedor", "runner_up": "Vice-campeão", "eliminated_semifinal": "Eliminado na semifinal", "eliminated_quarterfinal": "Eliminado nas quartas de final", "eliminated_round": "Eliminado na rodada {{round}}" },
+    "common": {
+      "versus": "vs"
+    },
+    "bracket": {
+      "stage": { "quarterfinals": "Quartas de final", "semifinals": "Semifinais" },
+      "match_number": "Partida {{match_number}}",
+      "match_details": "Detalhes da partida",
+      "match_two_if_needed": "Partida 2 se necessário",
+      "completion": {
+        "nodes_in_progress": "Partidas em andamento",
+        "next_wave_ready": "Partidas prontas para liberação"
+      },
+      "source": {
+        "previous_winner": "Vencedor da partida anterior",
+        "previous_loser": "Perdedor da partida anterior"
+      }
+    },
+    "encounters": { "forfeit": "falta" },
+    "slots": {
+      "record_result": "Registar resultado",
+      "double_forfeit_help": "O 0-0 regista uma dupla derrota por falta; nenhum jogador recebe pontos.",
+      "sections": {
+        "needs_response": "Requer a sua resposta",
+        "scheduled": "Agendadas",
+        "needs_time": "Precisa de horário",
+        "later": "Mais tarde / ainda não disponibilizadas",
+        "completed": "Concluídas",
+        "all_matches": "Todas as partidas"
+      },
+      "schedule_agreed_time": "Horário acordado",
+      "schedule_alternatives": "Alternativas ({{count}})",
+      "schedule_proposed_by": "Proposto por {{proposer}}",
+      "schedule_use_time": "Usar este horário",
+      "schedule_choose_instead": "Escolher em vez do atual",
+      "schedule_offer_another": "Propor outro horário",
+      "schedule_relative_now": "agora",
+      "schedule_relative_days": "em {{count}} d",
+      "schedule_relative_hours": "em {{count}} h",
+      "schedule_relative_minutes": "em {{count}} min"
+    },
+    "withdrawal": {
+      "self_confirmation": "Sair deste torneio? Esta ação não pode ser desfeita.",
+      "entrant_confirmation": "Retirar este participante? Esta ação não pode ser desfeita."
+    },
+    "arena": {
+      "you_are_playing": "Está a jogar — abra o jogo",
+      "pairings_closed": "Os emparelhamentos do torneio estão encerrados.",
+      "paused_notice": "Está em pausa. Retome quando quiser voltar a jogar.",
+      "stand_by": "Aguarde, {{username}} — o próximo emparelhamento aparecerá aqui.",
+      "standings": "Classificação da arena",
+      "recent_results": "Resultados recentes",
+      "close": "Fechar",
+      "current_game": "Partida atual",
+      "online": "Online",
+      "offline": "Offline",
+      "on_fire": "Em chamas",
+      "win_rate": "Taxa de vitórias",
+      "berserk_rate": "Taxa de berserk",
+      "average_opponent": "Adversário médio",
+      "top_games": "Jogos em destaque"
+    },
+    "swiss": {
+      "pairing_number": "#{{number}}"
+    }
+  },
+  "tiebreakers": {
+    "head_to_head": "Jogos ganhos entre jogadores empatados",
+    "sonneborn_berger": "Soma dos pontos dos oponentes contra os quais pontuou"
+  }
 }

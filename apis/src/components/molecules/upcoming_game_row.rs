@@ -1,26 +1,28 @@
 use crate::{
-    common::with_class,
+    common::{format_local_datetime, with_class},
     components::{atoms::profile_link::ProfileLink, molecules::time_row::TimeRow},
+    i18n::*,
     providers::AuthContext,
     responses::GameResponse,
 };
 use chrono::{DateTime, Duration, Local, Utc};
 use leptos::prelude::*;
 use leptos_icons::*;
-use shared_types::TimeInfo;
 
 #[component]
 pub fn UpcomingGameRow(
     game_data: (DateTime<Utc>, GameResponse),
     current_time: RwSignal<DateTime<Local>>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let auth_context = expect_context::<AuthContext>();
     let (start_time, game) = game_data;
+    let time_control = game.time_control();
     let local_time = RwSignal::new(None::<DateTime<Local>>);
     let formatted_time = Signal::derive(move || {
         local_time
             .get()
-            .map(|t| t.format("%Y-%m-%d %H:%M UTC%z").to_string())
+            .map(|_| format_local_datetime(i18n.get_locale(), start_time))
     });
     Effect::watch(
         move || (),
@@ -36,19 +38,15 @@ pub fn UpcomingGameRow(
         game.tournament
             .as_ref()
             .map(|t| t.name.clone())
-            .unwrap_or_else(|| "Unknown Tournament".to_string()),
+            .unwrap_or_else(|| {
+                t_string!(i18n, tournaments.calendar.unknown_tournament).to_string()
+            }),
     );
     let tournament_id = game
         .tournament
         .as_ref()
         .map(|t| t.tournament_id.0.clone())
         .unwrap_or_else(|| "unknown".to_string());
-
-    let time_info = TimeInfo {
-        mode: game.time_mode,
-        base: game.time_base,
-        increment: game.time_increment,
-    };
 
     let show_button = move || {
         local_time.get().is_some_and(|start| {
@@ -88,7 +86,9 @@ pub fn UpcomingGameRow(
                         deleted=white_deleted
                         extend_tw_classes="font-semibold"
                     />
-                    <span class="text-sm opacity-75">vs</span>
+                    <span class="text-sm opacity-75">
+                        {t!(i18n, tournaments.view.common.versus)}
+                    </span>
                     <ProfileLink
                         username=black_username.get_value()
                         patreon=game.black_player.patreon
@@ -98,7 +98,7 @@ pub fn UpcomingGameRow(
                     />
                 </div>
 
-                <TimeRow time_info extend_tw_classes="text-sm" />
+                <TimeRow time_control extend_tw_classes="text-sm" />
 
                 <Show when=show_button>
                     <a
@@ -107,14 +107,14 @@ pub fn UpcomingGameRow(
                     >
                         {move || {
                             if user_is_player() {
-                                view! { "Join Game" }.into_any()
+                                view! { {t!(i18n, tournaments.calendar.join_game)} }.into_any()
                             } else {
                                 view! {
                                     <Icon
                                         icon=icondata_ai::AiEyeOutlined
                                         attr:class="mr-1 size-4"
                                     />
-                                    "Watch"
+                                    {t!(i18n, tournaments.calendar.watch)}
                                 }
                                     .into_any()
                             }

@@ -53,12 +53,15 @@ pub fn UserRow(
                 UserAction::Invite(tournament_id) => Some(EitherOf5::B(
                     view! { <InviteButton user_id tournament_id /> },
                 )),
+                UserAction::InviteOrganizer(tournament_id) => Some(EitherOf5::B(
+                    view! { <InviteButton user_id tournament_id organizer=true /> },
+                )),
                 UserAction::Uninvite(tournament_id) => Some(EitherOf5::C(
                     view! { <UninviteButton user_id tournament_id /> },
                 )),
-                UserAction::Kick(tournament) => Some(EitherOf5::D(
-                    view! { <KickButton user_id tournament=*tournament /> },
-                )),
+                UserAction::Kick(tournament_id) => {
+                    Some(EitherOf5::D(view! { <KickButton user_id tournament_id /> }))
+                }
                 UserAction::Message if user.bot => None,
                 UserAction::Message => Some(EitherOf5::E(view! {
                     <Show when=move || {

@@ -7,7 +7,9 @@
             "days_move_one": "{{count}} day per move",
             "days_move_other": "{{count}} days per move",
             "days_side_one": "{{count}} day per side",
-            "days_side_other": "{{count}} days per side"
+            "days_side_other": "{{count}} days per side",
+            "duration_move": "{{duration}} per move",
+            "duration_side": "{{duration}} per side"
         }
     },
     "played_in": "Played in:",
@@ -42,19 +44,44 @@
         "both_click": "The game will start when both of you click ready within 30s of each other",
         "both_ready": "This tournament game will start when both players are ready"
     },
+    "arena": {
+        "berserk": "Berserk",
+        "berserk_title": "Give up your increment and, when eligible, halve your base time for extra Arena points."
+    },
+    "realtime_assignments": {
+        "title": "Realtime games ready",
+        "challenge": "Realtime challenge",
+        "tournament": "Tournament game",
+        "arena": "Arena game",
+        "opening_due": "Opening move due in {{count}}s",
+        "opening_due_now": "Opening move is due now",
+        "open_new_tab": "Open in new tab"
+    },
     "speeds": {
         "bullet": "Bullet",
         "blitz": "Blitz",
         "rapid": "Rapid",
-        "classic": "Classic",
-        "correspondence": "Correspondence",
-        "untimed": "Untimed"
-    },
+    "classic": "Classic",
+    "correspondence": "Correspondence",
+    "untimed": "Untimed",
+    "puzzle": "Puzzle"
+  },
     "tournament_ready_title": "Tournament Game Ready!",
     "tournament_ready_opponent": "Your opponent",
     "tournament_ready_message": "is ready to start the tournament game. You have 30 seconds to accept and start the game.",
     "tournament_ready_accept": "Accept Game",
     "tournament_ready_view_game": "View Game",
     "tournament_ready_close": "Close",
-    "tournament_ready_timeout": "This notification will auto-close in 30 seconds."
+    "tournament_ready_timeout": "This notification will auto-close in 30 seconds.",
+    "tournament_result": {
+        "white_won": "White won",
+        "draw": "Draw",
+        "black_won": "Black won",
+        "white_won_by_forfeit": "White won by forfeit",
+        "black_won_by_forfeit": "Black won by forfeit",
+        "adjudicated_draw": "Adjudicated draw",
+        "white_draw_black_forfeit_loss": "White draw; Black forfeit loss",
+        "white_forfeit_loss_black_draw": "White forfeit loss; Black draw",
+        "double_forfeit": "Double forfeit"
+    }
 }

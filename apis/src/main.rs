@@ -126,12 +126,12 @@ async fn main() -> std::io::Result<()> {
     }
 
     jobs::hash_backfill(pool.clone());
-    jobs::tournament_start(pool.clone(), Data::clone(&hub));
     jobs::heartbeat(Data::clone(&hub));
     jobs::ping(Data::clone(&hub));
     jobs::game_cleanup(pool.clone());
     jobs::challenge_cleanup(pool.clone());
     jobs::tournament_cleanup(pool.clone(), Data::clone(&hub));
+    jobs::tournament_runtime(pool.clone(), Data::clone(&hub));
     jobs::timeout_sweeper(pool.clone(), Data::clone(&hub));
     jobs::push_device_sweep(pool.clone());
     jobs::email_drain(pool.clone(), email::EmailConfig::from_env());

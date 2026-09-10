@@ -1,28 +1,42 @@
 use crate::{
     common::UserAction,
     components::molecules::user_search::UserSearch,
-    responses::TournamentResponse,
+    i18n::*,
+    providers::{TournamentCommonStoreFields, TournamentState},
 };
 use leptos::prelude::*;
 use std::collections::HashSet;
 
 #[component]
-pub fn InviteUser(tournament: StoredValue<TournamentResponse>) -> impl IntoView {
-    let filtered_users: HashSet<String> = tournament.with_value(|t| {
-        t.players
+pub fn InviteUser(tournament: TournamentState) -> impl IntoView {
+    let i18n = use_i18n();
+    let filtered_users = Signal::derive(move || {
+        let memberships = tournament.common.memberships().get();
+        memberships
+            .players
             .values()
             .map(|player| &player.username)
-            .chain(t.invitees.iter().map(|invitee| &invitee.username))
+            .chain(memberships.invitees.iter().map(|invitee| &invitee.username))
+            .chain(
+                memberships
+                    .declined_invitees
+                    .iter()
+                    .map(|invitee| &invitee.username),
+            )
             .cloned()
-            .collect()
+            .collect::<HashSet<_>>()
     });
+    let tournament_id = tournament.tournament_id();
 
     view! {
-        <div class="flex flex-col justify-center items-center">
+        <div class="flex flex-col flex-1 justify-center w-full min-w-0">
             <UserSearch
-                placeholder="Invite player".to_string()
+                compact=true
+                placeholder=move || {
+                    t_string!(i18n, tournaments.admin.invite_placeholder).to_string()
+                }
                 filtered_users=filtered_users
-                actions=vec![UserAction::Invite(tournament.with_value(|t| t.tournament_id.clone()))]
+                actions=vec![UserAction::Invite(tournament_id)]
             />
         </div>
     }

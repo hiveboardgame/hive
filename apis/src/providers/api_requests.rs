@@ -6,7 +6,7 @@ use crate::{
 };
 use hive_lib::{GameControl, Turn};
 use leptos::prelude::*;
-use shared_types::{ChallengeId, GameId, TournamentGameResult, TournamentId};
+use shared_types::{ChallengeId, GameId};
 
 #[derive(Clone)]
 pub struct ApiRequests {
@@ -60,6 +60,11 @@ impl ApiRequests {
         self.websocket.send(&msg);
     }
 
+    pub fn game(&self, game_id: GameId, action: GameAction) {
+        self.websocket
+            .send(&ClientRequest::Game { game_id, action });
+    }
+
     pub fn tournament_game_start(&self, game_id: GameId) {
         let msg = ClientRequest::Game {
             game_id,
@@ -68,24 +73,9 @@ impl ApiRequests {
         self.websocket.send(&msg);
     }
 
-    pub fn tournament_abandon(&self, tournament_id: TournamentId) {
-        let msg = ClientRequest::Tournament(TournamentAction::Abandon(tournament_id));
-        self.websocket.send(&msg);
-    }
-
-    pub fn tournament_adjudicate_game_result(
-        &self,
-        game_id: GameId,
-        new_result: TournamentGameResult,
-    ) {
-        let msg =
-            ClientRequest::Tournament(TournamentAction::AdjudicateResult(game_id, new_result));
-        self.websocket.send(&msg);
-    }
-
-    pub fn tournament(&self, action: TournamentAction) {
-        let msg = ClientRequest::Tournament(action.to_owned());
-        self.websocket.send(&msg);
+    pub fn tournament(&self, action: TournamentAction) -> bool {
+        let msg = ClientRequest::Tournament(action);
+        self.websocket.send(&msg)
     }
 
     pub fn game_check_time(&self, game_id: &GameId) {

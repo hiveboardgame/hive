@@ -1,6 +1,17 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    arena_game_results (game_id) {
+        game_id -> Uuid,
+        tournament_id -> Uuid,
+        white_points -> Int8,
+        black_points -> Int8,
+        white_doubled -> Bool,
+        black_doubled -> Bool,
+    }
+}
+
+diesel::table! {
     challenges (id) {
         id -> Uuid,
         nanoid -> Text,
@@ -147,6 +158,12 @@ diesel::table! {
         game_start -> Text,
         move_times -> Array<Nullable<Int8>>,
         timeout_at -> Nullable<Timestamptz>,
+        white_berserked -> Bool,
+        black_berserked -> Bool,
+        finished_at -> Nullable<Timestamptz>,
+        arena_move_due_at -> Nullable<Timestamptz>,
+        tournament_slot_id -> Nullable<Uuid>,
+        arena_ordinal -> Nullable<Int8>,
     }
 }
 
@@ -213,15 +230,41 @@ diesel::table! {
 }
 
 diesel::table! {
-    schedules (id) {
+    schedule_offers (id) {
         id -> Uuid,
-        game_id -> Uuid,
         tournament_id -> Uuid,
+        tournament_slot_id -> Uuid,
         proposer_id -> Uuid,
-        opponent_id -> Uuid,
-        start_t -> Timestamptz,
-        agreed -> Bool,
+        candidate_times -> Array<Nullable<Timestamptz>>,
+        status -> Text,
+        selected_time -> Nullable<Timestamptz>,
+        created_at -> Timestamptz,
+        resolved_at -> Nullable<Timestamptz>,
+        resolved_by -> Nullable<Uuid>,
         notified -> Bool,
+    }
+}
+
+diesel::table! {
+    tournament_elimination_nodes (tournament_id, node_id) {
+        tournament_id -> Uuid,
+        node_id -> Int8,
+        fact -> Jsonb,
+    }
+}
+
+diesel::table! {
+    tournament_final_arena_results (tournament_id, game_id) {
+        tournament_id -> Uuid,
+        game_id -> Uuid,
+    }
+}
+
+diesel::table! {
+    tournament_final_outcomes (tournament_id) {
+        tournament_id -> Uuid,
+        standings -> Jsonb,
+        arena_ratings -> Nullable<Jsonb>,
     }
 }
 
@@ -244,37 +287,64 @@ diesel::table! {
 }
 
 diesel::table! {
+    tournament_slots (id) {
+        id -> Uuid,
+        tournament_id -> Uuid,
+        native_key -> Jsonb,
+        white_id -> Uuid,
+        black_id -> Uuid,
+        clock -> Jsonb,
+        resolution -> Nullable<Jsonb>,
+        resolved_at -> Nullable<Timestamptz>,
+        scheduled_at -> Nullable<Timestamptz>,
+        deadline_at -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
+    tournament_swiss_rounds (tournament_id, round_id) {
+        tournament_id -> Uuid,
+        round_id -> Int8,
+        pairings -> Jsonb,
+        accepted_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     tournaments (id) {
         id -> Uuid,
         nanoid -> Text,
         name -> Text,
-        description -> Text,
-        scoring -> Text,
-        tiebreaker -> Array<Nullable<Text>>,
-        seats -> Int4,
+        description -> Nullable<Text>,
+        seats -> Nullable<Int4>,
         min_seats -> Int4,
-        rounds -> Int4,
         invite_only -> Bool,
-        mode -> Text,
-        time_mode -> Text,
-        time_base -> Nullable<Int4>,
-        time_increment -> Nullable<Int4>,
         band_upper -> Nullable<Int4>,
         band_lower -> Nullable<Int4>,
-        start_mode -> Text,
         starts_at -> Nullable<Timestamptz>,
-        ends_at -> Nullable<Timestamptz>,
         started_at -> Nullable<Timestamptz>,
-        round_duration -> Nullable<Int4>,
-        status -> Text,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
         series -> Nullable<Uuid>,
+        configuration -> Jsonb,
+        finished_at -> Nullable<Timestamptz>,
+        featured_game_id -> Nullable<Uuid>,
+        start_setup -> Nullable<Jsonb>,
+        bracket_order -> Nullable<Jsonb>,
     }
 }
 
 diesel::table! {
     tournaments_invitations (tournament_id, invitee_id) {
+        tournament_id -> Uuid,
+        invitee_id -> Uuid,
+        created_at -> Timestamptz,
+        declined_at -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
+    tournaments_organizer_invitations (tournament_id, invitee_id) {
         tournament_id -> Uuid,
         invitee_id -> Uuid,
         created_at -> Timestamptz,
@@ -292,6 +362,12 @@ diesel::table! {
     tournaments_users (tournament_id, user_id) {
         tournament_id -> Uuid,
         user_id -> Uuid,
+        accepted_at -> Timestamptz,
+        pairing_number -> Nullable<Int4>,
+        arena_rating -> Nullable<Int4>,
+        arena_pairing_intent -> Nullable<Text>,
+        arena_waiting_since -> Nullable<Timestamptz>,
+        withdrawn_at -> Nullable<Timestamptz>,
     }
 }
 
@@ -343,13 +419,18 @@ diesel::joinable!(games_users -> users (user_id));
 diesel::joinable!(notification_preferences -> users (user_id));
 diesel::joinable!(push_devices -> users (user_id));
 diesel::joinable!(ratings -> users (user_uid));
-diesel::joinable!(schedules -> games (game_id));
-diesel::joinable!(schedules -> tournaments (tournament_id));
+diesel::joinable!(tournament_elimination_nodes -> tournaments (tournament_id));
+diesel::joinable!(tournament_final_arena_results -> tournament_final_outcomes (tournament_id));
+diesel::joinable!(tournament_final_outcomes -> tournaments (tournament_id));
 diesel::joinable!(tournament_series_organizers -> tournament_series (tournament_series_id));
 diesel::joinable!(tournament_series_organizers -> users (organizer_id));
+diesel::joinable!(tournament_slots -> tournaments (tournament_id));
+diesel::joinable!(tournament_swiss_rounds -> tournaments (tournament_id));
 diesel::joinable!(tournaments -> tournament_series (series));
 diesel::joinable!(tournaments_invitations -> tournaments (tournament_id));
 diesel::joinable!(tournaments_invitations -> users (invitee_id));
+diesel::joinable!(tournaments_organizer_invitations -> tournaments (tournament_id));
+diesel::joinable!(tournaments_organizer_invitations -> users (invitee_id));
 diesel::joinable!(tournaments_organizers -> tournaments (tournament_id));
 diesel::joinable!(tournaments_organizers -> users (organizer_id));
 diesel::joinable!(tournaments_users -> tournaments (tournament_id));
@@ -358,6 +439,7 @@ diesel::joinable!(user_tournament_chat_mutes -> tournaments (tournament_id));
 diesel::joinable!(user_tournament_chat_mutes -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    arena_game_results,
     challenges,
     chat_channels,
     chat_messages,
@@ -373,11 +455,17 @@ diesel::allow_tables_to_appear_in_same_query!(
     notification_preferences,
     push_devices,
     ratings,
-    schedules,
+    schedule_offers,
+    tournament_elimination_nodes,
+    tournament_final_arena_results,
+    tournament_final_outcomes,
     tournament_series,
     tournament_series_organizers,
+    tournament_slots,
+    tournament_swiss_rounds,
     tournaments,
     tournaments_invitations,
+    tournaments_organizer_invitations,
     tournaments_organizers,
     tournaments_users,
     user_blocks,

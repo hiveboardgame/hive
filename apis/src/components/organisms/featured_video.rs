@@ -18,7 +18,7 @@ pub fn FeaturedVideo() -> impl IntoView {
         <Show when=show>
             <div class=with_class(
                 "ui-panel",
-                "overflow-hidden mx-auto w-full max-w-screen-md transition-colors hover:border-pillbug-teal/40",
+                "overflow-hidden mx-auto w-full transition-colors hover:border-pillbug-teal/40",
             )>
                 <div class="ui-panel-header">
                     <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">

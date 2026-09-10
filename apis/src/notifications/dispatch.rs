@@ -7,7 +7,7 @@ use super::{
 use dashmap::{mapref::entry::Entry, DashMap};
 use db_lib::models::User;
 use hive_lib::{Color, GameResult, GameStatus};
-use shared_types::{Conclusion, TimeMode};
+use shared_types::{Conclusion, GameSpeed, TimeMode};
 use std::{
     str::FromStr,
     sync::{LazyLock, OnceLock},
@@ -173,6 +173,9 @@ pub fn notify_your_turn(game: &db_lib::models::Game, opponent: String) {
         opponent,
         game_nanoid: game.nanoid.clone(),
         time_left,
-        speed: shared_types::GameSpeed::from_base_increment(game.time_base, game.time_increment),
+        speed: game
+            .speed
+            .parse::<GameSpeed>()
+            .expect("persisted game speed is valid"),
     });
 }

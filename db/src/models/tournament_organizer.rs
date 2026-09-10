@@ -1,15 +1,8 @@
 use crate::{
-    db_error::DbError,
-    get_conn,
     models::{tournament::Tournament, user::User},
-    schema::tournaments_organizers::{
-        self,
-        dsl::tournaments_organizers as tournament_organizer_table,
-    },
-    DbPool,
+    schema::tournaments_organizers,
 };
 use diesel::{prelude::*, Identifiable, Insertable, Queryable};
-use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
 #[derive(Insertable, Identifiable, Selectable, Queryable, Associations, Debug, Clone)]
@@ -28,13 +21,5 @@ impl TournamentOrganizer {
             tournament_id,
             organizer_id,
         }
-    }
-
-    pub async fn insert(&self, pool: &DbPool) -> Result<(), DbError> {
-        let conn = &mut get_conn(pool).await?;
-        self.insert_into(tournament_organizer_table)
-            .execute(conn)
-            .await?;
-        Ok(())
     }
 }

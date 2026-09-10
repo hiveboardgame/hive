@@ -4,11 +4,12 @@ use crate::responses::{
     GameResponse,
     HeartbeatResponse,
     ScheduleResponse,
+    TournamentPatch,
     UserResponse,
 };
 use serde::{Deserialize, Serialize};
 use shared_types::{ChallengeId, ChatMessageContainer, ConversationKey, GameId, TournamentId};
-use std::{collections::HashMap, fmt, time::Duration};
+use std::{fmt, time::Duration};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -126,6 +127,7 @@ pub enum ServerMessage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LobbySnapshot {
     pub tournament_invitations: Vec<TournamentId>,
+    pub tournament_organizer_invitations: Vec<TournamentId>,
     pub schedule_notifications: Vec<ScheduleResponse>,
     pub urgent_games: Vec<GameResponse>,
     pub challenges: Vec<ChallengeResponse>,
@@ -135,15 +137,27 @@ pub struct LobbySnapshot {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TournamentUpdate {
-    Adjudicated(TournamentId),
+    CatalogChanged(TournamentId),
     Created(TournamentId),
     Declined(TournamentId),
     Deleted(TournamentId),
     Finished(TournamentId),
     Invited(TournamentId),
+    OrganizerInvited(TournamentId),
+    OrganizerInvitationsClosed(TournamentId),
+    OrganizerUninvited(TournamentId),
+    OrganizerJoined(TournamentId),
+    OrganizerLeft(TournamentId, bool),
     Joined(TournamentId),
     Left(TournamentId),
-    StateChanged(TournamentId),
+    Patch {
+        tournament_id: TournamentId,
+        patch: Box<TournamentPatch>,
+    },
+    SlotsClosed {
+        tournament_id: TournamentId,
+        count: u32,
+    },
     Started(TournamentId),
     Uninvited(TournamentId),
 }
@@ -182,9 +196,9 @@ pub struct GameActionResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ChallengeUpdate {
-    Created(ChallengeResponse), // A new challenge was created
-    Removed(ChallengeId),       // A challenge was removed
-    Direct(ChallengeResponse),  // Player got directly invited to a game
+    Created(Box<ChallengeResponse>), // A new challenge was created
+    Removed(ChallengeId),            // A challenge was removed
+    Direct(Box<ChallengeResponse>),  // Player got directly invited to a game
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -203,9 +217,6 @@ pub enum UserStatus {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ScheduleUpdate {
-    Proposed(ScheduleResponse),
-    Accepted(ScheduleResponse),
-    Deleted(ScheduleResponse),
-    TournamentSchedules(HashMap<GameId, HashMap<Uuid, ScheduleResponse>>),
-    OwnTournamentSchedules(HashMap<GameId, HashMap<Uuid, ScheduleResponse>>),
+    Changed(Vec<ScheduleResponse>),
+    TournamentPurged(TournamentId),
 }

@@ -15,6 +15,7 @@ use shared_types::{ConversationKey, GameThread, MAX_CHAT_MESSAGE_LENGTH};
 pub fn ChatInput(
     conversation: ConversationHandle,
     #[prop(into)] mode: Signal<ComposerMode>,
+    #[prop(default = true)] focus_on_mount: bool,
 ) -> impl IntoView {
     let i18n = use_i18n();
     let chat = expect_context::<Chat>();
@@ -60,7 +61,9 @@ pub fn ChatInput(
     let composer_label = move || t_string!(i18n, messages.chat.composer_label).to_string();
     let input_ref = NodeRef::<html::Input>::new();
     Effect::new(move |_| {
-        let _ = input_ref.get_untracked().map(|input| input.focus());
+        if focus_on_mount {
+            let _ = input_ref.get_untracked().map(|input| input.focus());
+        }
     });
 
     view! {
@@ -206,6 +209,7 @@ pub(super) fn Composer(
                                 <ChatInput
                                     conversation=conversation.get_value()
                                     mode=composer_mode
+                                    focus_on_mount=!compact
                                 />
                             </Show>
                         </Show>

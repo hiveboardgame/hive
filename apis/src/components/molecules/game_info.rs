@@ -1,11 +1,5 @@
 use crate::{
-    common::{
-        format_game_rating,
-        format_game_result,
-        game_time_info,
-        game_tournament_link,
-        untimed_time_info,
-    },
+    common::{format_game_rating, format_game_result, game_tournament_link},
     components::molecules::time_row::TimeRow,
     i18n::*,
     providers::game_state::{GameStateStore, GameStateStoreFields},
@@ -22,13 +16,9 @@ pub fn GameInfo(
     let game_response = game_state.game_response();
     let has_game_response =
         Memo::new(move |_| game_response.with(|game_response| game_response.is_some()));
-    let time_info = Memo::new(move |_| {
-        game_response.with(|game_response| {
-            game_response
-                .as_ref()
-                .map(game_time_info)
-                .unwrap_or_else(untimed_time_info)
-        })
+    let time_control = Memo::new(move |_| {
+        game_response
+            .with(|game_response| game_response.as_ref().and_then(|game| game.time_control()))
     });
     let rated = Memo::new(move |_| {
         game_response.with(|game_response| {
@@ -108,7 +98,7 @@ pub fn GameInfo(
                 <div class=container_class>
                     <div class=metadata_class>
                         <div class="shrink-0">
-                            <TimeRow time_info extend_tw_classes="whitespace-nowrap" />
+                            <TimeRow time_control extend_tw_classes="whitespace-nowrap" />
                         </div>
                         <div class=rated_class>{rated_text}</div>
                         <Show when=is_tournament>

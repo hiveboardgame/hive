@@ -102,7 +102,7 @@ pub fn QuickPlay() -> impl IntoView {
         set_cookie.set(Some(params.get()));
     });
     view! {
-        <div class="flex flex-col gap-3 items-center py-2 mx-auto w-full max-w-screen-md">
+        <div class="flex flex-col gap-3 items-center py-2 mx-auto w-full">
             <Modal dialog_el>
                 <ChallengeCreate />
             </Modal>

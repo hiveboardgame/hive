@@ -7,7 +7,9 @@
             "days_move_one": "{{count}} Tag pro Zug",
             "days_move_other": "{{count}} Tage pro Zug",
             "days_side_one": "{{count}} Tag pro Seite",
-            "days_side_other": "{{count}} Tage pro Seite"
+            "days_side_other": "{{count}} Tage pro Seite",
+            "duration_move": "{{duration}} pro Zug",
+            "duration_side": "{{duration}} pro Seite"
         }
     },
     "played_in": "Gespielt in:",
@@ -41,6 +43,19 @@
         "both_click": "Das Spiel beginnt, wenn ihr beide innerhalb von 30 Sekunden bereit klickt",
         "both_ready": "Dieses Turnierspiel beginnt, wenn beide Spieler:innnen bereit sind"
     },
+    "arena": {
+        "berserk": "Berserk",
+        "berserk_title": "Verzichte auf den Zeitbonus und, wenn zulässig, auf die Hälfte der Grundzeit für zusätzliche Arena-Punkte."
+    },
+    "realtime_assignments": {
+        "title": "Echtzeitpartien sind bereit",
+        "challenge": "Echtzeit-Herausforderung",
+        "tournament": "Turnierpartie",
+        "arena": "Arena-Partie",
+        "opening_due": "Eröffnungszug fällig in {{count}} s",
+        "opening_due_now": "Eröffnungszug ist jetzt fällig",
+        "open_new_tab": "In neuem Tab öffnen"
+    },
     "speeds": {
         "bullet": "Bullet",
         "blitz": "Blitz",
@@ -48,5 +63,16 @@
         "classic": "Klassisch",
         "correspondence": "Korrespondenz",
         "untimed": "Unbegrenzt"
+    },
+    "tournament_result": {
+        "white_won": "Weiß hat gewonnen",
+        "draw": "Remis",
+        "black_won": "Schwarz hat gewonnen",
+        "white_won_by_forfeit": "Weiß gewann durch Nichtantritt",
+        "black_won_by_forfeit": "Schwarz gewann durch Nichtantritt",
+        "adjudicated_draw": "Remis durch Schiedsentscheidung",
+        "white_draw_black_forfeit_loss": "Remis für Weiß; Niederlage für Schwarz durch Nichtantritt",
+        "white_forfeit_loss_black_draw": "Niederlage für Weiß durch Nichtantritt; Remis für Schwarz",
+        "double_forfeit": "Beidseitiger Nichtantritt"
     }
 }

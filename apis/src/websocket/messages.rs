@@ -4,7 +4,11 @@ use shared_types::{GameId, TournamentId};
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
-use crate::common::{GameActionResponse, GameUpdate, ServerMessage};
+use crate::{
+    common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
+    responses::GameResponse,
+};
+use db_lib::models::Game;
 
 #[derive(thiserror::Error, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum AuthError {
@@ -27,6 +31,7 @@ pub enum GameSpectatorAudience {
 #[derive(Debug, Clone, Copy)]
 pub enum TournamentAudience {
     Updates,
+    ScheduleViewers,
     Chat { sender_id: Uuid },
 }
 
@@ -40,71 +45,29 @@ pub struct GameFinalize {
     pub black_id: Uuid,
 }
 
+#[derive(Debug, Clone)]
+pub(crate) struct TerminalGameRetry {
+    pub(crate) game: Game,
+    pub(crate) reaction: GameReaction,
+    pub(crate) actor_id: Uuid,
+    pub(crate) actor_username: Option<String>,
+    pub(crate) publish_tv: bool,
+}
+
 /// A `GameUpdate::Reaction` event that needs to fan out to both players and
 /// every spectator. Carrying the unserialized payload lets the dispatcher
 /// (`WsHub::dispatch_reaction`) msgpack-encode it **once** and `Bytes::clone`
 /// the result across the three destinations — saving two redundant
 /// serializations of a non-trivial payload per turn/control.
 ///
-/// Use this in handlers that return a `HandlerOutput`. Paths that
-/// build a flat `Vec<InternalServerMessage>` (bot API, periodic jobs) can
-/// still call `Reaction::into_messages` to get the legacy three-message
-/// expansion.
+/// Use this in handlers that return a `HandlerOutput` so every committed Game
+/// publication shares the same outer dispatch path.
 #[derive(Debug, Clone)]
 pub struct Reaction {
     pub game_id: GameId,
     pub white_id: Uuid,
     pub black_id: Uuid,
     pub gar: GameActionResponse,
-}
-
-impl Reaction {
-    /// Expand into three `InternalServerMessage`s for callers that don't
-    /// go through `HandlerOutput.reactions` and so can't take advantage of
-    /// the single serialization in `WsHub::dispatch_reaction`. Each call
-    /// site here pays for two payload clones plus two extra msgpack
-    /// serializations — fine for low-volume HTTP/cron paths.
-    pub fn into_messages(self) -> Vec<InternalServerMessage> {
-        let payload = ServerMessage::Game(Box::new(GameUpdate::Reaction(self.gar)));
-        vec![
-            InternalServerMessage {
-                destination: MessageDestination::User(self.white_id),
-                message: payload.clone(),
-            },
-            InternalServerMessage {
-                destination: MessageDestination::User(self.black_id),
-                message: payload.clone(),
-            },
-            InternalServerMessage {
-                destination: MessageDestination::GameSpectators {
-                    game_id: self.game_id,
-                    white_id: self.white_id,
-                    black_id: self.black_id,
-                    audience: GameSpectatorAudience::GameViewers,
-                },
-                message: payload,
-            },
-        ]
-    }
-}
-
-/// Legacy entry point: build the three-message expansion of a reaction.
-/// Hot WS handlers should push to `HandlerOutput.reactions` instead and
-/// rely on `WsHub::dispatch_reaction` to serialize once. Retained for the
-/// bot API + tournament_start dispatch paths.
-pub fn reaction_messages(
-    game_id: GameId,
-    white_id: Uuid,
-    black_id: Uuid,
-    gar: GameActionResponse,
-) -> Vec<InternalServerMessage> {
-    Reaction {
-        game_id,
-        white_id,
-        black_id,
-        gar,
-    }
-    .into_messages()
 }
 
 impl GameFinalize {
@@ -130,12 +93,27 @@ impl GameFinalize {
 pub struct HandlerOutput {
     pub messages: Vec<InternalServerMessage>,
     pub reactions: Vec<Reaction>,
+    pub tv_updates: Vec<TvUpdate>,
     pub finalize_games: Vec<GameFinalize>,
+    pub(crate) terminal_game_retries: Vec<TerminalGameRetry>,
+    pub request_error: Option<anyhow::Error>,
 }
 
 impl HandlerOutput {
     pub fn empty() -> Self {
         Self::default()
+    }
+
+    pub fn append(&mut self, mut other: Self) {
+        self.messages.append(&mut other.messages);
+        self.reactions.append(&mut other.reactions);
+        self.tv_updates.append(&mut other.tv_updates);
+        self.finalize_games.append(&mut other.finalize_games);
+        self.terminal_game_retries
+            .append(&mut other.terminal_game_retries);
+        if self.request_error.is_none() {
+            self.request_error = other.request_error;
+        }
     }
 }
 
@@ -144,9 +122,19 @@ impl From<Vec<InternalServerMessage>> for HandlerOutput {
         Self {
             messages,
             reactions: Vec::new(),
+            tv_updates: Vec::new(),
             finalize_games: Vec::new(),
+            terminal_game_retries: Vec::new(),
+            request_error: None,
         }
     }
+}
+
+#[derive(Debug)]
+pub struct TvUpdate {
+    pub game_id: GameId,
+    pub game: GameResponse,
+    pub final_state: bool,
 }
 
 #[derive(Clone, Debug)]

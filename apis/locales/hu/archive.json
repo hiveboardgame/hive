@@ -36,6 +36,7 @@
   "search": "Keresés",
   "games_loaded_count": "{{loaded}} games loaded / {{total}} games found",
   "page_info": "{{page}}. oldal / {{total_pages}} ({{start}}-{{end}} / {{total}})",
+  "pagination": "Lapozás",
   "first_page": "Első oldal",
   "prev_page": "Előző",
   "next_page": "Következő",

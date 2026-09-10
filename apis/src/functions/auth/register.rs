@@ -9,9 +9,12 @@ pub async fn register(
     password_confirmation: String,
     pathname: String,
 ) -> Result<AccountResponse, ServerFnError> {
-    use crate::functions::{
-        auth::password::{hash_password, validate_password},
-        db::pool,
+    use crate::{
+        common::safe_return_path,
+        functions::{
+            auth::password::{hash_password, validate_password},
+            db::pool,
+        },
     };
     use actix_identity::Identity;
     use actix_web::HttpMessage;
@@ -40,7 +43,7 @@ pub async fn register(
     let req: actix_web::HttpRequest = leptos_actix::extract().await?;
 
     Identity::login(&req.extensions(), user.id.to_string()).expect("To have logged in");
-    leptos_actix::redirect(&pathname);
+    leptos_actix::redirect(&safe_return_path(&pathname));
 
     Ok(account)
 }

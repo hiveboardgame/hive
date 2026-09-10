@@ -16,7 +16,6 @@ use crate::{
 use hive_lib::ColorChoice;
 use leptos::prelude::*;
 use leptos_icons::*;
-use shared_types::TimeInfo;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum PendingAction {
@@ -49,22 +48,15 @@ pub fn ChallengeDetails(
     let api = expect_context::<ApiRequestsProvider>().0;
     let websocket = expect_context::<WebsocketContext>();
     let challenge = StoredValue::new(challenge);
+    let time_control = challenge.with_value(ChallengeResponse::time_control);
     let ChallengeResponse {
         challenge_id,
         game_type,
         rated,
         color_choice,
-        time_mode,
-        time_base,
-        time_increment,
         ..
     } = challenge.get_value();
     let challenge_id = StoredValue::new(challenge_id);
-    let time_info = TimeInfo {
-        mode: time_mode,
-        base: time_base,
-        increment: time_increment,
-    };
     let color_icon = match color_choice {
         ColorChoice::Random => icondata_bs::BsHexagonHalf,
         ColorChoice::White => icondata_bs::BsHexagon,
@@ -130,7 +122,7 @@ pub fn ChallengeDetails(
                         <Icon icon=color_icon attr:class="size-3.5 shrink-0" />
                     </div> <div class=CHALLENGE_META_CLASS>
                         <span>{game_type}</span>
-                        <TimeRow time_info extend_tw_classes="text-xs leading-tight" />
+                        <TimeRow time_control extend_tw_classes="text-xs leading-tight" />
                         <span class="font-bold">{if rated { "Rated" } else { "Casual" }}</span>
                     </div>
                 </div>

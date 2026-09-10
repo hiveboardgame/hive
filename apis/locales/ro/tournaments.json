@@ -1,8 +1,246 @@
 {
-    "tiebreakers": {
-        "raw_points": "Puncte totale de turneu câștigate",
-        "head_to_head": "Jocuri câștigate între jucători la egalitate",
-        "wins_as_black": "Jocuri câștigate jucând cu negrul",
-        "sonneborn_berger": "Suma punctelor adversarilor împotriva cărora ai punctat"
+  "unavailable": "Turneul nu este disponibil.",
+  "not_found": "Turneul nu a fost găsit.",
+  "format": {
+    "label": "Format",
+    "round_robin": "Fiecare cu fiecare",
+    "swiss": "Elvețian",
+    "double_swiss": "Elvețian dublu",
+    "single_elimination": "Eliminare simplă",
+    "double_elimination": "Eliminare dublă",
+    "arena": "Arenă"
+  },
+  "creation": {
+    "entry_and_advanced": "Restricții de înscriere și setări avansate",
+    "choose_format": "Alege un format, apoi concentrează-te pe setările importante pentru acesta.",
+    "arena_description": "O competiție continuă și cronometrată, în care jucătorii sunt împerecheați pe măsură ce încheie partidele.",
+    "swiss_title": "Sistem elvețian",
+    "swiss_description": "Împerechează jucătorii într-un număr fix de runde prin sistemul elvețian sau elvețian dublu.",
+    "round_robin_description": "Fiecare participant joacă împotriva tuturor celorlalți într-un grup fix și compact.",
+    "elimination_title": "Eliminare",
+    "elimination_description": "Organizează un tablou cu eliminare simplă sau dublă și serii de partide configurabile.",
+    "elimination": {
+      "overrides": {
+        "cancel": "Anulează"
+      },
+      "colors": {
+        "move_left": "Mută {{color}} cu o partidă mai devreme",
+        "move_right": "Mută {{color}} cu o partidă mai târziu",
+        "even_inventory": "Acest set par oferă fiecărui participant piesele albe de același număr de ori.",
+        "odd_advantage_first": "Set impar: primul participant primește inevitabil o partidă în plus cu albele (partea care începe).",
+        "odd_advantage_second": "Set impar: al doilea participant primește inevitabil o partidă în plus cu albele (partea care începe).",
+        "give_extra_first": "Dă partida în plus cu albele primului participant",
+        "give_extra_second": "Dă partida în plus cu albele celui de-al doilea participant",
+        "invalid_inventory": "Ordinea culorilor trebuie să conțină exact o atribuire pentru fiecare partidă și să împartă albele egal, cu excepția unei atribuiri în plus într-un set impar."
+      },
+      "clock": {
+        "realtime": "{{minutes}}+{{increment}}"
+      }
+    },
+    "automatic_progression": "Progresie automată",
+    "automatic_progression_help": "Publică automat rundele și meciurile, apoi încheie turneul când toate rezultatele sunt complete. Regula de pornire se configurează separat.",
+    "arena_length_minutes": "Durata arenei (minute)",
+    "invalid_configuration": "Configurația de turneu selectată nu este validă."
+  },
+  "progress": {
+    "next_round": "Runda următoare",
+    "next_wave": "Publică următoarele meciuri",
+    "finish": "Încheie turneul"
+  },
+  "arena": {
+    "live_title": "Arene în desfășurare",
+    "time_left": "Timp rămas",
+    "over": "încheiată",
+    "you": "Tu",
+    "entrant_summary": "{{position}} · {{points}} pct. · {{games}} partide",
+    "players_active": "{{count}} joacă",
+    "join": "Intră",
+    "pause": "Pauză",
+    "resume": "Reia",
+    "leave": "Ieși",
+    "view": "Vezi",
+    "pause_title": "Oprește împerecherile noi. O partidă deja începută contează în continuare.",
+    "resume_title": "Revino în grupul de împerechere.",
+    "leave_title": "Ieși definitiv. Punctele obținute rămân valabile.",
+    "no_games_played": "Nu s-a jucat nicio partidă."
+  },
+  "finished_standings": {
+    "title": "Clasament final",
+    "empty": "Nu a fost înregistrat niciun clasament.",
+    "position": "Loc",
+    "player": "Jucător",
+    "score": "Scor",
+    "games": "Partide",
+        "record": "V-R-Î",
+    "criteria": {
+      "points": "Puncte",
+      "pairing_number": "Nr. de împerechere",
+      "progressive": "Progresiv",
+      "sonneborn_berger": "Sonneborn-Berger",
+      "koya": "Koya",
+      "number_of_wins": "Victorii",
+      "games_won": "Partide câștigate",
+      "games_won_with_black": "Victorii cu negru",
+      "primary_score": "Scor principal",
+      "game_points": "Puncte de partidă",
+      "match_points": "Puncte de meci",
+      "buchholz": "Buchholz",
+      "performance": "Performanță",
+      "arena_rating": "Rating Arena"
+    },
+    "counts": {
+            "scored_results": "Rezultate punctate"
     }
+  },
+  "list": {
+    "active": "Active",
+    "mine": "Ale mele",
+    "search": "Numele turneului",
+    "mine_active": "Turnee active",
+    "mine_history": "Istoricul turneelor",
+    "empty_active": "Nu există turnee active în acest moment.",
+    "empty_mine_active": "Nu ai turnee active.",
+    "empty_mine_history": "Nu ai turnee încheiate în istoric.",
+    "empty_finished": "Nu a fost înregistrat încă niciun turneu încheiat.",
+    "no_results": "Niciun turneu nu corespunde acestui nume.",
+    "progress_entrants": "{{current}} participanți · minim {{minimum}} · capacitate {{capacity}}",
+    "progress_arena": "{{elapsed}} din {{duration}} minute",
+    "progress_games": "{{resolved}} din {{total}} partide rezolvate",
+    "progress_rounds": "{{completed}} din {{total}} runde încheiate",
+    "progress_swiss": "{{completed}} din {{total}} runde · runda curentă {{games}}/{{round_games}}",
+    "progress_nodes": "{{decided}} din {{total}} meciuri ale tabloului decise",
+        "progress_complete": "Complet",
+        "empty_upcoming": "Nu există turnee viitoare în acest moment.",
+        "empty_in_progress": "Nu există turnee în desfășurare în acest moment.",
+        "empty_mine": "Nu te-ai înscris și nu organizezi niciun turneu.",
+        "date_starts": "Începe",
+        "date_started": "A început",
+        "date_finished": "S-a încheiat",
+        "invited": "Invitat",
+        "organizing": "Organizator",
+        "mixed_time_controls": "Controale de timp mixte",
+        "title": "Turnee",
+        "subtitle": "Explorează turneele viitoare, în desfășurare și încheiate.",
+        "future": "Viitoare",
+        "in_progress": "În desfășurare",
+        "completed": "Încheiate",
+        "joined": "Înscris",
+        "hosting": "Organizator",
+        "search_placeholder": "Caută turnee după nume",
+        "loading": "Se încarcă turneele…",
+        "error": "Eroare la încărcarea turneelor"
+  },
+  "admin": {
+    "players": "Jucători",
+    "invitees": "Invitați",
+    "declined": "Invitații refuzate",
+    "invite_players": "Invită jucători",
+    "invite_placeholder": "Invită un jucător",
+    "invite_action": "Invită la turneu",
+    "kick_action": "Elimină jucătorul din turneu",
+    "uninvite_action": "Retrage invitația la turneu"
+  },
+  "calendar": {
+    "title": "Partide",
+    "last_updated": "Ultima actualizare: {{time}}",
+    "loading": "Se încarcă…",
+    "loading_games": "Se încarcă partidele viitoare…",
+    "loading_help": "Se preiau partidele programate",
+    "error": "Partidele viitoare nu au putut fi încărcate",
+    "empty": "Nu există partide de turneu viitoare",
+    "empty_help": "Partidele programate vor apărea aici",
+    "unknown_tournament": "Turneu necunoscut",
+    "join_game": "Intră în partidă",
+    "watch": "Urmărește"
+  },
+  "detail": {
+    "markdown": "Markdown",
+        "started_at": "A început",
+        "finished_at": "S-a încheiat",
+    "start_worker_pending": "Turneul va începe în curând."
+  },
+  "view": {
+    "manage": {
+      "lifecycle": "Ciclu de viață",
+      "players_and_invitations": "Jucători și invitații",
+      "description": "Descriere",
+      "progression": "Progresie",
+      "match_administration": "Administrarea meciurilor",
+      "danger_zone": "Zonă periculoasă",
+      "delete_confirmation": "Ștergi acest turneu? Acțiunea nu poate fi anulată.",
+      "description_pending": "Se actualizează descrierea…",
+      "description_error": "Descrierea nu a putut fi actualizată."
+    },
+    "tabs": { "label": "Secțiunile turneului", "overview": "Prezentare generală", "detailed_standings": "Clasament detaliat", "scheduling": "Programare", "manage": "Administrare" },
+    "context": { "tv_title": "TV turneu", "waiting": "Se așteaptă următorul joc al turneului", "no_start": "Neînceput — timpul de deschidere a expirat", "played_as_white": "A jucat cu Albele", "played_as_black": "A jucat cu Negrele" },
+    "player_details": { "rating": "Rating", "winner": "Câștigător", "runner_up": "Finalist", "eliminated_semifinal": "Eliminat în semifinală", "eliminated_quarterfinal": "Eliminat în sferturile de finală", "eliminated_round": "Eliminat în runda {{round}}" },
+    "common": {
+      "versus": "vs"
+    },
+    "bracket": {
+      "stage": { "quarterfinals": "Sferturi de finală", "semifinals": "Semifinale" },
+      "match_number": "Meciul {{match_number}}",
+      "match_details": "Detaliile meciului",
+      "match_two_if_needed": "Meciul 2 dacă este necesar",
+      "completion": {
+        "nodes_in_progress": "Meciuri în desfășurare",
+        "next_wave_ready": "Meciuri gata de publicare"
+      },
+      "source": {
+        "previous_winner": "Câștigătorul meciului anterior",
+        "previous_loser": "Învinsul meciului anterior"
+      }
+    },
+    "encounters": { "forfeit": "forfait" },
+    "slots": {
+      "record_result": "Înregistrează rezultatul",
+      "double_forfeit_help": "Scorul 0-0 înregistrează un dublu forfait; niciun jucător nu primește puncte.",
+      "sections": {
+        "needs_response": "Necesită răspunsul tău",
+        "scheduled": "Programate",
+        "needs_time": "Necesită o oră",
+        "later": "Mai târziu / încă nelansate",
+        "completed": "Încheiate",
+        "all_matches": "Toate partidele"
+      },
+      "schedule_agreed_time": "Ora convenită",
+      "schedule_alternatives": "Alternative ({{count}})",
+      "schedule_proposed_by": "Propus de {{proposer}}",
+      "schedule_use_time": "Folosește această oră",
+      "schedule_choose_instead": "Alege în schimb",
+      "schedule_offer_another": "Oferă altă oră",
+      "schedule_relative_now": "acum",
+      "schedule_relative_days": "peste {{count}} z",
+      "schedule_relative_hours": "peste {{count}} h",
+      "schedule_relative_minutes": "peste {{count}} min"
+    },
+    "withdrawal": {
+      "self_confirmation": "Te retragi din acest turneu? Acțiunea nu poate fi anulată.",
+      "entrant_confirmation": "Retragi acest participant? Acțiunea nu poate fi anulată."
+    },
+    "arena": {
+      "you_are_playing": "Joci — deschide partida",
+      "pairings_closed": "Împerecherile turneului s-au închis.",
+      "paused_notice": "Ești în pauză. Reia când vrei să joci din nou.",
+      "stand_by": "Așteaptă, {{username}} — următoarea împerechere va apărea aici.",
+      "standings": "Clasament arenă",
+      "recent_results": "Rezultate recente",
+      "close": "Închide",
+      "current_game": "Partida curentă",
+      "online": "Online",
+      "offline": "Offline",
+      "on_fire": "În flăcări",
+      "win_rate": "Rată de victorii",
+      "berserk_rate": "Rată berserk",
+      "average_opponent": "Adversar mediu",
+      "top_games": "Partide de top"
+    },
+    "swiss": {
+      "pairing_number": "#{{number}}"
+    }
+  },
+  "tiebreakers": {
+    "head_to_head": "Jocuri câștigate între jucători la egalitate",
+    "sonneborn_berger": "Suma punctelor adversarilor împotriva cărora ai punctat"
+  }
 }

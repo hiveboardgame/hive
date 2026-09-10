@@ -422,7 +422,7 @@ async fn accept_challenge(
     send_challenge_messages(hub, deleted_challenges, &game, &bot, &pool).await?;
 
     let challenger_id = challenge.challenger_id;
-    let speed = GameSpeed::from_base_increment(game.time_base, game.time_increment);
+    let speed = game.speed.parse::<GameSpeed>()?;
     notify(Event::GameStarted {
         recipient: challenger_id,
         opponent: bot.username.clone(),
@@ -436,17 +436,9 @@ async fn accept_challenge(
 }
 
 async fn get_challenges(user_id: Uuid, pool: Data<DbPool>) -> Result<Vec<ChallengeResponse>> {
-    let mut responses = Vec::new();
     let mut conn = get_conn(&pool).await?;
-    let challenges = Challenge::direct_challenges(user_id, &mut conn).await?;
-    let own = Challenge::get_own(user_id, &mut conn).await?;
-    for challenge in own {
-        let response = ChallengeResponse::from_model(&challenge, &mut conn).await?;
-        responses.push(response);
-    }
-    for challenge in challenges {
-        let response = ChallengeResponse::from_model(&challenge, &mut conn).await?;
-        responses.push(response);
-    }
-    Ok(responses)
+    let direct = Challenge::direct_challenges(user_id, &mut conn).await?;
+    let mut challenges = Challenge::get_own(user_id, &mut conn).await?;
+    challenges.extend(direct);
+    ChallengeResponse::from_models_batch(challenges, &mut conn).await
 }

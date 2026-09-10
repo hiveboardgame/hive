@@ -56,6 +56,28 @@
         "button": "Telepítés",
         "ios_hint": "Telepítsd a HiveGame-et: koppints a Megosztásra, majd a „Főképernyőhöz adás” lehetőségre."
     },
+    "actions": {
+        "dismiss": "Bezárás",
+        "accept": "Elfogadás",
+        "decline": "Elutasítás",
+        "view_tournament": "Verseny megtekintése",
+        "view_named_tournament": "Verseny megtekintése: {{name}}"
+    },
+    "schedule": {
+        "proposed": "{{proposer}} ezt a játékidőt javasolta: {{time}}",
+        "accepted": "{{player}} elfogadta ezt a játékidőt: {{time}}"
+    },
+    "tournament_status": {
+        "label": "Verseny",
+        "started": "Elkezdődött",
+        "finished": "Befejeződött"
+    },
+    "tournament_invitation": {
+        "label": "Versenymeghívó",
+        "players": "Játékosok: {{count}}",
+        "accept": "Meghívás elfogadása",
+        "decline": "Meghívás elutasítása"
+    },
     "push": {
         "your_turn_title": "Te jössz",
         "your_turn_timed": "{{opponent}} lépett · {{time_left}} maradt",

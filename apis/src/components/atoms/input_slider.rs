@@ -19,7 +19,7 @@ pub fn InputSlider(
             min=min
             max=max
             step=step
-            value=signal_to_update
+            prop:value=signal_to_update
             on:input:target=move |ev| {
                 let val = ev.target().value().parse::<i32>().unwrap();
                 signal_to_update.set(val);
@@ -45,7 +45,7 @@ pub fn InputSliderWithCallback(
             min=min
             max=max
             step=step
-            value=signal
+            prop:value=signal
             on:input:target=move |ev| {
                 let val = ev.target().value().parse::<i32>().unwrap();
                 callback.run(val);

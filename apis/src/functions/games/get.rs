@@ -7,23 +7,15 @@ use shared_types::{GameId, GameSpeed, GamesQueryOptions};
 use uuid::Uuid;
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
-pub async fn get_game_from_uuid(game_id: Uuid) -> Result<GameResponse, ServerFnError> {
-    use crate::functions::db::pool;
-    use db_lib::get_conn;
-    let pool = pool().await?;
-    let mut conn = get_conn(&pool).await?;
-    GameResponse::new_from_uuid(game_id, &mut conn)
-        .await
-        .map_err(ServerFnError::new)
-}
-
-#[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_game_from_nanoid(game_id: GameId) -> Result<GameResponse, ServerFnError> {
     use crate::functions::db::pool;
-    use db_lib::get_conn;
+    use db_lib::{get_conn, models::Game};
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
-    GameResponse::new_from_game_id(&game_id, &mut conn)
+    let game = Game::find_by_game_id(&game_id, &mut conn)
+        .await
+        .map_err(ServerFnError::new)?;
+    GameResponse::from_model(&game, &mut conn)
         .await
         .map_err(ServerFnError::new)
 }

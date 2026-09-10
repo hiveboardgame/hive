@@ -76,6 +76,7 @@ pub fn Unstarted(
         let api = api.get();
         api.tournament_game_start(game_id());
     };
+
     let style = move || {
         if orientation_signal.orientation_vertical.get() {
             "flex grow min-h-0 justify-center items-center h-full w-full"

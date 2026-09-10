@@ -7,7 +7,9 @@
             "days_move_one": "{{count}} zi per mutare",
             "days_move_other": "{{count}} zile per mutare",
             "days_side_one": "{{count}} zi per jucător",
-            "days_side_other": "{{count}} zile per jucător"
+            "days_side_other": "{{count}} zile per jucător",
+            "duration_move": "{{duration}} per mutare",
+            "duration_side": "{{duration}} per jucător"
         }
     },
     "played_in": "Jucat în:",
@@ -41,6 +43,19 @@
         "both_click": "Jocul va începe când amândoi jucătorii apasă pregătit în decurs de 30s unul de celălalt",
         "both_ready": "Acest joc de turneu va începe când ambii jucători sunt pregătiți"
     },
+    "arena": {
+        "berserk": "Berserk",
+        "berserk_title": "Renunță la increment și, când se aplică, la jumătate din timpul de bază pentru puncte Arena suplimentare."
+    },
+    "realtime_assignments": {
+        "title": "Partide în timp real pregătite",
+        "challenge": "Provocare în timp real",
+        "tournament": "Partidă de turneu",
+        "arena": "Partidă Arena",
+        "opening_due": "Mutarea de deschidere expiră în {{count}} s",
+        "opening_due_now": "Mutarea de deschidere expiră acum",
+        "open_new_tab": "Deschide într-o filă nouă"
+    },
     "speeds": {
         "bullet": "Bullet",
         "blitz": "Blitz",
@@ -48,5 +63,16 @@
         "classic": "Clasic",
         "correspondence": "Corespondență",
         "untimed": "Fără timp"
+    },
+    "tournament_result": {
+        "white_won": "Albul a câștigat",
+        "draw": "Remiză",
+        "black_won": "Negrul a câștigat",
+        "white_won_by_forfeit": "Albul a câștigat prin neprezentare",
+        "black_won_by_forfeit": "Negrul a câștigat prin neprezentare",
+        "adjudicated_draw": "Remiză decisă de arbitru",
+        "white_draw_black_forfeit_loss": "Remiză pentru Alb; înfrângere prin neprezentare pentru Negru",
+        "white_forfeit_loss_black_draw": "Înfrângere prin neprezentare pentru Alb; remiză pentru Negru",
+        "double_forfeit": "Dublă neprezentare"
     }
 }

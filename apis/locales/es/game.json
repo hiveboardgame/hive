@@ -7,7 +7,9 @@
             "days_side_one": "{{count}} día por jugador",
             "days_side_other": "{{count}} días por jugador",
             "days_move_other": "{{count}} días por turno",
-            "title": "Correspondencia"
+            "title": "Correspondencia",
+            "duration_move": "{{duration}} por turno",
+            "duration_side": "{{duration}} por jugador"
         }
     },
     "rated": "Puntuada",
@@ -41,6 +43,19 @@
         "both_agree": "El juego comenzará cuando ambos acuerden una hora",
         "both_click": "El juego comenzará cuando ambos pulsen \"Preparado\" con 30 segundos de diferencia"
     },
+    "arena": {
+        "berserk": "Berserk",
+        "berserk_title": "Renuncia al incremento y, cuando corresponda, a la mitad del tiempo base para obtener puntos extra de arena."
+    },
+    "realtime_assignments": {
+        "title": "Partidas en tiempo real listas",
+        "challenge": "Desafío en tiempo real",
+        "tournament": "Partida de torneo",
+        "arena": "Partida de Arena",
+        "opening_due": "La jugada inicial vence en {{count}} s",
+        "opening_due_now": "La jugada inicial vence ahora",
+        "open_new_tab": "Abrir en una pestaña nueva"
+    },
     "speeds": {
         "bullet": "Bala",
         "blitz": "Bombardeo",
@@ -48,5 +63,16 @@
         "untimed": "Sin tiempo",
         "rapid": "Rápido",
         "correspondence": "Correspondencia"
+    },
+    "tournament_result": {
+        "white_won": "Ganaron las blancas",
+        "draw": "Tablas",
+        "black_won": "Ganaron las negras",
+        "white_won_by_forfeit": "Las blancas ganaron por incomparecencia",
+        "black_won_by_forfeit": "Las negras ganaron por incomparecencia",
+        "adjudicated_draw": "Tablas por decisión arbitral",
+        "white_draw_black_forfeit_loss": "Tablas para las blancas; derrota de las negras por incomparecencia",
+        "white_forfeit_loss_black_draw": "Derrota de las blancas por incomparecencia; tablas para las negras",
+        "double_forfeit": "Doble incomparecencia"
     }
 }

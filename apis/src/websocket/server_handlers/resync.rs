@@ -41,6 +41,12 @@ impl ResyncHandler {
     }
 
     pub async fn handle(self) -> Result<HandlerOutput> {
+        let Some(_snapshot_guard) = self
+            .hub
+            .try_begin_lobby_snapshot(self.received_from.socket_id)
+        else {
+            return Ok(HandlerOutput::empty());
+        };
         if !self.hub.allow_resync(self.received_from.socket_id) {
             return Ok(HandlerOutput::empty());
         }
