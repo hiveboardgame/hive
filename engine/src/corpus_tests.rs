@@ -378,11 +378,11 @@ fn canonical_hash_is_position_identity() {
     );
 }
 
-/// The axis-gap unwrapping must agree with walking the hive, cell for cell. Injectivity alone would
-/// not catch geometry that is wrong but consistently wrong.
+/// Reading the piece-position table must agree with walking the hive, cell for cell. Injectivity
+/// alone would not catch geometry that is wrong but consistently wrong.
 #[test]
 #[ignore = "needs MLP_GAMES_CSV"]
-fn axis_unwrap_agrees_with_walking() {
+fn table_cells_agree_with_walking() {
     let games = load("MLP_GAMES_CSV");
     let (mut compared, mut disagreed) = (0usize, 0usize);
 
@@ -647,24 +647,6 @@ fn hive_extent_statistics() {
 
     // Occupied residues as a bitmask -> hive width in cells: 32 minus the widest circular
     // empty run (a connected hive always leaves one).
-    fn width(mask: u32) -> usize {
-        if mask == 0 {
-            return 0;
-        }
-        let mut widest = 0i32;
-        let mut run = 0i32;
-        // Doubled scan handles the wrap-around run.
-        for bit in 0..64 {
-            if mask & (1 << (bit % 32)) == 0 {
-                run += 1;
-                widest = widest.max(run.min(32));
-            } else {
-                run = 0;
-            }
-        }
-        32 - widest as usize
-    }
-
     let games = load("MLP_GAMES_CSV");
     let mut histogram = [0u64; 33];
     let mut crossing_plies: Vec<usize> = Vec::new();
@@ -684,12 +666,17 @@ fn hive_extent_statistics() {
                 ok = false;
                 break;
             }
-            let (mut q_mask, mut r_mask) = (0u32, 0u32);
+            // Plain min/max: coordinates are unbounded now, so a bitmask over them would
+            // shift past the word as soon as a hive drifted.
+            let (mut q_min, mut q_max, mut r_min, mut r_max) =
+                (i32::MAX, i32::MIN, i32::MAX, i32::MIN);
             for p in state.board.positions.iter().flatten() {
-                q_mask |= 1 << p.q;
-                r_mask |= 1 << p.r;
+                q_min = q_min.min(p.q);
+                q_max = q_max.max(p.q);
+                r_min = r_min.min(p.r);
+                r_max = r_max.max(p.r);
             }
-            let extent = width(q_mask).max(width(r_mask));
+            let extent = ((q_max - q_min).max(r_max - r_min) + 1) as usize;
             max_extent = max_extent.max(extent);
             if crossed_at.is_none() && extent > 12 {
                 crossed_at = Some(ply);

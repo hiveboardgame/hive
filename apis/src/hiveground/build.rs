@@ -543,34 +543,25 @@ mod tests {
         piece.parse().expect("test piece parses")
     }
 
-    /// The render half of `Board::recenter`; the engine test only pins the coordinates.
+    /// #825: reframing used to rewrite every coordinate, and the renderer drew that as the whole
+    /// board jumping mid-game. The model has to come out identical on either side of one.
     #[test]
-    fn rendered_hive_is_one_cluster_even_across_the_torus_seam() {
+    fn reframing_the_board_leaves_the_render_model_alone() {
         let mut board = Board::new();
-        for (q, r, piece) in [
-            (30, 16, "wQ"),
-            (31, 16, "wA1"),
-            (0, 16, "bQ"),
-            (1, 16, "bA1"),
-            (31, 15, "wG1"),
-            (0, 15, "bG1"),
-        ] {
-            board.insert(Position::new(q, r), self::piece(piece), true);
+        let pieces = [
+            "wQ", "wA1", "wA2", "wA3", "wG1", "wG2", "wG3", "bQ", "bA1", "bA2", "bA3", "bG1",
+            "bG2", "bG3",
+        ];
+        for (offset, name) in pieces.into_iter().enumerate() {
+            board.insert(Position::new(9 + offset as i32, 9), self::piece(name), true);
         }
-        board.recenter();
-        let model = build_static_render_model(&board);
-        let rendered: Vec<Position> = model.stacks.iter().map(|stack| stack.position).collect();
-        let span = |axis: fn(&Position) -> i32| {
-            let min = rendered.iter().map(&axis).min().unwrap();
-            let max = rendered.iter().map(&axis).max().unwrap();
-            max - min
-        };
+        let before = build_static_render_model(&board);
         assert!(
-            span(|p| p.q) < 31 && span(|p| p.r) < 31,
-            "a seam-straddling hive renders split into pieces (q span {}, r span {})",
-            span(|p| p.q),
-            span(|p| p.r)
+            board.needs_reframing(),
+            "a 14-wide hive has outgrown its window"
         );
+        board.reframe();
+        assert_eq!(build_static_render_model(&board), before);
     }
     /// One-directional on purpose: an offered piece with no legal target is only noise, but a
     /// greyed-out piece the engine would spawn is a lie.

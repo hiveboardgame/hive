@@ -2,7 +2,7 @@ use std::{collections::HashMap, fs, str::FromStr};
 
 use super::*;
 use crate::{
-    board::{Board, BOARD_SIZE},
+    board::Board,
     bug::Bug,
     color::Color,
     direction::Direction,
@@ -125,32 +125,31 @@ fn a_loaded_position_still_owes_its_queen_by_the_fourth_turn() {
         .expect("the queen itself is always allowed");
 }
 
-/// A long snake of a hive walked off the torus edge on load and rendered in three pieces.
-/// Loading must land the whole hive on one side of the seam, centred on the spawn position.
+/// A long snake of a hive walked off the torus edge on load and rendered in three pieces. The
+/// window has no edge to walk off any more, so what is left to check is that the walk lays the
+/// hive down connected and inside the storage it ends up with.
 #[test]
-fn load_does_not_wrap_around_the_torus() {
+fn load_lands_the_whole_hive_in_one_cluster() {
     let parsed = parse("A+BMBPSLGGSAAGqapgbgblmgsasaQ,w").unwrap();
-    let (mut min_q, mut max_q) = (BOARD_SIZE, -1);
-    let (mut min_r, mut max_r) = (BOARD_SIZE, -1);
-    for at in parsed.board.all_taken_positions() {
-        min_q = min_q.min(at.q);
-        max_q = max_q.max(at.q);
-        min_r = min_r.min(at.r);
-        max_r = max_r.max(at.r);
+    let cells: Vec<Position> = parsed.board.all_taken_positions().collect();
+    assert!(cells.len() > 20, "the fixture is a long snake");
+
+    let mut reached = vec![cells[0]];
+    let mut head = 0;
+    while head < reached.len() {
+        let at = reached[head];
+        head += 1;
+        for around in at.positions_around() {
+            if cells.contains(&around) && !reached.contains(&around) {
+                reached.push(around);
+            }
+        }
     }
-    // A wrapped hive occupies both edge residues of an axis; one clear of both edges cannot
-    // be wrapped.
+    assert_eq!(reached.len(), cells.len(), "the hive loaded in pieces");
     assert!(
-        min_q > 0 && max_q < BOARD_SIZE - 1,
-        "hive wraps the q axis: q spans {min_q}..={max_q}"
+        !parsed.board.needs_reframing(),
+        "the loaded hive does not sit inside its own window"
     );
-    assert!(
-        min_r > 0 && max_r < BOARD_SIZE - 1,
-        "hive wraps the r axis: r spans {min_r}..={max_r}"
-    );
-    let centre = Position::initial_spawn_position();
-    assert_eq!(min_q + (max_q - min_q) / 2, centre.q, "not centred on q");
-    assert_eq!(min_r + (max_r - min_r) / 2, centre.r, "not centred on r");
 }
 
 #[test]

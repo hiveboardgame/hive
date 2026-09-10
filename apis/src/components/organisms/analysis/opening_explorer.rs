@@ -629,10 +629,14 @@ fn explorer_position_key(selected: Option<u64>, at_pre_game: bool) -> Option<i64
 mod tests {
     use super::*;
 
+    /// The label has to be the notation `History` recorded as the move was played, never one
+    /// recomputed from the board afterwards. Written when a move could re-base every coordinate
+    /// under it; the window no longer moves a piece, but recomputing is still the fragile way to
+    /// get this and reading the record is still the robust one.
     #[test]
-    fn recorded_label_survives_recentering_after_the_move() {
+    fn the_label_is_the_notation_history_recorded() {
         let mut board = hive_lib::Board::new();
-        for (q, piece) in [(30, "wQ"), (31, "wA1"), (0, "bQ"), (1, "bA1")] {
+        for (q, piece) in [(14, "wQ"), (15, "wA1"), (16, "bQ"), (17, "bA1")] {
             board.insert(
                 Position::new(q, 16),
                 piece.parse().expect("test piece"),
@@ -643,30 +647,19 @@ mod tests {
             State::new_from_position(board, GameType::MLP, Color::White).expect("test position");
         let move_index = state.history.moves.len();
         let piece = "wG1".parse().expect("test piece");
-        let original_target = Position::new(30, 15);
 
         state
-            .play_turn_from_position(piece, original_target)
-            .expect("legal move");
+            .play_turn_from_position(piece, Position::new(14, 15))
+            .expect("a plain spawn beside White's own queen");
 
-        assert_ne!(
-            state.board.position_of_piece(piece),
-            Some(original_target),
-            "the move must trigger recentering for this regression"
-        );
+        let (recorded_piece, recorded_position) = state
+            .history
+            .moves
+            .get(move_index)
+            .expect("the move was recorded");
         assert_eq!(
             recorded_move_label(&state, move_index),
-            state
-                .history
-                .moves
-                .get(move_index)
-                .map(|(piece, position)| {
-                    if position.is_empty() {
-                        piece.clone()
-                    } else {
-                        format!("{piece} {position}")
-                    }
-                })
+            Some(format!("{recorded_piece} {recorded_position}"))
         );
     }
 

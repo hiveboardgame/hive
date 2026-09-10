@@ -321,11 +321,11 @@ fn exported_document_reconstructs_every_node() {
             "checkpointed reconstruction diverged at node {id:?}"
         );
         let (mut q_min, mut q_max, mut r_min, mut r_max) = (i32::MAX, i32::MIN, i32::MAX, i32::MIN);
+        assert!(
+            !state.board.needs_reframing(),
+            "hive hugs the window edge at node {id:?}"
+        );
         for p in state.board.positions.iter().flatten() {
-            assert!(
-                (2..=30).contains(&p.q) && (2..=30).contains(&p.r),
-                "hive hugs the seam at node {id:?}"
-            );
             q_min = q_min.min(p.q);
             q_max = q_max.max(p.q);
             r_min = r_min.min(p.r);
@@ -342,12 +342,6 @@ fn exported_document_reconstructs_every_node() {
                 "storage does not match the hive extent ({extent}) at node {id:?}"
             );
             if small {
-                for p in state.board.positions.iter().flatten() {
-                    assert!(
-                        (10..=21).contains(&p.q) && (10..=21).contains(&p.r),
-                        "small storage but hive outside the window at node {id:?}"
-                    );
-                }
                 small_nodes += 1;
             } else {
                 big_nodes += 1;

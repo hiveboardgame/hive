@@ -1,9 +1,9 @@
-use crate::{board::Board, position::Position, torus_array::TorusArray};
+use crate::{board::Board, position::Position, window_array::WindowArray};
 
 pub struct MidMoveBoard<'this> {
     pub board: &'this Board,
     pub position_in_flight: Position,
-    pub neighbor_count: TorusArray<u8>,
+    pub neighbor_count: WindowArray<u8>,
 }
 
 impl<'this> MidMoveBoard<'this> {

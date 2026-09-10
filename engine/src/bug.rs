@@ -1,10 +1,10 @@
 use crate::{
-    board::{Board, BOARD_SIZE},
+    board::Board,
     game_error::GameError,
     game_type::GameType,
     mid_move_board::MidMoveBoard,
     position::Position,
-    torus_array::TorusArray,
+    window_array::WindowArray,
 };
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt, str::FromStr};
@@ -283,7 +283,7 @@ impl Bug {
         destination: Position,
         board: &Board,
     ) -> bool {
-        if !Bug::is_canonical_position(piece_position) || !Bug::is_canonical_position(destination) {
+        if !board.can_place(piece_position) || !board.can_place(destination) {
             return false;
         }
 
@@ -300,10 +300,6 @@ impl Bug {
             return false;
         };
         !board.is_pinned(piece) && !board.gated(2, piece_position, ability_position)
-    }
-
-    fn is_canonical_position(position: Position) -> bool {
-        (0..BOARD_SIZE).contains(&position.q) && (0..BOARD_SIZE).contains(&position.r)
     }
 
     fn has_pillbug_throw(position: Position, board: &Board) -> bool {
@@ -371,7 +367,7 @@ impl Bug {
         board: &Board,
         keep_scanning: &mut impl FnMut(Position) -> bool,
     ) -> bool {
-        let mut state = TorusArray::new_like(&board.board, (false, false));
+        let mut state = WindowArray::new_like(&board.board, (false, false));
         let board = MidMoveBoard::new(board, position);
         let mut unexplored = None;
         for pos in Bug::crawl_negative_space(position, &board) {
@@ -663,15 +659,12 @@ mod tests {
                 );
             }
 
-            for q in 0..BOARD_SIZE {
-                for r in 0..BOARD_SIZE {
-                    let target = Position::new(q, r);
-                    assert_eq!(
-                        Bug::has_target_move(*position, target, board),
-                        collected.contains(&target),
-                        "has_target_move disagrees with normal_moves from {position} to {target}"
-                    );
-                }
+            for target in board.scan_positions() {
+                assert_eq!(
+                    Bug::has_target_move(*position, target, board),
+                    collected.contains(&target),
+                    "has_target_move disagrees with normal_moves from {position} to {target}"
+                );
             }
         }
     }
@@ -849,8 +842,10 @@ mod tests {
         ));
     }
 
+    /// Coordinates no longer wrap, so a forged position can name a cell the window cannot
+    /// address; `can_throw` has to refuse rather than write past the edge.
     #[test]
-    fn tests_can_throw_rejects_non_canonical_positions() {
+    fn tests_can_throw_rejects_positions_off_the_window() {
         let mut board = Board::new();
         board.insert(
             Position::new(0, 0),
@@ -862,49 +857,18 @@ mod tests {
             Piece::new_from(Bug::Mosquito, Color::Black, 0),
             true,
         );
+        let off_window = Position { q: 1_000, r: 0 };
+        assert!(!board.can_place(off_window));
         assert!(!Bug::can_throw(
             Position::new(0, 0),
             Position::new(1, 0),
-            Position { q: -1, r: 0 },
+            off_window,
             &board
         ));
-
-        let mut board = Board::new();
-        board.insert(
-            Position::new(0, 0),
-            Piece::new_from(Bug::Pillbug, Color::White, 0),
-            true,
-        );
-        board.insert(
-            Position::new(-1, 0),
-            Piece::new_from(Bug::Mosquito, Color::Black, 0),
-            true,
-        );
         assert!(!Bug::can_throw(
             Position::new(0, 0),
-            Position { q: -1, r: 0 },
+            off_window,
             Position::new(0, 1),
-            &board
-        ));
-
-        let mut board = Board::new();
-        board.insert(
-            Position::new(-1, 0),
-            Piece::new_from(Bug::Pillbug, Color::White, 0),
-            true,
-        );
-        board.insert(
-            Position::new(0, 0),
-            Piece::new_from(Bug::Mosquito, Color::Black, 0),
-            true,
-        );
-        assert!(!Bug::can_throw(
-            Position::new(-1, 0),
-            Position::new(0, 0),
-            Position {
-                q: BOARD_SIZE,
-                r: 0
-            },
             &board
         ));
     }

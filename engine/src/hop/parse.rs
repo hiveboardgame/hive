@@ -413,10 +413,10 @@ impl Walk {
         if self.scopes.len() != 1 {
             return Err(HopError::UnbalancedParens);
         }
-        // The walk runs wherever the serializer's spiral leads, so a long hive wraps the
-        // torus; recentering lands it whole and translates the `!` mark with it.
+        // The walk runs wherever the serializer's spiral leads, so a long hive can end up far
+        // from the spawn; reframing sizes the window around wherever it landed.
         self.board.last_moved = self.marked;
-        self.board.recenter();
+        self.board.reframe();
         Ok(self.board)
     }
 }

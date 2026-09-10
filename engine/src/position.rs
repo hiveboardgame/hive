@@ -1,9 +1,4 @@
-use crate::{
-    board::{Board, BOARD_SIZE},
-    direction::Direction,
-    game_error::GameError,
-    piece::Piece,
-};
+use crate::{board::Board, direction::Direction, game_error::GameError, piece::Piece};
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -36,8 +31,6 @@ impl fmt::Display for Position {
 
 impl Position {
     pub fn new(q: i32, r: i32) -> Self {
-        let q = q.rem_euclid(BOARD_SIZE);
-        let r = r.rem_euclid(BOARD_SIZE);
         Self { q, r }
     }
 
@@ -45,21 +38,8 @@ impl Position {
         Self { q: 16, r: 16 }
     }
 
-    fn wrap_around(num: i32) -> i32 {
-        if num == (BOARD_SIZE - 1) {
-            return -1;
-        }
-        if num == -(BOARD_SIZE - 1) {
-            return 1;
-        }
-        num
-    }
-
     pub fn is_neighbor(&self, to: Position) -> bool {
-        let diff = (
-            Self::wrap_around(to.q - self.q),
-            Self::wrap_around(to.r - self.r),
-        );
+        let diff = (to.q - self.q, to.r - self.r);
         matches!(
             diff,
             (0, -1) | (0, 1) | (1, -1) | (-1, 1) | (-1, 0) | (1, 0)
@@ -68,10 +48,7 @@ impl Position {
 
     // this implements "odd-r horizontal" which offsets odd rows to the right
     pub fn direction(&self, to: Position) -> Direction {
-        let diff = (
-            Self::wrap_around(to.q - self.q),
-            Self::wrap_around(to.r - self.r),
-        );
+        let diff = (to.q - self.q, to.r - self.r);
         match diff {
             (0, -1) => Direction::NW,
             (0, 1) => Direction::SE,

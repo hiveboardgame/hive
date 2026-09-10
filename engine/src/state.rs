@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fmt::Display, path::PathBuf, str::FromStr};
 
 use crate::{
-    board::{Board, BOARD_SIZE},
+    board::Board,
     bug::Bug,
     color::Color,
     game_error::GameError,
@@ -529,10 +529,9 @@ impl State {
 
     fn play_turn(&mut self, piece: Piece, target_position: Position) -> Result<(), GameError> {
         // `Position` derives Deserialize over its public fields, so a websocket turn can carry
-        // coordinates `Position::new` would never produce, and they index straight past the board.
-        if !(0..BOARD_SIZE).contains(&target_position.q)
-            || !(0..BOARD_SIZE).contains(&target_position.r)
-        {
+        // coordinates no legal move could reach, and they index straight past the window. A real
+        // move always lands within one cell of the hive, which `reframe` keeps well inside.
+        if !self.board.can_place(target_position) {
             return Err(GameError::InvalidMove {
                 piece: piece.to_string(),
                 from: "NA".to_string(),
@@ -560,10 +559,10 @@ impl State {
         self.three_fold_repetition(self.turn_color.opposite_color());
         debug_assert!(self.board.check());
         self.next_turn();
-        // The renderer draws raw coordinates, so keep the hive clear of the torus seam.
-        // Deterministic, so every replay path recenters at the same plies.
-        if self.board.needs_recentering() {
-            self.board.recenter();
+        // Keep the storage window centred on the hive so move generation always has its probe
+        // margin. Coordinates do not move, so the cadence is invisible outside the board.
+        if self.board.needs_reframing() {
+            self.board.reframe();
         }
         Ok(())
     }
@@ -720,15 +719,16 @@ mod tests {
         );
     }
 
-    /// Play must keep the hive clear of the seam; only the renderer's pixels would notice.
+    /// Play must keep the probe margin alive on every side, or move generation reads past the
+    /// window edge. Nothing else notices: the coordinates stay put.
     #[test]
-    fn play_recenters_a_hive_that_reaches_the_seam() {
+    fn play_reframes_a_hive_that_reaches_the_window_edge() {
         let mut board = Board::new();
         for (q, r, piece) in [
-            (30, 16, "wQ"),
-            (31, 16, "wA1"),
-            (0, 16, "bQ"),
-            (1, 16, "bA1"),
+            (9, 16, "wQ"),
+            (10, 16, "wA1"),
+            (11, 16, "bQ"),
+            (12, 16, "bA1"),
         ] {
             board.insert(
                 Position::new(q, r),
@@ -738,13 +738,18 @@ mod tests {
         }
         let mut state = State::new_from_position(board, GameType::MLP, Color::White)
             .expect("a hand-built hive is reachable");
+        let before: Vec<_> = state.board.all_taken_positions().collect();
         state
-            .play_turn_from_position("wG1".parse().expect("test piece"), Position::new(30, 15))
+            .play_turn_from_position("wG1".parse().expect("test piece"), Position::new(9, 15))
             .expect("a plain spawn next to White's own pieces");
-        for position in state.board.all_taken_positions() {
+        assert!(
+            !state.board.needs_reframing(),
+            "play left the hive against the window edge"
+        );
+        for position in before {
             assert!(
-                (2..=30).contains(&position.q) && (2..=30).contains(&position.r),
-                "still hugging the seam at {position}"
+                state.board.all_taken_positions().any(|at| at == position),
+                "the reframe moved the piece at {position}"
             );
         }
     }

@@ -13,6 +13,7 @@ use crate::{
     piece::Piece,
     position::Position,
     state::State,
+    svg_position::SvgPosition,
 };
 use std::str::FromStr;
 
@@ -199,19 +200,13 @@ fn check_boundaries(state: &State, seed: u64) {
         context()
     );
 
-    if state.board.storage_cells() == 256 {
-        for p in state.board.positions.iter().flatten() {
-            assert!(
-                (10..=21).contains(&p.q) && (10..=21).contains(&p.r),
-                "small storage but hive outside the window ({})",
-                context()
-            );
-        }
-    }
+    let (origin, size) = (state.board.board.origin(), state.board.board.size());
+    let margin = crate::window_array::MARGIN;
     for p in state.board.positions.iter().flatten() {
         assert!(
-            (2..=30).contains(&p.q) && (2..=30).contains(&p.r),
-            "hive hugs the seam ({})",
+            (origin.q + margin..=origin.q + size - 1 - margin).contains(&p.q)
+                && (origin.r + margin..=origin.r + size - 1 - margin).contains(&p.r),
+            "hive hugs the window edge ({})",
             context()
         );
     }
@@ -347,4 +342,94 @@ fn hostile_inputs_only_error_deeply() {
         .and_then(|v| v.parse().ok())
         .unwrap_or(1);
     hostile_sweep(rounds, seed);
+}
+
+/// Everything the renderer draws sits on `SvgPosition`, so the geometry it produces has to agree
+/// with the engine cell for cell: pieces the engine calls neighbours land exactly one hex apart,
+/// and pieces it does not land further. A drifting hive is what makes this bite - the coordinate
+/// domain the drawing code sees is no longer the `0..BOARD_SIZE` box it was written against.
+fn assert_drawn_geometry_matches(state: &State, ply: usize) {
+    // Ask the renderer itself how far apart neighbours sit, rather than restating its hex size.
+    let origin = SvgPosition::center_for_level(Position::new(0, 0), 0, false);
+    let east = SvgPosition::center_for_level(Position::new(1, 0), 0, false);
+    let hex_width = (east.0 - origin.0).hypot(east.1 - origin.1);
+    let cells: Vec<Position> = state.board.all_taken_positions().collect();
+    for a in &cells {
+        for b in &cells {
+            if a == b {
+                continue;
+            }
+            let (ax, ay) = SvgPosition::center_for_level(*a, 0, false);
+            let (bx, by) = SvgPosition::center_for_level(*b, 0, false);
+            let apart = ((ax - bx).powi(2) + (ay - by).powi(2)).sqrt();
+            assert_eq!(
+                apart < hex_width * 1.05,
+                a.is_neighbor(*b),
+                "ply {ply}: {a} and {b} draw {apart} apart, hex width is {hex_width}"
+            );
+        }
+    }
+}
+
+/// The torus let the hive walk forever because coordinates wrapped. Nothing wraps now, so the
+/// replacement promise is that the window follows the hive however far it treadmills - including
+/// off the old `0..BOARD_SIZE` box and into negative coordinates.
+#[test]
+fn a_treadmilling_hive_drags_the_window_with_it() {
+    let mut state = State::new(GameType::MLP, true);
+    let mut plies = 0;
+    for _ in 0..150 {
+        if matches!(
+            state.game_status,
+            GameStatus::Finished(_) | GameStatus::Adjudicated
+        ) {
+            break;
+        }
+        let options = legal_actions(&state);
+        if options.is_empty() {
+            assert!(state.play_turn_from_history("pass", "").is_ok());
+            continue;
+        }
+        // Greedily drag the hive east every ply; a game that draws itself proves nothing.
+        let mut best: Option<(i32, Piece, Position)> = None;
+        for (piece, target) in options {
+            let mut probe = state.clone();
+            if probe.play_turn_from_position(piece, target).is_err() {
+                continue;
+            }
+            if matches!(
+                probe.game_status,
+                GameStatus::Finished(_) | GameStatus::Adjudicated
+            ) {
+                continue;
+            }
+            let score = probe.board.all_taken_positions().map(|p| p.q).sum::<i32>();
+            if best.as_ref().is_none_or(|(seen, _, _)| score > *seen) {
+                best = Some((score, piece, target));
+            }
+        }
+        let Some((_, piece, target)) = best else {
+            break;
+        };
+        assert!(state.play_turn_from_position(piece, target).is_ok());
+        plies += 1;
+        assert_drawn_geometry_matches(&state, plies);
+    }
+
+    let centre = state.board.center_coordinates();
+    assert!(plies > 100, "the treadmill stalled after {plies} plies");
+    assert!(
+        centre.q > 16 + 4,
+        "the hive did not actually travel: centre q {}",
+        centre.q
+    );
+    // The point of the exercise: everything still works out where the old torus could not reach.
+    assert_eq!(
+        crate::board::Board::from_snapshot(&state.board.snapshot()),
+        state.board,
+        "snapshot round trip broke after drifting to {centre}"
+    );
+    let hop = hop::from_position(&state.board, state.game_type, side_to_move(&state));
+    hop::parse(&hop).unwrap_or_else(|e| panic!("HOP does not reload after drifting: {e}"));
+    check_boundaries(&state, 0);
 }

@@ -29,8 +29,8 @@ mod player;
 mod position;
 mod state;
 mod svg_position;
-mod torus_array;
 mod turn;
+mod window_array;
 
 pub use board::{Board, BoardSnapshot};
 pub use bug::Bug;

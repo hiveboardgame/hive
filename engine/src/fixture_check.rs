@@ -264,7 +264,7 @@ fn fixture_symmetry_check() {
             .position_of_piece(Piece::new_from(crate::bug::Bug::Queen, Color::White, 0))
             .expect("wQ anchors the frame");
         let mut cells = std::collections::BTreeMap::new();
-        for pos in Board::all_positions() {
+        for pos in state.board.scan_positions() {
             let stack = state.board.board.get(pos);
             if !stack.is_empty() {
                 cells.insert((pos.q - origin.q, pos.r - origin.r), stack.simple());
@@ -493,7 +493,7 @@ type OrientedMove = ((i32, i32), (i32, i32), u8);
 
 fn identity(state: &State, with_moves: bool) -> String {
     let mut cells: Vec<((i32, i32), u32)> = Vec::new();
-    for pos in Board::all_positions() {
+    for pos in state.board.scan_positions() {
         let stack = state.board.board.get(pos);
         if !stack.is_empty() {
             cells.push(((pos.q, pos.r), stack.simple()));
@@ -589,7 +589,7 @@ fn fixture_04_mirror_pooling() {
 /// Occupied cells and their stack signatures, at absolute coordinates.
 fn layout_of(state: &State) -> Vec<String> {
     let mut cells: Vec<String> = Vec::new();
-    for pos in Board::all_positions() {
+    for pos in state.board.scan_positions() {
         let stack = state.board.board.get(pos);
         if !stack.is_empty() {
             cells.push(format!("{}@{},{}", stack.simple(), pos.q, pos.r));
@@ -716,7 +716,7 @@ fn fixture_05_edge_axis_mirror_stun() {
 fn fixture_05_layout_is_edge_axis_symmetric() {
     let state = replay_uhp_prefix("./test_pgns/regressions/edge_axis_mirror_stun.uhp", 19);
     let mut layout = std::collections::BTreeMap::new();
-    for pos in Board::all_positions() {
+    for pos in state.board.scan_positions() {
         let bs = state.board.board.get(pos);
         if !bs.is_empty() {
             layout.insert((pos.q, pos.r), bs.simple());

@@ -196,3 +196,40 @@ fn the_hash_is_a_pure_function_of_the_board() {
     );
     assert!(validated > 0, "no positions were validated");
 }
+
+/// #825: reframing used to renumber every piece at once, and the renderer drew that as the
+/// whole board jumping mid-game. A ply may move the piece it moved and nothing else, however
+/// often the storage window slides underneath it.
+#[test]
+fn a_ply_moves_only_the_piece_it_moved() {
+    for dir in ["./test_pgns/valid/", "./test_pgns/regressions/"] {
+        for file in pgns_in(dir) {
+            let history = History::from_filepath(file.clone()).expect("PGN");
+            let tournament = !history
+                .moves
+                .iter()
+                .take(2)
+                .filter_map(|(piece, _)| piece.parse::<Piece>().ok())
+                .any(|piece| piece.bug() == crate::bug::Bug::Queen);
+            let mut state = State::new(history.game_type, tournament);
+            state.set_replaying(true);
+            let mut before = state.board.positions;
+            for (ply, (piece, position)) in history.moves.iter().enumerate() {
+                state
+                    .play_turn_from_history(piece, position)
+                    .unwrap_or_else(|err| panic!("{} ply {ply}: {err}", file.display()));
+                let after = state.board.positions;
+                let moved: Vec<usize> = (0..before.len())
+                    .filter(|&offset| before[offset] != after[offset])
+                    .collect();
+                assert!(
+                    moved.len() <= 1,
+                    "{} ply {ply} moved {} pieces at once",
+                    file.display(),
+                    moved.len()
+                );
+                before = after;
+            }
+        }
+    }
+}

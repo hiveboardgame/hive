@@ -1,9 +1,9 @@
 //! The position hash: a pure function of pieces, side to move, and the stun - nothing else.
 //!
-//! Hive has no board, so identity is up to translation, rotation and reflection. Unwrap the
-//! torus at each axis's guaranteed gap (a connected hive of <=28 pieces leaves one on a 32-wide
-//! axis), sum a commutative key per cell under each of the 12 symmetries, keep the minimum -
-//! congruent positions produce the same accumulator set, so the minimum agrees.
+//! Hive has no board, so identity is up to translation, rotation and reflection. Sum a
+//! commutative key per cell under each of the 12 symmetries and keep the minimum - congruent
+//! positions produce the same accumulator set, so the minimum agrees. [`normalised`] re-anchors
+//! to the bounding-box corner, so the frame the cells arrive in does not matter.
 
 use crate::{
     board::{Board, BOARD_SIZE},
@@ -33,7 +33,6 @@ fn wyhash(input: u64) -> u64 {
 const MAX_CELLS: usize = 28;
 
 #[cfg(test)]
-/// [`Position::to`] applies these wrapped into the torus; here they stay true integers.
 const DELTAS: [(Direction, i32, i32); 6] = [
     (Direction::NW, 0, -1),
     (Direction::SE, 0, 1),
@@ -67,28 +66,8 @@ pub(crate) struct Cells {
     len: usize,
 }
 
-/// A connected hive of <=28 cells projects to a contiguous residue interval, so a 32-wide axis
-/// always has exactly one maximal gap - cut there to unwrap. Returns the interval's left edge.
-pub(crate) fn axis_origin(mask: u32) -> i32 {
-    debug_assert!(mask != 0);
-    let residues = || (0..BOARD_SIZE).filter(move |bit| mask & (1 << bit) != 0);
-    let last = residues().next_back().expect("non-empty");
-
-    let (mut widest, mut origin) = (-1, 0);
-    let mut previous = last;
-    for residue in residues() {
-        let gap = (residue - previous - 1).rem_euclid(BOARD_SIZE);
-        if gap > widest {
-            widest = gap;
-            origin = residue;
-        }
-        previous = residue;
-    }
-    origin
-}
-
 /// Reads the piece-position table rather than walking the hive: the walk was only ever there to
-/// escape the torus, and [`axis_origin`] does that far more cheaply.
+/// escape the torus, and coordinates no longer wrap.
 pub(crate) fn relative_cells(board: &Board, stunned: Option<Piece>) -> Option<Cells> {
     let mut cells = Cells {
         offsets: [(0, 0); MAX_CELLS],
@@ -97,13 +76,13 @@ pub(crate) fn relative_cells(board: &Board, stunned: Option<Piece>) -> Option<Ce
     };
     let restricted = stunned.and_then(|piece| board.position_of_piece(piece));
 
-    // One entry per piece, so stacked cells repeat; the bitset dedupes them.
+    // One entry per piece, so stacked cells repeat; the bitset dedupes them. Indexed off the
+    // storage window, which every piece is inside, so the bit stays in range.
     let mut seen = [0u64; (BOARD_SIZE * BOARD_SIZE / 64) as usize];
-    let (mut q_mask, mut r_mask) = (0u32, 0u32);
-    let mut raw = [(0i32, 0i32); MAX_CELLS];
+    let origin = board.board.origin();
 
     for position in board.positions.iter().flatten() {
-        let bit = (position.r * BOARD_SIZE + position.q) as usize;
+        let bit = ((position.r - origin.r) * BOARD_SIZE + (position.q - origin.q)) as usize;
         if seen[bit / 64] & (1 << (bit % 64)) != 0 {
             continue;
         }
@@ -113,25 +92,15 @@ pub(crate) fn relative_cells(board: &Board, stunned: Option<Piece>) -> Option<Ce
             debug_assert!(false, "more than {MAX_CELLS} occupied cells");
             return None;
         }
-        raw[cells.len] = (position.q, position.r);
+        cells.offsets[cells.len] = (position.q - origin.q, position.r - origin.r);
         cells.stacks[cells.len] = board.board.get(*position).simple();
         if restricted == Some(*position) {
             cells.stacks[cells.len] |= STUNNED_CELL;
         }
         cells.len += 1;
-        q_mask |= 1 << position.q;
-        r_mask |= 1 << position.r;
     }
     if cells.len == 0 {
         return None;
-    }
-
-    let (q_origin, r_origin) = (axis_origin(q_mask), axis_origin(r_mask));
-    for (offset, (q, r)) in cells.offsets[..cells.len].iter_mut().zip(raw) {
-        *offset = (
-            (q - q_origin).rem_euclid(BOARD_SIZE),
-            (r - r_origin).rem_euclid(BOARD_SIZE),
-        );
     }
     Some(cells)
 }
@@ -153,8 +122,9 @@ fn relative_cells_by_walking(board: &Board, stunned: Option<Piece>) -> Option<Ce
 
     // Direct-addressed visit set: cheaper than hashing, and small enough to sit on the stack.
     let mut visited = [0u64; (BOARD_SIZE * BOARD_SIZE / 64) as usize];
+    let origin = board.board.origin();
     let mut mark = |position: Position| {
-        let bit = (position.r * BOARD_SIZE + position.q) as usize;
+        let bit = ((position.r - origin.r) * BOARD_SIZE + (position.q - origin.q)) as usize;
         let word = &mut visited[bit / 64];
         let seen = *word & (1 << (bit % 64)) != 0;
         *word |= 1 << (bit % 64);
