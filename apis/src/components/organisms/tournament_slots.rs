@@ -164,17 +164,12 @@ pub(crate) fn slot_card_label(
                 round
                     .slots
                     .iter()
-                    .find(|round_slot| round_slot.slot_id == slot.id)
-                    .map(|round_slot| {
-                        let base = format!(
-                            "Round {} · Board {}",
-                            round.round_index + 1,
-                            round_slot.board_index + 1
-                        );
+                    .any(|round_slot| round_slot.slot_id == slot.id)
+                    .then(|| {
                         if repeats > 1 {
-                            format!("{base} · Game {} of {repeats}", round.pass_index + 1)
+                            format!("Game {} of {repeats}", round.pass_index + 1)
                         } else {
-                            base
+                            String::from("Game")
                         }
                     })
             })
@@ -612,7 +607,7 @@ fn DeadlineEditorBody(
         if slot_ids.is_empty() {
             // TODO: i18n once copy is approved.
             input_error.set(Some(String::from(
-                "No released unstarted matches are in this scope.",
+                "No available unstarted games are in this scope.",
             )));
             return;
         }
@@ -676,10 +671,10 @@ fn DeadlineEditorBody(
                         }
                     >
                         // TODO: i18n once copy is approved.
-                        <option value="all">"All released unstarted matches"</option>
+                        <option value="all">"All available unstarted games"</option>
                         // TODO: i18n once copy is approved.
                         <option value="missing">
-                            "Released unstarted matches without a play-by time"
+                            "Available unstarted games without a play-by time"
                         </option>
                     </select>
                 </label>

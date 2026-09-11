@@ -27,6 +27,8 @@ use leptos_router::hooks::use_location;
 use shared_types::{tournament_view::SlotResponse, TournamentId};
 use uuid::Uuid;
 
+const REVIEW_PAGE_SIZE: usize = 6;
+
 fn slot_is_closeout_eligible(slot: &SlotResponse, gameless: bool) -> bool {
     slot.resolution.is_none()
         && match &slot.game {
@@ -42,7 +44,6 @@ struct ReviewedCloseoutSlot {
     identity: String,
     players: String,
     scheduled_at: Option<DateTime<Utc>>,
-    released: bool,
 }
 
 fn reviewed_closeout_slots(
@@ -92,7 +93,6 @@ fn reviewed_closeout_slots(
                 identity,
                 players: format!("{white} vs {black}"),
                 scheduled_at: slot.scheduled_at,
-                released: slot.game.is_some(),
             })
         })
         .collect::<Vec<_>>();
@@ -123,6 +123,8 @@ fn current_tournament_id(
 pub fn TournamentCloseout(tournament: TournamentState, organizer: Signal<bool>) -> impl IntoView {
     let i18n = use_i18n();
     let reviewed = RwSignal::new(None::<Vec<ReviewedCloseoutSlot>>);
+    let reviewed_count =
+        Signal::derive(move || reviewed.with(|rows| rows.as_ref().map_or(0, Vec::len)));
     let page = RwSignal::new(1usize);
     let dialog_el = NodeRef::<Dialog>::new();
     let api = expect_context::<ApiRequestsProvider>().0;
@@ -189,47 +191,36 @@ pub fn TournamentCloseout(tournament: TournamentState, organizer: Signal<bool>) 
                     }
                 }
             >
-                {move || {
-                    format!(
-                        "{} ({})",
-                        t_string!(i18n, tournaments.view.closeout.title),
-                        closeout_eligible_slots.get(),
-                    )
-                }}
+                // TODO: i18n once copy is approved.
+                {move || format!("Close unstarted games ({})", closeout_eligible_slots.get())}
             </button>
         </Show>
-        <Modal
-            dialog_el
-            aria_label=t_string!(i18n, tournaments.view.closeout.review).to_string()
-            on_close=cancel
-        >
+        // TODO: i18n once copy is approved.
+        <Modal dialog_el aria_label="Close unstarted games" on_close=cancel>
             <Show when=move || route_active.get() && reviewed.with(Option::is_some)>
                 <div class="px-3 pb-4 mx-auto space-y-3 sm:px-4 w-[min(94vw,48rem)]">
                     <header>
                         // TODO: i18n once copy is approved.
                         <h2 class="text-xl font-bold">
                             {move || {
-                                format!(
-                                    "Review {} double forfeits",
-                                    reviewed.with(|rows| rows.as_ref().map_or(0, Vec::len)),
-                                )
+                                let count = reviewed_count.get();
+                                let game = if count == 1 { "game" } else { "games" };
+                                format!("Close {count} unstarted {game}?")
                             }}
                         </h2>
                         <p class="text-sm text-gray-600 dark:text-gray-300">
                             {move || tournament.common.lifecycle().get().name}
                         </p>
                     </header>
+                    // TODO: i18n once copy is approved.
                     <p class="p-3 text-sm ui-danger-notice">
                         {move || {
-                            t_string!(
-                                i18n, tournaments.view.closeout.description,
-                            count = reviewed.with(|rows| rows.as_ref().map_or(0, Vec::len))
-                            )
+                            if reviewed_count.get() == 1 {
+                                "This records a double forfeit (0–0). Neither player receives points."
+                            } else {
+                                "Each game is recorded as a double forfeit (0–0). Neither player receives points."
+                            }
                         }}
-                    </p>
-                    // TODO: i18n once copy is approved.
-                    <p class="text-sm">
-                        "Both players receive 0 points. This may finish the tournament."
                     </p>
                     // TODO: i18n once copy is approved.
                     <p class="text-xs text-gray-600 dark:text-gray-300">
@@ -237,11 +228,10 @@ pub fn TournamentCloseout(tournament: TournamentState, organizer: Signal<bool>) 
                     </p>
                     <div class="overflow-hidden rounded border divide-y border-black/10 divide-black/10 dark:border-white/10 dark:divide-white/10">
                         // TODO: i18n once copy is approved.
-                        <div class="hidden gap-3 p-3 text-xs font-semibold sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,1.3fr)_4.5rem]">
-                            <span>"Game"</span>
+                        <div class="hidden gap-3 p-3 text-xs font-semibold sm:grid sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.3fr)]">
                             <span>"Players"</span>
+                            <span>"Game"</span>
                             <span>"Agreed time"</span>
-                            <span>"State"</span>
                         </div>
                         <For
                             each=move || {
@@ -250,8 +240,8 @@ pub fn TournamentCloseout(tournament: TournamentState, organizer: Signal<bool>) 
                                         rows.as_ref()
                                             .map(|rows| {
                                                 rows.iter()
-                                                    .skip((page.get() - 1) * 6)
-                                                    .take(6)
+                                                    .skip((page.get() - 1) * REVIEW_PAGE_SIZE)
+                                                    .take(REVIEW_PAGE_SIZE)
                                                     .cloned()
                                                     .collect::<Vec<_>>()
                                             })
@@ -262,11 +252,11 @@ pub fn TournamentCloseout(tournament: TournamentState, organizer: Signal<bool>) 
                             let:row
                         >
                             <article
-                                class="grid gap-1 p-3 text-sm sm:gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,1.3fr)_4.5rem]"
+                                class="grid gap-1 p-3 text-sm sm:gap-3 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.3fr)]"
                                 data-slot-id=row.id.to_string()
                             >
-                                <p>{row.identity}</p>
                                 <p class="font-semibold break-words">{row.players}</p>
+                                <p>{row.identity}</p>
                                 // TODO: i18n once copy is approved.
                                 <p class="text-gray-600 dark:text-gray-300">
                                     {row
@@ -274,19 +264,17 @@ pub fn TournamentCloseout(tournament: TournamentState, organizer: Signal<bool>) 
                                         .map(|time| format_local_datetime(i18n.get_locale(), time))
                                         .unwrap_or_else(|| String::from("No agreed time"))}
                                 </p>
-                                // TODO: i18n once copy is approved.
-                                <p>{if row.released { "Released" } else { "Planned" }}</p>
                             </article>
                         </For>
                     </div>
-                    <PaginationControls
-                        page=page.into()
-                        total=Signal::derive(move || {
-                            reviewed.with(|rows| rows.as_ref().map_or(0, Vec::len))
-                        })
-                        page_size=6
-                        on_page_change=Callback::new(move |next| page.set(next))
-                    />
+                    <Show when=move || { reviewed_count.get() > REVIEW_PAGE_SIZE }>
+                        <PaginationControls
+                            page=page.into()
+                            total=reviewed_count
+                            page_size=REVIEW_PAGE_SIZE
+                            on_page_change=Callback::new(move |next| page.set(next))
+                        />
+                    </Show>
                     <footer class="flex flex-wrap gap-2 justify-end pt-3 border-t border-black/10 dark:border-white/10">
                         <button
                             type="button"
@@ -302,10 +290,11 @@ pub fn TournamentCloseout(tournament: TournamentState, organizer: Signal<bool>) 
                             on:click=move |_| confirm.run(())
                         >
                             {move || {
-                                format!(
-                                    "Record {} double forfeits",
-                                    reviewed.with(|rows| rows.as_ref().map_or(0, Vec::len)),
-                                )
+                                if reviewed_count.get() == 1 {
+                                    String::from("Record double forfeit")
+                                } else {
+                                    format!("Record {} double forfeits", reviewed_count.get())
+                                }
                             }}
                         </button>
                     </footer>

@@ -14,6 +14,7 @@ use crate::{
 };
 use leptos::prelude::*;
 use leptos_router::{components::A, hooks::use_location};
+use shared_types::tournament::Format;
 use std::collections::HashSet;
 
 #[component]
@@ -25,11 +26,12 @@ pub fn TournamentOrganizers(
     let api = expect_context::<ApiRequestsProvider>().0;
     let auth = expect_context::<AuthContext>();
     let tournament_id = StoredValue::new(tournament.tournament_id());
-    let active = Signal::derive(move || {
-        tournament
-            .common
-            .lifecycle()
-            .with(|lifecycle| lifecycle.finished_at.is_none())
+    let management_available = Signal::derive(move || {
+        tournament.format.format() != Format::Arena
+            && tournament
+                .common
+                .lifecycle()
+                .with(|lifecycle| lifecycle.finished_at.is_none())
     });
     let organizers = Signal::derive(move || {
         tournament
@@ -65,7 +67,7 @@ pub fn TournamentOrganizers(
     let pathname = use_location().pathname;
     let send = Callback::new(move |action| {
         let id = tournament_id.get_value();
-        if active.get_untracked()
+        if management_available.get_untracked()
             && tournament_path_matches(&pathname.get_untracked(), &id)
             && tournament.common.lifecycle().get_untracked().tournament_id == id
         {
@@ -78,7 +80,9 @@ pub fn TournamentOrganizers(
                 <div class="flex flex-wrap gap-2 justify-between items-center">
                     // TODO: i18n once copy is approved.
                     <h3 class="font-bold">"Organizers"</h3>
-                    <Show when=move || active.get() && user_is_organizer_or_admin.get()>
+                    <Show when=move || {
+                        management_available.get() && user_is_organizer_or_admin.get()
+                    }>
                         // TODO: i18n once copy is approved.
                         <A
                             href=move || {
@@ -99,7 +103,7 @@ pub fn TournamentOrganizers(
                     </For>
                 </div>
             </Show>
-            <Show when=move || active.get() && invited.get()>
+            <Show when=move || management_available.get() && invited.get()>
                 // TODO: i18n once copy is approved.
                 <p class="text-sm">"You have been invited to organize this tournament."</p>
                 <div class="flex flex-wrap gap-2">
@@ -125,7 +129,9 @@ pub fn TournamentOrganizers(
                     </button>
                 </div>
             </Show>
-            <Show when=move || managing && active.get() && user_is_organizer_or_admin.get()>
+            <Show when=move || {
+                managing && management_available.get() && user_is_organizer_or_admin.get()
+            }>
                 // TODO: i18n once copy is approved.
                 <h2 class="text-lg font-bold">
                     {move || format!("Organizers ({})", organizers.with(Vec::len))}

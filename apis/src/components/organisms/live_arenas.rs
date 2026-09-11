@@ -1,9 +1,6 @@
 use crate::{
     common::{tournament_admission_viewer, TournamentAction},
-    components::{
-        atoms::rating::icon_for_speed,
-        molecules::{panel::Panel, time_row::format_compact_duration},
-    },
+    components::{atoms::rating::icon_for_speed, molecules::time_row::format_compact_duration},
     functions::tournaments::get_live_arenas,
     hooks::arena_clock::{format_time_left, use_ticking_now},
     i18n::*,
@@ -76,25 +73,30 @@ pub fn LiveArenas() -> impl IntoView {
                         // must not reread or clone the resource's tournament list.
                         view! {
                             <Show when=move || latest_end.is_some_and(|end| now.get() < end)>
-                                <div class="mx-auto w-full">
-                                    <Panel
-                                        title=move || t_string!(i18n, tournaments.arena.live_title)
-                                        clone:arenas
-                                    >
-                                        <ul class="divide-y divide-gray-200 dark:divide-gray-700">
-                                            {arenas
-                                                .into_iter()
-                                                .map(|(arena, ends_at)| {
-                                                    view! {
-                                                        <Show when=move || now.get() < ends_at>
-                                                            <ArenaCard arena=arena.clone() now ends_at />
-                                                        </Show>
-                                                    }
-                                                })
-                                                .collect_view()}
-                                        </ul>
-                                    </Panel>
-                                </div>
+                                <section class="overflow-hidden mx-auto w-full ui-panel">
+                                    <header class="flex gap-2 items-center px-4 pt-3 pb-1">
+                                        <span
+                                            class="rounded-full size-2 bg-pillbug-teal"
+                                            aria-hidden="true"
+                                        />
+                                        <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-300">
+                                            {t!(i18n, tournaments.arena.live_title)}
+                                        </h2>
+                                    </header>
+                                    <ul class="divide-y divide-black/10 dark:divide-white/10">
+                                        {arenas
+                                            .clone()
+                                            .into_iter()
+                                            .map(|(arena, ends_at)| {
+                                                view! {
+                                                    <Show when=move || now.get() < ends_at>
+                                                        <ArenaCard arena=arena.clone() now ends_at />
+                                                    </Show>
+                                                }
+                                            })
+                                            .collect_view()}
+                                    </ul>
+                                </section>
                             </Show>
                         }
                     })
@@ -172,49 +174,61 @@ fn ArenaCard(
     };
 
     view! {
-        <li class="flex gap-3 justify-between items-center py-2 px-1">
+        <li class="flex gap-4 justify-between items-center px-4 pt-2 pb-4">
             <a
                 href=href.clone()
-                class="flex flex-col min-w-0 rounded transition-opacity hover:opacity-80 grow"
+                class="flex flex-col gap-1.5 min-w-0 rounded no-link-style grow group focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-pillbug-teal"
             >
-                <span class="text-sm font-medium truncate">{name.clone()}</span>
-                <span class="flex flex-wrap gap-x-1.5 items-center text-xs text-gray-600 dark:text-gray-300">
-                    <Icon icon=icon_for_speed(speed) attr:class="size-3 shrink-0" />
-                    <span>{time_control.clone()}</span>
-                    <span aria-hidden="true">"·"</span>
-                    <span>
+                <span class="font-semibold text-gray-900 transition-colors dark:text-gray-100 wrap-break-word group-hover:text-pillbug-teal">
+                    {name.clone()}
+                </span>
+                <span class="flex flex-wrap gap-y-1 gap-x-3 items-center text-xs text-gray-600 dark:text-gray-400">
+                    <span class="inline-flex gap-1.5 items-center whitespace-nowrap">
+                        <Icon icon=icon_for_speed(speed) attr:class="size-3 shrink-0" />
+                        <span>{time_control.clone()}</span>
+                    </span>
+                    <span class="inline-flex gap-1.5 items-center whitespace-nowrap">
+                        <Icon icon=icondata_lu::LuUsers attr:class="size-3.5 shrink-0" />
                         {move || {
                             t_string!(i18n, tournaments.arena.players_active, count = players)
                                 .to_string()
                         }}
                     </span>
-                    <span aria-hidden="true">"·"</span>
-                    <span class="font-bold tabular-nums text-gray-900 dark:text-gray-100">
-                        {move || format_time_left(time_left.get())}
-                    </span>
                 </span>
             </a>
-            <Show
-                when=can_join
-                fallback=move || {
-                    view! {
-                        <a
-                            href=href.clone()
-                            title=move || admission.get().label()
-                            class="shrink-0 ui-button ui-button-secondary ui-button-sm"
-                        >
-                            {t!(i18n, tournaments.arena.view)}
-                        </a>
-                    }
-                }
-            >
-                <button
-                    class="shrink-0 ui-button ui-button-primary ui-button-sm"
-                    on:click=join.clone()
+            <div class="flex flex-col gap-2 items-end sm:flex-row sm:gap-4 sm:items-center shrink-0">
+                <time
+                    class="inline-flex gap-1.5 items-center text-sm font-semibold tabular-nums text-gray-700 dark:text-gray-200"
+                    aria-label=move || t_string!(i18n, tournaments.arena.time_left).to_string()
                 >
-                    {t!(i18n, tournaments.arena.join)}
-                </button>
-            </Show>
+                    <Icon
+                        icon=icondata_lu::LuClock3
+                        attr:class="size-3.5 text-gray-500 dark:text-gray-400"
+                    />
+                    {move || format_time_left(time_left.get())}
+                </time>
+                <Show
+                    when=can_join
+                    fallback=move || {
+                        view! {
+                            <a
+                                href=href.clone()
+                                title=move || admission.get().label()
+                                class="shrink-0 ui-button ui-button-secondary ui-button-sm"
+                            >
+                                {t!(i18n, tournaments.arena.view)}
+                            </a>
+                        }
+                    }
+                >
+                    <button
+                        class="shrink-0 ui-button ui-button-primary ui-button-sm"
+                        on:click=join.clone()
+                    >
+                        {t!(i18n, tournaments.arena.join)}
+                    </button>
+                </Show>
+            </div>
         </li>
     }
 }

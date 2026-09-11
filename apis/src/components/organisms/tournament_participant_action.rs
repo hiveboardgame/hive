@@ -203,7 +203,7 @@ pub fn TournamentParticipantAction(
                     (TournamentStatus::InProgress, TournamentFormatStore::Arena(arena)) => {
                         view! { <ArenaAction common arena /> }.into_any()
                     }
-                    (TournamentStatus::InProgress, _) => {
+                    (TournamentStatus::InProgress, _) if relationship.get().joined => {
                         view! {
                             <div class="flex flex-wrap gap-y-2 gap-x-4 items-center">
                                 {move || {
@@ -233,10 +233,8 @@ pub fn TournamentParticipantAction(
                                                 })
                                             {
                                                 "Withdrawn"
-                                            } else if relationship.get().joined {
-                                                "Playing"
                                             } else {
-                                                "Watching"
+                                                "Playing"
                                             }
                                         }}
                                     </span>
@@ -259,7 +257,7 @@ pub fn TournamentParticipantAction(
                         }
                             .into_any()
                     }
-                    (TournamentStatus::Finished, _) => ().into_any(),
+                    (TournamentStatus::InProgress | TournamentStatus::Finished, _) => ().into_any(),
                 }
             }}
         </Show>

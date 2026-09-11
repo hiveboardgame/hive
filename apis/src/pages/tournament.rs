@@ -74,7 +74,7 @@ use crate::{
 use chrono::{DateTime, Duration, Utc};
 use leptos::{
     ev::pagehide,
-    html::{Aside, Details, Dialog, Div, Summary},
+    html::{Aside, Details, Dialog, Div, Summary, Textarea},
     prelude::*,
 };
 use leptos_icons::Icon;
@@ -456,7 +456,7 @@ fn child_route_availability(
     organizer: bool,
     auth_resolved: bool,
 ) -> Option<bool> {
-    if format == Format::Arena && route != TournamentChildRoute::Manage {
+    if format == Format::Arena {
         return Some(route == TournamentChildRoute::Overview);
     }
     let started = status != TournamentStatus::NotStarted;
@@ -883,7 +883,12 @@ fn TournamentOverviewHeader() -> impl IntoView {
             </div>
         </header>
         <div class=move || {
-            if context.tournament.common.lifecycle().get().status == TournamentStatus::Finished {
+            let status = context.tournament.common.lifecycle().get().status;
+            if status == TournamentStatus::Finished
+                || (status == TournamentStatus::InProgress
+                    && context.tournament.format.format() != Format::Arena
+                    && !context.user_joined.get())
+            {
                 "p-3 border-b border-black/10 dark:border-white/10 tournament-three:hidden"
             } else {
                 "p-3 space-y-2 border-b sm:px-4 border-black/10 dark:border-white/10"
@@ -907,21 +912,21 @@ fn TournamentOverviewHeader() -> impl IntoView {
             />
         </div>
         <Show when=show_description>
-            <details class="border-b border-black/10 group dark:border-white/10">
-                <summary class="py-3 px-4 text-sm list-none text-gray-700 transition-colors cursor-pointer dark:text-gray-200 [&::-webkit-details-marker]:hidden dark:hover:bg-pillbug-teal/15 hover:bg-blue-light/70">
-                    <Show
-                        when=move || {
-                            context.tournament.common.lifecycle().get().description.is_some()
-                        }
-                        fallback=|| {
-                            view! {
-                                // TODO: i18n once copy is approved.
-                                <span class="font-semibold text-pillbug-teal">
-                                    "Add description"
-                                </span>
-                            }
-                        }
-                    >
+            <Show
+                when=move || context.tournament.common.lifecycle().get().description.is_some()
+                fallback=move || {
+                    view! {
+                        <div class="border-b border-black/10 ui-panel-body dark:border-white/10">
+                            <TournamentDescriptionEditor
+                                tournament=context.tournament
+                                editable=context.organizer
+                            />
+                        </div>
+                    }
+                }
+            >
+                <details class="border-b border-black/10 group dark:border-white/10">
+                    <summary class="py-3 px-4 text-sm list-none text-gray-700 transition-colors cursor-pointer dark:text-gray-200 [&::-webkit-details-marker]:hidden dark:hover:bg-pillbug-teal/15 hover:bg-blue-light/70">
                         <div class="grid gap-2 items-end grid-cols-[minmax(0,1fr)_auto] group-open:hidden">
                             <div
                                 class="overflow-hidden max-w-none leading-6 wrap-break-word line-clamp-2 [&_p]:inline"
@@ -947,15 +952,15 @@ fn TournamentOverviewHeader() -> impl IntoView {
                         <span class="hidden gap-1 justify-end items-center font-semibold text-pillbug-teal group-open:flex">
                             "Show less" <Icon icon=icondata_lu::LuChevronUp attr:class="size-4" />
                         </span>
-                    </Show>
-                </summary>
-                <div class="pt-0 ui-panel-body">
-                    <TournamentDescriptionEditor
-                        tournament=context.tournament
-                        editable=context.organizer
-                    />
-                </div>
-            </details>
+                    </summary>
+                    <div class="pt-0 ui-panel-body">
+                        <TournamentDescriptionEditor
+                            tournament=context.tournament
+                            editable=context.organizer
+                        />
+                    </div>
+                </details>
+            </Show>
         </Show>
     }
 }
@@ -2301,35 +2306,59 @@ fn TournamentDescriptionEditor(
     });
 
     view! {
-        <div class="space-y-3 ui-setting-group">
+        <div class=move || {
+            if state.with(|state| state.editing || state.current.is_some()) {
+                "space-y-3 ui-setting-group"
+            } else {
+                "space-y-3"
+            }
+        }>
             <Show
                 when=move || state.with(|state| state.editing)
                 fallback=move || {
                     view! {
-                        <div
-                            class="w-full max-w-none wrap-break-word prose dark:prose-invert"
-                            inner_html=move || {
-                                state
-                                    .with(|state| {
-                                        state
-                                            .current
-                                            .as_deref()
-                                            .map(markdown_to_html)
-                                            .unwrap_or_default()
-                                    })
-                            }
-                        />
+                        <Show when=move || state.with(|state| state.current.is_some())>
+                            <div
+                                class="w-full max-w-none wrap-break-word prose dark:prose-invert"
+                                inner_html=move || {
+                                    state
+                                        .with(|state| {
+                                            state
+                                                .current
+                                                .as_deref()
+                                                .map(markdown_to_html)
+                                                .unwrap_or_default()
+                                        })
+                                }
+                            />
+                        </Show>
                         <Show when=editable>
                             <div class="flex flex-wrap gap-2">
                                 <button
                                     type="button"
-                                    class="ui-button ui-button-secondary ui-button-sm"
+                                    class=move || {
+                                        if state.with(|state| state.current.is_some()) {
+                                            "ui-button ui-button-secondary ui-button-sm"
+                                        } else {
+                                            "inline-flex gap-1.5 items-center rounded text-sm font-semibold text-pillbug-teal hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-pillbug-teal"
+                                        }
+                                    }
                                     on:click=move |_| {
                                         update.clear();
                                         state.update(DescriptionEditorState::begin_edit);
                                     }
                                 >
-                                    {t!(i18n, tournaments.detail.edit_description)}
+                                    <Show when=move || state.with(|state| state.current.is_none())>
+                                        <Icon icon=icondata_lu::LuPlus attr:class="size-4" />
+                                    </Show>
+                                    {move || {
+                                        if state.with(|state| state.current.is_some()) {
+                                            t_string!(i18n, tournaments.detail.edit_description)
+                                                .to_string()
+                                        } else {
+                                            "Add description".to_string()
+                                        }
+                                    }}
                                 </button>
                                 <Show when=move || state.with(|state| state.current.is_some())>
                                     <button
@@ -2367,8 +2396,14 @@ fn TournamentDescriptionEditor(
                     <Show
                         when=move || state.with(|state| state.previewing)
                         fallback=move || {
+                            let textarea = NodeRef::<Textarea>::new();
+                            textarea
+                                .on_load(|element| {
+                                    let _ = element.focus();
+                                });
                             view! {
                                 <textarea
+                                    node_ref=textarea
                                     class="ui-field-textarea min-h-36"
                                     prop:value=move || state.with(|state| state.draft.clone())
                                     on:input=move |event| {

@@ -167,12 +167,6 @@
             "description_pending": "Updating description…",
             "description_error": "Could not update the description."
         },
-        "closeout": {
-            "title": "Close unstarted matches",
-            "description": "{{count}} eligible unstarted match(es) will be recorded as double forfeits. Games already in progress or completed are untouched.",
-            "review": "Review closeout",
-            "success": "Closed {{count}} tournament match(es)."
-        },
         "common": {
             "player": "Player",
             "versus": "vs"

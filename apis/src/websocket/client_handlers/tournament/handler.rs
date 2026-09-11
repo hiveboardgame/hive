@@ -1,6 +1,5 @@
 use crate::{
     common::TournamentUpdate,
-    i18n::*,
     providers::{
         chat::Chat,
         ActiveTournamentState,
@@ -47,7 +46,6 @@ fn is_tournament_creation_path(current_path: &str) -> bool {
 }
 
 pub fn handle_tournament(tournament: TournamentUpdate) {
-    let i18n = use_i18n();
     let notifications = expect_context::<NotificationContext>();
     let chat = expect_context::<Chat>();
     let schedules = expect_context::<SchedulesContext>();
@@ -81,7 +79,12 @@ pub fn handle_tournament(tournament: TournamentUpdate) {
             expect_context::<AlertsContext>()
                 .last_alert
                 .set(Some(AlertType::Notification(
-                    t_string!(i18n, tournaments.view.closeout.success, count = count).to_string(),
+                    // TODO: i18n once copy is approved.
+                    if count == 1 {
+                        String::from("Recorded a double forfeit.")
+                    } else {
+                        format!("Recorded {count} double forfeits.")
+                    },
                 )));
         }
         TournamentUpdate::Created(tournament_id) => {
