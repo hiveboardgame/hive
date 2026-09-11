@@ -10,6 +10,7 @@ use super::{
 };
 use crate::{
     common::{
+        login_redirect_url,
         ExternalServerError,
         LobbySnapshot as LobbySnapshotPayload,
         ServerMessage::*,
@@ -21,7 +22,7 @@ use crate::{
 };
 use leptos::{
     logging::log,
-    prelude::{expect_context, use_context, Set},
+    prelude::{expect_context, untrack, use_context, Set},
 };
 use leptos_router::hooks::use_navigate;
 use shared_types::ConversationKey;
@@ -96,7 +97,7 @@ pub fn handle_response(m: ServerResult) {
             match e {
                 ExternalServerError::Unauthorized { .. } => {
                     let navigate = use_navigate();
-                    navigate("/login", Default::default());
+                    navigate(&untrack(login_redirect_url), Default::default());
                 }
                 ExternalServerError::ChatSubscribe { attempt, error } => {
                     if let Some(chat) = use_context::<Chat>() {

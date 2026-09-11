@@ -68,25 +68,10 @@ pub async fn api_play(
 
 fn bot_db_error(error: DbError) -> anyhow::Error {
     match error {
-        DbError::NotFound { .. } => anyhow!("Not found"),
-        DbError::InvalidTournamentDetails { .. } => anyhow!("Invalid TournamentDetails"),
         DbError::InternalError { .. }
         | DbError::InvalidPersistedTournament { .. }
         | DbError::SerializationConflict => anyhow!("Internal database error"),
-        DbError::InvalidInput { .. } => anyhow!("Invalid input"),
-        DbError::InvalidAction { .. } => anyhow!("Invalid action"),
-        DbError::TimeNotFound { .. } => anyhow!("Time not present"),
         error => error.into(),
-    }
-}
-
-fn map_play_command_error(error: DbError) -> anyhow::Error {
-    match error {
-        DbError::GameIsOver => anyhow!("Game is finished"),
-        DbError::InvalidAction { info } if info == "It is not this player's turn" => {
-            anyhow!("Not your turn")
-        }
-        error => bot_db_error(error),
     }
 }
 
@@ -127,7 +112,7 @@ async fn play_move(
         &mut conn,
     )
     .await
-    .map_err(map_play_command_error)?;
+    .map_err(bot_db_error)?;
     let context = GameCommandContext::bot(
         GameReaction::Turn(played_turn.clone()),
         bot.id,
@@ -139,7 +124,7 @@ async fn play_move(
     }
     output.append(committed.output);
     if let Some(rejected) = committed.rejected {
-        return Err(map_play_command_error(rejected));
+        return Err(bot_db_error(rejected));
     }
     Ok((committed.game, played_turn))
 }
@@ -192,38 +177,6 @@ fn control_from_request(game: &Game, bot_id: uuid::Uuid, requested: &str) -> Res
     }
 }
 
-fn map_control_command_error(error: DbError, control: GameControl) -> anyhow::Error {
-    match error {
-        DbError::GameIsOver => anyhow!("Game is finished"),
-        DbError::Unauthorized => anyhow!("Not your game"),
-        DbError::InvalidAction { info } if info == "The same game control is already present" => {
-            anyhow!("Control already sent")
-        }
-        DbError::InvalidAction { info }
-            if matches!(control, GameControl::Resign(_))
-                && (info == "Game control is not allowed on this turn"
-                    || info == "An unbegun Ready tournament game cannot accept game controls") =>
-        {
-            anyhow!("Cannot resign before turn 2")
-        }
-        DbError::InvalidAction { info }
-            if matches!(control, GameControl::Abort(_))
-                && (info == "Tournament games cannot be aborted"
-                    || info == "An unbegun Ready tournament game cannot accept game controls") =>
-        {
-            anyhow!("Cannot abort tournament games")
-        }
-        DbError::InvalidAction { info }
-            if matches!(control, GameControl::Abort(_))
-                && (info == "Game control is not allowed on this turn"
-                    || info == "A started game cannot be aborted") =>
-        {
-            anyhow!("Cannot abort after turn 2")
-        }
-        error => bot_db_error(error),
-    }
-}
-
 async fn handle_control(
     req: ControlRequest,
     bot: User,
@@ -256,7 +209,7 @@ async fn handle_control(
         &mut conn,
     )
     .await
-    .map_err(|error| map_control_command_error(error, game_control))?;
+    .map_err(bot_db_error)?;
     let context = GameCommandContext::bot(
         GameReaction::Control(game_control),
         bot.id,
@@ -270,7 +223,7 @@ async fn handle_control(
     }
     output.append(committed.output);
     if let Some(rejected) = committed.rejected {
-        return Err(map_control_command_error(rejected, game_control));
+        return Err(bot_db_error(rejected));
     }
     Ok(committed.game)
 }

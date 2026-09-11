@@ -1,5 +1,5 @@
 use crate::{
-    common::auth_page_url,
+    common::{auth_page_url, use_return_path},
     components::{
         layouts::page_shell::{PageShell, PageShellVariant},
         molecules::page_card::PageCard,
@@ -7,7 +7,7 @@ use crate::{
     },
     functions::{auth::register::Register, users::username_taken},
     i18n::*,
-    providers::{use_auth_return_path, AuthContext},
+    providers::AuthContext,
 };
 use leptos::{form::ActionForm, html, leptos_dom::helpers::debounce, prelude::*};
 use std::time::Duration;
@@ -23,7 +23,7 @@ pub fn Register() -> impl IntoView {
         let user = user.clone();
         async move { username_taken(user).await }
     });
-    let pathname = use_auth_return_path();
+    let pathname = use_return_path();
     let my_input = NodeRef::<html::Input>::new();
     Effect::new(move |_| {
         let _ = my_input.get_untracked().map(|el| el.focus());

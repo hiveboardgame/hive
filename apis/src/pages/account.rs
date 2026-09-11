@@ -1,4 +1,5 @@
 use crate::{
+    common::use_return_path,
     components::{
         layouts::page_shell::{PageShell, PageShellVariant},
         molecules::panel::Panel,
@@ -6,7 +7,7 @@ use crate::{
     },
     functions::accounts::{delete::DeleteAccount, edit::EditAccount},
     i18n::*,
-    providers::{AuthContext, RefererContext},
+    providers::AuthContext,
     pwa,
 };
 use leptos::{form::ActionForm, leptos_dom::helpers::debounce, prelude::*, task::spawn_local};
@@ -18,7 +19,7 @@ pub fn Account() -> impl IntoView {
     let account_action = ServerAction::<EditAccount>::new();
     let delete_action = ServerAction::<DeleteAccount>::new();
     let auth_session = expect_context::<AuthContext>().session_actions();
-    let pathname = expect_context::<RefererContext>().pathname;
+    let pathname = use_return_path();
     let current_password = RwSignal::new(String::new());
     let new_password = RwSignal::new(String::new());
     let confirm_password = RwSignal::new(String::new());
@@ -133,7 +134,7 @@ pub fn Account() -> impl IntoView {
                             "Password must be at least 8 characters and match confirmation"
                         </small>
                     </Show>
-                    <input type="hidden" name="pathname" value=pathname.get_value() />
+                    <input type="hidden" name="pathname" value=pathname />
                     <button
                         type="submit"
                         disabled=form_invalid

@@ -1,5 +1,5 @@
 use crate::{
-    common::ChatSendError,
+    common::{login_redirect_url, ChatSendError},
     i18n::*,
     providers::{
         chat::{Chat, ConversationHandle, InitialHistoryStatus, SendIssue},
@@ -198,7 +198,7 @@ pub(super) fn Composer(
                                 fallback=move || {
                                     view! {
                                         <a
-                                            href="/login"
+                                            href=move || login_redirect_url()
                                             class="w-full ui-button ui-button-primary ui-button-md min-h-11"
                                         >
                                             {t!(i18n, messages.chat.login_to_send)}

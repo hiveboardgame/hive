@@ -1,4 +1,44 @@
+use leptos::prelude::*;
+use leptos_router::hooks::use_location;
 use url::{form_urlencoded, Position, Url};
+
+pub(crate) fn current_page_path() -> String {
+    let location = use_location();
+    let mut path = location.pathname.get();
+    let search = location.search.get();
+    if !search.is_empty() {
+        path.push('?');
+        path.push_str(&search);
+    }
+    #[cfg(not(feature = "ssr"))]
+    path.push_str(&location.hash.get());
+    path
+}
+
+pub(crate) fn login_redirect_url() -> String {
+    auth_page_url("/login", &current_page_path())
+}
+
+pub(crate) fn use_return_path() -> Memo<String> {
+    let location = use_location();
+    Memo::new(move |_| {
+        let query = location.search.get();
+        let Some((_, path)) =
+            form_urlencoded::parse(query.as_bytes()).find(|(key, _)| key == "return_to")
+        else {
+            return String::from("/");
+        };
+        let path = path.into_owned();
+        #[cfg(not(feature = "ssr"))]
+        let path = if path.contains('#') {
+            path
+        } else {
+            // HTTP redirects inherit the original fragment, which the server never receives.
+            format!("{path}{}", location.hash.get())
+        };
+        safe_return_path(&path)
+    })
+}
 
 pub(crate) fn safe_return_path(path: &str) -> String {
     if !path.starts_with('/')

@@ -1,11 +1,7 @@
-#[cfg(not(feature = "ssr"))]
-use crate::components::layouts::navigation_focus::current_browser_location_key;
 use crate::{
+    common::login_redirect_url,
     components::{
-        layouts::{
-            base_layout::BaseLayout,
-            navigation_focus::{NavigationFocus, NavigationFocusState},
-        },
+        layouts::base_layout::BaseLayout,
         organisms::{direct_challenge_modal::DirectChallengeModal, display_games::DisplayGames},
     },
     i18n::I18nContextProvider,
@@ -51,7 +47,6 @@ use crate::{
         challenges::provide_challenges,
         chat::provide_chat,
         games::provide_games,
-        login_redirect_url,
         online_users::provide_users,
         provide_active_tournament_state,
         provide_alerts,
@@ -63,7 +58,6 @@ use crate::{
         provide_game_state,
         provide_notifications,
         provide_ping,
-        provide_referer,
         provide_server_updates,
         provide_sounds,
         refocus::provide_refocus,
@@ -92,9 +86,6 @@ use leptos_router::{
 use leptos_use::SameSite;
 use shared_types::{GameProgress, GameThread};
 
-#[cfg(not(feature = "ssr"))]
-use leptos::{ev, leptos_dom::helpers::window_event_listener};
-
 // 1 year in milliseconds
 const LOCALE_MAX_AGE: i64 = 1000 * 60 * 60 * 24 * 365;
 
@@ -105,7 +96,6 @@ pub fn App() -> impl IntoView {
 
     //These dont expect any other context, can be provided in any order
     provide_ping();
-    provide_referer();
     provide_server_updates();
     provide_schedules();
     provide_notifications();
@@ -139,27 +129,12 @@ pub fn App() -> impl IntoView {
             .map(|identity| matches!(identity, AuthIdentity::User(_)))
     };
     let is_admin = move || auth.admin.get();
-    #[cfg(not(feature = "ssr"))]
-    let initial_location = current_browser_location_key();
-    #[cfg(feature = "ssr")]
-    let initial_location = None;
-    let navigation_focus = NavigationFocusState::new(initial_location);
-    provide_context(navigation_focus.clone());
-    #[cfg(not(feature = "ssr"))]
-    {
-        let navigation_focus = navigation_focus.clone();
-        let popstate_handle = window_event_listener(ev::popstate, move |_| {
-            navigation_focus.begin_history_navigation(current_browser_location_key());
-        });
-        on_cleanup(move || popstate_handle.remove());
-    }
     view! {
         <I18nContextProvider cookie_options=CookieOptions::default()
             .max_age(LOCALE_MAX_AGE)
             .same_site(SameSite::Lax)
             .path("/")>
             <Router>
-                <NavigationFocus state=navigation_focus />
                 <Routes fallback=|| "404 Not Found">
                     <ParentRoute
                         path=path!("")
@@ -215,7 +190,7 @@ pub fn App() -> impl IntoView {
                         <ProtectedParentRoute
                             condition=is_logged_in
                             path=path!("/message")
-                            redirect_path=|| "/login"
+                            redirect_path=|| untrack(login_redirect_url)
                             view=MessagesLayout
                         >
                             <Route path=path!("") view=MessagesIndex />
@@ -236,7 +211,7 @@ pub fn App() -> impl IntoView {
                         <ProtectedRoute
                             condition=is_logged_in
                             path=path!("/account")
-                            redirect_path=|| "/login"
+                            redirect_path=|| untrack(login_redirect_url)
                             view=|| view! { <Account /> }
                         />
                         <Route
@@ -248,26 +223,26 @@ pub fn App() -> impl IntoView {
                         <ProtectedRoute
                             condition=is_logged_in
                             path=path!("/config")
-                            redirect_path=|| "/login"
+                            redirect_path=|| untrack(login_redirect_url)
                             view=|| view! { <Config /> }
                         />
                         <ProtectedRoute
                             condition=is_logged_in
                             path=path!("/notifications")
-                            redirect_path=|| "/login"
+                            redirect_path=|| untrack(login_redirect_url)
                             view=|| view! { <Notifications /> }
                         />
                         <TournamentRoutes />
                         <ProtectedRoute
                             condition=is_logged_in
                             path=path!("/tournaments/create")
-                            redirect_path=login_redirect_url
+                            redirect_path=|| untrack(login_redirect_url)
                             view=|| view! { <TournamentCreateChooser /> }
                         />
                         <ProtectedRoute
                             condition=is_logged_in
                             path=path!("/tournaments/create/arena")
-                            redirect_path=login_redirect_url
+                            redirect_path=|| untrack(login_redirect_url)
                             view=|| {
                                 view! { <TournamentCreate kind=TournamentCreationKind::Arena /> }
                             }
@@ -275,7 +250,7 @@ pub fn App() -> impl IntoView {
                         <ProtectedRoute
                             condition=is_logged_in
                             path=path!("/tournaments/create/swiss")
-                            redirect_path=login_redirect_url
+                            redirect_path=|| untrack(login_redirect_url)
                             view=|| {
                                 view! { <TournamentCreate kind=TournamentCreationKind::Swiss /> }
                             }
@@ -283,7 +258,7 @@ pub fn App() -> impl IntoView {
                         <ProtectedRoute
                             condition=is_logged_in
                             path=path!("/tournaments/create/round-robin")
-                            redirect_path=login_redirect_url
+                            redirect_path=|| untrack(login_redirect_url)
                             view=|| {
                                 view! {
                                     <TournamentCreate kind=TournamentCreationKind::RoundRobin />
@@ -293,7 +268,7 @@ pub fn App() -> impl IntoView {
                         <ProtectedRoute
                             condition=is_logged_in
                             path=path!("/tournaments/create/elimination")
-                            redirect_path=login_redirect_url
+                            redirect_path=|| untrack(login_redirect_url)
                             view=|| {
                                 view! {
                                     <TournamentCreate kind=TournamentCreationKind::Elimination />
@@ -337,7 +312,7 @@ pub fn App() -> impl IntoView {
                             <ProtectedParentRoute
                                 condition=is_logged_in
                                 path=path!("mine")
-                                redirect_path=|| "/login"
+                                redirect_path=|| untrack(login_redirect_url)
                                 view=|| view! { <Outlet /> }
                             >
                                 <Route path=path!("") view=MineTournamentsRedirect />

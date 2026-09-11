@@ -27,7 +27,14 @@ mod tournament_format_label;
 mod tournament_standings;
 mod ui_utils;
 mod user_action;
-pub(crate) use auth_redirect::{auth_page_url, safe_return_path};
+#[cfg(feature = "ssr")]
+pub(crate) use auth_redirect::safe_return_path;
+pub(crate) use auth_redirect::{
+    auth_page_url,
+    current_page_path,
+    login_redirect_url,
+    use_return_path,
+};
 pub use challenge_action::ChallengeAction;
 pub use challenge_viewer::{
     challenge_action_flags,

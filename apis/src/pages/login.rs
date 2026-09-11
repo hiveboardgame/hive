@@ -1,19 +1,19 @@
 use crate::{
-    common::auth_page_url,
+    common::{auth_page_url, use_return_path},
     components::{
         layouts::page_shell::{PageShell, PageShellVariant},
         molecules::page_card::PageCard,
     },
     functions::auth::login::Login,
     i18n::*,
-    providers::{use_auth_return_path, AuthContext},
+    providers::AuthContext,
 };
 use leptos::{form::ActionForm, html, prelude::*};
 
 #[component]
 pub fn Login() -> impl IntoView {
     let i18n = use_i18n();
-    let pathname = use_auth_return_path();
+    let pathname = use_return_path();
     let my_input = NodeRef::<html::Input>::new();
     Effect::new(move |_| {
         let _ = my_input.get_untracked().map(|el| el.focus());
@@ -76,7 +76,10 @@ pub fn Login() -> impl IntoView {
                 </ActionForm>
             </PageCard>
             <p class="text-xs text-center">
-                <a class="ui-text-link" href="/forgot-password">
+                <a
+                    class="ui-text-link"
+                    href=move || auth_page_url("/forgot-password", &pathname.get())
+                >
                     "Forgot your password?"
                 </a>
             </p>
