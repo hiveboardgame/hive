@@ -21,25 +21,28 @@ fn page_range(page: usize, total: usize, page_size: usize) -> Option<(usize, usi
 pub fn PaginationControls(
     page: Signal<usize>,
     total: Signal<usize>,
-    page_size: usize,
+    #[prop(into)] page_size: Signal<usize>,
     on_page_change: Callback<usize>,
     #[prop(optional)] display_total: Option<Signal<usize>>,
     #[prop(optional)] struck_total: Option<Signal<Option<usize>>>,
     #[prop(optional)] show_when_empty: bool,
+    #[prop(optional)] hide_single_page: bool,
 ) -> impl IntoView {
     let i18n = use_i18n();
     let display_total = display_total.unwrap_or(total);
     let struck_total = struck_total.unwrap_or_else(|| Signal::derive(|| None));
-    let total_pages = Signal::derive(move || total.get().div_ceil(page_size).max(1));
+    let total_pages = Signal::derive(move || total.get().div_ceil(page_size.get().max(1)).max(1));
     let has_previous = Signal::derive(move || page.get() > 1);
     let has_next = Signal::derive(move || page.get() < total_pages.get());
     let visible_range = Signal::derive(move || {
         let total = total.get();
-        page_range(page.get(), total, page_size)
+        page_range(page.get(), total, page_size.get())
     });
 
     view! {
-        <Show when=move || { show_when_empty || total.get() > 0 }>
+        <Show when=move || {
+            (show_when_empty || total.get() > 0) && (!hide_single_page || total_pages.get() > 1)
+        }>
             <nav
                 class="flex gap-1 items-center"
                 aria-label=move || t_string!(i18n, archive.pagination).to_string()

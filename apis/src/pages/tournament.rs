@@ -1552,11 +1552,7 @@ pub fn PairingsRoute() -> impl IntoView {
     let TournamentFormatStore::Swiss(swiss) = context.tournament.format else {
         unreachable!("pairings route is only available for Swiss tournaments")
     };
-    view! {
-        <div class="relative left-1/2 -translate-x-1/2 w-[calc(100vw-0.75rem)] sm:w-[98vw]">
-            <SwissRoundBrowser common=context.tournament.common swiss />
-        </div>
-    }
+    view! { <SwissRoundBrowser common=context.tournament.common swiss /> }
 }
 
 #[component]

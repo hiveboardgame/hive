@@ -4,6 +4,7 @@ mod challenge_viewer;
 mod client_message;
 mod config_options;
 mod date_time;
+mod fitted_pagination;
 mod focus;
 mod game_action;
 mod game_display;
@@ -47,6 +48,7 @@ pub use challenge_viewer::{
 pub use client_message::{ChatSendRequest, ClientRequest, SubscriptionAttempt};
 pub use config_options::{CurrentConfirm, MoveConfirm, TileDesign, TileDots, TileRotation};
 pub(crate) use date_time::{format_local_datetime, format_tournament_datetime};
+pub(crate) use fitted_pagination::use_fitted_pagination;
 pub(crate) use focus::focus_after_render;
 pub use game_action::GameAction;
 pub use game_display::{

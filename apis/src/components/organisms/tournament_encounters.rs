@@ -6,10 +6,12 @@ use crate::{
         primary_score_presentation,
         primary_value_text,
         standings_value_text,
+        use_fitted_pagination,
     },
     components::{
         molecules::{
             game_previews::GamePreview,
+            pagination_controls::PaginationControls,
             panel::Panel,
             time_row::TimeRow,
             tournament_standings_controls::TournamentStandingsControls,
@@ -34,7 +36,7 @@ use crate::{
     responses::{TournamentMemberships, TournamentStandings},
 };
 use hive_lib::{Color, GameStatus};
-use leptos::{portal::Portal, prelude::*};
+use leptos::{html, portal::Portal, prelude::*};
 use reactive_stores::{ArcField, Store};
 use shared_types::{
     tournament::{
@@ -1325,8 +1327,6 @@ pub fn RoundRobinCrosstable(
     }
 }
 
-const ROUND_BROWSER_PAGE_SIZE: usize = 10;
-
 #[derive(Clone)]
 enum SwissRoundItem {
     Encounter(SwissEncounterView),
@@ -1435,7 +1435,7 @@ fn swiss_encounter_result(
     let state = unresolved_state.unwrap_or(if all_scored && scored != 0 {
         ""
     } else if resolved {
-        "Resolved"
+        "Finished"
     } else {
         "Pending"
     });
@@ -1557,10 +1557,13 @@ fn SwissRoundLedgerItem(
                     if interactive {
                         // TODO: i18n once copy is approved.
                         view! {
-                            <article class="ui-dense-table-row">
+                            <article
+                                data-page-row
+                                class="min-w-0 rounded border @container border-black/10 dark:border-white/10"
+                            >
                                 <button
                                     type="button"
-                                    class="block py-2 px-3 w-full text-left hover:bg-pillbug-teal/10"
+                                    class="block py-3 px-2 w-full text-left rounded sm:px-3 hover:bg-pillbug-teal/10 focus-visible:outline-pillbug-teal"
                                     on:click=move |_| open_pairing.run((round_index, pairing_index))
                                 >
                                     <TournamentEncounterSummary
@@ -1576,9 +1579,12 @@ fn SwissRoundLedgerItem(
                             .into_any()
                     } else if let Some(game_id) = game_id {
                         view! {
-                            <article class="ui-dense-table-row">
+                            <article
+                                data-page-row
+                                class="min-w-0 rounded border @container border-black/10 dark:border-white/10"
+                            >
                                 <a
-                                    class="block py-2 px-3 w-full text-left no-link-style hover:bg-pillbug-teal/10"
+                                    class="block py-3 px-2 w-full text-left rounded sm:px-3 no-link-style hover:bg-pillbug-teal/10 focus-visible:outline-pillbug-teal"
                                     href=format!("/game/{game_id}")
                                 >
                                     <TournamentEncounterSummary
@@ -1594,7 +1600,10 @@ fn SwissRoundLedgerItem(
                             .into_any()
                     } else {
                         view! {
-                            <article class="py-2 px-3 ui-dense-table-row">
+                            <article
+                                data-page-row
+                                class="py-3 px-2 min-w-0 rounded border sm:px-3 @container border-black/10 dark:border-white/10"
+                            >
                                 <TournamentEncounterSummary
                                     identity=format!("#{}", pairing_index + 1)
                                     left
@@ -1636,7 +1645,10 @@ fn SwissRoundLedgerItem(
                 )),
             };
             view! {
-                <article class="py-2 px-3 ui-dense-table-row">
+                <article
+                    data-page-row
+                    class="py-3 px-2 min-w-0 rounded border sm:px-3 @container border-black/10 dark:border-white/10"
+                >
                     <TournamentEncounterSummary
                         identity=String::from("—")
                         left=participant
@@ -1657,7 +1669,7 @@ pub fn SwissRoundBrowser(
 ) -> impl IntoView {
     let selected = RwSignal::new(swiss.rounds().get_untracked().len().saturating_sub(1));
     let search = RwSignal::new(String::new());
-    let page = RwSignal::new(1usize);
+    let container = NodeRef::<html::Div>::new();
     let opened_pairing = RwSignal::new(None::<(u32, u32)>);
     let open_pairing = Callback::new(move |pairing| opened_pairing.set(Some(pairing)));
     let close_drawer = Callback::new(move |()| opened_pairing.set(None));
@@ -1691,6 +1703,9 @@ pub fn SwissRoundBrowser(
         |_, _| true,
     );
     let total = Signal::derive(move || filtered_items.with(Vec::len));
+    let pagination = use_fitted_pagination(container, total, 10);
+    let page = pagination.page;
+    let page_size = pagination.page_size;
     let on_page_change = Callback::new(move |next| page.set(next));
     let on_query_change = Callback::new(move |query| {
         search.set(query);
@@ -1703,29 +1718,16 @@ pub fn SwissRoundBrowser(
             page.set(1);
         }
     });
-    Effect::new(move |_| {
-        let last = total.get().div_ceil(ROUND_BROWSER_PAGE_SIZE).max(1);
-        if page.get_untracked() > last {
-            page.set(last);
-        } else if page.get_untracked() == 0 {
-            page.set(1);
-        }
-    });
 
     view! {
-        <Panel
-            // TODO: i18n once copy is approved.
-            title=move || common.lifecycle().get().name
-            class="mx-auto min-w-0 max-w-6xl"
-            body_class="space-y-3"
-        >
-            {move || {
-                {
+        <Panel class="min-w-0" body_class="@container">
+            <div node_ref=container data-testid="swiss-pairings">
+                {move || {
                     let configuration = swiss.configuration().get();
                     let rounds = swiss.rounds().get();
                     let selected_index = selected.get().min(rounds.len().saturating_sub(1));
                     let round = rounds.get(selected_index)?.clone();
-                    let (resolved, encounter_count) = swiss_round_progress(
+                    let (finished, encounter_count) = swiss_round_progress(
                             &rounds,
                             round.round_index,
                         )
@@ -1739,21 +1741,38 @@ pub fn SwissRoundBrowser(
                     let next = (selected_index + 1 < rounds.len()).then_some(selected_index + 1);
                     Some(
                         view! {
-                            <div class="space-y-3">
-                                <div class="flex flex-wrap gap-y-1 gap-x-4 justify-between items-baseline">
-                                    // TODO: i18n once copy is approved.
-                                    <strong class="text-base tabular-nums">
-                                        {format!(
-                                            "Round {} of {configured_rounds}",
-                                            round.round_index + 1,
-                                        )}
-                                    </strong>
-                                    // TODO: i18n once copy is approved.
-                                    <span class="text-xs font-semibold tabular-nums text-gray-500">
-                                        {format!("{resolved} of {encounter_count} resolved")}
-                                    </span>
-                                </div>
-                                <div class="flex gap-2 justify-between">
+                            <div class="flex flex-wrap gap-3 justify-between items-center pb-3 border-b border-black/10 dark:border-white/10">
+                                // TODO: i18n once copy is approved.
+                                <nav
+                                    aria-label="Tournament rounds"
+                                    class="hidden flex-wrap gap-1 items-center @min-[48rem]:flex"
+                                >
+                                    <span class="mr-2 text-sm font-semibold">"Round"</span>
+                                    {rounds
+                                        .iter()
+                                        .enumerate()
+                                        .map(|(index, round)| {
+                                            view! {
+                                                <button
+                                                    type="button"
+                                                    class=if index == selected_index {
+                                                        "ui-button ui-button-primary ui-button-sm min-w-10"
+                                                    } else {
+                                                        "ui-button ui-button-secondary ui-button-sm min-w-10"
+                                                    }
+                                                    aria-current=(index == selected_index).then_some("step")
+                                                    on:click=move |_| {
+                                                        selected.set(index);
+                                                        page.set(1);
+                                                    }
+                                                >
+                                                    {round.round_index + 1}
+                                                </button>
+                                            }
+                                        })
+                                        .collect_view()}
+                                </nav>
+                                <div class="flex gap-2 justify-between items-center w-full @min-[48rem]:hidden">
                                     // TODO: i18n once copy is approved.
                                     <button
                                         type="button"
@@ -1769,6 +1788,10 @@ pub fn SwissRoundBrowser(
                                         "Previous round"
                                     </button>
                                     // TODO: i18n once copy is approved.
+                                    <span class="text-sm font-semibold tabular-nums">
+                                        {format!("{} / {configured_rounds}", round.round_index + 1)}
+                                    </span>
+                                    // TODO: i18n once copy is approved.
                                     <button
                                         type="button"
                                         class="ui-button ui-button-secondary ui-button-sm"
@@ -1783,78 +1806,97 @@ pub fn SwissRoundBrowser(
                                         "Next round"
                                     </button>
                                 </div>
-                                <div class="flex items-center py-2 px-2 min-w-0 sm:px-3 border-y border-black/10 dark:border-white/10">
-                                    <TournamentStandingsControls
-                                        page=page.into()
-                                        total
-                                        page_size=ROUND_BROWSER_PAGE_SIZE
-                                        query=search.into()
-                                        on_query_change
-                                        on_page_change
-                                        entrant_names
-                                        suggestions_id=suggestions_id.get_value()
-                                    />
+                                <TournamentStandingsControls
+                                    page=page.into()
+                                    total
+                                    page_size
+                                    query=search.into()
+                                    on_query_change
+                                    on_page_change
+                                    entrant_names
+                                    suggestions_id=suggestions_id.get_value()
+                                    search_only=true
+                                />
+                            </div>
+                            <div class="flex flex-wrap gap-y-1 gap-x-4 justify-between items-baseline py-3">
+                                <div class="flex flex-wrap gap-y-1 gap-x-3 items-baseline">
+                                    // TODO: i18n once copy is approved.
+                                    <strong class="text-base">
+                                        {format!("Round {}", round.round_index + 1)}
+                                    </strong>
+                                    // TODO: i18n once copy is approved.
+                                    <span class="text-xs text-gray-500">
+                                        {format!("{finished} of {encounter_count} finished")}
+                                    </span>
                                 </div>
+                                // TODO: i18n once copy is approved.
+                                <span class="text-xs text-gray-500">
+                                    "Points shown before this round"
+                                </span>
                             </div>
                         },
                     )
-                }
-            }}
-            <div class="overflow-hidden rounded border border-gray-200 dark:border-gray-700">
-                <div class="hidden gap-2 py-2 px-3 text-xs font-bold tracking-wide text-gray-500 uppercase md:grid md:grid-cols-[3rem_minmax(0,1fr)_8rem_minmax(0,1fr)]">
-                    // TODO: i18n once copy is approved.
-                    <span class="text-center">"Pair"</span>
-                    // TODO: i18n once copy is approved.
-                    <span>"Player · rating · pre-round score"</span>
-                    // TODO: i18n once copy is approved.
-                    <span class="text-center">"Result / state"</span>
-                    // TODO: i18n once copy is approved.
-                    <span>"Player · rating · pre-round score"</span>
-                </div>
-                {move || {
-                    let start = page
-                        .get()
-                        .saturating_sub(1)
-                        .saturating_mul(ROUND_BROWSER_PAGE_SIZE);
-                    let visible = filtered_items
-                        .get()
-                        .into_iter()
-                        .skip(start)
-                        .take(ROUND_BROWSER_PAGE_SIZE)
-                        .collect::<Vec<_>>();
-                    if visible.is_empty() {
-                        view! {
-                            // TODO: i18n once copy is approved.
-                            <p class="ui-empty-state">"No pairings match this search."</p>
-                        }
-                            .into_any()
-                    } else {
-                        let configuration = swiss.configuration().get();
-                        let interactive = is_double_swiss(&configuration);
-                        let round_index = swiss
-                            .rounds()
-                            .get()
-                            .get(selected.get())
-                            .map(|round| round.round_index)
-                            .unwrap_or_default();
-                        visible
-                            .into_iter()
-                            .map(|item| {
-                                view! {
-                                    <SwissRoundLedgerItem
-                                        common
-                                        configuration=configuration.clone()
-                                        item
-                                        round_index
-                                        open_pairing
-                                        interactive
-                                    />
-                                }
-                            })
-                            .collect_view()
-                            .into_any()
-                    }
                 }}
+                <div
+                    data-page-items
+                    class="grid grid-cols-1 gap-2 @min-[64rem]:grid-cols-2 @min-[64rem]:gap-x-4"
+                >
+                    {move || {
+                        let start = page.get().saturating_sub(1).saturating_mul(page_size.get());
+                        let visible = filtered_items
+                            .get()
+                            .into_iter()
+                            .skip(start)
+                            .take(page_size.get())
+                            .collect::<Vec<_>>();
+                        if visible.is_empty() {
+                            view! {
+                                // TODO: i18n once copy is approved.
+                                <p class="col-span-full ui-empty-state">
+                                    "No pairings match this search."
+                                </p>
+                            }
+                                .into_any()
+                        } else {
+                            let configuration = swiss.configuration().get();
+                            let interactive = is_double_swiss(&configuration);
+                            let round_index = swiss
+                                .rounds()
+                                .get()
+                                .get(selected.get())
+                                .map(|round| round.round_index)
+                                .unwrap_or_default();
+                            visible
+                                .into_iter()
+                                .map(|item| {
+                                    view! {
+                                        <SwissRoundLedgerItem
+                                            common
+                                            configuration=configuration.clone()
+                                            item
+                                            round_index
+                                            open_pairing
+                                            interactive
+                                        />
+                                    }
+                                })
+                                .collect_view()
+                                .into_any()
+                        }
+                    }}
+                </div>
+                <div
+                    class="flex justify-end pt-3"
+                    class:hidden=move || total.get() <= page_size.get()
+                >
+                    <PaginationControls
+                        page=page.into()
+                        total
+                        page_size
+                        on_page_change
+                        hide_single_page=true
+                    />
+                </div>
             </div>
         </Panel>
         {move || {

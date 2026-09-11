@@ -5,10 +5,15 @@ use crate::{
         round_robin_criterion_presentation,
         standings_value_text,
         swiss_criterion_presentation,
+        use_fitted_pagination,
         ScorePresentation,
     },
     components::{
-        molecules::{panel::Panel, tournament_standings_controls::TournamentStandingsControls},
+        molecules::{
+            pagination_controls::PaginationControls,
+            panel::Panel,
+            tournament_standings_controls::TournamentStandingsControls,
+        },
         organisms::tournament_explanations::{
             round_robin_criterion_explanation,
             round_robin_criterion_name,
@@ -26,7 +31,7 @@ use crate::{
         TournamentState,
     },
 };
-use leptos::prelude::*;
+use leptos::{html, prelude::*};
 use leptos_i18n::I18nContext;
 use shared_types::{
     tournament::{
@@ -40,7 +45,6 @@ use shared_types::{
 
 const CELL: &str = "px-1 py-2 text-center text-sm whitespace-nowrap sm:px-2";
 const HEAD: &str = "px-1 py-2 text-[0.65rem] font-bold uppercase whitespace-nowrap sm:px-2";
-const PAGE_SIZE: usize = 25;
 
 #[derive(Clone, Copy)]
 struct DetailedStandingsColumn {
@@ -199,7 +203,7 @@ pub fn TournamentDetailedStandings(tournament: TournamentState) -> impl IntoView
             .map(|player| player.username.clone())
             .collect()
     });
-    let page = RwSignal::new(1usize);
+    let container = NodeRef::<html::Div>::new();
     let row_columns = model.columns.clone();
     let primary_presentation = model.primary_presentation;
     let filtered_rows = Memo::new(move |_| {
@@ -248,26 +252,20 @@ pub fn TournamentDetailedStandings(tournament: TournamentState) -> impl IntoView
             .collect::<Vec<_>>()
     });
     let matching_count = Signal::derive(move || filtered_rows.with(Vec::len));
+    let pagination = use_fitted_pagination(container, matching_count, 25);
+    let page = pagination.page;
+    let page_size = pagination.page_size;
     let on_page_change = Callback::new(move |next| page.set(next));
     let on_query_change = Callback::new(move |query| {
         search.set(query);
         page.set(1);
     });
-    Effect::new(move || {
-        let last = matching_count.get().div_ceil(PAGE_SIZE).max(1);
-        if page.get() > last {
-            page.set(last);
-        } else if page.get() == 0 {
-            page.set(1);
-        }
-    });
-
     let rows = move || {
-        let start = page.get().saturating_sub(1).saturating_mul(PAGE_SIZE);
+        let start = page.get().saturating_sub(1).saturating_mul(page_size.get());
         filtered_rows.with(|rows| {
             rows.iter()
                 .skip(start)
-                .take(PAGE_SIZE)
+                .take(page_size.get())
                 .cloned()
                 .map(|row| {
                     let DetailedStandingsRow {
@@ -280,8 +278,8 @@ pub fn TournamentDetailedStandings(tournament: TournamentState) -> impl IntoView
                         values,
                     } = row;
                     view! {
-                        <tr class="ui-dense-table-row">
-                            <td class="sticky left-0 z-10 py-2 px-1 w-14 text-sm text-center min-w-14 bg-even-light dark:bg-surface-panel">
+                        <tr data-page-row class="ui-dense-table-row">
+                            <td class="sticky left-0 z-10 py-2 px-1 w-14 text-sm text-center whitespace-nowrap min-w-14 bg-even-light dark:bg-surface-panel">
                                 {placement
                                     .map(|placement| placement.to_string())
                                     .unwrap_or_else(|| String::from("—"))}
@@ -331,65 +329,80 @@ pub fn TournamentDetailedStandings(tournament: TournamentState) -> impl IntoView
             class="min-w-0"
             body_class="p-0"
         >
-            <div class="flex items-center py-2 px-2 min-w-0 border-b sm:px-3 border-black/10 dark:border-white/10">
-                <TournamentStandingsControls
-                    page=page.into()
-                    total=matching_count
-                    page_size=PAGE_SIZE
-                    query=search.into()
-                    on_query_change
-                    on_page_change
-                    entrant_names
-                    suggestions_id=suggestions_id.get_value()
-                />
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full table-auto h-fit min-w-[22rem]">
-                    <thead>
-                        <tr>
-                            <th class="sticky left-0 z-20 p-2 w-14 text-sm min-w-14 bg-even-light dark:bg-surface-panel">
-                                {t!(i18n, tournaments.finished_standings.position)}
-                            </th>
-                            <th class="sticky left-14 z-20 p-2 text-sm bg-even-light dark:bg-surface-panel">
-                                {t!(i18n, tournaments.finished_standings.player)}
-                            </th>
-                            // TODO: i18n once copy is approved.
-                            <th class=HEAD>"Rating"</th>
-                            <th class=HEAD>{move || primary_name.get()}</th>
-                            {columns
-                                .into_iter()
-                                .map(|column| {
-                                    view! {
-                                        <th class=HEAD title=move || column.explanation.get()>
-                                            {move || column.name.get()}
-                                        </th>
-                                    }
-                                })
-                                .collect_view()}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <Show when=move || {
-                            matching_count.get() == 0 && !search.get().trim().is_empty()
-                        }>
+            <div node_ref=container data-testid="tournament-standings">
+                <div class="flex items-center py-2 px-2 min-w-0 border-b sm:px-3 border-black/10 dark:border-white/10">
+                    <TournamentStandingsControls
+                        page=page.into()
+                        total=matching_count
+                        page_size
+                        query=search.into()
+                        on_query_change
+                        on_page_change
+                        entrant_names
+                        suggestions_id=suggestions_id.get_value()
+                        search_only=true
+                    />
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full table-auto h-fit min-w-[22rem]">
+                        <thead>
                             <tr>
-                                <td colspan=column_count class="p-4 text-sm text-center">
-                                    // TODO: i18n once copy is approved.
-                                    <span>"No players match your search. "</span>
-                                    // TODO: i18n once copy is approved.
-                                    <button
-                                        type="button"
-                                        class="ui-text-link"
-                                        on:click=move |_| on_query_change.run(String::new())
-                                    >
-                                        "Clear search"
-                                    </button>
-                                </td>
+                                <th class="sticky left-0 z-20 p-2 w-14 text-sm min-w-14 bg-even-light dark:bg-surface-panel">
+                                    {t!(i18n, tournaments.finished_standings.position)}
+                                </th>
+                                <th class="sticky left-14 z-20 p-2 text-sm bg-even-light dark:bg-surface-panel">
+                                    {t!(i18n, tournaments.finished_standings.player)}
+                                </th>
+                                // TODO: i18n once copy is approved.
+                                <th class=HEAD>"Rating"</th>
+                                <th class=HEAD>{move || primary_name.get()}</th>
+                                {columns
+                                    .into_iter()
+                                    .map(|column| {
+                                        view! {
+                                            <th class=HEAD title=move || column.explanation.get()>
+                                                {move || column.name.get()}
+                                            </th>
+                                        }
+                                    })
+                                    .collect_view()}
                             </tr>
-                        </Show>
-                        {rows}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody data-page-items>
+                            <Show when=move || {
+                                matching_count.get() == 0 && !search.get().trim().is_empty()
+                            }>
+                                <tr>
+                                    <td colspan=column_count class="p-4 text-sm text-center">
+                                        // TODO: i18n once copy is approved.
+                                        <span>"No players match your search. "</span>
+                                        // TODO: i18n once copy is approved.
+                                        <button
+                                            type="button"
+                                            class="ui-text-link"
+                                            on:click=move |_| on_query_change.run(String::new())
+                                        >
+                                            "Clear search"
+                                        </button>
+                                    </td>
+                                </tr>
+                            </Show>
+                            {rows}
+                        </tbody>
+                    </table>
+                </div>
+                <div
+                    class="flex justify-end pt-3"
+                    class:hidden=move || matching_count.get() <= page_size.get()
+                >
+                    <PaginationControls
+                        page=page.into()
+                        total=matching_count
+                        page_size
+                        on_page_change
+                        hide_single_page=true
+                    />
+                </div>
             </div>
             <details class="mx-3 mt-3 mb-3 ui-setting-group">
                 // TODO: i18n once copy is approved.
