@@ -77,16 +77,23 @@ class HiveBot:
         """
         self._socket = await websockets.connect(self._url)
         self._buffered = []
-        await self.send({"Auth": self._token})
-        while True:
-            message = await self._next()
-            if "Authenticated" in message:
-                return message["Authenticated"]
-            if message.get("Error") == "Auth failed":
-                raise HiveError("authentication failed")
-            # A connection is subscribed to the lobby before it authenticates, so anything
-            # broadcast in the meantime — including our own Online — is traffic, not an answer.
-            self._buffered.append(message)
+        try:
+            await self.send({"Auth": self._token})
+            while True:
+                message = await self._next()
+                if "Authenticated" in message:
+                    return message["Authenticated"]
+                if message.get("Error") == "Auth failed":
+                    raise HiveError("authentication failed")
+                # A connection is subscribed to the lobby before it authenticates, so anything
+                # broadcast in the meantime — including our own Online — is traffic, not an answer.
+                self._buffered.append(message)
+        except BaseException:
+            # `__aenter__` is this method, so a raise here never reaches `__aexit__`, and the
+            # server leaves the socket open after refusing a token rather than hanging up.
+            # Without this a retry loop on a bad token leaks a connection per attempt.
+            await self.close()
+            raise
 
     async def close(self) -> None:
         if self._socket is not None:
