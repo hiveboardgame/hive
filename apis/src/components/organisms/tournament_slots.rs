@@ -17,6 +17,7 @@ use crate::{
     components::{
         atoms::{date_time_picker::DateTimePicker, message_button::MessageButton},
         molecules::modal::Modal,
+        organisms::tournament_closeout::TournamentCloseout,
     },
     hooks::arena_clock::use_ticking_now,
     i18n::*,
@@ -2197,7 +2198,7 @@ pub fn TournamentOrganizerLayout(
     tournament: TournamentState,
     schedules: TournamentScheduleState,
     schedules_ready: Signal<bool>,
-    children: Children,
+    organizer: Signal<bool>,
 ) -> impl IntoView {
     let i18n = use_i18n();
     let location = use_location();
@@ -2330,32 +2331,20 @@ pub fn TournamentOrganizerLayout(
         }
     });
 
-    let actions = children();
     let dialog_tournament = context.tournament;
     let dialog_target = context.deadline_target;
     view! {
         <div class="space-y-3">
             <header class="flex flex-wrap gap-3 justify-between items-center px-0.5">
-                <div>
-                    // TODO: i18n once copy is approved.
-                    <h2 class="break-words ui-page-title">
-                        {move || {
-                            format!(
-                                "Manage tournament · {}",
-                                tournament.common.lifecycle().get().name,
-                            )
-                        }}
-                    </h2>
-                    <p class="text-sm text-gray-600 dark:text-gray-300">
-                        {move || {
-                            current_manage_route(&context)
-                                .map(|_| { organizer_progress_label(context.tournament) })
-                        }}
-                    </p>
-                </div>
-                {actions}
+                <p class="text-sm text-gray-600 dark:text-gray-300">
+                    {move || {
+                        current_manage_route(&context)
+                            .map(|_| { organizer_progress_label(context.tournament) })
+                    }}
+                </p>
+                <TournamentCloseout tournament organizer />
             </header>
-            <div class="flex overflow-hidden flex-col rounded-lg border shadow-sm h-[calc(100dvh-15.5rem)] min-h-[28rem] border-black/10 bg-even-light/95 tournament-two:grid tournament-two:h-[calc(100dvh-13rem)] tournament-two:min-h-[32rem] tournament-two:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)] tournament-two:grid-rows-[minmax(0,1fr)] tournament-three:grid-cols-[13rem_minmax(20rem,1fr)_minmax(18rem,24rem)] dark:border-white/10 dark:bg-surface-panel">
+            <div class="flex overflow-hidden flex-col rounded-lg border shadow-sm h-[calc(100dvh-19rem)] min-h-[28rem] border-black/10 bg-even-light/95 tournament-two:grid tournament-two:h-[calc(100dvh-16.5rem)] tournament-two:min-h-[32rem] tournament-two:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)] tournament-two:grid-rows-[minmax(0,1fr)] tournament-three:grid-cols-[13rem_minmax(20rem,1fr)_minmax(18rem,24rem)] dark:border-white/10 dark:bg-surface-panel">
                 <OrganizerViews />
                 <OrganizerMatchList />
                 <main class=move || {

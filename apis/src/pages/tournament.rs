@@ -16,7 +16,6 @@ use crate::{
             bracket::{Bracket, BracketPlacementPreview, BracketPosition},
             chat::ResolvedChatWindow,
             tournament_admin::TournamentAdminControls,
-            tournament_closeout::TournamentCloseout,
             tournament_detailed_standings::TournamentDetailedStandings,
             tournament_encounters::{RoundRobinCrosstable, SwissRoundBrowser},
             tournament_explanations::{
@@ -30,7 +29,10 @@ use crate::{
             tournament_overview_standings::TournamentOverviewStandings,
             tournament_participant_action::TournamentParticipantAction,
             tournament_slots::{
-                participant_schedule::participant_schedule_opponents_needing_time,
+                participant_schedule::{
+                    participant_has_schedulable_slots,
+                    participant_schedule_opponents_needing_time,
+                },
                 ParticipantScheduleIndex,
                 ParticipantScheduleLayout,
                 ParticipantScheduleOpponent,
@@ -38,7 +40,6 @@ use crate::{
                 TournamentOrganizerLayout,
                 TournamentOrganizerMatch,
             },
-            tournament_withdrawal::TournamentWithdrawal,
         },
     },
     functions::{
@@ -428,6 +429,8 @@ struct TournamentPageContext {
     scheduling_available: Signal<bool>,
     organizer: Signal<bool>,
     auth_resolved: Signal<bool>,
+    manage_access: Memo<Option<bool>>,
+    scheduling_access: Memo<Option<bool>>,
     pre_start_changes_open: Signal<bool>,
     scheduled_start_pending: Signal<bool>,
     format: Format,
@@ -453,7 +456,7 @@ fn child_route_availability(
     organizer: bool,
     auth_resolved: bool,
 ) -> Option<bool> {
-    if format == Format::Arena {
+    if format == Format::Arena && route != TournamentChildRoute::Manage {
         return Some(route == TournamentChildRoute::Overview);
     }
     let started = status != TournamentStatus::NotStarted;
@@ -601,6 +604,7 @@ fn TournamentSurface(
             return false;
         }
         realtime_format
+            && participant_has_schedulable_slots(tournament, user_id)
             && match tournament.format {
                 TournamentFormatStore::Elimination(state) => state
                     .player_results()
@@ -646,8 +650,33 @@ fn TournamentSurface(
         pre_start_state.get() == PreStartBoundary::WaitingForScheduledWorker
     });
     let auth_resolved = Signal::derive(move || identity.get().is_some());
+    let tournament_id = StoredValue::new(tournament.tournament_id());
+    let pathname = use_location().pathname;
+    // ProtectedParentRoute recreates its view when its condition is notified.
+    // Preserve local edits across fact updates that do not change access.
+    let route_access = move |route| {
+        Memo::new(move |_| {
+            let id = tournament_id.get_value();
+            let lifecycle = tournament.common.lifecycle().get();
+            if !current_tournament_path_matches(&pathname.get(), &id)
+                || lifecycle.tournament_id != id
+            {
+                return None;
+            }
+            child_route_availability(
+                route,
+                format,
+                lifecycle.status,
+                scheduling_available.get(),
+                organizer.get(),
+                auth_resolved.get(),
+            )
+        })
+    };
+    let manage_access = route_access(TournamentChildRoute::Manage);
+    let scheduling_access = route_access(TournamentChildRoute::Scheduling);
     let page_context = TournamentPageContext {
-        tournament_id: StoredValue::new(tournament.tournament_id()),
+        tournament_id,
         tournament,
         schedules,
         schedules_ready,
@@ -656,6 +685,8 @@ fn TournamentSurface(
         scheduling_available,
         organizer,
         auth_resolved,
+        manage_access,
+        scheduling_access,
         pre_start_changes_open,
         scheduled_start_pending,
         format,
@@ -663,9 +694,7 @@ fn TournamentSurface(
     provide_context(page_context);
 
     view! {
-        <Show when=move || format != Format::Arena>
-            <TournamentNavigation />
-        </Show>
+        <TournamentNavigation />
         <main class="min-w-0">
             <Outlet />
         </main>
@@ -838,10 +867,11 @@ fn TournamentOverviewHeader() -> impl IntoView {
 
     view! {
         <header class="flex flex-wrap gap-3 justify-between items-center ui-panel-header">
-            <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100 wrap-break-word">
+            <h1 class="min-w-0 text-xl font-bold text-gray-900 dark:text-gray-100 wrap-break-word">
                 {move || context.tournament.common.lifecycle().get().name}
             </h1>
             <div class="flex flex-wrap gap-3 items-center ml-auto">
+                <TournamentHeaderActions />
                 <Show when=move || countdown.get().is_some()>
                     <time
                         class="text-lg font-semibold tabular-nums text-gray-700 dark:text-gray-200"
@@ -850,7 +880,6 @@ fn TournamentOverviewHeader() -> impl IntoView {
                         {move || countdown.get().unwrap_or_default()}
                     </time>
                 </Show>
-                <TournamentHeaderActions />
             </div>
         </header>
         <div class=move || {
@@ -860,7 +889,15 @@ fn TournamentOverviewHeader() -> impl IntoView {
                 "p-3 space-y-2 border-b sm:px-4 border-black/10 dark:border-white/10"
             }
         }>
-            <div class="tournament-three:hidden">
+            <div class=move || {
+                if context.tournament.common.lifecycle().get().status
+                    == TournamentStatus::NotStarted
+                {
+                    "tournament-two:hidden"
+                } else {
+                    "tournament-three:hidden"
+                }
+            }>
                 <TournamentEntryFacts tournament=context.tournament />
             </div>
             <TournamentParticipantAction
@@ -978,7 +1015,7 @@ fn TournamentHeaderActions() -> impl IntoView {
             <EliminationStartSetup setup />
         </For>
         <Show when=context.organizer>
-            <div class="flex flex-wrap gap-2 justify-end">
+            <div class="flex flex-wrap gap-2">
                 <Show when=manual_start>
                     // TODO: i18n once copy is approved.
                     <button
@@ -1267,6 +1304,12 @@ fn route_availability(
 
 fn tournament_child_route_condition(route: TournamentChildRoute) -> Option<bool> {
     let context = use_context::<TournamentPageContext>()?;
+    if route == TournamentChildRoute::Manage {
+        return context.manage_access.try_get().flatten();
+    }
+    if route == TournamentChildRoute::Scheduling {
+        return context.scheduling_access.try_get().flatten();
+    }
     let pathname = use_location().pathname.try_get()?;
     let tournament_id = context.tournament_id.try_get_value()?;
     if !current_tournament_path_matches(&pathname, &tournament_id) {
@@ -1370,6 +1413,7 @@ pub fn TournamentRoutes() -> impl MatchNestedRoutes + Clone {
                 view=TournamentManageRoute
             >
                 <Route path=path!("") view=TournamentManageIndex />
+                <Route path=path!("people") view=TournamentManagePeople />
                 <ProtectedRoute
                     condition=|| {
                         tournament_child_route_condition(TournamentChildRoute::ManageMatches)
@@ -1404,6 +1448,9 @@ pub fn OverviewRoute() -> impl IntoView {
     let rail = NodeRef::<Aside>::new();
     let rail_size = use_element_size(rail);
     let chat_visible = RwSignal::new(true);
+    let pre_start = Signal::derive(move || {
+        tournament.common.lifecycle().get().status == TournamentStatus::NotStarted
+    });
     Effect::new(move |_| {
         let requested_selection = requested_player.get().and_then(|requested_player| {
             player_selection_from_query(&tournament.common.memberships().get(), &requested_player)
@@ -1433,18 +1480,38 @@ pub fn OverviewRoute() -> impl IntoView {
         }
     });
     view! {
-        <div class="grid gap-3 items-start min-w-0 tournament-two:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)] tournament-three:min-h-[calc(100vh-7rem)] tournament-three:items-stretch tournament-three:grid-cols-[clamp(18rem,16vw,24rem)_minmax(0,1fr)_clamp(18rem,16vw,24rem)]">
-            <div class="min-w-0 tournament-two:col-start-1 tournament-two:row-start-1 tournament-three:col-start-2">
+        <div class=move || {
+            if pre_start.get() {
+                "grid gap-3 items-start min-w-0 tournament-two:grid-cols-[clamp(16rem,22vw,20rem)_minmax(0,1fr)]"
+            } else {
+                "grid gap-3 items-start min-w-0 tournament-two:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)] tournament-three:min-h-[calc(100vh-7rem)] tournament-three:items-stretch tournament-three:grid-cols-[clamp(18rem,16vw,24rem)_minmax(0,1fr)_clamp(18rem,16vw,24rem)]"
+            }
+        }>
+            <div class=move || {
+                if pre_start.get() {
+                    "min-w-0 tournament-two:col-start-2 tournament-two:row-start-1"
+                } else {
+                    "min-w-0 tournament-two:col-start-1 tournament-two:row-start-1 tournament-three:col-start-2"
+                }
+            }>
                 <TournamentOverview tournament selection />
             </div>
-            <aside class="contents min-w-0 tournament-two:block tournament-two:col-start-2 tournament-two:row-start-1 tournament-two:row-span-2 tournament-three:col-start-3 tournament-three:row-span-1">
-                <TournamentOverviewInspector tournament selection>
-                    <TournamentOverviewRail tournament selection />
-                </TournamentOverviewInspector>
-            </aside>
+            <Show when=move || !pre_start.get()>
+                <aside class="contents min-w-0 tournament-two:block tournament-two:col-start-2 tournament-two:row-start-1 tournament-two:row-span-2 tournament-three:col-start-3 tournament-three:row-span-1">
+                    <TournamentOverviewInspector tournament selection>
+                        <TournamentOverviewRail tournament selection />
+                    </TournamentOverviewInspector>
+                </aside>
+            </Show>
             <aside
                 node_ref=rail
-                class="flex flex-col gap-3 min-w-0 tournament-two:col-start-1 tournament-two:row-start-2 tournament-three:col-start-1 tournament-three:row-start-1 tournament-three:h-full tournament-three:max-h-[calc(100vh-7rem)]"
+                class=move || {
+                    if pre_start.get() {
+                        "flex flex-col gap-3 min-w-0 tournament-two:col-start-1 tournament-two:row-start-1 tournament-two:h-[calc(100vh-7rem)]"
+                    } else {
+                        "flex flex-col gap-3 min-w-0 tournament-two:col-start-1 tournament-two:row-start-2 tournament-three:col-start-1 tournament-three:row-start-1 tournament-three:h-full tournament-three:max-h-[calc(100vh-7rem)]"
+                    }
+                }
             >
                 <TournamentInformation
                     tournament
@@ -1524,90 +1591,187 @@ pub fn TournamentManageRoute() -> impl IntoView {
     let context = expect_context::<TournamentPageContext>();
     let tournament_id = StoredValue::new(context.tournament.tournament_id());
     let pathname = use_location().pathname;
-    let in_progress = Memo::new(move |_| {
-        context.tournament.common.lifecycle().get().status == TournamentStatus::InProgress
+    let matches_available = Signal::derive(move || {
+        context.format != Format::Arena
+            && context.tournament.common.lifecycle().get().status == TournamentStatus::InProgress
     });
+    let section = Signal::derive(move || {
+        let path = pathname.get();
+        let root = format!("/tournament/{}/manage", tournament_id.get_value().0);
+        match path
+            .strip_prefix(&root)
+            .unwrap_or_default()
+            .trim_matches('/')
+        {
+            "people" => "people",
+            _ if matches_available.get() => "matches",
+            _ => "people",
+        }
+    });
+    let route_active = move || {
+        let Some(pathname) = pathname.try_get() else {
+            return false;
+        };
+        let Some(id) = tournament_id.try_get_value() else {
+            return false;
+        };
+        current_tournament_path_matches(&pathname, &id)
+            && context
+                .tournament
+                .common
+                .lifecycle()
+                .try_get()
+                .is_some_and(|lifecycle| lifecycle.tournament_id == id)
+    };
     view! {
-        {move || {
-            let pathname = pathname.try_get()?;
-            let tournament_id = tournament_id.try_get_value()?;
-            if !current_tournament_path_matches(&pathname, &tournament_id)
-                || context
-                    .tournament
-                    .common
-                    .lifecycle()
-                    .try_get()
-                    .is_none_or(|lifecycle| lifecycle.tournament_id != tournament_id)
-            {
-                return None;
-            }
-            Some(
-                if in_progress.try_get()? {
-                    view! {
-                        <TournamentLiveManage
-                            tournament=context.tournament
-                            schedules=context.schedules
-                            schedules_ready=context.schedules_ready
-                            organizer=context.organizer
-                        />
+        <Show when=route_active>
+            <div class="space-y-3">
+                // TODO: i18n once copy is approved.
+                <h1 class="px-0.5 wrap-break-word ui-page-title">
+                    {move || {
+                        format!(
+                            "Manage tournament · {}",
+                            context.tournament.common.lifecycle().get().name,
+                        )
+                    }}
+                </h1>
+                <Show when=move || matches_available.get()>
+                    // TODO: i18n once copy is approved.
+                    <nav
+                        class="flex flex-wrap gap-1 p-1.5 ui-panel"
+                        aria-label="Tournament management"
+                    >
+                        {[("matches", "Matches"), ("people", "People")]
+                            .into_iter()
+                            .map(|(tab, label)| {
+                                view! {
+                                    <Show when=move || tab != "matches" || matches_available.get()>
+                                        <A
+                                            href=move || {
+                                                let root = format!(
+                                                    "/tournament/{}/manage",
+                                                    tournament_id.get_value().0,
+                                                );
+                                                if tab == "matches" {
+                                                    root
+                                                } else {
+                                                    format!("{root}/{tab}")
+                                                }
+                                            }
+                                            attr:class=move || {
+                                                if section.get() == tab {
+                                                    "ui-button ui-button-primary ui-button-sm no-link-style"
+                                                } else {
+                                                    "ui-button ui-button-ghost ui-button-sm no-link-style"
+                                                }
+                                            }
+                                            attr:aria-current=move || {
+                                                (section.get() == tab).then_some("page")
+                                            }
+                                        >
+                                            {label}
+                                        </A>
+                                    </Show>
+                                }
+                            })
+                            .collect_view()}
+                    </nav>
+                </Show>
+                <Show
+                    when=move || section.get() == "matches"
+                    fallback=|| {
+                        view! {
+                            <div class="p-3 sm:p-4 ui-panel">
+                                <Outlet />
+                            </div>
+                        }
                     }
-                        .into_any()
-                } else {
-                    view! { <Outlet /> }.into_any()
-                },
-            )
-        }}
+                >
+                    <TournamentOrganizerLayout
+                        tournament=context.tournament
+                        schedules=context.schedules
+                        schedules_ready=context.schedules_ready
+                        organizer=context.organizer
+                    />
+                </Show>
+            </div>
+        </Show>
     }
 }
 
 #[component]
 pub fn TournamentManageIndex() -> impl IntoView {
     let context = expect_context::<TournamentPageContext>();
-    let i18n = use_i18n();
     let tournament_id = StoredValue::new(context.tournament.tournament_id());
     let pathname = use_location().pathname;
     let in_progress = Memo::new(move |_| {
-        context.tournament.common.lifecycle().get().status == TournamentStatus::InProgress
+        context.format != Format::Arena
+            && context.tournament.common.lifecycle().get().status == TournamentStatus::InProgress
     });
+    let route_active = move || {
+        let Some(pathname) = pathname.try_get() else {
+            return false;
+        };
+        let Some(id) = tournament_id.try_get_value() else {
+            return false;
+        };
+        current_tournament_path_matches(&pathname, &id)
+            && context
+                .tournament
+                .common
+                .lifecycle()
+                .try_get()
+                .is_some_and(|lifecycle| lifecycle.tournament_id == id)
+    };
     view! {
-        {move || {
-            let pathname = pathname.try_get()?;
-            let tournament_id = tournament_id.try_get_value()?;
-            if !current_tournament_path_matches(&pathname, &tournament_id)
-                || context
-                    .tournament
-                    .common
-                    .lifecycle()
-                    .try_get()
-                    .is_none_or(|lifecycle| lifecycle.tournament_id != tournament_id)
-            {
-                return None;
-            }
-            Some(
-                if in_progress.try_get()? {
-                    view! { <TournamentOrganizerIndex /> }.into_any()
-                } else {
-                    view! {
-                        <Panel
-                            title=move || context.tournament.common.lifecycle().get().name
-                            body_class="space-y-3"
-                        >
-                            <Show when=context.scheduled_start_pending>
-                                <p class="ui-notice">
-                                    {t!(i18n, tournaments.detail.start_worker_pending)}
-                                </p>
-                            </Show>
-                            <TournamentAdminControls
-                                user_is_organizer_or_admin=context.organizer
-                                tournament=context.tournament
-                                editable=context.pre_start_changes_open
-                            />
-                        </Panel>
-                    }
-                        .into_any()
-                },
-            )
-        }}
+        <Show when=route_active>
+            <Show when=move || in_progress.get() fallback=|| view! { <TournamentManagePeople /> }>
+                <TournamentOrganizerIndex />
+            </Show>
+        </Show>
+    }
+}
+
+#[component]
+pub fn TournamentManagePeople() -> impl IntoView {
+    let context = expect_context::<TournamentPageContext>();
+    let i18n = use_i18n();
+    view! {
+        <div class="space-y-3">
+            <Show when=context.scheduled_start_pending>
+                <p class="ui-notice">{t!(i18n, tournaments.detail.start_worker_pending)}</p>
+            </Show>
+            <Show when=move || {
+                !context.pre_start_changes_open.get()
+                    && context.tournament.common.lifecycle().get().status
+                        == TournamentStatus::NotStarted
+                    && context.tournament.common.lifecycle().get().start_setup.is_some()
+            }>
+                // TODO: i18n once copy is approved.
+                <p class="ui-notice">"The roster is locked while bracket review is in progress."</p>
+            </Show>
+            <div class="grid gap-6 min-w-0 xl:grid-cols-[minmax(0,1fr)_21rem]">
+                <div class="space-y-3 min-w-0">
+                    // TODO: i18n once copy is approved.
+                    <h2 class="text-lg font-bold">"Players"</h2>
+                    <TournamentAdminControls
+                        user_is_organizer_or_admin=context.organizer
+                        tournament=context.tournament
+                        editable=context.pre_start_changes_open
+                    />
+                </div>
+                <aside
+                    id="organizers"
+                    class="pt-4 min-w-0 max-w-sm border-t xl:pt-0 xl:pl-5 xl:border-t-0 xl:border-l border-black/10 dark:border-white/10"
+                >
+                    <TournamentOrganizers
+                        tournament=context.tournament
+                        user_is_organizer_or_admin=context.organizer
+                        managing=true
+                    />
+                </aside>
+            </div>
+        </div>
     }
 }
 
@@ -2029,13 +2193,17 @@ fn TournamentInformation(
                         <StandingsCriteriaRules configuration=format_configuration.get_value() />
                     </details>
                 </Show>
-                <details class="ui-setting-group">
-                    // TODO: i18n once copy is approved.
-                    <summary class="font-semibold cursor-pointer">"About this format"</summary>
-                    <div class="pt-3">
-                        <TournamentFormatFaq format=Signal::derive(move || format) />
-                    </div>
-                </details>
+                <Show when=move || {
+                    tournament.common.lifecycle().get().status != TournamentStatus::NotStarted
+                }>
+                    <details class="ui-setting-group">
+                        // TODO: i18n once copy is approved.
+                        <summary class="font-semibold cursor-pointer">"About this format"</summary>
+                        <div class="pt-3">
+                            <TournamentFormatFaq format=Signal::derive(move || format) />
+                        </div>
+                    </details>
+                </Show>
             </div>
         </details>
     }
@@ -2050,48 +2218,13 @@ fn TournamentOverview(
         <TournamentOverviewStandings tournament selection>
             <TournamentOverviewHeader />
         </TournamentOverviewStandings>
-    }
-}
-
-#[component]
-fn TournamentLiveManage(
-    tournament: TournamentState,
-    schedules: TournamentScheduleState,
-    schedules_ready: Signal<bool>,
-    organizer: Signal<bool>,
-) -> impl IntoView {
-    let tournament_actions_available =
-        !matches!(tournament.format, TournamentFormatStore::Arena(_));
-    let closeout = Signal::derive(move || match tournament.format {
-        TournamentFormatStore::RoundRobin(state) => Some(state.closeout_eligible_slots().get()),
-        TournamentFormatStore::Swiss(state) => Some(state.closeout_eligible_slots().get()),
-        TournamentFormatStore::Arena(_) | TournamentFormatStore::Elimination(_) => None,
-    });
-    view! {
-        <TournamentOrganizerLayout tournament schedules schedules_ready>
-            <Show when=move || tournament_actions_available>
-                <details class="relative w-full tournament-two:w-auto">
-                    // TODO: i18n once copy is approved.
-                    <summary class="list-none ui-button ui-button-secondary ui-button-sm [&::-webkit-details-marker]:hidden">
-                        "Tournament actions"
-                    </summary>
-                    <div class="absolute right-0 z-30 p-3 mt-2 space-y-3 w-[min(28rem,calc(100vw-1.5rem))] ui-panel">
-                        // TODO: i18n once copy is approved.
-                        <h3 class="font-bold">"Participant withdrawal"</h3>
-                        <TournamentWithdrawal
-                            common=tournament.common
-                            format=tournament.format
-                            organizer
-                        />
-                        <Show when=move || closeout.get().is_some_and(|count| count > 0)>
-                            <div class="pt-3 border-t border-black/10 dark:border-white/10">
-                                <TournamentCloseout tournament organizer />
-                            </div>
-                        </Show>
-                    </div>
-                </details>
-            </Show>
-        </TournamentOrganizerLayout>
+        <Show when=move || {
+            tournament.common.lifecycle().get().status == TournamentStatus::NotStarted
+        }>
+            <section class="p-4 mt-3 sm:p-6 ui-panel">
+                <TournamentFormatFaq format=Signal::derive(move || tournament.format.format()) />
+            </section>
+        </Show>
     }
 }
 

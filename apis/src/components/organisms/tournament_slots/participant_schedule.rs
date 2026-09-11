@@ -440,6 +440,16 @@ fn compare_summaries(left: &ScheduleSummary, right: &ScheduleSummary) -> Orderin
         .then_with(|| compare_relevant_at(left.relevant_at, right.relevant_at))
 }
 
+pub(crate) fn participant_has_schedulable_slots(
+    tournament: TournamentState,
+    user_id: Uuid,
+) -> bool {
+    fixed_slot_fields(tournament).into_iter().any(|slot| {
+        slot.try_get()
+            .is_some_and(|slot| schedule_is_available(&slot, user_id))
+    })
+}
+
 pub(crate) fn participant_schedule_opponents_needing_time(
     tournament: TournamentState,
     schedules: TournamentScheduleState,

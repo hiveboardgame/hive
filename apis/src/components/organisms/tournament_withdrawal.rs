@@ -1,5 +1,6 @@
 use crate::{
     common::{tournament_path_matches, TournamentAction},
+    components::molecules::modal::Modal,
     i18n::*,
     providers::{
         ApiRequestsProvider,
@@ -13,32 +14,22 @@ use crate::{
         TournamentFormatStore,
     },
 };
-use leptos::prelude::*;
+use leptos::{html::Dialog, prelude::*};
 use leptos_router::hooks::use_location;
 use reactive_stores::Store;
-use shared_types::{tournament::Format, TournamentStatus};
+use shared_types::TournamentStatus;
 use uuid::Uuid;
-
-#[cfg(feature = "hydrate")]
-fn confirm_withdrawal(message: &str) -> bool {
-    window().confirm_with_message(message).unwrap_or(false)
-}
-
-#[cfg(not(feature = "hydrate"))]
-fn confirm_withdrawal(_message: &str) -> bool {
-    false
-}
 
 #[component]
 pub fn TournamentWithdrawal(
     common: Store<TournamentCommon>,
     format: TournamentFormatStore,
     organizer: Signal<bool>,
+    #[prop(optional)] player_id: Option<Uuid>,
 ) -> impl IntoView {
     let i18n = use_i18n();
     let auth = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
-    let selected = RwSignal::new(Option::<Uuid>::None);
     let user_id = Signal::derive(move || auth.identity.get().and_then(AuthIdentity::user_id));
     let pathname = use_location().pathname;
     let expected_tournament_id = StoredValue::new(common.lifecycle().get_untracked().tournament_id);
@@ -70,121 +61,128 @@ pub fn TournamentWithdrawal(
             .tournament(TournamentAction::Withdraw(tournament_id, player));
     });
 
+    let target = Signal::derive(move || player_id.or(user_id.get()));
+    let allowed = Signal::derive(move || {
+        route_active.get()
+            && common.lifecycle().get().status == TournamentStatus::InProgress
+            && user_id.get().is_some()
+            && (player_id.is_none() || organizer.get())
+            && target.get().is_some_and(|id| {
+                common.memberships().get().players.contains_key(&id)
+                    && withdrawable_entrants
+                        .get()
+                        .is_some_and(|ids| ids.contains(&id))
+            })
+    });
+    let dialog_el = NodeRef::<Dialog>::new();
+    let reviewed = RwSignal::new(None::<(Uuid, String)>);
+    let cancel = Callback::new(move |_: ()| {
+        if let Some(dialog) = dialog_el.try_get().flatten() {
+            dialog.close();
+        }
+        let _ = reviewed.try_set(None);
+    });
+    Effect::new(move |_| {
+        if !allowed.get()
+            || reviewed.with(|reviewed| {
+                reviewed
+                    .as_ref()
+                    .is_some_and(|(id, _)| Some(*id) != target.get())
+            })
+        {
+            cancel.run(());
+        }
+    });
+    let confirm = move |_| {
+        if allowed.try_get_untracked() != Some(true) {
+            return;
+        }
+        let Some((id, _)) = reviewed.try_get_untracked().flatten() else {
+            return;
+        };
+        if target.try_get_untracked().flatten() == Some(id) {
+            let _ = send.try_run(id);
+        }
+        cancel.run(());
+    };
     view! {
-        {move || {
-            if !route_active.try_get()? {
-                return None;
-            }
-            let current_tournament_id = expected_tournament_id.try_get_value()?;
-            let current_user = user_id.try_get()?;
-            let selected_player = selected.try_get()?;
-            let lifecycle = common.lifecycle().try_get()?;
-            if lifecycle.tournament_id != current_tournament_id {
-                return None;
-            }
-            let memberships = common.memberships().get();
-            let capabilities = withdrawable_entrants.try_get()??;
-            let in_progress = matches!(lifecycle.status, TournamentStatus::InProgress)
-                && format.format() != Format::Arena;
-            let withdrawable = current_user.is_some_and(|id| capabilities.contains(&id));
-            let mut candidates = memberships
-                .players
-                .values()
-                .filter(|user| capabilities.contains(&user.uid))
-                .map(|user| (user.uid, user.username.clone()))
-                .collect::<Vec<_>>();
-            candidates.sort_by(|left, right| left.1.cmp(&right.1).then(left.0.cmp(&right.0)));
-            let self_action = (in_progress && withdrawable)
-                .then(|| {
-                    view! {
-                        <button
-                            class="ui-button ui-button-danger ui-button-sm"
-                            on:click=move |_| {
-                                if route_active.try_get() == Some(true)
-                                    && confirm_withdrawal(
-                                        t_string!(
-                                            i18n, tournaments.view.withdrawal.self_confirmation
-                                        ),
-                                    )
-                                {
-                                    if let Some(id) = user_id.try_get_untracked().flatten() {
-                                        let _ = send.try_run(id);
-                                    }
-                                }
-                            }
-                        >
-                            {t!(i18n, tournaments.view.withdrawal.self_action)}
-                        </button>
+        <Show when=move || allowed.get()>
+            <button
+                type="button"
+                class="shrink-0 ui-button ui-button-secondary ui-button-sm"
+                on:click=move |_| {
+                    if allowed.try_get_untracked() != Some(true) {
+                        return;
                     }
-                });
-            let organizer_action = (in_progress && organizer.try_get().unwrap_or(false))
-                .then(|| {
-                    view! {
-                        <div class="flex flex-wrap gap-2 items-center">
-                            <select
-                                class="ui-field-select"
-                                on:change=move |event| {
-                                    if route_active.try_get() == Some(true) {
-                                        selected.set(event_target_value(&event).parse().ok());
-                                    }
-                                }
-                            >
-                                <option value="">
-                                    {t!(i18n, tournaments.view.withdrawal.select_entrant)}
-                                </option>
-                                {candidates
-                                    .into_iter()
-                                    .map(|candidate| {
-                                        view! {
-                                            <option value=candidate.0.to_string()>{candidate.1}</option>
-                                        }
+                    let Some(id) = target.try_get_untracked().flatten() else {
+                        return;
+                    };
+                    let Some(username) = common
+                        .memberships()
+                        .with_untracked(|memberships| {
+                            memberships.players.get(&id).map(|user| user.username.clone())
+                        }) else {
+                        return;
+                    };
+                    reviewed.set(Some((id, username)));
+                    if let Some(dialog) = dialog_el.try_get().flatten() {
+                        let _ = dialog.show_modal();
+                    }
+                }
+            >
+                // TODO: i18n once copy is approved.
+                "Withdraw"
+            </button>
+        </Show>
+        // TODO: i18n once copy is approved.
+        <Modal dialog_el aria_label="Confirm withdrawal" on_close=cancel>
+            <Show when=move || reviewed.with(Option::is_some)>
+                <div class="px-4 pb-4 space-y-4 w-[min(90vw,26rem)]">
+                    // TODO: i18n once copy is approved.
+                    <h2 class="text-xl font-bold">
+                        {move || {
+                            if player_id.is_some() {
+                                reviewed
+                                    .with(|reviewed| {
+                                        reviewed
+                                            .as_ref()
+                                            .map(|(_, name)| format!("Withdraw {name}?"))
                                     })
-                                    .collect_view()}
-                            </select>
-                            <button
-                                class="ui-button ui-button-danger ui-button-sm"
-                                prop:disabled=selected_player.is_none()
-                                on:click=move |_| {
-                                    if route_active.try_get() != Some(true) {
-                                        return;
-                                    }
-                                    let Some(id) = selected.try_get_untracked().flatten() else {
-                                        return;
-                                    };
-                                    let Some(username) = common
-                                        .memberships()
-                                        .with_untracked(|memberships| {
-                                            memberships
-                                                .players
-                                                .get(&id)
-                                                .map(|user| user.username.clone())
-                                        }) else {
-                                        return;
-                                    };
-                                    let message = format!(
-                                        "{username}\n{}",
-                                        t_string!(
-                                            i18n, tournaments.view.withdrawal.entrant_confirmation
-                                        ),
-                                    );
-                                    if confirm_withdrawal(&message) {
-                                        let _ = send.try_run(id);
-                                        selected.set(None);
-                                    }
-                                }
-                            >
-                                {t!(i18n, tournaments.view.withdrawal.entrant_action)}
-                            </button>
-                        </div>
-                    }
-                });
-            Some(
-
-                view! {
-                    {self_action}
-                    {organizer_action}
-                },
-            )
-        }}
+                            } else {
+                                Some(String::from("Withdraw from tournament?"))
+                            }
+                        }}
+                    </h2>
+                    <p class="text-sm text-gray-700 dark:text-gray-200">
+                        {if player_id.is_some() {
+                            t_string!(i18n, tournaments.view.withdrawal.entrant_confirmation)
+                                .to_string()
+                        } else {
+                            t_string!(i18n, tournaments.view.withdrawal.self_confirmation)
+                                .to_string()
+                        }}
+                    </p>
+                    <div class="flex gap-2 justify-end">
+                        <button
+                            type="button"
+                            class="ui-button ui-button-secondary ui-button-sm"
+                            on:click=move |_| cancel.run(())
+                        >
+                            // TODO: i18n once copy is approved.
+                            "Cancel"
+                        </button>
+                        <button
+                            type="button"
+                            class="ui-button ui-button-danger ui-button-sm"
+                            prop:disabled=move || !allowed.get()
+                            on:click=confirm
+                        >
+                            // TODO: i18n once copy is approved.
+                            "Withdraw"
+                        </button>
+                    </div>
+                </div>
+            </Show>
+        </Modal>
     }
 }

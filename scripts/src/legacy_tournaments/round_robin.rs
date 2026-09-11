@@ -246,22 +246,23 @@ fn map_round_robin_inner(input: &RoundRobinInput<'_>) -> Result<RoundRobinMappin
             if projection.is_complete() {
                 diagnostics.push(AuditDiagnostic::warning(
                     Some(tournament.id),
-                    "round_robin_engine_complete_while_in_progress",
-                    "legacy status is InProgress although mapped Round Robin replay is complete",
+                    "round_robin_completed_on_import",
+                    "legacy status is InProgress, but all Round Robin results are recorded; importing as Finished",
                 ));
             }
             if actual_groups != expected_groups {
                 diagnostics.push(AuditDiagnostic::warning(
                     Some(tournament.id),
                     "round_robin_live_order_changed",
-                    "mapped ongoing standings groups differ from the legacy ordering",
+                    "mapped standings groups differ from the legacy ordering",
                 ));
             }
         }
         LegacyTournamentStatus::NotStarted => unreachable!(),
     }
 
-    let final_outcome = matches!(status, LegacyTournamentStatus::Finished)
+    let final_outcome = projection
+        .is_complete()
         .then(|| round_robin_final_outcome(&projection, &roster))
         .transpose()?;
 
@@ -711,7 +712,13 @@ fn round_robin_final_outcome(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::legacy_tournaments::{
+        audit,
+        bundle::{validate, BundleRecord, EncodedBundle},
+        model::{LegacyOrganizerRow, LegacySource, LegacySourceMetadata},
+    };
     use chrono::{Duration, TimeZone, Utc};
+    use shared_types::TournamentStatus;
 
     fn tournament(mode: &str, status: &str) -> LegacyTournamentRow {
         LegacyTournamentRow {
@@ -983,27 +990,60 @@ mod tests {
     }
 
     #[test]
-    fn complete_in_progress_mapping_warns_without_rewriting_lifecycle() {
-        let tournament = tournament("DoubleRoundRobin", "InProgress");
-        let memberships = memberships(tournament.id);
-        let first = memberships[0].user_id;
-        let second = memberships[1].user_id;
-        let games = vec![
-            game(&tournament, 100, first, second, 1, Some("1-0")),
-            game(&tournament, 101, second, first, 2, Some("0-1")),
-        ];
-        let mapped = map_round_robin(&RoundRobinInput {
-            tournament: &tournament,
-            memberships: &memberships,
-            games: &games,
-        })
-        .unwrap();
-
-        assert_eq!(mapped.plan.tournament.status, "InProgress");
-        assert!(mapped.diagnostics.iter().any(|diagnostic| {
-            diagnostic.code == "round_robin_engine_complete_while_in_progress"
-        }));
-        assert!(mapped.plan.final_outcome.is_none());
+    fn legacy_round_robin_export_finishes_only_when_all_results_are_recorded() {
+        for last_result in [Some("0-1"), None] {
+            let tournament = tournament("DoubleRoundRobin", "InProgress");
+            let memberships = memberships(tournament.id);
+            let first = memberships[0].user_id;
+            let second = memberships[1].user_id;
+            let games = vec![
+                game(&tournament, 100, first, second, 10, Some("1-0")),
+                game(&tournament, 101, second, first, 20, last_result),
+            ];
+            let expected_finished_at = last_result.map(|_| games[1].updated_at);
+            let source = LegacySource {
+                metadata: LegacySourceMetadata {
+                    database_name: String::from("hive-test"),
+                },
+                organizers: vec![LegacyOrganizerRow {
+                    tournament_id: tournament.id,
+                    organizer_id: first,
+                }],
+                tournaments: vec![tournament],
+                memberships: memberships.to_vec(),
+                games,
+                invitations: Vec::new(),
+                schedules: Vec::new(),
+                series: Vec::new(),
+                series_organizers: Vec::new(),
+            };
+            let audit = audit::run(&source);
+            assert!(!audit.has_hard_failures(), "{:?}", audit.report.diagnostics);
+            let bundle = EncodedBundle::build(&source, &audit).unwrap();
+            let records = validate(&bundle.jsonl, &bundle.manifest).unwrap();
+            let tournament = records
+                .iter()
+                .find_map(|record| match record {
+                    BundleRecord::Tournament { tournament } => Some(tournament),
+                    _ => None,
+                })
+                .unwrap();
+            assert_eq!(
+                tournament.lifecycle,
+                if last_result.is_some() {
+                    TournamentStatus::Finished
+                } else {
+                    TournamentStatus::InProgress
+                }
+            );
+            assert_eq!(tournament.finished_at, expected_finished_at);
+            assert_eq!(
+                records
+                    .iter()
+                    .any(|record| matches!(record, BundleRecord::FinalOutcome { .. })),
+                last_result.is_some(),
+            );
+        }
     }
 
     #[test]

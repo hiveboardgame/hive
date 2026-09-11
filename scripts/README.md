@@ -78,6 +78,13 @@ Game, constraint failure, duplicate, or partial target rolls the entire import
 back. Import never reconstructs or re-audits the legacy source and performs no
 engine replay.
 
+During legacy interpretation, a Round Robin with every result recorded is
+exported as finished even if its old manual lifecycle still says `InProgress`.
+Its final standings come from the mapped results, and its finish timestamp is
+no earlier than its last recorded result. Round Robins still missing results
+remain ongoing, with their retained Games linked to unresolved Slots so normal
+game completion can finish the tournament after cutover.
+
 After import, verify the concise imported, retained, skipped, and rejected
 counts, Tournament pages, Game links, scheduled times, current offers,
 and final standings before reopening writes. Legacy scheduling history is

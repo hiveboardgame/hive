@@ -170,41 +170,39 @@ pub fn TournamentCloseout(tournament: TournamentState, organizer: Signal<bool>) 
     });
     view! {
         <Show when=move || { route_active.get() && closeout_eligible_slots.get() > 0 }>
-            <div class="p-3 space-y-2 ui-danger-notice" data-testid="tournament-closeout">
-                <div>
-                    <p class="font-bold">{t!(i18n, tournaments.view.closeout.title)}</p>
-                    <p class="text-sm">
-                        {move || {
-                            t_string!(
-                                i18n, tournaments.view.closeout.description, count = closeout_eligible_slots.get()
-                            )
-                        }}
-                    </p>
-                </div>
-                <button
-                    type="button"
-                    class="ui-button ui-button-danger ui-button-sm"
-                    on:click=move |_| {
-                        if !route_active.get_untracked() {
-                            return;
-                        }
-                        let rows = reviewed_closeout_slots(tournament, i18n);
-                        if rows.is_empty() {
-                            return;
-                        }
-                        page.set(1);
-                        reviewed.set(Some(rows));
-                        if let Some(dialog) = dialog_el.try_get().flatten() {
-                            let _ = dialog.show_modal();
-                        }
+            <button
+                type="button"
+                class="ui-button ui-button-secondary ui-button-sm"
+                data-testid="tournament-closeout"
+                on:click=move |_| {
+                    if !route_active.get_untracked() {
+                        return;
                     }
-                >
-                    {t!(i18n, tournaments.view.closeout.review)}
-                </button>
-            </div>
+                    let rows = reviewed_closeout_slots(tournament, i18n);
+                    if rows.is_empty() {
+                        return;
+                    }
+                    page.set(1);
+                    reviewed.set(Some(rows));
+                    if let Some(dialog) = dialog_el.try_get().flatten() {
+                        let _ = dialog.show_modal();
+                    }
+                }
+            >
+                {move || {
+                    format!(
+                        "{} ({})",
+                        t_string!(i18n, tournaments.view.closeout.title),
+                        closeout_eligible_slots.get(),
+                    )
+                }}
+            </button>
         </Show>
-        // TODO: i18n once copy is approved.
-        <Modal dialog_el aria_label="Review double forfeits" on_close=cancel>
+        <Modal
+            dialog_el
+            aria_label=t_string!(i18n, tournaments.view.closeout.review).to_string()
+            on_close=cancel
+        >
             <Show when=move || route_active.get() && reviewed.with(Option::is_some)>
                 <div class="px-3 pb-4 mx-auto space-y-3 sm:px-4 w-[min(94vw,48rem)]">
                     <header>
@@ -221,8 +219,16 @@ pub fn TournamentCloseout(tournament: TournamentState, organizer: Signal<bool>) 
                             {move || tournament.common.lifecycle().get().name}
                         </p>
                     </header>
-                    // TODO: i18n once copy is approved.
                     <p class="p-3 text-sm ui-danger-notice">
+                        {move || {
+                            t_string!(
+                                i18n, tournaments.view.closeout.description,
+                            count = reviewed.with(|rows| rows.as_ref().map_or(0, Vec::len))
+                            )
+                        }}
+                    </p>
+                    // TODO: i18n once copy is approved.
+                    <p class="text-sm">
                         "Both players receive 0 points. This may finish the tournament."
                     </p>
                     // TODO: i18n once copy is approved.

@@ -205,7 +205,7 @@ pub fn TournamentParticipantAction(
                     }
                     (TournamentStatus::InProgress, _) => {
                         view! {
-                            <div class="flex flex-wrap gap-2 items-center">
+                            <div class="flex flex-wrap gap-y-2 gap-x-4 items-center">
                                 {move || {
                                     next_action
                                         .get()
@@ -219,8 +219,11 @@ pub fn TournamentParticipantAction(
                                                 </a>
                                             }
                                         })
-                                }} <Show when=move || next_action.get().is_none()>
-                                    <span class="text-sm text-gray-600 dark:text-gray-300">
+                                }} <div class="flex gap-2 items-center">
+                                    <span
+                                        class="text-sm text-gray-600 dark:text-gray-300"
+                                        role="status"
+                                    >
                                         // TODO: i18n once copy is approved.
                                         {move || {
                                             if user_id
@@ -231,27 +234,18 @@ pub fn TournamentParticipantAction(
                                             {
                                                 "Withdrawn"
                                             } else if relationship.get().joined {
-                                                "Joined"
+                                                "Playing"
                                             } else {
                                                 "Watching"
                                             }
                                         }}
                                     </span>
-                                </Show> <Show when=move || relationship.get().joined>
-                                    <details class="text-sm">
-                                        // TODO: i18n once copy is approved.
-                                        <summary class="cursor-pointer ui-button ui-button-ghost ui-button-sm">
-                                            "Participation"
-                                        </summary>
-                                        <div class="pt-2">
-                                            <TournamentWithdrawal
-                                                common
-                                                format
-                                                organizer=Signal::derive(|| false)
-                                            />
-                                        </div>
-                                    </details>
-                                </Show>
+                                    <TournamentWithdrawal
+                                        common
+                                        format
+                                        organizer=Signal::derive(|| false)
+                                    />
+                                </div>
                             </div>
                         }
                             .into_any()

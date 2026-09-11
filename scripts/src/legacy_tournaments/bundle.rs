@@ -260,10 +260,14 @@ fn records(
     let schedule_projection = project_schedules(source, audit, cutover_at)?;
     for row in &source.tournaments {
         let p = plans[&row.id];
-        let lifecycle = match LegacyTournamentStatus::from_str(&row.status)? {
-            LegacyTournamentStatus::NotStarted => TournamentStatus::NotStarted,
-            LegacyTournamentStatus::InProgress => TournamentStatus::InProgress,
-            LegacyTournamentStatus::Finished => TournamentStatus::Finished,
+        let lifecycle = if p.final_outcome.is_some() {
+            TournamentStatus::Finished
+        } else {
+            match LegacyTournamentStatus::from_str(&row.status)? {
+                LegacyTournamentStatus::NotStarted => TournamentStatus::NotStarted,
+                LegacyTournamentStatus::InProgress => TournamentStatus::InProgress,
+                LegacyTournamentStatus::Finished => TournamentStatus::Finished,
+            }
         };
         ensure!(
             p.final_outcome.is_some() == (lifecycle == TournamentStatus::Finished),
@@ -271,6 +275,20 @@ fn records(
             row.id
         );
         let created_at = reconstructed_created_at(source, row);
+        // Legacy manual tournaments can still say InProgress after their last
+        // result. Their finish time must include that result, not just startup.
+        let finished_at = (lifecycle == TournamentStatus::Finished).then(|| {
+            p.slots
+                .iter()
+                .filter_map(|slot| match slot.status {
+                    SlotPlanStatus::Sealed { game_id, .. } => {
+                        games_by_id.get(&game_id).map(|game| game.updated_at)
+                    }
+                    _ => None,
+                })
+                .chain(row.started_at)
+                .fold(row.updated_at, |latest, time| latest.max(time))
+        });
         created_at_by_id.insert(row.id, created_at);
         out.push(BundleRecord::Tournament {
             tournament: Box::new(CanonicalTournament {
@@ -292,14 +310,7 @@ fn records(
                 series: row.series,
                 configuration: p.configuration.clone(),
                 lifecycle,
-                finished_at: if lifecycle == TournamentStatus::Finished {
-                    Some(
-                        row.started_at
-                            .map_or(row.updated_at, |started| started.max(row.updated_at)),
-                    )
-                } else {
-                    None
-                },
+                finished_at,
             }),
         });
     }
