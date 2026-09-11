@@ -119,6 +119,8 @@
               binaryen
               tailwindcss_4
               openssl
+              # Only for clients/python: the bot client and its one dependency.
+              (python3.withPackages (ps: [ ps.websockets ]))
               # nokamute # The AI used by hive-hydra - temporarily disabled due to darwin SDK issue
               (rust-bin.selectLatestNightlyWith (
                 toolchain:
