@@ -97,7 +97,7 @@ impl GameControlHandler {
             black_id: self.game.black_id,
             gar: GameActionResponse {
                 game_id: GameId(self.game.nanoid.to_owned()),
-                game: (*game_response).clone(),
+                game: game_response.clone(),
                 game_action,
                 user_id: self.user_id.to_owned(),
                 username: self.username.to_owned(),
@@ -140,7 +140,7 @@ impl GameControlHandler {
             self.data.telemetry.inc_tv_broadcast();
             messages.push(InternalServerMessage {
                 destination: MessageDestination::Global,
-                message: ServerMessage::Game(Box::new(GameUpdate::Tv((*game_response).clone()))),
+                message: ServerMessage::Game(Box::new(GameUpdate::Tv(game_response.clone()))),
             });
         };
         // Signal the dispatcher to run finalization after dispatch — see the

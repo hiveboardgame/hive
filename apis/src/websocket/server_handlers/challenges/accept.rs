@@ -13,6 +13,7 @@ use db_lib::{
 };
 use diesel_async::AsyncConnection;
 use shared_types::{ChallengeId, GameSpeed};
+use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct AcceptHandler {
@@ -97,7 +98,7 @@ impl AcceptHandler {
                 let new_game = NewGame::new(white_id, black_id, &challenge)?;
                 let (game, deleted_challenges) =
                     Game::create_and_delete_challenges(new_game, tc).await?;
-                let game_response = GameResponse::from_model(&game, tc).await?;
+                let game_response = Arc::new(GameResponse::from_model(&game, tc).await?);
                 Ok((game, deleted_challenges, game_response))
             })
             .await?;

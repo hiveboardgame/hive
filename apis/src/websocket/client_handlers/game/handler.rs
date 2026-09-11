@@ -23,7 +23,7 @@ pub fn handle_game(game_update: GameUpdate) {
     match game_update {
         GameUpdate::Reaction(game) => handle_reaction(game),
         GameUpdate::Tv(game) => {
-            games_signal.live_games_add(game);
+            games_signal.live_games_add((*game).clone());
         }
         GameUpdate::Urgent(games) => {
             games_signal.own_games_set(games);
@@ -55,10 +55,10 @@ fn handle_reaction(gar: GameActionResponse) {
     let update_notifier = expect_context::<UpdateNotifier>();
     match gar.game_action.clone() {
         GameReaction::New => {
-            handle_new_game(gar.game.clone());
+            handle_new_game((*gar.game).clone());
         }
         GameReaction::Tv => {
-            games.live_games_add(gar.game);
+            games.live_games_add((*gar.game).clone());
         }
         GameReaction::TimedOut => {
             let game_id = &gar.game.game_id;
@@ -76,7 +76,7 @@ fn handle_reaction(gar: GameActionResponse) {
                 let chat = expect_context::<Chat>();
                 chat.request_catalog_refresh();
             } else {
-                games.own_games_add(gar.game.clone());
+                games.own_games_add((*gar.game).clone());
             }
             ack_seen_if_watching(&gar.game.game_id, gar.game.current_player_id);
         }

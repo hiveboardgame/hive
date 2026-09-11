@@ -14,6 +14,7 @@ from hivegame_bot import HiveBot, HiveError
 class FakeSocket:
     def __init__(self, incoming=()):
         self.sent = []
+        self.closed = False
         self._incoming = list(incoming)
 
     async def send(self, text):
@@ -23,7 +24,7 @@ class FakeSocket:
         return self._incoming.pop(0)
 
     async def close(self):
-        pass
+        self.closed = True
 
 
 def bot_with(incoming=()):
@@ -93,15 +94,22 @@ async def check_auth_frame_and_envelope_unwrapping():
     assert await bot._receive() == {"LobbySnapshot": {"urgent_games": []}}
 
 
-def bot_connecting_through(incoming):
-    """A bot whose `connect` reaches a stub instead of a server."""
-    socket = FakeSocket(incoming)
+def connection_through(socket):
+    """The bot and the socket its `connect` will reach. The socket is handed back
+    separately because a connect that cleans up after itself drops the bot's reference to
+    it, and the whole question is whether that socket was hung up."""
 
     async def stub_connect(_url):
         return socket
 
     hivegame_bot.websockets = type("stub", (), {"connect": staticmethod(stub_connect)})
-    return HiveBot("tok")
+    return HiveBot("tok"), socket
+
+
+def bot_connecting_through(incoming):
+    """A bot whose `connect` reaches a stub instead of a server."""
+    bot, _ = connection_through(FakeSocket(incoming))
+    return bot
 
 
 def ok(message):
@@ -159,6 +167,63 @@ async def check_pings_are_answered_and_not_yielded():
     assert frames(bot) == [{"Pong": 7}], frames(bot)
 
 
+async def check_a_refused_token_closes_the_socket():
+    # `__aenter__` is `connect`, so a raise there means `__aexit__` never runs and nothing
+    # else will ever hang up. The server keeps the connection open after "Auth failed"
+    # rather than closing it, so a bot retrying a bad token leaks one socket per attempt.
+    bot, socket = connection_through(FakeSocket([ok({"Error": "Auth failed"})]))
+
+    try:
+        await bot.connect()
+    except HiveError:
+        pass
+    else:
+        raise AssertionError("a refused token must raise")
+
+    assert socket.closed, "a refused token left the socket open"
+    assert bot._socket is None, "a bot that failed to connect must not look connected"
+
+
+async def check_a_failed_context_manager_closes_the_socket():
+    bot, socket = connection_through(FakeSocket([ok({"Error": "Auth failed"})]))
+
+    try:
+        async with bot:
+            raise AssertionError("the body must not run when authentication failed")
+    except HiveError:
+        pass
+
+    assert socket.closed, "async with leaked the socket when authentication failed"
+
+
+async def check_a_cancelled_connect_closes_the_socket():
+    # Same shape as a refusal: a bot that times out its own connect, or is cancelled at
+    # shutdown, unwinds out of `connect` with the socket already open.
+    class Cancelling(FakeSocket):
+        async def recv(self):
+            raise asyncio.CancelledError
+
+    bot, socket = connection_through(Cancelling())
+
+    try:
+        await bot.connect()
+    except asyncio.CancelledError:
+        pass
+    else:
+        raise AssertionError("cancellation must propagate")
+
+    assert socket.closed, "a cancelled connect left the socket open"
+
+
+async def check_a_successful_connect_keeps_the_socket():
+    # The guard against fixing the leak with an unconditional hang-up.
+    bot, socket = connection_through(FakeSocket([AUTHENTICATED]))
+
+    await bot.connect()
+
+    assert not socket.closed, "a successful connect must leave the socket usable"
+
+
 async def main():
     await check_requests()
     await check_auth_frame_and_envelope_unwrapping()
@@ -166,6 +231,10 @@ async def main():
     await check_auth_survives_traffic_arriving_before_the_ack()
     await check_an_anonymous_snapshot_is_not_authentication()
     await check_a_refused_token_raises()
+    await check_a_refused_token_closes_the_socket()
+    await check_a_failed_context_manager_closes_the_socket()
+    await check_a_cancelled_connect_closes_the_socket()
+    await check_a_successful_connect_keeps_the_socket()
     print("all frame checks passed")
 
 

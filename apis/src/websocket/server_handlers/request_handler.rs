@@ -29,7 +29,7 @@ use crate::{
     },
 };
 use db_lib::{DbConn, DbPool};
-use shared_types::{normalize_chat_message, ConversationKey, SimpleUser};
+use shared_types::{normalize_chat_message, ConversationKey, GameId, SimpleUser};
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -131,15 +131,34 @@ impl RequestHandler {
     }
 
     async fn bot_read(&self, read: BotRead) -> Result<HandlerOutput> {
-        Ok(BotReadHandler::new(
-            read,
-            self.received_from.clone(),
-            self.user_id,
-            self.data.clone(),
-            &self.pool,
+        Ok(Box::pin(
+            BotReadHandler::new(
+                read,
+                self.received_from.clone(),
+                self.user_id,
+                self.data.clone(),
+                &self.pool,
+            )
+            .handle(),
         )
-        .handle()
         .await?)
+    }
+
+    /// The deepest chain the dispatcher can enter: a turn replays the whole board and
+    /// writes it back. Boxed at both steps so none of it lands in the future every other
+    /// request is dispatched through.
+    async fn game_action(&self, game_id: &GameId, action: GameAction) -> Result<HandlerOutput> {
+        let handler = Box::pin(GameActionHandler::new(
+            game_id,
+            action,
+            self.received_from.clone(),
+            (&self.username, self.user_id),
+            self.data.clone(),
+            self.hub.clone(),
+            &self.pool,
+        ))
+        .await?;
+        Ok(Box::pin(handler.handle()).await?)
     }
     async fn chat_connection(&self, context: &'static str) -> Result<DbConn<'_>> {
         db_lib::get_conn(&self.pool).await.map_err(|error| {
@@ -215,14 +234,16 @@ impl RequestHandler {
             }
             ClientRequest::Tournament(tournament_action) => {
                 self.ensure_auth()?;
-                TournamentHandler::new(
-                    tournament_action,
-                    &self.username,
-                    self.user_id,
-                    self.hub.clone(),
-                    &self.pool,
+                Box::pin(
+                    TournamentHandler::new(
+                        tournament_action,
+                        &self.username,
+                        self.user_id,
+                        self.hub.clone(),
+                        &self.pool,
+                    )
+                    .handle(),
                 )
-                .handle()
                 .await?
             }
             ClientRequest::Pong(nonce) => {
@@ -230,14 +251,19 @@ impl RequestHandler {
                 HandlerOutput::empty()
             }
             ClientRequest::Resync => {
-                ResyncHandler::new(
-                    self.hub.clone(),
-                    self.pool.clone(),
-                    self.received_from.clone(),
-                    self.user_id,
-                    self.authed,
+                // Carries the same lobby snapshot `handle_auth` does, and both frames are
+                // live at once on a move, so leaving this one inline would have fixed half
+                // the problem.
+                Box::pin(
+                    ResyncHandler::new(
+                        self.hub.clone(),
+                        self.pool.clone(),
+                        self.received_from.clone(),
+                        self.user_id,
+                        self.authed,
+                    )
+                    .handle(),
                 )
-                .handle()
                 .await?
             }
             ClientRequest::Game {
@@ -250,18 +276,7 @@ impl RequestHandler {
                     }
                     _ => {}
                 };
-                GameActionHandler::new(
-                    &game_id,
-                    game_action,
-                    self.received_from.clone(),
-                    (&self.username, self.user_id),
-                    self.data.clone(),
-                    self.hub.clone(),
-                    &self.pool,
-                )
-                .await?
-                .handle()
-                .await?
+                self.game_action(&game_id, game_action).await?
             }
             ClientRequest::Challenge(challenge_action) => {
                 self.ensure_auth()?;
@@ -308,11 +323,8 @@ impl RequestHandler {
                     crate::common::ScheduleAction::TournamentPublic(_) => {}
                     _ => self.ensure_auth()?,
                 }
-                ScheduleHandler::new(self.user_id, action, &self.pool)
-                    .await?
-                    .handle()
-                    .await?
-                    .into()
+                let handler = ScheduleHandler::new(self.user_id, action, &self.pool).await?;
+                Box::pin(handler.handle()).await?.into()
             }
         };
         Ok(output)
@@ -558,5 +570,124 @@ mod tests {
             handler.handle().await,
             Err(RequestHandlerError::AuthError(AuthError::Unauthorized))
         ));
+    }
+
+    /// Every websocket frame is dispatched through this one future. Debug builds neither
+    /// pack async state machines nor elide the stack temporaries used to build them, so a
+    /// branch that inlines its handler's future widens the frame that *unrelated* requests
+    /// — an ordinary move included — are dispatched through, until the handler chain below
+    /// no longer fits an Actix worker stack. Box a branch's future rather than raising this.
+    const DISPATCH_FUTURE_BUDGET: usize = 16 * 1024;
+
+    #[tokio::test]
+    async fn the_dispatch_future_fits_a_worker_stack() {
+        let handler = test_handler(ClientRequest::GetPendingGames, bot()).await;
+
+        let size = std::mem::size_of_val(&handler.handle());
+
+        println!("RequestHandler::handle future: {size} bytes of {DISPATCH_FUTURE_BUDGET}");
+        assert!(
+            size <= DISPATCH_FUTURE_BUDGET,
+            "RequestHandler::handle is a {size} byte future, budget is \
+             {DISPATCH_FUTURE_BUDGET}; box the branch futures that grew it"
+        );
+    }
+
+    /// The bot reads were the arms added last, and each one inlines a whole
+    /// `BotReadHandler::handle` — connection checkout, game lookup, response build — into
+    /// the shared dispatcher. Boxing keeps the branch a pointer instead of a payload.
+    #[tokio::test]
+    async fn a_bot_read_does_not_inline_its_handler_future() {
+        let handler = test_handler(ClientRequest::GetPendingGames, bot()).await;
+
+        let size = std::mem::size_of_val(&handler.bot_read(BotRead::PendingGames));
+
+        assert!(
+            size <= 1024,
+            "the bot_read branch carries a {size} byte future inline"
+        );
+    }
+
+    /// An outlier detector, not the stack constraint — that is the aggregate budget above,
+    /// which measures what is actually inline after boxing. This measures each handler's
+    /// own future instead, because a handler this far over is one whose *body* wants
+    /// restructuring rather than one more `Box::pin` at its call site. The chat and game
+    /// arms cannot be sized here: both need a live `DbConn` to build their future.
+    const BRANCH_FUTURE_OUTLIER: usize = 256 * 1024;
+
+    /// Which arm to box is a measurement, not a guess: `handle`'s future is about as big
+    /// as its largest arm, so boxing anything smaller than that buys nothing.
+    #[tokio::test]
+    async fn no_branch_inlines_more_than_its_share() {
+        use crate::common::{ChallengeAction, ScheduleAction, TournamentAction};
+        use shared_types::{ChallengeId, TournamentId};
+        use std::mem::size_of_val;
+
+        let handler = test_handler(ClientRequest::GetPendingGames, bot()).await;
+        let user_id = handler.user_id;
+
+        let tournament = TournamentHandler::new(
+            TournamentAction::Join(TournamentId("a-tournament".to_string())),
+            &handler.username,
+            user_id,
+            handler.hub.clone(),
+            &handler.pool,
+        );
+        let challenge = ChallengeHandler::new(
+            ChallengeAction::Accept(ChallengeId("a-challenge".to_string())),
+            &handler.username,
+            user_id,
+            false,
+            &handler.pool,
+        )
+        .await
+        .expect("the challenge handler builds without touching the database");
+        let schedule = ScheduleHandler::new(
+            user_id,
+            ScheduleAction::Accept(Uuid::new_v4()),
+            &handler.pool,
+        )
+        .await
+        .expect("the schedule handler builds without touching the database");
+        let status = UserStatusHandler::new()
+            .await
+            .expect("the status handler builds without touching the database");
+
+        let branches = [
+            ("tournament", size_of_val(&tournament.handle())),
+            ("challenge", size_of_val(&challenge.handle())),
+            ("schedule", size_of_val(&schedule.handle())),
+            ("user_status", size_of_val(&status.handle())),
+            ("oauth", size_of_val(&OauthHandler::new(user_id).handle())),
+            (
+                "resync",
+                size_of_val(
+                    &ResyncHandler::new(
+                        handler.hub.clone(),
+                        handler.pool.clone(),
+                        handler.received_from.clone(),
+                        user_id,
+                        true,
+                    )
+                    .handle(),
+                ),
+            ),
+            (
+                "bot_read",
+                size_of_val(&handler.bot_read(BotRead::PendingGames)),
+            ),
+        ];
+
+        println!("branch futures: {branches:?}");
+        let over: Vec<&(&str, usize)> = branches
+            .iter()
+            .filter(|(_, size)| *size > BRANCH_FUTURE_OUTLIER)
+            .collect();
+
+        assert!(
+            over.is_empty(),
+            "these branches carry more than {BRANCH_FUTURE_OUTLIER} bytes of future: \
+             {over:?} (all branches: {branches:?})"
+        );
     }
 }

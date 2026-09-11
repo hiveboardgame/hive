@@ -200,7 +200,9 @@ async fn handle_request(
     identity: &Arc<Mutex<SimpleUser>>,
 ) {
     if let ClientRequest::Auth(token) = request {
-        handle_auth(&token, hub, socket, pool, jwt_secret, identity).await;
+        // Boxed so the login, profile build and lobby snapshot behind it stay out of the
+        // future every *other* frame — an ordinary move included — is dispatched through.
+        Box::pin(handle_auth(&token, hub, socket, pool, jwt_secret, identity)).await;
         return;
     }
 
@@ -665,5 +667,68 @@ mod tests {
         let after = identity.lock().expect("identity mutex poisoned").clone();
         assert!(!after.authed);
         assert_eq!(after.user_id, anonymous.user_id);
+    }
+
+    /// The frame dispatcher is the parent frame of every handler chain, so its size is
+    /// paid by requests that never touch the branch responsible for it — `handle_auth`
+    /// inlines a login, a profile build and a whole lobby snapshot into the same future an
+    /// ordinary move is dispatched through. Debug builds neither pack async state machines
+    /// nor elide the temporaries used to build them, so this is what decides whether the
+    /// chain below still fits an Actix worker stack.
+    #[tokio::test]
+    async fn the_frame_dispatch_future_fits_a_worker_stack() {
+        use crate::{
+            api::v1::auth::jwt_secret::JwtSecret,
+            common::GameAction,
+            websocket::{
+                messages::{SocketFormat, SocketTx},
+                ws_hub::WsHub,
+                WebsocketData,
+            },
+        };
+        use shared_types::SimpleUser;
+        use std::sync::{Arc, Mutex};
+
+        const DISPATCH_FUTURE_BUDGET: usize = 16 * 1024;
+
+        let pool = db_lib::get_pool("postgresql://test:test@127.0.0.1:9/test")
+            .await
+            .expect("bb8 pool builds without connecting");
+        let data = Arc::new(WebsocketData::default());
+        let hub = WsHub::new(data.clone(), pool.clone());
+        let (tx, _rx) = tokio::sync::mpsc::channel(8);
+        let socket = SocketTx {
+            socket_id: Uuid::new_v4(),
+            format: SocketFormat::Msgpack,
+            tx,
+        };
+        let identity = Arc::new(Mutex::new(SimpleUser {
+            user_id: Uuid::nil(),
+            username: "anonymous".to_string(),
+            admin: false,
+            authed: false,
+        }));
+        let jwt_secret = Arc::new(JwtSecret::new("test-secret".to_string()));
+        let request = ClientRequest::Game {
+            game_id: GameId("some-game".to_string()),
+            action: GameAction::Play("wA1 -bQ".to_string()),
+        };
+
+        let size = std::mem::size_of_val(&super::handle_request(
+            request,
+            &hub,
+            &socket,
+            &data,
+            &pool,
+            &jwt_secret,
+            &identity,
+        ));
+
+        println!("handle_request future: {size} bytes of {DISPATCH_FUTURE_BUDGET}");
+        assert!(
+            size <= DISPATCH_FUTURE_BUDGET,
+            "handle_request is a {size} byte future, budget is {DISPATCH_FUTURE_BUDGET}; \
+             box the branch futures that grew it"
+        );
     }
 }

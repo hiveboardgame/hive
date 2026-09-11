@@ -52,10 +52,10 @@ pub fn handle_control(game_control: GameControl, gar: GameActionResponse) {
             games.own_games_remove(&gar.game.game_id);
         }
         GameControl::TakebackAccept(_) => {
-            games.own_games_add(gar.game.to_owned());
+            games.own_games_add((*gar.game).clone());
         }
         GameControl::DrawOffer(_) | GameControl::TakebackRequest(_) => {
-            games.own_games_add(gar.game.to_owned());
+            games.own_games_add((*gar.game).clone());
         }
         GameControl::DrawReject(_) | GameControl::TakebackReject(_) => {}
     }
