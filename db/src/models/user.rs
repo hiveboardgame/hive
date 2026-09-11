@@ -37,11 +37,11 @@ use diesel::{
     Identifiable,
     Insertable,
     OptionalExtension,
-    PgTextExpressionMethods,
     QueryDsl,
     Queryable,
     Selectable,
     SelectableHelper,
+    TextExpressionMethods,
 };
 use diesel_async::{AsyncConnection, RunQueryDsl};
 use hive_lib::GameControl;
@@ -55,6 +55,14 @@ const MAX_USERNAME_LENGTH: usize = 20;
 const MIN_USERNAME_LENGTH: usize = 2;
 const VALID_USERNAME_CHARS: &str = "-_";
 const DELETED_USERNAME_PREFIX: &str = "deleted_user_";
+const USERNAME_SEARCH_LIMIT: i64 = 25;
+
+fn escape_like_pattern(pattern: &str) -> String {
+    pattern
+        .replace('\\', "\\\\")
+        .replace('%', "\\%")
+        .replace('_', "\\_")
+}
 
 lazy_static! {
     static ref EMAIL_RE: Regex = Regex::new(r"^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$").unwrap();
@@ -333,14 +341,25 @@ impl User {
 
     pub async fn search_usernames(
         pattern: &str,
+        excluded: &[String],
         conn: &mut DbConn<'_>,
     ) -> Result<Vec<User>, DbError> {
         if pattern.is_empty() {
             return Ok(vec![]);
         }
+        let pattern = pattern.to_lowercase();
+        let like = escape_like_pattern(&pattern);
+        let excluded: Vec<String> = excluded.iter().map(|name| name.to_lowercase()).collect();
         Ok(users_table
-            .filter(normalized_username.ilike(format!("%{pattern}%")))
+            .filter(normalized_username.like(format!("%{like}%")))
+            .filter(normalized_username.ne_all(excluded))
             .filter(deleted_field.eq(false))
+            .order((
+                normalized_username.eq(pattern).desc(),
+                normalized_username.like(format!("{like}%")).desc(),
+                normalized_username.asc(),
+            ))
+            .limit(USERNAME_SEARCH_LIMIT)
             .load(conn)
             .await?)
     }

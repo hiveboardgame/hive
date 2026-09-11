@@ -50,7 +50,7 @@ pub fn UserSearch(
     let excluded_users = move || {
         filtered_users
             .as_ref()
-            .map(|filtered_users| filtered_users())
+            .map(|filtered_users| filtered_users().into_iter().collect::<Vec<_>>())
             .unwrap_or_default()
     };
 
@@ -61,14 +61,13 @@ pub fn UserSearch(
             if pattern.len() < MIN_SEARCH_LENGTH {
                 None
             } else {
-                let user_search = search_users(pattern).await;
-                let btree: BTreeMap<String, UserResponse> = user_search
+                let ranked: Vec<(String, UserResponse)> = search_users(pattern, filtered_users)
+                    .await
                     .unwrap_or_default()
                     .into_iter()
-                    .filter(|user| !filtered_users.contains(&user.username))
                     .map(|user| (user.username.clone(), user))
                     .collect();
-                Some(btree)
+                Some(ranked)
             }
         }
     });
@@ -108,7 +107,7 @@ pub fn UserSearch(
         if !has_search_query() {
             sorted_by_username(fallback_users.map(|f| f()).unwrap_or_default())
         } else {
-            let mut users = sorted_by_username(user_search.get().flatten().unwrap_or_default());
+            let mut users = user_search.get().flatten().unwrap_or_default();
             users.truncate(MAX_SUGGESTIONS);
             users
         }

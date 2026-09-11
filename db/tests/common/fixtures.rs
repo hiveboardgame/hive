@@ -18,8 +18,8 @@ use uuid::Uuid;
 const CLOCK_SECONDS: i64 = 3600;
 
 pub async fn create_user(username: &str, bot: bool, conn: &mut DbConn<'_>) -> User {
-    let mut new_user = NewUser::new(username, "password", &format!("{username}@example.com"))
-        .expect("create new user fixture");
+    let email = format!("{}@example.com", username.to_lowercase());
+    let mut new_user = NewUser::new(username, "password", &email).expect("create new user fixture");
     new_user.bot = bot;
     User::create(new_user, conn).await.expect("insert user")
 }
