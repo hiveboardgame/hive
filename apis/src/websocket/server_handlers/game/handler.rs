@@ -3,7 +3,7 @@ use super::{
     join_handler::JoinHandler,
     start::StartHandler,
     timeout_handler::TimeoutHandler,
-    turn_handler::TurnHandler,
+    turn_handler::{TurnHandler, TurnInput},
 };
 use crate::{
     common::GameAction,
@@ -76,11 +76,16 @@ impl GameActionHandler {
                 .handle()
                 .await?
             }
-            GameAction::Turn(turn) => {
+            GameAction::Turn(_) | GameAction::Play(_) => {
                 self.ensure_not_finished()?;
                 self.ensure_user_is_player()?;
+                let input = match self.game_action.clone() {
+                    GameAction::Turn(turn) => TurnInput::Structured(turn),
+                    GameAction::Play(notation) => TurnInput::Notation(notation),
+                    _ => unreachable!(),
+                };
                 TurnHandler::new(
-                    turn,
+                    input,
                     &self.game,
                     &self.username,
                     self.user_id,

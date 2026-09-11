@@ -97,6 +97,10 @@ impl fmt::Display for ExternalServerError {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ServerMessage {
+    /// Sent when an `Auth` frame succeeds, before the snapshot that follows it.
+    /// A bot has no other way to tell a completed authentication apart from the
+    /// anonymous connect snapshot, which races it on the same socket.
+    Authenticated(UserResponse),
     Challenge(ChallengeUpdate),
     Chat(ChatMessageContainer),
     ChatRead {
@@ -120,6 +124,7 @@ pub enum ServerMessage {
     UserSettings(UserSettingsUpdate),
     UserStatus(UserUpdate),
     RedirectLink(String),
+    UserProfile(UserResponse),
 }
 
 /// Authoritative best-effort lobby state sent on connect and Resync.
@@ -169,6 +174,7 @@ pub enum GameUpdate {
     OwnGameRemoved(GameId),
     Tv(GameResponse),
     Heartbeat(HeartbeatResponse),
+    Fetched(GameResponse),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
