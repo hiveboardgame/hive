@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::websocket::{
-    messages::SocketTx,
+    messages::{SocketFormat, SocketTx},
     ws_connection::reader_task,
     ws_hub::{WsHub, SOCKET_BUFFER_CAPACITY},
     WebsocketData,
@@ -44,13 +44,36 @@ pub async fn start_connection(
     data.telemetry.record_connect();
 
     let socket_id = Uuid::new_v4();
+    let format = if req
+        .query_string()
+        .split('&')
+        .any(|pair| pair == "format=json")
+    {
+        SocketFormat::Json
+    } else {
+        SocketFormat::Msgpack
+    };
     let (tx, mut out_rx) = mpsc::channel::<Bytes>(SOCKET_BUFFER_CAPACITY);
-    let socket = SocketTx { socket_id, tx };
+    let socket = SocketTx {
+        socket_id,
+        format,
+        tx,
+    };
 
     let mut write_session = session.clone();
     actix_web::rt::spawn(async move {
         while let Some(bytes) = out_rx.recv().await {
-            if write_session.binary(bytes).await.is_err() {
+            // The hub already encoded for this socket's format; the writer only picks the frame
+            // type that carries it.
+            let written = match format {
+                SocketFormat::Msgpack => write_session.binary(bytes).await,
+                SocketFormat::Json => {
+                    write_session
+                        .text(String::from_utf8_lossy(&bytes).into_owned())
+                        .await
+                }
+            };
+            if written.is_err() {
                 // The transport is broken. Close the session from this side
                 // so the reader's MessageStream wakes up immediately and
                 // calls on_disconnect — otherwise every subsequent dispatch
