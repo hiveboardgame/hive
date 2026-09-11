@@ -439,10 +439,8 @@ struct TournamentPageContext {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum TournamentChildRoute {
     Overview,
-    Results,
-    Pairings,
+    Matches,
     Standings,
-    Bracket,
     Scheduling,
     Manage,
     ManageMatches,
@@ -462,20 +460,11 @@ fn child_route_availability(
     let started = status != TournamentStatus::NotStarted;
     let available = match route {
         TournamentChildRoute::Overview => true,
-        TournamentChildRoute::Results => format == Format::RoundRobin && started,
-        TournamentChildRoute::Pairings => {
-            matches!(format, Format::Swiss | Format::DoubleSwiss) && started
-        }
+        TournamentChildRoute::Matches => started,
         TournamentChildRoute::Standings => {
             matches!(
                 format,
                 Format::RoundRobin | Format::Swiss | Format::DoubleSwiss
-            ) && started
-        }
-        TournamentChildRoute::Bracket => {
-            matches!(
-                format,
-                Format::SingleElimination | Format::DoubleElimination
             ) && started
         }
         TournamentChildRoute::Scheduling => {
@@ -752,17 +741,13 @@ fn TournamentNavigation() -> impl IntoView {
             }
         }
     };
-    let show_results = route_visible(TournamentChildRoute::Results);
-    let show_pairings = route_visible(TournamentChildRoute::Pairings);
+    let show_matches = route_visible(TournamentChildRoute::Matches);
     let show_standings = route_visible(TournamentChildRoute::Standings);
-    let show_bracket = route_visible(TournamentChildRoute::Bracket);
     let show_scheduling = route_visible(TournamentChildRoute::Scheduling);
     let show_manage = route_visible(TournamentChildRoute::Manage);
     let overview_class = link_class("", false);
-    let results_class = link_class("results", false);
-    let pairings_class = link_class("pairings", false);
+    let matches_class = link_class("matches", false);
     let standings_class = link_class("standings", false);
-    let bracket_class = link_class("bracket", false);
     let scheduling_class = link_class("schedule", true);
     let manage_class = link_class("manage", true);
     view! {
@@ -771,28 +756,16 @@ fn TournamentNavigation() -> impl IntoView {
             <A href="" exact=true attr:class=overview_class>
                 "Overview"
             </A>
-            <Show when=show_results>
+            <Show when=show_matches>
                 // TODO: i18n once copy is approved.
-                <A href="results" attr:class=results_class>
-                    "Results"
-                </A>
-            </Show>
-            <Show when=show_pairings>
-                // TODO: i18n once copy is approved.
-                <A href="pairings" attr:class=pairings_class>
-                    "Pairings"
+                <A href="matches" attr:class=matches_class>
+                    "Matches"
                 </A>
             </Show>
             <Show when=show_standings>
                 // TODO: i18n once copy is approved.
                 <A href="standings" attr:class=standings_class>
                     "Standings"
-                </A>
-            </Show>
-            <Show when=show_bracket>
-                // TODO: i18n once copy is approved.
-                <A href="bracket" attr:class=bracket_class>
-                    "Bracket"
                 </A>
             </Show>
             <Show when=show_scheduling>
@@ -1373,18 +1346,11 @@ pub fn TournamentRoutes() -> impl MatchNestedRoutes + Clone {
         <ParentRoute path=path!("/tournament/:nanoid") view=Tournament>
             <Route path=path!("") view=OverviewRoute />
             <ProtectedRoute
-                condition=|| tournament_child_route_condition(TournamentChildRoute::Results)
-                path=path!("results")
+                condition=|| tournament_child_route_condition(TournamentChildRoute::Matches)
+                path=path!("matches")
                 redirect_path=tournament_overview_path
                 fallback=TournamentAccessPending
-                view=ResultsRoute
-            />
-            <ProtectedRoute
-                condition=|| tournament_child_route_condition(TournamentChildRoute::Pairings)
-                path=path!("pairings")
-                redirect_path=tournament_overview_path
-                fallback=TournamentAccessPending
-                view=PairingsRoute
+                view=TournamentMatchesRoute
             />
             <ProtectedRoute
                 condition=|| tournament_child_route_condition(TournamentChildRoute::Standings)
@@ -1392,13 +1358,6 @@ pub fn TournamentRoutes() -> impl MatchNestedRoutes + Clone {
                 redirect_path=tournament_overview_path
                 fallback=TournamentAccessPending
                 view=TournamentStandingsRoute
-            />
-            <ProtectedRoute
-                condition=|| tournament_child_route_condition(TournamentChildRoute::Bracket)
-                path=path!("bracket")
-                redirect_path=tournament_overview_path
-                fallback=TournamentAccessPending
-                view=BracketRoute
             />
             <ProtectedParentRoute
                 condition=|| tournament_child_route_condition(TournamentChildRoute::Scheduling)
@@ -1532,47 +1491,39 @@ pub fn OverviewRoute() -> impl IntoView {
 }
 
 #[component]
-pub fn ResultsRoute() -> impl IntoView {
+pub fn TournamentMatchesRoute() -> impl IntoView {
     let context = expect_context::<TournamentPageContext>();
-    let TournamentFormatStore::RoundRobin(round_robin) = context.tournament.format else {
-        unreachable!("results route is only available for Round Robin tournaments")
-    };
-    view! {
-        <RoundRobinCrosstable
-            common=context.tournament.common
-            round_robin
-            user_id=context.user_id
-        />
+    match context.tournament.format {
+        TournamentFormatStore::RoundRobin(round_robin) => view! {
+            <RoundRobinCrosstable
+                common=context.tournament.common
+                round_robin
+                user_id=context.user_id
+            />
+        }
+        .into_any(),
+        TournamentFormatStore::Swiss(swiss) => {
+            view! { <SwissRoundBrowser common=context.tournament.common swiss /> }.into_any()
+        }
+        TournamentFormatStore::Elimination(elimination) => {
+            let selection = RwSignal::new(None::<TournamentSelection>);
+            view! {
+                <div class="relative left-1/2 -translate-x-1/2 w-[calc(100vw-0.75rem)] sm:w-[98vw]">
+                    <Bracket common=context.tournament.common elimination selection />
+                </div>
+            }
+            .into_any()
+        }
+        TournamentFormatStore::Arena(_) => {
+            unreachable!("matches route is not available for Arena tournaments")
+        }
     }
-}
-
-#[component]
-pub fn PairingsRoute() -> impl IntoView {
-    let context = expect_context::<TournamentPageContext>();
-    let TournamentFormatStore::Swiss(swiss) = context.tournament.format else {
-        unreachable!("pairings route is only available for Swiss tournaments")
-    };
-    view! { <SwissRoundBrowser common=context.tournament.common swiss /> }
 }
 
 #[component]
 pub fn TournamentStandingsRoute() -> impl IntoView {
     let context = expect_context::<TournamentPageContext>();
     view! { <TournamentDetailedStandings tournament=context.tournament /> }
-}
-
-#[component]
-pub fn BracketRoute() -> impl IntoView {
-    let context = expect_context::<TournamentPageContext>();
-    let TournamentFormatStore::Elimination(elimination) = context.tournament.format else {
-        unreachable!("bracket route is only available for Elimination tournaments")
-    };
-    let selection = RwSignal::new(None::<TournamentSelection>);
-    view! {
-        <div class="relative left-1/2 -translate-x-1/2 w-[calc(100vw-0.75rem)] sm:w-[98vw]">
-            <Bracket common=context.tournament.common elimination selection />
-        </div>
-    }
 }
 
 #[component]
