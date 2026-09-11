@@ -125,6 +125,10 @@ pub struct Board {
     pinned: [bool; 48],
     // number of pieces present on the board
     pub played: usize,
+    /// Net (dq, dr) applied to raw coordinates by every `recenter` call so far. Not part of the
+    /// hive's identity - the renderer uses it to keep the on-screen board from jumping when
+    /// storage-driven recentering moves everyone's raw `Position`.
+    pub recenter_shift: (i32, i32),
 }
 
 /// Storage size is not part of the hive; derived fields follow from the compared ones.
@@ -168,6 +172,7 @@ impl Board {
             positions: [None; 48],
             pinned: [false; 48],
             played: 0,
+            recenter_shift: (0, 0),
         }
     }
 
@@ -258,6 +263,13 @@ impl Board {
             self.last_move.1.map(translate),
         );
         centered.stunned = self.stunned;
+        // Not itself wrapped: a hive that doesn't straddle the seam (the only case this single
+        // delta can compensate for) translates uniformly, so `q_start - q_origin` is the same
+        // for every piece regardless of the `rem_euclid` each individual `translate` applies.
+        centered.recenter_shift = (
+            self.recenter_shift.0 + (q_start - q_origin),
+            self.recenter_shift.1 + (r_start - r_origin),
+        );
         *self = centered;
     }
 
@@ -1522,6 +1534,63 @@ mod tests {
         board.recenter();
         assert_eq!(board.storage_cells(), 256);
         assert!(!board.needs_recentering());
+    }
+
+    /// The renderer cancels a recenter jump by panning the camera the same amount it shifted
+    /// raw coordinates, so the accumulated total - not just the latest call - has to be right.
+    #[test]
+    fn recenter_shift_accumulates_across_multiple_recenters() {
+        let mut board = Board::new();
+        let anchor: Piece = "wQ".parse().expect("test piece");
+        board.insert(Position::new(9, 16), anchor, true);
+        board.insert(
+            Position::new(10, 16),
+            "bQ".parse().expect("test piece"),
+            true,
+        );
+        assert_eq!(board.recenter_shift, (0, 0));
+
+        let before_first = board.position_of_piece(anchor).expect("just inserted");
+        board.recenter();
+        let after_first = board.position_of_piece(anchor).expect("still on the board");
+        assert_eq!(
+            after_first,
+            Position::new(
+                before_first.q + board.recenter_shift.0,
+                before_first.r + board.recenter_shift.1
+            ),
+            "the piece should have moved by exactly the reported shift"
+        );
+        let shift_after_first = board.recenter_shift;
+        assert_ne!(shift_after_first, (0, 0), "the hive was off-centre already");
+
+        // Skew the bounding box so a second `recenter` picks a different target and has to
+        // apply a further, non-zero translation on top of the first.
+        for (offset, piece) in ["wA1", "bA1", "wA2", "bA2", "wG1", "bG1", "wG2", "bG2"]
+            .into_iter()
+            .enumerate()
+        {
+            board.insert(
+                Position::new(21 - offset as i32, 16),
+                piece.parse().expect("test piece"),
+                true,
+            );
+        }
+        let before_second = board.position_of_piece(anchor).expect("still on the board");
+        board.recenter();
+        let after_second = board.position_of_piece(anchor).expect("still on the board");
+        let applied_second = (
+            after_second.q - before_second.q,
+            after_second.r - before_second.r,
+        );
+        assert_eq!(
+            board.recenter_shift,
+            (
+                shift_after_first.0 + applied_second.0,
+                shift_after_first.1 + applied_second.1
+            ),
+            "the second recenter should add to, not replace, the first shift"
+        );
     }
 
     #[test]

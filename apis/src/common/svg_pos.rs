@@ -60,6 +60,16 @@ pub fn hex_height() -> f32 {
     2.0 * HEX_SIZE
 }
 
+/// Pixel translation `center_for_level` produces for a raw `(dq, dr)` coordinate shift, at any
+/// starting position. Deliberately bypasses `Position::new` (which wraps into `0..BOARD_SIZE` and
+/// would corrupt a negative or out-of-range delta) - lets the camera cancel a `Board::recenter`
+/// shift without needing a real, addressable `Position` for the delta itself.
+pub fn pixel_delta_for_shift(dq: i32, dr: i32) -> (f32, f32) {
+    let w = hex_width();
+    let h = hex_height();
+    ((dq as f32 + dr as f32 / 2.0) * w, dr as f32 * 0.75 * h)
+}
+
 /// Inverse of `center` at level 0 (screen point → hex), for click hit-testing.
 /// Mirrors `center`'s row parity and truncating `r / 2` so it round-trips; stack
 /// offsets only apply above level 0, so `straight` doesn't matter here.

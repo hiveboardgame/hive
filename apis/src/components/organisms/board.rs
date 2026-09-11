@@ -1,5 +1,5 @@
 use crate::{
-    common::{position_from_svg, SvgPos, TileDesign},
+    common::{pixel_delta_for_shift, position_from_svg, SvgPos, TileDesign},
     components::{
         layouts::base_layout::OrientationSignal,
         molecules::{
@@ -353,6 +353,30 @@ pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>)
                 let rect = div.get_bounding_client_rect();
                 update_viewbox_size(rect.width() as f32, rect.height() as f32, false);
             }
+        },
+        false,
+    );
+
+    // `Board::recenter` (engine) periodically re-bases every piece's raw coordinates to keep
+    // them inside the fixed-size storage window. Raw coordinates feed the renderer directly, so
+    // left uncompensated that reads as the whole board jumping when stepping across the ply
+    // where it happened. Since the shift is a uniform translation, panning the camera by the
+    // same pixel delta (in the opposite direction) cancels it exactly, with no need to touch any
+    // `Position` used for hit-testing or move submission.
+    Effect::watch(
+        move || history_board.with(|board| board.recenter_shift),
+        move |shift, prev_shift, _| {
+            let Some(prev_shift) = prev_shift else {
+                return;
+            };
+            if shift == prev_shift {
+                return;
+            }
+            let (dx, dy) = pixel_delta_for_shift(shift.0 - prev_shift.0, shift.1 - prev_shift.1);
+            viewbox_signal.update(|vb| {
+                vb.x_transform -= dx;
+                vb.y_transform -= dy;
+            });
         },
         false,
     );
