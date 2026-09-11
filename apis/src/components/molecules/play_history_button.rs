@@ -38,9 +38,20 @@ pub fn HistoryButton(
         PlayHistoryNavigation::Next => icondata_ai::AiStepForwardFilled,
         PlayHistoryNavigation::Previous => icondata_ai::AiStepBackwardFilled,
     };
+    let label = match action {
+        PlayHistoryNavigation::First => "First move",
+        PlayHistoryNavigation::Last => "Last move",
+        PlayHistoryNavigation::Next => "Next move",
+        PlayHistoryNavigation::Previous => "Previous move",
+    };
 
     view! {
-        <HistoryNavButton disabled=is_disabled on_press=on_press>
+        <HistoryNavButton
+            disabled=is_disabled
+            on_press=on_press
+            attr:aria-label=label
+            attr:title=label
+        >
             <Icon icon=icon />
         </HistoryNavButton>
     }
