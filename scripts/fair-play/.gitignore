@@ -1,0 +1,5 @@
+__pycache__/
+*.py[cod]
+
+# generated review files contain usernames — never commit them
+logs/
