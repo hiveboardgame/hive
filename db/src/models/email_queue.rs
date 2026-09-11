@@ -14,9 +14,9 @@ use crate::{
     },
     DbConn,
 };
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable};
-use diesel_async::RunQueryDsl;
+use diesel_async::{AsyncConnection, RunQueryDsl};
 use uuid::Uuid;
 
 #[derive(Insertable, Debug)]
@@ -53,18 +53,52 @@ impl EmailQueueItem {
             .await?)
     }
 
+    /// Takes a batch out of the queue and leases it to this caller.
+    ///
+    /// A plain `SELECT` is not enough: the drain delivers before it marks
+    /// anything, so two app instances — which every blue/green deploy has for
+    /// the length of the overlap window — read the same rows and both send.
+    /// Pushing `scheduled_at` forward in the same transaction that locks the
+    /// rows is the lease: the other instance's `scheduled_at <= now()` filter
+    /// stops matching them. `SKIP LOCKED` is what keeps the two from simply
+    /// queueing behind each other and handing over the same batch anyway.
+    ///
+    /// `attempts` is deliberately not bumped: an instance that dies mid-batch
+    /// should have the rest retried in full once the lease expires, not have
+    /// them burn a delivery attempt that was never made.
+    ///
+    /// `lease` is the caller's, because only the caller knows its worst-case
+    /// time to work through `limit` items. A lease shorter than that lets a
+    /// second instance reclaim and re-send messages the first is still sending.
     pub async fn claim_batch(
         limit: i64,
+        lease: Duration,
         conn: &mut DbConn<'_>,
     ) -> Result<Vec<EmailQueueItem>, DbError> {
-        Ok(email_queue_table
-            .filter(sent_at.is_null())
-            .filter(attempts_field.lt(3))
-            .filter(scheduled_at.le(Utc::now()))
-            .order(created_at.asc())
-            .limit(limit)
-            .load(conn)
-            .await?)
+        let lease = Utc::now() + lease;
+        conn.transaction::<_, DbError, _>(async move |tc| {
+            let ids: Vec<Uuid> = email_queue_table
+                .select(id_field)
+                .filter(sent_at.is_null())
+                .filter(attempts_field.lt(3))
+                .filter(scheduled_at.le(Utc::now()))
+                .order(created_at.asc())
+                .limit(limit)
+                .for_update()
+                .skip_locked()
+                .load(tc)
+                .await?;
+            if ids.is_empty() {
+                return Ok(Vec::new());
+            }
+            Ok(
+                diesel::update(email_queue_table.filter(id_field.eq_any(ids)))
+                    .set(scheduled_at.eq(lease))
+                    .get_results(tc)
+                    .await?,
+            )
+        })
+        .await
     }
 
     pub async fn mark_sent(id: Uuid, conn: &mut DbConn<'_>) -> Result<(), DbError> {

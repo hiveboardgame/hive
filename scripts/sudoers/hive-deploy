@@ -1,0 +1,17 @@
+# Allow `drone` to manage the hive systemd slots and swap the nginx upstream
+# without a password. Install with:
+#   sudo install -m 440 scripts/sudoers/hive-deploy /etc/sudoers.d/hive-deploy
+# (visudo will reject it if the syntax is wrong.)
+#
+# Paths are Debian 13's (`which systemctl` -> /usr/bin/systemctl). A rule that
+# names arguments must match the whole argument list, so these mirror
+# scripts/lib.sh, deploy.sh and rollback.sh exactly — change them together.
+# Both failure modes here are a silent password prompt that hangs the deploy
+# with no output, not an error.
+Cmnd_Alias HIVE_SLOTS   = /usr/bin/systemctl start hive@*, /usr/bin/systemctl stop hive@*
+Cmnd_Alias HIVE_JOURNAL = /usr/bin/journalctl -u hive@* -n 50 --no-pager
+Cmnd_Alias HIVE_NGINX   = /usr/bin/tee /etc/nginx/hive-upstream.conf, \
+                          /usr/bin/rm -f /etc/nginx/hive-upstream.conf, \
+                          /usr/sbin/nginx -t, /usr/sbin/nginx -s reload
+
+drone ALL=(root) NOPASSWD: HIVE_SLOTS, HIVE_JOURNAL, HIVE_NGINX

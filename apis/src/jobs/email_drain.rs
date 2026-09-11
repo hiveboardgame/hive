@@ -5,8 +5,19 @@ use std::time::Duration;
 use tokio::time::MissedTickBehavior;
 
 const DRAIN_INTERVAL_SECS: u64 = 3;
-const BATCH_SIZE: i64 = 50;
+const BATCH_SIZE: i64 = 10;
 const MAX_ATTEMPTS: i16 = 3;
+
+/// The send is an HTTP call with no timeout of its own, so without this a
+/// single unresponsive request stalls the batch indefinitely.
+const DELIVERY_TIMEOUT: Duration = Duration::from_secs(20);
+
+/// Must exceed the worst case for a whole batch — `BATCH_SIZE` deliveries each
+/// taking `DELIVERY_TIMEOUT` — or another instance reclaims messages this one
+/// is still sending and they go out twice. 200s worst case, 300s of lease.
+fn claim_lease() -> ChronoDuration {
+    ChronoDuration::seconds(300)
+}
 
 pub fn run(pool: DbPool, config: EmailConfig) {
     actix_rt::spawn(async move {
@@ -15,14 +26,16 @@ pub fn run(pool: DbPool, config: EmailConfig) {
         loop {
             interval.tick().await;
             match get_conn(&pool).await {
-                Ok(mut conn) => match EmailQueueItem::claim_batch(BATCH_SIZE, &mut conn).await {
-                    Ok(batch) => {
-                        for item in batch {
-                            process(&config, item, &mut conn).await;
+                Ok(mut conn) => {
+                    match EmailQueueItem::claim_batch(BATCH_SIZE, claim_lease(), &mut conn).await {
+                        Ok(batch) => {
+                            for item in batch {
+                                process(&config, item, &mut conn).await;
+                            }
                         }
+                        Err(err) => log::warn!("email_drain: claim_batch failed: {err}"),
                     }
-                    Err(err) => log::warn!("email_drain: claim_batch failed: {err}"),
-                },
+                }
                 Err(err) => log::warn!("email_drain: get_conn failed: {err}"),
             }
         }
@@ -34,7 +47,16 @@ async fn process(config: &EmailConfig, item: EmailQueueItem, conn: &mut DbConn<'
         let _ = EmailQueueItem::mark_skipped(item.id, "skipped: cannot render", conn).await;
         return;
     };
-    match deliver(config, &item.to_address, &subject, &body).await {
+    let sent = match tokio::time::timeout(
+        DELIVERY_TIMEOUT,
+        deliver(config, &item.to_address, &subject, &body),
+    )
+    .await
+    {
+        Ok(result) => result,
+        Err(_) => Err(format!("timed out after {}s", DELIVERY_TIMEOUT.as_secs())),
+    };
+    match sent {
         Ok(()) => {
             if let Err(err) = EmailQueueItem::mark_sent(item.id, conn).await {
                 log::warn!("email_drain: mark_sent failed for {}: {err}", item.id);

@@ -27,6 +27,14 @@ pub fn run(pool: DbPool, hub: Data<Arc<WsHub>>) {
                 let hub = hub.get_ref().clone();
                 let _ = conn
                     .transaction::<_, anyhow::Error, _>(async move |tc| {
+                        if !crate::jobs::try_advisory_xact_lock(
+                            tc,
+                            crate::jobs::TOURNAMENT_START_LOCK,
+                        )
+                        .await?
+                        {
+                            return Ok(());
+                        }
                         if let Ok(tournament_infos) = Tournament::automatic_start(tc).await {
                             let mut messages = Vec::new();
                             for (tournament, games, deleted_invitations) in tournament_infos {

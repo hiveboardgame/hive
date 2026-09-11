@@ -4,13 +4,16 @@
 pkg
 apis/target/
 apis/.cargo
+scripts/.cargo
+db/.cargo
+hive-hydra/.cargo/
+engine/.cargo
 .cargo/target/
 todos
 site/
 docs/
 email_debug.log
 
-hive-hydra/.cargo/
 
 # Firebase Admin SDK service account JSON — the *real* push-dispatch
 # credential (not to be confused with google-services.json). Granted broad
