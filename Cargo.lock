@@ -465,6 +465,7 @@ dependencies = [
  "diesel",
  "diesel-async",
  "diesel_migrations",
+ "dotenvy",
  "futures-util",
  "gloo-timers 0.4.0",
  "hive",

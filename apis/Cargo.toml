@@ -67,7 +67,8 @@ web-push = { workspace = true, optional = true }
 web-time = { workspace = true }
 url = { workspace = true, optional = true }
 reactive_stores = { workspace = true }
-serde = { workspace = true, features = ["derive"] }
+# rc: websocket messages carry Arc<GameResponse>, so one fanout shares one allocation.
+serde = { workspace = true, features = ["derive", "rc"] }
 serde_json = { workspace = true }
 server_fn = { workspace = true }
 sha2 = { workspace = true, optional = true }
@@ -81,6 +82,9 @@ walkdir = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true }
 wasm-bindgen-futures = { workspace = true }
 web-sys = { workspace = true }
+
+[dev-dependencies]
+dotenvy = { workspace = true }
 
 [build-dependencies]
 leptos_i18n_build = { workspace = true }

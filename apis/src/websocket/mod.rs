@@ -41,6 +41,20 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
         cached_updated_at == game_updated_at && cached_at.elapsed() < GAME_RESPONSE_CACHE_TTL
     }
 
+    /// A pool on TEST_DATABASE_URL, or None when no test database is reachable. The
+    /// connect and auth paths both bail at `get_conn`, so neither can be observed
+    /// through the unreachable pool the rest of the websocket tests share.
+    #[cfg(test)]
+    pub(in crate::websocket) async fn live_test_pool() -> Option<db_lib::DbPool> {
+        dotenvy::dotenv().ok();
+        let url = std::env::var("TEST_DATABASE_URL")
+            .ok()?
+            .replace("@localhost:/", "@localhost/");
+        let pool = db_lib::get_pool(&url).await.ok()?;
+        db_lib::get_conn(&pool).await.ok()?;
+        Some(pool)
+    }
+
     #[derive(Debug)]
     pub struct WebsocketData {
         pub game_start: TournamentGameStart,

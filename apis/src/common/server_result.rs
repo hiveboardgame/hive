@@ -8,7 +8,7 @@ use crate::responses::{
 };
 use serde::{Deserialize, Serialize};
 use shared_types::{ChallengeId, ChatMessageContainer, ConversationKey, GameId, TournamentId};
-use std::{collections::HashMap, fmt, time::Duration};
+use std::{collections::HashMap, fmt, sync::Arc, time::Duration};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -97,6 +97,10 @@ impl fmt::Display for ExternalServerError {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ServerMessage {
+    /// Sent when an `Auth` frame succeeds, before the snapshot that follows it.
+    /// A bot has no other way to tell a completed authentication apart from the
+    /// anonymous connect snapshot, which races it on the same socket.
+    Authenticated(UserResponse),
     Challenge(ChallengeUpdate),
     Chat(ChatMessageContainer),
     ChatRead {
@@ -120,6 +124,7 @@ pub enum ServerMessage {
     UserSettings(UserSettingsUpdate),
     UserStatus(UserUpdate),
     RedirectLink(String),
+    UserProfile(UserResponse),
 }
 
 /// Authoritative best-effort lobby state sent on connect and Resync.
@@ -167,14 +172,17 @@ pub enum GameUpdate {
     /// draw offered). Client merges into the local `own` map.
     Urgent(Vec<GameResponse>),
     OwnGameRemoved(GameId),
-    Tv(GameResponse),
+    Tv(Arc<GameResponse>),
     Heartbeat(HeartbeatResponse),
+    Fetched(Arc<GameResponse>),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameActionResponse {
     pub game_action: GameReaction,
-    pub game: GameResponse,
+    /// Shared, not owned: one response fans out to both players and every spectator, and
+    /// `get_or_build_response` already hands it over behind an `Arc`.
+    pub game: Arc<GameResponse>,
     pub game_id: GameId,
     pub user_id: Uuid,
     pub username: String,

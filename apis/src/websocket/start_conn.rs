@@ -1,10 +1,13 @@
 use std::sync::Arc;
 
-use crate::websocket::{
-    messages::SocketTx,
-    ws_connection::reader_task,
-    ws_hub::{WsHub, SOCKET_BUFFER_CAPACITY},
-    WebsocketData,
+use crate::{
+    api::v1::auth::jwt_secret::JwtSecret,
+    websocket::{
+        messages::{SocketFormat, SocketTx},
+        ws_connection::{reader_task, Deps},
+        ws_hub::{WsHub, SOCKET_BUFFER_CAPACITY},
+        WebsocketData,
+    },
 };
 use actix_identity::Identity;
 use actix_web::{
@@ -28,6 +31,7 @@ pub async fn start_connection(
     pool: Data<DbPool>,
     identity: Option<Identity>,
     data: Data<WebsocketData>,
+    jwt_secret: Data<JwtSecret>,
 ) -> Result<HttpResponse, Error> {
     let user = resolve_identity(identity, &pool).await;
 
@@ -44,13 +48,36 @@ pub async fn start_connection(
     data.telemetry.record_connect();
 
     let socket_id = Uuid::new_v4();
+    let format = if req
+        .query_string()
+        .split('&')
+        .any(|pair| pair == "format=json")
+    {
+        SocketFormat::Json
+    } else {
+        SocketFormat::Msgpack
+    };
     let (tx, mut out_rx) = mpsc::channel::<Bytes>(SOCKET_BUFFER_CAPACITY);
-    let socket = SocketTx { socket_id, tx };
+    let socket = SocketTx {
+        socket_id,
+        format,
+        tx,
+    };
 
     let mut write_session = session.clone();
     actix_web::rt::spawn(async move {
         while let Some(bytes) = out_rx.recv().await {
-            if write_session.binary(bytes).await.is_err() {
+            // The hub already encoded for this socket's format; the writer only picks the frame
+            // type that carries it.
+            let written = match format {
+                SocketFormat::Msgpack => write_session.binary(bytes).await,
+                SocketFormat::Json => {
+                    write_session
+                        .text(String::from_utf8_lossy(&bytes).into_owned())
+                        .await
+                }
+            };
+            if written.is_err() {
                 // The transport is broken. Close the session from this side
                 // so the reader's MessageStream wakes up immediately and
                 // calls on_disconnect — otherwise every subsequent dispatch
@@ -65,8 +92,18 @@ pub async fn start_connection(
     let hub = hub.get_ref().clone();
     let data = Arc::clone(&data);
     let pool = pool.get_ref().clone();
+    let jwt_secret = jwt_secret.into_inner();
     actix_web::rt::spawn(reader_task(
-        session, msg_stream, socket, hub, data, pool, user,
+        session,
+        msg_stream,
+        socket,
+        Deps {
+            hub,
+            data,
+            pool,
+            jwt_secret,
+        },
+        user,
     ));
 
     Ok(response)

@@ -69,7 +69,7 @@ impl StartHandler {
                     black_id: game.black_id,
                     gar: GameActionResponse {
                         game_id: GameId(game.nanoid.to_owned()),
-                        game: (*game_response).clone(),
+                        game: game_response.clone(),
                         game_action: GameReaction::Started,
                         user_id: self.user_id.to_owned(),
                         username: self.username.to_owned(),
@@ -86,7 +86,7 @@ impl StartHandler {
                     black_id: self.game.black_id,
                     gar: GameActionResponse {
                         game_id: GameId(self.game.nanoid.to_owned()),
-                        game: (*game_response).clone(),
+                        game: game_response.clone(),
                         game_action: GameReaction::Ready,
                         user_id: self.user_id.to_owned(),
                         username: self.username.to_owned(),
