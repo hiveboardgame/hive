@@ -1,6 +1,6 @@
 import { Client } from "pg";
 import { setTimeout as delay } from "node:timers/promises";
-import { usernames, publicTimeControls, type TestAccount } from "./catalog";
+import { usernames, poolCapacity, publicTimeControls, type TestAccount } from "./catalog";
 import { AccountReservation } from "./reservation";
 
 // All runs against a database must use this namespace and per-account lock keys.
@@ -11,7 +11,8 @@ export const accountWaitTimeout = 180_000;
 export async function reserveAccounts(count: 1 | 2, {
   connectionString = process.env.PLAYWRIGHT_DATABASE_URL,
   timeout = accountWaitTimeout,
-}: { connectionString?: string; timeout?: number } = {}): Promise<AccountReservation> {
+  publicChallenge = false,
+}: { connectionString?: string; timeout?: number; publicChallenge?: boolean } = {}): Promise<AccountReservation> {
   if (!connectionString) {
     throw new Error("Set PLAYWRIGHT_DATABASE_URL to the test database served by PLAYWRIGHT_BASE_URL.");
   }
@@ -46,7 +47,7 @@ export async function reserveAccounts(count: 1 | 2, {
          WHERE username = ANY($1::text[]) AND normalized_username = username
            AND email = username || '@example.test' AND email_verified AND NOT admin
            AND NOT deleted AND NOT bot
-         ORDER BY username`,
+         ORDER BY array_position($1::text[], username)`,
         [usernames],
       );
       accounts = result.rows;
@@ -54,7 +55,7 @@ export async function reserveAccounts(count: 1 | 2, {
       throw new Error("Cannot validate test accounts; apply application and testware migrations first.");
     }
     if (accounts.length !== usernames.length || usernames.some((name, i) => accounts[i].username !== name)) {
-      throw new Error("The account pool requires verified, non-admin user_1 through user_8; apply testware migrations.");
+      throw new Error("The account pool requires verified, non-admin user_1 through user_30; apply testware migrations.");
     }
     const deadline = Date.now() + timeout;
     let backoff = 100;
@@ -62,10 +63,11 @@ export async function reserveAccounts(count: 1 | 2, {
       const selected: TestAccount[] = [];
       try {
         for (let pool = 0; pool < count; pool++) {
-          const first = Math.floor(Math.random() * publicTimeControls.length);
-          for (let offset = 0; offset < publicTimeControls.length; offset++) {
+          const capacity = pool === 0 && publicChallenge ? publicTimeControls.length : poolCapacity;
+          const first = Math.floor(Math.random() * capacity);
+          for (let offset = 0; offset < capacity; offset++) {
             if (disconnected) throw new Error();
-            const index = ((first + offset) % publicTimeControls.length) * 2 + pool;
+            const index = ((first + offset) % capacity) * 2 + pool;
             const result = await client.query<{ acquired: boolean }>(
               "SELECT pg_try_advisory_lock($1::int, $2::int) AS acquired",
               [lockNamespace, index + 1],

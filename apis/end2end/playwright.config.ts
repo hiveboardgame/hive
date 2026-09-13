@@ -11,7 +11,7 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: 4,
+  workers: 12,
   reporter: process.env.CI
     ? [
         ["list", { printSteps: true, printFailuresInline: true }],
@@ -27,7 +27,8 @@ export default defineConfig({
     ignoreHTTPSErrors: process.env.PLAYWRIGHT_IGNORE_HTTPS_ERRORS === "1",
     // Service workers can bypass the WebKit session-cookie response interceptor.
     serviceWorkers: "block",
-    trace: "on-first-retry",
+    // Preserve the original failing attempt, including WebSocket traffic.
+    trace: "retain-on-failure",
   },
 
   projects: [

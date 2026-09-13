@@ -1,8 +1,9 @@
 import type { Page } from "@playwright/test";
 
 export async function confirmControl(page: Page, title: string) {
-  const control = page.getByTitle(title);
+  const control = page.getByTitle(title, { exact: true });
   await control.click();
+  await control.locator("..").getByTitle("Cancel", { exact: true }).waitFor({ state: "visible", timeout: 5_000 });
   await control.click();
 }
 

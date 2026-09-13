@@ -2,6 +2,12 @@ import type { BrowserContext } from "@playwright/test";
 
 const instrumentedContexts = new WeakMap<BrowserContext, ReturnType<BrowserContext["route"]>>();
 
+// Verified read-only server functions that may retry a connection reset once.
+const retryableReadEndpoints = new Set([
+  "/api/get_account",
+  "/api/get_upcoming_tournament_games",
+]);
+
 function cookieKey(name: string, domain: string, path: string) {
   return JSON.stringify([name, domain.replace(/^\./, "").toLowerCase(), path]);
 }
@@ -50,7 +56,13 @@ export async function stripSecureCookiesForWebKit(
     // login returns 200 with a client-redirect header, which we preserve below.
     // WebKit cannot replay a real HTTP redirect through route.fulfill; document
     // requests therefore take the fallback path above.
-    const response = await route.fetch({ maxRedirects: 0 });
+    const pathname = new URL(route.request().url()).pathname;
+    // Leptos appends a generated numeric suffix to server-function paths.
+    const endpoint = pathname.replace(/\d+$/, "");
+    const response = await route.fetch({
+      maxRedirects: 0,
+      maxRetries: retryableReadEndpoints.has(endpoint) ? 1 : 0,
+    });
     const headers = response.headers();
     const rewrittenKeys = new Set<string>();
     const cookies = response.headersArray()

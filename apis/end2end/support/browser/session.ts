@@ -4,7 +4,7 @@ import { cleanUpAccounts } from "../accounts/cleanup";
 import { signIn } from "./authentication";
 import type { Player } from "./player";
 
-export type Players = Readonly<{ userOne: Player; userTwo: Player; publicTimeControl: string }>;
+export type Players = Readonly<{ userOne: Player; userTwo: Player }>;
 
 // The injected actions let lifecycle checks exercise failures without a server.
 export async function withUsers({
@@ -28,7 +28,13 @@ export async function withUsers({
   let lostReservation: Error | undefined;
   const closeContexts = async () => {
     const results = await Promise.allSettled([...contexts].map(([context, closing]) => {
-      closing ??= context.close();
+      closing ??= (async () => {
+        try {
+          await context.unrouteAll({ behavior: "ignoreErrors" });
+        } finally {
+          await context.close();
+        }
+      })();
       contexts.set(context, closing);
       return closing;
     }));

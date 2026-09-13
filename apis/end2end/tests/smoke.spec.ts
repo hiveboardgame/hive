@@ -1,10 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { expectHydrated } from "../support/browser/hydration";
 
-test.describe("Home page", () => {
+test.describe("Anonymous navigation", () => {
   // Include the 45-second hydration wait and the remaining navigation checks.
   test.describe.configure({ timeout: 60_000 });
 
-  test("Anonymous navigation and sign-in redirect", async ({ page }, testInfo) => {
+  test("Home rendering", async ({ page }) => {
     await test.step("Load and hydrate the home page", async () => {
       const response = await page.goto("/");
 
@@ -19,15 +20,7 @@ test.describe("Home page", () => {
       await expect(page, "The home page has the HiveGame.com browser title").toHaveTitle(
         "HiveGame.com",
       );
-      // The SSR shell initially marks main as hidden and reveals it during
-      // hydration. The development WASM bundle is large, so allow the complete
-      // download and compilation before asserting the app.
-      const main = page.locator("main");
-      await expect(
-        main,
-        "The hydrated home page removes the hidden state from its main content",
-      ).not.toHaveClass(/(?:^|\s)hidden(?:\s|$)/, { timeout: 45 * 1000 });
-      await expect(main, "The hydrated home page shows its main content").toBeVisible();
+      await expectHydrated(page);
       await expect(
         page.getByRole("heading", { name: "Create a game" }),
         "Visitors can see the Create a game heading",
@@ -41,7 +34,11 @@ test.describe("Home page", () => {
         "Visitors can see the Login link",
       ).toBeVisible();
     }, { box: true });
+  });
 
+  test("Responsive navigation", async ({ page }, testInfo) => {
+    await page.goto("/");
+    await expectHydrated(page);
     await test.step("Use the navigation controls", async () => {
       if (testInfo.project.name.endsWith("-mobile")) {
         await page.getByRole("button", { name: "Open navigation menu" }).click();
@@ -60,8 +57,12 @@ test.describe("Home page", () => {
         ).toBeVisible();
       }
     }, { box: true });
+  });
 
-    await test.step("Quick play redirects anonymous visitors to sign-in", async () => {
+  test("Quick play redirects anonymous visitors to sign-in", async ({ page }) => {
+    await page.goto("/");
+    await expectHydrated(page);
+    await test.step("Select quick play", async () => {
       await page.getByRole("button", { name: "1+2", exact: true }).click();
       await expect(page, "Selecting a quick-play time control takes visitors to the sign-in page").toHaveURL(
         /\/login$/,

@@ -2,6 +2,7 @@ import { expect } from "@playwright/test";
 import type { AccountReservation, AccountState } from "./reservation";
 import { confirmControl, showControlsIfMobile } from "../game/controls";
 import type { Player } from "../browser/player";
+import { expectHydrated } from "../browser/hydration";
 
 export async function cleanUpAccounts(
   reservation: AccountReservation,
@@ -39,6 +40,7 @@ export async function cleanUpAccounts(
     try {
       // Documents for direct challenges can render unauthenticated SSR pages.
       await player.page.goto(challenge ? "/" : `/game/${game.nanoid}`);
+      await expectHydrated(player.page);
       if (!await stillPresent()) continue;
       reservation.assertHeld();
       if (challenge) {
