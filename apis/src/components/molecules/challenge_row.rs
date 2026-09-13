@@ -1,7 +1,13 @@
 use crate::{
-    common::{challenge_action_flags, challenge_displayed_player, challenge_viewer_role},
+    common::{
+        challenge_action_flags,
+        challenge_displayed_color,
+        challenge_displayed_player,
+        challenge_viewer_role,
+    },
     components::{
         atoms::{
+            color_choice_hex::ColorChoiceHex,
             game_type::GameType,
             profile_link::ProfileLink,
             status_indicator::StatusIndicator,
@@ -10,7 +16,7 @@ use crate::{
     },
     hooks::clipboard_copy::use_clipboard_copy,
     i18n::*,
-    providers::{ApiRequestsProvider, AuthContext, Config},
+    providers::{ApiRequestsProvider, AuthContext},
     responses::ChallengeResponse,
 };
 use hive_lib::ColorChoice;
@@ -20,8 +26,6 @@ use leptos_use::use_window;
 use shared_types::{ChallengeId, TimeInfo};
 
 const CHALLENGE_LEADING_RAIL_CLASS: &str = "flex items-center justify-center gap-1";
-const CHALLENGE_LEADING_TOKEN_CLASS: &str =
-    "grid shrink-0 grid-cols-1 items-center justify-items-center gap-0.5 sm:grid-cols-[1.75rem_1rem]";
 const CHALLENGE_MOBILE_ACTIONS_CLASS: &str =
     "flex shrink-0 flex-col items-center justify-center gap-1 max-[359px]:min-h-[4.25rem] min-[360px]:max-[639px]:min-w-[4.25rem] min-[360px]:max-[639px]:flex-row sm:hidden";
 const CHALLENGE_DESKTOP_ACTIONS_CLASS: &str =
@@ -38,14 +42,12 @@ pub fn ChallengeRow(
         challenge_id,
         game_type,
         rated,
-        color_choice,
         time_mode,
         time_base,
         time_increment,
         ..
     } = challenge;
     let i18n = use_i18n();
-    let config = expect_context::<Config>().0;
     let api = expect_context::<ApiRequestsProvider>().0;
     let auth_context = expect_context::<AuthContext>();
     let user = auth_context.user;
@@ -53,47 +55,6 @@ pub fn ChallengeRow(
     let challenge_id = StoredValue::new(challenge_id);
     let all_challenge_ids = StoredValue::new(challenge_ids);
     let group_count = count;
-    let color_choice = StoredValue::new(color_choice);
-    let icon = move || {
-        let prefers_dark = config.with(|c| c.prefers_dark);
-        match color_choice.get_value() {
-            ColorChoice::Random => icondata_bs::BsHexagonHalf,
-            ColorChoice::White => {
-                if prefers_dark {
-                    icondata_bs::BsHexagonFill
-                } else {
-                    icondata_bs::BsHexagon
-                }
-            }
-            ColorChoice::Black => {
-                if prefers_dark {
-                    icondata_bs::BsHexagon
-                } else {
-                    icondata_bs::BsHexagonFill
-                }
-            }
-        }
-    };
-    let icon_class = move || {
-        let prefers_dark = config.with(|c| c.prefers_dark);
-        match color_choice.get_value() {
-            ColorChoice::Random => "size-4 shrink-0 pb-[2px]",
-            ColorChoice::White => {
-                if prefers_dark {
-                    "size-4 shrink-0 fill-white pb-[2px]"
-                } else {
-                    "size-4 shrink-0 stroke-black pb-[2px]"
-                }
-            }
-            ColorChoice::Black => {
-                if prefers_dark {
-                    "size-4 shrink-0 stroke-white pb-[2px]"
-                } else {
-                    "size-4 shrink-0 fill-black pb-[2px]"
-                }
-            }
-        }
-    };
     let challenge_address = move || {
         let origin = use_window()
             .as_ref()
@@ -130,6 +91,15 @@ pub fn ChallengeRow(
             )
         })
     });
+    let displayed_color = Memo::new(move |_| {
+        challenge_value
+            .with_value(|challenge| challenge_displayed_color(challenge, viewer_role.get()))
+    });
+    let color_label = move || match displayed_color.get() {
+        ColorChoice::White => t_string!(i18n, home.challenge_details.plays.white),
+        ColorChoice::Black => t_string!(i18n, home.challenge_details.plays.black),
+        ColorChoice::Random => t_string!(i18n, home.challenge_details.plays.random),
+    };
     let admin_cancel_dialog = NodeRef::<Dialog>::new();
     let admin_cancel_button_classes = StoredValue::new("ui-button ui-button-danger ui-button-icon");
     let admin_confirm_button_classes = StoredValue::new("ui-button ui-button-danger ui-button-sm");
@@ -204,7 +174,7 @@ pub fn ChallengeRow(
     };
     view! {
         <tr class="cursor-pointer ui-dense-table-row">
-            <td class=format!("w-24 sm:w-16 {td_class}")>
+            <td class=format!("w-20 sm:w-12 {td_class}")>
                 <Show when=move || action_flags.with(|flags| flags.admin_cancel)>
                     <Modal dialog_el=admin_cancel_dialog>
                         <div class="flex flex-col items-center p-4 max-w-xs">
@@ -238,16 +208,13 @@ pub fn ChallengeRow(
                     </Modal>
                 </Show>
                 <div class=CHALLENGE_LEADING_RAIL_CLASS>
-                    <div class=CHALLENGE_LEADING_TOKEN_CLASS>
-                        <span class=move || {
-                            if group_count > 1 {
-                                "inline-flex h-5 items-center justify-center text-[10px] font-bold leading-none text-gray-900 dark:text-gray-100 sm:min-w-7 sm:justify-start sm:text-xs"
-                            } else {
-                                "hidden h-5 items-center justify-center text-[10px] font-bold leading-none text-gray-900 dark:text-gray-100 sm:invisible sm:inline-flex sm:min-w-7 sm:justify-start sm:text-xs"
-                            }
-                        }>{format!("x{}", group_count.max(1))}</span>
-                        <Icon icon=Signal::derive(icon) attr:class=Signal::derive(icon_class) />
-                    </div>
+                    <span class=move || {
+                        if group_count > 1 {
+                            "inline-flex h-5 items-center justify-center text-[10px] font-bold leading-none text-gray-900 dark:text-gray-100 sm:min-w-7 sm:justify-start sm:text-xs"
+                        } else {
+                            "hidden h-5 items-center justify-center text-[10px] font-bold leading-none text-gray-900 dark:text-gray-100 sm:invisible sm:inline-flex sm:min-w-7 sm:justify-start sm:text-xs"
+                        }
+                    }>{format!("x{}", group_count.max(1))}</span>
                     <div class=CHALLENGE_MOBILE_ACTIONS_CLASS>{action_buttons()}</div>
                 </div>
             </td>
@@ -277,6 +244,18 @@ pub fn ChallengeRow(
                                 }
                             })
                     }}
+                </div>
+            </td>
+            <td class=td_class>
+                <div class="flex gap-1 justify-center items-center">
+                    {move || {
+                        view! {
+                            <ColorChoiceHex
+                                color_choice=displayed_color.get()
+                                extend_tw_classes="size-4"
+                            />
+                        }
+                    }} <span class="hidden md:inline">{color_label}</span>
                 </div>
             </td>
             <td class=td_class>

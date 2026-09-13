@@ -1,15 +1,21 @@
 use crate::{
     common::{
         challenge_action_flags,
+        challenge_displayed_color,
         challenge_displayed_player,
         challenge_viewer_role,
         with_class,
         ServerResult,
     },
     components::{
-        atoms::{profile_link::ProfileLink, status_indicator::StatusIndicator},
+        atoms::{
+            color_choice_hex::ColorChoiceHex,
+            profile_link::ProfileLink,
+            status_indicator::StatusIndicator,
+        },
         molecules::time_row::TimeRow,
     },
+    i18n::*,
     providers::{websocket::WebsocketContext, ApiRequestsProvider, AuthContext},
     responses::ChallengeResponse,
 };
@@ -43,6 +49,7 @@ pub fn ChallengeDetails(
     #[prop(optional)] label: Option<&'static str>,
     #[prop(optional, into)] class: Option<String>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let auth_context = expect_context::<AuthContext>();
     let user = auth_context.user;
     let admin = auth_context.admin;
@@ -53,7 +60,6 @@ pub fn ChallengeDetails(
         challenge_id,
         game_type,
         rated,
-        color_choice,
         time_mode,
         time_base,
         time_increment,
@@ -65,10 +71,17 @@ pub fn ChallengeDetails(
         base: time_base,
         increment: time_increment,
     };
-    let color_icon = match color_choice {
-        ColorChoice::Random => icondata_bs::BsHexagonHalf,
-        ColorChoice::White => icondata_bs::BsHexagon,
-        ColorChoice::Black => icondata_bs::BsHexagonFill,
+    let displayed_color = Memo::new(move |_| {
+        let viewer_id = user.with(|user| user.as_ref().map(|user| user.id));
+        challenge.with_value(|challenge| {
+            let role = challenge_viewer_role(challenge, viewer_id);
+            challenge_displayed_color(challenge, role)
+        })
+    });
+    let color_label = move || match displayed_color.get() {
+        ColorChoice::White => t_string!(i18n, home.challenge_details.plays.white),
+        ColorChoice::Black => t_string!(i18n, home.challenge_details.plays.black),
+        ColorChoice::Random => t_string!(i18n, home.challenge_details.plays.random),
     };
     let pending_action = RwSignal::new(None::<PendingAction>);
     Effect::new(move |_| {
@@ -126,9 +139,20 @@ pub fn ChallengeDetails(
                                     </div>
                                 }
                             })
-                    }} <div class=CHALLENGE_LEADING_CELL_CLASS>
-                        <Icon icon=color_icon attr:class="size-3.5 shrink-0" />
+                    }}
+                    <div class=CHALLENGE_LEADING_CELL_CLASS>
+                        {move || {
+                            view! {
+                                <ColorChoiceHex
+                                    color_choice=displayed_color.get()
+                                    extend_tw_classes="size-3.5"
+                                />
+                            }
+                        }}
                     </div> <div class=CHALLENGE_META_CLASS>
+                        <span class="font-bold">
+                            {t!(i18n, home.challenge_details.plays.title)} " " {color_label}
+                        </span>
                         <span>{game_type}</span>
                         <TimeRow time_info extend_tw_classes="text-xs leading-tight" />
                         <span class="font-bold">{if rated { "Rated" } else { "Casual" }}</span>
