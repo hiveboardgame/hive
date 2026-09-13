@@ -2,6 +2,7 @@ pub mod active;
 pub mod block_toggle_button;
 pub mod bug_tile;
 pub mod challenge_details;
+pub mod color_choice_hex;
 pub mod color_hex;
 pub mod copy_button;
 pub mod create_challenge_button;

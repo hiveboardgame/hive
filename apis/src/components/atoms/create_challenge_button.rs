@@ -1,21 +1,12 @@
-use crate::providers::Config;
+use crate::components::atoms::color_choice_hex::ColorChoiceHex;
 use hive_lib::ColorChoice;
 use leptos::prelude::*;
-use leptos_icons::*;
 
 #[component]
 pub fn CreateChallengeButton(
     color_choice: StoredValue<ColorChoice>,
     create_challenge: Callback<ColorChoice>,
 ) -> impl IntoView {
-    let config = expect_context::<Config>().0;
-    let icon = Signal::derive(move || {
-        config.with(|cfg| match (color_choice.get_value(), cfg.prefers_dark) {
-            (ColorChoice::Random, _) => icondata_bs::BsHexagonHalf,
-            (ColorChoice::White, false) | (ColorChoice::Black, true) => icondata_bs::BsHexagon,
-            _ => icondata_bs::BsHexagonFill,
-        })
-    });
     view! {
         <button
             title=color_choice.get_value().to_string()
@@ -25,7 +16,7 @@ pub fn CreateChallengeButton(
 
             on:click=move |_| { create_challenge.run(color_choice.get_value()) }
         >
-            <Icon icon style="height:100%; width:100%" />
+            <ColorChoiceHex color_choice=color_choice.get_value() extend_tw_classes="size-full" />
         </button>
     }
 }
