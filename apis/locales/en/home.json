@@ -31,6 +31,12 @@
     },
     "challenge_details": {
         "player": "Player",
+        "plays": {
+            "title": "Plays",
+            "white": "White",
+            "black": "Black",
+            "random": "Random"
+        },
         "time": "Time",
         "rated": {
             "title": "Rated",
