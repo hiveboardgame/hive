@@ -11,7 +11,7 @@ use crate::{
     },
     hiveground::HivegroundInteraction,
     providers::{
-        analysis::AnalysisContext,
+        analysis::{AnalysisContext, NodeId},
         annotations::{AnnotationColor, AnnotationTool, AnnotationsSignal, MarkerShape},
         game_state::{BoardView, GameStateStore, GameStateStoreFields},
         Config,
@@ -52,8 +52,17 @@ use leptos_use::{
     UseIntersectionObserverOptions,
     UseTimeoutFnReturn,
 };
+use shared_types::GameId;
 use wasm_bindgen::JsCast;
-use web_sys::{Element, EventTarget, KeyboardEvent, PointerEvent, TouchEvent, WheelEvent};
+use web_sys::{
+    Element,
+    EventTarget,
+    KeyboardEvent,
+    PointerEvent,
+    SvgGraphicsElement,
+    TouchEvent,
+    WheelEvent,
+};
 
 // Movement under this (client px) is a click, not a drag.
 const ANNOTATION_TAP_SLOP_PX: f64 = 8.0;
@@ -65,9 +74,39 @@ const ZOOM_WHEEL_MAX_STEP: f32 = 0.10; // cap one event at ~10% zoom
 const ZOOM_IN_LIMIT: f32 = 150.0;
 const ZOOM_OUT_LIMIT_MIN: f32 = 2500.0;
 const ZOOM_OUT_LIMIT_FACTOR: f32 = 2.5;
+const BOARD_FIT_PADDING: f32 = 24.0;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct ViewportSelection {
+    game_id: Option<GameId>,
+    view: BoardView,
+    turn: usize,
+    analysis: Option<(u64, NodeId)>,
+}
+
+impl ViewportSelection {
+    fn navigated_from(&self, previous: &Self) -> bool {
+        self.game_id == previous.game_id
+            && if self.analysis.is_some() {
+                self.analysis != previous.analysis
+            } else {
+                // Playing at the history edge also advances BoardView. Keep live moves manual.
+                self.turn == previous.turn && self.view != previous.view
+            }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct TileBounds {
+    left: f32,
+    top: f32,
+    right: f32,
+    bottom: f32,
+}
 
 #[derive(Debug, Clone)]
 enum ViewBoxUpdateType {
+    HistoryNavigation(ViewportSelection),
     Resize {
         width: f32,
         height: f32,
@@ -136,6 +175,40 @@ impl ViewBoxControls {
         self.y -= delta_y;
         self
     }
+
+    fn recover_offscreen(&mut self, tiles: &[TileBounds], width: f32, height: f32) -> bool {
+        let Some(first) = tiles.first() else {
+            return false;
+        };
+        if width <= 0.0 || height <= 0.0 {
+            return false;
+        }
+        if tiles.iter().any(|tile| {
+            tile.right + self.x_transform > self.x
+                && tile.left + self.x_transform < self.x + self.width
+                && tile.bottom + self.y_transform > self.y
+                && tile.top + self.y_transform < self.y + self.height
+        }) {
+            return false;
+        }
+        let bounds = tiles.iter().fold(*first, |bounds, tile| TileBounds {
+            left: bounds.left.min(tile.left),
+            top: bounds.top.min(tile.top),
+            right: bounds.right.max(tile.right),
+            bottom: bounds.bottom.max(tile.bottom),
+        });
+        // Restore normal tile size, zooming out only as far as the whole position needs.
+        let scale = ((bounds.right - bounds.left + 2.0 * BOARD_FIT_PADDING) / width)
+            .max((bounds.bottom - bounds.top + 2.0 * BOARD_FIT_PADDING) / height)
+            .max(1.0);
+        self.x = 0.0;
+        self.y = 0.0;
+        self.width = width * scale;
+        self.height = height * scale;
+        self.x_transform = self.width / 2.0 - (bounds.left + bounds.right) / 2.0;
+        self.y_transform = self.height / 2.0 - (bounds.top + bounds.bottom) / 2.0;
+        true
+    }
 }
 
 struct ViewBoxState {
@@ -190,12 +263,28 @@ pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>)
     let board_view = game_state.board_view();
     let state = game_state.state();
     let in_analysis = analysis.is_some();
+    let displayed_board = if in_analysis {
+        Signal::derive(move || state.with(|state| state.board.clone()))
+    } else {
+        history_board.into()
+    };
     let stack_expansion_reset_key = Memo::new(move |_| {
         let view = board_view.get();
         state.with(|state| stack_expansion_reset_key(view, state, in_analysis))
     });
     let game_status = Memo::new(move |_| state.with(|state| state.game_status.clone()));
     let game_id_slice = game_state.game_id();
+    let viewport_selection = Memo::new(move |_| ViewportSelection {
+        game_id: game_id_slice.get(),
+        view: board_view.get(),
+        turn: state.with(|state| state.turn),
+        analysis: analysis.map(|analysis| {
+            (
+                analysis.store.document_generation(),
+                analysis.store.selected_node_id(),
+            )
+        }),
+    });
     let board_style = move || {
         if orientation_signal.orientation_vertical.get() {
             "flex relative grow min-h-0"
@@ -236,7 +325,7 @@ pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>)
 
     // Unified RAF-based viewbox update system
     let update_viewbox_size = move |width: f32, height: f32, respect_zoom: bool| {
-        let current_center = state.with_untracked(|state| state.board.center_coordinates());
+        let current_center = displayed_board.with_untracked(HiveBoard::center_coordinates);
         let svg_pos = SvgPos::center_for_level(current_center, 0, straight);
         let (scale_x, scale_y) = if respect_zoom && viewbox_state.has_zoomed.get_untracked() {
             let svg = viewbox_ref.get_untracked().expect("It exists");
@@ -265,6 +354,25 @@ pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>)
         if let Some(update) = update {
             pending_update.set(None);
             match update {
+                ViewBoxUpdateType::HistoryNavigation(selection) => {
+                    if selection != viewport_selection.get_untracked() {
+                        return;
+                    }
+                    let recovered = displayed_board.with_untracked(|board| {
+                        recover_offscreen_viewbox(
+                            viewbox_ref,
+                            g_ref,
+                            board,
+                            viewbox_signal.get_untracked(),
+                        )
+                    });
+                    if let Some(next) = recovered {
+                        viewbox_signal.set(next);
+                        viewbox_state.has_zoomed.set(true);
+                        viewbox_state.is_panning.set(false);
+                        pinch_base.set(None);
+                    }
+                }
                 ViewBoxUpdateType::Resize { width, height } => {
                     update_viewbox_size(width, height, true);
                 }
@@ -335,6 +443,18 @@ pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>)
             (raf_controller.resume)();
         }
     });
+    Effect::watch(
+        move || viewport_selection.get(),
+        move |selection, previous, _| {
+            if previous.is_some_and(|previous| selection.navigated_from(previous)) {
+                // Wait for the selected tiles to render before measuring their bounds.
+                queue_update.with_value(|queue| {
+                    queue(ViewBoxUpdateType::HistoryNavigation(selection.clone()));
+                });
+            }
+        },
+        false,
+    );
     Effect::watch(
         move || (),
         move |_, _, _| {
@@ -1008,11 +1128,166 @@ fn will_svg_be_visible(g_ref: NodeRef<svg::G>, viewbox: &ViewBoxControls) -> boo
         && (bbox_mid_y < viewbox_bottom)
 }
 
+fn recover_offscreen_viewbox(
+    viewbox_ref: NodeRef<svg::Svg>,
+    g_ref: NodeRef<svg::G>,
+    board: &HiveBoard,
+    mut viewbox: ViewBoxControls,
+) -> Option<ViewBoxControls> {
+    let svg = viewbox_ref.get_untracked()?;
+    let g = g_ref.get_untracked()?;
+    // Annotations and empty move markers do not count as visible tiles.
+    let tiles = board
+        .all_taken_positions()
+        .map(|position| {
+            let selector = format!(
+                "[data-hg-stack-q='{}'][data-hg-stack-r='{}']",
+                position.q, position.r,
+            );
+            let stack = g.query_selector(&selector).ok()??;
+            let bounds = stack
+                .unchecked_ref::<SvgGraphicsElement>()
+                .get_b_box()
+                .ok()?;
+            (bounds.width() > 0.0 && bounds.height() > 0.0).then_some(TileBounds {
+                left: bounds.x(),
+                top: bounds.y(),
+                right: bounds.x() + bounds.width(),
+                bottom: bounds.y() + bounds.height(),
+            })
+        })
+        .collect::<Option<Vec<_>>>()?;
+    viewbox
+        .recover_offscreen(
+            &tiles,
+            svg.client_width() as f32,
+            svg.client_height() as f32,
+        )
+        .then_some(viewbox)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::board_history_style;
+    use super::{board_history_style, TileBounds, ViewBoxControls, ViewportSelection};
     use crate::providers::game_state::BoardView;
     use hive_lib::{Color, GameResult, GameStatus};
+
+    #[test]
+    fn history_recovery_preserves_a_partially_visible_tile_and_zoom() {
+        let mut viewbox = ViewBoxControls::new();
+        viewbox.x = 100.0;
+        viewbox.y = 200.0;
+        viewbox.width = 150.0;
+        viewbox.height = 300.0;
+        viewbox.x_transform = -1000.0;
+        viewbox.y_transform = -1000.0;
+        let before = viewbox.clone();
+        let tiles = [TileBounds {
+            left: 1050.0,
+            right: 1101.0,
+            top: 1250.0,
+            bottom: 1310.0,
+        }];
+        assert!(!viewbox.recover_offscreen(&tiles, 390.0, 844.0));
+        assert_eq!((viewbox.x, viewbox.y), (before.x, before.y));
+        assert_eq!(
+            (viewbox.width, viewbox.height),
+            (before.width, before.height)
+        );
+        assert_eq!(
+            (viewbox.x_transform, viewbox.y_transform),
+            (before.x_transform, before.y_transform),
+        );
+    }
+
+    #[test]
+    fn offscreen_history_recovery_centers_and_fits_every_tile() {
+        let tiles = [
+            TileBounds {
+                left: 1000.0,
+                right: 1060.0,
+                top: -400.0,
+                bottom: -340.0,
+            },
+            TileBounds {
+                left: 1700.0,
+                right: 1760.0,
+                top: -100.0,
+                bottom: -40.0,
+            },
+        ];
+        for (width, height) in [(390.0, 640.0), (900.0, 300.0)] {
+            let mut viewbox = ViewBoxControls::new();
+            assert!(viewbox.recover_offscreen(&tiles, width, height));
+            assert!((viewbox.width / viewbox.height - width / height).abs() < 0.001);
+            assert!((1380.0 + viewbox.x_transform - viewbox.width / 2.0).abs() < 0.001);
+            assert!((-220.0 + viewbox.y_transform - viewbox.height / 2.0).abs() < 0.001);
+            for tile in tiles {
+                assert!(tile.left + viewbox.x_transform > viewbox.x);
+                assert!(tile.right + viewbox.x_transform < viewbox.x + viewbox.width);
+                assert!(tile.top + viewbox.y_transform > viewbox.y);
+                assert!(tile.bottom + viewbox.y_transform < viewbox.y + viewbox.height);
+            }
+        }
+    }
+
+    #[test]
+    fn empty_space_between_offscreen_tiles_does_not_prevent_recovery() {
+        let mut viewbox = ViewBoxControls::new();
+        let tiles = [
+            TileBounds {
+                left: -100.0,
+                right: -40.0,
+                top: 200.0,
+                bottom: 260.0,
+            },
+            TileBounds {
+                left: 600.0,
+                right: 660.0,
+                top: 200.0,
+                bottom: 260.0,
+            },
+        ];
+        assert!(viewbox.recover_offscreen(&tiles, 390.0, 640.0));
+    }
+
+    #[test]
+    fn live_moves_do_not_trigger_history_recovery_even_at_the_history_edge() {
+        for view in [BoardView::Live, BoardView::History { turn: Some(39) }] {
+            let previous = ViewportSelection {
+                game_id: None,
+                view,
+                turn: 40,
+                analysis: None,
+            };
+            let mut next = previous.clone();
+            next.turn += 1;
+            if next.view.is_history() {
+                next.view = BoardView::History { turn: Some(40) };
+            }
+            assert!(!next.navigated_from(&previous));
+
+            next = previous.clone();
+            next.view = BoardView::History { turn: Some(0) };
+            assert!(next.navigated_from(&previous));
+        }
+        let previous = ViewportSelection {
+            game_id: None,
+            view: BoardView::Live,
+            turn: 40,
+            analysis: Some((0, serde_json::from_str("40").unwrap())),
+        };
+        let mut selected = previous.clone();
+        selected.analysis = Some((0, serde_json::from_str("1").unwrap()));
+        selected.turn = 1;
+        assert!(selected.navigated_from(&previous));
+        selected = previous.clone();
+        selected.turn += 1;
+        assert!(
+            !selected.navigated_from(&previous),
+            "an explorer preview is not navigation"
+        );
+    }
 
     #[test]
     fn analysis_never_dims_a_non_final_history_position() {

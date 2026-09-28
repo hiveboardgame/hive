@@ -196,3 +196,62 @@ fn the_hash_is_a_pure_function_of_the_board() {
     );
     assert!(validated > 0, "no positions were validated");
 }
+
+/// #825: recentering used to move unrelated pieces along with the played move.
+#[test]
+fn a_ply_moves_only_the_piece_it_moved() {
+    for dir in ["./test_pgns/valid/", "./test_pgns/regressions/"] {
+        for file in pgns_in(dir) {
+            let history = History::from_filepath(file.clone()).expect("PGN");
+            let tournament = !history
+                .moves
+                .iter()
+                .take(2)
+                .filter_map(|(piece, _)| piece.parse::<Piece>().ok())
+                .any(|piece| piece.bug() == crate::bug::Bug::Queen);
+            let mut state = State::new(history.game_type, tournament);
+            state.set_replaying(true);
+            let mut before = state.board.positions;
+            for (ply, (piece, position)) in history.moves.iter().enumerate() {
+                state
+                    .play_turn_from_history(piece, position)
+                    .unwrap_or_else(|err| panic!("{} ply {ply}: {err}", file.display()));
+                let after = state.board.positions;
+                let moved: Vec<usize> = (0..before.len())
+                    .filter(|&offset| before[offset] != after[offset])
+                    .collect();
+                assert!(
+                    moved.len() <= 1,
+                    "{} ply {ply} moved {} pieces at once",
+                    file.display(),
+                    moved.len()
+                );
+                before = after;
+            }
+        }
+    }
+}
+
+/// Even a hive with fewer than eight occupied cells can travel far from spawn.
+#[test]
+fn the_centre_follows_a_small_hive_that_travels() {
+    let history =
+        History::from_filepath("./test_pgns/regressions/travelling_small_hive.pgn".into())
+            .expect("PGN");
+    let state = State::new_from_history(&history).expect("replays");
+    let cells: Vec<_> = state.board.all_taken_positions().collect();
+    assert!(
+        cells.len() < 8,
+        "the shortcut only ever applied under eight pieces"
+    );
+
+    let q = cells.iter().map(|at| at.q);
+    let r = cells.iter().map(|at| at.r);
+    let (q_min, q_max) = (q.clone().min().expect("hive"), q.max().expect("hive"));
+    let (r_min, r_max) = (r.clone().min().expect("hive"), r.max().expect("hive"));
+    let centre = state.board.center_coordinates();
+    assert!(
+        (q_min..=q_max).contains(&centre.q) && (r_min..=r_max).contains(&centre.r),
+        "centre {centre} is outside the hive it should be centred on"
+    );
+}

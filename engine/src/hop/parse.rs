@@ -413,10 +413,10 @@ impl Walk {
         if self.scopes.len() != 1 {
             return Err(HopError::UnbalancedParens);
         }
-        // The walk runs wherever the serializer's spiral leads, so a long hive wraps the
-        // torus; recentering lands it whole and translates the `!` mark with it.
+        // Match the coordinate frame expected by saved analysis annotations.
         self.board.last_moved = self.marked;
-        self.board.recenter();
+        self.board.normalise_to_spawn();
+        self.board.reframe();
         Ok(self.board)
     }
 }
