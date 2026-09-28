@@ -9,6 +9,7 @@ pub mod challenge_create;
 pub mod challenge_view;
 pub mod config;
 pub mod donate;
+pub mod external_link;
 pub mod faq;
 pub mod forgot_password;
 pub mod game_search;

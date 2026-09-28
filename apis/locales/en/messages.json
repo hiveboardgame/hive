@@ -52,6 +52,15 @@
         "tournament_read_restricted": "Only participants can chat here.",
         "turn": " - turn {{turn}}"
     },
+    "external_link": {
+        "title": "You are about to leave hivegame.com",
+        "loading": "Loading link…",
+        "invalid_destination": "This link is missing or does not have a valid external destination.",
+        "confirmation": "Are you sure you want to continue to this website?",
+        "safety_reminder": "Check the address before entering passwords or personal information.",
+        "back_to_hivegame": "Go back to Hivegame",
+        "continue_to_site": "Continue"
+    },
     "block_dialog": {
         "unblock": "Unblock",
         "title": "Block this user?",
