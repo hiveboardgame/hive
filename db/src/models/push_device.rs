@@ -9,7 +9,7 @@ use diesel::{
     Queryable,
     Selectable,
 };
-use diesel_async::{AsyncConnection, RunQueryDsl};
+use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -45,16 +45,15 @@ pub struct PushDevice {
 impl PushDevice {
     pub async fn upsert(
         new: NewPushDevice,
-        clear_revocation: bool,
+        explicit_registration: bool,
         conn: &mut DbConn<'_>,
     ) -> Result<Self, DbError> {
         use crate::schema::push_devices::dsl::*;
         let now = Utc::now();
-        let insert = diesel::insert_into(push_devices)
-            .values(&new)
-            .on_conflict((platform, device_token));
-        let device = if clear_revocation {
-            insert
+        let device = if explicit_registration {
+            diesel::insert_into(push_devices)
+                .values(&new)
+                .on_conflict((platform, device_token))
                 .do_update()
                 .set((
                     user_id.eq(excluded(user_id)),
@@ -68,18 +67,22 @@ impl PushDevice {
                 .get_result(conn)
                 .await?
         } else {
-            insert
-                .do_update()
-                .set((
-                    user_id.eq(excluded(user_id)),
-                    app_version.eq(excluded(app_version)),
-                    locale.eq(excluded(locale)),
-                    last_seen_at.eq(now),
-                    p256dh.eq(excluded(p256dh)),
-                    auth.eq(excluded(auth)),
-                ))
-                .get_result(conn)
-                .await?
+            // Background reconciliation cannot enroll a new device or change its owner.
+            diesel::update(
+                push_devices
+                    .filter(user_id.eq(new.user_id))
+                    .filter(platform.eq(&new.platform))
+                    .filter(device_token.eq(&new.device_token)),
+            )
+            .set((
+                app_version.eq(new.app_version),
+                locale.eq(new.locale),
+                last_seen_at.eq(now),
+                p256dh.eq(new.p256dh),
+                auth.eq(new.auth),
+            ))
+            .get_result(conn)
+            .await?
         };
         Ok(device)
     }
@@ -179,43 +182,33 @@ impl PushDevice {
         .await?)
     }
 
-    pub async fn take_rotated_endpoint(
-        uid: Uuid,
-        old_token: &str,
-        conn: &mut DbConn<'_>,
-    ) -> Result<bool, DbError> {
-        use crate::schema::push_devices::dsl::*;
-        let removed: Vec<Option<DateTime<Utc>>> = diesel::delete(
-            push_devices
-                .filter(user_id.eq(uid))
-                .filter(device_token.eq(old_token)),
-        )
-        .returning(revoked_at)
-        .get_results(conn)
-        .await?;
-        Ok(removed.iter().any(|r| r.is_some()))
-    }
-
-    pub async fn upsert_rotated(
+    pub async fn rotate_endpoint(
         new: NewPushDevice,
         old_endpoint: Option<String>,
         conn: &mut DbConn<'_>,
     ) -> Result<(), DbError> {
-        let user = new.user_id;
-        conn.transaction::<_, DbError, _>(async move |tc| {
-            let carry_revocation = match &old_endpoint {
-                Some(old) if *old != new.device_token => {
-                    Self::take_rotated_endpoint(user, old, tc).await?
-                }
-                _ => false,
-            };
-            let device = Self::upsert(new, false, tc).await?;
-            if carry_revocation {
-                Self::revoke_for_user(device.id, user, tc).await?;
-            }
-            Ok(())
-        })
-        .await
+        use crate::schema::push_devices::dsl::*;
+        let old_endpoint = old_endpoint.ok_or(DbError::Unauthorized)?;
+        // One UPDATE preserves the owner and revocation atomically. The unique endpoint
+        // constraint also prevents a renewal from replacing another registration.
+        diesel::update(
+            push_devices
+                .filter(user_id.eq(new.user_id))
+                .filter(platform.eq(new.platform))
+                .filter(device_token.eq(old_endpoint)),
+        )
+        .set((
+            device_token.eq(new.device_token),
+            app_version.eq(new.app_version),
+            locale.eq(new.locale),
+            last_seen_at.eq(Utc::now()),
+            p256dh.eq(new.p256dh),
+            auth.eq(new.auth),
+        ))
+        .returning(id)
+        .get_result::<Uuid>(conn)
+        .await?;
+        Ok(())
     }
 
     pub async fn touch(device_id: Uuid, conn: &mut DbConn<'_>) -> Result<usize, DbError> {

@@ -2,6 +2,7 @@ use crate::{
     common::ScheduleAction,
     functions::schedules::MarkScheduleSeen,
     providers::{ApiRequestsProvider, NotificationContext},
+    security::csrf::ActionForm,
 };
 use chrono::{DateTime, Local, Utc};
 use leptos::prelude::*;
@@ -112,6 +113,7 @@ pub fn AcceptanceNotification(
                 </div>
             </div>
             <ActionForm action=mark_seen_action on:submit=dismiss>
+
                 <input type="hidden" name="schedule_id" value=schedule_id.get_value().to_string() />
                 <button
                     type="submit"

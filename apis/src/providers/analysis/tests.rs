@@ -341,7 +341,7 @@ fn hash_equivalent_child_restores_the_existing_orientation() {
 }
 
 /// Convergence is tree-wide: equal depth and equal hash, not just a sibling.
-
+///
 /// From TbkRypoWaw ply 56, which supplies a real four-ply cycle. The two-ply `m` commutes with
 /// it, so `[m, cycle]` and `[cycle, m]` reach one position at one depth, having passed through
 /// it twice and once.
