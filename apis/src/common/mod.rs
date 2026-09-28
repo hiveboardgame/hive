@@ -1,5 +1,6 @@
 mod challenge_action;
 mod challenge_viewer;
+mod chat_link;
 mod client_message;
 mod config_options;
 mod game_action;
@@ -27,6 +28,7 @@ pub use challenge_viewer::{
     ChallengeActionFlags,
     ChallengeViewerRole,
 };
+pub use chat_link::{chat_link_href, external_link_destination, validated_link_url};
 pub use client_message::{ChatSendRequest, ClientRequest, SubscriptionAttempt};
 pub use config_options::{CurrentConfirm, MoveConfirm, TileDesign, TileDots, TileRotation};
 pub use game_action::GameAction;

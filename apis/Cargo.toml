@@ -65,7 +65,7 @@ resvg = { workspace = true, optional = true }
 rustls = { workspace = true, optional = true }
 web-push = { workspace = true, optional = true }
 web-time = { workspace = true }
-url = { workspace = true, optional = true }
+url = { workspace = true }
 reactive_stores = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
@@ -126,7 +126,6 @@ ssr = [
   "dep:subtle",
   "dep:web-push",
   "dep:walkdir",
-  "dep:url",
   "leptos/ssr",
   "leptos-use/ssr",
   "leptos-use/actix",

@@ -1,6 +1,7 @@
 use super::{
     composer::SendErrorMessage,
     history::LoadPreviousMessages,
+    message_body::ChatMessageBody,
     read_eligibility::is_scrolled_near_bottom,
 };
 use crate::{
@@ -270,7 +271,8 @@ fn MessageRowView(
                                 </div>
                             </Show>
                             <div class=bubble_class>
-                                {message.with_value(|message| message.message.clone())}
+                                <ChatMessageBody body=message
+                                    .with_value(|message| message.message.clone()) />
                             </div>
                         },
                     )
@@ -291,7 +293,9 @@ fn OutgoingMessageRow(outgoing: OutgoingChat, conversation: ConversationHandle) 
 
     view! {
         <div class="flex flex-col items-end mb-1 w-full">
-            <div class="border-dashed shadow-none ui-chat-bubble ui-chat-bubble-own">{body}</div>
+            <div class="border-dashed shadow-none ui-chat-bubble ui-chat-bubble-own">
+                <ChatMessageBody body />
+            </div>
             {match state {
                 OutgoingState::Pending => {
                     EitherOf3::A(

@@ -13,6 +13,7 @@ use crate::{
         challenge_view::ChallengeView,
         config::Config,
         donate::Donate,
+        external_link::ExternalLink,
         faq::Faq,
         forgot_password::ForgotPassword,
         game_search::GameSearch,
@@ -146,6 +147,7 @@ pub fn App() -> impl IntoView {
                     >
 
                         <Route path=path!("") view=|| view! { <Home /> } />
+                        <Route path=path!("/external-link") view=ExternalLink />
                         <Route path=path!("/@/me") view=|| view! { <ProfileMe /> } />
                         <ParentRoute
                             path=path!("/@/:username")
