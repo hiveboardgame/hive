@@ -1,7 +1,11 @@
-use crate::responses::AccountResponse;
+#[cfg(feature = "ssr")]
+use crate::security::csrf::reset_session;
+use crate::{responses::AccountResponse, security::csrf::CsrfClient};
+#[cfg(feature = "ssr")]
+use actix_session::SessionExt;
 use leptos::prelude::*;
 
-#[server]
+#[server(client = CsrfClient)]
 pub async fn register(
     username: String,
     email: String,
@@ -39,6 +43,7 @@ pub async fn register(
 
     let req: actix_web::HttpRequest = leptos_actix::extract().await?;
 
+    reset_session(&req.get_session())?;
     Identity::login(&req.extensions(), user.id.to_string()).expect("To have logged in");
     leptos_actix::redirect(&pathname);
 

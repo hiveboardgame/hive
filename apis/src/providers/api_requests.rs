@@ -47,11 +47,6 @@ impl ApiRequests {
         self.websocket.send(&msg);
     }
 
-    pub fn link_discord(&self) {
-        let msg = ClientRequest::LinkDiscord;
-        self.websocket.send(&msg);
-    }
-
     pub fn game_control(&self, game_id: GameId, gc: GameControl) {
         let msg = ClientRequest::Game {
             game_id,

@@ -4,8 +4,9 @@ use crate::{
         molecules::page_card::PageCard,
     },
     functions::auth::forgot_password::ForgotPassword,
+    security::csrf::ActionForm,
 };
-use leptos::{form::ActionForm, prelude::*};
+use leptos::prelude::*;
 
 #[component]
 pub fn ForgotPassword() -> impl IntoView {
@@ -19,6 +20,7 @@ pub fn ForgotPassword() -> impl IntoView {
                     fallback=move || {
                         view! {
                             <ActionForm action=action attr:class="space-y-4">
+
                                 <div class="flex flex-col gap-1">
                                     <h1 class="ui-page-title">"Forgot your password?"</h1>
                                     <p class="ui-page-subtitle">

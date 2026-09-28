@@ -7,8 +7,9 @@ use crate::{
     functions::{auth::register::Register, users::username_taken},
     i18n::*,
     providers::{AuthContext, RefererContext},
+    security::csrf::ActionForm,
 };
-use leptos::{form::ActionForm, html, leptos_dom::helpers::debounce, prelude::*};
+use leptos::{html, leptos_dom::helpers::debounce, prelude::*};
 use std::time::Duration;
 use web_sys::Event;
 
@@ -89,6 +90,7 @@ pub fn Register() -> impl IntoView {
         <PageShell variant=PageShellVariant::Form>
             <PageCard class="p-6 sm:p-8">
                 <ActionForm action=register attr:class="space-y-4">
+
                     <div class="flex flex-col gap-1">
                         <h1 class="ui-page-title">
                             {t!(i18n, user_config.create_account.signup_button)}

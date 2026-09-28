@@ -1,4 +1,4 @@
-use crate::responses::ChallengeResponse;
+use crate::{responses::ChallengeResponse, security::csrf::CsrfClient};
 use leptos::prelude::*;
 use server_fn::codec;
 use shared_types::ChallengeId;
@@ -29,7 +29,7 @@ fn can_read_challenge(challenge: &db_lib::models::Challenge, viewer_id: Option<U
             .is_some_and(|opponent_id| opponent_id == viewer_id)
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_challenge_by_uuid(id: Uuid) -> Result<ChallengeResponse, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::{get_conn, models::Challenge};
@@ -44,7 +44,7 @@ pub async fn get_challenge_by_uuid(id: Uuid) -> Result<ChallengeResponse, Server
         .map_err(ServerFnError::new)
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_challenge(challenge_id: ChallengeId) -> Result<ChallengeResponse, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::{get_conn, models::Challenge};

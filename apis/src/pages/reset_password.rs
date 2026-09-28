@@ -5,8 +5,9 @@ use crate::{
         update_from_event::update_from_input,
     },
     functions::auth::reset_password::{verify_reset_token, ResetPassword},
+    security::csrf::ActionForm,
 };
-use leptos::{either::Either, form::ActionForm, leptos_dom::helpers::debounce, prelude::*};
+use leptos::{either::Either, leptos_dom::helpers::debounce, prelude::*};
 use leptos_router::hooks::use_query_map;
 use std::time::Duration;
 
@@ -42,6 +43,7 @@ pub fn ResetPassword() -> impl IntoView {
                                     Either::Left(
                                         view! {
                                             <ActionForm action=action attr:class="space-y-4">
+
                                                 <input type="hidden" name="token" value=token.get_value() />
                                                 <div class="flex flex-col gap-1">
                                                     <h1 class="ui-page-title">"Reset your password"</h1>

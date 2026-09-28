@@ -1,10 +1,13 @@
-use crate::responses::{TournamentAbstractResponse, TournamentResponse};
+use crate::{
+    responses::{TournamentAbstractResponse, TournamentResponse},
+    security::csrf::CsrfClient,
+};
 use leptos::prelude::*;
 use server_fn::codec;
 use shared_types::{TournamentId, TournamentSortOrder, TournamentStatus};
 use std::collections::HashSet;
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_all_abstract(
     sort_order: TournamentSortOrder,
 ) -> Result<Vec<TournamentAbstractResponse>, ServerFnError> {
@@ -24,7 +27,7 @@ pub async fn get_all_abstract(
     Ok(result)
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_complete(
     tournament_id: TournamentId,
 ) -> Result<TournamentResponse, ServerFnError> {
@@ -40,7 +43,7 @@ pub async fn get_complete(
     }
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_by_status(
     status: TournamentStatus,
     sort_order: TournamentSortOrder,
@@ -61,7 +64,7 @@ pub async fn get_by_status(
     Ok(result)
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_abstracts_by_ids(
     tournament_ids: HashSet<TournamentId>,
 ) -> Result<Vec<TournamentAbstractResponse>, ServerFnError> {
@@ -83,7 +86,7 @@ pub async fn get_abstracts_by_ids(
     Ok(result)
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_hosting_tournaments(
     sort_order: TournamentSortOrder,
 ) -> Result<Vec<TournamentAbstractResponse>, ServerFnError> {
@@ -104,7 +107,7 @@ pub async fn get_hosting_tournaments(
     Ok(result)
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_joined_tournaments(
     sort_order: TournamentSortOrder,
 ) -> Result<Vec<TournamentAbstractResponse>, ServerFnError> {
@@ -125,7 +128,7 @@ pub async fn get_joined_tournaments(
     Ok(result)
 }
 
-#[server]
+#[server(client = CsrfClient)]
 pub async fn update_description(
     tournament_id: String,
     description: String,

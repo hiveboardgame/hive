@@ -1,5 +1,10 @@
 use crate::functions::{
-    devices::{get_vapid_public_key, register_device, unregister_current_device},
+    devices::{
+        get_vapid_public_key,
+        register_device,
+        unregister_current_device,
+        DeviceRegistration,
+    },
     notification_preferences::send_test_push,
 };
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
@@ -287,15 +292,15 @@ async fn register_subscription(
     let locale = web_sys::window()
         .and_then(|w| w.navigator().language())
         .unwrap_or_else(|| "en".to_string());
-    register_device(
-        "web".to_string(),
-        parsed.endpoint,
-        env!("CARGO_PKG_VERSION").to_string(),
+    register_device(DeviceRegistration {
+        platform: "web".to_string(),
+        device_token: parsed.endpoint,
+        app_version: env!("CARGO_PKG_VERSION").to_string(),
         locale,
-        Some(parsed.keys.p256dh),
-        Some(parsed.keys.auth),
+        p256dh: Some(parsed.keys.p256dh),
+        auth: Some(parsed.keys.auth),
         explicit,
-    )
+    })
     .await
     .map(|_| ())
     .map_err(|e| format!("registration failed: {e}"))

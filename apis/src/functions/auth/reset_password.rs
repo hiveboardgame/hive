@@ -1,6 +1,7 @@
+use crate::security::csrf::CsrfClient;
 use leptos::prelude::*;
 
-#[server]
+#[server(client = CsrfClient)]
 pub async fn reset_password(
     token: String,
     new_password: String,
@@ -55,7 +56,7 @@ pub async fn reset_password(
 
 /// Checks whether a reset token is still usable, without consuming it, so the
 /// page can show an "expired link" state up front instead of after submit.
-#[server]
+#[server(client = CsrfClient)]
 pub async fn verify_reset_token(token: String) -> Result<bool, ServerFnError> {
     use crate::{email::hash_token, functions::db::pool};
     use db_lib::{db_error::DbError, get_conn, models::EmailToken};

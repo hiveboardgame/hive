@@ -30,6 +30,7 @@ use crate::{
         UpdateNotifier,
     },
     responses::{GameResponse, TournamentResponse},
+    security::csrf::ActionForm,
 };
 use chrono::Local;
 use hive_lib::GameStatus;
@@ -423,6 +424,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                 }
             >
                 <ActionForm action=update_desc_action attr:class="space-y-3">
+
                     <input
                         type="hidden"
                         name="tournament_id"

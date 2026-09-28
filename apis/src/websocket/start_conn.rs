@@ -1,10 +1,13 @@
 use std::sync::Arc;
 
-use crate::websocket::{
-    messages::SocketTx,
-    ws_connection::reader_task,
-    ws_hub::{WsHub, SOCKET_BUFFER_CAPACITY},
-    WebsocketData,
+use crate::{
+    security::origin::validate_request_origin,
+    websocket::{
+        messages::SocketTx,
+        ws_connection::reader_task,
+        ws_hub::{WsHub, SOCKET_BUFFER_CAPACITY},
+        WebsocketData,
+    },
 };
 use actix_identity::Identity;
 use actix_web::{
@@ -29,6 +32,10 @@ pub async fn start_connection(
     identity: Option<Identity>,
     data: Data<WebsocketData>,
 ) -> Result<HttpResponse, Error> {
+    if let Err(error) = validate_request_origin(&req, true) {
+        data.telemetry.record_handshake_fail();
+        return Err(error);
+    }
     let user = resolve_identity(identity, &pool).await;
 
     let ws_result = actix_ws::handle(&req, body);

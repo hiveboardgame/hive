@@ -9,6 +9,7 @@ use crate::{
     },
     functions::home_banner,
     providers::AuthContext,
+    security::csrf::ActionForm,
 };
 use leptos::prelude::*;
 use shared_types::ConversationKey;
@@ -70,6 +71,7 @@ fn EditBanner() -> impl IntoView {
                                 }}
                             </button>
                             <ActionForm action=update>
+
                                 <div class=move || {
                                     if show_preview() { "" } else { "hidden" }
                                 }>

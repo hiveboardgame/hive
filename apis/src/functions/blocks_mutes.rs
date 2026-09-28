@@ -1,3 +1,4 @@
+use crate::security::csrf::CsrfClient;
 #[cfg(feature = "ssr")]
 use db_lib::db_error::DbError;
 use leptos::prelude::*;
@@ -113,12 +114,12 @@ async fn set_tournament_mute_setting(
     Ok(muted)
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn set_user_blocked(blocked_id: Uuid, blocked: bool) -> Result<bool, ServerFnError> {
     set_block_setting(blocked_id, blocked).await
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn set_tournament_chat_muted(
     tournament_id: String,
     muted: bool,

@@ -1,8 +1,8 @@
-use crate::responses::AccountResponse;
+use crate::{responses::AccountResponse, security::csrf::CsrfClient};
 use leptos::prelude::*;
 use shared_types::Takeback;
 
-#[server]
+#[server(client = CsrfClient)]
 pub async fn edit_account(
     new_password: String,
     new_password_confirmation: String,
@@ -31,7 +31,7 @@ pub async fn edit_account(
     AccountResponse::from_uuid(&user.id, &mut conn).await
 }
 
-#[server]
+#[server(client = CsrfClient)]
 pub async fn edit_takeback(takeback: Takeback) -> Result<(), ServerFnError> {
     use crate::functions::{auth::identity::uuid, db::pool};
     use db_lib::{get_conn, models::User};
@@ -42,7 +42,7 @@ pub async fn edit_takeback(takeback: Takeback) -> Result<(), ServerFnError> {
     Ok(())
 }
 
-#[server]
+#[server(client = CsrfClient)]
 pub async fn edit_lang(lang: String) -> Result<(), ServerFnError> {
     use crate::functions::{auth::identity::uuid, db::pool};
     use db_lib::{get_conn, models::User};

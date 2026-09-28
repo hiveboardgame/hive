@@ -1,8 +1,20 @@
 #[cfg(feature = "ssr")]
 use crate::notifications::web_push;
-use crate::responses::PushDeviceResponse;
+use crate::{responses::PushDeviceResponse, security::csrf::CsrfClient};
 use leptos::prelude::*;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceRegistration {
+    pub platform: String,
+    pub device_token: String,
+    pub app_version: String,
+    pub locale: String,
+    pub p256dh: Option<String>,
+    pub auth: Option<String>,
+    pub explicit: bool,
+}
 
 #[cfg(feature = "ssr")]
 pub fn new_web_push_device(
@@ -25,18 +37,20 @@ pub fn new_web_push_device(
     })
 }
 
-#[server]
-pub async fn register_device(
-    platform: String,
-    device_token: String,
-    app_version: String,
-    locale: String,
-    p256dh: Option<String>,
-    auth: Option<String>,
-    explicit: bool,
-) -> Result<Uuid, ServerFnError> {
+#[server(client = CsrfClient)]
+pub async fn register_device(registration: DeviceRegistration) -> Result<Uuid, ServerFnError> {
     use crate::functions::{auth::identity::uuid, db::pool};
     use db_lib::{get_conn, models::PushDevice};
+
+    let DeviceRegistration {
+        platform,
+        device_token,
+        app_version,
+        locale,
+        p256dh,
+        auth,
+        explicit,
+    } = registration;
 
     if platform != "web" {
         return Err(ServerFnError::new("platform must be 'web'"));
@@ -60,7 +74,7 @@ pub async fn register_device(
     Ok(device.id)
 }
 
-#[server]
+#[server(client = CsrfClient)]
 pub async fn list_devices(
     current_endpoint: Option<String>,
 ) -> Result<Vec<PushDeviceResponse>, ServerFnError> {
@@ -79,7 +93,7 @@ pub async fn list_devices(
         .collect())
 }
 
-#[server]
+#[server(client = CsrfClient)]
 pub async fn unregister_device(device_id: String) -> Result<(), ServerFnError> {
     use crate::functions::{auth::identity::uuid, db::pool};
     use db_lib::{get_conn, models::PushDevice};
@@ -96,7 +110,7 @@ pub async fn unregister_device(device_id: String) -> Result<(), ServerFnError> {
     Ok(())
 }
 
-#[server]
+#[server(client = CsrfClient)]
 pub async fn unregister_current_device(endpoint: String) -> Result<(), ServerFnError> {
     use crate::functions::{auth::identity::uuid, db::pool};
     use db_lib::{get_conn, models::PushDevice};
@@ -112,7 +126,7 @@ pub async fn unregister_current_device(endpoint: String) -> Result<(), ServerFnE
     Ok(())
 }
 
-#[server]
+#[server(client = CsrfClient)]
 pub async fn get_vapid_public_key() -> Result<Option<String>, ServerFnError> {
     Ok(web_push::cached_public_key().map(str::to_string))
 }
