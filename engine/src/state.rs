@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fmt::Display, path::PathBuf, str::FromStr};
 
 use crate::{
-    board::{Board, BOARD_SIZE},
+    board::Board,
     bug::Bug,
     color::Color,
     game_error::GameError,
@@ -127,11 +127,13 @@ impl State {
     }
 
     pub fn new_from_position(
-        board: Board,
+        mut board: Board,
         game_type: GameType,
         to_move: Color,
     ) -> Result<State, GameError> {
         Self::reachable(&board)?;
+        // Direct inserts guarantee room for writes; playable states also need the probe margin.
+        board.reframe();
         let mut turn = board.played;
         if turn.is_multiple_of(2) != (to_move == Color::White) {
             turn += 1;
@@ -529,10 +531,8 @@ impl State {
 
     fn play_turn(&mut self, piece: Piece, target_position: Position) -> Result<(), GameError> {
         // `Position` derives Deserialize over its public fields, so a websocket turn can carry
-        // coordinates `Position::new` would never produce, and they index straight past the board.
-        if !(0..BOARD_SIZE).contains(&target_position.q)
-            || !(0..BOARD_SIZE).contains(&target_position.r)
-        {
+        // coordinates outside the storage window.
+        if !self.board.can_place(target_position) {
             return Err(GameError::InvalidMove {
                 piece: piece.to_string(),
                 from: "NA".to_string(),
@@ -560,10 +560,9 @@ impl State {
         self.three_fold_repetition(self.turn_color.opposite_color());
         debug_assert!(self.board.check());
         self.next_turn();
-        // The renderer draws raw coordinates, so keep the hive clear of the torus seam.
-        // Deterministic, so every replay path recenters at the same plies.
-        if self.board.needs_recentering() {
-            self.board.recenter();
+        // Preserve the move-generation margin without changing piece coordinates.
+        if self.board.needs_reframing() {
+            self.board.reframe();
         }
         Ok(())
     }
@@ -720,32 +719,67 @@ mod tests {
         );
     }
 
-    /// Play must keep the hive clear of the seam; only the renderer's pixels would notice.
     #[test]
-    fn play_recenters_a_hive_that_reaches_the_seam() {
+    fn play_reframes_a_hive_that_reaches_the_window_edge() {
         let mut board = Board::new();
-        for (q, r, piece) in [
-            (30, 16, "wQ"),
-            (31, 16, "wA1"),
-            (0, 16, "bQ"),
-            (1, 16, "bA1"),
-        ] {
+        let pieces = [
+            "wQ", "wA1", "wA2", "wA3", "wG1", "bQ", "bA1", "bA2", "bA3", "bG1", "bG2",
+        ];
+        for (offset, piece) in pieces.into_iter().enumerate() {
             board.insert(
-                Position::new(q, r),
+                Position::new(10 + offset as i32, 16),
                 piece.parse().expect("test piece"),
                 true,
             );
         }
         let mut state = State::new_from_position(board, GameType::MLP, Color::White)
             .expect("a hand-built hive is reachable");
+        let before: Vec<_> = state.board.all_taken_positions().collect();
         state
-            .play_turn_from_position("wG1".parse().expect("test piece"), Position::new(30, 15))
+            .play_turn_from_position("wG2".parse().expect("test piece"), Position::new(9, 16))
             .expect("a plain spawn next to White's own pieces");
-        for position in state.board.all_taken_positions() {
+        assert!(
+            !state.board.needs_reframing(),
+            "play left the hive against the window edge"
+        );
+        for position in before {
             assert!(
-                (2..=30).contains(&position.q) && (2..=30).contains(&position.r),
-                "still hugging the seam at {position}"
+                state.board.all_taken_positions().any(|at| at == position),
+                "the reframe moved the piece at {position}"
             );
+        }
+    }
+
+    #[test]
+    fn imported_edge_positions_allow_generated_spawns() {
+        for (white, black, target) in [
+            ((9, 16), (10, 16), (8, 16)),
+            ((22, 16), (21, 16), (23, 16)),
+            ((16, 9), (16, 10), (16, 8)),
+            ((16, 22), (16, 21), (16, 23)),
+        ] {
+            let mut board = Board::new();
+            for ((q, r), piece) in [(white, "wQ"), (black, "bQ")] {
+                board.insert(
+                    Position::new(q, r),
+                    piece.parse().expect("test piece"),
+                    true,
+                );
+            }
+            let before = board.snapshot();
+            let mut state = State::new_from_position(board, GameType::MLP, Color::White)
+                .expect("a hand-built hive is reachable");
+            assert_eq!(state.board.snapshot(), before, "import moved a piece");
+            let target = Position::new(target.0, target.1);
+            assert!(state
+                .board
+                .spawnable_positions(Color::White)
+                .any(|at| at == target));
+            let ant = "wA1".parse().expect("test piece");
+            state
+                .play_turn_from_position(ant, target)
+                .expect("a generated spawn must be playable beside an imported hive");
+            assert_eq!(state.board.position_of_piece(ant), Some(target));
         }
     }
 

@@ -13,6 +13,7 @@ use crate::{
     piece::Piece,
     position::Position,
     state::State,
+    svg_position::SvgPosition,
 };
 use std::str::FromStr;
 
@@ -199,19 +200,13 @@ fn check_boundaries(state: &State, seed: u64) {
         context()
     );
 
-    if state.board.storage_cells() == 256 {
-        for p in state.board.positions.iter().flatten() {
-            assert!(
-                (10..=21).contains(&p.q) && (10..=21).contains(&p.r),
-                "small storage but hive outside the window ({})",
-                context()
-            );
-        }
-    }
+    let (origin, size) = (state.board.board.origin(), state.board.board.size());
+    let margin = crate::window_array::MARGIN;
     for p in state.board.positions.iter().flatten() {
         assert!(
-            (2..=30).contains(&p.q) && (2..=30).contains(&p.r),
-            "hive hugs the seam ({})",
+            (origin.q + margin..=origin.q + size - 1 - margin).contains(&p.q)
+                && (origin.r + margin..=origin.r + size - 1 - margin).contains(&p.r),
+            "hive hugs the window edge ({})",
             context()
         );
     }
@@ -347,4 +342,89 @@ fn hostile_inputs_only_error_deeply() {
         .and_then(|v| v.parse().ok())
         .unwrap_or(1);
     hostile_sweep(rounds, seed);
+}
+
+/// Uses the engine's `SvgPosition`; the browser has a separate `SvgPos` implementation.
+fn assert_drawn_geometry_matches(state: &State, ply: usize) {
+    // Ask the renderer itself how far apart neighbours sit, rather than restating its hex size.
+    let origin = SvgPosition::center_for_level(Position::new(0, 0), 0, false);
+    let east = SvgPosition::center_for_level(Position::new(1, 0), 0, false);
+    let hex_width = (east.0 - origin.0).hypot(east.1 - origin.1);
+    let cells: Vec<Position> = state.board.all_taken_positions().collect();
+    for a in &cells {
+        for b in &cells {
+            if a == b {
+                continue;
+            }
+            let (ax, ay) = SvgPosition::center_for_level(*a, 0, false);
+            let (bx, by) = SvgPosition::center_for_level(*b, 0, false);
+            let apart = ((ax - bx).powi(2) + (ay - by).powi(2)).sqrt();
+            assert_eq!(
+                apart < hex_width * 1.05,
+                a.is_neighbor(*b),
+                "ply {ply}: {a} and {b} draw {apart} apart, hex width is {hex_width}"
+            );
+        }
+    }
+}
+
+#[test]
+fn a_treadmilling_hive_drags_the_window_with_it() {
+    let mut state = State::new(GameType::MLP, true);
+    let mut plies = 0;
+    for _ in 0..150 {
+        if matches!(
+            state.game_status,
+            GameStatus::Finished(_) | GameStatus::Adjudicated
+        ) {
+            break;
+        }
+        let mut options = legal_actions(&state);
+        if options.is_empty() {
+            assert!(state.play_turn_from_history("pass", "").is_ok());
+            continue;
+        }
+        // Make tie-breaking independent of HashMap iteration order.
+        options.sort_by_key(|(piece, target)| (piece.to_string(), target.q, target.r));
+        // Favor eastward moves that let the test continue.
+        let mut best: Option<(i32, Piece, Position)> = None;
+        for (piece, target) in options {
+            let mut probe = state.clone();
+            if probe.play_turn_from_position(piece, target).is_err() {
+                continue;
+            }
+            if matches!(
+                probe.game_status,
+                GameStatus::Finished(_) | GameStatus::Adjudicated
+            ) {
+                continue;
+            }
+            let score = probe.board.all_taken_positions().map(|p| p.q).sum::<i32>();
+            if best.as_ref().is_none_or(|(seen, _, _)| score > *seen) {
+                best = Some((score, piece, target));
+            }
+        }
+        let Some((_, piece, target)) = best else {
+            break;
+        };
+        assert!(state.play_turn_from_position(piece, target).is_ok());
+        plies += 1;
+        assert_drawn_geometry_matches(&state, plies);
+    }
+
+    let centre = state.board.center_coordinates();
+    assert!(plies > 100, "the treadmill stalled after {plies} plies");
+    assert!(
+        centre.q > 16 + 4,
+        "the hive did not actually travel: centre q {}",
+        centre.q
+    );
+    assert_eq!(
+        crate::board::Board::from_snapshot(&state.board.snapshot()),
+        state.board,
+        "snapshot round trip broke after drifting to {centre}"
+    );
+    let hop = hop::from_position(&state.board, state.game_type, side_to_move(&state));
+    hop::parse(&hop).unwrap_or_else(|e| panic!("HOP does not reload after drifting: {e}"));
+    check_boundaries(&state, 0);
 }
