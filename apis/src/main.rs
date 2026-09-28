@@ -6,9 +6,10 @@ use std::sync::Arc;
 use actix_session::config::PersistentSession;
 use actix_web::{
     cookie::{time::Duration, SameSite},
-    middleware::Compress,
+    middleware::{from_fn, Compress},
 };
 use apis::{api, email, functions, jobs, notifications};
+use apis::security::{csrf, origin::ApplicationOrigin};
 use apis::websocket::{self, WebsocketData};
 
 #[actix_web::main]
@@ -40,6 +41,14 @@ async fn main() -> std::io::Result<()> {
 
     let conf = get_configuration(None).expect("Got configuration");
     let addr = conf.leptos_options.site_addr;
+    let public_origin = match std::env::var("APP_ORIGIN") {
+        Ok(origin) => ApplicationOrigin::parse(&origin)
+            .expect("APP_ORIGIN must be an HTTP(S) origin"),
+        Err(_) if cfg!(debug_assertions) => ApplicationOrigin::Development { port: addr.port() },
+        Err(_) => ApplicationOrigin::parse("https://hivegame.com")
+            .expect("the production origin is valid"),
+    };
+    let public_origin = Data::new(public_origin);
     let routes = generate_route_list(App);
 
     // The backfill's info-level lifecycle lines are how a hash migration is supervised.
@@ -147,6 +156,8 @@ async fn main() -> std::io::Result<()> {
         let pwa_assets = pwa_manifest.document_assets();
 
         App::new()
+            .app_data(Data::clone(&public_origin))
+            .app_data(Data::new(functions::oauth::DiscordLinkKey(cookie_key.clone())))
             .app_data(Data::new(pool.clone()))
             .app_data(Data::clone(&hub))
             .app_data(Data::clone(&data))
@@ -164,6 +175,7 @@ async fn main() -> std::io::Result<()> {
             .service(functions::pwa::cache)
             .service(functions::web_push_http::vapid_public_key)
             .service(functions::web_push_http::web_subscription)
+            .service(csrf::token_endpoint)
             .service(functions::oauth::callback)
             .service(functions::og::og_game_image)
             .service(get_token)
@@ -197,6 +209,8 @@ async fn main() -> std::io::Result<()> {
                     }
             }})
             .app_data(Data::new(leptos_options.to_owned()))
+            .wrap(from_fn(csrf::protection))
+            .wrap(from_fn(csrf::token_cookie))
             // IdentityMiddleware needs to be first
             .wrap(IdentityMiddleware::default())
             // Now SessionMiddleware, this is a bit confusing but actix invokes middlesware in

@@ -80,7 +80,7 @@ async fn explicit_subscribe_clears_tombstone() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn reconcile_restores_swept_device() {
+async fn reconcile_cannot_create_a_missing_registration() {
     let db = common::db::test_db().await;
     let mut conn = get_conn(&db.pool).await.expect("get connection");
     let user = create_user("swept_owner", &mut conn).await;
@@ -95,14 +95,97 @@ async fn reconcile_restores_swept_device() {
     assert_eq!(removed, 1);
     assert!(all_rows(user.id, &mut conn).await.is_empty());
 
-    PushDevice::upsert(new_device(user.id, "endpoint-d"), false, &mut conn)
-        .await
-        .expect("reconcile upsert");
+    assert!(
+        PushDevice::upsert(new_device(user.id, "endpoint-d"), false, &mut conn)
+            .await
+            .is_err()
+    );
+    assert!(all_rows(user.id, &mut conn).await.is_empty());
+}
 
-    let rows = all_rows(user.id, &mut conn).await;
+#[tokio::test(flavor = "multi_thread")]
+async fn reconcile_cannot_take_another_accounts_subscription() {
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.expect("get connection");
+    let owner = create_user("push_owner", &mut conn).await;
+    let other = create_user("other_owner", &mut conn).await;
+    let device = PushDevice::upsert(new_device(owner.id, "owned-endpoint"), true, &mut conn)
+        .await
+        .unwrap();
+
+    assert!(
+        PushDevice::upsert(new_device(other.id, "owned-endpoint"), false, &mut conn)
+            .await
+            .is_err()
+    );
+    assert_eq!(find_ids(owner.id, &mut conn).await, vec![device.id]);
+    assert!(all_rows(other.id, &mut conn).await.is_empty());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn rotation_requires_an_existing_subscription_of_the_current_account() {
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.expect("get connection");
+    let owner = create_user("rotation_owner", &mut conn).await;
+    let other = create_user("rotation_other", &mut conn).await;
+    let original = PushDevice::upsert(new_device(owner.id, "old-endpoint"), true, &mut conn)
+        .await
+        .unwrap();
+
+    for old in [None, Some("missing-endpoint"), Some("old-endpoint")] {
+        assert!(PushDevice::rotate_endpoint(
+            new_device(other.id, "new-endpoint"),
+            old.map(str::to_string),
+            &mut conn
+        )
+        .await
+        .is_err());
+    }
+    assert_eq!(find_ids(owner.id, &mut conn).await, vec![original.id]);
+    assert!(all_rows(other.id, &mut conn).await.is_empty());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn rotation_preserves_revocation_and_cannot_overwrite_another_endpoint() {
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.expect("get connection");
+    let owner = create_user("revoked_rotation", &mut conn).await;
+    let other = create_user("rotation_target", &mut conn).await;
+    let original = PushDevice::upsert(new_device(owner.id, "revoked-old"), true, &mut conn)
+        .await
+        .unwrap();
+    PushDevice::revoke_for_user(original.id, owner.id, &mut conn)
+        .await
+        .unwrap();
+    PushDevice::upsert(new_device(other.id, "occupied-endpoint"), true, &mut conn)
+        .await
+        .unwrap();
+
+    assert!(PushDevice::rotate_endpoint(
+        new_device(owner.id, "occupied-endpoint"),
+        Some("revoked-old".into()),
+        &mut conn
+    )
+    .await
+    .is_err());
+    assert_eq!(
+        all_rows(owner.id, &mut conn).await[0].device_token,
+        "revoked-old"
+    );
+    assert_eq!(all_rows(other.id, &mut conn).await.len(), 1);
+
+    PushDevice::rotate_endpoint(
+        new_device(owner.id, "revoked-new"),
+        Some("revoked-old".into()),
+        &mut conn,
+    )
+    .await
+    .unwrap();
+    let rows = all_rows(owner.id, &mut conn).await;
     assert_eq!(rows.len(), 1);
-    assert!(rows[0].revoked_at.is_none());
-    assert_eq!(find_ids(user.id, &mut conn).await.len(), 1);
+    assert_eq!(rows[0].device_token, "revoked-new");
+    assert!(rows[0].revoked_at.is_some());
+    assert!(find_ids(owner.id, &mut conn).await.is_empty());
 }
 
 #[tokio::test(flavor = "multi_thread")]

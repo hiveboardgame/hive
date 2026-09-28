@@ -8,8 +8,9 @@ use crate::{
     i18n::*,
     providers::{AuthContext, RefererContext},
     pwa,
+    security::csrf::ActionForm,
 };
-use leptos::{form::ActionForm, leptos_dom::helpers::debounce, prelude::*, task::spawn_local};
+use leptos::{leptos_dom::helpers::debounce, prelude::*, task::spawn_local};
 use std::time::Duration;
 
 #[component]
@@ -76,6 +77,7 @@ pub fn Account() -> impl IntoView {
 
             <Panel title="Change Password" body_class="space-y-4">
                 <ActionForm action=account_action attr:class="space-y-4">
+
                     <label class="flex flex-col gap-1.5" for="old_password">
                         <span class="ui-field-label">"Current Password"</span>
                         <input
@@ -155,6 +157,7 @@ pub fn Account() -> impl IntoView {
             >
                 <p class="ui-danger-notice">{t!(i18n, user_config.delete_account.description)}</p>
                 <ActionForm action=delete_action attr:class="space-y-4">
+
                     <label class="flex flex-col gap-1.5" for="delete_password">
                         <span class="ui-field-label">
                             {t!(i18n, user_config.delete_account.password)}

@@ -1,8 +1,8 @@
-use crate::responses::AccountResponse;
+use crate::{responses::AccountResponse, security::csrf::CsrfClient};
 use leptos::prelude::*;
 use server_fn::codec;
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_account() -> Result<Option<AccountResponse>, ServerFnError> {
     use crate::functions::{auth::identity::identity, db::pool};
     use db_lib::get_conn;

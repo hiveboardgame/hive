@@ -1,3 +1,4 @@
+use crate::security::csrf::CsrfClient;
 #[cfg(feature = "ssr")]
 use crate::{
     chat::access::{allows_anonymous_chat_read, authorize_chat_read, ChatAccessError},
@@ -148,7 +149,7 @@ async fn dispatch_chat_read_update(user_id: Uuid, key: ConversationKey, last_rea
         .await;
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_chat_history(
     channel_key: ConversationKey,
     before_message_id: Option<i64>,
@@ -209,7 +210,7 @@ pub async fn get_chat_history(
     Ok(ChatHistoryResponse::Page(page))
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn mark_chat_read(
     channel_key: ConversationKey,
     last_read_message_id: i64,
@@ -229,7 +230,7 @@ pub async fn mark_chat_read(
     Ok(marked_read_through)
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_chat_inbox_snapshot() -> Result<ChatInboxSnapshot, ServerFnError> {
     let user_id = uuid().await?;
     let pool = pool().await?;
@@ -250,7 +251,7 @@ pub async fn get_chat_inbox_snapshot() -> Result<ChatInboxSnapshot, ServerFnErro
     })
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_messages_catalog_data() -> Result<MessagesCatalogData, ServerFnError> {
     let user_id = uuid().await?;
     let pool = pool().await?;
@@ -272,7 +273,7 @@ pub async fn get_messages_catalog_data() -> Result<MessagesCatalogData, ServerFn
     Ok(data)
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn resolve_dm_route_user(username: String) -> Result<DmRouteResponse, ServerFnError> {
     let _user_id = uuid().await?;
     let pool = pool().await?;
@@ -290,7 +291,7 @@ pub async fn resolve_dm_route_user(username: String) -> Result<DmRouteResponse, 
     }
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_tournament_route_data(
     tournament_id: String,
 ) -> Result<TournamentRouteResponse, ServerFnError> {
@@ -310,7 +311,7 @@ pub async fn get_tournament_route_data(
     }
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_game_chat_route_data(
     game_id: GameId,
 ) -> Result<GameChatRouteResponse, ServerFnError> {

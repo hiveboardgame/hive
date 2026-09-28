@@ -1,8 +1,8 @@
-use crate::responses::NotificationPreferencesResponse;
+use crate::{responses::NotificationPreferencesResponse, security::csrf::CsrfClient};
 use leptos::prelude::*;
 use server_fn::codec;
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_notification_preferences() -> Result<NotificationPreferencesResponse, ServerFnError>
 {
     use crate::functions::{auth::identity::uuid, db::pool};
@@ -17,7 +17,7 @@ pub async fn get_notification_preferences() -> Result<NotificationPreferencesRes
     Ok(prefs.into())
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn set_notification_preferences(
     payload: NotificationPreferencesResponse,
 ) -> Result<NotificationPreferencesResponse, ServerFnError> {
@@ -67,7 +67,7 @@ pub async fn set_notification_preferences(
     Ok(updated.into())
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn send_test_push() -> Result<(), ServerFnError> {
     use crate::{
         functions::{auth::identity::uuid, db::pool},

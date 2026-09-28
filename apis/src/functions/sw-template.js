@@ -8,15 +8,29 @@ const CORE_ICONS = [
   '/assets/favicon.ico',
 ];
 
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const raw = atob(base64);
-  const output = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i++) {
-    output[i] = raw.charCodeAt(i);
+async function postWithCsrf(path, body) {
+  const url = new URL(path, self.location.origin);
+  if (url.origin !== self.location.origin) {
+    throw new Error('Worker requests must use the application origin');
   }
-  return output;
+  const options = { credentials: 'same-origin', mode: 'same-origin', redirect: 'error' };
+  const tokenResponse = await fetch('/api/csrf', { ...options, cache: 'no-store' });
+  if (!tokenResponse.ok) {
+    throw new Error(`CSRF token request failed (${tokenResponse.status})`);
+  }
+  const token = await tokenResponse.text();
+  if (!token) {
+    throw new Error('CSRF token response was empty');
+  }
+  const response = await fetch(url.href, {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    throw new Error(`Push subscription update failed (${response.status})`);
+  }
 }
 
 function isTileSvgRequest(request) {
@@ -94,36 +108,25 @@ self.addEventListener('push', (event) => {
 });
 
 self.addEventListener('pushsubscriptionchange', (event) => {
+  // Missing subscriptions can mean permission was revoked or ownership was lost.
+  // Only an explicit subscription from the page may create a new registration.
+  if (!event.oldSubscription || !event.newSubscription) {
+    return;
+  }
   event.waitUntil(
     (async () => {
       try {
-        const resp = await fetch('/api/push/vapid-public-key');
-        if (!resp.ok) {
-          return;
-        }
-        const vapid = (await resp.text()).trim();
-        if (!vapid) {
-          return;
-        }
-        const sub = await self.registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(vapid),
+        const json = event.newSubscription.toJSON();
+        await postWithCsrf('/api/push/web-subscription', {
+          endpoint: json.endpoint,
+          p256dh: json.keys.p256dh,
+          auth: json.keys.auth,
+          locale: self.navigator.language || 'en',
+          old_endpoint: event.oldSubscription.endpoint,
         });
-        const json = sub.toJSON();
-        const oldEndpoint =
-          (event.oldSubscription && event.oldSubscription.endpoint) || null;
-        await fetch('/api/push/web-subscription', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            endpoint: json.endpoint,
-            p256dh: json.keys.p256dh,
-            auth: json.keys.auth,
-            locale: self.navigator.language || 'en',
-            old_endpoint: oldEndpoint,
-          }),
-        });
-      } catch (e) {
+      } catch (error) {
+        // A changed login or failed connection ends this attempt; never replay it.
+        console.warn('Push subscription renewal failed:', error.message);
       }
     })()
   );

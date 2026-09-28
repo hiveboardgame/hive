@@ -242,10 +242,10 @@ impl Board {
         // A connected MLP hive spans at most 28 cells per axis. Reject larger imports
         // before reframing could discard pieces outside the window.
         assert!(
-            q_width.max(r_width) <= BOARD_SIZE - 2 * MARGIN - 1,
+            q_width.max(r_width) < BOARD_SIZE - 2 * MARGIN,
             "hive spans {q_width}x{r_width}, wider than any window"
         );
-        let small = q_width.max(r_width) <= SMALL_SIZE - 2 * MARGIN - 1;
+        let small = q_width.max(r_width) < SMALL_SIZE - 2 * MARGIN;
         let size = if small { SMALL_SIZE } else { BOARD_SIZE };
         let start = |min: i32, width: i32| min - MARGIN - (size - 2 * MARGIN - 1 - width) / 2;
         (
@@ -278,7 +278,7 @@ impl Board {
         };
         let centre = Position::initial_spawn_position();
         let (q_width, r_width) = (q_max - q_min, r_max - r_min);
-        let small = q_width.max(r_width) <= SMALL_SIZE - 2 * MARGIN - 1;
+        let small = q_width.max(r_width) < SMALL_SIZE - 2 * MARGIN;
         let low = INITIAL_ORIGIN.q + MARGIN;
         let high = INITIAL_ORIGIN.q + SMALL_SIZE - MARGIN - 1;
         let start = |mid: i32, width: i32| {

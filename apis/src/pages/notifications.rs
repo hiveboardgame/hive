@@ -11,12 +11,12 @@ use crate::{
     functions::{
         devices::{list_devices, unregister_device},
         notification_preferences::{get_notification_preferences, set_notification_preferences},
-        oauth::{get_discord_handle, DiscordHandleStatus},
+        oauth::{get_discord_handle, DiscordHandleStatus, StartDiscordLink},
     },
     i18n::*,
-    providers::ApiRequestsProvider,
     pwa,
     responses::NotificationPreferencesResponse,
+    security::csrf::ActionForm,
 };
 use leptos::{prelude::*, task::spawn_local};
 use leptos_i18n::I18nContext;
@@ -36,10 +36,7 @@ pub fn Notifications() -> impl IntoView {
     let prefs = RwSignal::new(NotificationPreferencesResponse::default());
     let loaded = RwSignal::new(false);
     let device_refresh = RwSignal::new(0_u32);
-    let api = expect_context::<ApiRequestsProvider>();
-    let oauth = move |_: leptos::ev::MouseEvent| {
-        api.0.get().link_discord();
-    };
+    let oauth = ServerAction::<StartDiscordLink>::new();
     let discord_name = Action::new(move |_: &()| async { get_discord_handle().await });
     Effect::new(move |_| {
         discord_name.dispatch(());
@@ -272,14 +269,26 @@ pub fn Notifications() -> impl IntoView {
                                             }}
                                         </div>
                                     </div>
-                                    <button
-                                        type="button"
-                                        class="w-full sm:w-auto ui-button ui-button-primary ui-button-md"
-                                        on:click=oauth
-                                    >
-                                        "Link Discord account"
-                                    </button>
+                                    <ActionForm action=oauth>
+
+                                        <button
+                                            type="submit"
+                                            class="w-full sm:w-auto ui-button ui-button-primary ui-button-md"
+                                            disabled=move || oauth.pending().get()
+                                        >
+                                            "Link Discord account"
+                                        </button>
+                                    </ActionForm>
                                 </div>
+                                {move || {
+                                    oauth
+                                        .value()
+                                        .get()
+                                        .and_then(Result::err)
+                                        .map(|error| {
+                                            view! { <p class="ui-field-error">{error.to_string()}</p> }
+                                        })
+                                }}
                             </div>
                         </Panel>
                     </div>
