@@ -1,5 +1,6 @@
 mod composer;
 mod history;
+mod message_body;
 mod message_list;
 mod read_eligibility;
 mod window;
