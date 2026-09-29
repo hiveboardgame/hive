@@ -6,8 +6,9 @@ use crate::{
     functions::auth::login::Login,
     i18n::*,
     providers::{AuthContext, RefererContext},
+    security::csrf::ActionForm,
 };
-use leptos::{form::ActionForm, html, prelude::*};
+use leptos::{html, prelude::*};
 
 #[component]
 pub fn Login() -> impl IntoView {
@@ -33,6 +34,7 @@ pub fn Login() -> impl IntoView {
         <PageShell variant=PageShellVariant::Form>
             <PageCard class="p-6 sm:p-8">
                 <ActionForm action=login attr:class="space-y-4">
+
                     <div class="flex flex-col gap-1">
                         <h1 class="ui-page-title">{t!(i18n, user_config.login.login_button)}</h1>
                         <p class="ui-page-subtitle">"Sign in to continue playing."</p>

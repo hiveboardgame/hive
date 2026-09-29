@@ -1,12 +1,16 @@
+#[cfg(feature = "ssr")]
+use crate::security::csrf::reset_session;
+use crate::security::csrf::CsrfClient;
+#[cfg(feature = "ssr")]
+use actix_session::Session;
 use leptos::prelude::*;
 
-#[server]
+#[server(client = CsrfClient)]
 pub async fn delete_account(password: String) -> Result<(), ServerFnError> {
     use crate::{
         functions::{
             auth::{
                 identity::uuid,
-                logout::logout,
                 password::{hash_password, verify_password},
             },
             db::pool,
@@ -44,7 +48,8 @@ pub async fn delete_account(password: String) -> Result<(), ServerFnError> {
             user.id
         );
     }
-    logout(None).await?;
+    let session: Session = leptos_actix::extract().await?;
+    reset_session(&session)?;
     leptos_actix::redirect("/");
     Ok(())
 }

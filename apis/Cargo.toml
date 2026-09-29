@@ -60,7 +60,7 @@ log = { workspace = true }
 lru = { version = "0.18.1", optional = true }
 markdown = { workspace = true }
 rand = { workspace = true, optional = true }
-reqwest = { workspace = true, optional = true }
+reqwest = { workspace = true, optional = true, features = ["query"] }
 resvg = { workspace = true, optional = true }
 rustls = { workspace = true, optional = true }
 web-push = { workspace = true, optional = true }
@@ -73,6 +73,7 @@ server_fn = { workspace = true }
 sha2 = { workspace = true, optional = true }
 shared_types = { path = "../shared_types" }
 simple_logger = { workspace = true, optional = true }
+subtle = { workspace = true, optional = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, optional = true }
 tokio-util = { workspace = true, optional = true }
@@ -122,6 +123,7 @@ ssr = [
   "dep:rustls",
   "dep:sha2",
   "dep:simple_logger",
+  "dep:subtle",
   "dep:web-push",
   "dep:walkdir",
   "dep:url",

@@ -1,3 +1,5 @@
+#[cfg(feature = "ssr")]
+use crate::security::csrf::ensure_document_token;
 use leptos::prelude::*;
 use leptos_meta::{HashedStylesheet, MetaTags};
 
@@ -9,6 +11,9 @@ pub fn DocumentShell(
     pwa_script_src: String,
     children: ChildrenFn,
 ) -> impl IntoView {
+    #[cfg(feature = "ssr")]
+    ensure_document_token();
+
     view! {
         <!DOCTYPE html>
         <html lang="en">

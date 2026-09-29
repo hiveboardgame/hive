@@ -7,7 +7,6 @@ use super::{
         limits::ChatLimitError,
     },
     game::handler::GameActionHandler,
-    oauth::handler::OauthHandler,
     resync::ResyncHandler,
     schedules::ScheduleHandler,
     tournaments::handler::TournamentHandler,
@@ -140,10 +139,6 @@ impl RequestHandler {
 
     pub async fn handle(&self) -> Result<HandlerOutput> {
         let output: HandlerOutput = match self.command.clone() {
-            ClientRequest::LinkDiscord => {
-                self.ensure_auth()?;
-                OauthHandler::new(self.user_id).handle().await?.into()
-            }
             ClientRequest::Chat(request) => {
                 self.ensure_auth()?;
                 self.hub

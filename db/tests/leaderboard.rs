@@ -96,7 +96,7 @@ async fn ties_break_by_games_played_then_id() {
     let first = ranked_user("bot_tie_one", true, 1500.0, RANKABLE, 5, &mut conn).await;
     let second = ranked_user("bot_tie_two", true, 1500.0, RANKABLE, 5, &mut conn).await;
 
-    let mut fully_tied = vec![first.id, second.id];
+    let mut fully_tied = [first.id, second.id];
     fully_tied.sort();
 
     let bots = top(LeaderboardKind::Bots, None, 10, &mut conn).await;

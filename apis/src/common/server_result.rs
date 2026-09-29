@@ -119,7 +119,6 @@ pub enum ServerMessage {
     Tournament(TournamentUpdate),
     UserSettings(UserSettingsUpdate),
     UserStatus(UserUpdate),
-    RedirectLink(String),
 }
 
 /// Authoritative best-effort lobby state sent on connect and Resync.
