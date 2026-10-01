@@ -183,7 +183,7 @@ impl HivegroundInteraction {
 
     pub fn can_inspect_stacks(&self) -> bool {
         self.capabilities
-            .with_untracked(|capabilities| capabilities.inspect_stacks)
+            .with(|capabilities| capabilities.inspect_stacks)
     }
 
     pub fn is_viewport_pan_allowed(&self) -> bool {
