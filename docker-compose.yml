@@ -1,7 +1,7 @@
-#version: '3'
 volumes:
   hive-dev:
   target:
+  cargo-target:
 
 services:
   postgres:
@@ -11,31 +11,42 @@ services:
       POSTGRES_HOST_AUTH_METHOD: trust
       POSTGRES_DB: hive-local
     volumes:
-      - ./dev-container/postgres_init.sh:/docker-entrypoint-initdb.d/create_database.sh
+      - ./dev-container/postgres_init.sh:/docker-entrypoint-initdb.d/create_database.sh:ro
       - hive-dev:/var/lib/postgresql/data/
-    restart: unless-stopped
     ports:
       - 5433:5432
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -d postgres -u hive-dev" ]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-d", "hive-local", "-U", "hive-dev"]
+      interval: 5s
+      timeout: 3s
       retries: 5
   app:
-    build: ./dev-container/.
+    build:
+      context: .
+      dockerfile: dev-container/Dockerfile
+      args:
+        TEST_MODE_DOCKER: ${TEST_MODE_DOCKER:-false}
     depends_on:
-      - postgres
-    working_dir: /app
-    entrypoint: ["/bin/bash", "-c", "./dev-container/wait-for-it.sh -t 3 postgres:5432 -- ./dev-container/start_app.sh"]
+      postgres:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "/app/dev-container/start_app.sh"]
     volumes:
       - .:/app
       - target:/app/target/
+      - cargo-target:/app/.cargo/target/
     ports:
       - 3000:3000
       - 3001:3001
     env_file:
       - .env
-    restart: unless-stopped
     environment:
       DATABASE_URL: postgres://hive-dev@postgres:5432/hive-local
       TEST_DATABASE_URL: postgres://hive-dev@postgres:5432/hive-test
+      TEST_MODE_DOCKER: ${TEST_MODE_DOCKER:-false}
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--output", "/dev/null", "http://localhost:3000/"]
+      interval: 5s
+      timeout: 5s
+      # Allow 15 minutes for startup, then 10 minutes of failed checks at 5s intervals.
+      start_period: 15m
+      retries: 120

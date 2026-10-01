@@ -1,27 +1,43 @@
-FROM rustlang/rust:nightly-bookworm
+FROM debian:bookworm-slim AS base
 
-# Base tools and runtime deps (libpq for diesel_cli)
+ENV RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH=/usr/local/cargo/bin:$PATH
+
+# Build dependencies for the application itself.
 RUN apt-get update && \
     apt-get install --no-install-recommends -y \
-      ca-certificates \
-      wget \
-      curl \
-      pkg-config \
-      build-essential \
-      libssl-dev \
-      libpq5 \
-      libpq-dev && \
+      ca-certificates curl pkg-config \
+      libssl-dev libpq-dev build-essential && \
     rm -rf /var/lib/apt/lists/*
 
-RUN wget --progress=dot:giga https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-unknown-linux-musl.tgz && \
-    tar -xvf cargo-binstall-x86_64-unknown-linux-musl.tgz && \
-    mv cargo-binstall /usr/local/cargo/bin && \
-    rm -f cargo-binstall-x86_64-unknown-linux-musl.tgz
+# Share rustup without installing a compiler in the base image.
+RUN bash -o pipefail -c ' \
+    curl --fail --location --silent --show-error \
+      --proto "=https" --tlsv1.2 https://sh.rustup.rs | \
+      sh -s -- -y --no-modify-path --default-toolchain none --profile minimal'
 
-RUN cargo binstall -y \
-      cargo-leptos && \
-    cargo install diesel_cli --no-default-features --features postgres -j $(nproc)
+# Build CLI tools independently of the application's pinned toolchain.
+FROM base AS cli-tools
+RUN rustup default stable
 
-RUN rustup target add wasm32-unknown-unknown
+RUN bash -o pipefail -c ' \
+    curl --fail --location --silent --show-error \
+      --proto "=https" --tlsv1.2 https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | \
+      bash'
 
+RUN cargo binstall -y cargo-leptos
+
+RUN cargo install diesel_cli --version '~2.3.0' --locked --no-default-features --features postgres
+
+ARG TEST_MODE_DOCKER=false
+RUN if [ "$TEST_MODE_DOCKER" = "true" ]; then cargo binstall leptosfmt; fi
+
+# Keep the CLI compiler and build artifacts out of the development image.
+FROM base AS development
 WORKDIR /app
+COPY rust-toolchain.toml ./
+RUN rustup show
+
+# Copy executables only; keep toolchain installation cached when CLI tools change.
+COPY --from=cli-tools /usr/local/cargo/bin/ /usr/local/cargo/bin/
