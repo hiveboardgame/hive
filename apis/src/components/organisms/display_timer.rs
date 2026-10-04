@@ -4,7 +4,7 @@ use crate::{
     providers::{game_state::GameStateStore, timer::TimerSignal, ApiRequestsProvider, AuthContext},
 };
 use hive_lib::Color;
-use leptos::prelude::*;
+use leptos::{either::Either, prelude::*};
 use leptos_icons::*;
 use shared_types::TimeMode;
 
@@ -17,7 +17,11 @@ pub enum Placement {
 }
 
 #[component]
-pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
+pub fn DisplayTimer(
+    placement: Placement,
+    vertical: bool,
+    #[prop(optional)] name: Option<&'static str>,
+) -> impl IntoView {
     let game_state = expect_context::<GameStateStore>();
     let auth_context = expect_context::<AuthContext>();
     let current_confirm = expect_context::<CurrentConfirm>().0;
@@ -134,7 +138,14 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
             </button>
             <Show when=move || !vertical>
                 <div class=classes>
-                    <UserWithRating side=side() text_color=text_color() />
+                    {match name {
+                        Some(name) => Either::Left(view! { <span class=text_color()>{name}</span> }),
+                        None => {
+                            Either::Right(
+                                view! { <UserWithRating side=side() text_color=text_color() /> },
+                            )
+                        }
+                    }}
                 </div>
             </Show>
         </div>

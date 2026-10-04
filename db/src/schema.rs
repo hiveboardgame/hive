@@ -296,6 +296,14 @@ diesel::table! {
 }
 
 diesel::table! {
+    tutorial_progress (user_id, lesson_id) {
+        user_id -> Uuid,
+        lesson_id -> Text,
+        completed_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     user_blocks (blocker_id, blocked_id) {
         blocker_id -> Uuid,
         blocked_id -> Uuid,
@@ -354,6 +362,7 @@ diesel::joinable!(tournaments_organizers -> tournaments (tournament_id));
 diesel::joinable!(tournaments_organizers -> users (organizer_id));
 diesel::joinable!(tournaments_users -> tournaments (tournament_id));
 diesel::joinable!(tournaments_users -> users (user_id));
+diesel::joinable!(tutorial_progress -> users (user_id));
 diesel::joinable!(user_tournament_chat_mutes -> tournaments (tournament_id));
 diesel::joinable!(user_tournament_chat_mutes -> users (user_id));
 
@@ -380,6 +389,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     tournaments_invitations,
     tournaments_organizers,
     tournaments_users,
+    tutorial_progress,
     user_blocks,
     user_tournament_chat_mutes,
     users,

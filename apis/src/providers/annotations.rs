@@ -16,6 +16,7 @@ pub enum AnnotationColor {
     Black,
     Red,
     Green,
+    Orange,
 }
 
 impl AnnotationColor {
@@ -25,6 +26,7 @@ impl AnnotationColor {
             AnnotationColor::Black => "#2a323e",
             AnnotationColor::Red => "#d61a35",
             AnnotationColor::Green => "#3f9b3a",
+            AnnotationColor::Orange => "#f68c11",
         }
     }
 
@@ -47,6 +49,13 @@ impl AnnotationColor {
                     "#5cc451"
                 } else {
                     "#3f9b3a"
+                }
+            }
+            AnnotationColor::Orange => {
+                if prefers_dark {
+                    "#e9ac43"
+                } else {
+                    "#c96f0a"
                 }
             }
         }
@@ -79,6 +88,8 @@ impl AnnotationColor {
 pub enum MarkerShape {
     Circle,
     Cross,
+    Ring,
+    Grid,
 }
 
 impl MarkerShape {
@@ -101,6 +112,13 @@ pub struct Marker {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Label {
+    pub position: Position,
+    pub number: u8,
+    pub color: AnnotationColor,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Arrow {
     pub from: Position,
     pub to: Position,
@@ -113,11 +131,16 @@ pub struct AnnotationSet {
     pub highlights: Vec<Highlight>,
     pub markers: Vec<Marker>,
     pub arrows: Vec<Arrow>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub labels: Vec<Label>,
 }
 
 impl AnnotationSet {
     pub fn is_empty(&self) -> bool {
-        self.highlights.is_empty() && self.markers.is_empty() && self.arrows.is_empty()
+        self.highlights.is_empty()
+            && self.markers.is_empty()
+            && self.arrows.is_empty()
+            && self.labels.is_empty()
     }
 
     fn clear_point(&mut self, position: Position) {
@@ -191,6 +214,7 @@ pub enum AnnotationTool {
 #[derive(Clone, Copy)]
 enum AnnotationBackend {
     Analysis(AnalysisContext),
+    Fixed(Signal<AnnotationSet>),
     Play {
         game_state: GameStateStore,
         store: RwSignal<HashMap<(Option<GameId>, usize), AnnotationSet>>,
@@ -201,6 +225,7 @@ impl AnnotationBackend {
     fn read_current(&self) -> AnnotationSet {
         match self {
             AnnotationBackend::Analysis(analysis) => analysis.store.current_annotation(),
+            AnnotationBackend::Fixed(set) => set.get(),
             AnnotationBackend::Play { game_state, store } => {
                 let key = play_key(*game_state);
                 store.with(|map| map.get(&key).cloned().unwrap_or_default())
@@ -213,6 +238,7 @@ impl AnnotationBackend {
             AnnotationBackend::Analysis(analysis) => {
                 analysis.store.update_current_annotation(mutate)
             }
+            AnnotationBackend::Fixed(_) => {}
             AnnotationBackend::Play { game_state, store } => {
                 let key = play_key(*game_state);
                 store.update(|map| {
@@ -270,6 +296,10 @@ impl AnnotationsSignal {
 
     pub fn analysis(analysis: AnalysisContext) -> Self {
         Self::new(AnnotationBackend::Analysis(analysis))
+    }
+
+    pub fn fixed(set: Signal<AnnotationSet>) -> Self {
+        Self::new(AnnotationBackend::Fixed(set))
     }
 
     pub fn play(game_state: GameStateStore) -> Self {

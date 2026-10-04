@@ -21,6 +21,8 @@ pub struct TileOptions {
     pub rotation: TileRotation,
     pub dots: TileDots,
     pub background_color: Option<String>,
+    #[serde(default)]
+    pub grid: bool,
 }
 
 impl TileOptions {
@@ -102,4 +104,52 @@ pub fn provide_config() {
     );
     let cookie = Signal::derive(move || cookie().unwrap_or_default());
     provide_context(Config(cookie, set_cookie));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use codee::{Decoder, Encoder};
+
+    #[derive(Serialize)]
+    struct TileOptionsBeforeGrid {
+        design: TileDesign,
+        rotation: TileRotation,
+        dots: TileDots,
+        background_color: Option<String>,
+    }
+
+    #[derive(Serialize)]
+    struct ConfigOptsBeforeGrid {
+        confirm_mode: HashMap<GameSpeed, MoveConfirm>,
+        tile: TileOptionsBeforeGrid,
+        prefers_sound: bool,
+        prefers_dark: bool,
+        allow_preselect: bool,
+        video_dismissed: bool,
+    }
+
+    #[test]
+    fn a_cookie_from_before_the_grid_option_still_loads() {
+        let old = ConfigOptsBeforeGrid {
+            confirm_mode: HashMap::new(),
+            tile: TileOptionsBeforeGrid {
+                design: TileDesign::default(),
+                rotation: TileRotation::default(),
+                dots: TileDots::default(),
+                background_color: Some("#123456".to_string()),
+            },
+            prefers_sound: true,
+            prefers_dark: true,
+            allow_preselect: false,
+            video_dismissed: true,
+        };
+        let bytes = MsgpackSerdeCodec::encode(&old).expect("old cookie encodes");
+
+        let decoded: ConfigOpts = MsgpackSerdeCodec::decode(&bytes).expect("old cookie decodes");
+
+        assert_eq!(decoded.tile.background_color.as_deref(), Some("#123456"));
+        assert!(!decoded.tile.grid);
+        assert!(decoded.prefers_dark);
+    }
 }

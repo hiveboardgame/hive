@@ -106,6 +106,7 @@ fn color_hint(color: AnnotationColor) -> &'static str {
         AnnotationColor::Black => "Black (Alt)",
         AnnotationColor::Red => "Red (Ctrl+Alt)",
         AnnotationColor::Green => "Green (Meta)",
+        AnnotationColor::Orange => "Orange",
     }
 }
 
@@ -164,6 +165,8 @@ fn shape_glyph(shape: MarkerShape) -> &'static str {
     match shape {
         MarkerShape::Circle => "●",
         MarkerShape::Cross => "✕",
+        MarkerShape::Ring => "⬡",
+        MarkerShape::Grid => "⬡",
     }
 }
 
@@ -171,5 +174,7 @@ fn shape_title(shape: MarkerShape) -> &'static str {
     match shape {
         MarkerShape::Circle => "Circle (W)",
         MarkerShape::Cross => "Cross (E)",
+        MarkerShape::Ring => "Ring",
+        MarkerShape::Grid => "Grid",
     }
 }

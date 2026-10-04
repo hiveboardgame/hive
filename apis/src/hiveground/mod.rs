@@ -1,13 +1,18 @@
 mod app_interaction;
 mod build;
 mod config;
+mod grid;
 mod history;
 mod interaction;
 mod model;
 mod paint;
 mod render;
 
-pub use app_interaction::{analysis_hiveground_interaction, live_hiveground_interaction};
+pub use app_interaction::{
+    analysis_hiveground_interaction,
+    live_hiveground_interaction,
+    tutorial_hiveground_interaction,
+};
 pub use build::{
     build_board_render_model,
     build_reserve_render_model,
@@ -16,6 +21,7 @@ pub use build::{
     ReserveRenderOptions,
 };
 pub use config::ReserveLayout;
+pub use grid::grid_positions;
 pub use history::selected_history_board;
 pub use interaction::{HivegroundAction, HivegroundActions, HivegroundInteraction};
 pub use model::{

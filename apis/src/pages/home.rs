@@ -2,7 +2,7 @@ use crate::{
     components::{
         atoms::logo::Logo,
         layouts::page_shell::{PageShell, PageShellVariant},
-        molecules::{online_users::OnlineUsers, rl_banner::RlBanner},
+        molecules::{online_users::OnlineUsers, rl_banner::RlBanner, tutorial_card::TutorialCard},
         organisms::{
             calendar::Calendar,
             challenges::Challenges,
@@ -38,8 +38,9 @@ pub fn Home() -> impl IntoView {
             </Transition>
             <div class="grid grid-cols-1 gap-6 items-start mx-auto w-full max-w-screen-xl lg:px-4 2xl:max-w-screen-2xl lg:grid-cols-[minmax(18rem,20rem)_minmax(0,1fr)] 2xl:grid-cols-[minmax(18rem,20rem)_minmax(0,1fr)_minmax(18rem,20rem)]">
                 <div class="contents lg:flex lg:flex-col lg:col-start-1 lg:row-start-1 lg:items-center lg:space-y-4 lg:min-w-0">
-                    <div class="flex flex-col order-1 items-center min-w-0 lg:order-none">
+                    <div class="flex flex-col order-1 gap-4 items-center min-w-0 lg:order-none">
                         <Logo tw_class="flex w-48 lg:w-72" />
+                        <TutorialCard />
                     </div>
                     <div class="order-4 mx-auto mt-4 w-full min-w-0 max-w-md lg:overflow-y-auto lg:order-none lg:mt-0 lg:max-h-[50rem]">
                         <Calendar />

@@ -5,6 +5,7 @@ use crate::{
         molecules::{
             annotation_toolbar::AnnotationToolbar,
             annotations_layer::AnnotationsLayer,
+            board_grid::BoardGrid,
             board_pieces::BoardPieces,
             history_pieces::HistoryPieces,
         },
@@ -75,6 +76,7 @@ const ZOOM_IN_LIMIT: f32 = 150.0;
 const ZOOM_OUT_LIMIT_MIN: f32 = 2500.0;
 const ZOOM_OUT_LIMIT_FACTOR: f32 = 2.5;
 const BOARD_FIT_PADDING: f32 = 24.0;
+const FIT_MAX_ZOOM: f32 = 2.0;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct ViewportSelection {
@@ -107,6 +109,7 @@ struct TileBounds {
 #[derive(Debug, Clone)]
 enum ViewBoxUpdateType {
     HistoryNavigation(ViewportSelection),
+    Fit,
     Resize {
         width: f32,
         height: f32,
@@ -177,12 +180,6 @@ impl ViewBoxControls {
     }
 
     fn recover_offscreen(&mut self, tiles: &[TileBounds], width: f32, height: f32) -> bool {
-        let Some(first) = tiles.first() else {
-            return false;
-        };
-        if width <= 0.0 || height <= 0.0 {
-            return false;
-        }
         if tiles.iter().any(|tile| {
             tile.right + self.x_transform > self.x
                 && tile.left + self.x_transform < self.x + self.width
@@ -191,16 +188,27 @@ impl ViewBoxControls {
         }) {
             return false;
         }
+        // Restore normal tile size, zooming out only as far as the whole position needs.
+        self.fit(tiles, width, height, 1.0)
+    }
+
+    /// `max_zoom` caps how far a small position is blown up; 1.0 keeps the normal tile size.
+    fn fit(&mut self, tiles: &[TileBounds], width: f32, height: f32, max_zoom: f32) -> bool {
+        let Some(first) = tiles.first() else {
+            return false;
+        };
+        if width <= 0.0 || height <= 0.0 {
+            return false;
+        }
         let bounds = tiles.iter().fold(*first, |bounds, tile| TileBounds {
             left: bounds.left.min(tile.left),
             top: bounds.top.min(tile.top),
             right: bounds.right.max(tile.right),
             bottom: bounds.bottom.max(tile.bottom),
         });
-        // Restore normal tile size, zooming out only as far as the whole position needs.
         let scale = ((bounds.right - bounds.left + 2.0 * BOARD_FIT_PADDING) / width)
             .max((bounds.bottom - bounds.top + 2.0 * BOARD_FIT_PADDING) / height)
-            .max(1.0);
+            .max(1.0 / max_zoom);
         self.x = 0.0;
         self.y = 0.0;
         self.width = width * scale;
@@ -240,7 +248,11 @@ enum StackExpansionResetKey {
 }
 
 #[component]
-pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>) -> impl IntoView {
+pub fn Board(
+    interaction: HivegroundInteraction,
+    history_board: Memo<HiveBoard>,
+    #[prop(optional, into)] fit_on: Option<Signal<u64>>,
+) -> impl IntoView {
     let game_state = expect_context::<GameStateStore>();
     let analysis = use_context::<AnalysisContext>();
     let annotations = use_context::<AnnotationsSignal>();
@@ -349,6 +361,24 @@ pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>)
         });
     };
 
+    let apply_fit = move || {
+        let fitted = displayed_board.with_untracked(|board| {
+            adjusted_viewbox(
+                viewbox_ref,
+                g_ref,
+                board,
+                viewbox_signal.get_untracked(),
+                |viewbox, tiles, width, height| viewbox.fit(tiles, width, height, FIT_MAX_ZOOM),
+            )
+        });
+        if let Some(next) = fitted {
+            viewbox_signal.set(next);
+            viewbox_state.has_zoomed.set(true);
+            viewbox_state.is_panning.set(false);
+            pinch_base.set(None);
+        }
+    };
+
     let raf_controller = use_raf_fn(move |_| {
         let update = pending_update.get_untracked();
         if let Some(update) = update {
@@ -359,11 +389,12 @@ pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>)
                         return;
                     }
                     let recovered = displayed_board.with_untracked(|board| {
-                        recover_offscreen_viewbox(
+                        adjusted_viewbox(
                             viewbox_ref,
                             g_ref,
                             board,
                             viewbox_signal.get_untracked(),
+                            ViewBoxControls::recover_offscreen,
                         )
                     });
                     if let Some(next) = recovered {
@@ -373,8 +404,13 @@ pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>)
                         pinch_base.set(None);
                     }
                 }
+                ViewBoxUpdateType::Fit => apply_fit(),
                 ViewBoxUpdateType::Resize { width, height } => {
-                    update_viewbox_size(width, height, true);
+                    if fit_on.is_some() {
+                        apply_fit();
+                    } else {
+                        update_viewbox_size(width, height, true);
+                    }
                 }
                 ViewBoxUpdateType::Pan { delta_x, delta_y } => {
                     if viewbox_state.is_panning.get_untracked()
@@ -437,12 +473,29 @@ pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>)
     });
 
     let queue_update = StoredValue::new(move |update_type: ViewBoxUpdateType| {
-        let was_empty = pending_update.get_untracked().is_none();
+        let pending = pending_update.get_untracked();
+        let was_empty = pending.is_none();
+        // A fit measures the board when it runs, so a resize queued behind it adds nothing.
+        if matches!(pending, Some(ViewBoxUpdateType::Fit))
+            && matches!(update_type, ViewBoxUpdateType::Resize { .. })
+        {
+            return;
+        }
         pending_update.set(Some(update_type));
         if was_empty {
             (raf_controller.resume)();
         }
     });
+    if let Some(fit_on) = fit_on {
+        Effect::watch(
+            move || fit_on.get(),
+            move |_, _, _| {
+                // Wait for the new position's tiles to render before measuring them.
+                queue_update.with_value(|queue| queue(ViewBoxUpdateType::Fit));
+            },
+            true,
+        );
+    }
     Effect::watch(
         move || viewport_selection.get(),
         move |selection, previous, _| {
@@ -756,6 +809,11 @@ pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>)
                     pointer-events="all"
                 />
                 <g transform=transform node_ref=g_ref>
+                    {move || {
+                        tile_opts
+                            .with(|tile| tile.grid)
+                            .then(|| view! { <BoardGrid board=displayed_board /> })
+                    }}
                     {move || {
                         if board_view.get().is_history() && !last_turn() && !in_analysis {
                             Either::Left(
@@ -1128,11 +1186,12 @@ fn will_svg_be_visible(g_ref: NodeRef<svg::G>, viewbox: &ViewBoxControls) -> boo
         && (bbox_mid_y < viewbox_bottom)
 }
 
-fn recover_offscreen_viewbox(
+fn adjusted_viewbox(
     viewbox_ref: NodeRef<svg::Svg>,
     g_ref: NodeRef<svg::G>,
     board: &HiveBoard,
     mut viewbox: ViewBoxControls,
+    adjust: impl FnOnce(&mut ViewBoxControls, &[TileBounds], f32, f32) -> bool,
 ) -> Option<ViewBoxControls> {
     let svg = viewbox_ref.get_untracked()?;
     let g = g_ref.get_untracked()?;
@@ -1157,13 +1216,13 @@ fn recover_offscreen_viewbox(
             })
         })
         .collect::<Option<Vec<_>>>()?;
-    viewbox
-        .recover_offscreen(
-            &tiles,
-            svg.client_width() as f32,
-            svg.client_height() as f32,
-        )
-        .then_some(viewbox)
+    adjust(
+        &mut viewbox,
+        &tiles,
+        svg.client_width() as f32,
+        svg.client_height() as f32,
+    )
+    .then_some(viewbox)
 }
 
 #[cfg(test)]

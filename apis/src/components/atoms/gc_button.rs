@@ -53,6 +53,17 @@ pub fn ConfirmButton(
     #[prop(optional, into)] hidden: Signal<bool>,
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateStore>();
+    let on_confirm = Callback::new(move |control| game_state.send_game_control(control, user_id));
+    view! { <GameControlButton game_control on_confirm hidden /> }
+}
+
+#[component]
+pub fn GameControlButton(
+    game_control: GameControl,
+    on_confirm: Callback<GameControl>,
+    #[prop(optional, into)] hidden: Signal<bool>,
+) -> impl IntoView {
+    let game_state = expect_context::<GameStateStore>();
     let game_control_pending = game_state.game_control_pending();
     let state = game_state.state();
     let turn = Memo::new(move |_| state.with(|state| state.turn as i32));
@@ -69,7 +80,7 @@ pub fn ConfirmButton(
     let onclick_confirm = move |_| {
         if is_clicked() {
             (stop.get_value())();
-            game_state.send_game_control(game_control, user_id);
+            on_confirm.run(game_control);
             is_clicked.update(|v| *v = false);
         } else {
             is_clicked.set(true);
@@ -141,7 +152,7 @@ pub fn ConfirmButton(
     }
 }
 
-fn get_icon_and_title(
+pub(crate) fn get_icon_and_title(
     game_control: GameControl,
 ) -> (&'static icondata_core::IconData, &'static str) {
     match game_control {

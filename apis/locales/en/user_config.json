@@ -19,6 +19,11 @@
         "angled": "Angled",
         "vertical": "Vertical"
     },
+    "show_grid": "Show hex grid",
+    "grid_buttons": {
+        "off": "Off",
+        "on": "On"
+    },
     "background_color": "Background Color",
     "game_speed": "Game speed:",
     "move_confirm": "Move confirmation:",

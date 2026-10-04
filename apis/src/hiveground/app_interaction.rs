@@ -11,6 +11,7 @@ use crate::{
         annotations::AnnotationsSignal,
         config::ConfigOpts,
         game_state::{live_move_allowed, GameStateStore, GameStateStoreFields},
+        tutorial::TutorialContext,
         ApiRequestsProvider,
         AuthContext,
         AuthIdentity,
@@ -40,6 +41,7 @@ pub fn live_hiveground_interaction() -> HivegroundInteraction {
     let handler = HivegroundActionHandler {
         game_state,
         analysis: None,
+        tutorial: None,
         api,
         current_confirm,
         config,
@@ -59,6 +61,7 @@ pub fn analysis_hiveground_interaction() -> HivegroundInteraction {
     let handler = HivegroundActionHandler {
         game_state,
         analysis: Some(analysis),
+        tutorial: None,
         api,
         current_confirm,
         config,
@@ -77,9 +80,37 @@ pub fn analysis_hiveground_interaction() -> HivegroundInteraction {
     HivegroundInteraction::new(capabilities, hiveground_actions(handler))
 }
 
+pub fn tutorial_hiveground_interaction() -> HivegroundInteraction {
+    let tutorial = expect_context::<TutorialContext>();
+    let game_state = expect_context::<GameStateStore>();
+    let api = expect_context::<ApiRequestsProvider>();
+    let current_confirm = expect_context::<CurrentConfirm>().0;
+    let config = expect_context::<Config>().0;
+    let identity = expect_context::<AuthContext>().identity;
+    let handler = HivegroundActionHandler {
+        game_state,
+        analysis: None,
+        tutorial: Some(tutorial),
+        api,
+        current_confirm,
+        config,
+        identity,
+    };
+    let capabilities = Signal::derive(move || {
+        if tutorial.allows_selection() {
+            HivegroundCapabilities::analysis_selection()
+        } else {
+            HivegroundCapabilities::board_inspection()
+        }
+    });
+
+    HivegroundInteraction::new(capabilities, hiveground_actions(handler))
+}
+
 struct HivegroundActionHandler {
     game_state: GameStateStore,
     analysis: Option<AnalysisContext>,
+    tutorial: Option<TutorialContext>,
     api: ApiRequestsProvider,
     current_confirm: Memo<MoveConfirm>,
     config: Signal<ConfigOpts>,
@@ -121,30 +152,38 @@ impl HivegroundActionHandler {
 
     fn select_board_piece(&self, piece: Piece, position: Position) {
         let game_state = self.game_state;
-        if game_state.is_move_allowed(self.analysis.is_some()) {
+        if game_state.is_move_allowed(self.free_play()) {
             game_state.show_moves(piece, position);
         }
     }
 
     fn select_reserve_piece(&self, piece: Piece, position: Position) {
         let game_state = self.game_state;
-        if game_state.is_move_allowed(self.analysis.is_some()) {
+        if game_state.is_move_allowed(self.free_play()) {
             game_state.show_spawns(piece, position);
         }
     }
 
     fn select_target(&self, position: Position) {
         let game_state = self.game_state;
-        if game_state.is_move_allowed(self.analysis.is_some()) {
+        if game_state.is_move_allowed(self.free_play()) {
             let was_selected = game_state
                 .move_info()
                 .with_untracked(|move_info| move_info.target_position == Some(position));
             game_state.set_target(position);
             let confirm = self.current_confirm.get_untracked();
             if confirm == MoveConfirm::Single || (confirm == MoveConfirm::Double && was_selected) {
-                game_state.move_active(self.analysis, self.api.0.get_untracked());
+                if let Some(tutorial) = self.tutorial {
+                    tutorial.play_selected();
+                } else {
+                    game_state.move_active(self.analysis, self.api.0.get_untracked());
+                }
             }
         }
+    }
+
+    fn free_play(&self) -> bool {
+        self.analysis.is_some() || self.tutorial.is_some()
     }
 
     fn reset_selection(&self) {
@@ -152,7 +191,7 @@ impl HivegroundActionHandler {
     }
 
     fn preselect_piece(&self, piece: Piece, position: Position, piece_type: PieceType) {
-        if self.analysis.is_none() {
+        if !self.free_play() {
             preselect_piece(
                 self.game_state,
                 self.config,
