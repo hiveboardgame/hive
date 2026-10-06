@@ -22,6 +22,7 @@ mod user_action;
 pub use challenge_action::ChallengeAction;
 pub use challenge_viewer::{
     challenge_action_flags,
+    challenge_displayed_color,
     challenge_displayed_player,
     challenge_is_viewable,
     challenge_viewer_role,
