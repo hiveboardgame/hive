@@ -24,6 +24,10 @@
     "support": "Suport",
     "login": "Autentificare",
     "user_menu": {
+        "update_available": "Actualizare disponibilă",
+        "refresh_now": "Reîncarcă acum",
+        "refresh_when_ready": "Reîncarcă pagina când ești gata.",
+        "save_analysis_before_refresh": "Salvează analiza înainte de a reîncărca pagina.",
         "profile": "Profil",
         "messages": "Mesaje",
         "edit_account": "Editează contul",

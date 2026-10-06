@@ -24,6 +24,10 @@
     "support": "Support",
     "login": "Login",
     "user_menu": {
+        "update_available": "Update available",
+        "refresh_now": "Refresh now",
+        "refresh_when_ready": "Refresh when you’re ready.",
+        "save_analysis_before_refresh": "Save your analysis before refreshing.",
         "profile": "Profile",
         "messages": "Messages",
         "edit_account": "Edit Account",

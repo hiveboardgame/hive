@@ -17,6 +17,10 @@
     "support": "Aide",
     "login": "Connexion",
     "user_menu": {
+        "update_available": "Mise à jour disponible",
+        "refresh_now": "Actualiser maintenant",
+        "refresh_when_ready": "Actualisez quand vous le souhaitez.",
+        "save_analysis_before_refresh": "Enregistrez votre analyse avant d’actualiser.",
         "profile": "Profil",
         "messages": "Messages",
         "logout": "Déconnexion",
