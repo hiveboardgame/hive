@@ -17,6 +17,7 @@ pub fn run(pool: DbPool, hub: Data<Arc<WsHub>>) {
         interval.set_missed_tick_behavior(MissedTickBehavior::Delay);
         loop {
             interval.tick().await;
+            crate::active_instance::wait_until_active().await;
             if let Err(e) = sweep_once(&pool, hub.as_ref()).await {
                 log::error!("timeout_sweeper: {e}");
             }

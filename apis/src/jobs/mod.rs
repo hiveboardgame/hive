@@ -1,3 +1,4 @@
+mod advisory_lock;
 pub mod challenge_cleanup;
 pub mod email_cleanup;
 pub mod email_drain;
@@ -10,6 +11,15 @@ pub mod timeout_sweeper;
 pub mod tournament_cleanup;
 pub mod tournament_start;
 pub mod ws_telemetry;
+pub(crate) use advisory_lock::{
+    advisory_session_unlock,
+    try_advisory_session_lock,
+    try_advisory_xact_lock,
+    CHALLENGE_CLEANUP_LOCK,
+    GAME_CLEANUP_LOCK,
+    HASH_BACKFILL_LOCK,
+    TOURNAMENT_START_LOCK,
+};
 pub use challenge_cleanup::run as challenge_cleanup;
 pub use email_cleanup::run as email_cleanup;
 pub use email_drain::run as email_drain;

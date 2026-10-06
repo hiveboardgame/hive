@@ -36,6 +36,11 @@ pub async fn start_connection(
         data.telemetry.record_handshake_fail();
         return Err(error);
     }
+    // Until the previous instance has stopped, its sockets may still be raising events this
+    // hub never sees; clients retry and connect once the handoff is complete.
+    if !crate::active_instance::is_active_instance() {
+        return Ok(HttpResponse::ServiceUnavailable().finish());
+    }
     let user = resolve_identity(identity, &pool).await;
 
     let ws_result = actix_ws::handle(&req, body);

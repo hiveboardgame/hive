@@ -1,0 +1,20 @@
+[Unit]
+Description=Hive game server (%i)
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=drone
+Group=drone
+WorkingDirectory=/home/drone/hive
+EnvironmentFile=/etc/hive/prod.env
+EnvironmentFile=/etc/hive/common.env
+EnvironmentFile=/etc/hive/%i.env
+ExecStart=/home/drone/hive/bin/%i/hive
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=45
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

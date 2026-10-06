@@ -20,6 +20,7 @@ async fn main() -> std::io::Result<()> {
     use api::v1::auth::get_identity_handler::get_identity;
     use api::v1::auth::jwt_secret::JwtSecret;
     use api::v1::bot::users::api_get_user;
+    use api::v1::health::{health, health_ready};
     use actix_files::Files;
     use actix_identity::IdentityMiddleware;
     use actix_session::{storage::CookieSessionStore, SessionMiddleware};
@@ -38,6 +39,32 @@ async fn main() -> std::io::Result<()> {
     rustls::crypto::aws_lc_rs::default_provider()
         .install_default()
         .expect("failed to install rustls aws-lc-rs crypto provider");
+
+    pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../db/migrations");
+    let migration_flag = std::env::args().nth(1);
+    if let Some(flag @ ("--migrate-only" | "--pending-migrations")) = migration_flag.as_deref() {
+        use diesel::migration::Migration;
+        let database_url = std::env::var("DATABASE_URL").map_err(std::io::Error::other)?;
+        let mut conn = PgConnection::establish(&database_url).map_err(std::io::Error::other)?;
+        if flag == "--pending-migrations" {
+            let pending = conn
+                .pending_migrations(MIGRATIONS)
+                .map_err(std::io::Error::other)?;
+            for migration in &pending {
+                println!("pending migration {}", migration.name());
+            }
+            println!("{} migration(s) pending", pending.len());
+        } else {
+            let applied = conn
+                .run_pending_migrations(MIGRATIONS)
+                .map_err(std::io::Error::other)?;
+            for version in &applied {
+                println!("applied migration {version}");
+            }
+            println!("{} migration(s) applied", applied.len());
+        }
+        return Ok(());
+    }
 
     let conf = get_configuration(None).expect("Got configuration");
     let addr = conf.leptos_options.site_addr;
@@ -59,7 +86,6 @@ async fn main() -> std::io::Result<()> {
         .expect("couldn't initialize logging");
 
     let config = DbConfig::from_env().expect("Failed to load config from env");
-    pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../db/migrations");
     let database_url = &config.database_url;
     let mut conn = PgConnection::establish(database_url)
         .unwrap_or_else(|e| panic!("Error connecting to {database_url}: {e}"));
@@ -171,6 +197,8 @@ async fn main() -> std::io::Result<()> {
             .service(Files::new("/assets", site_root.as_ref()))
             // serve the favicon from /favicon.ico
             .service(favicon)
+            .service(health)
+            .service(health_ready)
             .service(start_connection)
             .service(functions::pwa::cache)
             .service(functions::web_push_http::vapid_public_key)
@@ -234,6 +262,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(Compress::default())
     })
     .bind(&addr)?
+    .shutdown_timeout(2)
     .run()
     .await
 }
