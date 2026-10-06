@@ -56,7 +56,7 @@ fi
 
 WS_CODE=$(curl -s -o /dev/null -w '%{http_code}' -m 3 --http1.1 \
     -H 'Connection: Upgrade' -H 'Upgrade: websocket' -H 'Sec-WebSocket-Version: 13' \
-    -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' "$BASE/ws/" 2>/dev/null) || true
+    -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' -H "Origin: $BASE" "$BASE/ws/" 2>/dev/null) || true
 case "$WS_CODE" in
     101) pass "websocket upgrade via $BASE" ;;
     503) fail "websocket refused (503): the handoff to the active instance has not happened" ;;
