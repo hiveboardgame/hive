@@ -13,6 +13,7 @@ pub fn run(pool: DbPool, hub: Data<Arc<WsHub>>) {
         let mut interval = actix_rt::time::interval(Duration::from_secs(60 * 60 * 24));
         loop {
             interval.tick().await;
+            crate::active_instance::wait_until_active().await;
             if let Ok(mut conn) = get_conn(&pool).await {
                 if let Ok(tournament_ids) = Tournament::delete_old_and_unstarted(&mut conn).await {
                     for tournament_id in tournament_ids {

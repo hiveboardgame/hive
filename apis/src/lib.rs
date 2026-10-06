@@ -1,3 +1,5 @@
+#[cfg(feature = "ssr")]
+pub mod active_instance;
 pub mod api;
 pub mod app;
 #[cfg(feature = "ssr")]
