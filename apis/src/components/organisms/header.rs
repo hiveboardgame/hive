@@ -29,7 +29,7 @@ const HEADER_NAV_ITEM_CLASS: &str =
     "flex h-full items-center px-2 py-0 font-bold whitespace-nowrap transition-colors duration-200 active:scale-100 no-link-style hover:bg-black/5 hover:text-pillbug-teal dark:hover:bg-white/10";
 
 #[component]
-pub fn Header() -> impl IntoView {
+pub fn Header(update_available: Signal<bool>) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     let i18n = use_i18n();
     let location = use_location();
@@ -68,7 +68,7 @@ pub fn Header() -> impl IntoView {
                     </a>
                 </div>
             </div>
-            <Controls user=auth_context.user current_game_id />
+            <Controls user=auth_context.user current_game_id update_available />
         </header>
     }
 }
@@ -97,6 +97,7 @@ fn GuestActions(current_game_id: Signal<Option<GameId>>) -> impl IntoView {
 fn Controls(
     user: Signal<Option<AccountResponse>>,
     current_game_id: Signal<Option<GameId>>,
+    update_available: Signal<bool>,
 ) -> impl IntoView {
     move || match user() {
         Some(user) => {
@@ -112,7 +113,7 @@ fn Controls(
                     <SoundToggle />
                     <LocaleDropdown />
                     <NotificationDropdown current_game_id />
-                    <UserDropdown username=user.username.clone() current_game_id />
+                    <UserDropdown username=user.username.clone() current_game_id update_available />
                 </div>
             })
         }

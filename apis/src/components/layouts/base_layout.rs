@@ -11,6 +11,7 @@ use crate::{
     },
     hooks::{
         install_nudge::use_install_nudge_active,
+        reload_on_new_release::use_reload_on_new_release,
         sync_user_locale::use_sync_user_locale,
         web_push_nav_listener::use_web_push_nav_listener,
         web_push_reconcile::use_web_push_reconcile,
@@ -69,6 +70,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         height_lock: RwSignal::new(None),
     });
     use_sync_user_locale();
+    let update_available = use_reload_on_new_release();
     use_web_push_nav_listener();
     use_web_push_reconcile();
     let install_nudge_active = use_install_nudge_active();
@@ -210,7 +212,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
                 is_hidden(),
             )
         }>
-            <Header />
+            <Header update_available />
             <Alert />
             <InstallNudge active=install_nudge_active />
             <WebPushNudge install_nudge_active=install_nudge_active />

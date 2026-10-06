@@ -15,6 +15,10 @@
         "archive": "Arquivo"
     },
     "user_menu": {
+        "update_available": "Atualização disponível",
+        "refresh_now": "Atualizar agora",
+        "refresh_when_ready": "Atualize quando quiser.",
+        "save_analysis_before_refresh": "Salve sua análise antes de atualizar.",
         "login": "Login",
         "profile": "Perfil",
         "messages": "Mensagens",

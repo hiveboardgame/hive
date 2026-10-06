@@ -24,6 +24,10 @@
     "login": "Войти",
     "support": "Поддержка",
     "user_menu": {
+        "update_available": "Доступно обновление",
+        "refresh_now": "Обновить сейчас",
+        "refresh_when_ready": "Обновите страницу, когда будете готовы.",
+        "save_analysis_before_refresh": "Сохраните анализ перед обновлением страницы.",
         "profile": "Профиль",
         "messages": "Сообщения",
         "edit_account": "Редактировать аккаунт",

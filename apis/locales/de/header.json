@@ -24,6 +24,10 @@
     "support": "Unterstützen",
     "login": "Anmelden",
     "user_menu": {
+        "update_available": "Update verfügbar",
+        "refresh_now": "Jetzt neu laden",
+        "refresh_when_ready": "Lade die Seite neu, wenn du bereit bist.",
+        "save_analysis_before_refresh": "Speichere deine Analyse vor dem Neuladen.",
         "profile": "Profil",
         "messages": "Nachrichten",
         "edit_account": "Konto bearbeiten",

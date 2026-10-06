@@ -1,10 +1,11 @@
-use actix_web::{get, web::Data, HttpResponse};
+use actix_web::{get, http::header, web::Data, HttpResponse};
 use db_lib::{get_conn, DbPool};
 use diesel_async::RunQueryDsl;
 
 #[get("/health")]
 pub async fn health() -> HttpResponse {
     let mut response = HttpResponse::Ok();
+    response.insert_header((header::CACHE_CONTROL, "no-store"));
     if let Ok(addr) = std::env::var("LEPTOS_SITE_ADDR") {
         response.insert_header(("X-Hive-Addr", addr));
     }
