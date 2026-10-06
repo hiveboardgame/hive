@@ -186,7 +186,9 @@ migration_version() {
 migration_versions_in() {
     local dir
     git ls-tree --name-only "$1:db/migrations" | while IFS= read -r dir; do
-        migration_version "$dir"
+        case "$dir" in
+            [0-9]*) migration_version "$dir" ;;
+        esac
     done
 }
 
@@ -240,8 +242,9 @@ check_schema_compat() {
         echo "ERROR: cannot list the migrations of ${release:0:12}." >&2
         return 2
     fi
-    unknown=$(comm -23 <(printf '%s\n' "$schema" | grep -v '^$' | LC_ALL=C sort -u) \
-                       <(printf '%s\n' "$known" | LC_ALL=C sort -u))
+    # Collation must match sort's; the server's locale orders differently and comm then fails.
+    unknown=$(LC_ALL=C comm -23 <(printf '%s\n' "$schema" | grep -E '^[0-9]+$' | LC_ALL=C sort -u) \
+                                <(printf '%s\n' "$known" | grep -E '^[0-9]+$' | LC_ALL=C sort -u))
     [ -n "$unknown" ] || return 0
 
     echo "→ Migrations release ${release:0:12} does not know:"
