@@ -90,10 +90,16 @@ pub enum RenderLayerKind {
         shadow: PieceShadow,
     },
     Target,
+    VacateTarget,
     Active {
         state: ActiveMarkerState,
+        // The marker covers the selected piece, so pressing it must still drag that piece.
+        source: Option<(Piece, PieceType)>,
     },
     LastMove {
+        direction: LastMoveDirection,
+    },
+    Premove {
         direction: LastMoveDirection,
     },
 }
@@ -106,7 +112,10 @@ pub enum PieceShadow {
 
 impl PieceShadow {
     pub fn for_piece_type(piece_type: PieceType) -> Self {
-        if matches!(piece_type, PieceType::Move | PieceType::Spawn) {
+        if matches!(
+            piece_type,
+            PieceType::Move | PieceType::Spawn | PieceType::Premove
+        ) {
             Self::None
         } else {
             Self::Design
@@ -132,7 +141,7 @@ impl RenderLayer {
                 PieceType::Board | PieceType::Covered | PieceType::History => {
                     ExpandedStackLevel::Separated
                 }
-                PieceType::Move => ExpandedStackLevel::Attached,
+                PieceType::Move | PieceType::Premove => ExpandedStackLevel::Attached,
                 _ => ExpandedStackLevel::Fixed,
             },
             RenderLayerKind::Target => {
@@ -142,6 +151,7 @@ impl RenderLayer {
                     ExpandedStackLevel::Attached
                 }
             }
+            RenderLayerKind::VacateTarget => ExpandedStackLevel::Fixed,
             RenderLayerKind::Active { state, .. } => {
                 if self.level == 0 || *state == ActiveMarkerState::Board {
                     ExpandedStackLevel::Separated
@@ -149,7 +159,8 @@ impl RenderLayer {
                     ExpandedStackLevel::Attached
                 }
             }
-            RenderLayerKind::LastMove { direction, .. } => match direction {
+            RenderLayerKind::LastMove { direction, .. }
+            | RenderLayerKind::Premove { direction } => match direction {
                 LastMoveDirection::To => ExpandedStackLevel::Separated,
                 LastMoveDirection::From => {
                     if self.level == 0 {
@@ -169,7 +180,8 @@ impl RenderLayer {
             }
             RenderLayerKind::Active { state, .. } => *state == ActiveMarkerState::Board,
             RenderLayerKind::Target => self.level != 0,
-            RenderLayerKind::LastMove { .. } => false,
+            RenderLayerKind::VacateTarget => false,
+            RenderLayerKind::LastMove { .. } | RenderLayerKind::Premove { .. } => false,
         }
     }
 }

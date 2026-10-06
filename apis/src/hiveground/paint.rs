@@ -33,6 +33,14 @@ impl HivegroundPaint {
         OverlayPaint::target(&self.tile_options)
     }
 
+    pub fn vacate_target(&self) -> OverlayPaint {
+        OverlayPaint::vacate_target(&self.tile_options)
+    }
+
+    pub fn premove(&self, direction: LastMoveDirection) -> OverlayPaint {
+        OverlayPaint::premove(&self.tile_options, direction)
+    }
+
     pub fn last_move(&self, direction: LastMoveDirection) -> OverlayPaint {
         OverlayPaint::last_move(&self.tile_options, direction)
     }

@@ -46,7 +46,9 @@ struct OverlaySet {
     last_move: Option<LastMoveOverlay>,
     active_marker: Option<ActiveMarkerOverlay>,
     target_positions: Vec<Position>,
+    vacate_targets: Vec<Position>,
     ghost_piece: Option<GhostPieceOverlay>,
+    premove: Option<LastMoveOverlay>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -67,6 +69,8 @@ struct GhostPieceOverlay {
     position: Position,
     piece: Piece,
     piece_type: PieceType,
+    // Drawn beside the piece that has to leave first, not stacked on it like a climb.
+    ground: bool,
 }
 
 impl OverlaySet {
@@ -75,6 +79,10 @@ impl OverlaySet {
         positions.extend(self.target_positions.iter().copied());
         positions.extend(self.ghost_piece.as_ref().map(|ghost| ghost.position));
         positions.extend(self.active_marker.as_ref().map(|active| active.position));
+        if let Some(premove) = &self.premove {
+            positions.extend(premove.from);
+            positions.extend(premove.to);
+        }
         if let Some(last_move) = &self.last_move {
             positions.extend(last_move.from);
             positions.extend(last_move.to);
@@ -198,6 +206,26 @@ fn build_hiveground_render_model(config: &HivegroundConfig) -> HivegroundRenderM
 }
 
 fn board_overlay_set(board: &Board, move_info: &MoveInfo) -> OverlaySet {
+    let last_move = LastMoveOverlay {
+        from: board.last_move.0,
+        to: board.last_move.1,
+    };
+    if let Some((piece, target)) = move_info.queued_premove() {
+        return OverlaySet {
+            last_move: Some(last_move),
+            ghost_piece: Some(GhostPieceOverlay {
+                position: target,
+                piece,
+                piece_type: PieceType::Premove,
+                ground: move_info.vacate_targets.contains(&target),
+            }),
+            premove: Some(LastMoveOverlay {
+                from: move_info.current_position,
+                to: Some(target),
+            }),
+            ..OverlaySet::default()
+        };
+    }
     let active_piece = move_info.active.map(|(piece, _)| piece);
     let preview_source = preview_source(move_info);
     let has_active_preview = active_piece.is_some() && preview_source.is_some();
@@ -209,10 +237,13 @@ fn board_overlay_set(board: &Board, move_info: &MoveInfo) -> OverlaySet {
         }),
         Some((PreviewSource::Reserve, _)) | None => None,
     };
-    let target_positions = if has_active_preview {
-        move_info.target_positions.clone()
+    let (target_positions, vacate_targets) = if has_active_preview {
+        (
+            move_info.target_positions.clone(),
+            move_info.vacate_targets.clone(),
+        )
     } else {
-        Vec::new()
+        (Vec::new(), Vec::new())
     };
     let ghost_piece = active_piece
         .zip(preview_source)
@@ -221,17 +252,17 @@ fn board_overlay_set(board: &Board, move_info: &MoveInfo) -> OverlaySet {
                 position,
                 piece,
                 piece_type: ghost_piece_type_for_source(source),
+                ground: false,
             })
         });
 
     OverlaySet {
-        last_move: (!has_active_preview).then_some(LastMoveOverlay {
-            from: board.last_move.0,
-            to: board.last_move.1,
-        }),
+        last_move: (!has_active_preview).then_some(last_move),
         active_marker,
         target_positions,
+        vacate_targets,
         ghost_piece,
+        premove: None,
     }
 }
 
@@ -241,6 +272,15 @@ fn reserve_overlay_set(
     user_color: Option<Color>,
     analysis: bool,
 ) -> OverlaySet {
+    if move_info.premove {
+        return OverlaySet {
+            premove: Some(LastMoveOverlay {
+                from: reserve_active_position(reserve_color, move_info, user_color, analysis),
+                to: None,
+            }),
+            ..OverlaySet::default()
+        };
+    }
     OverlaySet {
         active_marker: reserve_active_position(reserve_color, move_info, user_color, analysis).map(
             |position| ActiveMarkerOverlay {
@@ -330,7 +370,12 @@ fn build_stack_model(
 fn apply_overlays(layers: &mut Vec<RenderLayer>, overlays: &OverlaySet, position: Position) {
     if let Some(last_move) = &overlays.last_move {
         if last_move.to == Some(position) {
-            add_last_move_to(layers);
+            add_marker_under_top_piece(
+                layers,
+                RenderLayerKind::LastMove {
+                    direction: LastMoveDirection::To,
+                },
+            );
         }
         if last_move.from == Some(position) {
             add_last_move_from(layers);
@@ -347,13 +392,29 @@ fn apply_overlays(layers: &mut Vec<RenderLayer>, overlays: &OverlaySet, position
         }
     }
 
-    if overlays.target_positions.contains(&position) {
+    if overlays.vacate_targets.contains(&position) {
+        add_vacate_target(layers);
+    } else if overlays.target_positions.contains(&position) {
         add_target(layers);
     }
 
     if let Some(ghost_piece) = &overlays.ghost_piece {
         if ghost_piece.position == position {
             add_ghost(layers, ghost_piece);
+        }
+    }
+
+    if let Some(premove) = &overlays.premove {
+        if premove.to == Some(position) {
+            add_marker_under_top_piece(
+                layers,
+                RenderLayerKind::Premove {
+                    direction: LastMoveDirection::To,
+                },
+            );
+        }
+        if premove.from == Some(position) {
+            add_premove_from(layers);
         }
     }
 }
@@ -382,13 +443,13 @@ fn base_piece_type(level: usize, top_index: usize) -> PieceType {
     }
 }
 
-fn add_last_move_to(layers: &mut Vec<RenderLayer>) {
+fn add_marker_under_top_piece(layers: &mut Vec<RenderLayer>, kind: RenderLayerKind) {
     let top = layers.pop();
     layers.push(RenderLayer {
-        level: layers.len(),
-        kind: RenderLayerKind::LastMove {
-            direction: LastMoveDirection::To,
-        },
+        level: top
+            .as_ref()
+            .map_or_else(|| layer_count_for_tile(layers), |top| top.level),
+        kind,
     });
     if let Some(piece) = top {
         layers.push(piece.with_shadow(PieceShadow::None));
@@ -410,6 +471,12 @@ fn add_active_marker(
     suppress_source_shadow: bool,
 ) {
     let len = layer_count_for_tile(layers);
+    let source = layers.iter().rev().find_map(|layer| match layer.kind {
+        RenderLayerKind::Piece {
+            piece, piece_type, ..
+        } => Some((piece, piece_type)),
+        _ => None,
+    });
     if remove_source_top_piece {
         layers.pop();
     } else if suppress_source_shadow {
@@ -418,7 +485,7 @@ fn add_active_marker(
     let state = active_state(layers);
     layers.push(RenderLayer {
         level: len.saturating_sub(1),
-        kind: RenderLayerKind::Active { state },
+        kind: RenderLayerKind::Active { state, source },
     });
 }
 
@@ -439,8 +506,19 @@ fn add_target(layers: &mut Vec<RenderLayer>) {
     });
 }
 
+fn add_vacate_target(layers: &mut Vec<RenderLayer>) {
+    layers.push(RenderLayer {
+        level: 0,
+        kind: RenderLayerKind::VacateTarget,
+    });
+}
+
 fn add_ghost(layers: &mut Vec<RenderLayer>, ghost_piece: &GhostPieceOverlay) {
-    let level = layer_count_for_tile(layers);
+    let level = if ghost_piece.ground {
+        0
+    } else {
+        layer_count_for_tile(layers)
+    };
     layers.push(RenderLayer {
         level,
         kind: RenderLayerKind::Piece {
@@ -451,10 +529,27 @@ fn add_ghost(layers: &mut Vec<RenderLayer>, ghost_piece: &GhostPieceOverlay) {
     });
 }
 
+// Sits where the piece leaves from, as `add_last_move_from` will once the premove is played.
+fn add_premove_from(layers: &mut Vec<RenderLayer>) {
+    layers.push(RenderLayer {
+        level: layer_count_for_tile(layers).saturating_sub(1),
+        kind: RenderLayerKind::Premove {
+            direction: LastMoveDirection::From,
+        },
+    });
+}
+
 fn layer_count_for_tile(layers: &[RenderLayer]) -> usize {
     layers
         .iter()
-        .filter(|layer| !matches!(&layer.kind, RenderLayerKind::LastMove { .. }))
+        .filter(|layer| {
+            !matches!(
+                &layer.kind,
+                RenderLayerKind::LastMove { .. }
+                    | RenderLayerKind::Premove { .. }
+                    | RenderLayerKind::VacateTarget
+            )
+        })
         .count()
 }
 
@@ -699,11 +794,15 @@ mod tests {
                     piece, piece_type, ..
                 } => format!("piece:{piece}:{piece_type:?}:{}", layer.level),
                 RenderLayerKind::Target => format!("target:{}", layer.level),
+                RenderLayerKind::VacateTarget => format!("vacate:{}", layer.level),
                 RenderLayerKind::Active { state, .. } => {
                     format!("active:{state:?}:{}", layer.level)
                 }
                 RenderLayerKind::LastMove { direction, .. } => {
                     format!("last:{direction:?}:{}", layer.level)
+                }
+                RenderLayerKind::Premove { direction } => {
+                    format!("premove:{direction:?}:{}", layer.level)
                 }
             })
             .collect()
@@ -969,6 +1068,123 @@ mod tests {
         assert_eq!(
             layer_summary(stack_at(&model, target)),
             vec!["target:0", "piece:bB1:Move:1"]
+        );
+    }
+
+    #[test]
+    fn board_model_keeps_premoved_origin_and_hides_targets() {
+        let origin = Position::new(3, 2);
+        let target = Position::new(4, 2);
+        let other_target = Position::new(2, 2);
+        let board = board_with_stacks(vec![(origin, vec!["wQ", "bB1"])]);
+        let mut move_info = MoveInfo::new();
+        move_info.active = Some((piece("bB1"), PieceType::Board));
+        move_info.current_position = Some(origin);
+        move_info.target_position = Some(target);
+        move_info.target_positions = vec![target, other_target];
+        move_info.premove = true;
+
+        let model = build_board_render_model(&board, &move_info);
+
+        assert_eq!(
+            layer_summary(stack_at(&model, origin)),
+            vec!["piece:wQ:Covered:0", "piece:bB1:Board:1", "premove:From:1"]
+        );
+        assert_eq!(
+            layer_summary(stack_at(&model, target)),
+            vec!["premove:To:0", "piece:bB1:Premove:0"]
+        );
+        assert!(model
+            .stacks
+            .iter()
+            .all(|stack| stack.position != other_target));
+    }
+
+    #[test]
+    fn selection_marker_remembers_the_piece_it_covers() {
+        let origin = Position::new(3, 2);
+        let board = board_with_stacks(vec![(origin, vec!["wQ", "bB1"])]);
+        let mut move_info = MoveInfo::new();
+        move_info.active = Some((piece("bB1"), PieceType::Board));
+        move_info.current_position = Some(origin);
+        move_info.target_positions = vec![Position::new(4, 2)];
+
+        let model = build_board_render_model(&board, &move_info);
+
+        let sources = stack_at(&model, origin)
+            .layers
+            .iter()
+            .filter_map(|layer| match layer.kind {
+                RenderLayerKind::Active { source, .. } => Some(source),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(sources, vec![Some((piece("bB1"), PieceType::Board))]);
+    }
+
+    #[test]
+    fn vacate_targets_are_dashed_around_the_piece_not_on_top() {
+        let origin = Position::new(3, 2);
+        let occupied = Position::new(1, 2);
+        let empty = Position::new(4, 2);
+        let board = board_with_stacks(vec![(origin, vec!["bA1"]), (occupied, vec!["wP"])]);
+        let mut move_info = MoveInfo::new();
+        move_info.active = Some((piece("bA1"), PieceType::Board));
+        move_info.current_position = Some(origin);
+        move_info.target_positions = vec![occupied, empty];
+        move_info.vacate_targets = vec![occupied];
+
+        let model = build_board_render_model(&board, &move_info);
+
+        assert_eq!(
+            layer_summary(stack_at(&model, occupied)),
+            vec!["piece:wP:Board:0", "vacate:0"]
+        );
+        assert_eq!(layer_summary(stack_at(&model, empty)), vec!["target:0"]);
+    }
+
+    #[test]
+    fn queued_vacate_premove_sits_beside_the_piece_that_must_leave() {
+        let origin = Position::new(3, 2);
+        let target = Position::new(1, 2);
+        let board = board_with_stacks(vec![(origin, vec!["bA1"]), (target, vec!["wP"])]);
+        let mut move_info = MoveInfo::new();
+        move_info.active = Some((piece("bA1"), PieceType::Board));
+        move_info.current_position = Some(origin);
+        move_info.target_positions = vec![target];
+        move_info.vacate_targets = vec![target];
+        move_info.target_position = Some(target);
+        move_info.premove = true;
+
+        let model = build_board_render_model(&board, &move_info);
+
+        assert_eq!(
+            layer_summary(stack_at(&model, target)),
+            vec!["piece:wP:Board:0", "premove:To:0", "piece:bA1:Premove:0"]
+        );
+    }
+
+    #[test]
+    fn premove_markers_layer_like_last_move_markers_when_they_overlap() {
+        let origin = Position::new(3, 2);
+        let target = Position::new(4, 2);
+        let mut board = board_with_stacks(vec![(origin, vec!["bA1"])]);
+        board.last_move = (Some(target), Some(origin));
+        let mut move_info = MoveInfo::new();
+        move_info.active = Some((piece("bA1"), PieceType::Board));
+        move_info.current_position = Some(origin);
+        move_info.target_position = Some(target);
+        move_info.premove = true;
+
+        let model = build_board_render_model(&board, &move_info);
+
+        assert_eq!(
+            layer_summary(stack_at(&model, origin)),
+            vec!["last:To:0", "piece:bA1:Board:0", "premove:From:0"]
+        );
+        assert_eq!(
+            layer_summary(stack_at(&model, target)),
+            vec!["last:From:0", "premove:To:0", "piece:bA1:Premove:0"]
         );
     }
 

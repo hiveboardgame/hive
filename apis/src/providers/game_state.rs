@@ -4,7 +4,19 @@ use crate::{
     common::{MoveInfo, PieceType},
     responses::GameResponse,
 };
-use hive_lib::{hop, Color, GameControl, GameStatus, GameType, Piece, Position, State, Turn};
+use hive_lib::{
+    hop,
+    Bug,
+    Color,
+    Direction,
+    GameControl,
+    GameStatus,
+    GameType,
+    Piece,
+    Position,
+    State,
+    Turn,
+};
 use leptos::{logging::log, prelude::*, reactive::effect::batch};
 use reactive_stores::Store;
 use shared_types::{GameId, Takeback};
@@ -214,12 +226,7 @@ impl GameStateStore {
                 .board
                 .spawnable_positions(state.turn_color)
                 .collect::<Vec<Position>>();
-            let active = state
-                .board
-                .reserve(state.turn_color, state.game_type)
-                .get(&piece.bug())
-                .and_then(|pieces| pieces.first())
-                .and_then(|piece| Piece::from_str(piece).ok());
+            let active = next_reserve_piece(state, state.turn_color, piece.bug());
             (target_positions, active)
         });
         self.move_info().update(|move_info| {
@@ -230,6 +237,56 @@ impl GameStateStore {
                 move_info.reserve_position = Some(position);
             }
         });
+    }
+
+    pub fn show_premove_targets(
+        &self,
+        piece: Piece,
+        position: Position,
+        piece_type: PieceType,
+        mover: Color,
+    ) {
+        let selection = self
+            .state()
+            .with_untracked(|state| premove_selection(state, piece, piece_type, mover));
+        let Some((piece, piece_type, targets)) = selection else {
+            return;
+        };
+        self.move_info().update(|move_info| {
+            move_info.reset();
+            move_info.active = Some((piece, piece_type));
+            move_info.target_positions = targets.all;
+            move_info.vacate_targets = targets.vacate;
+            if piece_type == PieceType::Board {
+                move_info.current_position = Some(position);
+            } else {
+                move_info.reserve_position = Some(position);
+            }
+        });
+    }
+
+    pub fn set_premove(&self, target: Position) {
+        self.move_info().update(|move_info| {
+            move_info.target_position = Some(target);
+            move_info.premove = true;
+        });
+    }
+
+    pub fn play_premove(&self, api: ApiRequests, mover: Option<Color>) -> bool {
+        let Some((piece, target)) = self.move_info().with_untracked(MoveInfo::queued_premove)
+        else {
+            return false;
+        };
+        let Some(mover) = mover else {
+            return false;
+        };
+        let playable = self
+            .state()
+            .with_untracked(|state| premove_playable(state, piece, target, mover));
+        if playable {
+            self.move_active(None, api);
+        }
+        playable
     }
 
     pub fn set_target(&self, position: Position) {
@@ -361,6 +418,132 @@ pub(crate) fn live_move_allowed(
 ) -> bool {
     user_color == Some(turn_color)
         && !matches!(status, GameStatus::Finished(_) | GameStatus::Adjudicated)
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+struct PremoveTargets {
+    all: Vec<Position>,
+    // Occupied now and only reachable if the opponent's piece leaves, as opposed to a climb.
+    vacate: Vec<Position>,
+}
+
+fn premove_selection(
+    state: &State,
+    piece: Piece,
+    piece_type: PieceType,
+    mover: Color,
+) -> Option<(Piece, PieceType, PremoveTargets)> {
+    match piece_type {
+        PieceType::Board => {
+            let targets = premove_reach(state, mover, piece);
+            // An enemy piece is only ours to premove when our pillbug can throw it.
+            (piece.is_color(mover) || !targets.all.is_empty()).then_some((
+                piece,
+                PieceType::Board,
+                targets,
+            ))
+        }
+        PieceType::Reserve | PieceType::Inactive if piece.is_color(mover) => {
+            let board = &state.board;
+            if board.queen_required(mover) && piece.bug() != Bug::Queen {
+                return None;
+            }
+            let opening = board.all_taken_positions().next().is_none();
+            if opening && state.tournament && piece.bug() == Bug::Queen {
+                return None;
+            }
+            let next_piece = next_reserve_piece(state, mover, piece.bug())?;
+            // White always opens on the same hex and Hive is symmetric around it, so east of it
+            // stands for every first reply.
+            let targets = if opening {
+                PremoveTargets {
+                    all: vec![Position::initial_spawn_position().to(Direction::E)],
+                    vacate: Vec::new(),
+                }
+            } else {
+                premove_reach(state, mover, next_piece)
+            };
+            Some((next_piece, PieceType::Reserve, targets))
+        }
+        _ => None,
+    }
+}
+
+// Plays every reply the opponent has and keeps the selected piece's destinations afterwards,
+// so a premove can target a hex that the opponent's move is what makes legal.
+fn premove_reach(state: &State, mover: Color, selected: Piece) -> PremoveTargets {
+    let mut all = Vec::new();
+    let mut climbs = Vec::new();
+    let spawning = !state.board.piece_already_played(selected);
+    for (piece, target) in opponent_replies(state, mover.opposite_color()) {
+        let mut after = state.clone();
+        if after.play_turn_from_position(piece, target).is_err()
+            || after.turn_color != mover
+            || matches!(
+                after.game_status,
+                GameStatus::Finished(_) | GameStatus::Adjudicated
+            )
+        {
+            continue;
+        }
+        if spawning {
+            all.extend(after.board.spawnable_positions(mover));
+        } else {
+            let targets = after.board.moves_for_piece(mover, selected);
+            climbs.extend(
+                targets
+                    .iter()
+                    .filter(|target| after.board.occupied(**target)),
+            );
+            all.extend(targets);
+        }
+    }
+    all.sort_unstable_by_key(|position| (position.r, position.q));
+    all.dedup();
+    let vacate = all
+        .iter()
+        .copied()
+        .filter(|target| state.board.occupied(*target) && !climbs.contains(target))
+        .collect();
+    PremoveTargets { all, vacate }
+}
+
+fn next_reserve_piece(state: &State, color: Color, bug: Bug) -> Option<Piece> {
+    state
+        .board
+        .reserve(color, state.game_type)
+        .get(&bug)
+        .and_then(|pieces| pieces.first())
+        .and_then(|piece| Piece::from_str(piece).ok())
+}
+
+fn opponent_replies(state: &State, opponent: Color) -> Vec<(Piece, Position)> {
+    let board = &state.board;
+    let spawn_positions = board.spawnable_positions(opponent).collect::<Vec<_>>();
+    let spawns = Bug::all()
+        .into_iter()
+        .filter_map(|bug| next_reserve_piece(state, opponent, bug))
+        .flat_map(|piece| {
+            spawn_positions
+                .iter()
+                .map(move |position| (piece, *position))
+        });
+    board
+        .moves(opponent)
+        .into_iter()
+        .flat_map(|((piece, _), targets)| targets.into_iter().map(move |target| (piece, target)))
+        .chain(spawns)
+        .collect()
+}
+
+// The mover, not the piece, must be on turn: a pillbug throws the opponent's pieces.
+fn premove_playable(state: &State, piece: Piece, target: Position, mover: Color) -> bool {
+    state.turn_color == mover
+        && !matches!(
+            state.game_status,
+            GameStatus::Finished(_) | GameStatus::Adjudicated
+        )
+        && state.clone().play_turn_from_position(piece, target).is_ok()
 }
 
 #[derive(Clone, Debug, Store)]
@@ -577,6 +760,8 @@ mod tests {
             target_positions: vec![Position::initial_spawn_position()],
             target_position: Some(Position::initial_spawn_position()),
             reserve_position: Some(Position::new(0, 0)),
+            premove: false,
+            vacate_targets: Vec::new(),
         });
         game_state
             .board_view()
@@ -667,6 +852,340 @@ mod tests {
                     .target_positions
                     .contains(&Position::initial_spawn_position()));
             });
+        });
+    }
+
+    fn played(moves: &[(&str, (i32, i32))]) -> State {
+        let spawn = Position::initial_spawn_position();
+        let mut state = State::new(GameType::MLP, false);
+        for (played, (dq, dr)) in moves {
+            let position = Position::new(spawn.q + dq, spawn.r + dr);
+            state
+                .play_turn_from_position(piece(played), position)
+                .unwrap_or_else(|error| panic!("{played} to {position}: {error}"));
+        }
+        state
+    }
+
+    fn at(dq: i32, dr: i32) -> Position {
+        let spawn = Position::initial_spawn_position();
+        Position::new(spawn.q + dq, spawn.r + dr)
+    }
+
+    fn opened_state() -> State {
+        played(&[("wQ", (0, 0)), ("bQ", (1, 0)), ("wA1", (-1, 0))])
+    }
+
+    fn position_of(state: &State, wanted: &str) -> Position {
+        state
+            .board
+            .all_taken_positions()
+            .find(|position| state.board.top_piece(*position) == Some(piece(wanted)))
+            .expect("piece is on the board")
+    }
+
+    fn targets_for(
+        state: &State,
+        wanted: &str,
+        piece_type: PieceType,
+        mover: Color,
+    ) -> Vec<Position> {
+        let (_, _, targets) =
+            premove_selection(state, piece(wanted), piece_type, mover).expect("piece selects");
+        targets.all
+    }
+
+    fn vacate_targets_for(state: &State, wanted: &str, mover: Color) -> Vec<Position> {
+        let (_, _, targets) = premove_selection(state, piece(wanted), PieceType::Board, mover)
+            .expect("piece selects");
+        targets.vacate
+    }
+
+    #[test]
+    fn premoved_pillbug_only_steps_onto_free_neighbours() {
+        let state = played(&[
+            ("wQ", (0, 0)),
+            ("bQ", (1, 0)),
+            ("wA1", (-1, 0)),
+            ("bP", (2, 0)),
+        ]);
+        let origin = position_of(&state, "bP");
+        let targets = targets_for(&state, "bP", PieceType::Board, Color::Black);
+
+        assert!(!targets.is_empty());
+        for target in &targets {
+            assert!(
+                origin.positions_around().any(|hex| hex == *target),
+                "{target}"
+            );
+            assert!(!state.board.occupied(*target), "{target}");
+        }
+    }
+
+    #[test]
+    fn hexes_the_opponent_must_vacate_are_offered_and_flagged() {
+        let state = played(&[
+            ("wL", (0, 0)),
+            ("bG1", (1, 0)),
+            ("wQ", (-1, 0)),
+            ("bQ", (2, 0)),
+            ("wP", (-2, 0)),
+            ("bA1", (3, 0)),
+        ]);
+        let pillbug = position_of(&state, "wP");
+        let targets = targets_for(&state, "bA1", PieceType::Board, Color::Black);
+        let vacate = vacate_targets_for(&state, "bA1", Color::Black);
+
+        assert!(targets.contains(&pillbug));
+        assert_eq!(vacate, vec![pillbug]);
+        assert!(targets
+            .iter()
+            .filter(|hex| state.board.occupied(**hex))
+            .all(|hex| vacate.contains(hex)));
+    }
+
+    #[test]
+    fn climbs_are_not_flagged_as_vacate() {
+        let state = played(&[
+            ("wQ", (0, 0)),
+            ("bQ", (1, 0)),
+            ("wA1", (-1, 0)),
+            ("bB1", (2, 0)),
+        ]);
+        let queen = position_of(&state, "bQ");
+        assert!(targets_for(&state, "bB1", PieceType::Board, Color::Black).contains(&queen));
+        assert!(!vacate_targets_for(&state, "bB1", Color::Black).contains(&queen));
+    }
+
+    #[test]
+    fn premoved_ant_reaches_hexes_only_the_reply_opens_up() {
+        let state = played(&[
+            ("wQ", (0, 0)),
+            ("bQ", (1, 0)),
+            ("wA1", (-1, 0)),
+            ("bA1", (2, 0)),
+        ]);
+        let targets = targets_for(&state, "bA1", PieceType::Board, Color::Black);
+
+        assert!(targets
+            .iter()
+            .any(|hex| !state.board.occupied(*hex) && !state.board.is_negative_space(*hex)));
+    }
+
+    #[test]
+    fn only_climbers_premove_on_top_of_pieces() {
+        let state = played(&[
+            ("wQ", (0, 0)),
+            ("bQ", (1, 0)),
+            ("wA1", (-1, 0)),
+            ("bB1", (2, 0)),
+        ]);
+        let beetle_targets = targets_for(&state, "bB1", PieceType::Board, Color::Black);
+        assert!(beetle_targets.contains(&position_of(&state, "bQ")));
+
+        let queen_targets = targets_for(&state, "bQ", PieceType::Board, Color::Black);
+        assert!(queen_targets.iter().all(|hex| !state.board.occupied(*hex)));
+    }
+
+    #[test]
+    fn prespawn_reaches_hexes_an_enemy_move_makes_legal() {
+        let state = played(&[("wQ", (0, 0)), ("bQ", (1, 0)), ("wB1", (-1, 0))]);
+        let (next, piece_type, targets) =
+            premove_selection(&state, piece("wA3"), PieceType::Inactive, Color::White)
+                .expect("reserve piece selects");
+
+        assert_eq!(next, piece("wA1"));
+        assert_eq!(piece_type, PieceType::Reserve);
+        let target = at(0, 1);
+        assert!(!state.board.spawnable(Color::White, target));
+        let mut after = state.clone();
+        after
+            .play_turn_from_position(piece("bQ"), at(1, -1))
+            .unwrap();
+        assert!(premove_playable(&after, next, target, Color::White));
+        assert!(targets.all.contains(&target));
+        assert!(!targets.vacate.contains(&target));
+    }
+
+    #[test]
+    fn prespawned_climbers_flag_vacated_hexes_instead_of_climbing() {
+        let state = played(&[
+            ("wQ", (0, 0)),
+            ("bQ", (1, 0)),
+            ("wA1", (-1, 0)),
+            ("bA1", (2, 0)),
+            ("wG1", (-2, 0)),
+            ("bA1", (-3, 0)),
+            ("wS1", (-1, -1)),
+        ]);
+        let target = position_of(&state, "bA1");
+        let mut after = state.clone();
+        after
+            .play_turn_from_position(piece("bA1"), at(2, 0))
+            .unwrap();
+        for climber in ["wB1", "wM"] {
+            let (next, _, targets) =
+                premove_selection(&state, piece(climber), PieceType::Inactive, Color::White)
+                    .expect("reserve piece selects");
+            assert!(premove_playable(&after, next, target, Color::White));
+            assert!(targets.all.contains(&target), "{climber}");
+            assert!(targets.vacate.contains(&target), "{climber}");
+            assert!(
+                !targets.all.contains(&position_of(&state, "wQ")),
+                "{climber}"
+            );
+        }
+    }
+
+    #[test]
+    fn only_the_queen_prespawns_when_she_is_due() {
+        let state = played(&[
+            ("wA1", (0, 0)),
+            ("bA1", (1, 0)),
+            ("wG1", (-1, 0)),
+            ("bG1", (2, 0)),
+            ("wS1", (-2, 0)),
+        ]);
+        assert!(
+            premove_selection(&state, piece("wA2"), PieceType::Inactive, Color::White).is_none()
+        );
+        assert!(!targets_for(&state, "wQ", PieceType::Inactive, Color::White).is_empty());
+    }
+
+    #[test]
+    fn black_prespawns_east_of_whites_opening_and_it_plays() {
+        let state = State::new(GameType::MLP, false);
+        let east = Position::initial_spawn_position().to(BoardDirection::E);
+        assert_eq!(
+            targets_for(&state, "bA1", PieceType::Inactive, Color::Black),
+            vec![east]
+        );
+
+        let after_opening = played(&[("wG1", (0, 0))]);
+        assert!(premove_playable(
+            &after_opening,
+            piece("bA1"),
+            east,
+            Color::Black
+        ));
+    }
+
+    #[test]
+    fn no_queen_prespawn_on_the_tournament_opening() {
+        let state = State::new(GameType::MLP, true);
+        assert!(
+            premove_selection(&state, piece("bQ"), PieceType::Inactive, Color::Black).is_none()
+        );
+        assert!(!targets_for(&state, "bA1", PieceType::Inactive, Color::Black).is_empty());
+    }
+
+    #[test]
+    fn premove_only_plays_when_legal_for_the_side_to_move() {
+        let state = opened_state();
+        let legal_spawn = state
+            .board
+            .spawnable_positions(Color::Black)
+            .next()
+            .expect("black can spawn");
+        let illegal_spawn = state
+            .board
+            .negative_space()
+            .find(|hex| !state.board.spawnable(Color::Black, *hex))
+            .expect("some hex touches white");
+
+        assert!(premove_playable(
+            &state,
+            piece("bA1"),
+            legal_spawn,
+            Color::Black
+        ));
+        assert!(!premove_playable(
+            &state,
+            piece("bA1"),
+            illegal_spawn,
+            Color::Black
+        ));
+        assert!(!premove_playable(
+            &state,
+            piece("wA2"),
+            legal_spawn,
+            Color::White
+        ));
+    }
+
+    // White's pillbug sits next to a black ant that arrived two moves ago, so it is throwable.
+    fn pillbug_state() -> State {
+        played(&[
+            ("wQ", (0, 0)),
+            ("bQ", (1, 0)),
+            ("wP", (-1, 0)),
+            ("bA1", (2, 0)),
+            ("wA1", (-1, 1)),
+            ("bA1", (-1, -1)),
+            ("wA1", (0, 1)),
+            ("bQ", (1, -1)),
+            ("wG1", (-1, 1)),
+        ])
+    }
+
+    #[test]
+    fn pillbug_can_premove_a_throw_of_an_adjacent_enemy() {
+        let state = pillbug_state();
+        let ant = position_of(&state, "bA1");
+        let targets = targets_for(&state, "bA1", PieceType::Board, Color::White);
+
+        assert!(targets.contains(&at(-2, 0)));
+        assert!(!targets.contains(&ant));
+    }
+
+    #[test]
+    fn premove_of_a_throw_plays_for_the_thrower() {
+        let mut state = pillbug_state();
+        state
+            .play_turn_from_position(piece("bQ"), at(1, 0))
+            .expect("black replies");
+        assert!(premove_playable(
+            &state,
+            piece("bA1"),
+            at(-2, 0),
+            Color::White
+        ));
+        assert!(!premove_playable(
+            &state,
+            piece("bA1"),
+            at(-2, 0),
+            Color::Black
+        ));
+    }
+
+    #[test]
+    fn enemies_out_of_throwing_range_are_not_selectable() {
+        let state = pillbug_state();
+        assert!(premove_selection(&state, piece("bQ"), PieceType::Board, Color::White).is_none());
+    }
+
+    #[test]
+    fn clicking_an_unselectable_enemy_keeps_the_queued_premove() {
+        with_store(|game_state| {
+            let state = opened_state();
+            let queen = position_of(&state, "bQ");
+            game_state.state().set(state);
+            let queued = MoveInfo {
+                active: Some((piece("wA1"), PieceType::Board)),
+                current_position: Some(Position::new(0, 0)),
+                target_positions: vec![Position::new(3, 3)],
+                target_position: Some(Position::new(3, 3)),
+                reserve_position: None,
+                premove: true,
+                vacate_targets: Vec::new(),
+            };
+            game_state.move_info().set(queued.clone());
+
+            game_state.show_premove_targets(piece("bQ"), queen, PieceType::Board, Color::White);
+
+            game_state
+                .move_info()
+                .with_untracked(|move_info| assert_eq!(*move_info, queued));
         });
     }
 

@@ -329,6 +329,12 @@ pub fn Play() -> impl IntoView {
                                         game_state.view_game();
                                         sync_play_move_query(game_state, &set_move);
                                     }
+                                    if game_state.play_premove(
+                                        api.0.get_untracked(),
+                                        user_color.get_untracked(),
+                                    ) {
+                                        return;
+                                    }
                                     if let Some((piece, piece_type)) = active {
                                         match piece_type {
                                             PieceType::Board => {
@@ -336,7 +342,7 @@ pub fn Play() -> impl IntoView {
                                                     game_state.show_moves(piece, position);
                                                 }
                                             }
-                                            PieceType::Inactive => {
+                                            PieceType::Reserve | PieceType::Inactive => {
                                                 if let Some(position) = reserve_pos {
                                                     game_state.show_spawns(piece, position);
                                                 }

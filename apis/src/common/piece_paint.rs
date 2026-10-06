@@ -36,7 +36,7 @@ impl ShadowHref {
     pub fn href(self) -> &'static str {
         match self {
             Self::None => "#no_ds",
-            Self::CommonDropShadow => "/assets/tiles/common/all.svg#drop_shadow",
+            Self::CommonDropShadow => "/assets/tiles/common/all.svg?v=3#drop_shadow",
             Self::ThreeDShadow => "/assets/tiles/3d/shadow.svg#dshadow",
         }
     }
@@ -134,11 +134,11 @@ fn piece_dots_href(piece: Piece, dots: &TileDots) -> Option<DotsHref> {
     match dots {
         TileDots::No => None,
         TileDots::Angled => Some(DotsHref(format!(
-            "/assets/tiles/common/all.svg#a{}",
+            "/assets/tiles/common/all.svg?v=3#a{}",
             piece.order()
         ))),
         TileDots::Vertical => Some(DotsHref(format!(
-            "/assets/tiles/common/all.svg#v{}",
+            "/assets/tiles/common/all.svg?v=3#v{}",
             piece.order()
         ))),
     }
@@ -230,11 +230,11 @@ mod tests {
 
         assert_eq!(
             piece_dots_href(ant, &TileDots::Vertical),
-            Some(DotsHref("/assets/tiles/common/all.svg#v3".to_string()))
+            Some(DotsHref("/assets/tiles/common/all.svg?v=3#v3".to_string()))
         );
         assert_eq!(
             piece_dots_href(ant, &TileDots::Angled),
-            Some(DotsHref("/assets/tiles/common/all.svg#a3".to_string()))
+            Some(DotsHref("/assets/tiles/common/all.svg?v=3#a3".to_string()))
         );
         assert_eq!(piece_dots_href(ant, &TileDots::No), None);
         assert_eq!(piece_rotation_degrees(ant, &TileRotation::Yes), Some(120));

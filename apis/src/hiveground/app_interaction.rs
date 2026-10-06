@@ -17,7 +17,7 @@ use crate::{
         Config,
     },
 };
-use hive_lib::{Color, Piece, Position};
+use hive_lib::{Color, GameStatus, Piece, Position};
 use leptos::prelude::*;
 
 pub fn live_hiveground_interaction() -> HivegroundInteraction {
@@ -70,7 +70,13 @@ pub fn analysis_hiveground_interaction() -> HivegroundInteraction {
         if annotations.is_some_and(|a| a.mode.get()) {
             HivegroundCapabilities::none()
         } else {
-            HivegroundCapabilities::analysis_selection()
+            let drag_color = config
+                .with(|config| config.drag_and_drop)
+                .then(|| game_state.state().with(|state| state.turn_color));
+            HivegroundCapabilities {
+                drag_color,
+                ..HivegroundCapabilities::analysis_selection()
+            }
         }
     });
 
@@ -105,6 +111,13 @@ impl HivegroundActionHandler {
             }
             HivegroundAction::SelectTarget { position } => {
                 self.select_target(position);
+            }
+            HivegroundAction::DropOnTarget {
+                position,
+                dragged,
+                dragged_type,
+            } => {
+                self.drop_on_target(position, (dragged, dragged_type));
             }
             HivegroundAction::ResetSelection => {
                 self.reset_selection();
@@ -144,6 +157,43 @@ impl HivegroundActionHandler {
             if confirm == MoveConfirm::Single || (confirm == MoveConfirm::Double && was_selected) {
                 game_state.move_active(self.analysis, self.api.0.get_untracked());
             }
+        } else {
+            self.set_premove(position);
+        }
+    }
+
+    fn drop_on_target(&self, position: Position, dragged: (Piece, PieceType)) {
+        let game_state = self.game_state;
+        let (is_target, drags_selection) = game_state.move_info().with_untracked(|move_info| {
+            (
+                move_info.target_positions.contains(&position),
+                move_info
+                    .active
+                    .is_some_and(|selected| is_dragged_selection(selected, dragged)),
+            )
+        });
+        if !is_target || !drags_selection {
+            self.reset_selection();
+        } else if game_state.is_move_allowed(self.analysis.is_some()) {
+            game_state.set_target(position);
+            game_state.move_active(self.analysis, self.api.0.get_untracked());
+        } else {
+            self.set_premove(position);
+        }
+    }
+
+    fn set_premove(&self, position: Position) {
+        let allow_premove = self.config.with_untracked(|config| config.allow_premove);
+        let (is_target, queued_target) = self.game_state.move_info().with_untracked(|move_info| {
+            (
+                move_info.target_positions.contains(&position),
+                move_info.queued_premove().map(|(_, target)| target),
+            )
+        });
+        if queued_target == Some(position) {
+            self.reset_selection();
+        } else if queued_target.is_none() && self.analysis.is_none() && allow_premove && is_target {
+            self.game_state.set_premove(position);
         }
     }
 
@@ -165,21 +215,66 @@ impl HivegroundActionHandler {
     }
 }
 
+// Selecting a reserve piece picks the lowest-numbered one of that bug, so match on bug there.
+fn is_dragged_selection(
+    (selected, selected_type): (Piece, PieceType),
+    (dragged, dragged_type): (Piece, PieceType),
+) -> bool {
+    match (
+        selected_type == PieceType::Board,
+        dragged_type == PieceType::Board,
+    ) {
+        (true, true) => selected == dragged,
+        (false, false) => selected.color() == dragged.color() && selected.bug() == dragged.bug(),
+        _ => false,
+    }
+}
+
 fn live_capabilities(
     game_state: GameStateStore,
     user_color: Option<Color>,
     config: Signal<ConfigOpts>,
 ) -> HivegroundCapabilities {
-    let allow_preselect = config.with(|config| config.allow_preselect);
+    let (allow_preselect, allow_premove, drag_and_drop) = config.with(|config| {
+        (
+            config.allow_preselect,
+            config.allow_premove,
+            config.drag_and_drop,
+        )
+    });
     let is_player = user_color.is_some();
-    let can_move = game_state
-        .state()
-        .with(|state| live_move_allowed(user_color, state.turn_color, &state.game_status));
+    let (can_move, game_over) = game_state.state().with(|state| {
+        (
+            live_move_allowed(user_color, state.turn_color, &state.game_status),
+            matches!(
+                state.game_status,
+                GameStatus::Finished(_) | GameStatus::Adjudicated
+            ),
+        )
+    });
+    let drag_color = user_color.filter(|_| drag_and_drop);
+    let state_turn = game_state.state().with(|state| state.turn);
+    let viewing_past_turn = game_state
+        .board_view()
+        .with(|view| view.is_history() && !view.is_last_turn(state_turn));
 
-    if can_move {
-        let mut capabilities = HivegroundCapabilities::live_selection();
-        capabilities.preselect_piece = false;
-        capabilities
+    // A selection made on a past position would act on the live one, unseen.
+    if viewing_past_turn {
+        HivegroundCapabilities::board_inspection()
+    } else if can_move {
+        HivegroundCapabilities {
+            preselect_piece: false,
+            drag_color,
+            ..HivegroundCapabilities::live_selection()
+        }
+    } else if is_player && allow_premove && !game_over {
+        HivegroundCapabilities {
+            select_target: true,
+            preselect_piece: true,
+            inspect_stacks: true,
+            drag_color,
+            ..HivegroundCapabilities::none()
+        }
     } else if is_player && allow_preselect {
         HivegroundCapabilities {
             preselect_piece: true,
@@ -199,9 +294,17 @@ fn preselect_piece(
     position: Position,
     piece_type: PieceType,
 ) {
-    let allow_preselect = config.with_untracked(|config| config.allow_preselect);
+    let (allow_preselect, allow_premove) =
+        config.with_untracked(|config| (config.allow_preselect, config.allow_premove));
     let user_id = identity.get_untracked().and_then(AuthIdentity::user_id);
-    let is_player = game_state.user_color_untracked(user_id).is_some();
+    let user_color = game_state.user_color_untracked(user_id);
+    if allow_premove {
+        if let Some(color) = user_color {
+            game_state.show_premove_targets(piece, position, piece_type, color);
+        }
+        return;
+    }
+    let is_player = user_color.is_some();
     let current_turn_color = game_state.state().with_untracked(|state| state.turn_color);
     let is_selectable_piece = allow_preselect
         && match piece_type {
@@ -222,4 +325,33 @@ fn preselect_piece(
             move_info.reserve_position = Some(position);
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn piece(piece: &str) -> Piece {
+        piece.parse().expect("test piece parses")
+    }
+
+    #[test]
+    fn a_drop_only_plays_the_piece_that_was_dragged() {
+        let reserve = |name| (piece(name), PieceType::Inactive);
+        let board = |name| (piece(name), PieceType::Board);
+
+        let queen = (piece("wQ"), PieceType::Reserve);
+        assert!(!is_dragged_selection(queen, reserve("wB1")));
+        assert!(is_dragged_selection(queen, reserve("wQ")));
+
+        let first_ant = (piece("wA1"), PieceType::Reserve);
+        assert!(is_dragged_selection(first_ant, reserve("wA3")));
+        assert!(!is_dragged_selection(first_ant, reserve("bA1")));
+        assert!(!is_dragged_selection(first_ant, board("wA1")));
+
+        let board_ant = board("wA1");
+        assert!(is_dragged_selection(board_ant, board("wA1")));
+        assert!(!is_dragged_selection(board_ant, board("wA2")));
+        assert!(!is_dragged_selection(board_ant, reserve("wA1")));
+    }
 }

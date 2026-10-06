@@ -14,7 +14,11 @@ pub fn Target(
     interaction: HivegroundInteraction,
 ) -> impl IntoView {
     view! {
-        <g on:click=move |evt| interaction.click_target(evt, position)>
+        <g
+            data-hg-target-q=position.q
+            data-hg-target-r=position.r
+            on:click=move |evt| interaction.click_target(evt, position)
+        >
             <OverlayGlyph position level paint />
         </g>
     }
