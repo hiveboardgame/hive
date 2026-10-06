@@ -131,27 +131,29 @@ pub fn Config() -> impl IntoView {
                         <div class="grid gap-4 lg:grid-cols-2 xl:grid-cols-1">
                             <div class="ui-setting-group">
                                 <div class="flex flex-col gap-2">
-                                    <p class="ui-field-label">"Preselect"</p>
+                                    <p class="ui-field-label">{t!(i18n, user_config.preselect)}</p>
                                     <p class="ui-field-helper">
-                                        "Allow selecting a piece during the opponent's turn."
+                                        {t!(i18n, user_config.preselect_description)}
                                     </p>
                                     <ConfigFlagToggle flag=ConfigFlag::Preselect />
                                 </div>
                             </div>
                             <div class="ui-setting-group">
                                 <div class="flex flex-col gap-2">
-                                    <p class="ui-field-label">"Premove"</p>
+                                    <p class="ui-field-label">{t!(i18n, user_config.premove)}</p>
                                     <p class="ui-field-helper">
-                                        "Queue a move during the opponent's turn. It plays automatically if it is still legal."
+                                        {t!(i18n, user_config.premove_description)}
                                     </p>
                                     <ConfigFlagToggle flag=ConfigFlag::Premove />
                                 </div>
                             </div>
                             <div class="ui-setting-group">
                                 <div class="flex flex-col gap-2">
-                                    <p class="ui-field-label">"Drag and drop"</p>
+                                    <p class="ui-field-label">
+                                        {t!(i18n, user_config.drag_and_drop)}
+                                    </p>
                                     <p class="ui-field-helper">
-                                        "Move pieces by dragging them. A drop always plays the move, regardless of the confirm mode."
+                                        {t!(i18n, user_config.drag_and_drop_description)}
                                     </p>
                                     <ConfigFlagToggle flag=ConfigFlag::DragAndDrop />
                                 </div>

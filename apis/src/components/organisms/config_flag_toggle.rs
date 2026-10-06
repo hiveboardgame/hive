@@ -1,4 +1,7 @@
-use crate::providers::{config::ConfigOpts, Config};
+use crate::{
+    i18n::*,
+    providers::{config::ConfigOpts, Config},
+};
 use leptos::prelude::*;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -38,6 +41,7 @@ pub fn ConfigFlagToggle(flag: ConfigFlag) -> impl IntoView {
 
 #[component]
 fn ConfigFlagButton(flag: ConfigFlag, enabled: bool) -> impl IntoView {
+    let i18n = use_i18n();
     let Config(config, set_cookie) = expect_context();
     let is_active = move || config.with(|c| flag.get(c)) == enabled;
 
@@ -55,7 +59,11 @@ fn ConfigFlagButton(flag: ConfigFlag, enabled: bool) -> impl IntoView {
                     });
             }
         >
-            {if enabled { "Yes" } else { "No" }}
+            {if enabled {
+                t!(i18n, user_config.toggle_buttons.yes).into_any()
+            } else {
+                t!(i18n, user_config.toggle_buttons.no).into_any()
+            }}
         </button>
     }
 }

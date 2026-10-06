@@ -16,6 +16,16 @@
         "yes": "Si"
     },
     "show_dots": "Mostra puntini",
+    "preselect": "Preselezione",
+    "preselect_description": "Consente di selezionare un pezzo durante il turno dell'avversario.",
+    "premove": "Premossa",
+    "premove_description": "Programma una mossa durante il turno dell'avversario. Le premosse vengono giocate automaticamente senza conferma se sono ancora legali.",
+    "drag_and_drop": "Trascina e rilascia",
+    "drag_and_drop_description": "Muovi i pezzi trascinandoli. Le mosse durante il tuo turno seguono la tua impostazione di conferma delle mosse.",
+    "toggle_buttons": {
+        "yes": "Sì",
+        "no": "No"
+    },
     "game_speed": "Velocitá della partita:",
     "move_confirm": "Conferma della mossa:",
     "preview": "Anteprima:",

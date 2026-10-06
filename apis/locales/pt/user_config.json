@@ -15,6 +15,16 @@
         "no": "Não",
         "vertical": "Vertical"
     },
+    "preselect": "Pré-seleção",
+    "preselect_description": "Permite selecionar uma peça durante o turno do adversário.",
+    "premove": "Pré-jogada",
+    "premove_description": "Programa uma jogada durante o turno do adversário. As pré-jogadas são executadas automaticamente sem confirmação se continuarem a ser legais.",
+    "drag_and_drop": "Arrastar e largar",
+    "drag_and_drop_description": "Move as peças arrastando-as. As jogadas durante o teu turno seguem a tua definição de confirmação de jogadas.",
+    "toggle_buttons": {
+        "yes": "Sim",
+        "no": "Não"
+    },
     "game_speed": "Velocidade de jogo:",
     "move_confirm": "Confirmação da jogada:",
     "color_scheme": "Esquema de cores:",

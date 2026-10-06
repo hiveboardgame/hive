@@ -15,6 +15,16 @@
         "no": "No",
         "angled": "En angle"
     },
+    "preselect": "Selecció prèvia",
+    "preselect_description": "Permet seleccionar una peça durant el torn de l'oponent.",
+    "premove": "Premoviment",
+    "premove_description": "Programa un moviment durant el torn de l'oponent. Els premoviments es juguen automàticament sense confirmació si encara són legals.",
+    "drag_and_drop": "Arrossegar i deixar anar",
+    "drag_and_drop_description": "Mou les peces arrossegant-les. Els moviments durant el teu torn segueixen la configuració de confirmació de moviments.",
+    "toggle_buttons": {
+        "yes": "Sí",
+        "no": "No"
+    },
     "game_speed": "Velocitat de la partida:",
     "color_scheme": "Esquema de color:",
     "edit_account": {

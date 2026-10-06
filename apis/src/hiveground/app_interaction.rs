@@ -174,11 +174,8 @@ impl HivegroundActionHandler {
         });
         if !is_target || !drags_selection {
             self.reset_selection();
-        } else if game_state.is_move_allowed(self.analysis.is_some()) {
-            game_state.set_target(position);
-            game_state.move_active(self.analysis, self.api.0.get_untracked());
         } else {
-            self.set_premove(position);
+            self.select_target(position);
         }
     }
 

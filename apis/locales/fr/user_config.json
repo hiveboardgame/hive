@@ -17,6 +17,16 @@
     },
     "background_color": "Couleur d'Arrière-plan",
     "rotation": "Rotation",
+    "preselect": "Présélection",
+    "preselect_description": "Permet de sélectionner une pièce pendant le tour de l'adversaire.",
+    "premove": "Coup anticipé",
+    "premove_description": "Programme un coup pendant le tour de l'adversaire. Les coups anticipés sont joués automatiquement sans confirmation s'ils sont toujours légaux.",
+    "drag_and_drop": "Glisser-déposer",
+    "drag_and_drop_description": "Déplace les pièces en les faisant glisser. Les coups joués pendant ton tour suivent ton réglage de confirmation des coups.",
+    "toggle_buttons": {
+        "yes": "Oui",
+        "no": "Non"
+    },
     "game_speed": "Vitesse du jeu :",
     "move_confirm": "Confirmation des mouvements :",
     "color_scheme": "Schéma de couleur :",

@@ -16,6 +16,16 @@
         "angled": "Înclinate",
         "vertical": "Verticale"
     },
+    "preselect": "Preselectare",
+    "preselect_description": "Permite selectarea unei piese în timpul turei adversarului.",
+    "premove": "Mutare anticipată",
+    "premove_description": "Planifică o mutare în timpul turei adversarului. Mutările anticipate sunt executate automat, fără confirmare, dacă sunt încă legale.",
+    "drag_and_drop": "Tragere și plasare",
+    "drag_and_drop_description": "Mută piesele prin tragere. Mutările din timpul turei tale respectă setarea de confirmare a mutărilor.",
+    "toggle_buttons": {
+        "yes": "Da",
+        "no": "Nu"
+    },
     "game_speed": "Viteza jocului:",
     "move_confirm": "Confirmarea mutării:",
     "color_scheme": "Schema de culori:",
