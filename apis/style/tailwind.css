@@ -732,8 +732,8 @@ html[data-display-mode="standalone"] {
     word-break: normal;
     hyphens: none;
     text-align: center;
-    font-size: 0.75rem;
-    font-size: clamp(0.5rem, 14cqw, 0.95rem);
+    font-size: 0.875rem;
+    font-size: clamp(0.65rem, 16cqw, 1.05rem);
     line-height: 1.05;
   }
 
