@@ -16,6 +16,16 @@
         "vertical": "En vertical"
     },
     "background_color": "Color de Fondo",
+    "preselect": "Preselección",
+    "preselect_description": "Permite seleccionar una pieza durante el turno del oponente.",
+    "premove": "Movimiento anticipado",
+    "premove_description": "Programa un movimiento durante el turno del oponente. Los movimientos anticipados se juegan automáticamente sin confirmación si siguen siendo legales.",
+    "drag_and_drop": "Arrastrar y soltar",
+    "drag_and_drop_description": "Mueve las piezas arrastrándolas. Los movimientos durante tu turno siguen tu configuración de confirmación de movimientos.",
+    "toggle_buttons": {
+        "yes": "Sí",
+        "no": "No"
+    },
     "game_speed": "Velocidad de la partida:",
     "move_confirm": "Confirmación de movimientos:",
     "color_scheme": "Esquema de colores:",

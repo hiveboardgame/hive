@@ -20,6 +20,16 @@
         "vertical": "Vertical"
     },
     "background_color": "Background Color",
+    "preselect": "Preselect",
+    "preselect_description": "Allow selecting a piece during the opponent's turn.",
+    "premove": "Premove",
+    "premove_description": "Queue a move during the opponent's turn. Premoves play automatically without confirmation if they are still legal.",
+    "drag_and_drop": "Drag and drop",
+    "drag_and_drop_description": "Move pieces by dragging them. Moves on your turn follow your move confirmation setting.",
+    "toggle_buttons": {
+        "yes": "Yes",
+        "no": "No"
+    },
     "game_speed": "Game speed:",
     "move_confirm": "Move confirmation:",
     "color_scheme": "Color scheme:",

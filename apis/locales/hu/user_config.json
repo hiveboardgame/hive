@@ -17,6 +17,16 @@
         "angled": "Dőlt",
         "vertical": "Vertikális"
     },
+    "preselect": "Előzetes kijelölés",
+    "preselect_description": "Engedélyezi egy bábu kijelölését az ellenfél körében.",
+    "premove": "Előre megadott lépés",
+    "premove_description": "Adj meg egy lépést az ellenfél körében. Az előre megadott lépések automatikusan, jóváhagyás nélkül végrehajtódnak, ha továbbra is szabályosak.",
+    "drag_and_drop": "Húzás és ejtés",
+    "drag_and_drop_description": "Mozgasd a bábukat húzással. A saját körödben tett lépések a lépésjóváhagyási beállításodat követik.",
+    "toggle_buttons": {
+        "yes": "Igen",
+        "no": "Nem"
+    },
     "game_speed": "Időbeállítás:",
     "move_confirm": "Lépés jóváhagyás:",
     "color_scheme": "Színséma:",

@@ -17,6 +17,16 @@
         "vertical": "Vertikal"
     },
     "background_color": "Hintergrundfarbe",
+    "preselect": "Vorauswahl",
+    "preselect_description": "Erlaube die Auswahl einer Figur während des gegnerischen Zuges.",
+    "premove": "Vorabzug",
+    "premove_description": "Plane einen Zug während des gegnerischen Zuges. Vorabzüge werden automatisch ohne Bestätigung gespielt, wenn sie weiterhin legal sind.",
+    "drag_and_drop": "Ziehen und Ablegen",
+    "drag_and_drop_description": "Bewege Figuren durch Ziehen. Wenn du am Zug bist, gilt deine Einstellung zur Zugbestätigung.",
+    "toggle_buttons": {
+        "yes": "Ja",
+        "no": "Nein"
+    },
     "game_speed": "Spielgeschwindigkeit:",
     "move_confirm": "Zugbestätigung:",
     "color_scheme": "Farbschema:",
