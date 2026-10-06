@@ -66,6 +66,10 @@ pub struct ConfigOpts {
     pub allow_preselect: bool,
     #[serde(default)]
     pub video_dismissed: bool,
+    #[serde(default)]
+    pub allow_premove: bool,
+    #[serde(default)]
+    pub drag_and_drop: bool,
 }
 
 impl Default for ConfigOpts {
@@ -84,6 +88,8 @@ impl Default for ConfigOpts {
             prefers_dark: false,
             allow_preselect: false,
             video_dismissed: false,
+            allow_premove: false,
+            drag_and_drop: false,
         }
     }
 }

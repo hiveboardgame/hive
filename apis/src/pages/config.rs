@@ -5,9 +5,9 @@ use crate::{
         molecules::panel::Panel,
         organisms::{
             background_color_toggle::BackgroundColorToggle,
+            config_flag_toggle::{ConfigFlag, ConfigFlagToggle},
             confirm_mode_toggle::ConfirmModeToggle,
             darkmode_toggle::{DarkModeToggle, DarkModeToggleVariant},
-            preselect_toggle::PreSelectToggle,
             preview_tiles::PreviewTiles,
             takeback_conf::TakebackConf,
             tile_design_toggle::TileDesignToggle,
@@ -135,7 +135,25 @@ pub fn Config() -> impl IntoView {
                                     <p class="ui-field-helper">
                                         "Allow selecting a piece during the opponent's turn."
                                     </p>
-                                    <PreSelectToggle />
+                                    <ConfigFlagToggle flag=ConfigFlag::Preselect />
+                                </div>
+                            </div>
+                            <div class="ui-setting-group">
+                                <div class="flex flex-col gap-2">
+                                    <p class="ui-field-label">"Premove"</p>
+                                    <p class="ui-field-helper">
+                                        "Queue a move during the opponent's turn. It plays automatically if it is still legal."
+                                    </p>
+                                    <ConfigFlagToggle flag=ConfigFlag::Premove />
+                                </div>
+                            </div>
+                            <div class="ui-setting-group">
+                                <div class="flex flex-col gap-2">
+                                    <p class="ui-field-label">"Drag and drop"</p>
+                                    <p class="ui-field-helper">
+                                        "Move pieces by dragging them. A drop always plays the move, regardless of the confirm mode."
+                                    </p>
+                                    <ConfigFlagToggle flag=ConfigFlag::DragAndDrop />
                                 </div>
                             </div>
                             <div class="ui-setting-group">

@@ -124,6 +124,7 @@ pub fn Reserve(
             width="100%"
             height="100%"
             class=move || { format!("transition-none {viewbox_styles} {}", reserve_sepia_class()) }
+            class:touch-none=move || interaction.can_drag_any()
             viewBox=viewbox_str
             xmlns="http://www.w3.org/2000/svg"
         >

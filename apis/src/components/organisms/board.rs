@@ -6,10 +6,12 @@ use crate::{
             annotation_toolbar::AnnotationToolbar,
             annotations_layer::AnnotationsLayer,
             board_pieces::BoardPieces,
+            drag_ghost::DragGhost,
             history_pieces::HistoryPieces,
         },
     },
     hiveground::HivegroundInteraction,
+    hooks::piece_drag::use_piece_drag,
     providers::{
         analysis::{AnalysisContext, NodeId},
         annotations::{AnnotationColor, AnnotationTool, AnnotationsSignal, MarkerShape},
@@ -722,9 +724,20 @@ pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>)
         left_press.set(None);
     });
 
+    use_piece_drag(interaction, move |evt| {
+        drop_hex(viewbox_ref, viewbox_signal, evt)
+    });
+    let board_scale: Signal<f32> = Memo::new(move |_| {
+        let width = viewbox_signal.with(|vb| vb.width);
+        viewbox_ref
+            .get_untracked()
+            .map_or(1.0, |svg| svg.client_width() as f32 / width)
+    })
+    .into();
+
     _ = on_click_outside(g_ref, move |event| {
         // While drawing, an off-hive click is an annotation, not a selection to cancel.
-        if annotation_drawing_on(annotations) {
+        if annotation_drawing_on(annotations) || interaction.is_click_swallowed() {
             return;
         }
         let clicked_timer = event
@@ -772,6 +785,7 @@ pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>)
                 </g>
             </svg>
             {annotations.map(|annotations| view! { <AnnotationToolbar annotations /> })}
+            <DragGhost interaction tile_opts board_scale />
         </div>
     }
 }
@@ -1089,6 +1103,42 @@ fn stack_position_from_element(element: Element) -> Option<Position> {
     }
     let q = stack.get_attribute("data-hg-stack-q")?.parse().ok()?;
     let r = stack.get_attribute("data-hg-stack-r")?.parse().ok()?;
+    Some(Position::new(q, r))
+}
+
+// Stacked targets render raised in 3D, so the flat grid would pick the hex row above. Only
+// target overlays are trusted: piece shadows spill over neighbouring hexes.
+fn drop_hex(
+    svg: NodeRef<svg::Svg>,
+    viewbox_signal: RwSignal<ViewBoxControls>,
+    evt: &web_sys::PointerEvent,
+) -> Option<Position> {
+    let board = svg.get_untracked()?;
+    let rect = board.get_bounding_client_rect();
+    let (x, y) = (f64::from(evt.client_x()), f64::from(evt.client_y()));
+    if !(rect.left()..=rect.right()).contains(&x) || !(rect.top()..=rect.bottom()).contains(&y) {
+        return None;
+    }
+    let rendered_target = web_sys::window()
+        .and_then(|window| window.document())
+        .and_then(|document| {
+            document
+                .elements_from_point(x as f32, y as f32)
+                .iter()
+                .filter_map(|element| element.dyn_into::<Element>().ok())
+                .filter(|element| board.contains(Some(element)))
+                .find_map(|element| target_position(&element))
+        });
+    Some(rendered_target.unwrap_or_else(|| pointer_hex(svg, viewbox_signal, evt)))
+}
+
+fn target_position(element: &Element) -> Option<Position> {
+    let target = element
+        .closest("[data-hg-target-q][data-hg-target-r]")
+        .ok()
+        .flatten()?;
+    let q = target.get_attribute("data-hg-target-q")?.parse().ok()?;
+    let r = target.get_attribute("data-hg-target-r")?.parse().ok()?;
     Some(Position::new(q, r))
 }
 

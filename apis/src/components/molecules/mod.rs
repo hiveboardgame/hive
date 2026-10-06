@@ -8,6 +8,7 @@ pub mod challenge_buttons_trio;
 pub mod challenge_row;
 pub mod chat_and_controls;
 pub mod control_buttons;
+pub mod drag_ghost;
 pub mod dropdown_panel;
 pub mod empty_state;
 pub mod game_info;
