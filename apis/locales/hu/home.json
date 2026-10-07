@@ -5,36 +5,25 @@
     "online_players_one": "{{count}} online játékos",
     "custom_game": {
         "title": "Játék létrehozása:",
-        "rated": "Rangsorolt",
         "public": "Nyílt",
-        "casual": "Kötetlen",
         "private": "Privát",
-        "rating_range": "ELO-tartomány",
         "mode": {
             "real_time": {
-                "title": "Valós idő",
                 "minutes_per_side": "Perc játékosonként: {{count}}",
                 "increment_in_seconds": "Többletidő (másodpercben): {{count}}"
             },
             "correspondence": {
-                "title": "Levelező",
                 "days_per_move": "Nap lépésenként",
                 "total_time_each": "Idő összesen",
                 "time_one": "{{count}} nap",
                 "time_other": "{{count}} nap"
-            },
-            "untimed": "Végtelen"
+            }
         },
         "button": "Egyéni"
     },
     "online_players_other": "{{count}} online játékos",
     "challenge_details": {
         "player": "Játékos",
-        "rated": {
-            "no": "Nem",
-            "title": "Rangsorolt",
-            "yes": "Igen"
-        },
         "time": "Idő"
     },
     "challenge_tabs": {

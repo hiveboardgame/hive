@@ -4,12 +4,14 @@ use crate::{
         molecules::page_card::PageCard,
     },
     functions::auth::forgot_password::ForgotPassword,
+    i18n::{t, t_string, use_i18n},
     security::csrf::ActionForm,
 };
 use leptos::prelude::*;
 
 #[component]
 pub fn ForgotPassword() -> impl IntoView {
+    let i18n = use_i18n();
     let action = ServerAction::<ForgotPassword>::new();
     let submitted = move || action.value().get().is_some_and(|result| result.is_ok());
     view! {
@@ -28,14 +30,14 @@ pub fn ForgotPassword() -> impl IntoView {
                                     </p>
                                 </div>
                                 <label class="flex flex-col gap-1.5">
-                                    <span class="ui-field-label">"Email"</span>
+                                    <span class="ui-field-label">{t!(i18n, common.email)}</span>
                                     <input
                                         class="ui-field-input"
                                         name="email"
                                         type="email"
                                         inputmode="email"
                                         autocomplete="email"
-                                        placeholder="Email"
+                                        placeholder=move || t_string!(i18n, common.email)
                                     />
                                 </label>
                                 <button

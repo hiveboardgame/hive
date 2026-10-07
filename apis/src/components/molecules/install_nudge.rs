@@ -33,7 +33,7 @@ pub fn InstallNudge(active: RwSignal<bool>) -> impl IntoView {
                 </Show>
                 <button
                     class="ui-button ui-button-ghost ui-button-icon-sm"
-                    aria-label=move || t_string!(i18n, notifications.nudge.dismiss).to_string()
+                    aria-label=move || t_string!(i18n, common.close).to_string()
                     on:click=dismiss
                 >
                     "×"

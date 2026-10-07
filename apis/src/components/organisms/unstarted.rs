@@ -29,7 +29,7 @@ pub fn Unstarted(
         (game_response.with(|game_response| {
             game_response.as_ref().map(|gr| {
                 if gr.white_player.deleted {
-                    t_string!(i18n, profile.deleted_user).to_string()
+                    t_string!(i18n, common.deleted_user).to_string()
                 } else {
                     gr.white_player.username.clone()
                 }
@@ -40,7 +40,7 @@ pub fn Unstarted(
         (game_response.with(|game_response| {
             game_response.as_ref().map(|gr| {
                 if gr.black_player.deleted {
-                    t_string!(i18n, profile.deleted_user).to_string()
+                    t_string!(i18n, common.deleted_user).to_string()
                 } else {
                     gr.black_player.username.clone()
                 }

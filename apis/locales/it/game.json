@@ -1,9 +1,7 @@
 {
     "time_mode": {
         "real_time": "Partita a tempo",
-        "untimed": "Senza limiti di tempo",
         "correspondence": {
-            "title": "Corrispondenza",
             "days_move_one": "{{count}} giorni per mossa",
             "days_move_other": "{{count}} giorni per mossa",
             "days_side_one": "{{count}} giorno per giocatore",
@@ -45,8 +43,14 @@
         "blitz": "Lampo",
         "rapid": "Semi-lampo",
         "classic": "Classica",
-        "correspondence": "Corrsipondenza",
+        "correspondence": "Corrispondenza",
         "untimed": "Tempo Illimitato",
-        "bullet": "Bullet"
-    }
+        "bullet": "Bullet",
+        "puzzle": "Problema"
+    },
+    "rating_range": "intervallo di rating",
+    "speeds_label": "Cadenze",
+    "join": "Unisciti",
+    "view": "Vedi",
+    "quickplay_tooltip": "{{speed}}\n{{base}} min di tempo iniziale\n+{{increment}} s per mossa"
 }

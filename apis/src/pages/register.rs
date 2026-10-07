@@ -101,9 +101,7 @@ pub fn Register() -> impl IntoView {
                     </div>
 
                     <label class="flex flex-col gap-1.5">
-                        <span class="ui-field-label">
-                            {t!(i18n, user_config.create_account.username.title)}
-                        </span>
+                        <span class="ui-field-label">{t!(i18n, common.username)}</span>
                         <input
                             on:input=validate_username
                             node_ref=my_input
@@ -112,9 +110,7 @@ pub fn Register() -> impl IntoView {
                             type="text"
                             prop:value=username
                             autocomplete="username"
-                            placeholder=move || {
-                                t_string!(i18n, user_config.create_account.username.title)
-                            }
+                            placeholder=move || { t_string!(i18n, common.username) }
                             minlength="2"
                             maxlength="20"
                         />
@@ -133,7 +129,7 @@ pub fn Register() -> impl IntoView {
                         </small>
                     </label>
                     <label class="flex flex-col gap-1.5">
-                        <span class="ui-field-label">"Email"</span>
+                        <span class="ui-field-label">{t!(i18n, common.email)}</span>
                         <input
                             node_ref=email_ref
                             on:input=debounce(
@@ -168,9 +164,7 @@ pub fn Register() -> impl IntoView {
                         </small>
                     </label>
                     <label class="flex flex-col gap-1.5">
-                        <span class="ui-field-label">
-                            {t!(i18n, user_config.create_account.password)}
-                        </span>
+                        <span class="ui-field-label">{t!(i18n, common.password)}</span>
                         <input
                             on:input=debounce(Duration::from_millis(350), update_from_input(pw))
                             class="ui-field-input"
@@ -178,7 +172,7 @@ pub fn Register() -> impl IntoView {
                             type="password"
                             prop:value=pw
                             autocomplete="new-password"
-                            placeholder=move || t_string!(i18n, user_config.create_account.password)
+                            placeholder=move || t_string!(i18n, common.password)
                             minlength="8"
                             maxlength="128"
                         />
@@ -187,9 +181,7 @@ pub fn Register() -> impl IntoView {
                         </small>
                     </label>
                     <label class="flex flex-col gap-1.5">
-                        <span class="ui-field-label">
-                            {t!(i18n, user_config.create_account.confirm_password)}
-                        </span>
+                        <span class="ui-field-label">{t!(i18n, common.confirm_password)}</span>
                         <input
                             on:input=debounce(
                                 Duration::from_millis(350),
@@ -200,7 +192,7 @@ pub fn Register() -> impl IntoView {
                             type="password"
                             prop:value=pw_confirm
                             autocomplete="new-password"
-                            placeholder=move || t_string!(i18n, user_config.create_account.password)
+                            placeholder=move || t_string!(i18n, common.password)
                             minlength="8"
                             maxlength="128"
                         />

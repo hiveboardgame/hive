@@ -1,16 +1,13 @@
 {
     "page": {
-        "heading": "Notifications",
         "intro_before_link": "Choose how you want to be notified for each kind of event. Push goes to browsers you enable below. Discord setup is in the ",
         "account_link": "Discord section",
         "intro_after_link": " below.",
         "col_push": "Push",
         "col_discord": "Discord",
-        "email_coming_soon": "Email delivery is coming soon.",
         "saving": "Saving…",
         "saved": "Saved.",
-        "save_failed": "Failed to save:",
-        "loading": "Loading…"
+        "save_failed": "Failed to save:"
     },
     "events": {
         "your_turn": "Your turn",
@@ -23,15 +20,12 @@
     "browser": {
         "heading": "This browser",
         "body": "Receive the push notifications selected above in this browser, even when no HiveGame tab is open. Enable separately on each device you want notified.",
-        "enable": "Enable browser notifications",
-        "disable": "Disable browser notifications",
         "working": "Working…",
         "send_test": "Send a test",
         "test_sent": "Test notification sent — check your notifications.",
         "test_failed": "Test failed:"
     },
     "ios": {
-        "heading": "On your iPhone or iPad",
         "body": "To get notifications on iOS, add HiveGame to your Home Screen: tap the Share button, then \"Add to Home Screen\", and open it from there."
     },
     "devices": {
@@ -47,9 +41,7 @@
         "body_before_link": "Turn on browser notifications for this device. Manage them anytime on the ",
         "link": "notifications page",
         "body_after_link": ".",
-        "enable": "Enable",
-        "enabling": "Enabling…",
-        "dismiss": "Dismiss"
+        "enabling": "Enabling…"
     },
     "install": {
         "title": "Install HiveGame as an app",

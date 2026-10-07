@@ -79,7 +79,7 @@ pub fn UserDropdown(
                             let _ = window().location().reload();
                         }
                     >
-                        {t!(i18n, header.user_menu.refresh_now)}
+                        {t!(i18n, common.refresh)}
                     </button>
                 </div>
             </Show>
@@ -89,7 +89,7 @@ pub fn UserDropdown(
 
                 on:click=move |_| onclick_close()
             >
-                {t!(i18n, header.user_menu.profile)}
+                {t!(i18n, common.profile)}
             </a>
             <a
                 class="ui-dropdown-link"
@@ -97,7 +97,7 @@ pub fn UserDropdown(
                 on:focus=move |_| set_redirect(pathname)
                 on:click=move |_| onclick_close()
             >
-                <span>{t!(i18n, header.user_menu.messages)}</span>
+                <span>{t!(i18n, common.messages)}</span>
                 <span class="ml-auto">
                     <UnreadBadge
                         count=unread_count
@@ -106,7 +106,7 @@ pub fn UserDropdown(
                                 i18n,
                                 messages.chat.unread_badge,
                                 count = unread_count.get(),
-                                conversation = t_string!(i18n, header.user_menu.messages).to_string()
+                                conversation = t_string!(i18n, common.messages).to_string()
                             )
                                 .to_string()
                         })
@@ -135,7 +135,7 @@ pub fn UserDropdown(
                 on:focus=move |_| set_redirect(pathname)
                 on:click=move |_| onclick_close()
             >
-                {t!(i18n, header.user_menu.notifications)}
+                {t!(i18n, common.notifications)}
             </a>
             <Show when=move || auth_context.user.with(|a| a.as_ref().is_some_and(|v| v.user.admin))>
                 <a

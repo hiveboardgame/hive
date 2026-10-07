@@ -36,6 +36,7 @@ pub use game_action::GameAction;
 pub use game_display::{
     format_game_rating,
     format_game_result,
+    game_speed_label,
     game_time_info,
     game_tournament_link,
     untimed_time_info,

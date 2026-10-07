@@ -14,25 +14,15 @@
         "rules_summary": "Sommario delle Regole",
         "archive": "Archivio"
     },
-    "tournaments": {
-        "title": "Tornei",
-        "create": "Crea Torneo",
-        "view": "Vedi Tornei"
-    },
     "buy_game": "Compra Hive®",
     "donate": "Fai una Donazione",
-    "login": "Accedi",
     "support": "Supporto",
     "user_menu": {
         "update_available": "Aggiornamento disponibile",
-        "refresh_now": "Ricarica ora",
         "refresh_when_ready": "Ricarica quando vuoi.",
         "save_analysis_before_refresh": "Salva l’analisi prima di ricaricare.",
-        "profile": "Profilo",
-        "messages": "Messaggi",
         "edit_account": "Modifica Profilo",
         "config": "Configurazioni",
-        "logout": "Esci",
-        "login": "Entra"
+        "logout": "Esci"
     }
 }

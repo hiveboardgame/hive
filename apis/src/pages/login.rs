@@ -53,7 +53,7 @@ pub fn Login() -> impl IntoView {
                         />
                     </label>
                     <label class="flex flex-col gap-1.5" for="password">
-                        <span class="ui-field-label">{t!(i18n, user_config.login.password)}</span>
+                        <span class="ui-field-label">{t!(i18n, common.password)}</span>
                         <input
                             class="ui-field-input"
                             name="password"

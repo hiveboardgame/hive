@@ -48,7 +48,7 @@ pub(super) fn DmActions(
                     view! {
                         <div class="flex flex-wrap gap-2 items-center">
                             <A href=profile_href attr:class=HEADER_ACTION_BUTTON_PRIMARY>
-                                {t!(i18n, messages.page.view_profile)}
+                                {t!(i18n, common.profile)}
                             </A>
                             <BlockToggleButton blocked_user_id=other_user_id />
                         </div>
@@ -99,7 +99,7 @@ pub(super) fn TournamentActions(tournament_id: TournamentId) -> impl IntoView {
     );
     let button_label = Signal::derive(move || {
         if toggle.pending().get() {
-            t_string!(i18n, messages.page.loading)
+            t_string!(i18n, common.loading)
         } else if muted.get() {
             t_string!(i18n, messages.page.unmute_tournament_chat)
         } else {

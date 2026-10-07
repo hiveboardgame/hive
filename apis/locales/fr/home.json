@@ -2,32 +2,22 @@
     "learn_to_play": "Apprendre à jouer",
     "custom_game": {
         "title": "Créer une partie :",
-        "rated": "Évalué",
         "public": "Public",
         "mode": {
             "real_time": {
-                "title": "Temps réel",
                 "minutes_per_side": "Minutes par face : {{count}}"
             },
             "correspondence": {
                 "days_per_move": "Jours par mouvement",
-                "title": "Correspondance",
                 "time_one": "{{count}} jour",
                 "time_other": "{{count}} jours"
-            },
-            "untimed": "Non chronométré"
+            }
         },
         "private": "Privé",
-        "button": "Personnalisé",
-        "casual": "Libre"
+        "button": "Personnalisé"
     },
     "challenge_details": {
         "player": "Joueur",
-        "rated": {
-            "yes": "Oui",
-            "title": "Évalué",
-            "no": "Non"
-        },
         "time": "Durée"
     },
     "challenge_tabs": {

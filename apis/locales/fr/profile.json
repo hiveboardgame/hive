@@ -6,21 +6,13 @@
     },
     "color_buttons": {
         "black": "Noir",
-        "both": "Les deux",
         "white": "Blanc"
     },
     "result_buttons": {
         "win": "Victoire",
         "loss": "Défaite",
-        "draw": "Match nul",
-        "all": "Tout"
-    },
-    "stats_box": {
-        "total": "Total",
-        "draws": "Matchs nuls",
-        "wins": "Victoires",
-        "losses": "Défaites"
+        "draw": "Match nul"
     },
     "game_result": "Résultat de la partie :",
-    "player_color": "Couleur du joueur :"
+    "speed_statistics": "Statistiques : {{speed}}"
 }

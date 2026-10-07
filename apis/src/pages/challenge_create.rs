@@ -142,12 +142,12 @@ pub fn ChallengeCreate(#[prop(optional, into)] opponent: Signal<Option<String>>)
                 <TimeSelect is_tournament=false params on_value_change=time_change allowed_values />
             </div>
             <div class="flex gap-1 p-1">
-                {t!(i18n, home.custom_game.casual)}
+                {t!(i18n, game.casual)}
                 <SimpleSwitchWithCallback
                     checked=params.rated().into()
                     action=rated_callback
                     disabled=untimed_no_rated
-                /> {t!(i18n, home.custom_game.rated)}
+                /> {t!(i18n, game.rated)}
             </div>
             <div class="flex gap-1 p-1">
                 Basic
@@ -165,7 +165,7 @@ pub fn ChallengeCreate(#[prop(optional, into)] opponent: Signal<Option<String>>)
                         action=is_public_callback
                     /> {t!(i18n, home.custom_game.public)}
                 </div>
-                <p class="flex justify-center">{t!(i18n, home.custom_game.rating_range)}</p>
+                <p class="flex justify-center">{t!(i18n, game.rating_range)}</p>
                 <div class="flex justify-center w-24">{rating_string}</div>
                 <div class="flex">
                     <div class="flex gap-1 mx-1">

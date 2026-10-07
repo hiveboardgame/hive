@@ -183,7 +183,7 @@ pub fn ArchiveGameList(
                                         />
                                         {move || {
                                             if copy_state.get() {
-                                                t_string!(i18n, archive.copied).to_string()
+                                                t_string!(i18n, common.copied).to_string()
                                             } else {
                                                 t_string!(i18n, archive.permalink).to_string()
                                             }

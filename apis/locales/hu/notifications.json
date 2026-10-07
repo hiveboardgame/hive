@@ -1,16 +1,13 @@
 {
     "page": {
-        "heading": "Értesítések",
         "intro_before_link": "Válaszd ki, hogyan szeretnél értesítést kapni az egyes eseménytípusokról. A push-értesítések az alább engedélyezett böngészőkbe érkeznek. A Discord beállítását lent, a ",
         "account_link": "Discord szakaszban",
         "intro_after_link": " találod.",
         "col_push": "Push",
         "col_discord": "Discord",
-        "email_coming_soon": "Az e-mailes kézbesítés hamarosan érkezik.",
         "saving": "Mentés…",
         "saved": "Mentve.",
-        "save_failed": "A mentés sikertelen:",
-        "loading": "Betöltés…"
+        "save_failed": "A mentés sikertelen:"
     },
     "events": {
         "your_turn": "Te jössz",
@@ -23,15 +20,12 @@
     "browser": {
         "heading": "Ez a böngésző",
         "body": "Fogadd ebben a böngészőben a fent kiválasztott push-értesítéseket, még akkor is, ha nincs nyitva HiveGame lap. Engedélyezd külön minden eszközön, amelyen értesítést szeretnél kapni.",
-        "enable": "Böngészőértesítések engedélyezése",
-        "disable": "Böngészőértesítések letiltása",
         "working": "Folyamatban…",
         "send_test": "Teszt küldése",
         "test_sent": "Tesztértesítés elküldve – ellenőrizd az értesítéseidet.",
         "test_failed": "A teszt sikertelen:"
     },
     "ios": {
-        "heading": "Az iPhone-odon vagy iPadeden",
         "body": "Az iOS-en való értesítésekhez add hozzá a HiveGame-et a kezdőképernyőhöz: koppints a Megosztás gombra, majd a „Főképernyőhöz adás” lehetőségre, és onnan nyisd meg."
     },
     "devices": {
@@ -47,9 +41,7 @@
         "body_before_link": "Engedélyezd a böngészőértesítéseket ezen az eszközön. Bármikor kezelheted az ",
         "link": "értesítések oldalán",
         "body_after_link": ".",
-        "enable": "Engedélyezés",
-        "enabling": "Engedélyezés…",
-        "dismiss": "Bezárás"
+        "enabling": "Engedélyezés…"
     },
     "install": {
         "title": "A HiveGame telepítése alkalmazásként",

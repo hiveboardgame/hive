@@ -22,43 +22,42 @@ pub fn GamePreviews(
                                         bp: StoredValue<UserResponse>,
                                         base: Option<i32>,
                                         inc: Option<i32>| {
-        let (white_username, white_rating) = wp.with_value(|u| {
-            let username = if u.deleted {
-                t_string!(i18n, profile.deleted_user).to_string()
-            } else {
-                u.username.clone()
-            };
-            (
-                username,
-                u.ratings
-                    .get(&GameSpeed::from_base_increment(base, inc))
-                    .expect("Has a rating")
-                    .rating,
-            )
-        });
-        let (black_username, black_rating) = bp.with_value(|u| {
-            let username = if u.deleted {
-                t_string!(i18n, profile.deleted_user).to_string()
-            } else {
-                u.username.clone()
-            };
-            (
-                username,
-                u.ratings
-                    .get(&GameSpeed::from_base_increment(base, inc))
-                    .expect("Has a rating")
-                    .rating,
-            )
-        });
-        view! {
-            <div class="flex flex-wrap gap-1 justify-center p-1 text-center">
-                {format!("{white_username} {white_rating} vs {black_username} {black_rating}")}
-            </div>
-        }
+        let ratings_text = move || {
+            let (white_username, white_rating) = wp.with_value(|u| {
+                let username = if u.deleted {
+                    t_string!(i18n, common.deleted_user).to_string()
+                } else {
+                    u.username.clone()
+                };
+                (
+                    username,
+                    u.ratings
+                        .get(&GameSpeed::from_base_increment(base, inc))
+                        .expect("Has a rating")
+                        .rating,
+                )
+            });
+            let (black_username, black_rating) = bp.with_value(|u| {
+                let username = if u.deleted {
+                    t_string!(i18n, common.deleted_user).to_string()
+                } else {
+                    u.username.clone()
+                };
+                (
+                    username,
+                    u.ratings
+                        .get(&GameSpeed::from_base_increment(base, inc))
+                        .expect("Has a rating")
+                        .rating,
+                )
+            });
+            format!("{white_username} {white_rating} vs {black_username} {black_rating}")
+        };
+        view! { <div class="flex flex-wrap gap-1 justify-center p-1 text-center">{ratings_text}</div> }
     };
     let finished_ratings_view =
-        move |w_username: StoredValue<String>,
-              b_username: StoredValue<String>,
+        move |w_username: Signal<String>,
+              b_username: Signal<String>,
               gs: StoredValue<GameStatus>,
               ratings: StoredValue<RatingChangeInfo>,
               conclusion: StoredValue<Conclusion>| {
@@ -69,12 +68,12 @@ pub fn GamePreviews(
             view! {
                 <div class="flex flex-wrap gap-1 justify-center p-1 w-full text-center">
                     <div class="flex flex-grow gap-1 items-center w-auto min-w-0 whitespace-nowrap max-w-[fit-content]">
-                        <p>{w_username.get_value()}</p>
+                        <p>{move || w_username.get()}</p>
                         <RatingAndChange ratings side=Color::White />
                     </div>
                     <div class="w-auto text-center">vs</div>
                     <div class="flex flex-grow gap-1 items-center w-auto min-w-0 whitespace-nowrap max-w-[fit-content]">
-                        <p>{b_username.get_value()}</p>
+                        <p>{move || b_username.get()}</p>
                         <RatingAndChange ratings side=Color::Black />
                     </div>
 
@@ -104,22 +103,28 @@ pub fn GamePreviews(
                     let ratings = StoredValue::new(RatingChangeInfo::from_game_response(&game));
                     let gs = StoredValue::new(game.game_status.clone());
                     let conclusion = StoredValue::new(game.conclusion.clone());
-                    let w_username = StoredValue::new(
-                        if game.white_player.deleted {
-                            t_string!(i18n, profile.deleted_user).to_string()
-                        } else {
-                            game.white_player.username.clone()
-                        },
-                    );
-                    let b_username = StoredValue::new(
-                        if game.black_player.deleted {
-                            t_string!(i18n, profile.deleted_user).to_string()
-                        } else {
-                            game.black_player.username.clone()
-                        },
-                    );
                     let white_player = StoredValue::new(game.white_player.clone());
                     let black_player = StoredValue::new(game.black_player.clone());
+                    let w_username = Signal::derive(move || {
+                        white_player
+                            .with_value(|player| {
+                                if player.deleted {
+                                    t_string!(i18n, common.deleted_user).to_string()
+                                } else {
+                                    player.username.clone()
+                                }
+                            })
+                    });
+                    let b_username = Signal::derive(move || {
+                        black_player
+                            .with_value(|player| {
+                                if player.deleted {
+                                    t_string!(i18n, common.deleted_user).to_string()
+                                } else {
+                                    player.username.clone()
+                                }
+                            })
+                    });
                     view! {
                         <div class=with_class(
                             "ui-card-row",
@@ -148,7 +153,13 @@ pub fn GamePreviews(
                             </div>
                             <Show when=move || show_time>
                                 <div class="flex items-center">
-                                    {if rated { "RATED " } else { "CASUAL " }} <TimeRow time_info />
+                                    {move || {
+                                        if rated {
+                                            t_string!(i18n, game.rated)
+                                        } else {
+                                            t_string!(i18n, game.casual)
+                                        }
+                                    }} <TimeRow time_info />
                                 </div>
                             </Show>
                             <ThumbnailPieces board=StoredValue::new(board) />

@@ -327,7 +327,7 @@ fn OutgoingMessageRow(outgoing: OutgoingChat, conversation: ConversationHandle) 
                                         chat.retry_outgoing(&conversation.get_value(), client_id);
                                     }
                                 >
-                                    {t!(i18n, messages.chat.retry)}
+                                    {t!(i18n, common.retry)}
                                 </button>
                                 <button
                                     type="button"
@@ -336,7 +336,7 @@ fn OutgoingMessageRow(outgoing: OutgoingChat, conversation: ConversationHandle) 
                                         chat.dismiss_outgoing(&conversation.get_value(), client_id);
                                     }
                                 >
-                                    {t!(i18n, messages.chat.dismiss)}
+                                    {t!(i18n, common.dismiss)}
                                 </button>
                             </div>
                         },
@@ -357,7 +357,7 @@ fn OutgoingMessageRow(outgoing: OutgoingChat, conversation: ConversationHandle) 
                                         chat.dismiss_outgoing(&conversation.get_value(), client_id);
                                     }
                                 >
-                                    {t!(i18n, messages.chat.dismiss)}
+                                    {t!(i18n, common.dismiss)}
                                 </button>
                             </div>
                         },
@@ -460,7 +460,7 @@ pub(super) fn MessageList(
                                                     prop:disabled=retry_thread_error_disabled
                                                     on:click=move |event| retry_thread_error.run(event)
                                                 >
-                                                    {t!(i18n, messages.chat.retry)}
+                                                    {t!(i18n, common.retry)}
                                                 </button>
                                             </Show>
                                         </div>
@@ -500,7 +500,7 @@ pub(super) fn MessageList(
                                         prop:disabled=retry_thread_error_disabled
                                         on:click=move |event| retry_thread_error.run(event)
                                     >
-                                        {t!(i18n, messages.chat.retry)}
+                                        {t!(i18n, common.retry)}
                                     </button>
                                 </Show>
                             </div>

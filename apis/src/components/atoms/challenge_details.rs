@@ -155,7 +155,15 @@ pub fn ChallengeDetails(
                         </span>
                         <span>{game_type}</span>
                         <TimeRow time_info extend_tw_classes="text-xs leading-tight" />
-                        <span class="font-bold">{if rated { "Rated" } else { "Casual" }}</span>
+                        <span class="font-bold">
+                            {move || {
+                                if rated {
+                                    t_string!(i18n, game.rated)
+                                } else {
+                                    t_string!(i18n, game.casual)
+                                }
+                            }}
+                        </span>
                     </div>
                 </div>
             </div>

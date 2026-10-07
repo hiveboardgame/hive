@@ -4,5 +4,9 @@
         "head_to_head": "Partidas ganadas entre jugadores empatados",
         "wins_as_black": "Partidas ganadas jugando con negras",
         "sonneborn_berger": "Suma de puntos de oponentes contra los que puntuaste"
-    }
+    },
+    "create": "Crear torneo",
+    "view_list": "Ver torneos",
+    "view": "Ver torneo",
+    "view_named": "Ver torneo: {{name}}"
 }

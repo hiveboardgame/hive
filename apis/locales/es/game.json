@@ -1,13 +1,11 @@
 {
     "time_mode": {
-        "untimed": "Sin límite de tiempo",
         "real_time": "Tiempo real",
         "correspondence": {
             "days_move_one": "{{count}} día por turno",
             "days_side_one": "{{count}} día por jugador",
             "days_side_other": "{{count}} días por jugador",
-            "days_move_other": "{{count}} días por turno",
-            "title": "Correspondencia"
+            "days_move_other": "{{count}} días por turno"
         }
     },
     "rated": "Puntuada",
@@ -47,6 +45,12 @@
         "classic": "Clásico",
         "untimed": "Sin tiempo",
         "rapid": "Rápido",
-        "correspondence": "Correspondencia"
-    }
+        "correspondence": "Correspondencia",
+        "puzzle": "Problema"
+    },
+    "rating_range": "Rango de puntos",
+    "speeds_label": "Ritmos",
+    "join": "Unirse",
+    "view": "Ver",
+    "quickplay_tooltip": "{{speed}}\n{{base}} min de tiempo inicial\n+{{increment}} s por movimiento"
 }

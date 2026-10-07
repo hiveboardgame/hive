@@ -5,14 +5,10 @@
     "online_players_one": "Игроков онлайн: {{count}}",
     "custom_game": {
         "title": "Новая партия",
-        "casual": "Без рейтинга",
-        "rated": "Рейтинговая",
         "private": "По приглашению",
         "public": "Открыта для всех",
-        "rating_range": "Ограничения по рейтингу",
         "mode": {
             "real_time": {
-                "title": "В реальном времени",
                 "increment_in_seconds": "Прибавка времени в секундах: {{count}}",
                 "minutes_per_side": "Минут на игрока: {{count}}"
             },
@@ -20,21 +16,14 @@
                 "days_per_move": "Дней на ход",
                 "time_one": "{{count}} день",
                 "time_other": "{{count}} дн.",
-                "title": "Пошагово",
                 "total_time_each": "Общее время на игрока"
-            },
-            "untimed": "Не на время"
+            }
         },
         "button": "Настроить партию"
     },
     "challenge_details": {
         "player": "Игрок",
-        "time": "Контроль",
-        "rated": {
-            "title": "Рейтинговая",
-            "no": "Нет",
-            "yes": "Да"
-        }
+        "time": "Контроль"
     },
     "challenge_tabs": {
         "humans": "Люди",

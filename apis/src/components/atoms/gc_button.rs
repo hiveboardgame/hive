@@ -1,5 +1,6 @@
 use crate::{
     common::with_class,
+    i18n::{t_string, use_i18n},
     providers::game_state::{GameStateStore, GameStateStoreFields},
 };
 use hive_lib::GameControl;
@@ -52,6 +53,7 @@ pub fn ConfirmButton(
     user_id: Uuid,
     #[prop(optional, into)] hidden: Signal<bool>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let game_state = expect_context::<GameStateStore>();
     let game_control_pending = game_state.game_control_pending();
     let state = game_state.state();
@@ -130,7 +132,7 @@ pub fn ConfirmButton(
             </button>
             <Show when=is_clicked>
                 <button
-                    title="Cancel"
+                    title=move || t_string!(i18n, common.cancel)
                     on:click=cancel
                     class="ui-game-control-button ui-button-danger"
                 >

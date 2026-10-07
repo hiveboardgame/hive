@@ -173,8 +173,7 @@ pub fn MessagesDmThread() -> impl IntoView {
     let i18n = use_i18n();
     let chat = expect_context::<Chat>();
     let route_username = route_param("username");
-    let loading_message =
-        Signal::derive(move || t_string!(i18n, messages.page.loading).to_string());
+    let loading_message = Signal::derive(move || t_string!(i18n, common.loading).to_string());
     let failed_message =
         Signal::derive(move || t_string!(i18n, messages.page.failed_conversations).to_string());
     let resolved_resource = resolve_route(chat, route_username, |username| async move {
@@ -244,9 +243,7 @@ pub fn MessagesTournamentThread() -> impl IntoView {
             current_key=route_tournament_id
             resource=resolved_resource
             loading_title=title
-            loading_message=Signal::derive(move || {
-                t_string!(i18n, messages.page.loading).to_string()
-            })
+            loading_message=Signal::derive(move || { t_string!(i18n, common.loading).to_string() })
             missing_title=title
             missing_message=Signal::derive(move || {
                 t_string!(i18n, messages.page.failed_conversations).to_string()
@@ -286,9 +283,7 @@ pub fn MessagesGameThread(thread: GameThread) -> impl IntoView {
             current_key=route_game_thread
             resource=resolved_resource
             loading_title=title
-            loading_message=Signal::derive(move || {
-                t_string!(i18n, messages.page.loading).to_string()
-            })
+            loading_message=Signal::derive(move || { t_string!(i18n, common.loading).to_string() })
             missing_title=title
             missing_message=failed
             access_denied_message=failed

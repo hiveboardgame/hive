@@ -4,7 +4,7 @@ use crate::{
 };
 use hive_lib::{Color, GameResult, GameStatus};
 use leptos_i18n::I18nContext;
-use shared_types::{Conclusion, PrettyString, TimeInfo, TimeMode, TournamentGameResult};
+use shared_types::{Conclusion, GameSpeed, PrettyString, TimeInfo, TimeMode, TournamentGameResult};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TournamentLink {
@@ -40,6 +40,18 @@ pub fn format_game_rating(i18n: I18nContext<Locale, I18nKeys>, rated: bool) -> S
         t_string!(i18n, game.rated).to_string()
     } else {
         t_string!(i18n, game.casual).to_string()
+    }
+}
+
+pub fn game_speed_label(i18n: I18nContext<Locale, I18nKeys>, speed: GameSpeed) -> &'static str {
+    match speed {
+        GameSpeed::Bullet => t_string!(i18n, game.speeds.bullet),
+        GameSpeed::Blitz => t_string!(i18n, game.speeds.blitz),
+        GameSpeed::Rapid => t_string!(i18n, game.speeds.rapid),
+        GameSpeed::Classic => t_string!(i18n, game.speeds.classic),
+        GameSpeed::Correspondence => t_string!(i18n, game.speeds.correspondence),
+        GameSpeed::Untimed => t_string!(i18n, game.speeds.untimed),
+        GameSpeed::Puzzle => t_string!(i18n, game.speeds.puzzle),
     }
 }
 
@@ -104,7 +116,7 @@ fn winner_str(
         Color::Black => &game.black_player,
     };
     let winner_username = if winner.deleted {
-        t_string!(i18n, profile.deleted_user).to_string()
+        t_string!(i18n, common.deleted_user).to_string()
     } else {
         winner.username.clone()
     };

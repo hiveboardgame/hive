@@ -4,5 +4,9 @@
         "head_to_head": "Number of games won between tied players",
         "wins_as_black": "Number of games won while playing black",
         "sonneborn_berger": "Sum of points earned by all opponents you won/drew against"
-    }
+    },
+    "create": "Create Tournament",
+    "view_list": "View Tournaments",
+    "view": "View tournament",
+    "view_named": "View tournament: {{name}}"
 }

@@ -1,9 +1,7 @@
 {
     "time_mode": {
-        "untimed": "Fără timp",
         "real_time": "Timp real",
         "correspondence": {
-            "title": "Corespondență",
             "days_move_one": "{{count}} zi per mutare",
             "days_move_other": "{{count}} zile per mutare",
             "days_side_one": "{{count}} zi per jucător",
@@ -47,6 +45,12 @@
         "rapid": "Rapid",
         "classic": "Clasic",
         "correspondence": "Corespondență",
-        "untimed": "Fără timp"
-    }
+        "untimed": "Fără timp",
+        "puzzle": "Problemă"
+    },
+    "rating_range": "Interval elo",
+    "speeds_label": "Ritmuri",
+    "join": "Intră",
+    "view": "Vezi",
+    "quickplay_tooltip": "{{speed}}\n{{base}} min timp inițial\n+{{increment}} sec pe mutare"
 }

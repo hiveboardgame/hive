@@ -1,6 +1,7 @@
 use crate::{
     components::{layouts::base_layout::OrientationSignal, molecules::empty_state::EmptyState},
     functions::games::get::get_rating_history_resource,
+    i18n::{t, use_i18n},
     responses::RatingHistoryResponse,
 };
 use chrono::{DateTime, Duration, Utc};
@@ -32,6 +33,7 @@ fn build_x_ticks(data: ReadSignal<Vec<RatingHistoryResponse>>) -> TickLabels<Dat
 
 #[component]
 pub fn RatingGraph(user_id: Uuid, game_speed: GameSpeed) -> impl IntoView {
+    let i18n = use_i18n();
     let vertical = expect_context::<OrientationSignal>().orientation_vertical;
     let history = OnceResource::new(get_rating_history_resource(user_id, game_speed));
     let window_size = use_window_size();
@@ -59,7 +61,7 @@ pub fn RatingGraph(user_id: Uuid, game_speed: GameSpeed) -> impl IntoView {
             }
         >
             <Suspense fallback=move || {
-                view! { <p>"Loading..."</p> }
+                view! { <p>{t!(i18n, common.loading)}</p> }
             }>
                 {move || {
                     history

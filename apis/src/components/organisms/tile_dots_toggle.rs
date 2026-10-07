@@ -37,7 +37,7 @@ pub fn TileDotsButton(tile_dots: TileDots) -> impl IntoView {
             }
         >
             {move || match tile_dots() {
-                TileDots::No => t_string!(i18n, user_config.dots_buttons.no),
+                TileDots::No => t_string!(i18n, common.no),
                 TileDots::Angled => t_string!(i18n, user_config.dots_buttons.angled),
                 TileDots::Vertical => t_string!(i18n, user_config.dots_buttons.vertical),
             }}

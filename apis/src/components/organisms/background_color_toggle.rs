@@ -66,7 +66,7 @@ pub fn BackgroundColorToggle() -> impl IntoView {
                         class="ui-button ui-button-secondary ui-button-sm"
                         title="Reset to default"
                     >
-                        "Reset"
+                        {t!(i18n, common.reset)}
                     </button>
                 </Show>
             </div>

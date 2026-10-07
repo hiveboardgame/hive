@@ -362,7 +362,7 @@ pub fn Challenges() -> impl IntoView {
                             <th class=format!(
                                 "{} w-8 xs:w-10 sm:w-12 md:w-14 lg:w-16 min-w-0 text-xs sm:text-sm",
                                 th_class,
-                            )>{t!(i18n, home.challenge_details.rated.title)}</th>
+                            )>{t!(i18n, game.rated)}</th>
                             <th class=format!(
                                 "{} hidden sm:table-cell w-20 md:w-24 min-w-0",
                                 th_class,

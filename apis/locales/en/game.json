@@ -1,9 +1,7 @@
 {
     "time_mode": {
-        "untimed": "No time limit",
         "real_time": "Real time",
         "correspondence": {
-            "title": "Correspondence",
             "days_move_one": "{{count}} day per move",
             "days_move_other": "{{count}} days per move",
             "days_side_one": "{{count}} day per side",
@@ -48,13 +46,16 @@
         "rapid": "Rapid",
         "classic": "Classic",
         "correspondence": "Correspondence",
-        "untimed": "Untimed"
+        "untimed": "Untimed",
+        "puzzle": "Puzzle"
     },
     "tournament_ready_title": "Tournament Game Ready!",
     "tournament_ready_opponent": "Your opponent",
     "tournament_ready_message": "is ready to start the tournament game. You have 30 seconds to accept and start the game.",
-    "tournament_ready_accept": "Accept Game",
-    "tournament_ready_view_game": "View Game",
-    "tournament_ready_close": "Close",
-    "tournament_ready_timeout": "This notification will auto-close in 30 seconds."
+    "tournament_ready_timeout": "This notification will auto-close in 30 seconds.",
+    "rating_range": "Rating range",
+    "speeds_label": "Speeds",
+    "join": "Join",
+    "view": "View",
+    "quickplay_tooltip": "{{speed}}\n{{base}} min base time\n+{{increment}} sec per move"
 }

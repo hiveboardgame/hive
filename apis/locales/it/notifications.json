@@ -1,16 +1,13 @@
 {
     "page": {
-        "heading": "Notifiche",
         "intro_before_link": "Scegli come vuoi essere avvisato per ogni tipo di evento. Le notifiche push arrivano ai browser che attivi qui sotto. La configurazione di Discord è nella ",
         "account_link": "sezione Discord",
         "intro_after_link": " qui sotto.",
         "col_push": "Push",
         "col_discord": "Discord",
-        "email_coming_soon": "L'invio via e-mail arriverà presto.",
         "saving": "Salvataggio…",
         "saved": "Salvato.",
-        "save_failed": "Salvataggio non riuscito:",
-        "loading": "Caricamento…"
+        "save_failed": "Salvataggio non riuscito:"
     },
     "events": {
         "your_turn": "Tocca a te",
@@ -23,15 +20,12 @@
     "browser": {
         "heading": "Questo browser",
         "body": "Ricevi in questo browser le notifiche push selezionate sopra, anche quando nessuna scheda di HiveGame è aperta. Attivale separatamente su ogni dispositivo che vuoi notificare.",
-        "enable": "Attiva le notifiche del browser",
-        "disable": "Disattiva le notifiche del browser",
         "working": "Elaborazione…",
         "send_test": "Invia una prova",
         "test_sent": "Notifica di prova inviata: controlla le tue notifiche.",
         "test_failed": "Prova non riuscita:"
     },
     "ios": {
-        "heading": "Sul tuo iPhone o iPad",
         "body": "Per ricevere notifiche su iOS, aggiungi HiveGame alla schermata Home: tocca il pulsante Condividi, poi «Aggiungi a Home» e aprilo da lì."
     },
     "devices": {
@@ -47,9 +41,7 @@
         "body_before_link": "Attiva le notifiche del browser per questo dispositivo. Gestiscile in qualsiasi momento nella ",
         "link": "pagina delle notifiche",
         "body_after_link": ".",
-        "enable": "Attiva",
-        "enabling": "Attivazione…",
-        "dismiss": "Chiudi"
+        "enabling": "Attivazione…"
     },
     "install": {
         "title": "Installa HiveGame come app",

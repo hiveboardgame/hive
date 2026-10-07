@@ -11,14 +11,9 @@
   "result_player2_wins": "Player 2 wins",
   "result_draw": "Draw",
   "result_not_draw": "Not a draw",
-  "any": "Any",
-  "speeds": "Speeds",
-  "rated": "Rated",
-  "casual": "Casual",
   "expansions": "Expansions",
   "with_expansions": "With expansions",
   "base_only": "Base only",
-  "rating_range": "Rating range",
   "min": "Min",
   "max": "Max",
   "turn_range": "Turn range",
@@ -44,6 +39,5 @@
   "no_games_found": "No games found.",
   "loading_games": "Loading games...",
   "position": "Posició (HOP o hash)",
-  "position_placeholder": "Enganxa un HOP o un hash de posició",
-  "copied": "Copiat!"
+  "position_placeholder": "Enganxa un HOP o un hash de posició"
 }

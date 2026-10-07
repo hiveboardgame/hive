@@ -292,9 +292,9 @@ pub fn ChallengeRow(
                     <span class="font-bold">
                         {move || {
                             if rated {
-                                t_string!(i18n, home.challenge_details.rated.yes)
+                                t_string!(i18n, common.yes)
                             } else {
-                                t_string!(i18n, home.challenge_details.rated.no)
+                                t_string!(i18n, common.no)
                             }
                         }}
 

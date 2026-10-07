@@ -34,7 +34,7 @@ pub fn FeaturedVideo() -> impl IntoView {
                                 });
                         }
                         class="ui-button ui-button-danger ui-button-icon shrink-0"
-                        aria-label="Dismiss"
+                        aria-label=move || t_string!(i18n, common.close)
                     >
                         <Icon icon=icondata_io::IoCloseSharp attr:class="size-5" />
                     </button>
