@@ -14,25 +14,15 @@
         "rules_summary": "Resumen de reglas",
         "archive": "Archivo"
     },
-    "tournaments": {
-        "title": "Torneos",
-        "create": "Crear torneo",
-        "view": "Ver torneos"
-    },
     "buy_game": "Comprar juego",
     "donate": "Donar",
-    "login": "Conectarse",
     "support": "Soporte",
     "user_menu": {
         "update_available": "Actualización disponible",
-        "refresh_now": "Actualizar ahora",
         "refresh_when_ready": "Actualiza cuando quieras.",
         "save_analysis_before_refresh": "Guarda tu análisis antes de actualizar.",
-        "profile": "Perfil",
-        "messages": "Mensajes",
         "edit_account": "Editar cuenta",
         "config": "Configuración",
-        "logout": "Cerrar sesión",
-        "login": "Conectarse"
+        "logout": "Cerrar sesión"
     }
 }

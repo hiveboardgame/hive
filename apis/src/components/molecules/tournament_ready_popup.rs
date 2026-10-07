@@ -197,17 +197,17 @@ pub fn TournamentReadyPopup(
 
                 <div class="flex gap-4 justify-center">
                     <button on:click=accept_game class="ui-button ui-button-success ui-button-md">
-                        {t!(i18n, game.tournament_ready_accept)}
+                        {t!(i18n, common.accept)}
                     </button>
 
                     <Show when=move || !is_on_game_page.get()>
                         <button on:click=view_game class="ui-button ui-button-primary ui-button-md">
-                            {t!(i18n, game.tournament_ready_view_game)}
+                            {t!(i18n, game.view)}
                         </button>
                     </Show>
 
                     <button on:click=close_popup class="ui-button ui-button-secondary ui-button-md">
-                        {t!(i18n, game.tournament_ready_close)}
+                        {t!(i18n, common.close)}
                     </button>
                 </div>
 

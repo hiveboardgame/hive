@@ -34,8 +34,10 @@ pub use client_message::{ChatSendRequest, ClientRequest, SubscriptionAttempt};
 pub use config_options::{CurrentConfirm, MoveConfirm, TileDesign, TileDots, TileRotation};
 pub use game_action::GameAction;
 pub use game_display::{
+    display_username,
     format_game_rating,
     format_game_result,
+    game_speed_label,
     game_time_info,
     game_tournament_link,
     untimed_time_info,

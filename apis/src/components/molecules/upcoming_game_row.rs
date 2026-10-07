@@ -1,6 +1,7 @@
 use crate::{
     common::with_class,
     components::{atoms::profile_link::ProfileLink, molecules::time_row::TimeRow},
+    i18n::{t, use_i18n},
     providers::AuthContext,
     responses::GameResponse,
 };
@@ -14,6 +15,7 @@ pub fn UpcomingGameRow(
     game_data: (DateTime<Utc>, GameResponse),
     current_time: RwSignal<DateTime<Local>>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let auth_context = expect_context::<AuthContext>();
     let (start_time, game) = game_data;
     let local_time = RwSignal::new(None::<DateTime<Local>>);
@@ -107,7 +109,7 @@ pub fn UpcomingGameRow(
                     >
                         {move || {
                             if user_is_player() {
-                                view! { "Join Game" }.into_any()
+                                view! { {t!(i18n, game.join)} }.into_any()
                             } else {
                                 view! {
                                     <Icon

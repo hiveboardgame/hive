@@ -7,6 +7,7 @@ use crate::{
         molecules::{empty_state::EmptyState, panel::Panel, tournament_row::TournamentRow},
     },
     functions::tournaments::{get_by_status, get_hosting_tournaments, get_joined_tournaments},
+    i18n::{t_string, use_i18n},
     providers::{AuthContext, AuthIdentity},
     responses::TournamentAbstractResponse,
 };
@@ -27,6 +28,7 @@ fn tournament_tab_class(current_path: &str, target_path: &str) -> &'static str {
 
 #[component]
 pub fn Tournaments(children: Children) -> impl IntoView {
+    let i18n = use_i18n();
     let auth_context = expect_context::<AuthContext>();
     let location = use_location();
     let logged_in = move || matches!(auth_context.identity.get(), Some(AuthIdentity::User(_)));
@@ -35,7 +37,7 @@ pub fn Tournaments(children: Children) -> impl IntoView {
         <PageShell variant=PageShellVariant::Dashboard>
             <div class="flex flex-col gap-4 w-full max-w-5xl">
                 <PageHeader
-                    title="Tournaments"
+                    title=move || t_string!(i18n, common.tournaments)
                     subtitle="Browse upcoming, active, and completed tournaments."
                 />
                 <div class="flex flex-wrap gap-2">

@@ -59,11 +59,7 @@ fn ConfigFlagButton(flag: ConfigFlag, enabled: bool) -> impl IntoView {
                     });
             }
         >
-            {if enabled {
-                t!(i18n, user_config.toggle_buttons.yes).into_any()
-            } else {
-                t!(i18n, user_config.toggle_buttons.no).into_any()
-            }}
+            {if enabled { t!(i18n, common.yes).into_any() } else { t!(i18n, common.no).into_any() }}
         </button>
     }
 }

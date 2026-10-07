@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
+    common::display_username,
     components::layouts::base_layout::OrientationSignal,
     i18n::*,
     providers::{
@@ -28,22 +29,14 @@ pub fn Unstarted(
     let white = Memo::new(move |_| {
         (game_response.with(|game_response| {
             game_response.as_ref().map(|gr| {
-                if gr.white_player.deleted {
-                    t_string!(i18n, profile.deleted_user).to_string()
-                } else {
-                    gr.white_player.username.clone()
-                }
+                display_username(i18n, gr.white_player.deleted, &gr.white_player.username)
             })
         }),)
     });
     let black = Memo::new(move |_| {
         (game_response.with(|game_response| {
             game_response.as_ref().map(|gr| {
-                if gr.black_player.deleted {
-                    t_string!(i18n, profile.deleted_user).to_string()
-                } else {
-                    gr.black_player.username.clone()
-                }
+                display_username(i18n, gr.black_player.deleted, &gr.black_player.username)
             })
         }),)
     });

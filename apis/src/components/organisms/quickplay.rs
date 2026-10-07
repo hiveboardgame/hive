@@ -1,5 +1,5 @@
 use crate::{
-    common::ChallengeAction,
+    common::{game_speed_label, ChallengeAction},
     components::{atoms::rating::icon_for_speed, molecules::modal::Modal},
     hooks::tap_feedback::use_tap_feedback,
     i18n::*,
@@ -27,36 +27,33 @@ use QuickPlayTimeControl::*;
 
 #[component]
 pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
+    let i18n = use_i18n();
     let auth_context = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
-    let (display_text, icon_data, base, increment, speed_name) = match time_control {
-        Bullet1p2 => ("1+2".to_owned(), icon_for_speed(Bullet), 1, 2, "Bullet"),
-        Blitz3p3 => ("3+3".to_owned(), icon_for_speed(Blitz), 3, 3, "Blitz"),
-        Blitz5p4 => ("5+4".to_owned(), icon_for_speed(Blitz), 5, 4, "Blitz"),
-        Rapid10p10 => ("10+10".to_owned(), icon_for_speed(Rapid), 10, 10, "Rapid"),
-        Rapid15p10 => ("15+10".to_owned(), icon_for_speed(Rapid), 15, 10, "Rapid"),
-        Classic20p20 => (
-            "20+20".to_owned(),
-            icon_for_speed(Classic),
-            20,
-            20,
-            "Classic",
-        ),
-        Classic30p30 => (
-            "30+30".to_owned(),
-            icon_for_speed(Classic),
-            30,
-            30,
-            "Classic",
-        ),
+    let (display_text, icon_data, base, increment, speed) = match time_control {
+        Bullet1p2 => ("1+2".to_owned(), icon_for_speed(Bullet), 1, 2, Bullet),
+        Blitz3p3 => ("3+3".to_owned(), icon_for_speed(Blitz), 3, 3, Blitz),
+        Blitz5p4 => ("5+4".to_owned(), icon_for_speed(Blitz), 5, 4, Blitz),
+        Rapid10p10 => ("10+10".to_owned(), icon_for_speed(Rapid), 10, 10, Rapid),
+        Rapid15p10 => ("15+10".to_owned(), icon_for_speed(Rapid), 15, 10, Rapid),
+        Classic20p20 => ("20+20".to_owned(), icon_for_speed(Classic), 20, 20, Classic),
+        Classic30p30 => ("30+30".to_owned(), icon_for_speed(Classic), 30, 30, Classic),
     };
-    let hover_text = format!("{speed_name}\n{base} min base time\n+{increment} sec per move");
+    let hover_text = move || {
+        t_string!(
+            i18n,
+            game.quickplay_tooltip,
+            speed = game_speed_label(i18n, speed),
+            base = base,
+            increment = increment
+        )
+    };
     let mark_pressed = use_tap_feedback(".quickplay-hex-button");
     view! {
         <button
             type="button"
             class="quickplay-hex-button ui-button"
-            data-speed=speed_name
+            data-speed=speed.to_string()
             title=hover_text
             on:pointerdown=move |event| mark_pressed.run(event)
             on:click=move |_| {

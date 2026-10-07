@@ -4,6 +4,7 @@ use crate::{
         profile_link::ProfileLink,
         schedule_controls::{GameDateControls, ProposeDateControls},
     },
+    i18n::{t, use_i18n},
     providers::schedules::SchedulesContext,
     responses::{GameResponse, ScheduleResponse},
 };
@@ -46,6 +47,7 @@ fn MySchedulesInner(
     games_hashmap: Memo<HashMap<GameId, GameResponse>>,
     user_id: Signal<Uuid>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let ctx = expect_context::<SchedulesContext>();
     let get_game = move |game_id: GameId| games_hashmap.with(|games| games.get(&game_id).cloned());
     let get_schedules = move |game_id: GameId| {
@@ -139,7 +141,7 @@ fn MySchedulesInner(
                                     class="place-self-center ui-button ui-button-primary ui-button-md no-link-style"
                                     href=format!("/game/{}", &game_id())
                                 >
-                                    "Join Game"
+                                    {t!(i18n, game.join)}
                                 </a>
                             </div>
                         }

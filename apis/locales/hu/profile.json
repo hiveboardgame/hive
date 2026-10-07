@@ -7,21 +7,21 @@
     },
     "color_buttons": {
         "white": "Fehér",
-        "black": "Fekete",
-        "both": "Mindkettő"
+        "black": "Fekete"
     },
     "result_buttons": {
         "win": "Győzelem",
         "loss": "Vereség",
-        "draw": "Döntetlen",
-        "all": "Mind"
+        "draw": "Döntetlen"
     },
-    "stats_box": {
-        "total": "Összesen",
-        "draws": "Döntetlenek",
-        "wins": "Győzelmek",
-        "losses": "Vereségek"
+    "include_speeds": "Kiválasztott játékidők:",
+    "speed_statistics": "{{speed}} statisztikák",
+    "expansion_buttons": {
+        "basic": "Alap",
+        "full": "Teljes"
     },
-    "player_color": "Játékos színe:",
-    "include_speeds": "Kiválasztott játékidők:"
+    "player_color": "Játékos színe",
+    "rating": "ELO",
+    "games_played_one": "{{count}} játszma",
+    "games_played_other": "{{count}} játszma"
 }

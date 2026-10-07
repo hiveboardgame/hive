@@ -8,25 +8,19 @@
     "custom_game": {
         "button": "Custom",
         "title": "Create a game:",
-        "casual": "Casual",
-        "rated": "Rated",
         "private": "Private",
         "public": "Public",
-        "rating_range": "Rating range",
         "mode": {
             "real_time": {
-                "title": "Real time",
                 "minutes_per_side": "Minutes per side: {{count}}",
                 "increment_in_seconds": "Increment in sec: {{count}}"
             },
             "correspondence": {
-                "title": "Correspondence",
                 "days_per_move": "Days per move",
                 "total_time_each": "Total time each",
                 "time_one": "{{count}} day",
                 "time_other": "{{count}} days"
-            },
-            "untimed": "Untimed"
+            }
         }
     },
     "challenge_details": {
@@ -38,11 +32,6 @@
             "random": "Random"
         },
         "time": "Time",
-        "rated": {
-            "title": "Rated",
-            "yes": "Yes",
-            "no": "No"
-        },
         "admin_cancel_title": "Cancel this challenge (admin)",
         "admin_cancel_confirm": "Cancel this player's challenge?",
         "admin_cancel_confirm_button": "Yes, delete",
@@ -55,5 +44,14 @@
             "humans": "No human challenges are open. Create one above to get a game started.",
             "bots": "No bot challenges are open right now."
         }
+    },
+    "calendar": {
+        "title": "Matches",
+        "last_updated": "Last updated: {{time}}",
+        "loading_title": "Loading upcoming games...",
+        "loading_message": "Please wait while we fetch the scheduled games",
+        "error_title": "Error loading upcoming games",
+        "empty_title": "No upcoming tournament games",
+        "empty_message": "Check back later for scheduled games"
     }
 }

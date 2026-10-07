@@ -1,5 +1,6 @@
 use crate::{
     components::molecules::modal::Modal,
+    i18n::{t, use_i18n},
     providers::{analysis::AnalysisContext, game_state::GameStateStore},
 };
 use leptos::{html, html::Dialog, logging, prelude::*, task::spawn_local_scoped_with_cancellation};
@@ -18,6 +19,7 @@ enum AnalysisFileType {
 
 #[component]
 pub fn DownloadTree() -> impl IntoView {
+    let i18n = use_i18n();
     let analysis = expect_context::<AnalysisContext>().store;
 
     let download = move |_| {
@@ -44,7 +46,7 @@ pub fn DownloadTree() -> impl IntoView {
 
     view! {
         <button on:click=download class=BUTTON_CLASS>
-            "Save"
+            {t!(i18n, common.save)}
         </button>
     }
 }

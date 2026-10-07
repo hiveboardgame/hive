@@ -183,7 +183,7 @@ pub(super) fn Composer(
                                         class="py-3 text-sm text-center ui-field-helper"
                                         aria-busy="true"
                                     >
-                                        {t!(i18n, messages.page.loading)}
+                                        {t!(i18n, common.loading)}
                                     </div>
                                 }
                             }

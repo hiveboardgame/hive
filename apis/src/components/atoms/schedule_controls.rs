@@ -1,6 +1,7 @@
 use crate::{
     common::{with_class, ScheduleAction},
     components::atoms::date_time_picker::DateTimePicker,
+    i18n::{t, t_string, use_i18n},
     providers::ApiRequestsProvider,
     responses::ScheduleResponse,
 };
@@ -11,6 +12,7 @@ use uuid::Uuid;
 
 #[component]
 pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl IntoView {
+    let i18n = use_i18n();
     let start_date = schedule.start_t;
     let agreed = schedule.agreed;
     let id = schedule.id;
@@ -48,7 +50,7 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
                     class="m-1 ui-button ui-button-success ui-button-sm"
                 >
 
-                    "Accept"
+                    {t!(i18n, common.accept)}
                 </button>
             </Show>
             <button
@@ -59,7 +61,13 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
 
                 class="m-1 ui-button ui-button-danger ui-button-sm"
             >
-                {(if proposer_id == player_id || agreed { "Cancel" } else { "Reject" }).to_string()}
+                {move || {
+                    if proposer_id == player_id || agreed {
+                        t_string!(i18n, common.cancel)
+                    } else {
+                        t_string!(i18n, common.reject)
+                    }
+                }}
             </button>
         </div>
     }

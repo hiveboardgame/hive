@@ -1,6 +1,7 @@
 use crate::{
     common::{with_class, TournamentAction},
     components::atoms::profile_link::ProfileLink,
+    i18n::{t, use_i18n},
     providers::{schedules::SchedulesContext, ApiRequestsProvider},
     responses::GameResponse,
 };
@@ -15,6 +16,7 @@ pub fn UnplayedGameRow(
     user_is_organizer: Signal<bool>,
     tournament_finished: Signal<bool>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let schedules_signal = expect_context::<SchedulesContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
     let game = StoredValue::new(game);
@@ -141,9 +143,9 @@ pub fn UnplayedGameRow(
                                         {if game.tournament_game_result
                                             == TournamentGameResult::Unknown
                                         {
-                                            "Join Game"
+                                            t!(i18n, game.join).into_any()
                                         } else {
-                                            "View Game"
+                                            t!(i18n, game.view).into_any()
                                         }}
                                     </a>
                                 }
@@ -200,7 +202,7 @@ pub fn UnplayedGameRow(
                                     class="ui-button ui-button-danger ui-button-md min-w-fit"
                                     on:click=toggle_adjudicate
                                 >
-                                    {"Cancel"}
+                                    {t!(i18n, common.cancel)}
                                 </button>
                             }
                         }
@@ -209,7 +211,7 @@ pub fn UnplayedGameRow(
                             class="ui-button ui-button-danger ui-button-md min-w-fit"
                             on:click=move |_| adjudicate(TournamentGameResult::Unknown)
                         >
-                            {"Delete"}
+                            {t!(i18n, common.delete)}
                         </button>
                     </Show>
                 </Show>

@@ -14,26 +14,15 @@
         "rules_summary": "Выжимка из правил",
         "archive": "Архив"
     },
-    "tournaments": {
-        "view": "Список турниров",
-        "create": "Создать турнир",
-        "title": "Турниры"
-    },
     "buy_game": "Купить игру",
     "donate": "Поддержать проект",
-    "login": "Войти",
     "support": "Поддержка",
     "user_menu": {
         "update_available": "Доступно обновление",
-        "refresh_now": "Обновить сейчас",
         "refresh_when_ready": "Обновите страницу, когда будете готовы.",
         "save_analysis_before_refresh": "Сохраните анализ перед обновлением страницы.",
-        "profile": "Профиль",
-        "messages": "Сообщения",
         "edit_account": "Редактировать аккаунт",
         "config": "Настройки",
-        "notifications": "Уведомления",
-        "logout": "Выйти",
-        "login": "Войти в аккаунт"
+        "logout": "Выйти"
     }
 }

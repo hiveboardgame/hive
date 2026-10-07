@@ -5,6 +5,7 @@ use crate::{
         update_from_event::update_from_input,
     },
     functions::auth::reset_password::{verify_reset_token, ResetPassword},
+    i18n::{t, t_string, use_i18n},
     security::csrf::ActionForm,
 };
 use leptos::{either::Either, leptos_dom::helpers::debounce, prelude::*};
@@ -13,6 +14,7 @@ use std::time::Duration;
 
 #[component]
 pub fn ResetPassword() -> impl IntoView {
+    let i18n = use_i18n();
     let token = StoredValue::new(
         use_query_map()
             .get_untracked()
@@ -49,7 +51,9 @@ pub fn ResetPassword() -> impl IntoView {
                                                     <h1 class="ui-page-title">"Reset your password"</h1>
                                                 </div>
                                                 <label class="flex flex-col gap-1.5">
-                                                    <span class="ui-field-label">"New password"</span>
+                                                    <span class="ui-field-label">
+                                                        {t!(i18n, common.new_password)}
+                                                    </span>
                                                     <input
                                                         on:input=debounce(
                                                             Duration::from_millis(250),
@@ -60,13 +64,15 @@ pub fn ResetPassword() -> impl IntoView {
                                                         type="password"
                                                         prop:value=new_password
                                                         autocomplete="new-password"
-                                                        placeholder="New password"
+                                                        placeholder=move || t_string!(i18n, common.new_password)
                                                         minlength="8"
                                                         maxlength="128"
                                                     />
                                                 </label>
                                                 <label class="flex flex-col gap-1.5">
-                                                    <span class="ui-field-label">"Confirm new password"</span>
+                                                    <span class="ui-field-label">
+                                                        {t!(i18n, common.confirm_password)}
+                                                    </span>
                                                     <input
                                                         on:input=debounce(
                                                             Duration::from_millis(250),
@@ -77,7 +83,7 @@ pub fn ResetPassword() -> impl IntoView {
                                                         type="password"
                                                         prop:value=confirm_password
                                                         autocomplete="new-password"
-                                                        placeholder="Confirm new password"
+                                                        placeholder=move || t_string!(i18n, common.confirm_password)
                                                         minlength="8"
                                                         maxlength="128"
                                                     />

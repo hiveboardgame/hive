@@ -1,4 +1,7 @@
-use crate::providers::NotificationContext;
+use crate::{
+    i18n::{t, t_string, use_i18n},
+    providers::NotificationContext,
+};
 use leptos::prelude::*;
 use leptos_icons::*;
 use shared_types::TournamentId;
@@ -9,9 +12,16 @@ pub fn TournamentStatusNotification(
     tournament_name: String,
     finished: bool,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let notifications = expect_context::<NotificationContext>();
     let tournament_id = StoredValue::new(tournament_id);
-    let status = if !finished { "Started" } else { "Finished" };
+    let status = move || {
+        if finished {
+            t_string!(i18n, notifications.tournament_status.finished)
+        } else {
+            t_string!(i18n, notifications.tournament_status.started)
+        }
+    };
     let dismiss = move |_| {
         if !finished {
             notifications.tournament_started.update(|t| {
@@ -27,7 +37,9 @@ pub fn TournamentStatusNotification(
     view! {
         <div class="ui-notification-item">
             <div class="relative flex-1 min-w-0">
-                <div class="ui-notification-label">Tournament</div>
+                <div class="ui-notification-label">
+                    {t!(i18n, notifications.tournament_status.label)}
+                </div>
                 <div class="ui-notification-title">{tournament_name}</div>
                 <div class="ui-notification-meta">{status}</div>
                 <a
@@ -36,7 +48,7 @@ pub fn TournamentStatusNotification(
                 ></a>
             </div>
             <button
-                title="Dismiss"
+                title=move || t_string!(i18n, common.dismiss)
                 on:click=dismiss
                 class="z-20 ui-button ui-button-danger ui-button-icon"
             >

@@ -15,23 +15,13 @@
         "archive": "Archives"
     },
     "support": "Aide",
-    "login": "Connexion",
     "user_menu": {
         "update_available": "Mise à jour disponible",
-        "refresh_now": "Actualiser maintenant",
         "refresh_when_ready": "Actualisez quand vous le souhaitez.",
         "save_analysis_before_refresh": "Enregistrez votre analyse avant d’actualiser.",
-        "profile": "Profil",
-        "messages": "Messages",
         "logout": "Déconnexion",
-        "login": "Connexion",
         "config": "Configuration",
         "edit_account": "Modifier le compte"
-    },
-    "tournaments": {
-        "view": "Voir les tournois",
-        "title": "Tournois",
-        "create": "Créer un tournoi"
     },
     "buy_game": "Acheter le jeu",
     "donate": "Faire un don"

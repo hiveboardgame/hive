@@ -83,23 +83,21 @@ pub fn NotificationDropdown(current_game_id: Signal<Option<GameId>>) -> impl Int
                     <Show when=has_chat_notification>
                         <div class="ui-notification-item">
                             <div class="relative flex-1 min-w-0">
-                                <div class="ui-notification-label">
-                                    {t!(i18n, messages.page.title)}
-                                </div>
+                                <div class="ui-notification-label">{t!(i18n, common.messages)}</div>
                                 <div class="ui-notification-title">
                                     {t!(i18n, messages.chat.new_chat_message)}
                                 </div>
                                 <a
                                     class="absolute top-0 left-0 z-10 size-full"
                                     href="/message"
-                                    aria-label=move || t_string!(i18n, header.user_menu.messages)
+                                    aria-label=move || t_string!(i18n, common.messages)
                                     on:click=move |_| hamburger_show.set(false)
                                 ></a>
                             </div>
                             <button
                                 type="button"
-                                title=move || t_string!(i18n, messages.chat.dismiss)
-                                aria-label=move || t_string!(i18n, messages.chat.dismiss)
+                                title=move || t_string!(i18n, common.dismiss)
+                                aria-label=move || t_string!(i18n, common.dismiss)
                                 on:click=move |event| {
                                     event.prevent_default();
                                     event.stop_propagation();

@@ -2,6 +2,7 @@ use crate::{
     common::with_class,
     components::molecules::{empty_state::EmptyState, upcoming_game_row::UpcomingGameRow},
     functions::schedules::get_upcoming_tournament_games,
+    i18n::{t, t_string, use_i18n},
 };
 use chrono::{DateTime, Duration, Local};
 use leptos::prelude::*;
@@ -15,6 +16,7 @@ use leptos_use::{
 
 #[component]
 pub fn Calendar() -> impl IntoView {
+    let i18n = use_i18n();
     let upcoming_games = OnceResource::new(get_upcoming_tournament_games());
     let last_updated = RwSignal::new(None::<DateTime<Local>>);
     let current_time = RwSignal::new(Local::now());
@@ -64,14 +66,15 @@ pub fn Calendar() -> impl IntoView {
                 "ui-panel-header",
                 "sticky top-0 z-10 flex-col justify-center text-center",
             )>
-                <h2 class="text-xl font-bold">"Matches"</h2>
+                <h2 class="text-xl font-bold">{t!(i18n, home.calendar.title)}</h2>
                 <div class="text-xs opacity-75">
                     {move || {
                         match last_updated.get() {
                             Some(timestamp) => {
-                                format!("Last updated: {}", timestamp.format("%m/%d %I:%M %p"))
+                                let time = timestamp.format("%m/%d %I:%M %p").to_string();
+                                t_string!(i18n, home.calendar.last_updated, time = time).to_string()
                             }
-                            None => "Loading...".to_string(),
+                            None => t_string!(i18n, common.loading).to_string(),
                         }
                     }}
                 </div>
@@ -81,13 +84,15 @@ pub fn Calendar() -> impl IntoView {
                 <Suspense fallback=move || {
                     view! {
                         <EmptyState
-                            title="Loading upcoming games..."
-                            message="Please wait while we fetch the scheduled games"
+                            title=move || t_string!(i18n, home.calendar.loading_title)
+                            message=move || t_string!(i18n, home.calendar.loading_message)
                         />
                     }
                 }>
-                    <ErrorBoundary fallback=|_errors| {
-                        view! { <EmptyState title="Error loading upcoming games" /> }
+                    <ErrorBoundary fallback=move |_errors| {
+                        view! {
+                            <EmptyState title=move || t_string!(i18n, home.calendar.error_title) />
+                        }
                     }>
                         {move || {
                             upcoming_games
@@ -98,8 +103,8 @@ pub fn Calendar() -> impl IntoView {
                                             if games.is_empty() {
                                                 view! {
                                                     <EmptyState
-                                                        title="No upcoming tournament games"
-                                                        message="Check back later for scheduled games"
+                                                        title=move || t_string!(i18n, home.calendar.empty_title)
+                                                        message=move || t_string!(i18n, home.calendar.empty_message)
                                                     />
                                                 }
                                                     .into_any()

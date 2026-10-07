@@ -14,26 +14,15 @@
         "analysis": "Analysis",
         "archive": "Archive"
     },
-    "tournaments": {
-        "title": "Tournaments",
-        "create": "Create Tournament",
-        "view": "View Tournaments"
-    },
     "buy_game": "Buy Game",
     "donate": "Donate",
     "support": "Support",
-    "login": "Login",
     "user_menu": {
         "update_available": "Update available",
-        "refresh_now": "Refresh now",
         "refresh_when_ready": "Refresh when you’re ready.",
         "save_analysis_before_refresh": "Save your analysis before refreshing.",
-        "profile": "Profile",
-        "messages": "Messages",
         "edit_account": "Edit Account",
         "config": "Config",
-        "notifications": "Notifications",
-        "logout": "Logout",
-        "login": "Login"
+        "logout": "Logout"
     }
 }

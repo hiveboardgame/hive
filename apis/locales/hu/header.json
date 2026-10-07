@@ -16,24 +16,13 @@
         "archive": "Archívum"
     },
     "home": "Főoldal",
-    "login": "Bejelentkezés",
-    "tournaments": {
-        "title": "Versenyek",
-        "create": "Verseny létrehozása",
-        "view": "Versenyek böngészése"
-    },
     "support": "Támogatás",
     "user_menu": {
         "update_available": "Frissítés érhető el",
-        "refresh_now": "Frissítés most",
         "refresh_when_ready": "Frissíts, amikor készen állsz.",
         "save_analysis_before_refresh": "Frissítés előtt mentsd el az elemzésedet.",
-        "profile": "Profil",
-        "messages": "Üzenetek",
         "edit_account": "Fiók szerkesztése",
         "config": "Konfiguráció",
-        "notifications": "Értesítések",
-        "logout": "Kijelentkezés",
-        "login": "Bejelentkezés"
+        "logout": "Kijelentkezés"
     }
 }

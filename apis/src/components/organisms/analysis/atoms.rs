@@ -8,6 +8,7 @@ use crate::{
         navigate_analysis_history,
         AnalysisHistoryNavigation as HistoryNavigation,
     },
+    i18n::{t, use_i18n},
     providers::{
         analysis::{AnalysisContext, MoveDelta, VisibleRow},
         game_state::{GameStateStore, GameStateStoreFields},
@@ -37,6 +38,7 @@ pub fn AnalysisHistoryControls(#[prop(optional)] compact: bool) -> impl IntoView
 
 #[component]
 fn DeleteBranchButton() -> impl IntoView {
+    let i18n = use_i18n();
     let analysis = expect_context::<AnalysisContext>();
     let game_state = expect_context::<GameStateStore>();
     let dialog_ref = NodeRef::<Dialog>::new();
@@ -106,7 +108,7 @@ fn DeleteBranchButton() -> impl IntoView {
                                 type="submit"
                                 class="ui-button ui-button-secondary ui-button-sm"
                             >
-                                "Cancel"
+                                {t!(i18n, common.cancel)}
                             </button>
                         </form>
                         <button
