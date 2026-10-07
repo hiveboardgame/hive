@@ -199,7 +199,7 @@ pub fn Faq() -> impl IntoView {
                     </FaqItem>
                 </FaqSection>
 
-                <FaqSection title=move || { t_string!(i18n, faq.sections.tournaments) }>
+                <FaqSection title=move || { t_string!(i18n, common.tournaments) }>
                     <FaqItem question=move || {
                         t_string!(i18n, faq.can_i_set_up_a_tournament.question)
                     }>

@@ -1,4 +1,5 @@
 use crate::{
+    common::display_username,
     components::{
         molecules::empty_state::EmptyState,
         organisms::chat::{ComposerMode, ResolvedChatWindow},
@@ -76,11 +77,8 @@ pub(super) fn MessagesResolvedDmView(
 ) -> impl IntoView {
     let auth = expect_context::<AuthContext>();
     let i18n = use_i18n();
-    let title = if peer_deleted {
-        t_string!(i18n, messages.chat.deleted_user).to_string()
-    } else {
-        username.clone()
-    };
+    let title_username = username.clone();
+    let title = Signal::derive(move || display_username(i18n, peer_deleted, &title_username));
     let composer_mode = Signal::derive(move || {
         if peer_deleted {
             ComposerMode::PeerUnavailable
@@ -101,9 +99,7 @@ pub(super) fn MessagesResolvedDmView(
     let self_dm_error =
         Signal::derive(move || t_string!(i18n, messages.chat.self_dm_unsupported).to_string());
     view! {
-        <MessagesThreadFrame title=Signal::derive(move || {
-            title.clone()
-        })>
+        <MessagesThreadFrame title>
             {move || match current_user_id.get() {
                 Some(current_user_id) if current_user_id != other_user_id => {
                     EitherOf3::A(
@@ -237,7 +233,7 @@ fn MessagesStatusContent(
                         class="mt-3 ui-button ui-button-secondary ui-button-sm"
                         on:click=move |event| retry.run(event)
                     >
-                        {t!(i18n, messages.chat.retry)}
+                        {t!(i18n, common.retry)}
                     </button>
                 </ShowLet>
             </div>

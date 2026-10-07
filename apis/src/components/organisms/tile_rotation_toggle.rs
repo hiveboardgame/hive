@@ -36,8 +36,8 @@ pub fn TileRotationButton(tile_rotation: TileRotation) -> impl IntoView {
             }
         >
             {move || match tile_rotation.get_value() {
-                TileRotation::No => t_string!(i18n, user_config.rotation_buttons.no),
-                TileRotation::Yes => t_string!(i18n, user_config.rotation_buttons.yes),
+                TileRotation::No => t_string!(i18n, common.no),
+                TileRotation::Yes => t_string!(i18n, common.yes),
             }}
         </button>
     }

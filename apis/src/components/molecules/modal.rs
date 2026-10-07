@@ -1,3 +1,4 @@
+use crate::i18n::{t_string, use_i18n};
 use leptos::{
     html::{Dialog, Div},
     prelude::*,
@@ -11,6 +12,7 @@ pub fn Modal(
     #[prop(optional, into)] aria_label: Option<String>,
     #[prop(optional, into)] aria_labelledby: Option<String>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let inner = NodeRef::<Div>::new();
     #[allow(unused)]
     on_click_outside(inner, move |_| {
@@ -34,7 +36,7 @@ pub fn Modal(
                     <form class="m-2" method="dialog">
                         <button
                             class="hover:text-white ui-button ui-button-ghost ui-button-icon-sm hover:bg-ladybug-red"
-                            aria-label="Close"
+                            aria-label=move || t_string!(i18n, common.close)
                         >
                             x
                         </button>

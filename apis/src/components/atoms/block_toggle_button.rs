@@ -97,7 +97,7 @@ pub fn BlockToggleButton(blocked_user_id: Uuid) -> impl IntoView {
     };
     let button_label = Signal::derive(move || {
         if pending.get() {
-            t_string!(i18n, messages.page.loading)
+            t_string!(i18n, common.loading)
         } else if is_blocked.get() {
             t_string!(i18n, messages.block_dialog.unblock)
         } else {
@@ -117,7 +117,7 @@ pub fn BlockToggleButton(blocked_user_id: Uuid) -> impl IntoView {
                             aria-busy="true"
                             class="ui-button ui-button-secondary ui-button-sm"
                         >
-                            {t!(i18n, messages.page.loading)}
+                            {t!(i18n, common.loading)}
                         </button>
                     }
                 }
@@ -163,7 +163,7 @@ pub fn BlockToggleButton(blocked_user_id: Uuid) -> impl IntoView {
                                     type="submit"
                                     class="ui-button ui-button-secondary ui-button-sm"
                                 >
-                                    {t!(i18n, messages.block_dialog.cancel)}
+                                    {t!(i18n, common.cancel)}
                                 </button>
                             </form>
                             <button

@@ -79,7 +79,7 @@ pub fn Account() -> impl IntoView {
                 <ActionForm action=account_action attr:class="space-y-4">
 
                     <label class="flex flex-col gap-1.5" for="old_password">
-                        <span class="ui-field-label">"Current Password"</span>
+                        <span class="ui-field-label">{t!(i18n, common.current_password)}</span>
                         <input
                             on:input=debounce(
                                 Duration::from_millis(350),
@@ -91,11 +91,11 @@ pub fn Account() -> impl IntoView {
                             type="password"
                             prop:value=current_password
                             autocomplete="current-password"
-                            placeholder="Current password"
+                            placeholder=move || t_string!(i18n, common.current_password)
                         />
                     </label>
                     <label class="flex flex-col gap-1.5" for="new_password">
-                        <span class="ui-field-label">"New Password"</span>
+                        <span class="ui-field-label">{t!(i18n, common.new_password)}</span>
                         <input
                             on:input=debounce(
                                 Duration::from_millis(350),
@@ -107,13 +107,13 @@ pub fn Account() -> impl IntoView {
                             type="password"
                             prop:value=new_password
                             autocomplete="new-password"
-                            placeholder="New password"
+                            placeholder=move || t_string!(i18n, common.new_password)
                             minlength="8"
                             maxlength="128"
                         />
                     </label>
                     <label class="flex flex-col gap-1.5" for="confirm_password">
-                        <span class="ui-field-label">"Confirm Password"</span>
+                        <span class="ui-field-label">{t!(i18n, common.confirm_password)}</span>
                         <input
                             on:input=debounce(
                                 Duration::from_millis(350),
@@ -125,7 +125,11 @@ pub fn Account() -> impl IntoView {
                             type="password"
                             prop:value=confirm_password
                             autocomplete="new-password"
-                            placeholder="New password (again)"
+                            placeholder=move || {
+                                t_string!(
+                                    i18n, user_config.edit_account.confirm_password_placeholder
+                                )
+                            }
                             minlength="8"
                             maxlength="128"
                         />
@@ -141,7 +145,7 @@ pub fn Account() -> impl IntoView {
                         disabled=form_invalid
                         class="w-full ui-button ui-button-success ui-button-md"
                     >
-                        "Save Changes"
+                        {t!(i18n, common.save)}
                     </button>
                     <Show when=display_account_error>
                         <small class="ui-field-error">
@@ -159,9 +163,7 @@ pub fn Account() -> impl IntoView {
                 <ActionForm action=delete_action attr:class="space-y-4">
 
                     <label class="flex flex-col gap-1.5" for="delete_password">
-                        <span class="ui-field-label">
-                            {t!(i18n, user_config.delete_account.password)}
-                        </span>
+                        <span class="ui-field-label">{t!(i18n, common.current_password)}</span>
                         <input
                             on:input=debounce(
                                 Duration::from_millis(350),
@@ -173,9 +175,7 @@ pub fn Account() -> impl IntoView {
                             type="password"
                             prop:value=delete_password
                             autocomplete="current-password"
-                            placeholder=move || {
-                                t_string!(i18n, user_config.delete_account.password)
-                            }
+                            placeholder=move || { t_string!(i18n, common.current_password) }
                         />
                     </label>
                     <button

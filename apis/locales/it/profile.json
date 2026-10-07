@@ -5,23 +5,23 @@
         "finished": "Completato"
     },
     "color_buttons": {
-        "both": "Entrambi",
         "white": "Bianco",
         "black": "Nero"
     },
     "result_buttons": {
         "draw": "Patta",
-        "all": "Tutto",
         "loss": "Sconfitte",
         "win": "Vittorie"
     },
-    "stats_box": {
-        "total": "Total",
-        "wins": "Vittorie",
-        "losses": "Sconfitte",
-        "draws": "Patte"
-    },
-    "player_color": "Colore giocatore:",
     "game_result": "Risultato della partita:",
-    "include_speeds": "Velocitá incluse:"
+    "include_speeds": "Velocitá incluse:",
+    "speed_statistics": "Statistiche: {{speed}}",
+    "expansion_buttons": {
+        "basic": "Base",
+        "full": "Completo"
+    },
+    "player_color": "Colore giocatore",
+    "rating": "Rating",
+    "games_played_one": "{{count}} partita",
+    "games_played_other": "{{count}} partite"
 }

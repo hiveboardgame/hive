@@ -1,6 +1,7 @@
 use crate::{
     common::ScheduleAction,
     functions::schedules::MarkScheduleSeen,
+    i18n::{t, t_string, use_i18n},
     providers::{ApiRequestsProvider, NotificationContext},
     security::csrf::ActionForm,
 };
@@ -17,6 +18,7 @@ pub fn ProposalNotification(
     tournament_id: TournamentId,
     start_time: DateTime<Utc>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let notifications = expect_context::<NotificationContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
     let schedule_id = StoredValue::new(schedule_id);
@@ -52,12 +54,12 @@ pub fn ProposalNotification(
                             href=format!("/tournament/{}", &tournament_id.to_string())
                             class="ui-text-link"
                         >
-                            "View Tournament"
+                            {t!(i18n, tournaments.view)}
                         </a>
                     </div>
                 </div>
                 <button
-                    title="Dismiss"
+                    title=move || t_string!(i18n, common.dismiss)
                     on:click=dismiss
                     class="z-20 ui-button ui-button-ghost ui-button-icon"
                 >
@@ -66,10 +68,10 @@ pub fn ProposalNotification(
             </div>
             <div class="flex gap-2 justify-end">
                 <button on:click=accept class="ui-button ui-button-success ui-button-sm">
-                    "Accept"
+                    {t!(i18n, common.accept)}
                 </button>
                 <button on:click=decline class="ui-button ui-button-danger ui-button-sm">
-                    "Decline"
+                    {t!(i18n, common.decline)}
                 </button>
             </div>
         </div>
@@ -84,6 +86,7 @@ pub fn AcceptanceNotification(
     tournament_id: TournamentId,
     start_time: DateTime<Utc>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let notifications = expect_context::<NotificationContext>();
     let schedule_id = StoredValue::new(schedule_id);
     let local_time = start_time.with_timezone(&Local);
@@ -107,8 +110,7 @@ pub fn AcceptanceNotification(
                         href=format!("/tournament/{}", &tournament_id.to_string())
                         class="ui-text-link"
                     >
-                        "View Tournament:"
-                        {tournament_name}
+                        {t!(i18n, tournaments.view_named, name=move || tournament_name.clone())}
                     </a>
                 </div>
             </div>
@@ -117,7 +119,7 @@ pub fn AcceptanceNotification(
                 <input type="hidden" name="schedule_id" value=schedule_id.get_value().to_string() />
                 <button
                     type="submit"
-                    title="Dismiss"
+                    title=move || t_string!(i18n, common.dismiss)
                     class="z-50 ui-button ui-button-ghost ui-button-icon"
                 >
                     <Icon icon=icondata_io::IoCloseSharp attr:class="size-4" />

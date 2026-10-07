@@ -1,20 +1,10 @@
 {
-    "style_buttons": {
-        "official": "Ufficiale",
-        "flat": "Piatti",
-        "three_d": "3D"
-    },
     "piece_style": "Design",
     "dots_buttons": {
-        "no": "No",
         "angled": "Angolati",
         "vertical": "Verticali"
     },
     "rotation": "Rotazione",
-    "rotation_buttons": {
-        "no": "No",
-        "yes": "Si"
-    },
     "show_dots": "Mostra puntini",
     "preselect": "Preselezione",
     "preselect_description": "Consente di selezionare un pezzo durante il turno dell'avversario.",
@@ -22,23 +12,14 @@
     "premove_description": "Programma una mossa durante il turno dell'avversario. Le premosse vengono giocate automaticamente senza conferma se sono ancora legali.",
     "drag_and_drop": "Trascina e rilascia",
     "drag_and_drop_description": "Muovi i pezzi trascinandoli. Le mosse durante il tuo turno seguono la tua impostazione di conferma delle mosse.",
-    "toggle_buttons": {
-        "yes": "Sì",
-        "no": "No"
-    },
     "game_speed": "Velocitá della partita:",
     "move_confirm": "Conferma della mossa:",
     "preview": "Anteprima:",
     "edit_account": {
-        "current_password": "Password attuale",
-        "new_password": "Nuova password",
-        "confirm_password": "Conferma password",
-        "confirm_password_placeholder": "Nuova password (di nuovo)",
-        "save_button": "Salva"
+        "confirm_password_placeholder": "Nuova password (di nuovo)"
     },
     "create_account": {
         "username": {
-            "title": "Username",
             "description": "Per favore scegli un username decoroso. Profili con username non appropriati verranno chiusi!",
             "error": {
                 "taken": "Username giá esistente",
@@ -46,24 +27,20 @@
             }
         },
         "email": {
-            "title": "Email",
             "error": {
                 "invalid": "Email invalida"
             },
             "description": "Abbiamo bisogno del tuo indirizzo email per mandarti la conferma quando crei un profilo."
         },
-        "confirm_password": "Conferma Password",
         "be_nice_checkbox": "Accetto di comportarmi bene con altri giocatori e riportare offese su Discord",
         "signup_button": "Registrati",
         "password_requirements": "Almeno 8 caratteri",
         "password_error": "Password troppo breve o non corrispondente",
         "registration_error": "Registrazione non riuscita",
-        "existing_account_prompt": "Hai giá un profilo? <login_link>Entra</login_link>",
-        "password": "Password"
+        "existing_account_prompt": "Hai giá un profilo? <login_link>Entra</login_link>"
     },
     "login": {
         "email": "Email",
-        "password": "Password",
         "login_button": "Entra",
         "no_account_prompt": "Non hai un profilo? <register_link>Registrati</register_link>",
         "invalid_login": "Email o password non valida"

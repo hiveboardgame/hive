@@ -12,14 +12,14 @@ pub fn TournamentDropdown() -> impl IntoView {
             button_style="ui-header-dropdown-button"
             extend_tw_classes="h-full"
             dropdown_style="ui-dropdown-menu ui-dropdown-menu-left ui-header-dropdown-menu"
-            content=move || t!(i18n, header.tournaments.title)
+            content=move || t!(i18n, common.tournaments)
             id="Tournaments"
         >
             <a class="ui-dropdown-link" on:click=onclick_close href="/tournaments">
-                {t!(i18n, header.tournaments.view)}
+                {t!(i18n, tournaments.view_list)}
             </a>
             <a class="ui-dropdown-link" on:click=onclick_close href="/tournaments/create">
-                {t!(i18n, header.tournaments.create)}
+                {t!(i18n, tournaments.create)}
             </a>
         </Hamburger>
     }

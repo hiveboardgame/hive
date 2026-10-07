@@ -1,4 +1,5 @@
 use crate::{
+    common::display_username,
     components::atoms::unread_badge::UnreadBadge,
     hooks::tap_feedback::use_tap_feedback,
     i18n::*,
@@ -66,8 +67,7 @@ pub(super) fn MessagesSidebar(current_path: Signal<String>) -> impl IntoView {
     let dms_title = Signal::derive(move || t_string!(i18n, messages.sections.dms).to_string());
     let dms_empty_label =
         Signal::derive(move || t_string!(i18n, messages.sections.no_dms).to_string());
-    let tournaments_title =
-        Signal::derive(move || t_string!(i18n, messages.sections.tournaments).to_string());
+    let tournaments_title = Signal::derive(move || t_string!(i18n, common.tournaments).to_string());
     let tournaments_empty_label =
         Signal::derive(move || t_string!(i18n, messages.sections.no_tournament_chats).to_string());
     let games_title = Signal::derive(move || t_string!(i18n, messages.sections.games).to_string());
@@ -98,7 +98,7 @@ pub(super) fn MessagesSidebar(current_path: Signal<String>) -> impl IntoView {
                         Either::Left(
                             view! {
                                 <p class="p-3 animate-pulse ui-field-helper">
-                                    {t!(i18n, messages.page.loading)}
+                                    {t!(i18n, common.loading)}
                                 </p>
                             },
                         )
@@ -114,7 +114,7 @@ pub(super) fn MessagesSidebar(current_path: Signal<String>) -> impl IntoView {
                                         class="ui-button ui-button-secondary ui-button-sm"
                                         on:click=move |_| catalog.retry(chat)
                                     >
-                                        {t!(i18n, messages.chat.retry)}
+                                        {t!(i18n, common.retry)}
                                     </button>
                                 </div>
                             },
@@ -155,14 +155,6 @@ pub(super) fn MessagesSidebar(current_path: Signal<String>) -> impl IntoView {
     }
 }
 
-fn dm_display_name(dm: &DmConversation, deleted_user: String) -> String {
-    if dm.peer_deleted {
-        deleted_user
-    } else {
-        dm.username.clone()
-    }
-}
-
 #[component]
 fn DmChannelItem(channel: DmConversation, current_path: Signal<String>) -> impl IntoView {
     let i18n = use_i18n();
@@ -175,10 +167,7 @@ fn DmChannelItem(channel: DmConversation, current_path: Signal<String>) -> impl 
     let unread_label = Signal::derive(move || {
         let count = unread.get();
         let channel = channel.get_value();
-        let conversation = dm_display_name(
-            &channel,
-            t_string!(i18n, messages.chat.deleted_user).to_string(),
-        );
+        let conversation = display_username(i18n, channel.peer_deleted, &channel.username);
         t_string!(
             i18n,
             messages.chat.unread_badge,
@@ -190,10 +179,12 @@ fn DmChannelItem(channel: DmConversation, current_path: Signal<String>) -> impl 
     view! {
         <MessagesChannelLink href is_selected>
             <span class="truncate">
-                {move || dm_display_name(
-                    &channel.get_value(),
-                    t_string!(i18n, messages.chat.deleted_user).to_string(),
-                )}
+                {move || {
+                    channel
+                        .with_value(|channel| {
+                            display_username(i18n, channel.peer_deleted, &channel.username)
+                        })
+                }}
             </span>
             <UnreadBadge count=unread aria_label=unread_label />
         </MessagesChannelLink>

@@ -471,14 +471,20 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                                 previewing_description.set(false);
                             }
                         >
-                            "Cancel"
+                            {t!(i18n, common.cancel)}
                         </button>
                         <button
                             type="button"
                             class="ui-button ui-button-secondary ui-button-md"
                             on:click=move |_| previewing_description.update(|b| *b = !*b)
                         >
-                            {move || if previewing_description() { "Edit" } else { "Preview" }}
+                            {move || {
+                                if previewing_description() {
+                                    t_string!(i18n, common.edit)
+                                } else {
+                                    t_string!(i18n, common.preview)
+                                }
+                            }}
                         </button>
                         <a
                             class="ui-button ui-button-ghost ui-button-md no-link-style"
@@ -575,7 +581,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                                     class="ui-button ui-button-danger ui-button-md"
                                     on:click=delete
                                 >
-                                    {"Delete"}
+                                    {t!(i18n, common.delete)}
                                 </button>
                                 <button
                                     prop:disabled=start_disabled
@@ -640,7 +646,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                                                     class="ui-button ui-button-secondary ui-button-md"
                                                     on:click=cancel_double_forfeit
                                                 >
-                                                    {"Cancel"}
+                                                    {t!(i18n, common.cancel)}
                                                 </button>
                                             </div>
                                         </div>
@@ -687,7 +693,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                                                     class="ui-button ui-button-secondary ui-button-md"
                                                     on:click=move |_| confirming_reset_adjudicated.set(false)
                                                 >
-                                                    {"Cancel"}
+                                                    {t!(i18n, common.cancel)}
                                                 </button>
                                             </div>
                                         </div>

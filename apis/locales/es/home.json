@@ -6,36 +6,25 @@
     "online_players_other": "{{ count }} jugadores en línea",
     "custom_game": {
         "title": "Crear un juego:",
-        "casual": "Casual",
-        "rated": "Clasificado",
         "private": "Privado",
         "public": "Publico",
-        "rating_range": "Rango de puntos",
         "mode": {
             "real_time": {
-                "title": "Tiempo real",
                 "minutes_per_side": "Minutos por lado: {{ count }}",
                 "increment_in_seconds": "Incremento en seg: {{ count }}"
             },
             "correspondence": {
-                "title": "Correspondencia",
                 "days_per_move": "Días por movimiento",
                 "total_time_each": "Tiempo total por jugador",
                 "time_one": "{{ count }} día",
                 "time_other": "{{ count }} días"
-            },
-            "untimed": "Sin tiempo"
+            }
         },
         "button": "Personalizada"
     },
     "challenge_details": {
         "player": "Jugador",
-        "time": "Tiempo",
-        "rated": {
-            "title": "Clasificado",
-            "yes": "Sí",
-            "no": "No"
-        }
+        "time": "Tiempo"
     },
     "challenge_tabs": {
         "humans": "Humanos",
@@ -45,5 +34,14 @@
             "bots": "No hay desafíos de bots abiertos en este momento."
         }
     },
-    "found_players": "Encontrado:"
+    "found_players": "Encontrado:",
+    "calendar": {
+        "title": "Partidas",
+        "last_updated": "Última actualización: {{time}}",
+        "loading_title": "Cargando las próximas partidas...",
+        "loading_message": "Espera mientras recuperamos las partidas programadas",
+        "error_title": "Error al cargar las próximas partidas",
+        "empty_title": "No hay próximas partidas de torneo",
+        "empty_message": "Vuelve más tarde para ver las partidas programadas"
+    }
 }

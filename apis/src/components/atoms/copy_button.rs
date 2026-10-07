@@ -1,4 +1,7 @@
-use crate::hooks::clipboard_copy::use_clipboard_copy;
+use crate::{
+    hooks::clipboard_copy::use_clipboard_copy,
+    i18n::{t_string, use_i18n},
+};
 use leptos::prelude::*;
 use leptos_icons::*;
 
@@ -8,6 +11,7 @@ pub fn CopyButton(
     #[prop(into)] value: Signal<String>,
     #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let clipboard = use_clipboard_copy();
     let copied = clipboard.copied;
     let copy_text = clipboard.copy_text;
@@ -26,7 +30,7 @@ pub fn CopyButton(
         <button
             type="button"
             class=button_class
-            aria-label=format!("Copy {label}")
+            aria-label=move || t_string!(i18n, common.copy_label, label=label)
             title=value
             on:click=copy
         >
@@ -44,7 +48,7 @@ pub fn CopyButton(
             />
             // Announce the confirmation to screen readers; the icon swap alone is silent.
             <span class="sr-only" aria-live="polite">
-                {move || if copied.get() { "Copied" } else { "" }}
+                {move || if copied.get() { t_string!(i18n, common.copied) } else { "" }}
             </span>
         </button>
     }

@@ -1,7 +1,8 @@
 use crate::{
-    common::PieceType,
+    common::{game_speed_label, PieceType},
     components::atoms::{bug_tile::BugTile, rating::icon_for_speed},
     functions::opening_explorer::opening_explorer,
+    i18n::{t, t_string, use_i18n},
     providers::{
         analysis::{AnalysisContext, AnalysisPreviewSnapshot},
         game_state::{GameStateStore, GameStateStoreFields},
@@ -128,6 +129,7 @@ fn ResultBar(white: i64, draws: i64, black: i64, total: i64) -> impl IntoView {
 
 #[component]
 pub fn OpeningExplorer() -> impl IntoView {
+    let i18n = use_i18n();
     let analysis = expect_context::<AnalysisContext>();
     let game_state = expect_context::<GameStateStore>();
     let api = expect_context::<ApiRequestsProvider>().0;
@@ -249,7 +251,7 @@ pub fn OpeningExplorer() -> impl IntoView {
             // so toggling filters doesn't collapse the panel to "Loading…" and jump.
             <div class="min-h-64">
                 <Transition fallback=move || {
-                    view! { <div class="p-2">"Loading…"</div> }
+                    view! { <div class="p-2">{t!(i18n, common.loading)}</div> }
                 }>{suggestions}</Transition>
             </div>
         </div>
@@ -483,6 +485,7 @@ fn move_row(
 
 #[component]
 fn FilterControls(filters: RwSignal<ExplorerFilters>) -> impl IntoView {
+    let i18n = use_i18n();
     // Speed pill: highlighted when its speed is in the selected set.
     let speed_pill_class = move |speed: GameSpeed| {
         move || {
@@ -531,7 +534,7 @@ fn FilterControls(filters: RwSignal<ExplorerFilters>) -> impl IntoView {
                     </select>
                 </div>
                 <div class="space-y-1">
-                    <label class="ui-field-label">"Rated"</label>
+                    <label class="ui-field-label">{t!(i18n, game.rated)}</label>
                     <select
                         class="ui-field-select"
                         prop:value=Signal::derive(move || match filters.with(|f| f.rated) {
@@ -557,9 +560,9 @@ fn FilterControls(filters: RwSignal<ExplorerFilters>) -> impl IntoView {
                                 });
                         }
                     >
-                        <option value="rated">"Rated"</option>
-                        <option value="any">"Any"</option>
-                        <option value="casual">"Casual"</option>
+                        <option value="rated">{t!(i18n, game.rated)}</option>
+                        <option value="any">{t!(i18n, common.any)}</option>
+                        <option value="casual">{t!(i18n, game.casual)}</option>
                     </select>
                 </div>
             </div>
@@ -575,7 +578,10 @@ fn FilterControls(filters: RwSignal<ExplorerFilters>) -> impl IntoView {
                     .map(|speed| {
                         let icon = icon_for_speed(speed);
                         view! {
-                            <label class=speed_pill_class(speed) title=speed.to_string()>
+                            <label
+                                class=speed_pill_class(speed)
+                                title=move || game_speed_label(i18n, speed)
+                            >
                                 <input
                                     type="checkbox"
                                     class="sr-only"
@@ -583,7 +589,7 @@ fn FilterControls(filters: RwSignal<ExplorerFilters>) -> impl IntoView {
                                     on:change=move |_| toggle_speed(speed)
                                 />
                                 <Icon icon attr:class="size-5" />
-                                <span class="sr-only">{speed.to_string()}</span>
+                                <span class="sr-only">{move || game_speed_label(i18n, speed)}</span>
                             </label>
                         }
                     })
@@ -598,7 +604,7 @@ fn FilterControls(filters: RwSignal<ExplorerFilters>) -> impl IntoView {
                             format!("{base} invisible pointer-events-none")
                         }
                     }
-                    title="Untimed"
+                    title=move || t_string!(i18n, game.speeds.untimed)
                 >
                     <input
                         type="checkbox"
@@ -609,7 +615,7 @@ fn FilterControls(filters: RwSignal<ExplorerFilters>) -> impl IntoView {
                         on:change=move |_| toggle_speed(GameSpeed::Untimed)
                     />
                     <Icon icon=icon_for_speed(GameSpeed::Untimed) attr:class="size-5" />
-                    <span class="sr-only">"Untimed"</span>
+                    <span class="sr-only">{t!(i18n, game.speeds.untimed)}</span>
                 </label>
             </div>
         </div>

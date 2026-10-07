@@ -4,5 +4,10 @@
         "head_to_head": "Gewonnene Spiele zwischen punktgleichen Spielern",
         "wins_as_black": "Gewonnene Spiele mit schwarzen Steinen",
         "sonneborn_berger": "Summe der Punkte aller Gegner gegen die Sie punkteten"
-    }
+    },
+    "create": "Turnier erstellen",
+    "view_list": "Turniere ansehen",
+    "view": "Turnier ansehen",
+    "view_named": "Turnier ansehen: {{name}}",
+    "rating_range_summary": "Min. Bewertung: {{min}} / Max. Bewertung: {{max}}"
 }

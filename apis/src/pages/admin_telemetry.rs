@@ -7,6 +7,7 @@ use crate::{
         molecules::{empty_state::EmptyState, panel::Panel},
     },
     functions::telemetry::read_telemetry,
+    i18n::{t, use_i18n},
     providers::AuthContext,
 };
 use chrono::{DateTime, Duration, Utc};
@@ -40,6 +41,7 @@ fn build_x_ticks(rows: &[TelemetryRow]) -> TickLabels<DateTime<Utc>> {
 
 #[component]
 pub fn AdminTelemetry() -> impl IntoView {
+    let i18n = use_i18n();
     let auth_context = expect_context::<AuthContext>();
     let range = RwSignal::new(TelemetryRange::LastHour);
     let refresh_token = RwSignal::new(0u32);
@@ -80,7 +82,7 @@ pub fn AdminTelemetry() -> impl IntoView {
                             class="ui-button ui-button-secondary ui-button-sm"
                             on:click=move |_| refresh_token.update(|n| *n = n.wrapping_add(1))
                         >
-                            "Refresh"
+                            {t!(i18n, common.refresh)}
                         </button>
                         <span class="text-xs text-gray-600 dark:text-gray-400">
                             "Auto-refresh every 30s"

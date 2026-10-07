@@ -99,7 +99,7 @@ pub(super) fn TournamentActions(tournament_id: TournamentId) -> impl IntoView {
     );
     let button_label = Signal::derive(move || {
         if toggle.pending().get() {
-            t_string!(i18n, messages.page.loading)
+            t_string!(i18n, common.loading)
         } else if muted.get() {
             t_string!(i18n, messages.page.unmute_tournament_chat)
         } else {
