@@ -6,22 +6,14 @@
     },
     "color_buttons": {
         "black": "Pretas",
-        "both": "Todos",
         "white": "Brancas"
     },
     "result_buttons": {
         "win": "Vitória",
-        "all": "Todos",
         "loss": "Derrota",
         "draw": "Empate"
     },
-    "stats_box": {
-        "total": "Total",
-        "draws": "Empates",
-        "losses": "Derrotas",
-        "wins": "Vitórias"
-    },
-    "player_color": "Cor do jogador:",
     "game_result": "Resultado do jogo:",
-    "include_speeds": "Velocidades incluídas:"
+    "include_speeds": "Velocidades incluídas:",
+    "speed_statistics": "Estatísticas de {{speed}}"
 }

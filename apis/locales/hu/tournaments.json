@@ -4,5 +4,9 @@
         "head_to_head": "Nyert játékok egyenpontszámú játékosok között",
         "wins_as_black": "Fekete bábukkkal nyert játékok",
         "sonneborn_berger": "Az ellenfelek pontjainak összege akik ellen pontot szereztél"
-    }
+    },
+    "create": "Verseny létrehozása",
+    "view_list": "Versenyek böngészése",
+    "view": "Verseny megtekintése",
+    "view_named": "Verseny megtekintése: {{name}}"
 }

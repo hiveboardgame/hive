@@ -5,23 +5,15 @@
         "finished": "Finalizate"
     },
     "color_buttons": {
-        "both": "Ambele",
         "white": "Alb",
         "black": "Negru"
     },
     "result_buttons": {
         "win": "Victorie",
         "loss": "Înfrângere",
-        "draw": "Remiză",
-        "all": "Toate"
+        "draw": "Remiză"
     },
-    "stats_box": {
-        "total": "Total",
-        "wins": "Victorii",
-        "losses": "Înfrângeri",
-        "draws": "Remize"
-    },
-    "player_color": "Culoarea jucătorului:",
     "game_result": "Rezultat:",
-    "include_speeds": "Categorii timp:"
+    "include_speeds": "Categorii timp:",
+    "speed_statistics": "Statistici: {{speed}}"
 }

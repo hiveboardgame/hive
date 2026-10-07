@@ -1,18 +1,8 @@
 {
     "piece_style": "Figurenstil",
-    "style_buttons": {
-        "official": "Offiziell",
-        "flat": "Flach",
-        "three_d": "Drei-D"
-    },
     "rotation": "Drehung",
-    "rotation_buttons": {
-        "no": "Nein",
-        "yes": "Ja"
-    },
     "show_dots": "Punkte anzeigen",
     "dots_buttons": {
-        "no": "Nein",
         "angled": "Schräg",
         "vertical": "Vertikal"
     },
@@ -23,25 +13,16 @@
     "premove_description": "Plane einen Zug während des gegnerischen Zuges. Vorabzüge werden automatisch ohne Bestätigung gespielt, wenn sie weiterhin legal sind.",
     "drag_and_drop": "Ziehen und Ablegen",
     "drag_and_drop_description": "Bewege Figuren durch Ziehen. Wenn du am Zug bist, gilt deine Einstellung zur Zugbestätigung.",
-    "toggle_buttons": {
-        "yes": "Ja",
-        "no": "Nein"
-    },
     "game_speed": "Spielgeschwindigkeit:",
     "move_confirm": "Zugbestätigung:",
     "color_scheme": "Farbschema:",
     "preview": "Vorschau:",
 
     "edit_account": {
-        "current_password": "Aktuelles Passwort",
-        "new_password": "Neues Passwort",
-        "confirm_password": "Passwort bestätigen",
-        "confirm_password_placeholder": "Neues Passwort (nochmals)",
-        "save_button": "Speichern"
+        "confirm_password_placeholder": "Neues Passwort (nochmals)"
     },
     "create_account": {
         "username": {
-            "title": "Benutzername",
             "description": "Bitte wähle einen familienfreundlichen Benutzernamen. Konten mit unangemessenen Benutzernamen werden geschlossen!",
             "error": {
                 "taken": "Benutzername ist vergeben",
@@ -49,14 +30,11 @@
             }
         },
         "email": {
-            "title": "E-Mail",
             "error": {
                 "invalid": "Ungültige E-Mail"
             },
             "description": "Wir benötigen deine E-Mail-Adresse, um dir eine Bestätigungs-E-Mail zu senden, wenn du ein Konto erstellst."
         },
-        "password": "Passwort",
-        "confirm_password": "Passwort bestätigen",
         "password_requirements": "Mindestens 8 Zeichen",
         "password_error": "Passwort zu kurz oder stimmt nicht überein",
         "be_nice_checkbox": "Ich stimme zu, freundlich zu anderen Spieler*innen zu sein und Missbrauch auf Discord zu melden",
@@ -66,7 +44,6 @@
     },
     "login": {
         "email": "E-Mail",
-        "password": "Passwort",
         "login_button": "Einloggen",
         "no_account_prompt": "Hast du noch kein Konto? <register_link>Registrieren</register_link>",
         "invalid_login": "Ungültige E-Mail oder Passwort"

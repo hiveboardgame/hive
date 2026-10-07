@@ -1,16 +1,13 @@
 {
     "page": {
-        "heading": "Notificaciones",
         "intro_before_link": "Elige cómo quieres recibir notificaciones para cada tipo de evento. Las notificaciones push llegan a los navegadores que actives abajo. La configuración de Discord está en la ",
         "account_link": "sección de Discord",
         "intro_after_link": " de abajo.",
         "col_push": "Push",
         "col_discord": "Discord",
-        "email_coming_soon": "El envío por correo electrónico llegará pronto.",
         "saving": "Guardando…",
         "saved": "Guardado.",
-        "save_failed": "Error al guardar:",
-        "loading": "Cargando…"
+        "save_failed": "Error al guardar:"
     },
     "events": {
         "your_turn": "Tu turno",
@@ -23,15 +20,12 @@
     "browser": {
         "heading": "Este navegador",
         "body": "Recibe en este navegador las notificaciones push seleccionadas arriba, incluso cuando no haya ninguna pestaña de HiveGame abierta. Actívalas por separado en cada dispositivo que quieras que reciba notificaciones.",
-        "enable": "Activar notificaciones del navegador",
-        "disable": "Desactivar notificaciones del navegador",
         "working": "Procesando…",
         "send_test": "Enviar una prueba",
         "test_sent": "Notificación de prueba enviada: revisa tus notificaciones.",
         "test_failed": "La prueba falló:"
     },
     "ios": {
-        "heading": "En tu iPhone o iPad",
         "body": "Para recibir notificaciones en iOS, añade HiveGame a tu pantalla de inicio: toca el botón Compartir y luego «Añadir a pantalla de inicio» y ábrelo desde ahí."
     },
     "devices": {
@@ -47,9 +41,7 @@
         "body_before_link": "Activa las notificaciones del navegador para este dispositivo. Gestiónalas cuando quieras en la ",
         "link": "página de notificaciones",
         "body_after_link": ".",
-        "enable": "Activar",
-        "enabling": "Activando…",
-        "dismiss": "Descartar"
+        "enabling": "Activando…"
     },
     "install": {
         "title": "Instalar HiveGame como aplicación",

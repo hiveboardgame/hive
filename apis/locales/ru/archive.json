@@ -11,14 +11,9 @@
   "result_player2_wins": "Player 2 wins",
   "result_draw": "Draw",
   "result_not_draw": "Not a draw",
-  "any": "Any",
-  "speeds": "Speeds",
-  "rated": "Rated",
-  "casual": "Casual",
   "expansions": "Expansions",
   "with_expansions": "With expansions",
   "base_only": "Base only",
-  "rating_range": "Rating range",
   "min": "Min",
   "max": "Max",
   "turn_range": "Turn range",
@@ -44,6 +39,5 @@
   "no_games_found": "No games found.",
   "loading_games": "Loading games...",
   "position": "Позиция (HOP или хеш)",
-  "position_placeholder": "Вставьте HOP или хеш позиции",
-  "copied": "Скопировано!"
+  "position_placeholder": "Вставьте HOP или хеш позиции"
 }

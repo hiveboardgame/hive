@@ -66,8 +66,7 @@ pub(super) fn MessagesSidebar(current_path: Signal<String>) -> impl IntoView {
     let dms_title = Signal::derive(move || t_string!(i18n, messages.sections.dms).to_string());
     let dms_empty_label =
         Signal::derive(move || t_string!(i18n, messages.sections.no_dms).to_string());
-    let tournaments_title =
-        Signal::derive(move || t_string!(i18n, messages.sections.tournaments).to_string());
+    let tournaments_title = Signal::derive(move || t_string!(i18n, common.tournaments).to_string());
     let tournaments_empty_label =
         Signal::derive(move || t_string!(i18n, messages.sections.no_tournament_chats).to_string());
     let games_title = Signal::derive(move || t_string!(i18n, messages.sections.games).to_string());
@@ -98,7 +97,7 @@ pub(super) fn MessagesSidebar(current_path: Signal<String>) -> impl IntoView {
                         Either::Left(
                             view! {
                                 <p class="p-3 animate-pulse ui-field-helper">
-                                    {t!(i18n, messages.page.loading)}
+                                    {t!(i18n, common.loading)}
                                 </p>
                             },
                         )
@@ -114,7 +113,7 @@ pub(super) fn MessagesSidebar(current_path: Signal<String>) -> impl IntoView {
                                         class="ui-button ui-button-secondary ui-button-sm"
                                         on:click=move |_| catalog.retry(chat)
                                     >
-                                        {t!(i18n, messages.chat.retry)}
+                                        {t!(i18n, common.retry)}
                                     </button>
                                 </div>
                             },
@@ -175,10 +174,8 @@ fn DmChannelItem(channel: DmConversation, current_path: Signal<String>) -> impl 
     let unread_label = Signal::derive(move || {
         let count = unread.get();
         let channel = channel.get_value();
-        let conversation = dm_display_name(
-            &channel,
-            t_string!(i18n, messages.chat.deleted_user).to_string(),
-        );
+        let conversation =
+            dm_display_name(&channel, t_string!(i18n, common.deleted_user).to_string());
         t_string!(
             i18n,
             messages.chat.unread_badge,
@@ -192,7 +189,7 @@ fn DmChannelItem(channel: DmConversation, current_path: Signal<String>) -> impl 
             <span class="truncate">
                 {move || dm_display_name(
                     &channel.get_value(),
-                    t_string!(i18n, messages.chat.deleted_user).to_string(),
+                    t_string!(i18n, common.deleted_user).to_string(),
                 )}
             </span>
             <UnreadBadge count=unread aria_label=unread_label />

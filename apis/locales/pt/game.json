@@ -2,13 +2,11 @@
     "time_mode": {
         "real_time": "Tempo real",
         "correspondence": {
-            "title": "Por correspondência",
             "days_move_other": "{{count}} dias por jogada",
             "days_side_one": "{{count}} dia para cada lado",
             "days_side_other": "{{count}} dias para cada lado",
             "days_move_one": "{{count}} dia por jogada"
-        },
-        "untimed": "Sem limite de tempo"
+        }
     },
     "played_in": "Jogado em:",
     "rated": "Classificado",
@@ -47,6 +45,12 @@
         "rapid": "Rapid",
         "classic": "Clássico",
         "correspondence": "Correspondência",
-        "untimed": "Sem tempo"
-    }
+        "untimed": "Sem tempo",
+        "puzzle": "Problema"
+    },
+    "rating_range": "Intervalo de ELO",
+    "speeds_label": "Ritmos",
+    "join": "Entrar",
+    "view": "Ver",
+    "quickplay_tooltip": "{{speed}}\n{{base}} min de tempo inicial\n+{{increment}} s por jogada"
 }

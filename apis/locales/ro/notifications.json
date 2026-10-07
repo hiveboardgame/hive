@@ -1,16 +1,13 @@
 {
     "page": {
-        "heading": "Notificări",
         "intro_before_link": "Alege cum vrei să fii notificat pentru fiecare tip de eveniment. Notificările push ajung la browserele pe care le activezi mai jos. Configurarea Discord este în ",
         "account_link": "secțiunea Discord",
         "intro_after_link": " de mai jos.",
         "col_push": "Push",
         "col_discord": "Discord",
-        "email_coming_soon": "Trimiterea prin e-mail va fi disponibilă în curând.",
         "saving": "Se salvează…",
         "saved": "Salvat.",
-        "save_failed": "Salvarea a eșuat:",
-        "loading": "Se încarcă…"
+        "save_failed": "Salvarea a eșuat:"
     },
     "events": {
         "your_turn": "Este rândul tău",
@@ -23,15 +20,12 @@
     "browser": {
         "heading": "Acest browser",
         "body": "Primește în acest browser notificările push selectate mai sus, chiar și când nu este deschisă nicio filă HiveGame. Activează-le separat pe fiecare dispozitiv care vrei să fie notificat.",
-        "enable": "Activează notificările browserului",
-        "disable": "Dezactivează notificările browserului",
         "working": "Se procesează…",
         "send_test": "Trimite un test",
         "test_sent": "Notificare de test trimisă — verifică-ți notificările.",
         "test_failed": "Testul a eșuat:"
     },
     "ios": {
-        "heading": "Pe iPhone-ul sau iPad-ul tău",
         "body": "Pentru a primi notificări pe iOS, adaugă HiveGame pe ecranul principal: apasă butonul Partajează, apoi «Adaugă pe ecranul principal» și deschide-l de acolo."
     },
     "devices": {
@@ -47,9 +41,7 @@
         "body_before_link": "Activează notificările browserului pentru acest dispozitiv. Gestionează-le oricând pe ",
         "link": "pagina de notificări",
         "body_after_link": ".",
-        "enable": "Activează",
-        "enabling": "Se activează…",
-        "dismiss": "Închide"
+        "enabling": "Se activează…"
     },
     "install": {
         "title": "Instalează HiveGame ca aplicație",

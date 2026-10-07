@@ -12,6 +12,7 @@ use crate::{
         organisms::time_select::TimeSelect,
         update_from_event::{update_from_input, update_from_input_parsed},
     },
+    i18n::{t, t_string, use_i18n},
     providers::{ApiRequestsProvider, AuthContext, ChallengeParams, ChallengeParamsStoreFields},
 };
 use chrono::{DateTime, Duration, Local, Utc};
@@ -78,6 +79,7 @@ impl Default for TournamentSignals {
 
 #[component]
 pub fn TournamentCreate() -> impl IntoView {
+    let i18n = use_i18n();
     let tournament = TournamentSignals::default();
     let params = Store::new(ChallengeParams::default());
     let min_rating = RwSignal::new(500);
@@ -100,12 +102,12 @@ pub fn TournamentCreate() -> impl IntoView {
         format!(
             "Min Rating: {}/ Max Rating: {}",
             if min_rating() < 500 {
-                "Any".to_owned()
+                t_string!(i18n, common.any).to_string()
             } else {
                 min_rating.get().to_string()
             },
             if max_rating() > 2500 {
-                "Any".to_owned()
+                t_string!(i18n, common.any).to_string()
             } else {
                 max_rating().to_string()
             }
@@ -218,7 +220,7 @@ pub fn TournamentCreate() -> impl IntoView {
     view! {
         <PageShell>
             <div class="flex flex-col gap-1">
-                <h1 class="ui-page-title">"Create Tournament"</h1>
+                <h1 class="ui-page-title">{t!(i18n, tournaments.create)}</h1>
                 <p class="ui-page-subtitle">
                     "Set tournament details, entry limits, time controls, and start rules."
                 </p>
@@ -248,7 +250,13 @@ pub fn TournamentCreate() -> impl IntoView {
                                     on:click=move |_| is_not_preview_desc.update(|b| *b = !*b)
                                     class="py-1 px-3 text-xs ui-button ui-button-secondary ui-button-md"
                                 >
-                                    {move || if is_not_preview_desc() { "Preview" } else { "Edit" }}
+                                    {move || {
+                                        if is_not_preview_desc() {
+                                            t_string!(i18n, common.preview)
+                                        } else {
+                                            t_string!(i18n, common.edit)
+                                        }
+                                    }}
                                 </button>
 
                                 <a
@@ -479,7 +487,7 @@ pub fn TournamentCreate() -> impl IntoView {
                     prop:disabled=disable_create
                     on:click=create
                 >
-                    "Create Tournament"
+                    {t!(i18n, common.create)}
                 </button>
             </div>
         </PageShell>

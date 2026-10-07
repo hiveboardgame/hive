@@ -5,23 +5,15 @@
         "finished": "Finalizadas"
     },
     "color_buttons": {
-        "both": "Ambos",
         "white": "Blanco",
         "black": "Negro"
     },
     "result_buttons": {
         "win": "Victorias",
         "loss": "Derrotas",
-        "draw": "Empates",
-        "all": "Todos"
+        "draw": "Empates"
     },
-    "stats_box": {
-        "total": "Total",
-        "wins": "Victorias",
-        "losses": "Derrotas",
-        "draws": "Empates"
-    },
-    "player_color": "Color del jugador:",
     "game_result": "Resultado de la partida:",
-    "include_speeds": "Velodidades incluidas:"
+    "include_speeds": "Velodidades incluidas:",
+    "speed_statistics": "Estadísticas de {{speed}}"
 }

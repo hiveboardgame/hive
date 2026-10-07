@@ -31,7 +31,7 @@ pub fn ProfileLink(
                     view! {
                         <span class="z-20 font-bold no-link-style">
                             <span class=name_classes
-                                .get_value()>{t!(i18n, profile.deleted_user)}</span>
+                                .get_value()>{t!(i18n, common.deleted_user)}</span>
                         </span>
                     }
                 }

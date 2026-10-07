@@ -1,9 +1,7 @@
 {
     "time_mode": {
-        "untimed": "Kein Zeitlimit",
         "real_time": "Echtzeit",
         "correspondence": {
-            "title": "Korrespondenz",
             "days_move_one": "{{count}} Tag pro Zug",
             "days_move_other": "{{count}} Tage pro Zug",
             "days_side_one": "{{count}} Tag pro Seite",
@@ -47,6 +45,12 @@
         "rapid": "Rapid",
         "classic": "Klassisch",
         "correspondence": "Korrespondenz",
-        "untimed": "Unbegrenzt"
-    }
+        "untimed": "Unbegrenzt",
+        "puzzle": "Rätsel"
+    },
+    "rating_range": "Bewertungsbereich",
+    "speeds_label": "Spieltempi",
+    "join": "Beitreten",
+    "view": "Ansehen",
+    "quickplay_tooltip": "{{speed}}\n{{base}} Min. Grundzeit\n+{{increment}} Sek. pro Zug"
 }

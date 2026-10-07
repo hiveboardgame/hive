@@ -4,5 +4,9 @@
         "head_to_head": "Partides guanyades entre jugadors empatats",
         "wins_as_black": "Partides guanyades jugant amb negres",
         "sonneborn_berger": "Suma de punts dels oponents contra els quals vas puntuar"
-    }
+    },
+    "create": "Crear torneig",
+    "view_list": "Veure torneigs",
+    "view": "Mostra el torneig",
+    "view_named": "Mostra el torneig: {{name}}"
 }

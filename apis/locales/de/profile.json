@@ -5,23 +5,15 @@
         "finished": "Beendet"
     },
     "color_buttons": {
-        "both": "Beide",
         "white": "Weiß",
         "black": "Schwarz"
     },
     "result_buttons": {
         "win": "Sieg",
         "loss": "Niederlage",
-        "draw": "Unentschieden",
-        "all": "Alle"
+        "draw": "Unentschieden"
     },
-    "stats_box": {
-        "total": "Gesamt",
-        "wins": "Siege",
-        "losses": "Niederlagen",
-        "draws": "Unentschieden"
-    },
-    "player_color": "Spieler*innenfarbe:",
     "game_result": "Spielergebnis:",
-    "include_speeds": "Eingeschlossene Geschwindigkeiten:"
+    "include_speeds": "Eingeschlossene Geschwindigkeiten:",
+    "speed_statistics": "Statistik: {{speed}}"
 }

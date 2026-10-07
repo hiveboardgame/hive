@@ -153,7 +153,7 @@ pub(super) fn LoadPreviousMessages(
                 >
                     {move || {
                         if matches!(older_history.get(), OlderHistoryStatus::Loading(_)) {
-                            t_string!(i18n, messages.page.loading).to_string()
+                            t_string!(i18n, common.loading).to_string()
                         } else {
                             t_string!(i18n, messages.chat.load_previous_messages).to_string()
                         }

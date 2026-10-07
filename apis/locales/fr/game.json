@@ -2,12 +2,10 @@
     "time_mode": {
         "correspondence": {
             "days_move_one": "{{count}} jour par déplacement",
-            "title": "Correspondance",
             "days_side_other": "{{count}} jours par face",
             "days_side_one": "{{count}} jour par face",
             "days_move_other": "{{count}} jours par déplacement"
         },
-        "untimed": "Pas de limite de temps",
         "real_time": "Temps réel"
     },
     "created_ago": {
@@ -44,9 +42,15 @@
         "bullet": "Balle",
         "blitz": "Éclair",
         "rapid": "Rapide",
-        "correspondence": "Correspondance"
+        "correspondence": "Correspondance",
+        "puzzle": "Problème"
     },
     "rated": "Évalué",
     "played_in": "Joué dans :",
-    "casual": "Libre"
+    "casual": "Libre",
+    "rating_range": "Plage de classement",
+    "speeds_label": "Cadences",
+    "join": "Rejoindre",
+    "view": "Voir",
+    "quickplay_tooltip": "{{speed}}\n{{base}} min de temps initial\n+{{increment}} s par coup"
 }

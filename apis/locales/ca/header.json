@@ -14,25 +14,15 @@
         "rules_summary": "Resum de les regles",
         "archive": "Arxiu"
     },
-    "tournaments": {
-        "title": "Torneigs",
-        "create": "Crear torneig",
-        "view": "Veure torneigs"
-    },
     "buy_game": "Comprar el joc",
     "donate": "Donar",
-    "login": "Iniciar sessió",
     "support": "Suport",
     "user_menu": {
         "update_available": "Actualització disponible",
-        "refresh_now": "Actualitza ara",
         "refresh_when_ready": "Actualitza quan vulguis.",
         "save_analysis_before_refresh": "Desa l’anàlisi abans d’actualitzar.",
         "edit_account": "Editar el compte",
-        "messages": "Missatges",
         "logout": "Sortir",
-        "login": "Iniciar sessió",
-        "profile": "Perfil",
         "config": "Configuració"
     }
 }

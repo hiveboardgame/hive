@@ -108,13 +108,13 @@ pub fn Notifications() -> impl IntoView {
     view! {
         <PageShell variant=PageShellVariant::Content class="max-w-4xl">
             <PageHeader
-                title=move || t_string!(i18n, notifications.page.heading)
+                title=move || t_string!(i18n, common.notifications)
                 subtitle="Push, Discord, and device delivery settings."
             />
             <Suspense fallback=move || {
                 view! {
                     <Panel>
-                        <p class="ui-field-helper">{t!(i18n, notifications.page.loading)}</p>
+                        <p class="ui-field-helper">{t!(i18n, common.loading)}</p>
                     </Panel>
                 }
             }>
@@ -501,9 +501,9 @@ fn BrowserPushSetup(
                                 if busy.get() {
                                     t_string!(i18n, notifications.browser.working)
                                 } else if subscribed() {
-                                    t_string!(i18n, notifications.browser.disable)
+                                    t_string!(i18n, common.disable)
                                 } else {
-                                    t_string!(i18n, notifications.browser.enable)
+                                    t_string!(i18n, common.enable)
                                 }
                             }}
                         </button>

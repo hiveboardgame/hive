@@ -79,7 +79,7 @@ pub fn TimeSelect(
                         on:click=move |_| toggle_time_mode(TimeMode::RealTime)
                         class=move || radio_style(time_mode() == TimeMode::RealTime)
                     >
-                        {t!(i18n, home.custom_game.mode.real_time.title)}
+                        {t!(i18n, game.time_mode.real_time)}
                     </button>
                 </Show>
                 <Show when=move || allow_correspondence>
@@ -88,7 +88,7 @@ pub fn TimeSelect(
                         on:click=move |_| toggle_time_mode(TimeMode::Correspondence)
                         class=move || radio_style(time_mode() == TimeMode::Correspondence)
                     >
-                        {t!(i18n, home.custom_game.mode.correspondence.title)}
+                        {t!(i18n, game.speeds.correspondence)}
                     </button>
                 </Show>
                 <Show when=move || allow_untimed>
@@ -97,7 +97,7 @@ pub fn TimeSelect(
                         on:click=move |_| toggle_time_mode(TimeMode::Untimed)
                         class=move || radio_style(time_mode() == TimeMode::Untimed)
                     >
-                        {t!(i18n, home.custom_game.mode.untimed)}
+                        {t!(i18n, game.speeds.untimed)}
                     </button>
                 </Show>
             </div>

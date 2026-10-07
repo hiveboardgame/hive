@@ -1,16 +1,13 @@
 {
     "page": {
-        "heading": "Benachrichtigungen",
         "intro_before_link": "Wähle, wie du bei jeder Art von Ereignis benachrichtigt werden möchtest. Push geht an die Browser, die du unten aktivierst. Die Discord-Einrichtung findest du im ",
         "account_link": "Discord-Abschnitt",
         "intro_after_link": " unten.",
         "col_push": "Push",
         "col_discord": "Discord",
-        "email_coming_soon": "E-Mail-Zustellung kommt bald.",
         "saving": "Wird gespeichert…",
         "saved": "Gespeichert.",
-        "save_failed": "Speichern fehlgeschlagen:",
-        "loading": "Wird geladen…"
+        "save_failed": "Speichern fehlgeschlagen:"
     },
     "events": {
         "your_turn": "Du bist am Zug",
@@ -23,15 +20,12 @@
     "browser": {
         "heading": "Dieser Browser",
         "body": "Erhalte die oben ausgewählten Push-Benachrichtigungen in diesem Browser, auch wenn kein HiveGame-Tab geöffnet ist. Aktiviere sie auf jedem Gerät separat, das benachrichtigt werden soll.",
-        "enable": "Browser-Benachrichtigungen aktivieren",
-        "disable": "Browser-Benachrichtigungen deaktivieren",
         "working": "Wird ausgeführt…",
         "send_test": "Test senden",
         "test_sent": "Testbenachrichtigung gesendet – überprüfe deine Benachrichtigungen.",
         "test_failed": "Test fehlgeschlagen:"
     },
     "ios": {
-        "heading": "Auf deinem iPhone oder iPad",
         "body": "Um Benachrichtigungen unter iOS zu erhalten, füge HiveGame zu deinem Home-Bildschirm hinzu: Tippe auf „Teilen“ und dann auf „Zum Home-Bildschirm“ und öffne es von dort."
     },
     "devices": {
@@ -47,9 +41,7 @@
         "body_before_link": "Aktiviere Browser-Benachrichtigungen für dieses Gerät. Verwalte sie jederzeit auf der ",
         "link": "Benachrichtigungsseite",
         "body_after_link": ".",
-        "enable": "Aktivieren",
-        "enabling": "Wird aktiviert…",
-        "dismiss": "Schließen"
+        "enabling": "Wird aktiviert…"
     },
     "install": {
         "title": "HiveGame als App installieren",

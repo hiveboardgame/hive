@@ -1,9 +1,7 @@
 {
     "time_mode": {
-        "untimed": "Sense límit de temps",
         "real_time": "Temps real",
         "correspondence": {
-            "title": "Correspondència",
             "days_move_one": "{{count}} Dia per moviment",
             "days_move_other": "{{count}} Dies per moviment",
             "days_side_one": "{{count}} Dia per jugador",
@@ -45,8 +43,14 @@
         "untimed": "Sense temps",
         "correspondence": "Correspondència",
         "blitz": "Blitz",
-        "bullet": "Bullet"
+        "bullet": "Bullet",
+        "puzzle": "Problema"
     },
     "rated": "Puntuada",
-    "casual": "Casual"
+    "casual": "Casual",
+    "rating_range": "Marge de puntuació",
+    "speeds_label": "Ritmes",
+    "join": "Uneix-te",
+    "view": "Veure",
+    "quickplay_tooltip": "{{speed}}\n{{base}} min de temps inicial\n+{{increment}} s per moviment"
 }

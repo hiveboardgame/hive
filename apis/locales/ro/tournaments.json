@@ -4,5 +4,9 @@
         "head_to_head": "Jocuri câștigate între jucători la egalitate",
         "wins_as_black": "Jocuri câștigate jucând cu negrul",
         "sonneborn_berger": "Suma punctelor adversarilor împotriva cărora ai punctat"
-    }
+    },
+    "create": "Creează turneu",
+    "view_list": "Vezi turnee",
+    "view": "Vezi turneul",
+    "view_named": "Vezi turneul: {{name}}"
 }

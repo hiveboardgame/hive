@@ -79,13 +79,13 @@ pub fn WebPushNudge(install_nudge_active: RwSignal<bool>) -> impl IntoView {
                         if busy.get() {
                             t_string!(i18n, notifications.nudge.enabling)
                         } else {
-                            t_string!(i18n, notifications.nudge.enable)
+                            t_string!(i18n, common.enable)
                         }
                     }}
                 </button>
                 <button
                     class="ui-button ui-button-ghost ui-button-icon-sm"
-                    aria-label=move || t_string!(i18n, notifications.nudge.dismiss).to_string()
+                    aria-label=move || t_string!(i18n, common.close).to_string()
                     on:click=dismiss
                 >
                     "×"

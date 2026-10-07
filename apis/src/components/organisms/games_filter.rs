@@ -249,7 +249,7 @@ pub fn GamesFilter(username: String, ctx: GamesSearchContext) -> impl IntoView {
                                                 pending.update(|state| state.result = None)
                                             }
                                         >
-                                            "Any"
+                                            {t!(i18n, common.any)}
                                         </FilterButton>
                                     </div>
                                 </div>
@@ -423,8 +423,8 @@ fn ActiveFiltersDisplay(
                 <Show when=move || ctx.filters.with(|state| state.rated.is_some())>
                     <FilterPill>
                         {move || match ctx.filters.get().rated {
-                            Some(true) => "Rated",
-                            Some(false) => "Unrated",
+                            Some(true) => t_string!(i18n, game.rated),
+                            Some(false) => t_string!(i18n, game.casual),
                             None => "",
                         }}
                     </FilterPill>
@@ -523,18 +523,18 @@ fn TriStateFilter(
                     {move || match filter_type {
                         TriStateType::Color => t_string!(i18n, profile.color_buttons.black),
                         TriStateType::Expansion => "Basic",
-                        TriStateType::Rating => "Casual",
+                        TriStateType::Rating => t_string!(i18n, game.casual),
                     }}
                 </FilterButton>
                 <FilterButton is_active=is_option2_active on_click=set_option2 flex_class="">
                     {move || match filter_type {
                         TriStateType::Color => t_string!(i18n, profile.color_buttons.white),
                         TriStateType::Expansion => "Full",
-                        TriStateType::Rating => "Rated",
+                        TriStateType::Rating => t_string!(i18n, game.rated),
                     }}
                 </FilterButton>
                 <FilterButton is_active=is_any_active on_click=set_any flex_class="">
-                    "Any"
+                    {t!(i18n, common.any)}
                 </FilterButton>
             </div>
         </div>
@@ -550,12 +550,12 @@ enum FilterActionKind {
 }
 
 impl FilterActionKind {
-    fn label(&self) -> &'static str {
+    fn label(&self, i18n: I18nContext<Locale, I18nKeys>) -> &'static str {
         match self {
-            FilterActionKind::Apply => "Apply",
-            FilterActionKind::Save => "Save",
-            FilterActionKind::Reset => "Reset",
-            FilterActionKind::Clear => "Clear",
+            FilterActionKind::Apply => t_string!(i18n, common.apply),
+            FilterActionKind::Save => t_string!(i18n, common.save),
+            FilterActionKind::Reset => t_string!(i18n, common.reset),
+            FilterActionKind::Clear => t_string!(i18n, common.clear),
         }
     }
 
@@ -580,6 +580,7 @@ fn ActionButton<F>(on_click: F, disabled: Signal<bool>, variant: FilterActionKin
 where
     F: Fn(leptos::ev::MouseEvent) + 'static,
 {
+    let i18n = use_i18n();
     view! {
         <button
             on:click=on_click
@@ -592,7 +593,7 @@ where
                 )
             }
         >
-            <span class="ui-fit-label">{variant.label()}</span>
+            <span class="ui-fit-label">{move || variant.label(i18n)}</span>
         </button>
     }
 }

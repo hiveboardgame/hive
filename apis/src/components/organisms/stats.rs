@@ -1,5 +1,5 @@
 use crate::{
-    common::with_class,
+    common::{game_speed_label, with_class},
     components::{
         atoms::{
             rating::{icon_for_speed, Rating},
@@ -7,6 +7,7 @@ use crate::{
         },
         molecules::modal::Modal,
     },
+    i18n::{t, use_i18n},
     responses::{RatingResponse, UserResponse},
 };
 use leptos::{html::Dialog, prelude::*};
@@ -23,6 +24,7 @@ const WARNING_METRIC_TEXT_CLASS: &str = "text-yellow-600 dark:text-yellow-400";
 
 #[component]
 pub fn Stats(user: UserResponse) -> impl IntoView {
+    let i18n = use_i18n();
     let user_ratings = StoredValue::new(
         GameSpeed::all_rated_games()
             .iter()
@@ -77,7 +79,7 @@ pub fn Stats(user: UserResponse) -> impl IntoView {
 
                             <div class="hidden lg:flex lg:flex-col lg:items-start lg:min-w-0">
                                 <div class="max-w-full text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                                    {rating.speed.to_string()}
+                                    {move || game_speed_label(i18n, rating.speed)}
                                 </div>
                                 <div class="text-xs text-gray-500 dark:text-gray-400">
                                     {rating.played} " games"
@@ -99,7 +101,9 @@ pub fn Stats(user: UserResponse) -> impl IntoView {
                                 <div class="flex gap-2 items-center mb-4">
                                     <Icon icon=icon_for_speed(rating.speed) attr:class="size-6" />
                                     <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                                        {rating.speed.to_string()} " Statistics"
+                                        {t!(
+                                            i18n, profile.speed_statistics, speed=move || game_speed_label(i18n, rating.speed)
+                                        )}
                                     </h3>
                                 </div>
                                 <div class="space-y-3">

@@ -18,6 +18,7 @@ use crate::{
     functions::games::get::get_game_from_nanoid,
     hiveground::{analysis_hiveground_interaction, selected_history_board},
     hooks::history_nav::use_analysis_history_keyboard_navigation,
+    i18n::{t, use_i18n},
     providers::{
         analysis::{AnalysisContext, AnalysisStore},
         annotations::AnnotationsSignal,
@@ -88,6 +89,7 @@ impl AnalysisLoadState {
 
 #[component]
 pub fn Analysis() -> impl IntoView {
+    let i18n = use_i18n();
     // Play can reset the app's store while this page is still unmounting. Keep
     // analysis state local so that reset cannot queue work on its departing board.
     let game_state = GameStateStore::new();
@@ -424,7 +426,7 @@ pub fn Analysis() -> impl IntoView {
                                             class="mt-3 ui-button ui-button-primary ui-button-sm"
                                             on:click=retry
                                         >
-                                            "Retry"
+                                            {t!(i18n, common.retry)}
                                         </button>
                                     </Show>
                                 </div>

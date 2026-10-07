@@ -1,16 +1,13 @@
 {
     "page": {
-        "heading": "Notificacions",
         "intro_before_link": "Tria com vols rebre les notificacions per a cada tipus d'esdeveniment. Les notificacions push arriben als navegadors que activis a sota. La configuració de Discord és a la ",
         "account_link": "secció de Discord",
         "intro_after_link": " de sota.",
         "col_push": "Push",
         "col_discord": "Discord",
-        "email_coming_soon": "L'enviament per correu electrònic arribarà aviat.",
         "saving": "S'està desant…",
         "saved": "Desat.",
-        "save_failed": "No s'ha pogut desar:",
-        "loading": "S'està carregant…"
+        "save_failed": "No s'ha pogut desar:"
     },
     "events": {
         "your_turn": "El teu torn",
@@ -23,15 +20,12 @@
     "browser": {
         "heading": "Aquest navegador",
         "body": "Rep en aquest navegador les notificacions push seleccionades a dalt, fins i tot quan no hi hagi cap pestanya de HiveGame oberta. Activa-les per separat a cada dispositiu que vulguis notificar.",
-        "enable": "Activa les notificacions del navegador",
-        "disable": "Desactiva les notificacions del navegador",
         "working": "S'està processant…",
         "send_test": "Envia una prova",
         "test_sent": "Notificació de prova enviada: comprova les teves notificacions.",
         "test_failed": "La prova ha fallat:"
     },
     "ios": {
-        "heading": "Al teu iPhone o iPad",
         "body": "Per rebre notificacions a l'iOS, afegeix HiveGame a la pantalla d'inici: toca el botó Comparteix i després «Afegeix a la pantalla d'inici» i obre'l des d'allà."
     },
     "devices": {
@@ -47,9 +41,7 @@
         "body_before_link": "Activa les notificacions del navegador per a aquest dispositiu. Gestiona-les en qualsevol moment a la ",
         "link": "pàgina de notificacions",
         "body_after_link": ".",
-        "enable": "Activa",
-        "enabling": "S'està activant…",
-        "dismiss": "Descarta"
+        "enabling": "S'està activant…"
     },
     "install": {
         "title": "Instal·la HiveGame com a aplicació",

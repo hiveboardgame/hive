@@ -3,12 +3,10 @@
         "correspondence": {
             "days_move_one": "{{count}} nap lépésenként",
             "days_move_other": "{{count}} nap lépésenként",
-            "title": "Levelező",
             "days_side_other": "{{count}} nap játékosonként",
             "days_side_one": "{{count}} nap játékosonként"
         },
-        "real_time": "Valós idő",
-        "untimed": "Végtelen"
+        "real_time": "Valós idő"
     },
     "played_in": "Verseny:",
     "rated": "Rangsorolt",
@@ -47,6 +45,12 @@
         "rapid": "Rapid",
         "classic": "Klasszikus",
         "correspondence": "Levelező",
-        "untimed": "Végtelen"
-    }
+        "untimed": "Végtelen",
+        "puzzle": "Feladvány"
+    },
+    "rating_range": "ELO-tartomány",
+    "speeds_label": "Játéktempók",
+    "join": "Csatlakozás",
+    "view": "Megtekintés",
+    "quickplay_tooltip": "{{speed}}\n{{base}} perc alapidő\n+{{increment}} másodperc lépésenként"
 }

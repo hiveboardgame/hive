@@ -16,23 +16,13 @@
     },
     "user_menu": {
         "update_available": "Atualização disponível",
-        "refresh_now": "Atualizar agora",
         "refresh_when_ready": "Atualize quando quiser.",
         "save_analysis_before_refresh": "Salve sua análise antes de atualizar.",
-        "login": "Login",
-        "profile": "Perfil",
-        "messages": "Mensagens",
         "edit_account": "Editar Conta",
         "logout": "Sair",
         "config": "Configurar"
     },
-    "tournaments": {
-        "title": "Torneios",
-        "create": "Criar torneio",
-        "view": "Ver torneios"
-    },
     "buy_game": "Comprar o jogo",
     "donate": "Doar",
-    "support": "Apoiar",
-    "login": "Login"
+    "support": "Apoiar"
 }

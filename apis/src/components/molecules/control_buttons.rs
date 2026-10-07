@@ -1,6 +1,7 @@
 use crate::{
     common::ChallengeAction,
     components::atoms::gc_button::{AcceptDenyGc, ConfirmButton},
+    i18n::{t_string, use_i18n},
     providers::{
         challenges::ChallengeStateSignal,
         game_state::{GameStateStore, GameStateStoreFields},
@@ -19,6 +20,7 @@ const FINISHED_GAME_BUTTON_CLASS: &str =
 
 #[component]
 pub fn ControlButtons() -> impl IntoView {
+    let i18n = use_i18n();
     let game_state = expect_context::<GameStateStore>();
     let auth_context = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
@@ -156,7 +158,7 @@ pub fn ControlButtons() -> impl IntoView {
                 if *challenger_id == user_id() {
                     "Sent"
                 } else {
-                    "Accept"
+                    t_string!(i18n, common.accept)
                 }
             } else {
                 "Rematch"
