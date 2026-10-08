@@ -55,6 +55,8 @@ if [ -r /etc/hive/prod.env ]; then
     for key in DATABASE_URL COOKIE_SECRET_KEY JWT_SECRET_KEY VAPID_PRIVATE_KEY VAPID_SUBJECT LETTERMINT_API_KEY; do
         check "prod.env sets $key" grep -q "^$key=" /etc/hive/prod.env
     done
+    grep -q '^EVAL_WORKER_TOKEN=.' /etc/hive/prod.env && pass "prod.env sets EVAL_WORKER_TOKEN" \
+        || warn "prod.env has no EVAL_WORKER_TOKEN: engine evals are off (scripts/README.md, Evals)"
     if grep -E '^[A-Z_]+=' /etc/hive/prod.env | cut -d= -f2- | grep -q '[$\\]'; then
         warn "a prod.env value contains \$ or \\: systemd reads it literally, dotenvy did not; check it"
     else
@@ -84,6 +86,7 @@ grep -q 'include /etc/nginx/hive-upstream.conf' "$SITE" && pass "site includes t
 grep -q 'listen 127.0.0.1:3999' "$SITE" && pass "site listens on 127.0.0.1:3999" || warn "site has no 3999 listener yet (cutover step 3)"
 grep -q 'try_files /blue/site' "$SITE" && pass "site serves /pkg/ from both slots" || warn "site has no /pkg/ block yet (cutover step 3)"
 grep -q '@app' "$SITE" && pass "/pkg/ falls back to the app" || warn "site has no @app fallback for /pkg/ yet (cutover step 3)"
+grep -q 'location /api/v1/evals/' "$SITE" && pass "site keeps the eval worker API off the internet" || warn "site does not block /api/v1/evals/ publicly yet; see scripts/nginx/sites-enabled-default.example"
 check "mime.types knows application/wasm" grep -q 'application/wasm' /etc/nginx/mime.types
 /usr/sbin/nginx -V 2>&1 | grep -q http_gzip_static_module && pass "nginx has gzip_static" || fail "nginx lacks gzip_static"
 for dir in /home/drone "$PROJECT_ROOT"; do
@@ -102,6 +105,32 @@ grep -q '^HIVE_HYDRA_BASE_URL=http://localhost:3999' "$HOME/.config/hive-hydra/e
     && pass "hydra uses localhost:3999" || warn "hydra env has no HIVE_HYDRA_BASE_URL=http://localhost:3999 (cutover step 4)"
 check "~/.config/busybee/env exists" test -r "$HOME/.config/busybee/env"
 check "busybee venv exists" test -r "$PROJECT_ROOT/busybee/venv/bin/activate"
+EVAL_ENV="$HOME/.config/hive-evaluator/env"
+if [ -r "$EVAL_ENV" ]; then
+    pass "~/.config/hive-evaluator/env exists"
+    # A subshell, so the evaluator's settings never leak into the checks after this one.
+    read -r SB_DIR SB_NET SB_PY < <(set -a; . "$EVAL_ENV"; echo "${STOCKBEE_DIR:-} ${STOCKBEE_NET:-stockbee.pt} ${STOCKBEE_PYTHON:-python3}")
+    token_hash() { sed -n "s/^EVAL_WORKER_TOKEN=//p" "$1" 2>/dev/null | tr -d '"' | sha256sum | cut -c1-16; }
+    if [ -r /etc/hive/prod.env ] && [ "$(token_hash "$EVAL_ENV")" = "$(token_hash /etc/hive/prod.env)" ]; then
+        pass "evaluator token matches prod.env"
+    else
+        warn "evaluator token is missing or differs from prod.env's EVAL_WORKER_TOKEN"
+    fi
+    if [ -n "$SB_DIR" ]; then
+        check "StockBee engine built" test -x "$SB_DIR/build/stockbee"
+        check "StockBee featurizer built" test -r "$SB_DIR/build/libgraph_features.so"
+        check "StockBee net present" test -r "$SB_DIR/$SB_NET"
+        check "StockBee eval server present" test -r "$SB_DIR/tools/az_eval_server.py"
+        grep -q 'weights_only=False' "$SB_DIR/tools/az_eval_server.py" 2>/dev/null \
+            && fail "az_eval_server.py loads the net with weights_only=False: a swapped net could run code" \
+            || pass "the eval server loads the net as plain weights"
+        check "evaluator python has torch and numpy" "$SB_PY" -c 'import torch, numpy'
+    else
+        warn "evaluator env sets no STOCKBEE_DIR"
+    fi
+else
+    warn "no ~/.config/hive-evaluator/env: engine evals are off (scripts/README.md, Evals)"
+fi
 
 echo "== disk"
 ROOT_FREE=$(df --output=avail -BG / | tail -1 | tr -dc 0-9)

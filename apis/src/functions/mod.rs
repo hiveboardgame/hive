@@ -6,6 +6,7 @@ pub mod chat;
 #[cfg(feature = "ssr")]
 pub mod db;
 pub mod devices;
+pub mod game_evals;
 pub mod games;
 pub mod home_banner;
 pub mod notification_preferences;

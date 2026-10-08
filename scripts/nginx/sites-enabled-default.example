@@ -63,6 +63,12 @@ server {
         deny all;
     }
 
+    # Eval workers reach the site on 127.0.0.1:3999, which this block does not cover. To let a
+    # worker elsewhere (a laptop, a rented GPU) help, add `allow <its IP>;` above the deny.
+    location /api/v1/evals/ {
+        deny all;
+    }
+
     location /pkg/ {
         root /home/drone/hive/bin;
         try_files /blue/site$uri /green/site$uri @app;

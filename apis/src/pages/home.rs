@@ -8,15 +8,18 @@ use crate::{
             challenges::Challenges,
             featured_video::FeaturedVideo,
             quickplay::QuickPlay,
+            recent_evals::RecentEvals,
             tv::Tv,
         },
     },
     functions::home_banner,
+    providers::game_eval::evals_visible,
 };
 use leptos::prelude::*;
 
 #[component]
 pub fn Home() -> impl IntoView {
+    let evals_visible = evals_visible();
     let banner = OnceResource::new(async move { home_banner::get().await.ok().flatten() });
     view! {
         <PageShell variant=PageShellVariant::Dashboard class="overflow-x-hidden">
@@ -58,16 +61,22 @@ pub fn Home() -> impl IntoView {
                     <div class="order-4 w-full">
                         <div class="mx-auto w-full max-w-screen-md">
                             <div class="w-full lg:flow-root">
-                                <div class="hidden float-right w-64 lg:block lg:ml-6 2xl:hidden">
+                                <div class="hidden float-right w-64 lg:flex lg:flex-col lg:gap-4 lg:ml-6 2xl:hidden">
                                     <OnlineUsers />
+                                    <Show when=move || evals_visible.get()>
+                                        <RecentEvals />
+                                    </Show>
                                 </div>
                                 <Tv />
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="flex flex-col order-3 mx-auto w-full min-w-0 max-w-md lg:hidden 2xl:flex 2xl:order-none 2xl:col-start-3 2xl:row-start-1 2xl:mx-0 2xl:max-w-none">
+                <div class="flex flex-col order-3 gap-4 mx-auto w-full min-w-0 max-w-md lg:hidden 2xl:flex 2xl:order-none 2xl:col-start-3 2xl:row-start-1 2xl:mx-0 2xl:max-w-none">
                     <OnlineUsers />
+                    <Show when=move || evals_visible.get()>
+                        <RecentEvals />
+                    </Show>
                 </div>
             </div>
         </PageShell>

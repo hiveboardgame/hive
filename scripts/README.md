@@ -24,7 +24,7 @@ before touching anything. Every migration must keep the previous release working
 | ------------------------------------- | -------------------------------------------------- |
 | `deploy.sh`, `rollback.sh`, `lib.sh`  | deploys, run from the checkout as `drone`          |
 | `status.sh`, `preflight.sh`, `smoke.sh` | read-only checks, paste their output when asking for help |
-| `run-hydra.sh`, `run-busybee.sh`, `tmux-session.sh` | on-box services in drone's tmux      |
+| `run-hydra.sh`, `run-busybee.sh`, `run-evaluator.sh`, `tmux-session.sh` | on-box services in drone's tmux |
 | `systemd/hive@.service`               | `/etc/systemd/system/hive@.service`                |
 | `systemd/{common,blue,green}.env`     | `/etc/hive/`                                       |
 | `sudoers/hive-deploy`                 | `/etc/sudoers.d/hive-deploy`                       |
@@ -308,11 +308,80 @@ Run the whole window inside tmux: a dropped SSH session kills a foreground `depl
 ## tmux
 
 `scripts/tmux-session.sh` creates (or attaches to) session `hive`: `hive` (slot logs),
-`hydra`, `busybee`, `psql`, `shell`. A crashed window drops to a shell showing the error.
-Needs `~/.config/hive-hydra/env` and `~/.config/busybee/env` (both 0600; DISCORD_*, BUSYBEE_*),
+`hydra`, `busybee`, `evaluator`, `psql`, `shell`. A crashed window drops to a shell showing the error.
+Needs `~/.config/hive-hydra/env`, `~/.config/busybee/env` and `~/.config/hive-evaluator/env`
+(all 0600; DISCORD_*, BUSYBEE_*, see Evals below),
 `busybee/venv`, the `hive` libpq service, and `drone` in group `systemd-journal`.
 For a session after every reboot: `@reboot /home/drone/hive/scripts/tmux-session.sh` in
 drone's crontab.
+
+## Evals
+
+Engine evals of finished games (the Evals tab in analysis, "Recent evaluations" on the front
+page) come from `hive-evaluator`, which drives the StockBee engine; see
+`hive-evaluator/README.md`. StockBee never goes into this repo: it lives in `~/stockbee`.
+
+Until the 2026 world championship is over, evals are for admins only: everyone else sees no
+Evals tab, no marks in History, no ghosts on the board and no front-page card, and the server
+refuses them the eval data. The worker runs as normal behind that.
+
+### Rolling out
+
+1. Copy StockBee to the box without build output (from a machine that has it):
+   `rsync -a --exclude build --exclude out --exclude venv stockbee/ drone@<box>:stockbee/`
+2. As drone: `scripts/setup-evaluator.sh`. It locks the directory to drone, makes the eval
+   server load the net as plain weights, builds the engine, creates the torch venv, and writes
+   `~/.config/hive-evaluator/env` with a new token and `EVAL_AUTO=false`.
+3. Once, as a user with sudo: `sudo scripts/setup-evaluator.sh --install-token` copies that
+   token into `/etc/hive/prod.env` without printing it.
+4. Keep the worker API off the internet. In `/etc/nginx/sites-available/default`, add to the
+   `hivegame.com` server block, next to the `/health/ready` deny (see
+   `nginx/sites-enabled-default.example`):
+
+   ```nginx
+   location /api/v1/evals/ {
+       deny all;
+   }
+   ```
+
+   then `sudo nginx -t && sudo systemctl reload nginx`. The worker is not affected: it reaches
+   the site on `127.0.0.1:3999`. A worker elsewhere (a laptop, a rented GPU) can be let in
+   later with `allow <its IP>;` above the deny; until then its requests get 403.
+5. `scripts/preflight.sh`: it should show the evaluator token, env file and StockBee directory,
+   and "site keeps the eval worker API off the internet".
+6. Merge and `scripts/deploy.sh`, so the site has the eval code and reads the token.
+7. As drone, `scripts/setup-evaluator.sh` again: it sees the matching token and opens the
+   `evaluator` tmux window.
+8. `scripts/smoke.sh`: "hive-evaluator running" and "the eval worker API is not public", and
+   `curl -s -o /dev/null -w '%{http_code}\n' -X POST https://hivegame.com/api/v1/evals/claim`
+   answers 403.
+9. As an admin, open a finished MLP tournament game, Evals tab, request an eval, and watch it
+   go from queued to running to done. Logged out (or as a non-admin) the same page has no
+   Evals tab, and the front page no "Recent evaluations" card.
+
+### Opening evals to everyone
+
+After the world championship:
+
+1. Delete `ensure_eval_access` and its three calls in `apis/src/functions/game_evals.rs`, and
+   make `evals_visible` in `apis/src/providers/game_eval.rs` return true (or remove it and its
+   uses in the analysis sidebar and on the home page).
+2. Merge and deploy as usual; nothing changes for the worker.
+3. Optional: set `EVAL_AUTO=true` in `~/.config/hive-evaluator/env` and restart its window, so
+   the front page fills with evals of strong games while nobody is waiting.
+
+### Running it
+
+The worker takes user requests first. With `EVAL_AUTO=true` in its env (restart its window:
+Ctrl-C, then `scripts/run-evaluator.sh`) it also evaluates strong games while nobody is
+waiting. It talks to `:3999`, is built at nice 15 and runs at nice 19 with three eval servers
+of two torch threads each, survives slot flips, and an eval it drops is requeued after five
+quiet minutes. Stopping it (Ctrl-C) switches evals off without losing any; the site then says
+no engine is running.
+
+`scripts/preflight.sh` checks the token, the env file, the StockBee directory and the nginx
+block (WARN while evals are not set up). Re-running `scripts/tmux-session.sh` on a live session
+adds windows that are missing, so it also brings back a closed `evaluator` window.
 
 ## Checking a deploy
 

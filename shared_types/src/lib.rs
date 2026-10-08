@@ -3,6 +3,7 @@ mod challenge;
 mod chat_capabilities;
 mod chat_message;
 mod conclusion;
+mod game_eval;
 mod game_speed;
 mod game_start;
 mod games_query_options;
@@ -44,6 +45,25 @@ pub use chat_message::{
     MAX_CHAT_MESSAGE_LENGTH,
 };
 pub use conclusion::Conclusion;
+pub use game_eval::{
+    eval_unavailable_reason,
+    history_moves,
+    EvalClaim,
+    EvalFailure,
+    EvalJob,
+    EvalProgress,
+    EvalResult,
+    EvalResultError,
+    EvalStatus,
+    EvalStatusError,
+    EvalSubmission,
+    GameEvalView,
+    Grade,
+    MoveEval,
+    RecentEval,
+    RecentEvals,
+    MAX_EVAL_LINE,
+};
 pub use game_speed::GameSpeed;
 pub use game_start::GameStart;
 pub use games_query_options::{

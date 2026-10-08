@@ -19,6 +19,7 @@ pub mod leaderboard;
 pub mod logout;
 pub mod preview_tiles;
 pub mod quickplay;
+pub mod recent_evals;
 pub mod reserve;
 pub mod side_board;
 pub mod sound_toggle;

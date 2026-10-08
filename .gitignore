@@ -53,6 +53,7 @@ AGENTS.md
 /deploy-logs/
 /db-backups/
 /.deploy.lock
+/stockbee/
 
 # database dumps
 *.dump

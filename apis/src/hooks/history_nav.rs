@@ -218,7 +218,7 @@ fn use_history_arrow_keyboard_navigation<Action: Copy + 'static>(
     });
 }
 
-fn should_ignore_history_key_event(evt: &KeyboardEvent) -> bool {
+pub(crate) fn should_ignore_history_key_event(evt: &KeyboardEvent) -> bool {
     evt.alt_key()
         || evt.ctrl_key()
         || evt.meta_key()

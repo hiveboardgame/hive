@@ -1,0 +1,23 @@
+[package]
+name = "hive-evaluator"
+version = "0.1.0"
+edition = "2021"
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+clap = { workspace = true, features = ["env"] }
+reqwest = { version = "0.13.1", features = ["rustls", "json"], default-features = false }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+shared_types = { path = "../shared_types" }
+tokio = { workspace = true, features = ["process", "io-util", "signal"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+uuid = { workspace = true }
+
+[dev-dependencies]
+wiremock = "0.6"

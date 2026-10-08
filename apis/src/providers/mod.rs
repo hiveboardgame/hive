@@ -8,6 +8,7 @@ pub mod challenges;
 pub mod chat;
 pub mod config;
 mod direct_challenge;
+pub mod game_eval;
 pub mod game_state;
 mod game_updater;
 pub mod games;

@@ -96,6 +96,27 @@ diesel::table! {
 }
 
 diesel::table! {
+    game_evals (id) {
+        id -> Uuid,
+        game_id -> Uuid,
+        requested_by -> Nullable<Uuid>,
+        status -> Text,
+        moves -> Int4,
+        progress_pct -> Int2,
+        attempts -> Int2,
+        worker -> Nullable<Text>,
+        engine -> Nullable<Text>,
+        result -> Nullable<Jsonb>,
+        error -> Nullable<Text>,
+        created_at -> Timestamptz,
+        started_at -> Nullable<Timestamptz>,
+        heartbeat_at -> Nullable<Timestamptz>,
+        finished_at -> Nullable<Timestamptz>,
+        requested_by_system -> Bool,
+    }
+}
+
+diesel::table! {
     game_hashes (game_id, turn) {
         hash -> Int8,
         game_id -> Uuid,
@@ -337,6 +358,8 @@ diesel::joinable!(chat_read_receipts -> chat_channels (channel_id));
 diesel::joinable!(chat_read_receipts -> users (user_id));
 diesel::joinable!(email_queue -> users (user_id));
 diesel::joinable!(email_tokens -> users (user_id));
+diesel::joinable!(game_evals -> games (game_id));
+diesel::joinable!(game_evals -> users (requested_by));
 diesel::joinable!(game_hashes -> games (game_id));
 diesel::joinable!(games_users -> games (game_id));
 diesel::joinable!(games_users -> users (user_id));
@@ -366,6 +389,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     email_request_log,
     email_state,
     email_tokens,
+    game_evals,
     game_hashes,
     games,
     games_users,

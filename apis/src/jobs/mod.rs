@@ -2,6 +2,7 @@ mod advisory_lock;
 pub mod challenge_cleanup;
 pub mod email_cleanup;
 pub mod email_drain;
+pub mod eval_sweeper;
 pub mod game_cleanup;
 pub mod hash_backfill;
 pub mod heartbeat;
@@ -23,6 +24,7 @@ pub(crate) use advisory_lock::{
 pub use challenge_cleanup::run as challenge_cleanup;
 pub use email_cleanup::run as email_cleanup;
 pub use email_drain::run as email_drain;
+pub use eval_sweeper::run as eval_sweeper;
 pub use game_cleanup::run as game_cleanup;
 pub use hash_backfill::run as hash_backfill;
 pub use heartbeat::run as heartbeat;

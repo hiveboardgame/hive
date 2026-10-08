@@ -65,6 +65,8 @@ esac
 
 READY_CODE=$(curl -s -o /dev/null -w '%{http_code}' -m 5 "$BASE/health/ready") || true
 [ "$READY_CODE" = 403 ] && pass "/health/ready is not public" || fail "/health/ready returned $READY_CODE publicly"
+EVAL_API_CODE=$(curl -s -o /dev/null -w '%{http_code}' -m 5 -X POST "$BASE/api/v1/evals/claim") || true
+[ "$EVAL_API_CODE" = 403 ] && pass "the eval worker API is not public" || fail "/api/v1/evals/claim returned $EVAL_API_CODE publicly"
 
 for port in 3000 3001 3999 8080; do
     exposed=$(ss -tln "sport = :$port" | awk 'NR>1 {print $4}' | grep -vE '^(127\.0\.0\.1|\[::1\]):' | tr '\n' ' ')
@@ -74,6 +76,7 @@ done
 pgrep -f 'cargo-leptos leptos serve' > /dev/null && fail "the old cargo leptos serve process is still running" || pass "no old cargo leptos serve process"
 pgrep -f 'release/hive-hydra' > /dev/null && pass "hive-hydra running" || warn "hive-hydra not running"
 pgrep -f 'uvicorn api:app' > /dev/null && pass "busybee running" || warn "busybee not running"
+pgrep -f 'release/hive-evaluator' > /dev/null && pass "hive-evaluator running" || warn "hive-evaluator not running"
 
 echo
 print_status
