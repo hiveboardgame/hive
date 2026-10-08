@@ -283,6 +283,22 @@ impl AnalysisStore {
             .with(|path| path.get(depth).copied() == Some(node_id))
     }
 
+    /// How many of the loaded game's moves lead to `node_id`, or None off the game's own line.
+    pub fn game_ply_untracked(&self, node_id: NodeId) -> Option<usize> {
+        self.0
+            .game_line()
+            .with_untracked(|line| line.iter().position(|id| *id == node_id))
+    }
+
+    /// How many of the loaded game's moves lead to the selected position, or None when the
+    /// selection is in a variation.
+    pub fn selected_game_ply(&self) -> Option<usize> {
+        let selected = self.selected_node_id();
+        self.0
+            .game_line()
+            .with(|line| line.iter().position(|id| *id == selected))
+    }
+
     pub fn first_history_target_node_id(&self) -> Option<NodeId> {
         let selected = self.selected_node_id();
         self.0

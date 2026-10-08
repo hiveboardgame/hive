@@ -21,6 +21,7 @@ async fn main() -> std::io::Result<()> {
     use api::v1::auth::jwt_secret::JwtSecret;
     use api::v1::bot::users::api_get_user;
     use api::v1::health::{health, health_ready};
+    use api::v1::evals::{eval_claim, eval_fail, eval_progress, eval_result, EvalWorkerToken};
     use actix_files::Files;
     use actix_identity::IdentityMiddleware;
     use actix_session::{storage::CookieSessionStore, SessionMiddleware};
@@ -171,6 +172,8 @@ async fn main() -> std::io::Result<()> {
     jobs::push_device_sweep(pool.clone());
     jobs::email_drain(pool.clone(), email::EmailConfig::from_env());
     jobs::email_cleanup(pool.clone());
+    jobs::eval_sweeper(pool.clone());
+    let eval_worker_token = Data::new(EvalWorkerToken::from_env());
     let pwa_manifest = PwaManifest::from_site_root(&conf.leptos_options.site_root);
 
     println!("listening on http://{}", addr);
@@ -188,6 +191,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::clone(&hub))
             .app_data(Data::clone(&data))
             .app_data(Data::clone(&jwt_key))
+            .app_data(Data::clone(&eval_worker_token))
             .app_data(Data::from(push_telemetry.clone()))
             .app_data(Data::new(pwa_manifest.clone()))
             // serve JS/WASM/CSS from `pkg`
@@ -219,6 +223,10 @@ async fn main() -> std::io::Result<()> {
             .service(api_delete_challenge)
             .service(api_delete_challenges)
             .service(api_create_challenge)
+            .service(eval_claim)
+            .service(eval_progress)
+            .service(eval_result)
+            .service(eval_fail)
 
             // .leptos_routes(leptos_options.to_owned(), routes.to_owned(), App)
             .leptos_routes(routes.to_owned(), {

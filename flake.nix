@@ -119,6 +119,11 @@
               binaryen
               tailwindcss_4
               openssl
+              cmake
+              (python3.withPackages (ps: [
+                ps.numpy
+                ps.torch
+              ]))
               # nokamute # The AI used by hive-hydra - temporarily disabled due to darwin SDK issue
               (rust-bin.selectLatestNightlyWith (
                 toolchain:

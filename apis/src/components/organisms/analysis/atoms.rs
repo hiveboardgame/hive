@@ -10,6 +10,7 @@ use crate::{
     },
     providers::{
         analysis::{AnalysisContext, MoveDelta, VisibleRow},
+        game_eval::GameEvalContext,
         game_state::{GameStateStore, GameStateStoreFields},
     },
 };
@@ -174,15 +175,30 @@ pub(super) fn HistoryRow(row: VisibleRow, value: Option<MoveDelta>) -> impl Into
     let hop_rooted = analysis.store.is_hop_rooted_untracked();
     let turn_prefix = if hop_rooted { "+" } else { "" };
     let root_label = if hop_rooted { "HOP" } else { "0." };
+    // A row on the game's own line at position p shows the eval of move p - 1, the move that
+    // led here; rows in variations have no eval.
+    let evals = use_context::<GameEvalContext>();
+    let game_move = analysis
+        .store
+        .game_ply_untracked(node_id)
+        .and_then(|ply| ply.checked_sub(1));
+    let glyph = move || {
+        game_move
+            .zip(evals)
+            .and_then(|(ply, evals)| evals.grade(ply))
+            .map(|grade| format!(" {}", grade.glyph()))
+            .unwrap_or_default()
+    };
     let label = move || {
         value
             .as_ref()
             .map(|value| {
                 format!(
-                    "{turn_prefix}{}. {} {}{}",
+                    "{turn_prefix}{}. {} {}{}{}",
                     value.turn,
                     value.piece,
                     value.position,
+                    glyph(),
                     rep()
                 )
             })

@@ -1,4 +1,5 @@
 mod atoms;
+mod evals;
 mod game_details;
 mod history;
 mod opening_explorer;
@@ -7,6 +8,7 @@ mod sidebar;
 mod variation_list;
 
 pub use atoms::AnalysisHistoryControls;
+pub use evals::Evals;
 pub use game_details::GameDetailsPanel;
 pub use history::History;
 pub use opening_explorer::OpeningExplorer;

@@ -21,6 +21,7 @@ use crate::{
     providers::{
         analysis::{AnalysisContext, AnalysisStore},
         annotations::AnnotationsSignal,
+        game_eval::GameEvalContext,
         game_state::{GameStateStore, GameStateStoreFields},
         AuthContext,
         AuthIdentity,
@@ -166,6 +167,9 @@ pub fn Analysis() -> impl IntoView {
     );
     provide_context(analysis);
     provide_context(AnnotationsSignal::analysis(analysis));
+    let evals = GameEvalContext::new();
+    provide_context(evals);
+    evals.follow(game_id);
     let hiveground_interaction = analysis_hiveground_interaction();
 
     use_analysis_history_keyboard_navigation(analysis);
@@ -402,31 +406,38 @@ pub fn Analysis() -> impl IntoView {
                 <Show
                     when=analysis_available
                     fallback=move || {
-                        let title = if blocked.get() {
-                            "Analysis is unavailable during this game."
-                        } else if loading() {
-                            "Loading analysis..."
-                        } else {
-                            "Could not load analysis."
+                        let title = move || {
+                            if blocked.get() {
+                                "Analysis is unavailable during this game."
+                            } else if loading() {
+                                "Loading analysis..."
+                            } else {
+                                "Could not load analysis."
+                            }
                         };
+                        // The server renders this mid-load and the client hydrates it after a failed
+                        // load has finished, so nothing here may differ in structure: the message is
+                        // a DOM property and both are hidden by property, all set at hydration. A
+                        // <Show> or an Option child here made the two disagree and hydration panicked.
                         view! {
                             <div class="flex col-span-full row-span-full justify-center items-center p-4 min-h-[calc(100dvh-2.5rem)]">
                                 <div class="max-w-md ui-empty-state" role="status">
                                     <div class="text-sm font-bold text-gray-800 dark:text-gray-100">
                                         {title}
                                     </div>
-                                    <ShowLet some=load_error let:message>
-                                        <div class="mt-1 text-xs">{message}</div>
-                                    </ShowLet>
-                                    <Show when=can_retry>
-                                        <button
-                                            type="button"
-                                            class="mt-3 ui-button ui-button-primary ui-button-sm"
-                                            on:click=retry
-                                        >
-                                            "Retry"
-                                        </button>
-                                    </Show>
+                                    <div
+                                        class="mt-1 text-xs"
+                                        prop:hidden=move || load_error().is_none()
+                                        prop:textContent=move || load_error().unwrap_or_default()
+                                    ></div>
+                                    <button
+                                        type="button"
+                                        class="mt-3 ui-button ui-button-primary ui-button-sm"
+                                        prop:hidden=move || !can_retry()
+                                        on:click=retry
+                                    >
+                                        "Retry"
+                                    </button>
                                 </div>
                             </div>
                         }

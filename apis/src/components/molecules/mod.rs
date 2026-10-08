@@ -36,6 +36,7 @@ pub mod rl_banner;
 pub mod schedule_notification;
 pub mod score_row;
 pub mod thumbnail_pieces;
+pub mod tile_outline;
 pub mod time_row;
 pub mod tournament_invitation_notification;
 pub mod tournament_ready_popup;

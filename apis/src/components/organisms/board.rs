@@ -4,7 +4,7 @@ use crate::{
         layouts::base_layout::OrientationSignal,
         molecules::{
             annotation_toolbar::AnnotationToolbar,
-            annotations_layer::AnnotationsLayer,
+            annotations_layer::{AnnotationsLayer, GhostRingsLayer},
             board_pieces::BoardPieces,
             drag_ghost::DragGhost,
             history_pieces::HistoryPieces,
@@ -769,6 +769,7 @@ pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>)
                     pointer-events="all"
                 />
                 <g transform=transform node_ref=g_ref>
+                    {annotations.map(|_| view! { <GhostRingsLayer /> })}
                     {move || {
                         if board_view.get().is_history() && !last_turn() && !in_analysis {
                             Either::Left(

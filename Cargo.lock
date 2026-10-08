@@ -2616,6 +2616,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "hive-evaluator"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "shared_types",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+ "wiremock",
+]
+
+[[package]]
 name = "hive-hydra"
 version = "0.1.0"
 dependencies = [
@@ -6249,6 +6267,7 @@ dependencies = [
  "hive",
  "itertools 0.15.0",
  "serde",
+ "serde_json",
  "thiserror 2.0.18",
  "uuid",
 ]
