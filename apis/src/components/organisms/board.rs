@@ -178,6 +178,16 @@ impl ViewBoxControls {
         self
     }
 
+    fn resize_around_center(&mut self, previous_width: f32, width: f32, height: f32) {
+        let units_per_px = self.width / previous_width;
+        let center_x = self.x + self.width / 2.0;
+        let center_y = self.y + self.height / 2.0;
+        self.width = width * units_per_px;
+        self.height = height * units_per_px;
+        self.x = center_x - self.width / 2.0;
+        self.y = center_y - self.height / 2.0;
+    }
+
     fn recover_offscreen(&mut self, tiles: &[TileBounds], width: f32, height: f32) -> bool {
         let Some(first) = tiles.first() else {
             return false;
@@ -215,7 +225,6 @@ impl ViewBoxControls {
 
 struct ViewBoxState {
     is_panning: RwSignal<bool>,
-    has_zoomed: RwSignal<bool>,
     is_visible: RwSignal<bool>,
 }
 
@@ -223,7 +232,6 @@ impl ViewBoxState {
     fn new() -> Self {
         Self {
             is_panning: RwSignal::new(false),
-            has_zoomed: RwSignal::new(false),
             is_visible: RwSignal::new(true),
         }
     }
@@ -254,6 +262,7 @@ pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>)
     let config = expect_context::<Config>().0;
     let viewbox_state = ViewBoxState::new();
     let viewbox_signal = RwSignal::new(ViewBoxControls::new());
+    let board_width = StoredValue::new(0.0_f32);
     let initial_touch_distance = RwSignal::<f32>::new(0.0);
     // Snapshot taken at the start of a pinch: (viewbox, anchor_x, anchor_y).
     let pinch_base = RwSignal::<Option<(ViewBoxControls, f32, f32)>>::new(None);
@@ -326,26 +335,15 @@ pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>)
     );
 
     // Unified RAF-based viewbox update system
-    let update_viewbox_size = move |width: f32, height: f32, respect_zoom: bool| {
+    let center_on_hive = move |width: f32, height: f32| {
         let current_center = displayed_board.with_untracked(HiveBoard::center_coordinates);
         let svg_pos = SvgPos::center_for_level(current_center, 0, straight);
-        let (scale_x, scale_y) = if respect_zoom && viewbox_state.has_zoomed.get_untracked() {
-            let svg = viewbox_ref.get_untracked().expect("It exists");
-            viewbox_signal.with_untracked(|vb| {
-                (
-                    svg.client_width() as f32 / vb.width,
-                    svg.client_height() as f32 / vb.height,
-                )
-            })
-        } else {
-            (1.0, 1.0)
-        };
-
+        board_width.set_value(width);
         viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
             viewbox_controls.x = 0.0;
             viewbox_controls.y = 0.0;
-            viewbox_controls.width = width / scale_x;
-            viewbox_controls.height = height / scale_y;
+            viewbox_controls.width = width;
+            viewbox_controls.height = height;
             viewbox_controls.x_transform = -(svg_pos.0 - (viewbox_controls.width / 2.0));
             viewbox_controls.y_transform = -(svg_pos.1 - (viewbox_controls.height / 2.0));
         });
@@ -370,13 +368,23 @@ pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>)
                     });
                     if let Some(next) = recovered {
                         viewbox_signal.set(next);
-                        viewbox_state.has_zoomed.set(true);
                         viewbox_state.is_panning.set(false);
                         pinch_base.set(None);
                     }
                 }
                 ViewBoxUpdateType::Resize { width, height } => {
-                    update_viewbox_size(width, height, true);
+                    if width <= 0.0 || height <= 0.0 {
+                        return;
+                    }
+                    let previous_width = board_width.get_value();
+                    if previous_width > 0.0 {
+                        board_width.set_value(width);
+                        viewbox_signal.update(|viewbox_controls| {
+                            viewbox_controls.resize_around_center(previous_width, width, height);
+                        });
+                    } else {
+                        center_on_hive(width, height);
+                    }
                 }
                 ViewBoxUpdateType::Pan { delta_x, delta_y } => {
                     if viewbox_state.is_panning.get_untracked()
@@ -412,7 +420,6 @@ pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>)
                         viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
                             *viewbox_controls = future_viewbox;
                         });
-                        viewbox_state.has_zoomed.set(true);
                     }
                 }
                 ViewBoxUpdateType::PinchZoom {
@@ -431,7 +438,6 @@ pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>)
                         viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
                             *viewbox_controls = future_viewbox;
                         });
-                        viewbox_state.has_zoomed.set(true);
                     }
                 }
             }
@@ -462,18 +468,22 @@ pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>)
         move |_, _, _| {
             let div = div_ref.get_untracked().expect("it exists");
             let rect = div.get_bounding_client_rect();
-            update_viewbox_size(rect.width() as f32, rect.height() as f32, false);
+            center_on_hive(rect.width() as f32, rect.height() as f32);
         },
         true,
     );
 
     Effect::watch(
         move || game_id_slice.get(),
-        move |_, _, _| {
+        // Refetches (reconnect, game end, takeback) replace the whole store and
+        // re-notify game_id without changing it.
+        move |game_id, previous, _| {
+            if previous == Some(game_id) {
+                return;
+            }
             if let Some(div) = div_ref.get_untracked() {
-                viewbox_state.has_zoomed.set(false);
                 let rect = div.get_bounding_client_rect();
-                update_viewbox_size(rect.width() as f32, rect.height() as f32, false);
+                center_on_hive(rect.width() as f32, rect.height() as f32);
             }
         },
         false,
@@ -1299,6 +1309,25 @@ mod tests {
             },
         ];
         assert!(viewbox.recover_offscreen(&tiles, 390.0, 640.0));
+    }
+
+    #[test]
+    fn resize_keeps_pan_and_zoom() {
+        let mut viewbox = ViewBoxControls::new();
+        viewbox.x = 100.0;
+        viewbox.y = -50.0;
+        viewbox.width = 200.0;
+        viewbox.height = 100.0;
+        viewbox.x_transform = 30.0;
+        viewbox.y_transform = 40.0;
+
+        viewbox.resize_around_center(400.0, 800.0, 600.0);
+
+        assert_eq!(
+            (viewbox.x, viewbox.y, viewbox.width, viewbox.height),
+            (0.0, -150.0, 400.0, 300.0),
+        );
+        assert_eq!((viewbox.x_transform, viewbox.y_transform), (30.0, 40.0));
     }
 
     #[test]
