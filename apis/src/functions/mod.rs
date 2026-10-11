@@ -14,6 +14,7 @@ pub mod oauth;
 pub mod og;
 pub mod opening_explorer;
 pub mod push_metrics;
+pub mod puzzles;
 #[cfg(feature = "ssr")]
 pub mod pwa;
 pub mod schedules;

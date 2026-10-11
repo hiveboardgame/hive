@@ -1,5 +1,5 @@
 [workspace]
-members = ["apis", "engine", "db", "shared_types", "hive-hydra"]
+members = ["apis", "engine", "db", "shared_types", "hive-hydra", "puzzler"]
 resolver = "2"
 
 [workspace.lints.clippy]
@@ -130,6 +130,11 @@ web-sys = { version = "0.3.103", features = [
     "WebSocket",
     "Window",
 ] }
+
+# The puzzle generator is CPU-bound search; the size-optimised release profile costs it dearly.
+[profile.puzzler]
+inherits = "release"
+opt-level = 3
 
 # Defines a size-optimized profile for the WASM bundle in release mode
 [profile.wasm-release]

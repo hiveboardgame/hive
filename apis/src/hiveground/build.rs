@@ -257,7 +257,7 @@ fn board_overlay_set(board: &Board, move_info: &MoveInfo) -> OverlaySet {
         });
 
     OverlaySet {
-        last_move: (!has_active_preview).then_some(last_move),
+        last_move: Some(last_move),
         active_marker,
         target_positions,
         vacate_targets,
@@ -1272,7 +1272,9 @@ mod tests {
             .map(|stack| stack.position)
             .collect::<Vec<_>>();
 
-        assert_eq!(positions, vec![occupied, target]);
+        let mut expected = vec![last_move_from, occupied, target];
+        expected.sort();
+        assert_eq!(positions, expected);
     }
 
     #[test]

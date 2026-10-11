@@ -15,6 +15,9 @@ pub fn LearnDropdown() -> impl IntoView {
             content=move || t!(i18n, header.learn.title)
             id="Learn"
         >
+            <a class="ui-dropdown-link" on:click=onclick_close href="/puzzles">
+                {t!(i18n, header.learn.puzzles)}
+            </a>
             <a class="ui-dropdown-link" on:click=onclick_close href="/analysis">
                 {t!(i18n, header.learn.analysis)}
             </a>

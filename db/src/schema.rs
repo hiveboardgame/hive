@@ -196,6 +196,63 @@ diesel::table! {
 }
 
 diesel::table! {
+    puzzle_attempts (id) {
+        id -> Int8,
+        user_id -> Uuid,
+        puzzle_id -> Uuid,
+        solved -> Bool,
+        rated -> Bool,
+        hinted -> Bool,
+        time_ms -> Nullable<Int4>,
+        rating_before -> Nullable<Float8>,
+        rating_after -> Nullable<Float8>,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    puzzle_stars (user_id, puzzle_id) {
+        user_id -> Uuid,
+        puzzle_id -> Uuid,
+        stars -> Int2,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    puzzles (id) {
+        id -> Uuid,
+        nanoid -> Text,
+        kind -> Text,
+        game_type -> Text,
+        history -> Nullable<Text>,
+        position -> Nullable<Text>,
+        solution -> Array<Nullable<Text>>,
+        variations -> Jsonb,
+        solver_moves -> Int4,
+        themes -> Array<Nullable<Text>>,
+        authors -> Array<Nullable<Text>>,
+        source -> Text,
+        source_game -> Nullable<Text>,
+        collection -> Nullable<Text>,
+        title -> Nullable<Text>,
+        hint -> Nullable<Text>,
+        level -> Nullable<Text>,
+        hash -> Int8,
+        rating -> Float8,
+        deviation -> Float8,
+        volatility -> Float8,
+        plays -> Int4,
+        solves -> Int4,
+        stars_sum -> Int4,
+        stars_count -> Int4,
+        hidden -> Bool,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     ratings (id) {
         id -> Int4,
         user_uid -> Uuid,
@@ -342,6 +399,10 @@ diesel::joinable!(games_users -> games (game_id));
 diesel::joinable!(games_users -> users (user_id));
 diesel::joinable!(notification_preferences -> users (user_id));
 diesel::joinable!(push_devices -> users (user_id));
+diesel::joinable!(puzzle_attempts -> puzzles (puzzle_id));
+diesel::joinable!(puzzle_attempts -> users (user_id));
+diesel::joinable!(puzzle_stars -> puzzles (puzzle_id));
+diesel::joinable!(puzzle_stars -> users (user_id));
 diesel::joinable!(ratings -> users (user_uid));
 diesel::joinable!(schedules -> games (game_id));
 diesel::joinable!(schedules -> tournaments (tournament_id));
@@ -372,6 +433,9 @@ diesel::allow_tables_to_appear_in_same_query!(
     home_banner,
     notification_preferences,
     push_devices,
+    puzzle_attempts,
+    puzzle_stars,
+    puzzles,
     ratings,
     schedules,
     tournament_series,

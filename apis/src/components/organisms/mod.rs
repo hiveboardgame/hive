@@ -18,6 +18,7 @@ pub mod history;
 pub mod leaderboard;
 pub mod logout;
 pub mod preview_tiles;
+pub mod puzzle_trainer;
 pub mod quickplay;
 pub mod reserve;
 pub mod side_board;

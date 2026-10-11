@@ -30,7 +30,9 @@ use crate::{
         notifications::Notifications,
         play::Play,
         profile_view::{ProfileMe, ProfileView},
-        puzzles::Puzzles,
+        puzzle_browse::PuzzleBrowse,
+        puzzle_history::PuzzleHistory,
+        puzzles::{PuzzleView, Puzzles},
         register::Register,
         reset_password::ResetPassword,
         resources::Resources,
@@ -297,6 +299,9 @@ pub fn App() -> impl IntoView {
                         <Route path=path!("/donate") view=|| view! { <Donate /> } />
                         <Route path=path!("/faq") view=|| view! { <Faq /> } />
                         <Route path=path!("/puzzles") view=|| view! { <Puzzles /> } />
+                        <Route path=path!("/puzzles/history") view=|| view! { <PuzzleHistory /> } />
+                        <Route path=path!("/puzzles/browse") view=|| view! { <PuzzleBrowse /> } />
+                        <Route path=path!("/puzzles/:nanoid") view=|| view! { <PuzzleView /> } />
                         <Route path=path!("/rules") view=|| view! { <Rules /> } />
                         <Route path=path!("/strategy") view=|| view! { <Strategy /> } />
                         <Route path=path!("/resources") view=|| view! { <Resources /> } />

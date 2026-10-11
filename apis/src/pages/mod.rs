@@ -19,6 +19,8 @@ pub mod messages;
 pub mod notifications;
 pub mod play;
 pub mod profile_view;
+pub mod puzzle_browse;
+pub mod puzzle_history;
 pub mod puzzles;
 pub mod register;
 pub mod reset_password;

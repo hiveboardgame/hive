@@ -15,6 +15,7 @@ mod games_search_context;
 mod notifications;
 pub mod online_users;
 mod ping;
+pub mod puzzle;
 mod referer;
 pub mod refocus;
 pub mod schedules;

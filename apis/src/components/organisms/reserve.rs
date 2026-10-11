@@ -1,4 +1,5 @@
 use crate::{
+    common::SvgPos,
     components::molecules::{
         analysis_and_download::AnalysisAndDownload,
         annotation_toolbar::AnnotationToggle,
@@ -9,6 +10,7 @@ use crate::{
         build_reserve_render_model,
         HivegroundInteraction,
         HivegroundPaint,
+        RenderLayerKind,
         ReserveInteractivity,
         ReserveRenderOptions,
     },
@@ -119,6 +121,29 @@ pub fn Reserve(
         }
     });
 
+    let three_d = move || tile_opts.with(|tile| tile.is_three_d());
+    let counts = move || {
+        stacked_pieces.with(|model| {
+            model
+                .stacks
+                .iter()
+                .filter_map(|stack| {
+                    let levels: Vec<usize> = stack
+                        .layers
+                        .iter()
+                        .filter(|layer| matches!(layer.kind, RenderLayerKind::Piece { .. }))
+                        .map(|layer| layer.level)
+                        .collect();
+                    let top = *levels.iter().max()?;
+                    (levels.len() > 1).then(|| {
+                        let (x, y) = SvgPos::center_for_level(stack.position, top, three_d());
+                        (x, y, levels.len())
+                    })
+                })
+                .collect::<Vec<_>>()
+        })
+    };
+
     view! {
         <svg
             width="100%"
@@ -129,6 +154,30 @@ pub fn Reserve(
             xmlns="http://www.w3.org/2000/svg"
         >
             <HivegroundStacks model=stacked_pieces paint interaction />
+            {move || {
+                counts()
+                    .into_iter()
+                    .map(|(x, y, count)| {
+                        view! {
+                            <g
+                                transform=format!("translate({},{})", x + 15.0, y - 17.0)
+                                pointer-events="none"
+                            >
+                                <circle r="9" fill="#1f2937" stroke="#ffffff" stroke-width="1.5" />
+                                <text
+                                    text-anchor="middle"
+                                    dominant-baseline="central"
+                                    fill="#ffffff"
+                                    font-size="12"
+                                    font-weight="700"
+                                >
+                                    {count}
+                                </text>
+                            </g>
+                        }
+                    })
+                    .collect_view()
+            }}
         </svg>
     }
 }

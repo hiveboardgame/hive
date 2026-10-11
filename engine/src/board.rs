@@ -154,6 +154,19 @@ pub struct BoardSnapshot {
     pinned: [bool; 48],
 }
 
+/// What [`Board::unmake`] needs to reverse one [`Board::make`]. Storage growth is not undone:
+/// the frame is not part of the position.
+#[derive(Clone, Debug)]
+pub struct Unmake {
+    piece: Piece,
+    from: Option<Position>,
+    to: Position,
+    last_moved: Option<(Piece, Position)>,
+    last_move: (Option<Position>, Option<Position>),
+    stunned: Option<Piece>,
+    pinned: [bool; 48],
+}
+
 impl Board {
     pub fn new() -> Self {
         Self {
@@ -1302,6 +1315,198 @@ impl Board {
             });
         }
         stacks
+    }
+
+    /// Plays a move (`from` is `Some`) or a placement without validating it; legality is the
+    /// caller's, e.g. via [`Self::for_each_move`] / [`Self::for_each_placement`]. `mover` is the
+    /// side to move, which differs from `piece.color()` when a Pillbug throws an enemy piece.
+    pub fn make(
+        &mut self,
+        piece: Piece,
+        from: Option<Position>,
+        to: Position,
+        mover: Color,
+    ) -> Unmake {
+        let unmake = Unmake {
+            piece,
+            from,
+            to,
+            last_moved: self.last_moved,
+            last_move: self.last_move,
+            stunned: self.stunned,
+            pinned: self.pinned,
+        };
+        match from {
+            Some(from) => {
+                let ground_graph_changes = self.level(from) == 1 || !self.occupied(to);
+                let removed = self.remove(from);
+                debug_assert_eq!(removed, piece);
+                self.insert_with_pinned_update(to, piece, false, ground_graph_changes, mover);
+            }
+            None => self.insert_with_pinned_update(to, piece, true, true, mover),
+        }
+        self.last_move = (from, Some(to));
+        // Only `to` can push the hive towards the window edge; shrinking is left to `State`.
+        if !self.within_margin(to) {
+            self.reframe();
+        }
+        unmake
+    }
+
+    fn within_margin(&self, position: Position) -> bool {
+        let (origin, size) = (self.board.origin(), self.board.size());
+        (origin.q + MARGIN..origin.q + size - MARGIN).contains(&position.q)
+            && (origin.r + MARGIN..origin.r + size - MARGIN).contains(&position.r)
+    }
+
+    /// The game result `make(piece, from, to)` would produce, without making it: a search
+    /// horizon only needs to know whether a move surrounds a Queen.
+    pub fn result_after(&self, piece: Piece, from: Option<Position>, to: Position) -> GameResult {
+        let vacates = from.filter(|from| self.level(*from) == 1);
+        let fills = (!self.occupied(to)).then_some(to);
+        let surrounded = |queen: Piece| {
+            let Some(at) = self.position_of_piece(queen) else {
+                return false;
+            };
+            if queen == piece {
+                return to
+                    .positions_around()
+                    .filter(|around| self.occupied(*around) && Some(*around) != vacates)
+                    .count()
+                    == 6;
+            }
+            let mut count = i32::from(*self.neighbor_count.get(at));
+            if vacates.is_some_and(|from| from.is_neighbor(at)) {
+                count -= 1;
+            }
+            if fills.is_some_and(|to| to.is_neighbor(at)) {
+                count += 1;
+            }
+            count == 6
+        };
+        match (surrounded(*WHITE_QUEEN), surrounded(*BLACK_QUEEN)) {
+            (true, true) => GameResult::Draw,
+            (true, false) => GameResult::Winner(Color::Black),
+            (false, true) => GameResult::Winner(Color::White),
+            (false, false) => GameResult::Unknown,
+        }
+    }
+
+    pub fn unmake(&mut self, unmake: Unmake) {
+        let removed = self.remove(unmake.to);
+        debug_assert_eq!(removed, unmake.piece);
+        match unmake.from {
+            Some(from) => {
+                self.ensure_storage_for(from);
+                self.board.get_mut(from).push_piece(unmake.piece);
+                self.set_position_of_piece(unmake.piece, from);
+                if self.board.get(from).size == 1 {
+                    self.neighbor_count_add(from);
+                }
+            }
+            None => {
+                self.positions[self.piece_to_offset(unmake.piece)] = None;
+                self.played -= 1;
+            }
+        }
+        self.last_moved = unmake.last_moved;
+        self.last_move = unmake.last_move;
+        self.stunned = unmake.stunned;
+        self.pinned = unmake.pinned;
+    }
+
+    /// Every legal board move for `color` as `(piece, from, to)`, each exactly once even when a
+    /// cell is reachable both by walking and by a Pillbug throw. The set equals [`Self::moves`].
+    pub fn for_each_move(&self, color: Color, mut visit: impl FnMut(Piece, Position, Position)) {
+        if self.game_result() != GameResult::Unknown || !self.queen_played(color) {
+            return;
+        }
+        let mut targets: Vec<Position> = Vec::with_capacity(64);
+        for (piece, position) in self.top_pieces() {
+            if self.last_moved == Some((piece, position)) {
+                continue;
+            }
+            targets.clear();
+            if piece.is_color(color) && !self.is_pinned(piece) {
+                Bug::scan_normal_moves_while(position, self, &mut |target| {
+                    if !targets.contains(&target) {
+                        targets.push(target);
+                    }
+                    true
+                });
+            }
+            for (_, ability) in self.ability_pieces_around(color, position) {
+                for target in ability.positions_around() {
+                    if !targets.contains(&target)
+                        && Bug::can_throw_piece_to(ability, position, target, self)
+                    {
+                        targets.push(target);
+                    }
+                }
+            }
+            for &target in &targets {
+                visit(piece, position, target);
+            }
+        }
+    }
+
+    /// Every legal placement for `color`: one piece per bug type (the lowest unplayed number),
+    /// on every spawnable cell. `queen_allowed` carries the tournament opening rule, which is
+    /// state the board does not hold.
+    pub fn for_each_placement(
+        &self,
+        color: Color,
+        game_type: GameType,
+        queen_allowed: bool,
+        mut visit: impl FnMut(Piece, Position),
+    ) {
+        let queen_required = self.queen_required(color);
+        let mut pieces = [None; 8];
+        let mut count = 0;
+        let mut seen_bugs = 0u8;
+        let start = 24 * color as usize;
+        for offset in start..start + 24 {
+            if self.positions[offset].is_some() || !self.offset_represents_piece(offset, game_type)
+            {
+                continue;
+            }
+            let piece = self.offset_to_piece(offset);
+            let bug_bit = 1 << piece.bug() as u8;
+            if seen_bugs & bug_bit != 0 {
+                continue;
+            }
+            seen_bugs |= bug_bit;
+            let is_queen = piece.bug() == Bug::Queen;
+            if (is_queen && !queen_allowed) || (!is_queen && queen_required) {
+                continue;
+            }
+            pieces[count] = Some(piece);
+            count += 1;
+        }
+        if count == 0 {
+            return;
+        }
+        // Spawn cells touch the hive, so walking the hive's rim beats scanning the whole window.
+        let game_result = self.game_result();
+        let mut cells: Vec<Position> = Vec::with_capacity(64);
+        if self.played == 0 {
+            cells.push(Position::initial_spawn_position());
+        }
+        for at in self.all_taken_positions() {
+            for around in at.positions_around() {
+                if !self.occupied(around) && !cells.contains(&around) {
+                    cells.push(around);
+                }
+            }
+        }
+        for position in cells {
+            if !self.spawnable_with_game_result(color, position, &game_result) {
+                continue;
+            }
+            for piece in pieces[..count].iter().flatten() {
+                visit(*piece, position);
+            }
+        }
     }
 }
 
@@ -2666,5 +2871,118 @@ mod tests {
         );
         // The repetition is still noticed, it just does not overrule what was played.
         assert_eq!(state.repeating_moves, vec![25, 29, 33]);
+    }
+
+    fn fixture_histories() -> Vec<(String, History)> {
+        let mut histories = Vec::new();
+        for dir in ["./test_pgns/valid", "./test_pgns/regressions"] {
+            let mut paths: Vec<_> = fs::read_dir(dir)
+                .expect("fixture directory")
+                .map(|entry| entry.expect("fixture entry").path())
+                .collect();
+            paths.sort();
+            for path in paths {
+                let history = match path.extension().and_then(|ext| ext.to_str()) {
+                    Some("pgn") => History::from_filepath(path.clone()),
+                    Some("uhp") => {
+                        History::from_uhp_str(&fs::read_to_string(&path).expect("readable fixture"))
+                    }
+                    _ => continue,
+                };
+                if let Ok(history) = history {
+                    histories.push((path.display().to_string(), history));
+                }
+            }
+        }
+        histories
+    }
+
+    /// Board-level actions as the State would offer them: deduplicated moves, one spawn per bug.
+    fn state_actions(state: &State) -> HashSet<(Piece, Option<Position>, Position)> {
+        let color = state.turn_color;
+        let mut actions = HashSet::new();
+        for ((piece, from), targets) in state.board.moves(color) {
+            for target in targets {
+                actions.insert((piece, Some(from), target));
+            }
+        }
+        let spawns: Vec<Position> = state.board.spawnable_positions(color).collect();
+        for pieces in state.board.reserve(color, state.game_type).values() {
+            let Some(piece) = pieces.first().and_then(|p| p.parse::<Piece>().ok()) else {
+                continue;
+            };
+            if piece.bug() == Bug::Queen && !state.queen_allowed() {
+                continue;
+            }
+            if piece.bug() != Bug::Queen && state.queen_required_now(color) {
+                continue;
+            }
+            for &target in &spawns {
+                actions.insert((piece, None, target));
+            }
+        }
+        actions
+    }
+
+    #[test]
+    fn make_unmake_matches_state_play_over_the_fixtures() {
+        for (name, history) in fixture_histories() {
+            let tournament = !history.moves.iter().take(2).any(|(piece, _)| {
+                piece
+                    .parse::<Piece>()
+                    .is_ok_and(|piece| piece.bug() == Bug::Queen)
+            });
+            let mut state = State::new(history.game_type, tournament);
+            state.set_replaying(true);
+            for (ply, (piece, position)) in history.moves.iter().enumerate() {
+                if !matches!(state.game_status, GameStatus::Finished(_)) {
+                    let color = state.turn_color;
+                    let mut emitted = Vec::new();
+                    state.board.for_each_move(color, |piece, from, to| {
+                        emitted.push((piece, Some(from), to))
+                    });
+                    state.board.for_each_placement(
+                        color,
+                        state.game_type,
+                        state.queen_allowed(),
+                        |piece, to| emitted.push((piece, None, to)),
+                    );
+                    let unique: HashSet<_> = emitted.iter().copied().collect();
+                    assert_eq!(unique.len(), emitted.len(), "{name} ply {ply}: duplicates");
+                    assert_eq!(
+                        unique,
+                        state_actions(&state),
+                        "{name} ply {ply}: action set"
+                    );
+
+                    for (piece, from, to) in emitted {
+                        let mut board = state.board.clone();
+                        let unmake = board.make(piece, from, to, color);
+                        assert_eq!(
+                            state.board.result_after(piece, from, to),
+                            board.game_result(),
+                            "{name} ply {ply} {piece} {to}: result_after"
+                        );
+                        let mut played = state.clone();
+                        let before = played.history.moves.len();
+                        played
+                            .play_turn_from_position(piece, to)
+                            .unwrap_or_else(|err| panic!("{name} ply {ply} {piece}: {err}"));
+                        let mut made = board.clone();
+                        if played.history.moves.len() - before == 2 {
+                            made.last_moved = None;
+                            made.last_move = (None, None);
+                            made.stunned = None;
+                        }
+                        assert_eq!(made, played.board, "{name} ply {ply} {piece} {to}: make");
+                        board.unmake(unmake);
+                        assert_eq!(board, state.board, "{name} ply {ply} {piece} {to}: unmake");
+                    }
+                }
+                state
+                    .play_turn_from_history(piece, position)
+                    .unwrap_or_else(|err| panic!("{name} ply {ply}: {err}"));
+            }
+        }
     }
 }

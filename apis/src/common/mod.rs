@@ -67,7 +67,7 @@ pub use server_result::{
     UserStatus,
     UserUpdate,
 };
-pub use svg_pos::{position_from_svg, SvgPos};
+pub use svg_pos::{hex_height, hex_width, position_from_svg, SvgPos};
 pub use time_signals::{TimeParams, TimeParamsStoreFields};
 pub use tournament_action::{TournamentAction, TournamentResponseDepth};
 pub use ui_utils::{render_text_prop, with_class};

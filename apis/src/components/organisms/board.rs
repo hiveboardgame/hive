@@ -250,7 +250,13 @@ enum StackExpansionResetKey {
 }
 
 #[component]
-pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>) -> impl IntoView {
+pub fn Board(
+    interaction: HivegroundInteraction,
+    history_board: Memo<HiveBoard>,
+    /// Scale the view so the whole hive (plus room around it) fills the board area.
+    #[prop(optional)]
+    fit_hive: bool,
+) -> impl IntoView {
     let game_state = expect_context::<GameStateStore>();
     let analysis = use_context::<AnalysisContext>();
     let annotations = use_context::<AnnotationsSignal>();
@@ -334,16 +340,31 @@ pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>)
         annotations,
     );
 
+    let fitted_bounds = StoredValue::new(None::<HiveBounds>);
     // Unified RAF-based viewbox update system
     let center_on_hive = move |width: f32, height: f32| {
         let current_center = displayed_board.with_untracked(HiveBoard::center_coordinates);
-        let svg_pos = SvgPos::center_for_level(current_center, 0, straight);
         board_width.set_value(width);
+        let fitted = fit_hive
+            .then(|| {
+                let bounds = displayed_board
+                    .with_untracked(|board| hive_bounds(board, straight))
+                    .map(|bounds| match fitted_bounds.get_value() {
+                        Some(seen) => seen.union(bounds),
+                        None => bounds,
+                    });
+                fitted_bounds.set_value(bounds);
+                bounds.and_then(|bounds| bounds.fit(width, height))
+            })
+            .flatten();
+        let (scale, svg_pos) = fitted.unwrap_or_else(|| {
+            (1.0, SvgPos::center_for_level(current_center, 0, straight))
+        });
         viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
             viewbox_controls.x = 0.0;
             viewbox_controls.y = 0.0;
-            viewbox_controls.width = width;
-            viewbox_controls.height = height;
+            viewbox_controls.width = width / scale;
+            viewbox_controls.height = height / scale;
             viewbox_controls.x_transform = -(svg_pos.0 - (viewbox_controls.width / 2.0));
             viewbox_controls.y_transform = -(svg_pos.1 - (viewbox_controls.height / 2.0));
         });
@@ -1018,6 +1039,60 @@ fn setup_stack_expansion_events(
     _ = use_event_listener(viewbox_ref, contextmenu, move |evt| {
         evt.prevent_default();
     });
+}
+
+/// The scale and centre that frame every piece with a ring of free cells around it, for boards
+/// that show one position at a time (puzzles). Clamped so a tiny hive is not blown up absurdly.
+#[derive(Clone, Copy)]
+struct HiveBounds {
+    min_x: f32,
+    max_x: f32,
+    min_y: f32,
+    max_y: f32,
+}
+
+impl HiveBounds {
+    fn union(self, other: Self) -> Self {
+        Self {
+            min_x: self.min_x.min(other.min_x),
+            max_x: self.max_x.max(other.max_x),
+            min_y: self.min_y.min(other.min_y),
+            max_y: self.max_y.max(other.max_y),
+        }
+    }
+
+    fn fit(self, width: f32, height: f32) -> Option<(f32, (f32, f32))> {
+        if width <= 0.0 || height <= 0.0 {
+            return None;
+        }
+        let margin_x = 3.0 * crate::common::hex_width();
+        let margin_y = 2.5 * crate::common::hex_height();
+        let scale = (width / (self.max_x - self.min_x + margin_x))
+            .min(height / (self.max_y - self.min_y + margin_y))
+            .clamp(0.45, 2.4);
+        Some((
+            scale,
+            (
+                (self.min_x + self.max_x) / 2.0,
+                (self.min_y + self.max_y) / 2.0,
+            ),
+        ))
+    }
+}
+
+fn hive_bounds(board: &HiveBoard, straight: bool) -> Option<HiveBounds> {
+    board
+        .all_taken_positions()
+        .map(|position| SvgPos::center_for_level(position, 0, straight))
+        .fold(None, |bounds: Option<HiveBounds>, (x, y)| {
+            let point = HiveBounds {
+                min_x: x,
+                max_x: x,
+                min_y: y,
+                max_y: y,
+            };
+            Some(bounds.map_or(point, |bounds| bounds.union(point)))
+        })
 }
 
 /// A non-final history position is dimmed with a sepia filter to signal it isn't live play -

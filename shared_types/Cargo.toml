@@ -16,3 +16,6 @@ chrono = { workspace = true }
 hive = { path = "../engine" }
 anyhow = { workspace = true }
 itertools = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }

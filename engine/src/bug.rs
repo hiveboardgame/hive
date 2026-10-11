@@ -211,7 +211,7 @@ impl Bug {
     ///
     /// Returns true only when all targets were scanned. Returns false when
     /// `keep_scanning` stopped generation early.
-    fn scan_normal_moves_while(
+    pub(crate) fn scan_normal_moves_while(
         position: Position,
         board: &Board,
         keep_scanning: &mut impl FnMut(Position) -> bool,
@@ -353,7 +353,7 @@ impl Bug {
         })
     }
 
-    fn ant_moves(position: Position, board: &Board) -> Vec<Position> {
+    pub fn ant_moves(position: Position, board: &Board) -> Vec<Position> {
         let mut found_pos = Vec::with_capacity(24);
         Bug::scan_ant_moves_while(position, board, &mut |pos| {
             found_pos.push(pos);
@@ -456,7 +456,7 @@ impl Bug {
         true
     }
 
-    fn ladybug_moves(position: Position, board: &Board) -> Vec<Position> {
+    pub fn ladybug_moves(position: Position, board: &Board) -> Vec<Position> {
         let mut positions = Vec::new();
         Bug::scan_ladybug_moves_while(position, board, &mut |pos| {
             positions.push(pos);
@@ -521,7 +521,7 @@ impl Bug {
         }
     }
 
-    fn pillbug_moves(position: Position, board: &Board) -> impl Iterator<Item = Position> + '_ {
+    pub fn pillbug_moves(position: Position, board: &Board) -> impl Iterator<Item = Position> + '_ {
         Bug::crawl(position, board)
     }
 
@@ -567,7 +567,7 @@ impl Bug {
         moves
     }
 
-    fn queen_moves(position: Position, board: &Board) -> impl Iterator<Item = Position> + '_ {
+    pub fn queen_moves(position: Position, board: &Board) -> impl Iterator<Item = Position> + '_ {
         Bug::crawl(position, board)
     }
 
@@ -601,7 +601,7 @@ impl Bug {
         true
     }
 
-    fn spider_moves(position: Position, board: &Board) -> Vec<Position> {
+    pub fn spider_moves(position: Position, board: &Board) -> Vec<Position> {
         let mut res = Vec::new();
         Bug::scan_spider_moves_while(position, board, &mut |pos| {
             res.push(pos);

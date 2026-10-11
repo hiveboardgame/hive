@@ -102,10 +102,23 @@ impl std::str::FromStr for GameSpeed {
             "Classic" => Ok(GameSpeed::Classic),
             "Correspondence" => Ok(GameSpeed::Correspondence),
             "Untimed" => Ok(GameSpeed::Untimed),
-            "Puzzle" => Ok(GameSpeed::Untimed),
+            "Puzzle" => Ok(GameSpeed::Puzzle),
             s => Err(GameSpeedError::InvalidGameSpeed {
                 found: s.to_string(),
             }),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::str::FromStr;
+
+    #[test]
+    fn every_speed_round_trips_through_its_name() {
+        for speed in GameSpeed::all() {
+            assert_eq!(GameSpeed::from_str(&speed.to_string()).ok(), Some(speed));
         }
     }
 }

@@ -7,6 +7,7 @@ mod invitation;
 mod notification_preferences;
 mod opening_explorer;
 mod push_device;
+mod puzzle;
 mod rating;
 mod rating_history;
 mod schedules;
@@ -22,6 +23,14 @@ pub use invitation::InvitationResponse;
 pub use notification_preferences::NotificationPreferencesResponse;
 pub use opening_explorer::ExplorerResponse;
 pub use push_device::PushDeviceResponse;
+pub use puzzle::{
+    PuzzleAttemptResponse,
+    PuzzleHistoryRow,
+    PuzzleRatingResponse,
+    PuzzleResponse,
+    PuzzleSetResponse,
+    PuzzleStarsResponse,
+};
 pub use rating::RatingResponse;
 pub use rating_history::RatingHistoryResponse;
 pub use schedules::ScheduleResponse;

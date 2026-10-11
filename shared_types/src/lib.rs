@@ -13,6 +13,7 @@ mod notification_category;
 mod notification_channel;
 mod opening_explorer;
 mod pretty_string;
+mod puzzle;
 mod ready_user;
 mod reserved_username;
 mod scoring_mode;
@@ -72,6 +73,30 @@ pub use notification_category::NotificationCategory;
 pub use notification_channel::{CHANNEL_DISCORD, CHANNEL_EMAIL, CHANNEL_PUSH};
 pub use opening_explorer::{ExplorerFilters, ExplorerMove, MIN_PLIES};
 pub use pretty_string::PrettyString;
+pub use puzzle::{
+    play_token,
+    resolve_move,
+    solver_moves,
+    split_move,
+    start_hash,
+    start_state,
+    verify_lines,
+    PuzzleDifficulty,
+    PuzzleError,
+    PuzzleGameTypeFilter,
+    PuzzleHistoryFilter,
+    PuzzleImport,
+    PuzzleKind,
+    PuzzleLength,
+    PuzzleProgress,
+    PuzzleSelection,
+    PuzzleVerdict,
+    AUTO_HIDE_MAX_STARS,
+    AUTO_HIDE_MIN_VOTES,
+    PUZZLE_START_DEVIATION,
+    PUZZLE_START_RATING,
+    PUZZLE_START_VOLATILITY,
+};
 pub use ready_user::ReadyUser;
 pub use reserved_username::RESERVED_USERNAMES;
 pub use scoring_mode::ScoringMode;

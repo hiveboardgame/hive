@@ -21,6 +21,7 @@ async fn main() -> std::io::Result<()> {
     use api::v1::auth::jwt_secret::JwtSecret;
     use api::v1::bot::users::api_get_user;
     use api::v1::health::{health, health_ready};
+    use api::v1::puzzles::{api_import_puzzles, PuzzleImportToken};
     use actix_files::Files;
     use actix_identity::IdentityMiddleware;
     use actix_session::{storage::CookieSessionStore, SessionMiddleware};
@@ -190,6 +191,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::clone(&jwt_key))
             .app_data(Data::from(push_telemetry.clone()))
             .app_data(Data::new(pwa_manifest.clone()))
+            .app_data(Data::new(PuzzleImportToken::from_env()))
             // serve JS/WASM/CSS from `pkg`
             .service(Files::new("/pkg", format!("{site_root}/pkg")))
             .service(functions::pwa::worker)
@@ -219,6 +221,7 @@ async fn main() -> std::io::Result<()> {
             .service(api_delete_challenge)
             .service(api_delete_challenges)
             .service(api_create_challenge)
+            .service(api_import_puzzles)
 
             // .leptos_routes(leptos_options.to_owned(), routes.to_owned(), App)
             .leptos_routes(routes.to_owned(), {

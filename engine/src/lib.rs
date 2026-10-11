@@ -32,7 +32,7 @@ mod svg_position;
 mod turn;
 mod window_array;
 
-pub use board::{Board, BoardSnapshot};
+pub use board::{Board, BoardSnapshot, Unmake};
 pub use bug::Bug;
 pub use bug_stack::BugStack;
 pub use color::{Color, ColorChoice};

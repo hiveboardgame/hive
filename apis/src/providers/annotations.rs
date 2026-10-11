@@ -303,6 +303,10 @@ impl AnnotationsSignal {
             .update_current(|set| *set = AnnotationSet::default());
     }
 
+    pub fn replace_current(&self, replacement: AnnotationSet) {
+        self.backend.update_current(|set| *set = replacement);
+    }
+
     pub fn toggle_mode(&self) {
         self.mode.update(|on| *on = !*on);
     }

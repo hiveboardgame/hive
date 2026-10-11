@@ -8,7 +8,10 @@
 //! PERFT_DEPTH=6 cargo test --release perft_tests:: -- --ignored --nocapture
 
 use crate::{
+    board::Board,
     bug::Bug,
+    color::Color,
+    game_result::GameResult,
     game_status::GameStatus,
     game_type::GameType,
     piece::Piece,
@@ -208,4 +211,78 @@ fn perft_matches_the_reference_deeply() {
         .and_then(|value| value.parse().ok())
         .unwrap_or(5);
     check_to_depth(max_depth.min(7));
+}
+
+/// Same tree as `perft`, walked with `Board::make`/`unmake` instead of cloning `State`s.
+fn perft_make(
+    board: &mut Board,
+    game_type: GameType,
+    color: Color,
+    turn: usize,
+    depth: u32,
+) -> u64 {
+    if depth == 0 {
+        return 1;
+    }
+    if board.game_result() != GameResult::Unknown {
+        return 0;
+    }
+    let mut actions = Vec::new();
+    board.for_each_move(color, |piece, from, to| {
+        actions.push((piece, Some(from), to))
+    });
+    board.for_each_placement(color, game_type, turn > 1, |piece, to| {
+        actions.push((piece, None, to))
+    });
+    if actions.is_empty() {
+        let saved = (board.last_moved, board.last_move, board.stunned);
+        board.last_moved = None;
+        board.last_move = (None, None);
+        board.stunned = None;
+        let total = perft_make(
+            board,
+            game_type,
+            color.opposite_color(),
+            turn + 1,
+            depth - 1,
+        );
+        (board.last_moved, board.last_move, board.stunned) = saved;
+        return total;
+    }
+    let mut total = 0;
+    for (piece, from, to) in actions {
+        let unmake = board.make(piece, from, to, color);
+        total += perft_make(
+            board,
+            game_type,
+            color.opposite_color(),
+            turn + 1,
+            depth - 1,
+        );
+        board.unmake(unmake);
+    }
+    total
+}
+
+#[test]
+fn make_unmake_perft_matches_the_reference() {
+    let max_depth: u32 = std::env::var("PERFT_DEPTH")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(4);
+    for (game_type, counts) in REFERENCE {
+        for (depth, &expected) in counts.iter().enumerate().take(max_depth as usize + 1) {
+            let mut board = Board::new();
+            let count = perft_make(&mut board, game_type, Color::White, 0, depth as u32);
+            assert_eq!(
+                count, expected,
+                "make/unmake perft({depth}) diverged from the reference for {game_type}"
+            );
+            assert_eq!(
+                board,
+                Board::new(),
+                "perft must leave the board as it found it"
+            );
+        }
+    }
 }

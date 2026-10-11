@@ -19,7 +19,12 @@ pub use build::{
 pub use config::ReserveLayout;
 pub use drag::PieceDrag;
 pub use history::selected_history_board;
-pub use interaction::{HivegroundAction, HivegroundActions, HivegroundInteraction};
+pub use interaction::{
+    HivegroundAction,
+    HivegroundActions,
+    HivegroundCapabilities,
+    HivegroundInteraction,
+};
 pub use model::{
     ActiveMarkerState,
     ExpandedStackLevel,

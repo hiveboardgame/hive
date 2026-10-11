@@ -11,6 +11,7 @@ mod game_user;
 mod home_banner;
 mod notification_preferences;
 mod push_device;
+mod puzzle;
 mod rating;
 mod schedule;
 mod tournament;
@@ -37,6 +38,7 @@ pub use notification_preferences::{
     NotificationPreferencesUpdate,
 };
 pub use push_device::{NewPushDevice, PushDevice};
+pub use puzzle::{AttemptOutcome, Puzzle, PuzzleAttempt, PuzzleSetCount};
 pub use rating::{NewRating, Rating};
 pub use schedule::{NewSchedule, Schedule};
 pub use tournament::{NewTournament, Tournament};
