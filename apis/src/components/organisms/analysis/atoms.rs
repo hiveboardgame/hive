@@ -1,6 +1,6 @@
 use crate::{
     components::{
-        atoms::history_nav_button::HistoryNavButton,
+        atoms::{grade_mark::GradeMark, history_nav_button::HistoryNavButton},
         molecules::{annotation_toolbar::AnnotationToggle, modal::Modal},
     },
     hooks::history_nav::{
@@ -184,24 +184,19 @@ pub(super) fn HistoryRow(row: VisibleRow, value: Option<MoveDelta>) -> impl Into
         .store
         .game_ply_untracked(node_id)
         .and_then(|ply| ply.checked_sub(1));
-    let glyph = move || {
+    let grade = move || {
         game_move
             .zip(evals)
             .and_then(|(ply, evals)| evals.grade(ply))
-            .map(|grade| format!(" {}", grade.glyph()))
-            .unwrap_or_default()
     };
+    let is_move = value.is_some();
     let label = move || {
         value
             .as_ref()
             .map(|value| {
                 format!(
-                    "{turn_prefix}{}. {} {}{}{}",
-                    value.turn,
-                    value.piece,
-                    value.position,
-                    glyph(),
-                    rep()
+                    "{turn_prefix}{}. {} {}",
+                    value.turn, value.piece, value.position,
                 )
             })
             .unwrap_or_else(|| String::from(root_label))
@@ -254,6 +249,16 @@ pub(super) fn HistoryRow(row: VisibleRow, value: Option<MoveDelta>) -> impl Into
                 on:click=onclick
             >
                 {label}
+                {move || {
+                    grade()
+                        .map(|grade| {
+                            view! {
+                                " "
+                                <GradeMark grade />
+                            }
+                        })
+                }}
+                {move || is_move.then(rep)}
             </div>
         </div>
     }

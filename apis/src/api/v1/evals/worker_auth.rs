@@ -23,7 +23,6 @@ impl EvalWorkerToken {
     }
 }
 
-/// Proof that the request came from an eval worker.
 pub struct EvalWorker;
 
 impl FromRequest for EvalWorker {

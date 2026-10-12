@@ -7,11 +7,18 @@ use shared_types::{EvalResult, EvalStatus, GameSpeed, MoveEval};
 use uuid::Uuid;
 
 async fn game(conn: &mut DbConn<'_>, white: &str, black: &str) -> Uuid {
+    game_of(conn, white, black, 20).await
+}
+
+async fn game_of(conn: &mut DbConn<'_>, white: &str, black: &str, turn: i32) -> Uuid {
     let w = create_user(white, false, conn).await;
     let b = create_user(black, false, conn).await;
-    create_game(new_game(w.id, b.id, GameSpeed::Rapid, true), conn)
-        .await
-        .id
+    let mut game = new_game(w.id, b.id, GameSpeed::Rapid, true);
+    game.turn = turn;
+    // Strong enough for the front page.
+    game.white_rating = Some(2100.0);
+    game.black_rating = Some(2100.0);
+    create_game(game, conn).await.id
 }
 
 fn result_for(moves: &[&str]) -> EvalResult {
@@ -79,6 +86,123 @@ async fn a_user_has_one_active_eval_at_a_time() {
 
     let next = GameEval::request(g2, asker.id, 2, &mut conn).await.unwrap();
     assert_eq!(next.status(), EvalStatus::Queued);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn only_the_requester_can_take_back_a_waiting_eval() {
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.unwrap();
+    let g = game(&mut conn, "w1", "b1").await;
+    let asker = create_user("asker", false, &mut conn).await;
+    let other = create_user("other", false, &mut conn).await;
+    GameEval::request(g, asker.id, 2, &mut conn).await.unwrap();
+
+    assert!(!GameEval::cancel(g, other.id, &mut conn).await.unwrap());
+    assert!(GameEval::cancel(g, asker.id, &mut conn).await.unwrap());
+    assert!(GameEval::find_by_game(g, &mut conn)
+        .await
+        .unwrap()
+        .is_none());
+
+    // Once a worker has it, it is no longer the requester's to take back.
+    GameEval::request(g, asker.id, 2, &mut conn).await.unwrap();
+    GameEval::claim("worker-a", false, &mut conn)
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(!GameEval::cancel(g, asker.id, &mut conn).await.unwrap());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_front_page_leaves_out_games_too_short_to_be_evaluated_today() {
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.unwrap();
+    // Evaluated before short games were refused; it must not be advertised.
+    let short = game_of(&mut conn, "w1", "b1", 2).await;
+    let asker = create_user("asker", false, &mut conn).await;
+    let eval = GameEval::request(short, asker.id, 2, &mut conn)
+        .await
+        .unwrap();
+    GameEval::claim("worker-a", false, &mut conn)
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(GameEval::finish(
+        eval.id,
+        "worker-a",
+        "test",
+        &result_for(&["wQ", "bQ /wQ"]),
+        &mut conn
+    )
+    .await
+    .unwrap());
+
+    assert!(GameEval::recent(6, &mut conn).await.unwrap().is_empty());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_front_page_leaves_out_weaker_games_except_tournament_ones() {
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.unwrap();
+    let w = create_user("w1", false, &mut conn).await;
+    let b = create_user("b1", false, &mut conn).await;
+    let mut weak = new_game(w.id, b.id, GameSpeed::Rapid, true);
+    weak.turn = 20;
+    weak.white_rating = Some(2300.0);
+    weak.black_rating = Some(1500.0);
+    let weak = create_game(weak, &mut conn).await.id;
+    let asker = create_user("asker", false, &mut conn).await;
+    let eval = GameEval::request(weak, asker.id, 20, &mut conn)
+        .await
+        .unwrap();
+    GameEval::claim("worker-a", false, &mut conn)
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(GameEval::finish(
+        eval.id,
+        "worker-a",
+        "test",
+        &result_for(&["wQ", "bQ /wQ"]),
+        &mut conn
+    )
+    .await
+    .unwrap());
+
+    assert!(GameEval::recent(6, &mut conn).await.unwrap().is_empty());
+
+    // A tournament game shows whatever the ratings.
+    let tw = create_user("tw", false, &mut conn).await;
+    let tb = create_user("tb", false, &mut conn).await;
+    let mut cup = new_game(tw.id, tb.id, GameSpeed::Rapid, true);
+    cup.turn = 20;
+    cup.white_rating = Some(1400.0);
+    cup.black_rating = Some(1300.0);
+    cup.tournament_id = Some(tournament(tw.id, "cup", &mut conn).await);
+    let cup = create_game(cup, &mut conn).await.id;
+    let eval = GameEval::request(cup, asker.id, 20, &mut conn)
+        .await
+        .unwrap();
+    GameEval::claim("worker-a", false, &mut conn)
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(GameEval::finish(
+        eval.id,
+        "worker-a",
+        "test",
+        &result_for(&["wQ", "bQ /wQ"]),
+        &mut conn
+    )
+    .await
+    .unwrap());
+    let shown: Vec<String> = GameEval::recent(6, &mut conn)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|eval| eval.white)
+        .collect();
+    assert_eq!(shown, vec!["tw"]);
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -249,7 +373,16 @@ async fn the_queue_snapshot_lists_waiting_and_running_work() {
     let snap = GameEval::queue_snapshot(&mut conn).await.unwrap();
 
     assert_eq!(snap.queued, vec![(waiting.id, 30)]);
-    assert_eq!(snap.running, vec![(40, 50)]);
+    let running: Vec<(i32, i16, bool)> = snap
+        .running
+        .iter()
+        .map(|r| (r.moves, r.progress_pct, r.started_at.is_some()))
+        .collect();
+    assert_eq!(
+        running,
+        vec![(40, 50, true)],
+        "started_at feeds the own-pace estimate"
+    );
     assert_eq!(snap.workers, 1);
     assert_eq!(snap.position(waiting.id), Some(1));
 }
@@ -594,7 +727,7 @@ async fn set_tournament(game: Uuid, status: &str, ended_days_ago: i32, conn: &mu
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn the_front_page_puts_tournaments_then_requests_then_top_automatic_evals() {
+async fn the_front_page_shows_tournaments_then_requests_then_other_strong_games() {
     let db = common::db::test_db().await;
     let mut conn = get_conn(&db.pool).await.unwrap();
     // Auto-evals pick tournament games first, then by rating, so these finish in this order.
@@ -655,9 +788,8 @@ async fn the_front_page_puts_tournaments_then_requests_then_top_automatic_evals(
         .map(|eval| eval.white)
         .collect();
 
-    // The live tournament game was evaluated first of all and still leads; an automatic eval
-    // of an ordinary game never shows.
-    assert_eq!(shown, vec!["livew", "w1", "starw", "oldcupw"]);
+    // The live tournament game was evaluated first of all and still leads.
+    assert_eq!(shown, vec!["livew", "w1", "plainw", "starw", "oldcupw"]);
 }
 
 #[tokio::test(flavor = "multi_thread")]

@@ -8,6 +8,7 @@ use crate::{
                 AnalysisMobileHistoryControls,
                 AnalysisMobileTabs,
                 AnalysisSidebar,
+                EvalBoardNote,
                 GameDetailsPanel,
                 VariationList,
             },
@@ -475,7 +476,7 @@ pub fn Analysis() -> impl IntoView {
                                         <div class="flex relative min-h-0 grow">
                                             <Board interaction=hiveground_interaction history_board />
                                             <VariationList extend_tw_classes="absolute left-1 top-1 z-20" />
-                                        </div> {mobile_player_panel(Color::Black)}
+                                        </div> <EvalBoardNote /> {mobile_player_panel(Color::Black)}
                                         <div class="order-2 shrink-0 ui-board-reserve">
                                             <AnalysisMobileHistoryControls />
                                         </div>

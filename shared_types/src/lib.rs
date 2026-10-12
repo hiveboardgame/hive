@@ -62,6 +62,7 @@ pub use game_eval::{
     MoveEval,
     RecentEval,
     RecentEvals,
+    EVAL_MIN_MOVES,
     MAX_EVAL_LINE,
 };
 pub use game_speed::GameSpeed;

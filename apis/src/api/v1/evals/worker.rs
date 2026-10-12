@@ -1,4 +1,4 @@
-use super::{presence::worker_polled, worker_auth::EvalWorker};
+use super::{presence::worker_seen, worker_auth::EvalWorker};
 use actix_web::{
     post,
     web::{Bytes, Data, Json, Path},
@@ -27,7 +27,7 @@ pub async fn eval_claim(
     if bad_worker_name(&claim.worker) {
         return HttpResponse::BadRequest().body("worker name must be 1-64 bytes");
     }
-    worker_polled();
+    worker_seen(&claim.worker);
     let Ok(mut conn) = get_conn(&pool).await else {
         return HttpResponse::ServiceUnavailable().finish();
     };
@@ -56,6 +56,7 @@ pub async fn eval_progress(
     let Ok(mut conn) = get_conn(&pool).await else {
         return HttpResponse::ServiceUnavailable().finish();
     };
+    worker_seen(&progress.worker);
     let pct = i16::from(progress.progress_pct);
     match GameEval::report_progress(*id, &progress.worker, pct, &mut conn).await {
         Ok(true) => HttpResponse::Ok().finish(),

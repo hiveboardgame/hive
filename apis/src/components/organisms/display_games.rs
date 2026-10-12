@@ -2,6 +2,7 @@ use crate::{
     components::molecules::game_row::GameRow,
     providers::{
         calculate_initial_batch_size,
+        game_eval::provide_evaluated_games,
         initial_profile_filters_for_tab,
         load_games,
         GamesSearchContext,
@@ -124,6 +125,10 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
             .distance(10.0)
             .interval(300.0),
     );
+    provide_evaluated_games(Signal::derive(move || {
+        ctx.games
+            .with(|games| games.iter().map(|game| game.game_id.clone()).collect())
+    }));
     view! {
         <div
             node_ref=el

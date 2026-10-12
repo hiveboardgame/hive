@@ -5,7 +5,7 @@ use shared_types::{GameEvalView, GameId};
 
 #[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_game_eval(game_id: GameId) -> Result<GameEvalView, ServerFnError> {
-    use crate::functions::db::pool;
+    use crate::functions::{auth::identity::uuid, db::pool};
     use db_lib::{
         get_conn,
         models::{Game, GameEval},
@@ -18,7 +18,7 @@ pub async fn get_game_eval(game_id: GameId) -> Result<GameEvalView, ServerFnErro
         return Ok(GameEvalView::NotRequested);
     };
     let queue = queue_snapshot(&mut conn).await?;
-    Ok(eval.view(&queue))
+    Ok(eval.view(&queue, uuid().await.ok()))
 }
 
 #[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
@@ -54,7 +54,45 @@ pub async fn request_game_eval(game_id: GameId) -> Result<GameEvalView, ServerFn
             e => ServerFnError::new(e),
         })?;
     let queue = queue_snapshot(&mut conn).await?;
-    Ok(eval.view(&queue))
+    Ok(eval.view(&queue, Some(user)))
+}
+
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
+pub async fn evaluated_games(game_ids: Vec<GameId>) -> Result<Vec<GameId>, ServerFnError> {
+    use crate::functions::db::pool;
+    use db_lib::{get_conn, models::GameEval};
+    const MOST: usize = 200;
+    let pool = pool().await?;
+    let mut conn = get_conn(&pool).await?;
+    ensure_eval_access(&mut conn).await?;
+    let nanoids: Vec<String> = game_ids.into_iter().take(MOST).map(|id| id.0).collect();
+    Ok(GameEval::evaluated_among(&nanoids, &mut conn)
+        .await?
+        .into_iter()
+        .map(GameId)
+        .collect())
+}
+
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
+pub async fn cancel_game_eval(game_id: GameId) -> Result<GameEvalView, ServerFnError> {
+    use crate::functions::{auth::identity::uuid, db::pool};
+    use db_lib::{
+        get_conn,
+        models::{Game, GameEval},
+    };
+    let user = uuid()
+        .await
+        .map_err(|_| ServerFnError::new("Log in to change your request."))?;
+    let pool = pool().await?;
+    let mut conn = get_conn(&pool).await?;
+    ensure_eval_access(&mut conn).await?;
+    let game = Game::find_by_game_id(&game_id, &mut conn).await?;
+    if !GameEval::cancel(game.id, user, &mut conn).await? {
+        return Err(ServerFnError::new(
+            "Only a waiting eval you asked for can be taken back; the engine may have started it.",
+        ));
+    }
+    Ok(GameEvalView::NotRequested)
 }
 
 /// Evals stay admin-only while the 2026 world championship runs. To open them to everyone,
@@ -68,9 +106,11 @@ async fn ensure_eval_access(conn: &mut db_lib::DbConn<'_>) -> Result<(), ServerF
 async fn queue_snapshot(
     conn: &mut db_lib::DbConn<'_>,
 ) -> Result<db_lib::models::QueueSnapshot, ServerFnError> {
-    use crate::api::v1::evals::presence::worker_seen_recently;
+    use crate::api::v1::evals::presence::workers_online;
     let mut queue = db_lib::models::GameEval::queue_snapshot(conn).await?;
-    queue.worker_online = worker_seen_recently() || !queue.running.is_empty();
+    // Idle workers count too: a second machine waiting for work halves the queue's wait.
+    queue.workers = queue.workers.max(workers_online());
+    queue.worker_online = queue.workers > 0;
     Ok(queue)
 }
 

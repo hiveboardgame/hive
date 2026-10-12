@@ -11,6 +11,7 @@ mod render;
 pub use app_interaction::{analysis_hiveground_interaction, live_hiveground_interaction};
 pub use build::{
     build_board_render_model,
+    build_board_render_model_with,
     build_reserve_render_model,
     build_static_render_model,
     ReserveInteractivity,

@@ -29,7 +29,7 @@ pub use email_request_log::{EmailRequestLog, NewEmailRequestLog};
 pub use email_state::EmailState;
 pub use email_token::{EmailToken, NewEmailToken};
 pub use game::{Game, NewGame};
-pub use game_eval::{GameEval, QueueSnapshot};
+pub use game_eval::{GameEval, QueueSnapshot, RunningEval};
 pub use game_hash::{GameFinishContext, GameHash};
 pub use game_user::GameUser;
 pub use home_banner::HomeBanner;

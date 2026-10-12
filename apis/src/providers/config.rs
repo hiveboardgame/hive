@@ -70,6 +70,9 @@ pub struct ConfigOpts {
     pub allow_premove: bool,
     #[serde(default)]
     pub drag_and_drop: bool,
+    /// The Evals tab shows moves as notation instead of words; strong players read it faster.
+    #[serde(default)]
+    pub eval_notation: bool,
 }
 
 impl Default for ConfigOpts {
@@ -90,6 +93,7 @@ impl Default for ConfigOpts {
             video_dismissed: false,
             allow_premove: false,
             drag_and_drop: false,
+            eval_notation: false,
         }
     }
 }

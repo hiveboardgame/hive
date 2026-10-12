@@ -245,6 +245,8 @@ fn key_event_target_uses_arrows(evt: &KeyboardEvent) -> bool {
         || element
             .get_attribute("contenteditable")
             .is_some_and(|value| value != "false")
+        // A widget with its own arrow-key steps, such as the eval graph.
+        || element.closest("[data-own-arrows]").ok().flatten().is_some()
 }
 
 #[cfg(test)]

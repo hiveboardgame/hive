@@ -8,7 +8,10 @@ use crate::{
 };
 use hive_lib::{Board, Color};
 use leptos::prelude::*;
-use leptos_router::hooks::use_query_map;
+use leptos_router::{
+    hooks::{use_location, use_navigate, use_query_map},
+    NavigateOptions,
+};
 
 #[derive(Clone, Copy, PartialEq)]
 enum AnalysisTab {
@@ -26,9 +29,51 @@ impl AnalysisTab {
             _ => None,
         }
     }
+
+    fn query(self) -> &'static str {
+        match self {
+            AnalysisTab::History => "history",
+            AnalysisTab::Explorer => "explorer",
+            AnalysisTab::Evals => "evals",
+        }
+    }
 }
 
-/// `?tab=evals` opens analysis on that tab, so links can point straight at a game's eval.
+/// Sets (or, given None, removes) query parameters of the page in place, without a history
+/// entry or a scroll: the URL follows what is on screen, so a link or a reload brings it back.
+pub(crate) fn use_set_query() -> Callback<Vec<(&'static str, Option<String>)>> {
+    let navigate = use_navigate();
+    let location = use_location();
+    let queries = use_query_map();
+    Callback::new(move |changes: Vec<(&'static str, Option<String>)>| {
+        let mut query = queries.get_untracked();
+        let before = query.to_query_string();
+        for (key, value) in changes {
+            match value {
+                Some(value) => query.replace(key, value),
+                None => {
+                    query.remove(key);
+                }
+            }
+        }
+        if query.to_query_string() == before {
+            return;
+        }
+        navigate(
+            &format!(
+                "{}{}",
+                location.pathname.get_untracked(),
+                query.to_query_string()
+            ),
+            NavigateOptions {
+                replace: true,
+                scroll: false,
+                ..Default::default()
+            },
+        );
+    })
+}
+
 fn requested_tab() -> AnalysisTab {
     use_query_map()
         .with_untracked(|query| {
@@ -56,7 +101,7 @@ fn AnalysisTabList(tab: RwSignal<AnalysisTab>, shown: Signal<AnalysisTab>) -> im
             format!(
                 "ui-board-tab-trigger cursor-pointer {}",
                 if shown() == name {
-                    "ui-segmented-active hover:bg-button-dawn dark:hover:bg-button-twilight"
+                    "ui-segmented-active dark:text-gray-950 hover:bg-button-dawn dark:hover:bg-button-twilight"
                 } else {
                     "hover:bg-blue-light/70 dark:hover:bg-pillbug-teal/15"
                 },
@@ -65,13 +110,18 @@ fn AnalysisTabList(tab: RwSignal<AnalysisTab>, shown: Signal<AnalysisTab>) -> im
     };
 
     let shown_evals = evals_visible();
+    let set_query = use_set_query();
+    let choose = move |chosen: AnalysisTab| {
+        tab.set(chosen);
+        set_query.run(vec![("tab", Some(chosen.query().to_string()))]);
+    };
     view! {
         <div class="sticky top-0 z-10 ui-board-tab-list">
             <button
                 type="button"
                 class=trigger_class(AnalysisTab::History)
                 aria-pressed=move || (shown() == AnalysisTab::History).to_string()
-                on:click=move |_| tab.set(AnalysisTab::History)
+                on:click=move |_| choose(AnalysisTab::History)
             >
                 "History"
             </button>
@@ -79,7 +129,7 @@ fn AnalysisTabList(tab: RwSignal<AnalysisTab>, shown: Signal<AnalysisTab>) -> im
                 type="button"
                 class=trigger_class(AnalysisTab::Explorer)
                 aria-pressed=move || (shown() == AnalysisTab::Explorer).to_string()
-                on:click=move |_| tab.set(AnalysisTab::Explorer)
+                on:click=move |_| choose(AnalysisTab::Explorer)
             >
                 "Explorer"
             </button>
@@ -88,7 +138,7 @@ fn AnalysisTabList(tab: RwSignal<AnalysisTab>, shown: Signal<AnalysisTab>) -> im
                     type="button"
                     class=trigger_class(AnalysisTab::Evals)
                     aria-pressed=move || (shown() == AnalysisTab::Evals).to_string()
-                    on:click=move |_| tab.set(AnalysisTab::Evals)
+                    on:click=move |_| choose(AnalysisTab::Evals)
                 >
                     "Evals"
                 </button>

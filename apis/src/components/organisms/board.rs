@@ -4,7 +4,7 @@ use crate::{
         layouts::base_layout::OrientationSignal,
         molecules::{
             annotation_toolbar::AnnotationToolbar,
-            annotations_layer::{AnnotationsLayer, GhostRingsLayer},
+            annotations_layer::{selected_suggestion, AnnotationsLayer, GhostRingsLayer},
             board_pieces::BoardPieces,
             drag_ghost::DragGhost,
             history_pieces::HistoryPieces,
@@ -15,6 +15,7 @@ use crate::{
     providers::{
         analysis::{AnalysisContext, NodeId},
         annotations::{AnnotationColor, AnnotationTool, AnnotationsSignal, MarkerShape},
+        game_eval::GameEvalContext,
         game_state::{BoardView, GameStateStore, GameStateStoreFields},
         Config,
     },
@@ -109,6 +110,8 @@ struct TileBounds {
 #[derive(Debug, Clone)]
 enum ViewBoxUpdateType {
     HistoryNavigation(ViewportSelection),
+    /// The eval's ghosts and arrows changed; keep their cells in view.
+    RevealEval,
     Resize {
         width: f32,
         height: f32,
@@ -189,10 +192,7 @@ impl ViewBoxControls {
     }
 
     fn recover_offscreen(&mut self, tiles: &[TileBounds], width: f32, height: f32) -> bool {
-        let Some(first) = tiles.first() else {
-            return false;
-        };
-        if width <= 0.0 || height <= 0.0 {
+        if tiles.is_empty() || width <= 0.0 || height <= 0.0 {
             return false;
         }
         if tiles.iter().any(|tile| {
@@ -203,6 +203,40 @@ impl ViewBoxControls {
         }) {
             return false;
         }
+        self.fit(tiles, width, height);
+        true
+    }
+
+    /// Fits the board and `must_see` when part of `must_see` is out of view: the eval's
+    /// ghosts and arrows can sit on the far edge of a long game's board.
+    fn reveal(
+        &mut self,
+        must_see: &[TileBounds],
+        tiles: &[TileBounds],
+        width: f32,
+        height: f32,
+    ) -> bool {
+        if width <= 0.0 || height <= 0.0 {
+            return false;
+        }
+        let in_view = |tile: &TileBounds| {
+            tile.left + self.x_transform >= self.x
+                && tile.right + self.x_transform <= self.x + self.width
+                && tile.top + self.y_transform >= self.y
+                && tile.bottom + self.y_transform <= self.y + self.height
+        };
+        if must_see.iter().all(in_view) {
+            return false;
+        }
+        let everything: Vec<TileBounds> = tiles.iter().chain(must_see).copied().collect();
+        self.fit(&everything, width, height);
+        true
+    }
+
+    fn fit(&mut self, tiles: &[TileBounds], width: f32, height: f32) {
+        let Some(first) = tiles.first() else {
+            return;
+        };
         let bounds = tiles.iter().fold(*first, |bounds, tile| TileBounds {
             left: bounds.left.min(tile.left),
             top: bounds.top.min(tile.top),
@@ -219,7 +253,6 @@ impl ViewBoxControls {
         self.height = height * scale;
         self.x_transform = self.width / 2.0 - (bounds.left + bounds.right) / 2.0;
         self.y_transform = self.height / 2.0 - (bounds.top + bounds.bottom) / 2.0;
-        true
     }
 }
 
@@ -274,6 +307,8 @@ pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>)
     let board_view = game_state.board_view();
     let state = game_state.state();
     let in_analysis = analysis.is_some();
+    let evals = use_context::<GameEvalContext>();
+    let eval_cells = Memo::new(move |_| selected_suggestion(analysis, evals, game_state).cells());
     let displayed_board = if in_analysis {
         Signal::derive(move || state.with(|state| state.board.clone()))
     } else {
@@ -359,17 +394,42 @@ pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>)
                         return;
                     }
                     let recovered = displayed_board.with_untracked(|board| {
-                        recover_offscreen_viewbox(
+                        reveal_eval_viewbox(
                             viewbox_ref,
                             g_ref,
                             board,
+                            &eval_cells.get_untracked(),
+                            config.with_untracked(|c| c.tile.is_three_d()),
                             viewbox_signal.get_untracked(),
                         )
+                        .or_else(|| {
+                            recover_offscreen_viewbox(
+                                viewbox_ref,
+                                g_ref,
+                                board,
+                                viewbox_signal.get_untracked(),
+                            )
+                        })
                     });
                     if let Some(next) = recovered {
                         viewbox_signal.set(next);
                         viewbox_state.is_panning.set(false);
                         pinch_base.set(None);
+                    }
+                }
+                ViewBoxUpdateType::RevealEval => {
+                    let revealed = displayed_board.with_untracked(|board| {
+                        reveal_eval_viewbox(
+                            viewbox_ref,
+                            g_ref,
+                            board,
+                            &eval_cells.get_untracked(),
+                            config.with_untracked(|c| c.tile.is_three_d()),
+                            viewbox_signal.get_untracked(),
+                        )
+                    });
+                    if let Some(next) = revealed {
+                        viewbox_signal.set(next);
                     }
                 }
                 ViewBoxUpdateType::Resize { width, height } => {
@@ -451,6 +511,17 @@ pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>)
             (raf_controller.resume)();
         }
     });
+    Effect::watch(
+        move || eval_cells.get(),
+        move |cells, _, _| {
+            if !cells.is_empty() {
+                // Navigation queues its own update, which reveals too; this one covers picking
+                // another graded move without the board moving.
+                queue_update.with_value(|queue| queue(ViewBoxUpdateType::RevealEval));
+            }
+        },
+        false,
+    );
     Effect::watch(
         move || viewport_selection.get(),
         move |selection, previous, _| {
@@ -760,7 +831,7 @@ pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>)
         }
     });
     view! {
-        <div node_ref=div_ref class=board_style style=background_style>
+        <div node_ref=div_ref class=board_style style=background_style data-main-board="">
 
             <svg
                 width="100%"
@@ -1196,9 +1267,59 @@ fn recover_offscreen_viewbox(
     mut viewbox: ViewBoxControls,
 ) -> Option<ViewBoxControls> {
     let svg = viewbox_ref.get_untracked()?;
+    let tiles = tile_bounds(g_ref, board)?;
+    viewbox
+        .recover_offscreen(
+            &tiles,
+            svg.client_width() as f32,
+            svg.client_height() as f32,
+        )
+        .then_some(viewbox)
+}
+
+/// Half a tile's drawn size around its cell centre, for cells that hold no tile yet.
+const CELL_HALF_WIDTH: f32 = 28.0;
+const CELL_HALF_HEIGHT: f32 = 32.0;
+
+fn reveal_eval_viewbox(
+    viewbox_ref: NodeRef<svg::Svg>,
+    g_ref: NodeRef<svg::G>,
+    board: &HiveBoard,
+    cells: &[Position],
+    straight: bool,
+    mut viewbox: ViewBoxControls,
+) -> Option<ViewBoxControls> {
+    if cells.is_empty() {
+        return None;
+    }
+    let svg = viewbox_ref.get_untracked()?;
+    let tiles = tile_bounds(g_ref, board)?;
+    let must_see: Vec<TileBounds> = cells
+        .iter()
+        .map(|cell| {
+            let (x, y) = SvgPos::center_for_level(*cell, 0, straight);
+            TileBounds {
+                left: x - CELL_HALF_WIDTH,
+                top: y - CELL_HALF_HEIGHT,
+                right: x + CELL_HALF_WIDTH,
+                bottom: y + CELL_HALF_HEIGHT,
+            }
+        })
+        .collect();
+    viewbox
+        .reveal(
+            &must_see,
+            &tiles,
+            svg.client_width() as f32,
+            svg.client_height() as f32,
+        )
+        .then_some(viewbox)
+}
+
+fn tile_bounds(g_ref: NodeRef<svg::G>, board: &HiveBoard) -> Option<Vec<TileBounds>> {
     let g = g_ref.get_untracked()?;
     // Annotations and empty move markers do not count as visible tiles.
-    let tiles = board
+    board
         .all_taken_positions()
         .map(|position| {
             let selector = format!(
@@ -1217,14 +1338,7 @@ fn recover_offscreen_viewbox(
                 bottom: bounds.y() + bounds.height(),
             })
         })
-        .collect::<Option<Vec<_>>>()?;
-    viewbox
-        .recover_offscreen(
-            &tiles,
-            svg.client_width() as f32,
-            svg.client_height() as f32,
-        )
-        .then_some(viewbox)
+        .collect::<Option<Vec<_>>>()
 }
 
 #[cfg(test)]
@@ -1232,6 +1346,29 @@ mod tests {
     use super::{board_history_style, TileBounds, ViewBoxControls, ViewportSelection};
     use crate::providers::game_state::BoardView;
     use hive_lib::{Color, GameResult, GameStatus};
+
+    #[test]
+    fn an_eval_cell_off_screen_brings_the_whole_board_and_the_cell_into_view() {
+        let tile = |left: f32, top: f32| TileBounds {
+            left,
+            top,
+            right: left + 50.0,
+            bottom: top + 50.0,
+        };
+        let board = [tile(0.0, 0.0), tile(50.0, 0.0)];
+        let mut viewbox = ViewBoxControls::new();
+        viewbox.width = 200.0;
+        viewbox.height = 200.0;
+        assert!(
+            !viewbox.reveal(&[tile(100.0, 0.0)], &board, 200.0, 200.0),
+            "a cell already in view leaves the view alone"
+        );
+
+        let far = tile(600.0, 0.0);
+        assert!(viewbox.reveal(&[far], &board, 200.0, 200.0));
+        assert!(far.right + viewbox.x_transform <= viewbox.x + viewbox.width);
+        assert!(board[0].left + viewbox.x_transform >= viewbox.x);
+    }
 
     #[test]
     fn history_recovery_preserves_a_partially_visible_tile_and_zoom() {

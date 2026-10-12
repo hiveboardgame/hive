@@ -6,7 +6,7 @@ use crate::{
     },
     providers::{
         analysis::AnalysisContext,
-        annotations::{AnnotationTool, AnnotationsSignal, MarkerShape},
+        annotations::{AnnotationColor, AnnotationTool, AnnotationsSignal, MarkerShape},
         game_eval::{suggestion, GameEvalContext, Ghost, Suggestion},
         game_state::{GameStateStore, GameStateStoreFields},
         Config,
@@ -20,11 +20,15 @@ const SHAPE_OPACITY: &str = "0.8";
 /// A ghost is a solid piece ringed in red or green: faded pieces vanished on the light board,
 /// and the ring is what keeps a white ghost from passing for a real piece.
 const GHOST_BORDER: f32 = 2.5;
-/// `PieceGlyph` centres tiles with `translate(-45, -50)`, but every tile design is 88.337 wide,
-/// so a tile's middle sits this far left of its cell's.
 /// Comfortably more than a cell's half-height, so a half-plane clip never cuts a tile.
 const SPLIT_HALF: f32 = 40.0;
+/// `PieceGlyph` centres tiles with `translate(-45, -50)`, but every tile design is 88.337 wide,
+/// so a tile's middle sits this far left of its cell's.
 const TILE_CENTRE_DX: f32 = (88.337 / 2.0 - 45.0) * 0.56;
+const LEAVING_OPACITY: f32 = 0.35;
+/// Where a ghost's ✗ or ✓ badge sits, from the tile's middle: its upper corner.
+const BADGE_DX: f32 = 15.0;
+const BADGE_DY: f32 = -21.0;
 /// Draws the current position's annotations as inline SVG inside the board's
 /// transform `<g>`. `pointer-events: none` so it never eats the board's handlers
 /// (arrows are hit-tested by the board instead).
@@ -47,8 +51,21 @@ pub fn AnnotationsLayer(
         let mut set = current.get();
         // The engine's verdict is drawn over the user's own marks but never stored with them.
         let shown = selected_suggestion(analysis, evals, game_state);
+        // The piece a move takes away is still drawn where it starts; faded, it reads as
+        // leaving rather than as a second copy beside its ghost.
+        let leaving: String = shown
+            .arrows
+            .iter()
+            .map(|arrow| {
+                format!(
+                    "[data-hg-stack-q='{}'][data-hg-stack-r='{}']{{opacity:{LEAVING_OPACITY}}}",
+                    arrow.from.q, arrow.from.r
+                )
+            })
+            .collect();
         set.arrows.extend(shown.arrows);
         let ghosts = shown.ghosts;
+        let throwers = shown.throwers;
         let (straight, prefers_dark) = config.with(|c| (c.tile.is_three_d(), c.prefers_dark));
         // Scrubbing play history shows an earlier (possibly differently stacked)
         // board, so anchor marks to that board rather than the live one — matching
@@ -65,6 +82,9 @@ pub fn AnnotationsLayer(
         };
 
         let mut views = Vec::new();
+        if !leaving.is_empty() {
+            views.push(view! { <style>{leaving}</style> }.into_any());
+        }
 
         for highlight in &set.highlights {
             let (cx, cy) = center(highlight.position);
@@ -171,6 +191,34 @@ pub fn AnnotationsLayer(
                     views.push(ghost_piece(ghost).into_any());
                 }
             }
+        }
+        // Red and green alone fail colour-blind players; the ✗ and ✓ say which is which.
+        let split = matches!(ghosts.as_slice(), [a, b] if a.position == b.position);
+        for (i, ghost) in ghosts.iter().enumerate() {
+            let (cx, cy) = SvgPos::center_for_level(ghost.position, ghost.level, straight);
+            let dx = if split && i == 0 { -BADGE_DX } else { BADGE_DX };
+            views.push(badge_view(
+                cx + TILE_CENTRE_DX + dx,
+                cy + BADGE_DY,
+                ghost.color == AnnotationColor::Green,
+                ghost.color.stroke(prefers_dark),
+            ));
+        }
+        for (position, color) in &throwers {
+            let (cx, cy) = center(*position);
+            views.push(
+                view! {
+                    <path
+                        d=rounded_hex_path(cx, cy, HIGHLIGHT_SIZE)
+                        fill="none"
+                        stroke=color.stroke(prefers_dark)
+                        stroke-width="3"
+                        stroke-dasharray="5 3"
+                        stroke-linejoin="round"
+                    />
+                }
+                .into_any(),
+            );
         }
 
         for arrow in &set.arrows {
@@ -279,8 +327,22 @@ pub fn GhostRingsLayer() -> impl IntoView {
     }
 }
 
-/// What the eval shows for the move picked in the Evals tab; nothing outside analysis.
-fn selected_suggestion(
+fn badge_view(x: f32, y: f32, better: bool, colour: &'static str) -> AnyView {
+    view! {
+        <g>
+            <circle cx=x cy=y r="6.5" fill=colour stroke="white" stroke-width="1.5" />
+            <text x=x y=y + 3.2 text-anchor="middle" font-size="9" font-weight="bold" fill="white">
+                {if better { "✓" } else { "✗" }}
+            </text>
+        </g>
+    }
+    .into_any()
+}
+
+/// What the eval shows for the move picked in the Evals tab; nothing outside analysis or the
+/// Evals tab, and nothing while a previewed line or explorer move replaces the position it
+/// belongs to.
+pub(crate) fn selected_suggestion(
     analysis: Option<AnalysisContext>,
     evals: Option<GameEvalContext>,
     game_state: GameStateStore,
@@ -288,6 +350,9 @@ fn selected_suggestion(
     let (Some(analysis), Some(evals)) = (analysis, evals) else {
         return Suggestion::default();
     };
+    if analysis.preview.with(Option::is_some) || evals.panels.get() == 0 {
+        return Suggestion::default();
+    }
     analysis
         .store
         .selected_game_ply()
@@ -295,7 +360,7 @@ fn selected_suggestion(
         .map(|eval| {
             game_state
                 .state()
-                .with(|state| suggestion(&state.board, &eval))
+                .with(|state| suggestion(&state.board, state.turn_color, &eval))
         })
         .unwrap_or_default()
 }
@@ -309,7 +374,6 @@ fn outline_transform(ghost: &Ghost, outline: &TileOutline, straight: bool) -> St
     )
 }
 
-/// Half-planes left and right of `mid`, for a cell split between two ghosts.
 fn half_clips(left: &str, right: &str, mid: f32, cy: f32) -> impl IntoView {
     let half = SPLIT_HALF;
     view! {

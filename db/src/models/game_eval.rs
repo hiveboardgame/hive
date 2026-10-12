@@ -2,7 +2,18 @@ use crate::{db_error::DbError, schema::game_evals, DbConn};
 use chrono::{DateTime, Duration, Utc};
 use diesel::{
     result::{DatabaseErrorKind, Error as DieselError},
-    sql_types::{BigInt, Bool, Double, Integer, Nullable, Text, Timestamptz, Uuid as SqlUuid},
+    sql_types::{
+        Array,
+        BigInt,
+        Bool,
+        Double,
+        Integer,
+        Jsonb,
+        Nullable,
+        Text,
+        Timestamptz,
+        Uuid as SqlUuid,
+    },
     ExpressionMethods,
     Insertable,
     OptionalExtension,
@@ -23,6 +34,8 @@ const RECENT_FOR_ESTIMATE: i64 = 20;
 
 /// (moves, started_at, finished_at) of a finished eval.
 type FinishedRun = (i32, Option<DateTime<Utc>>, Option<DateTime<Utc>>);
+/// (moves, progress_pct, started_at, worker) of an eval being worked on.
+type RunningRow = (i32, i16, Option<DateTime<Utc>>, Option<String>);
 
 #[derive(Queryable, Selectable, Debug, Clone)]
 #[diesel(table_name = game_evals)]
@@ -72,6 +85,8 @@ struct RecentEvalRow {
     automatic: bool,
     #[diesel(sql_type = Timestamptz)]
     finished_at: DateTime<Utc>,
+    #[diesel(sql_type = Nullable<Jsonb>)]
+    result: Option<serde_json::Value>,
 }
 
 #[derive(QueryableByName)]
@@ -84,11 +99,13 @@ struct AutoCandidate {
 
 /// Auto-evals only pick games where both players were at least this strong.
 const AUTO_MIN_RATING: f64 = 1800.0;
-/// An automatic eval reaches the front page only for a game this strong, or a tournament game.
-const FRONT_PAGE_MIN_RATING: f64 = 2000.0;
+/// Outside tournaments the front page only advertises games where both players were at least
+/// this strong. Tournament games always show: a world championship field is not all
+/// top-rated.
+const FRONT_PAGE_MIN_RATING: f64 = 1800.0;
 /// How long a finished tournament's games keep their place at the top of the front page.
 const RECENT_TOURNAMENT_DAYS: i32 = 7;
-const AUTO_MIN_MOVES: i32 = 10;
+const MIN_MOVES: i32 = shared_types::EVAL_MIN_MOVES as i32;
 
 #[derive(QueryableByName)]
 struct CountRow {
@@ -104,12 +121,23 @@ struct NewGameEval {
     moves: i32,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct RunningEval {
+    pub moves: i32,
+    pub progress_pct: i16,
+    pub started_at: Option<DateTime<Utc>>,
+}
+
+/// Before this much of a game is done, its own pace says too little and the average of
+/// recent evals stands in.
+const OWN_PACE_FROM_PCT: i16 = 5;
+const OWN_PACE_FROM_SECS: i64 = 10;
+
 #[derive(Debug, Clone, Default)]
 pub struct QueueSnapshot {
     /// (id, moves) in claim order.
     pub queued: Vec<(Uuid, i32)>,
-    /// (moves, progress_pct) of evals being worked on.
-    pub running: Vec<(i32, i16)>,
+    pub running: Vec<RunningEval>,
     pub workers: usize,
     pub secs_per_move: f64,
     /// Whether any worker is around to take queued evals; the database cannot tell, the
@@ -130,20 +158,37 @@ impl QueueSnapshot {
     /// including it, spread over the workers.
     pub fn wait_secs(&self, eval_id: Uuid) -> Option<u64> {
         let position = self.position(eval_id)?;
+        let now = Utc::now();
         let running: f64 = self
             .running
             .iter()
-            .map(|(moves, pct)| *moves as f64 * (100 - *pct) as f64 / 100.0)
+            .map(|eval| self.left_secs(*eval, now))
             .sum();
         let queued: f64 = self.queued[..position]
             .iter()
-            .map(|(_, moves)| *moves as f64)
+            .map(|(_, moves)| *moves as f64 * self.secs_per_move)
             .sum();
-        Some(((running + queued) * self.secs_per_move / self.workers.max(1) as f64).ceil() as u64)
+        Some(((running + queued) / self.workers.max(1) as f64).ceil() as u64)
     }
 
-    pub fn remaining_secs(&self, moves: i32, progress_pct: i16) -> u64 {
-        (moves as f64 * (100 - progress_pct) as f64 / 100.0 * self.secs_per_move).ceil() as u64
+    pub fn remaining_secs(&self, eval: RunningEval) -> u64 {
+        self.left_secs(eval, Utc::now()).ceil() as u64
+    }
+
+    /// Seconds a running eval still needs. Once it is under way, its own pace so far: workers
+    /// differ, a home machine can be several times faster than the server, and the average
+    /// of recent evals mixes them all.
+    fn left_secs(&self, eval: RunningEval, now: DateTime<Utc>) -> f64 {
+        let pct = eval.progress_pct.clamp(0, 100);
+        let elapsed = eval
+            .started_at
+            .map(|started| (now - started).num_milliseconds());
+        match elapsed {
+            Some(ms) if pct >= OWN_PACE_FROM_PCT && ms >= OWN_PACE_FROM_SECS * 1000 => {
+                ms as f64 / 1000.0 * (100 - pct) as f64 / pct as f64
+            }
+            _ => eval.moves as f64 * (100 - pct) as f64 / 100.0 * self.secs_per_move,
+        }
     }
 }
 
@@ -152,10 +197,11 @@ impl GameEval {
         self.status.parse().unwrap_or(EvalStatus::Failed)
     }
 
-    pub fn view(&self, queue: &QueueSnapshot) -> GameEvalView {
+    pub fn view(&self, queue: &QueueSnapshot, viewer: Option<Uuid>) -> GameEvalView {
         match self.status() {
             EvalStatus::Queued => GameEvalView::Queued {
                 position: queue.position(self.id).unwrap_or(1),
+                mine: viewer.is_some() && viewer == self.requested_by,
                 queue_len: queue.queued.len().max(1),
                 wait_secs: queue
                     .worker_online
@@ -163,7 +209,11 @@ impl GameEval {
             },
             EvalStatus::Running => GameEvalView::Running {
                 progress_pct: self.progress_pct.clamp(0, 100) as u8,
-                wait_secs: queue.remaining_secs(self.moves, self.progress_pct),
+                wait_secs: queue.remaining_secs(RunningEval {
+                    moves: self.moves,
+                    progress_pct: self.progress_pct,
+                    started_at: self.started_at,
+                }),
             },
             EvalStatus::Done => self
                 .result()
@@ -176,7 +226,8 @@ impl GameEval {
     pub fn result(&self) -> Option<EvalResult> {
         self.result
             .as_ref()
-            .and_then(|value| serde_json::from_value(value.clone()).ok())
+            .and_then(|value| serde_json::from_value::<EvalResult>(value.clone()).ok())
+            .map(EvalResult::for_display)
     }
 
     pub async fn find(eval: Uuid, conn: &mut DbConn<'_>) -> Result<Self, DbError> {
@@ -196,6 +247,39 @@ impl GameEval {
             .first(conn)
             .await
             .optional()?)
+    }
+
+    pub async fn evaluated_among(
+        nanoids: &[String],
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<String>, DbError> {
+        #[derive(QueryableByName)]
+        struct Row {
+            #[diesel(sql_type = Text)]
+            nanoid: String,
+        }
+        let rows: Vec<Row> = diesel::sql_query(
+            "SELECT g.nanoid FROM game_evals e JOIN games g ON g.id = e.game_id \
+             WHERE e.status = 'done' AND g.nanoid = ANY($1)",
+        )
+        .bind::<Array<Text>, _>(nanoids)
+        .load(conn)
+        .await?;
+        Ok(rows.into_iter().map(|row| row.nanoid).collect())
+    }
+
+    /// Takes back `user`'s request for `game` while it still waits; false if there was none.
+    pub async fn cancel(game: Uuid, user: Uuid, conn: &mut DbConn<'_>) -> Result<bool, DbError> {
+        use crate::schema::game_evals::dsl::*;
+        let deleted = diesel::delete(
+            game_evals
+                .filter(game_id.eq(game))
+                .filter(requested_by.eq(user))
+                .filter(status.eq(EvalStatus::Queued.to_string())),
+        )
+        .execute(conn)
+        .await?;
+        Ok(deleted > 0)
     }
 
     /// Queues an eval of `game` for `user`. An existing eval is returned as is unless it failed,
@@ -385,7 +469,7 @@ impl GameEval {
             "#,
         )
         .bind::<Text, _>(hive_lib::GameType::MLP.to_string())
-        .bind::<Integer, _>(AUTO_MIN_MOVES)
+        .bind::<Integer, _>(MIN_MOVES)
         .bind::<Double, _>(AUTO_MIN_RATING)
         .get_result(conn)
         .await
@@ -489,11 +573,10 @@ impl GameEval {
         Ok((requeued, failed))
     }
 
-    /// Finished evals for the front page, each group newest first: games of running or
-    /// just-finished tournaments, then user requests, then automatic evals of top games.
-    /// Other automatic evals are left out, so the backfill never crowds out what people asked
-    /// for; a finished tournament only stays on top for a week for the same reason, since
-    /// auto-evals start with tournament games.
+    /// Finished evals of tournament or strong games for the front page, each group newest
+    /// first: games of running or just-finished tournaments, then user requests, then
+    /// automatic evals. A finished tournament only stays on top for a week, so the auto-evals,
+    /// which start with tournament games, never crowd out what people asked for.
     pub async fn recent(limit: i64, conn: &mut DbConn<'_>) -> Result<Vec<RecentEval>, DbError> {
         let rows: Vec<RecentEvalRow> = diesel::sql_query(
             r#"
@@ -501,15 +584,14 @@ impl GameEval {
                 SELECT g.nanoid, w.username AS white, b.username AS black,
                        g.white_rating, g.black_rating, g.game_status, g.conclusion, g.turn,
                        t.name AS tournament, r.username AS requester,
-                       e.requested_by_system AS automatic, e.finished_at,
+                       e.requested_by_system AS automatic, e.finished_at, e.result,
                        CASE
                            WHEN t.status = 'InProgress'
                                OR (t.status = 'Finished'
                                    AND COALESCE(t.ends_at, t.updated_at)
                                        > now() - make_interval(days => $3)) THEN 0
                            WHEN NOT e.requested_by_system THEN 1
-                           WHEN t.id IS NOT NULL
-                               OR LEAST(g.white_rating, g.black_rating) >= $2 THEN 2
+                           ELSE 2
                        END AS place
                 FROM game_evals e
                 JOIN games g ON g.id = e.game_id
@@ -517,9 +599,9 @@ impl GameEval {
                 JOIN users b ON b.id = g.black_id
                 LEFT JOIN tournaments t ON t.id = g.tournament_id
                 LEFT JOIN users r ON r.id = e.requested_by
-                WHERE e.status = 'done' AND e.finished_at IS NOT NULL
+                WHERE e.status = 'done' AND e.finished_at IS NOT NULL AND g.turn >= $4
+                    AND (t.id IS NOT NULL OR LEAST(g.white_rating, g.black_rating) >= $2)
             ) ranked
-            WHERE place IS NOT NULL
             ORDER BY place, finished_at DESC
             LIMIT $1
             "#,
@@ -527,6 +609,7 @@ impl GameEval {
         .bind::<BigInt, _>(limit)
         .bind::<Double, _>(FRONT_PAGE_MIN_RATING)
         .bind::<Integer, _>(RECENT_TOURNAMENT_DAYS)
+        .bind::<Integer, _>(MIN_MOVES)
         .load(conn)
         .await?;
         Ok(rows
@@ -544,11 +627,14 @@ impl GameEval {
                 requested_by: row.requester,
                 automatic: row.automatic,
                 finished_at: row.finished_at,
+                marks: row
+                    .result
+                    .and_then(|value| serde_json::from_value::<EvalResult>(value).ok())
+                    .map_or([0; 3], |result| result.for_display().marks(None)),
             })
             .collect())
     }
 
-    /// How many evals are queued or running.
     pub async fn in_line(conn: &mut DbConn<'_>) -> Result<usize, DbError> {
         let row: CountRow = diesel::sql_query(
             "SELECT count(*) AS count FROM game_evals WHERE status IN ('queued', 'running')",
@@ -566,9 +652,9 @@ impl GameEval {
             .select((id, moves))
             .load(conn)
             .await?;
-        let running_rows: Vec<(i32, i16, Option<String>)> = game_evals
+        let running_rows: Vec<RunningRow> = game_evals
             .filter(status.eq(EvalStatus::Running.to_string()))
-            .select((moves, progress_pct, worker))
+            .select((moves, progress_pct, started_at, worker))
             .load(conn)
             .await?;
         let recent: Vec<FinishedRun> = game_evals
@@ -581,14 +667,21 @@ impl GameEval {
 
         let mut workers: Vec<&str> = running_rows
             .iter()
-            .filter_map(|(_, _, w)| w.as_deref())
+            .filter_map(|(_, _, _, w)| w.as_deref())
             .collect();
         workers.sort_unstable();
         workers.dedup();
 
         Ok(QueueSnapshot {
             queued,
-            running: running_rows.iter().map(|(m, p, _)| (*m, *p)).collect(),
+            running: running_rows
+                .iter()
+                .map(|(m, p, s, _)| RunningEval {
+                    moves: *m,
+                    progress_pct: *p,
+                    started_at: *s,
+                })
+                .collect(),
             workers: workers.len(),
             secs_per_move: secs_per_move(&recent),
             worker_online: false,
@@ -631,7 +724,14 @@ mod tests {
         (
             QueueSnapshot {
                 queued: ids.iter().copied().zip(queued.iter().copied()).collect(),
-                running: running.to_vec(),
+                running: running
+                    .iter()
+                    .map(|(moves, progress_pct)| RunningEval {
+                        moves: *moves,
+                        progress_pct: *progress_pct,
+                        started_at: None,
+                    })
+                    .collect(),
                 workers,
                 secs_per_move: 2.0,
                 worker_online: true,
@@ -658,6 +758,26 @@ mod tests {
     fn an_eval_not_in_the_queue_has_no_wait() {
         let (snap, _) = snapshot(&[40], &[], 0);
         assert_eq!(snap.wait_secs(Uuid::new_v4()), None);
+    }
+
+    #[test]
+    fn a_running_eval_is_timed_by_its_own_pace_once_under_way() {
+        let (snap, _) = snapshot(&[], &[], 1);
+        let started = |secs: i64| Some(Utc::now() - Duration::seconds(secs));
+        // 40 seconds for a quarter: three quarters to go take 120, whatever the average says.
+        let fast = RunningEval {
+            moves: 400,
+            progress_pct: 25,
+            started_at: started(40),
+        };
+        assert!((119..=121).contains(&snap.remaining_secs(fast)));
+        // Just started: the average (2 s a move) is all there is.
+        let fresh = RunningEval {
+            moves: 50,
+            progress_pct: 2,
+            started_at: started(3),
+        };
+        assert_eq!(snap.remaining_secs(fresh), 98);
     }
 
     #[test]
@@ -695,7 +815,7 @@ mod tests {
     fn a_running_eval_shows_its_progress_and_what_is_left() {
         let (snap, _) = snapshot(&[], &[(40, 50)], 1);
         assert_eq!(
-            eval_with(EvalStatus::Running, 40, 50).view(&snap),
+            eval_with(EvalStatus::Running, 40, 50).view(&snap, None),
             GameEvalView::Running {
                 progress_pct: 50,
                 wait_secs: 40
@@ -710,13 +830,32 @@ mod tests {
         snap.queued.push((eval.id, 30));
         eval.moves = 30;
         assert_eq!(
-            eval.view(&snap),
+            eval.view(&snap, None),
             GameEvalView::Queued {
                 position: 2,
+                mine: false,
                 queue_len: 2,
                 wait_secs: Some(100)
             }
         );
+    }
+
+    #[test]
+    fn only_the_requester_sees_a_queued_eval_as_theirs() {
+        let mut eval = eval_with(EvalStatus::Queued, 30, 0);
+        let asker = Uuid::new_v4();
+        eval.requested_by = Some(asker);
+        let (mut snap, _) = snapshot(&[], &[], 1);
+        snap.queued.push((eval.id, 30));
+        let mine = |viewer| {
+            matches!(
+                eval.view(&snap, viewer),
+                GameEvalView::Queued { mine: true, .. }
+            )
+        };
+        assert!(mine(Some(asker)));
+        assert!(!mine(Some(Uuid::new_v4())));
+        assert!(!mine(None));
     }
 
     #[test]
@@ -726,9 +865,10 @@ mod tests {
         snap.queued.push((eval.id, 30));
         snap.worker_online = false;
         assert_eq!(
-            eval.view(&snap),
+            eval.view(&snap, None),
             GameEvalView::Queued {
                 position: 1,
+                mine: false,
                 queue_len: 1,
                 wait_secs: None
             }
@@ -739,7 +879,10 @@ mod tests {
     fn a_done_eval_with_an_unreadable_result_shows_as_failed() {
         let mut eval = eval_with(EvalStatus::Done, 2, 100);
         eval.result = Some(serde_json::json!({"not": "a result"}));
-        assert_eq!(eval.view(&QueueSnapshot::default()), GameEvalView::Failed);
+        assert_eq!(
+            eval.view(&QueueSnapshot::default(), None),
+            GameEvalView::Failed
+        );
     }
 
     #[test]

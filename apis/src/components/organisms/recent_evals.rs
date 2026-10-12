@@ -1,11 +1,17 @@
 use crate::{
     common::with_class,
-    components::molecules::empty_state::EmptyState,
+    components::{
+        atoms::grade_mark::{grade_fill_class, grade_name},
+        molecules::empty_state::EmptyState,
+    },
     functions::game_evals::get_recent_evals,
 };
 use chrono::{DateTime, Utc};
-use leptos::prelude::*;
-use shared_types::RecentEval;
+use leptos::{leptos_dom::helpers::set_interval_with_handle, prelude::*};
+use shared_types::{Grade, RecentEval};
+use std::time::Duration;
+
+const REFRESH_EVERY: Duration = Duration::from_secs(60);
 
 fn ago(then: DateTime<Utc>, now: DateTime<Utc>) -> String {
     let minutes = (now - then).num_minutes().max(0);
@@ -21,7 +27,15 @@ fn ago(then: DateTime<Utc>, now: DateTime<Utc>) -> String {
 /// queue is shared.
 #[component]
 pub fn RecentEvals() -> impl IntoView {
-    let evals = OnceResource::new(get_recent_evals());
+    let refresh = RwSignal::new(0u32);
+    let evals = Resource::new(move || refresh.get(), |_| get_recent_evals());
+    Effect::new(move |_| {
+        if let Ok(handle) =
+            set_interval_with_handle(move || refresh.update(|n| *n += 1), REFRESH_EVERY)
+        {
+            on_cleanup(move || handle.clear());
+        }
+    });
 
     view! {
         <div class="overflow-hidden w-full ui-panel">
@@ -40,7 +54,9 @@ pub fn RecentEvals() -> impl IntoView {
                                     let now = Utc::now();
                                     let in_line = evals.in_line;
                                     let rows = if evals.recent.is_empty() {
-                                        view! { <EmptyState title="No evaluations yet" /> }
+                                        view! {
+                                            <EmptyState title="No evaluations of tournament or strong games yet" />
+                                        }
                                             .into_any()
                                     } else {
                                         evals
@@ -72,9 +88,9 @@ pub fn RecentEvals() -> impl IntoView {
 fn HowToRequest(in_line: usize) -> impl IntoView {
     let waiting = match in_line {
         0 => None,
-        1 => Some("1 game is being evaluated or waiting right now.".to_string()),
+        1 => Some("1 game is being evaluated or waiting for the engine.".to_string()),
         n => Some(format!(
-            "{n} games are being evaluated or waiting right now."
+            "{n} games are being evaluated or waiting for the engine."
         )),
     };
     view! {
@@ -108,11 +124,36 @@ fn result_text(game_status: &str, conclusion: &str) -> String {
     }
 }
 
+/// Ratings are cut to whole points, as everywhere else on the site.
 fn player(name: &str, rating: Option<f64>) -> String {
     match rating {
-        Some(rating) => format!("{name} ({})", rating.round() as i64),
+        Some(rating) => format!("{name} ({})", rating.trunc() as i64),
         None => name.to_string(),
     }
+}
+
+/// "2 blunders · 1 mistake", worst first; None when the engine marked nothing.
+fn marks_text([inaccuracies, mistakes, blunders]: [usize; 3]) -> Option<String> {
+    let parts: Vec<String> = [
+        (blunders, Grade::Blunder),
+        (mistakes, Grade::Mistake),
+        (inaccuracies, Grade::Inaccuracy),
+    ]
+    .into_iter()
+    .filter(|(count, _)| *count > 0)
+    .map(|(count, grade)| {
+        let name = grade_name(grade);
+        let plural = match name.strip_suffix('y') {
+            Some(stem) => format!("{stem}ies"),
+            None => format!("{name}s"),
+        };
+        format!(
+            "{count} {}",
+            if count == 1 { name.to_string() } else { plural }
+        )
+    })
+    .collect();
+    (!parts.is_empty()).then(|| parts.join(" · "))
 }
 
 #[component]
@@ -120,14 +161,22 @@ fn RecentEvalRow(eval: RecentEval, now: DateTime<Utc>) -> impl IntoView {
     let asked = match (eval.automatic, eval.requested_by) {
         (true, _) => "evaluated automagically".to_string(),
         (false, Some(name)) => format!("requested by {name}"),
-        (false, None) => "requested by a former player".to_string(),
+        (false, None) => "requested by a deleted account".to_string(),
     };
+    let casual = eval.white_rating.is_none() && eval.black_rating.is_none();
     let details = format!(
-        "{} · {} moves · {}",
+        "{}{} · {} moves · {}",
+        if casual { "Casual · " } else { "" },
         result_text(&eval.game_status, &eval.conclusion),
         eval.moves,
         ago(eval.finished_at, now),
     );
+    let worst = [Grade::Blunder, Grade::Mistake, Grade::Inaccuracy]
+        .into_iter()
+        .zip([eval.marks[2], eval.marks[1], eval.marks[0]])
+        .find(|(_, count)| *count > 0)
+        .map(|(grade, _)| grade);
+    let marks = marks_text(eval.marks).unwrap_or_else(|| "no mistakes found".to_string());
     view! {
         <a
             href=format!("/analysis/{}?tab=evals", eval.game_id)
@@ -146,6 +195,17 @@ fn RecentEvalRow(eval: RecentEval, now: DateTime<Utc>) -> impl IntoView {
                 )}
             </span>
             <span class="text-xs opacity-75 truncate">{details}</span>
+            <span class="inline-flex gap-1.5 items-center text-xs truncate">
+                {worst
+                    .map(|grade| {
+                        view! {
+                            <span class=format!(
+                                "inline-block w-2 h-2 rounded-full shrink-0 {}",
+                                grade_fill_class(grade),
+                            )></span>
+                        }
+                    })} {marks}
+            </span>
             <span class="text-xs italic opacity-60 truncate">{asked}</span>
         </a>
     }
@@ -181,8 +241,21 @@ mod tests {
     }
 
     #[test]
+    fn marks_read_worst_first_and_skip_zeros() {
+        assert_eq!(
+            marks_text([3, 0, 1]),
+            Some("1 blunder · 3 inaccuracies".to_string())
+        );
+        assert_eq!(
+            marks_text([1, 2, 0]),
+            Some("2 mistakes · 1 inaccuracy".to_string())
+        );
+        assert_eq!(marks_text([0, 0, 0]), None);
+    }
+
+    #[test]
     fn ratings_are_shown_whole_and_only_when_known() {
-        assert_eq!(player("OrdepCubik", Some(2115.02)), "OrdepCubik (2115)");
+        assert_eq!(player("OrdepCubik", Some(2115.92)), "OrdepCubik (2115)");
         assert_eq!(player("guest", None), "guest");
     }
 

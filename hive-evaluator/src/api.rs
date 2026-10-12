@@ -13,7 +13,6 @@ pub struct Api {
     pub auto: bool,
 }
 
-/// Whether the server still considers an eval ours.
 #[derive(Debug, PartialEq)]
 pub enum Ownership {
     Ours,

@@ -1,11 +1,11 @@
 use crate::{
-    functions::game_evals::get_game_eval,
+    functions::game_evals::{evaluated_games, get_game_eval},
     providers::{
         annotations::{AnnotationColor, Arrow},
         AuthContext,
     },
 };
-use hive_lib::{Board, GameType, Piece, Position, State};
+use hive_lib::{Board, Bug, Color, Direction, GameType, Piece, Position, State};
 use leptos::{
     leptos_dom::helpers::{set_timeout_with_handle, TimeoutHandle},
     prelude::*,
@@ -13,7 +13,6 @@ use leptos::{
 use shared_types::{EvalResult, GameEvalView, GameId, Grade, MoveEval};
 use std::time::Duration;
 
-/// How often an open game asks again while its eval waits or runs.
 const POLL_EVERY: Duration = Duration::from_secs(5);
 
 /// Whether this viewer sees engine evals at all: admins only while the 2026 world championship
@@ -23,21 +22,70 @@ pub fn evals_visible() -> Signal<bool> {
     Signal::derive(move || admin.get() == Some(true))
 }
 
+#[derive(Clone, Copy)]
+pub struct EvaluatedGames {
+    pub ids: RwSignal<std::collections::HashSet<GameId>>,
+    /// Whether this viewer sees evals at all, and so whether rows keep room for a badge.
+    pub shown: Signal<bool>,
+}
+
+pub fn provide_evaluated_games(games: Signal<Vec<GameId>>) {
+    let visible = evals_visible();
+    let evaluated = EvaluatedGames {
+        ids: RwSignal::new(Default::default()),
+        shown: visible,
+    };
+    provide_context(evaluated);
+    let fetched = LocalResource::new(move || {
+        let ids = if visible.get() {
+            games.get()
+        } else {
+            Vec::new()
+        };
+        async move {
+            if ids.is_empty() {
+                return Vec::new();
+            }
+            evaluated_games(ids).await.unwrap_or_default()
+        }
+    });
+    Effect::new(move |_| {
+        if let Some(ids) = fetched.get() {
+            evaluated.ids.set(ids.into_iter().collect());
+        }
+    });
+}
+
 /// The engine eval of the game open in analysis. `None` until it has been fetched, and for
 /// boards that are not a stored game.
 #[derive(Clone, Copy)]
 pub struct GameEvalContext {
     pub view: RwSignal<Option<GameEvalView>>,
+    /// How many Evals panels are mounted. The board shows the eval's ghosts and arrows only
+    /// while one is on screen; the History tab keeps a plain board.
+    pub panels: RwSignal<u32>,
+    /// What the Evals panel says about the picked move, and its step to the previous or next
+    /// marked move: on a phone the panel sits a screen below the board, so the board repeats
+    /// them.
+    pub note: RwSignal<Option<String>>,
+    pub step: RwSignal<Option<Callback<bool>>>,
+    /// Leaves the engine's line, and where in it the board is: (step, steps).
+    pub back: RwSignal<Option<Callback<()>>>,
+    pub in_line: RwSignal<Option<(usize, usize)>>,
 }
 
 impl GameEvalContext {
     pub fn new() -> Self {
         Self {
             view: RwSignal::new(None),
+            panels: RwSignal::new(0),
+            note: RwSignal::new(None),
+            step: RwSignal::new(None),
+            back: RwSignal::new(None),
+            in_line: RwSignal::new(None),
         }
     }
 
-    /// Keeps `view` in step with the eval of `game_id`, polling while it waits or runs.
     pub fn follow(self, game_id: Memo<Option<GameId>>) {
         let refresh = RwSignal::new(0u32);
         let visible = evals_visible();
@@ -113,15 +161,36 @@ pub struct Ghost {
     pub color: AnnotationColor,
 }
 
-/// What to show for a graded move: an arrow for a piece that moves, and the piece on the cell
-/// it ends on, so a placement from the reserve shows which piece goes there.
+/// What to show for a graded move: an arrow for a piece that moves, the piece on the cell it
+/// ends on, so a placement from the reserve shows which piece goes there, and the Pillbug (or
+/// Mosquito) that does the moving when a move throws a piece.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Suggestion {
     pub arrows: Vec<Arrow>,
     pub ghosts: Vec<Ghost>,
+    pub throwers: Vec<(Position, AnnotationColor)>,
 }
 
-fn draw(shown: &mut Suggestion, board: &Board, uhp: &str, color: AnnotationColor) {
+impl Suggestion {
+    pub fn cells(&self) -> Vec<Position> {
+        let mut cells: Vec<Position> = self.ghosts.iter().map(|ghost| ghost.position).collect();
+        cells.extend(self.arrows.iter().flat_map(|arrow| [arrow.from, arrow.to]));
+        cells.extend(self.throwers.iter().map(|(position, _)| *position));
+        cells
+    }
+}
+
+/// The mover's Pillbug, or a Mosquito copying one, next to `from`: the only way a move can
+/// carry an opponent's piece.
+fn thrower(board: &Board, from: Position, mover: Color) -> Option<(Piece, Position)> {
+    [Bug::Pillbug, Bug::Mosquito].into_iter().find_map(|bug| {
+        let piece = Piece::new_from(bug, mover, 0);
+        let at = board.position_of_piece(piece)?;
+        at.is_neighbor(from).then_some((piece, at))
+    })
+}
+
+fn draw(shown: &mut Suggestion, board: &Board, mover: Color, uhp: &str, color: AnnotationColor) {
     if uhp == "pass" {
         return;
     }
@@ -131,6 +200,11 @@ fn draw(shown: &mut Suggestion, board: &Board, uhp: &str, color: AnnotationColor
     };
     if let Some(from) = board.position_of_piece(piece).filter(|from| *from != to) {
         shown.arrows.push(Arrow { from, to, color });
+        if !piece.is_color(mover) {
+            if let Some((_, at)) = thrower(board, from, mover) {
+                shown.throwers.push((at, color));
+            }
+        }
     }
     shown.ghosts.push(Ghost {
         piece,
@@ -140,49 +214,159 @@ fn draw(shown: &mut Suggestion, board: &Board, uhp: &str, color: AnnotationColor
     });
 }
 
-/// What to draw on the position a graded move was played from: the move played in red and
-/// the engine's better move in green.
-pub fn suggestion(board: &Board, eval: &MoveEval) -> Suggestion {
+/// What to draw on the position a graded move was played from, with `mover` to move: the move
+/// played in red and the engine's better move in green.
+pub fn suggestion(board: &Board, mover: Color, eval: &MoveEval) -> Suggestion {
     let mut shown = Suggestion::default();
     if eval.grade().is_some() {
-        draw(&mut shown, board, &eval.played, AnnotationColor::Red);
-        draw(&mut shown, board, &eval.best, AnnotationColor::Green);
+        draw(&mut shown, board, mover, &eval.played, AnnotationColor::Red);
+        draw(&mut shown, board, mover, &eval.best, AnnotationColor::Green);
     }
     shown
 }
 
+/// Where a move ends, the way the notation names it: beside a piece already on the board, or
+/// on top of it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Spot {
+    pub next_to: Piece,
+    /// None for on top.
+    pub side: Option<Direction>,
+}
+
+impl Spot {
+    fn parse(target: &str) -> Option<Spot> {
+        let (before, rest) = match target.chars().next()? {
+            c @ ('\\' | '-' | '/') => (Some(c), &target[1..]),
+            _ => (None, target),
+        };
+        let (name, after) = match rest.chars().last()? {
+            c @ ('\\' | '-' | '/') => (&rest[..rest.len() - 1], Some(c)),
+            _ => (rest, None),
+        };
+        let side = match (before, after) {
+            (Some('\\'), _) => Some(Direction::NW),
+            (Some('-'), _) => Some(Direction::W),
+            (Some('/'), _) => Some(Direction::SW),
+            (_, Some('/')) => Some(Direction::NE),
+            (_, Some('-')) => Some(Direction::E),
+            (_, Some('\\')) => Some(Direction::SE),
+            _ => None,
+        };
+        Some(Spot {
+            next_to: name.parse().ok()?,
+            side,
+        })
+    }
+
+    /// "left of White's Queen", "on top of Black's Beetle 1": always by colour, never "your",
+    /// which a spectator reads as their own piece.
+    fn words(&self) -> String {
+        let side = match self.side {
+            None => "on top of",
+            Some(Direction::NW) => "above left of",
+            Some(Direction::NE) => "above right of",
+            Some(Direction::E) => "right of",
+            Some(Direction::SE) => "below right of",
+            Some(Direction::SW) => "below left of",
+            Some(Direction::W) => "left of",
+        };
+        format!(
+            "{side} {}'s {}",
+            side_name(self.next_to.color()),
+            bare_name(self.next_to)
+        )
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Action {
-    Place(Piece),
-    Move(Piece),
+    Place {
+        piece: Piece,
+        at: Option<Spot>,
+        cell: Position,
+    },
+    Move {
+        piece: Piece,
+        to: Option<Spot>,
+        cell: Position,
+    },
+    Throw {
+        thrower: Piece,
+        piece: Piece,
+        to: Option<Spot>,
+        cell: Position,
+    },
     Pass,
 }
 
-fn action(board: &Board, uhp: &str) -> Option<Action> {
+impl Action {
+    fn cell(&self) -> Option<Position> {
+        match self {
+            Action::Place { cell, .. } | Action::Move { cell, .. } | Action::Throw { cell, .. } => {
+                Some(*cell)
+            }
+            Action::Pass => None,
+        }
+    }
+}
+
+fn action(board: &Board, mover: Color, uhp: &str) -> Option<Action> {
     if uhp == "pass" {
         return Some(Action::Pass);
     }
-    let piece: Piece = uhp
-        .split_once(' ')
-        .map_or(uhp, |(piece, _)| piece)
-        .parse()
-        .ok()?;
+    let (piece, target) = uhp.split_once(' ').unwrap_or((uhp, ""));
+    let piece: Piece = piece.parse().ok()?;
+    let cell = Position::from_string(target, board).ok()?;
+    let spot = Spot::parse(target);
     Some(match board.position_of_piece(piece) {
-        Some(_) => Action::Move(piece),
-        None => Action::Place(piece),
+        None => Action::Place {
+            piece,
+            at: spot,
+            cell,
+        },
+        Some(from) if !piece.is_color(mover) => Action::Throw {
+            thrower: thrower(board, from, mover)
+                .map_or(Piece::new_from(Bug::Pillbug, mover, 0), |t| t.0),
+            piece,
+            to: spot,
+            cell,
+        },
+        Some(_) => Action::Move {
+            piece,
+            to: spot,
+            cell,
+        },
     })
 }
 
-/// "Ant 2" for a bug a player has several of, "the Queen" for one they have just one of.
-fn piece_name(piece: Piece) -> String {
+fn side_name(color: Color) -> &'static str {
+    match color {
+        Color::White => "White",
+        Color::Black => "Black",
+    }
+}
+
+/// "Ant 2", or "Queen" for a bug a player has just one of.
+fn bare_name(piece: Piece) -> String {
     match piece.order() {
-        0 => format!("the {}", piece.bug().name()),
+        0 => piece.bug().name().to_string(),
         n => format!("{} {n}", piece.bug().name()),
+    }
+}
+
+/// "Ant 2", "the Queen", or for the opponent's pieces "Black's Ant 2".
+fn piece_name(piece: Piece, mover: Color) -> String {
+    match (piece.is_color(mover), piece.order()) {
+        (true, 0) => format!("the {}", piece.bug().name()),
+        (true, _) => bare_name(piece),
+        (false, _) => format!("{}'s {}", side_name(piece.color()), bare_name(piece)),
     }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Wording {
+    pub mover: Color,
     pub played: Action,
     pub best: Action,
 }
@@ -195,39 +379,88 @@ fn capitalised(text: String) -> String {
         .unwrap_or_default()
 }
 
+/// Verb forms: "placing"/"place".
+struct Verbs {
+    place: &'static str,
+    move_: &'static str,
+    use_: &'static str,
+    pass: &'static str,
+}
+
+const DOING: Verbs = Verbs {
+    place: "placing",
+    move_: "moving",
+    use_: "using",
+    pass: "passing",
+};
+const DO: Verbs = Verbs {
+    place: "place",
+    move_: "move",
+    use_: "use",
+    pass: "pass",
+};
+
 impl Wording {
-    fn played_doing(&self) -> String {
-        match self.played {
-            Action::Place(piece) => format!("placing {}", piece_name(piece)),
-            Action::Move(piece) => format!("moving {}", piece_name(piece)),
-            Action::Pass => "passing".to_string(),
-        }
+    fn spot(&self, spot: Option<Spot>) -> String {
+        spot.map(|spot| format!(" {}", spot.words()))
+            .unwrap_or_default()
     }
 
-    /// The engine's move as a verb phrase: "placing Beetle 1" (`doing`) or "place Beetle 1"
-    /// (after "Better: ").
-    fn best_words(&self, doing: bool) -> String {
-        let (place, move_, pass) = if doing {
-            ("placing", "moving", "passing")
-        } else {
-            ("place", "move", "pass")
+    /// The move in words. `instead` marks a better move that ends on the same cell as the
+    /// played one, so only the piece differs.
+    fn words(&self, action: Action, verbs: &Verbs, instead: bool) -> String {
+        let place = |spot: Option<Spot>| {
+            format!(
+                "{}{}",
+                self.spot(spot),
+                if instead { " instead" } else { "" }
+            )
         };
-        match (self.played, self.best) {
-            (Action::Move(played), Action::Move(best)) if played == best => {
-                format!("{move_} it elsewhere")
+        match action {
+            Action::Place { piece, at, .. } => {
+                format!(
+                    "{} {}{}",
+                    verbs.place,
+                    piece_name(piece, self.mover),
+                    place(at)
+                )
             }
-            (_, Action::Place(piece)) => format!("{place} {}", piece_name(piece)),
-            (_, Action::Move(piece)) => format!("{move_} {}", piece_name(piece)),
-            (_, Action::Pass) => pass.to_string(),
+            Action::Move { piece, to, .. } => {
+                format!(
+                    "{} {}{}",
+                    verbs.move_,
+                    piece_name(piece, self.mover),
+                    place(to)
+                )
+            }
+            Action::Throw {
+                thrower, piece, to, ..
+            } => format!(
+                "{} {}{} to move {}{}",
+                verbs.use_,
+                piece_name(thrower, self.mover),
+                if thrower.bug() == Bug::Mosquito {
+                    " (copying a Pillbug)"
+                } else {
+                    ""
+                },
+                piece_name(piece, self.mover),
+                place(to)
+            ),
+            Action::Pass => verbs.pass.to_string(),
         }
     }
 
-    /// "Move 5, White: placing the Pillbug (red) was a mistake. Placing Beetle 1 (green) was
-    /// better."
-    pub fn headline(&self, move_number: usize, white: bool, grade: Grade) -> String {
-        let marked = |action: Action, doing: String, color: &str| match action {
-            Action::Pass => doing,
-            _ => format!("{doing} ({color})"),
+    fn best_there(&self) -> bool {
+        self.best.cell().is_some() && self.best.cell() == self.played.cell()
+    }
+
+    /// "Move 5, White: placing the Pillbug below left of White's Ladybug (red) was a mistake.
+    /// Placing Beetle 1 below left of White's Ladybug instead (green) was better."
+    pub fn headline(&self, move_number: usize, grade: Grade) -> String {
+        let marked = |action: Action, words: String, color: &str| match action {
+            Action::Pass => words,
+            _ => format!("{words} ({color})"),
         };
         let what = match grade {
             Grade::Inaccuracy => "an inaccuracy",
@@ -236,27 +469,90 @@ impl Wording {
         };
         format!(
             "Move {move_number}, {}: {} was {what}. {} was better.",
-            if white { "White" } else { "Black" },
-            marked(self.played, self.played_doing(), "red"),
-            capitalised(marked(self.best, self.best_words(true), "green")),
+            side_name(self.mover),
+            marked(self.played, self.words(self.played, &DOING, false), "red"),
+            capitalised(marked(
+                self.best,
+                self.words(self.best, &DOING, self.best_there()),
+                "green"
+            )),
         )
     }
 
-    /// "Pillbug placed", "Ant 2 moved", "Passed".
+    /// "Pillbug placed left of White's Queen", "Beetle 1 climbed on top of Black's Ant 2", "Passed".
     pub fn played_short(&self) -> String {
-        let name =
-            |piece: Piece| capitalised(piece_name(piece).trim_start_matches("the ").to_string());
         match self.played {
-            Action::Place(piece) => format!("{} placed", name(piece)),
-            Action::Move(piece) => format!("{} moved", name(piece)),
+            Action::Place { piece, at, .. } => {
+                format!("{} placed{}", bare_name(piece), self.spot(at))
+            }
+            Action::Move {
+                piece,
+                to: to @ Some(Spot { side: None, .. }),
+                ..
+            } => format!("{} climbed{}", bare_name(piece), self.spot(to)),
+            Action::Move { piece, to, .. } => {
+                format!("{} moved{}", bare_name(piece), self.spot(to))
+            }
+            Action::Throw {
+                thrower, piece, to, ..
+            } => format!(
+                "{}{} moved {}{}",
+                bare_name(thrower),
+                if thrower.bug() == Bug::Mosquito {
+                    " (copying a Pillbug)"
+                } else {
+                    ""
+                },
+                piece_name(piece, self.mover),
+                self.spot(to)
+            ),
             Action::Pass => "Passed".to_string(),
         }
     }
 
     /// What to do instead, after "Better: ".
     pub fn best_short(&self) -> String {
-        self.best_words(false)
+        self.words(self.best, &DO, self.best_there())
     }
+}
+
+/// The engine's line after the first `ply` moves of `history`, one "White: place Ant 1 left
+/// of White's Queen" per move; it stops at a move that cannot be played.
+pub fn line_words(
+    game_type: GameType,
+    tournament: bool,
+    history: &[(String, String)],
+    ply: usize,
+    line: &[String],
+) -> Vec<String> {
+    let mut state = State::new(game_type, tournament);
+    for (piece, position) in history.iter().take(ply) {
+        if state.play_turn_from_history(piece, position).is_err() {
+            return Vec::new();
+        }
+    }
+    let mut out = Vec::with_capacity(line.len());
+    for mv in line {
+        let mover = state.turn_color;
+        let Some(action) = action(&state.board, mover, mv) else {
+            break;
+        };
+        let wording = Wording {
+            mover,
+            played: action,
+            best: action,
+        };
+        out.push(format!(
+            "{}: {}",
+            side_name(mover),
+            wording.words(action, &DO, false)
+        ));
+        let (piece, position) = mv.split_once(' ').unwrap_or((mv.as_str(), ""));
+        if state.play_turn_from_history(piece, position).is_err() {
+            break;
+        }
+    }
+    out
 }
 
 /// Puts every graded move of the game into words. Whether a piece is placed or moved depends
@@ -270,6 +566,7 @@ pub fn wordings(
     let mut state = State::new(game_type, tournament);
     let mut out = Vec::with_capacity(history.len());
     for (ply, (piece, position)) in history.iter().enumerate() {
+        let mover = state.turn_color;
         let wording = result
             .moves
             .get(ply)
@@ -277,8 +574,9 @@ pub fn wordings(
             .filter(|eval| eval.grade().is_some())
             .and_then(|eval| {
                 Some(Wording {
-                    played: action(&state.board, &eval.played)?,
-                    best: action(&state.board, &eval.best)?,
+                    mover,
+                    played: action(&state.board, mover, &eval.played)?,
+                    best: action(&state.board, mover, &eval.best)?,
                 })
             });
         out.push(wording);
@@ -294,8 +592,8 @@ mod tests {
     use super::*;
     use hive_lib::State;
 
-    fn board(history: &str) -> Board {
-        State::new_from_str(history, "Base+MLP").unwrap().board
+    fn state(history: &str) -> State {
+        State::new_from_str(history, "Base+MLP").unwrap()
     }
 
     fn graded(played: &str, best: &str) -> MoveEval {
@@ -309,14 +607,19 @@ mod tests {
         }
     }
 
+    fn shown(history: &str, eval: &MoveEval) -> (Board, Suggestion) {
+        let s = state(history);
+        let shown = suggestion(&s.board, s.turn_color, eval);
+        (s.board, shown)
+    }
+
     fn ghost(shown: &Suggestion, color: AnnotationColor) -> Ghost {
         *shown.ghosts.iter().find(|g| g.color == color).unwrap()
     }
 
     #[test]
     fn a_placement_shows_which_piece_goes_where() {
-        let b = board("wL ;bL wL-;");
-        let shown = suggestion(&b, &graded("wQ /wL", "wM /wL"));
+        let (b, shown) = shown("wL ;bL wL-;", &graded("wQ /wL", "wM /wL"));
         assert!(shown.arrows.is_empty());
         assert_eq!(
             ghost(&shown, AnnotationColor::Red).position,
@@ -334,8 +637,7 @@ mod tests {
 
     #[test]
     fn a_piece_on_the_board_gets_an_arrow_and_a_ghost_where_it_lands() {
-        let b = board("wL ;bL wL-;wQ /wL;bQ bL/;");
-        let shown = suggestion(&b, &graded("wQ wL\\", "wL bQ/"));
+        let (b, shown) = shown("wL ;bL wL-;wQ /wL;bQ bL/;", &graded("wQ wL\\", "wL bQ/"));
         let lady = b.position_of_piece("wL".parse().unwrap()).unwrap();
         let to = Position::from_string("bQ/", &b).unwrap();
         let green = shown
@@ -346,44 +648,78 @@ mod tests {
         assert_eq!((green.from, green.to), (lady, to));
         assert_eq!(ghost(&shown, AnnotationColor::Green).position, to);
         assert_eq!(shown.arrows.len(), 2);
+        assert!(shown.throwers.is_empty());
     }
 
     #[test]
     fn a_ghost_climbing_a_stack_sits_on_top_of_it() {
-        let b = board("wL ;bL wL-;wQ /wL;bQ bL/;");
-        let shown = suggestion(&b, &graded("wQ wL\\", "wQ wL"));
+        let (_, shown) = shown("wL ;bL wL-;wQ /wL;bQ bL/;", &graded("wQ wL\\", "wQ wL"));
         assert_eq!(ghost(&shown, AnnotationColor::Green).level, 1);
     }
 
+    /// Black's Ant 1 has walked up to White's Pillbug, so a white move of that ant is a throw.
+    const THROW: &str = "wP ;bL wP-;wQ \\wP;bQ bL-;wA1 /wP;bA1 bQ-;wB1 -wQ;bA1 wP\\;";
+
+    #[test]
+    fn a_throw_marks_the_pillbug_doing_it() {
+        let (b, shown) = shown(THROW, &graded("bA1 -wP", "wQ wP/"));
+        let pillbug = b.position_of_piece("wP".parse().unwrap()).unwrap();
+        assert_eq!(shown.throwers, vec![(pillbug, AnnotationColor::Red)]);
+    }
+
     fn words(history: &str, played: &str, best: &str) -> Wording {
-        let b = board(history);
+        let s = state(history);
         Wording {
-            played: action(&b, played).unwrap(),
-            best: action(&b, best).unwrap(),
+            mover: s.turn_color,
+            played: action(&s.board, s.turn_color, played).unwrap(),
+            best: action(&s.board, s.turn_color, best).unwrap(),
         }
     }
 
     #[test]
-    fn a_placement_reads_as_placing_the_piece() {
+    fn a_placement_reads_as_placing_the_piece_somewhere() {
         let w = words("wL ;bL wL-;", "wP wL/", r"wB1 wL\");
         assert_eq!(
-            w.headline(3, true, Grade::Mistake),
-            "Move 3, White: placing the Pillbug (red) was a mistake. Placing Beetle 1 (green) was better."
+            w.headline(3, Grade::Mistake),
+            "Move 3, White: placing the Pillbug above right of White's Ladybug (red) was a mistake. Placing Beetle 1 below right of White's Ladybug (green) was better."
         );
         assert_eq!(
             (w.played_short(), w.best_short()),
-            ("Pillbug placed".to_string(), "place Beetle 1".to_string())
+            (
+                "Pillbug placed above right of White's Ladybug".to_string(),
+                "place Beetle 1 below right of White's Ladybug".to_string()
+            )
         );
     }
 
     #[test]
-    fn moving_the_same_piece_better_reads_as_elsewhere() {
+    fn a_better_move_to_the_same_cell_reads_as_there_instead() {
+        let w = words("wL ;bL wL-;", "wQ /wL", "wM /wL");
+        assert_eq!(
+            w.best_short(),
+            "place the Mosquito below left of White's Ladybug instead"
+        );
+    }
+
+    #[test]
+    fn the_same_piece_moved_better_says_where_to() {
         let w = words("wL ;bL wL-;wQ /wL;bQ bL/;", r"wQ wL\", "wQ -wL");
         assert_eq!(
-            w.headline(5, true, Grade::Blunder),
-            "Move 5, White: moving the Queen (red) was a blunder. Moving it elsewhere (green) was better."
+            w.headline(5, Grade::Blunder),
+            "Move 5, White: moving the Queen below right of White's Ladybug (red) was a blunder. Moving the Queen left of White's Ladybug (green) was better."
         );
-        assert_eq!(w.best_short(), "move it elsewhere");
+        assert_eq!(w.best_short(), "move the Queen left of White's Ladybug");
+    }
+
+    #[test]
+    fn the_opponents_pieces_are_named_by_colour() {
+        let w = words("wL ;bL wL-;wQ /wL;bQ bL/;", "wQ bL-", "wQ bQ");
+        assert_eq!(w.played_short(), "Queen moved right of Black's Ladybug");
+        assert_eq!(w.best_short(), "move the Queen on top of Black's Queen");
+        assert_eq!(
+            words("wL ;bL wL-;wQ /wL;bQ bL/;", "wQ bL-", "wQ wL").best_short(),
+            "move the Queen on top of White's Ladybug"
+        );
     }
 
     #[test]
@@ -393,20 +729,67 @@ mod tests {
             "wA1 bA2/",
             "wA2 bQ-",
         );
-        assert_eq!(w.played_short(), "Ant 1 moved");
-        assert_eq!(w.best_short(), "move Ant 2");
+        assert_eq!(w.played_short(), "Ant 1 moved above right of Black's Ant 2");
+        assert_eq!(w.best_short(), "move Ant 2 right of Black's Queen");
+    }
+
+    #[test]
+    fn a_pillbug_throw_says_whose_piece_moves_and_who_moves_it() {
+        let w = words(THROW, "bA1 -wP", "wQ wP/");
+        assert_eq!(
+            w.headline(9, Grade::Blunder),
+            "Move 9, White: using the Pillbug to move Black's Ant 1 left of White's Pillbug (red) was a blunder. Moving the Queen above right of White's Pillbug (green) was better."
+        );
+        assert_eq!(
+            w.played_short(),
+            "Pillbug moved Black's Ant 1 left of White's Pillbug"
+        );
+        assert_eq!(
+            words(THROW, "wQ wP/", "bA1 -wP").best_short(),
+            "use the Pillbug to move Black's Ant 1 left of White's Pillbug"
+        );
     }
 
     #[test]
     fn a_pass_has_no_colour_to_point_at() {
-        let w = Wording {
-            played: Action::Pass,
-            best: Action::Place("bB1".parse().unwrap()),
-        };
+        let w = words("wL ;bL wL-;wQ /wL;", "pass", "bB1 bL-");
         assert_eq!(
-            w.headline(9, false, Grade::Inaccuracy),
-            "Move 9, Black: passing was an inaccuracy. Placing Beetle 1 (green) was better."
+            w.headline(4, Grade::Inaccuracy),
+            "Move 4, Black: passing was an inaccuracy. Placing Beetle 1 right of Black's Ladybug (green) was better."
         );
+    }
+
+    #[test]
+    fn a_piece_moving_onto_another_climbs() {
+        let w = words("wL ;bL wL-;wQ /wL;bQ bL/;", "wQ wL", "wQ -wL");
+        assert_eq!(w.played_short(), "Queen climbed on top of White's Ladybug");
+    }
+
+    #[test]
+    fn the_engines_line_reads_move_by_move_from_each_sides_view() {
+        let history: Vec<(String, String)> =
+            vec![("wL".into(), "".into()), ("bL".into(), "wL-".into())];
+        let line = ["wQ /wL".to_string(), "bQ bL/".to_string()];
+        assert_eq!(
+            line_words(GameType::MLP, true, &history, 2, &line),
+            vec![
+                "White: place the Queen below left of White's Ladybug".to_string(),
+                "Black: place the Queen above right of Black's Ladybug".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn the_notation_names_the_side_of_the_piece_a_move_ends_beside() {
+        let spot = |target: &str| Spot::parse(target).map(|spot| spot.side);
+        assert_eq!(spot(r"\wQ"), Some(Some(Direction::NW)));
+        assert_eq!(spot("-wQ"), Some(Some(Direction::W)));
+        assert_eq!(spot("/wQ"), Some(Some(Direction::SW)));
+        assert_eq!(spot("wQ/"), Some(Some(Direction::NE)));
+        assert_eq!(spot("wQ-"), Some(Some(Direction::E)));
+        assert_eq!(spot(r"wQ\"), Some(Some(Direction::SE)));
+        assert_eq!(spot("bB1"), Some(None));
+        assert_eq!(spot(""), None);
     }
 
     #[test]
@@ -422,23 +805,27 @@ mod tests {
         // Move 1 places the Ladybug; graded, it must read as a placement, not a move.
         result.moves[0] = Some(graded("wL", "wP"));
         let all = wordings(GameType::MLP, true, &history, &result);
-        assert_eq!(all[0].unwrap().played, Action::Place("wL".parse().unwrap()));
+        assert!(
+            matches!(all[0].unwrap().played, Action::Place { piece, at: None, .. } if piece == "wL".parse().unwrap())
+        );
+        assert_eq!(all[0].unwrap().best_short(), "place the Pillbug instead");
         assert_eq!(all[1], None);
-        assert_eq!(all[2].unwrap().best, Action::Place("wM".parse().unwrap()));
+        assert_eq!(
+            all[2].unwrap().best_short(),
+            "place the Mosquito below left of White's Ladybug instead"
+        );
     }
 
     #[test]
     fn an_ungraded_move_draws_nothing() {
-        let b = board("wL ;bL wL-;");
         let mut fine = graded("wQ /wL", "wM /wL");
         fine.after = fine.before;
-        assert_eq!(suggestion(&b, &fine), Suggestion::default());
+        assert_eq!(shown("wL ;bL wL-;", &fine).1, Suggestion::default());
     }
 
     #[test]
     fn a_played_pass_has_nothing_to_draw_but_the_better_move_still_shows() {
-        let b = board("wL ;bL wL-;");
-        let shown = suggestion(&b, &graded("pass", "wM /wL"));
+        let (_, shown) = shown("wL ;bL wL-;", &graded("pass", "wM /wL"));
         assert_eq!(shown.ghosts.len(), 1);
         assert_eq!(shown.ghosts[0].color, AnnotationColor::Green);
     }

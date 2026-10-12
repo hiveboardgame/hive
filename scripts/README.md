@@ -363,7 +363,7 @@ refuses them the eval data. The worker runs as normal behind that.
 
 After the world championship:
 
-1. Delete `ensure_eval_access` and its three calls in `apis/src/functions/game_evals.rs`, and
+1. Delete `ensure_eval_access` and its calls in `apis/src/functions/game_evals.rs`, and
    make `evals_visible` in `apis/src/providers/game_eval.rs` return true (or remove it and its
    uses in the analysis sidebar and on the home page).
 2. Merge and deploy as usual; nothing changes for the worker.
