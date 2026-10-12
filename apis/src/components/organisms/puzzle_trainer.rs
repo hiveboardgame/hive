@@ -2,18 +2,24 @@ use crate::{
     common::{CurrentConfirm, MoveConfirm},
     components::{
         layouts::base_layout::OrientationSignal,
-        molecules::puzzle_stars::PuzzleStars,
+        molecules::{puzzle_nav::PuzzleNav, puzzle_stars::PuzzleStars},
         organisms::{
             board::Board,
             reserve::{Alignment, Reserve},
         },
     },
-    functions::puzzles::{get_puzzle, my_puzzle_rating},
+    functions::puzzles::{get_puzzle, my_puzzle_rating, puzzle_sets},
     hiveground::selected_history_board,
     hooks::puzzle_keys::use_puzzle_keys,
     providers::{
         game_state::{GameStateStore, GameStateStoreFields},
-        puzzle::{is_signed_in, puzzle_hiveground_interaction, PuzzleContext, PuzzlePhase},
+        puzzle::{
+            is_signed_in,
+            puzzle_hiveground_interaction,
+            DailyStatus,
+            PuzzleContext,
+            PuzzlePhase,
+        },
         Config,
     },
     responses::{PuzzleResponse, PuzzleStarsResponse},
@@ -28,12 +34,16 @@ struct PuzzleNext(Callback<()>);
 /// The puzzle board with its side panel. With a `nanoid` it opens that puzzle; without one it
 /// serves puzzles near the player's rating, one after another.
 #[component]
-pub fn PuzzleTrainer(#[prop(into)] nanoid: Signal<Option<String>>) -> impl IntoView {
+pub fn PuzzleTrainer(
+    #[prop(into)] nanoid: Signal<Option<String>>,
+    #[prop(optional)] daily: Option<DailyStatus>,
+) -> impl IntoView {
     let query = leptos_router::hooks::use_query_map();
     let game_state = GameStateStore::new();
     provide_context(game_state);
     let config = expect_context::<Config>().0;
     let puzzle = PuzzleContext::new(game_state);
+    puzzle.daily.set(daily);
     provide_context(puzzle);
     let confirm = Memo::new(move |_| {
         if puzzle.one_click.get() {
@@ -61,12 +71,26 @@ pub fn PuzzleTrainer(#[prop(into)] nanoid: Signal<Option<String>>) -> impl IntoV
     let navigate = leptos_router::hooks::use_navigate();
     let next = Callback::new(move |()| {
         if pathname.get_untracked() != "/puzzles" && !puzzle.training.get_value() {
-            navigate("/puzzles", Default::default());
+            navigate(
+                &format!("/puzzles{}", puzzle.focus_query()),
+                Default::default(),
+            );
         } else {
             puzzle.load_next();
         }
     });
     provide_context(PuzzleNext(next));
+    let shared = RwSignal::new(ShareState::Idle);
+    provide_context(SharedLink(shared));
+    Effect::watch(
+        move || {
+            puzzle
+                .puzzle
+                .with(|current| current.as_ref().map(|p| p.nanoid.clone()))
+        },
+        move |_, _, _| shared.set(ShareState::Idle),
+        false,
+    );
     let annotations = crate::providers::annotations::AnnotationsSignal::play(game_state);
     provide_context(annotations);
     crate::hooks::puzzle_marks::use_puzzle_marks(puzzle, annotations);
@@ -127,6 +151,15 @@ pub fn PuzzleTrainer(#[prop(into)] nanoid: Signal<Option<String>>) -> impl IntoV
         puzzle.restore_preferences();
         match nanoid.get() {
             Some(nanoid) => {
+                let (theme, collection) = query.with(|query| {
+                    (
+                        query.get("theme").filter(|theme| !theme.is_empty()),
+                        query
+                            .get("collection")
+                            .filter(|collection| !collection.is_empty()),
+                    )
+                });
+                puzzle.set_focus(theme, collection);
                 puzzle.training.set_value(false);
                 puzzle.phase.set(PuzzlePhase::Loading);
                 spawn_local(async move {
@@ -189,6 +222,7 @@ pub fn PuzzleTrainer(#[prop(into)] nanoid: Signal<Option<String>>) -> impl IntoV
                         </div>
                         <div class="flex flex-col col-start-2 row-start-1 gap-2 pt-10 my-1 mr-1 min-h-0">
                             <div class="flex overflow-y-auto flex-col flex-1 gap-3 p-3 min-h-0 text-sm select-none ui-board-side-panel">
+                                <PuzzleNav />
                                 <PuzzlePrompt />
                                 <PuzzleControls />
                                 <Show when=has_puzzle>
@@ -198,7 +232,7 @@ pub fn PuzzleTrainer(#[prop(into)] nanoid: Signal<Option<String>>) -> impl IntoV
                                     </div>
                                 </Show>
                                 <PuzzleAfter />
-                                <PuzzleFooter rating />
+                                <PuzzleFooter rating nav_elsewhere=true />
                             </div>
                         </div>
                     }
@@ -236,7 +270,7 @@ fn color_name(color: Color) -> &'static str {
     }
 }
 
-fn moves_label(moves: i32) -> String {
+pub fn moves_label(moves: i32) -> String {
     if moves == 1 {
         "1 move".to_string()
     } else {
@@ -281,8 +315,11 @@ fn PuzzleBoard(
 
 fn next_available(puzzle: PuzzleContext) -> bool {
     let phase = puzzle.phase.get();
+    let in_set = puzzle.theme.with(Option::is_some) || puzzle.collection.with(Option::is_some);
     phase.is_over()
-        || (phase == PuzzlePhase::Empty && puzzle.game_type.get() == PuzzleGameTypeFilter::Any)
+        || (phase == PuzzlePhase::Empty
+            && puzzle.game_type.get() == PuzzleGameTypeFilter::Any
+            && !in_set)
 }
 
 /// On phones, once the puzzle is over the player's hand gives way to the buttons that move on,
@@ -317,7 +354,13 @@ fn BottomBar(
                     class="h-12 text-base font-bold text-white shadow ui-button bg-pillbug-teal grow basis-0"
                     on:click=move |_| next.run(())
                 >
-                    "Next puzzle →"
+                    {move || {
+                        if puzzle.daily.with(Option::is_some) {
+                            "More puzzles →"
+                        } else {
+                            "Next puzzle →"
+                        }
+                    }}
                 </button>
             </div>
         </Show>
@@ -358,10 +401,29 @@ fn TopCardTray(
         });
     });
     let rate_now = move || signed_in.get() && puzzle.reported.get() && puzzle.phase.get().is_over();
+    let guest_done = move || !signed_in.get() && puzzle.phase.get().is_over();
+    let remember_return = use_remember_return();
     view! {
         <Show
             when=rate_now
-            fallback=move || view! { <MobileHand color=opponent interaction history_board /> }
+            fallback=move || {
+                view! {
+                    <Show
+                        when=guest_done
+                        fallback=move || {
+                            view! { <MobileHand color=opponent interaction history_board /> }
+                        }
+                    >
+                        <a
+                            href="/login"
+                            class="flex items-center px-3 h-14 text-sm font-semibold border-t shrink-0 border-black/10 ui-text-link dark:border-white/10"
+                            on:click=move |_| remember_return()
+                        >
+                            "Sign in to get a puzzle rating and rate puzzles →"
+                        </a>
+                    </Show>
+                }
+            }
         >
             <div class="flex items-center px-3 h-14 border-t shrink-0 border-black/10 dark:border-white/10">
                 <PuzzleStars nanoid my_stars prominent=false on_rated compact=true />
@@ -386,7 +448,11 @@ fn MobileHand(
         let color = color.get();
         state.with(|state| !state.board.reserve(color, state.game_type).is_empty())
     };
-    let empty_label = if framed { "" } else { "" };
+    let empty_label = if framed {
+        "No pieces left in your hand"
+    } else {
+        "No pieces left in their hand"
+    };
     let has_puzzle = move || puzzle.puzzle.with(Option::is_some);
     view! {
         <div class=if framed {
@@ -399,7 +465,9 @@ fn MobileHand(
                 fallback=move || {
                     view! {
                         <Show when=has_puzzle>
-                            <span class="px-3 text-xs text-gray-500">{empty_label}</span>
+                            <span class="px-3 text-sm text-gray-500 dark:text-gray-400">
+                                {empty_label}
+                            </span>
                         </Show>
                     }
                 }
@@ -553,6 +621,29 @@ fn PhaseBadge(#[prop(optional)] results_only: bool) -> impl IntoView {
 #[component]
 fn FocusChip() -> impl IntoView {
     let puzzle = expect_context::<PuzzleContext>();
+    let set_key = move || {
+        puzzle
+            .collection
+            .get()
+            .map(|collection| format!("collection:{collection}"))
+            .or_else(|| puzzle.theme.get())
+    };
+    let progress = Resource::new(
+        move || {
+            (
+                set_key(),
+                puzzle.puzzle.with(|p| p.as_ref().map(|p| p.nanoid.clone())),
+            )
+        },
+        |(key, _)| async move {
+            let key = key?;
+            let sets = puzzle_sets().await.ok()?;
+            sets.into_iter()
+                .find(|set| set.key == key)
+                .map(|set| (set.solved, set.total))
+        },
+    );
+    let signed_in = is_signed_in();
     let focus = move || {
         puzzle
             .collection
@@ -560,16 +651,28 @@ fn FocusChip() -> impl IntoView {
             .map(|collection| collection_label(&collection))
             .or_else(|| puzzle.theme.get().map(|theme| theme_label(&theme)))
     };
+    let counter = move || {
+        let (solved, total) = progress.get().flatten()?;
+        Some(if signed_in.get() {
+            format!(" · {solved}/{total} solved")
+        } else {
+            format!(" · {total} puzzles")
+        })
+    };
     view! {
         <ShowLet some=focus let:focus>
-            <a
-                href="/puzzles"
-                class="inline-flex gap-2 items-center self-start py-1 px-3 text-xs font-semibold rounded-full bg-pillbug-teal/15 no-link-style"
-                title="Back to mixed puzzles"
-            >
-                {format!("Training: {focus}")}
-                <span aria-hidden="true">"✕"</span>
-            </a>
+            <span class="inline-flex items-center self-start pl-3 text-xs font-semibold rounded-full bg-pillbug-teal/15">
+                {format!("Training: {focus}")} <Transition>{counter}</Transition>
+                <button
+                    type="button"
+                    class="grid place-items-center -my-3 w-11 h-11 rounded-full hover:text-ladybug-red"
+                    title="Leave this set; later puzzles are mixed again"
+                    aria-label="Leave this set"
+                    on:click=move |_| puzzle.leave_focus()
+                >
+                    "✕"
+                </button>
+            </span>
         </ShowLet>
     }
 }
@@ -583,7 +686,7 @@ fn PuzzlePrompt(#[prop(optional)] compact: bool) -> impl IntoView {
             .attempt
             .get()
             .and_then(|attempt| Some((attempt.rating_change?, attempt.rating_after?)))
-            .map(|(change, after)| format!("rating\u{a0}{}\u{a0}→\u{a0}{after}", signed(change)))
+            .map(|(change, after)| format!("{},\u{a0}now\u{a0}{after}", signed(change)))
             .unwrap_or_default()
     };
     let confirm = expect_context::<CurrentConfirm>().0;
@@ -616,13 +719,18 @@ fn PuzzlePrompt(#[prop(optional)] compact: bool) -> impl IntoView {
     };
     // The task stays put while playing; transient status (hints, notices, results) gets its own
     // line underneath, so the opponent's move and the goal never vanish mid-thought.
+    let daily_summary = move || daily_summary(puzzle);
     let goal = move || match puzzle.phase.get() {
         PuzzlePhase::Loading => "Finding a puzzle…".to_string(),
         PuzzlePhase::Empty => String::new(),
-        PuzzlePhase::Setup => "Your opponent is moving…".to_string(),
+        PuzzlePhase::Setup | PuzzlePhase::Replying => "Your opponent is moving…".to_string(),
+        phase if phase.is_over() && daily_summary().is_some() => {
+            daily_summary().unwrap_or_default()
+        }
+        PuzzlePhase::Revealed | PuzzlePhase::Solved => String::new(),
         _ => {
             let (number, total) = move_number();
-            let task = if total > 1 {
+            let task = if total > 1 && puzzle.phase.get() == PuzzlePhase::Solving {
                 format!("Move {number} of {total}.")
             } else {
                 String::new()
@@ -635,10 +743,11 @@ fn PuzzlePrompt(#[prop(optional)] compact: bool) -> impl IntoView {
     };
     let with_note = move |text: &str| {
         let note = rating_note();
+        let stop = if text.ends_with('!') { "" } else { "." };
         if compact || note.is_empty() {
-            format!("{text}.")
+            format!("{text}{stop}")
         } else {
-            format!("{text} ({note}).")
+            format!("{text}{stop} Rating {note}.")
         }
     };
     let message = move || match puzzle.phase.get() {
@@ -657,11 +766,21 @@ fn PuzzlePrompt(#[prop(optional)] compact: bool) -> impl IntoView {
                     Some(hint) => format!("{hint} {prompt}"),
                     None => prompt.to_string(),
                 }
+            } else if let Some(hint) = puzzle.hint_text.get() {
+                hint
+            } else if let Some(summary) = daily_summary() {
+                summary
+            } else if puzzle.solver_to_move() {
+                if puzzle.progress.with(|progress| progress.index) > 0 {
+                    "✓ Good so far. Your move.".to_string()
+                } else {
+                    "Your move.".to_string()
+                }
             } else {
-                puzzle.hint_text.get().unwrap_or_default()
+                String::new()
             }
         }
-        PuzzlePhase::Replying => "✓ Correct! The opponent answers…".to_string(),
+        PuzzlePhase::Replying => "✓ Correct!".to_string(),
         PuzzlePhase::Solved if puzzle.replaying.get() => {
             if puzzle.solved_before_replay.get() {
                 "✓ Solved again.".to_string()
@@ -678,17 +797,34 @@ fn PuzzlePrompt(#[prop(optional)] compact: bool) -> impl IntoView {
         }
         PuzzlePhase::Solved if puzzle.first_result.get() == Some(false) => {
             if signed_in.get() {
-                with_note("✓ Solved, not rated")
+                with_note("✓ Solved. Your first try counted")
             } else {
                 "✓ Solved.".to_string()
             }
         }
         PuzzlePhase::Solved => with_note("✓ Solved!"),
+        PuzzlePhase::Failed if puzzle.refuted.get() => {
+            let opponent = color_name(solver().opposite_color());
+            let lost = puzzle.game_state.state().with(|state| {
+                matches!(
+                    state.game_status,
+                    hive_lib::GameStatus::Finished(hive_lib::GameResult::Winner(winner))
+                        if winner != solver()
+                )
+            });
+            if lost {
+                with_note(&format!("✗ Not the move. {opponent} answers and wins"))
+            } else {
+                with_note(&format!(
+                    "✗ Not the move. {opponent} defends, the win is gone"
+                ))
+            }
+        }
         PuzzlePhase::Failed => with_note("✗ Not the move"),
         PuzzlePhase::Revealed => {
             let step = puzzle.reveal_step.get();
             if compact && step > 0 {
-                format!("Step {step} of {}", puzzle.solution_steps())
+                solution_step_label(puzzle, step)
             } else if compact {
                 "Solution".to_string()
             } else {
@@ -697,14 +833,24 @@ fn PuzzlePrompt(#[prop(optional)] compact: bool) -> impl IntoView {
         }
         _ => String::new(),
     };
-    let message_class = move || match puzzle.phase.get() {
+    let daily_label = move || {
+        puzzle
+            .puzzle
+            .with(|p| p.as_ref().and_then(|p| p.daily_day))
+            .map(|day| format!("Puzzle of the day · {}", day.format("%A %-d %B")))
+    };
+    let message_class = move || {
+        match puzzle.phase.get() {
         PuzzlePhase::Solved
             if (puzzle.first_result.get() == Some(false) || puzzle.hinted.get())
                 && !puzzle.replaying.get() =>
         {
             "text-orange-twilight font-semibold rounded px-1 bg-orange-twilight/15"
         }
-        PuzzlePhase::Solved | PuzzlePhase::Replying => {
+        PuzzlePhase::Solved => {
+            "text-base text-green-700 dark:text-green-400 font-bold rounded px-1.5 py-0.5 bg-grasshopper-green/20"
+        }
+        PuzzlePhase::Replying => {
             "text-green-700 dark:text-green-400 font-semibold rounded px-1 bg-grasshopper-green/15"
         }
         PuzzlePhase::Failed => {
@@ -715,10 +861,20 @@ fn PuzzlePrompt(#[prop(optional)] compact: bool) -> impl IntoView {
         }
         PuzzlePhase::Solving if awaiting_confirm() => "text-pillbug-teal font-semibold",
         _ => "text-gray-700 dark:text-gray-300",
+    }
     };
     view! {
         <div class="flex flex-col gap-1">
-            <ShowLet some=details let:details>
+            {move || {
+                daily_label()
+                    .map(|label| {
+                        view! {
+                            <span class="text-xs font-semibold tracking-wide uppercase text-pillbug-teal">
+                                {label}
+                            </span>
+                        }
+                    })
+            }} <ShowLet some=details let:details>
                 <div class="flex gap-2 items-center">
                     <span
                         class=move || format!("inline-block w-5 h-5 shrink-0 {}", swatch())
@@ -754,9 +910,9 @@ fn PuzzlePrompt(#[prop(optional)] compact: bool) -> impl IntoView {
                             let note = rating_note();
                             let practice = details.3 || puzzle.replaying.get();
                             match (note.is_empty(), practice) {
-                                (false, _) => note.trim_start_matches("rating\u{a0}").to_string(),
+                                (false, _) => note,
                                 (true, true) => format!("{} · practice", details.1),
-                                (true, false) => format!("difficulty {}", details.1),
+                                (true, false) => format!("Difficulty {}", details.1),
                             }
                         }}
                     </span>
@@ -779,14 +935,12 @@ fn PuzzlePrompt(#[prop(optional)] compact: bool) -> impl IntoView {
                         </span>
                     </Show>
                 </div>
-            </ShowLet>
-            <FocusChip />
+            </ShowLet> <FocusChip />
             <p class=if compact {
-                "text-[15px] leading-snug text-gray-800 dark:text-gray-200 min-h-[3.9rem]"
+                "text-[15px] leading-snug text-gray-800 dark:text-gray-200 min-h-[2.6rem]"
             } else {
                 "text-sm text-gray-800 dark:text-gray-200 min-h-[2.5rem]"
-            }>{move || or_blank(goal())}</p>
-            <p class="text-sm min-h-[2.5rem]" aria-live="polite">
+            }>{move || or_blank(goal())}</p> <p class="text-sm min-h-[2.5rem]" aria-live="polite">
                 <span class=move || {
                     format!("box-decoration-clone {}", message_class())
                 }>{move || or_blank(message())}</span>
@@ -800,16 +954,36 @@ fn EmptyMessage() -> impl IntoView {
     let puzzle = expect_context::<PuzzleContext>();
     let next = expect_context::<PuzzleNext>().0;
     let filtered = move || puzzle.game_type.get() != PuzzleGameTypeFilter::Any;
+    let in_set = move || puzzle.theme.get().is_some() || puzzle.collection.get().is_some();
     view! {
         <div class="flex flex-col gap-3 items-center max-w-xs text-center ui-empty-state">
             <p class="text-base font-semibold">
                 {move || match puzzle.game_type.get() {
+                    _ if in_set() => "Nothing left to play in this set.",
                     PuzzleGameTypeFilter::Base => "No base-game puzzles left.",
                     PuzzleGameTypeFilter::Mlp => "No expansion puzzles left.",
                     PuzzleGameTypeFilter::Any => "This puzzle could not be found.",
                 }}
             </p>
-            <Show when=filtered>
+            <Show when=in_set>
+                <button
+                    type="button"
+                    class="text-white min-h-11 ui-button bg-pillbug-teal hover:brightness-110"
+                    on:click=move |_| {
+                        puzzle.leave_focus();
+                        puzzle.load_next();
+                    }
+                >
+                    "Mixed puzzles"
+                </button>
+                <a
+                    class="inline-flex items-center text-sm min-h-11 ui-text-link"
+                    href="/puzzles/browse"
+                >
+                    "Pick another set"
+                </a>
+            </Show>
+            <Show when=move || filtered() && !in_set()>
                 <button
                     type="button"
                     class="text-white min-h-11 ui-button bg-pillbug-teal hover:brightness-110"
@@ -845,7 +1019,15 @@ fn PuzzleControls(#[prop(optional)] compact: bool) -> impl IntoView {
     let signed_in = is_signed_in();
     let phase = puzzle.phase;
     // Buttons stay in place (disabled) while the opponent answers, so nothing jumps.
-    let in_progress = move || matches!(phase.get(), PuzzlePhase::Solving | PuzzlePhase::Replying);
+    let in_progress = move || {
+        matches!(
+            phase.get(),
+            PuzzlePhase::Solving
+                | PuzzlePhase::Replying
+                | PuzzlePhase::Setup
+                | PuzzlePhase::Loading
+        )
+    };
     let solving = move || phase.get() == PuzzlePhase::Solving;
     let next = expect_context::<PuzzleNext>().0;
     let confirm_reveal = puzzle.reveal_armed;
@@ -876,7 +1058,7 @@ fn PuzzleControls(#[prop(optional)] compact: bool) -> impl IntoView {
                         type="button"
                         class="ui-button ui-button-secondary ui-button-sm"
                         title="Each press gives a little more: the bug, then the piece, then where it goes (H)"
-                        on:click=move |_| puzzle.hint()
+                        on:click=move |_| puzzle.hint(costs_rating())
                         disabled=hint_disabled
                     >
                         {hint_label}
@@ -927,13 +1109,7 @@ fn PuzzleControls(#[prop(optional)] compact: bool) -> impl IntoView {
                         }
                     >
                         {move || {
-                            if puzzle.can_skip() {
-                                "Skip"
-                            } else if costs_rating() {
-                                "Give up"
-                            } else {
-                                "Next →"
-                            }
+                            if costs_rating() && !puzzle.can_skip() { "Give up" } else { "Skip" }
                         }}
                     </button>
                 </Show>
@@ -948,7 +1124,7 @@ fn PuzzleControls(#[prop(optional)] compact: bool) -> impl IntoView {
                         title="Undo the wrong move and try that move again (R)"
                         on:click=move |_| puzzle.retry()
                     >
-                        {if compact { "Retry" } else { "Retry this move" }}
+                        "Retry"
                     </button>
                     <button
                         type="button"
@@ -970,6 +1146,7 @@ fn PuzzleControls(#[prop(optional)] compact: bool) -> impl IntoView {
                             "Analyze"
                         </a>
                     </ShowLet>
+                    <ShareButton compact=true />
                 </Show>
                 <Show when=move || compact && phase.get() == PuzzlePhase::Revealed>
                     <button
@@ -1029,23 +1206,33 @@ fn PuzzleControls(#[prop(optional)] compact: bool) -> impl IntoView {
                         title="Next puzzle (N)"
                         on:click=move |_| next.run(())
                     >
-                        "Next →"
+                        {move || {
+                            if puzzle.daily.with(Option::is_some) {
+                                "More puzzles →"
+                            } else {
+                                "Next →"
+                            }
+                        }}
                     </button>
                 </Show>
             </div>
             <Show when=move || !compact && over()>
-                <ShowLet some=analysis let:href>
-                    <a
-                        href=href
-                        class="inline-flex items-center self-start text-sm font-semibold min-h-11 ui-text-link"
-                    >
-                        "Open in analysis →"
-                    </a>
-                </ShowLet>
+                <div class="flex flex-wrap gap-x-5 items-center">
+                    <ShowLet some=analysis let:href>
+                        <a
+                            href=href
+                            class="inline-flex items-center self-start text-sm font-semibold min-h-11 ui-text-link"
+                        >
+                            "Open in analysis →"
+                        </a>
+                    </ShowLet>
+                    <ShareButton />
+                </div>
             </Show>
             <Show when=move || !compact>
                 <SolutionMoves />
             </Show>
+            <ManualShareLink />
         </div>
     }
 }
@@ -1088,7 +1275,7 @@ fn SolutionMoves() -> impl IntoView {
                         "▶"
                     </button>
                     <span class="ml-1 text-gray-600 dark:text-gray-400">
-                        {move || { format!("Step {} of {}", step.get(), puzzle.solution_steps()) }}
+                        {move || solution_step_label(puzzle, step.get())}
                     </span>
                 </div>
             </div>
@@ -1165,57 +1352,12 @@ fn PuzzleAfter(#[prop(optional)] stars_elsewhere: bool) -> impl IntoView {
 #[component]
 fn PuzzleCredits(puzzle: PuzzleResponse) -> impl IntoView {
     let context = expect_context::<PuzzleContext>();
-    let copied = RwSignal::new(None::<bool>);
-    let link = format!("/puzzles/{}", puzzle.nanoid);
-    let share = {
-        let link = link.clone();
-        move |_| {
-            #[cfg(feature = "ssr")]
-            let _ = (&link, copied);
-            #[cfg(not(feature = "ssr"))]
-            if let Some(window) = web_sys::window() {
-                use wasm_bindgen::JsCast;
-                use wasm_bindgen_futures::{js_sys, JsFuture};
-                let url = format!("{}{link}", window.location().origin().unwrap_or_default());
-                let navigator = window.navigator();
-                let touch = window
-                    .match_media("(pointer: coarse)")
-                    .ok()
-                    .flatten()
-                    .is_some_and(|query| query.matches());
-                let share = js_sys::Reflect::get(&navigator, &"share".into())
-                    .ok()
-                    .and_then(|share| share.dyn_into::<js_sys::Function>().ok())
-                    .filter(|_| touch);
-                if let Some(share) = share {
-                    let data = js_sys::Object::new();
-                    let _ = js_sys::Reflect::set(&data, &"url".into(), &url.into());
-                    if let Ok(promise) = share.call1(&navigator, &data) {
-                        spawn_local(async move {
-                            let _ = JsFuture::from(js_sys::Promise::from(promise)).await;
-                        });
-                    }
-                    return;
-                }
-                let written = navigator.clipboard().write_text(&url);
-                spawn_local(async move {
-                    let ok = JsFuture::from(written).await.is_ok();
-                    let _ = copied.try_set(Some(ok));
-                    leptos::leptos_dom::helpers::set_timeout(
-                        move || {
-                            let _ = copied.try_set(None);
-                        },
-                        std::time::Duration::from_millis(2500),
-                    );
-                });
-            }
-        }
-    };
+    let shared = expect_context::<SharedLink>().0;
+    let share = move |_| share_current_puzzle(context, shared);
     let game_link = puzzle
         .source_game
         .as_ref()
         .map(|game| format!("/game/{game}"));
-    let analysis_link = analysis_link(&puzzle);
     let authors = puzzle.authors.join(", ");
     let themes: Vec<String> = puzzle
         .themes
@@ -1298,30 +1440,22 @@ fn PuzzleCredits(puzzle: PuzzleResponse) -> impl IntoView {
                 </div>
             </Show>
             <div class="flex flex-wrap gap-y-1 gap-x-3">
-                <button
-                    type="button"
-                    class="inline-flex items-center font-semibold min-h-11 ui-text-link"
-                    on:click=share
-                >
-                    {move || match copied.get() {
-                        Some(true) => "Link copied ✓",
-                        Some(false) => "Couldn't copy the link",
-                        None => "Share link",
-                    }}
-                </button>
+                <Show when=move || !context.phase.get().is_over()>
+                    <button
+                        type="button"
+                        class="inline-flex items-center font-semibold min-h-11 ui-text-link"
+                        on:click=share
+                    >
+                        {move || match shared.get() {
+                            ShareState::Copied => "Link copied ✓",
+                            _ => "Share link",
+                        }}
+                    </button>
+                </Show>
                 // Only after the attempt: the original game and an engine-free board would be a peek.
                 <Show when=move || {
                     context.reported.get()
                 }>
-                    {analysis_link
-                        .clone()
-                        .map(|href| {
-                            view! {
-                                <a class="inline-flex items-center min-h-11 ui-text-link" href=href>
-                                    "Open in analysis"
-                                </a>
-                            }
-                        })}
                     {game_link
                         .clone()
                         .map(|href| {
@@ -1388,7 +1522,10 @@ fn Chip(
 }
 
 #[component]
-fn PuzzleFooter(rating: RwSignal<Option<i32>>) -> impl IntoView {
+fn PuzzleFooter(
+    rating: RwSignal<Option<i32>>,
+    #[prop(optional)] nav_elsewhere: bool,
+) -> impl IntoView {
     let puzzle = expect_context::<PuzzleContext>();
     let settings_summary = move || {
         let pieces = match puzzle.game_type.get() {
@@ -1433,13 +1570,15 @@ fn PuzzleFooter(rating: RwSignal<Option<i32>>) -> impl IntoView {
         }
     };
     view! {
-        <div class="flex flex-col gap-2 pt-2 mt-auto text-sm border-t border-black/10 dark:border-white/10">
+        <div class="flex flex-col gap-2 pt-2 text-sm border-t border-black/10 dark:border-white/10">
             <Show
                 when=move || signed_in.get()
-                fallback=|| {
+                fallback=move || {
                     let remember_return = use_remember_return();
+                    let hidden = move || !nav_elsewhere && puzzle.phase.get().is_over();
+                    // On phones the top card already offers sign-in once the puzzle is over.
                     view! {
-                        <p class="text-xs text-gray-600 dark:text-gray-400">
+                        <p class="text-xs text-gray-600 dark:text-gray-400" class:hidden=hidden>
                             <a
                                 href="/login"
                                 class="ui-text-link"
@@ -1454,23 +1593,9 @@ fn PuzzleFooter(rating: RwSignal<Option<i32>>) -> impl IntoView {
             >
                 <div class="flex gap-2 justify-between items-baseline">
                     <span>"Your rating"</span>
-                    <span class="flex gap-2 items-baseline">
-                        <span class="text-base font-bold">
-                            {move || {
-                                rating
-                                    .get()
-                                    .map(|r| r.to_string())
-                                    .unwrap_or_else(|| "…".to_string())
-                            }}
-                        </span>
+                    <span class="text-base font-bold">
                         {move || {
-                            puzzle
-                                .attempt
-                                .get()
-                                .and_then(|attempt| attempt.rating_change)
-                                .map(|delta| {
-                                    view! { <span class=delta_class(delta)>{signed(delta)}</span> }
-                                })
+                            rating.get().map(|r| r.to_string()).unwrap_or_else(|| "…".to_string())
                         }}
                     </span>
                 </div>
@@ -1480,7 +1605,15 @@ fn PuzzleFooter(rating: RwSignal<Option<i32>>) -> impl IntoView {
                     {move || format!("{} solved in a row", puzzle.solved_streak.get())}
                 </div>
             </Show>
-            <details class="group">
+            <details
+                class="group"
+                on:toggle=move |evt| {
+                    let details = event_target::<web_sys::Element>(&evt);
+                    if details.has_attribute("open") {
+                        details.scroll_into_view_with_bool(false);
+                    }
+                }
+            >
                 <summary class="flex justify-between items-center cursor-pointer min-h-11">
                     <span class="font-semibold">"Puzzle settings"</span>
                     <span class="text-xs text-gray-600 dark:text-gray-400">{settings_summary}</span>
@@ -1586,32 +1719,19 @@ fn PuzzleFooter(rating: RwSignal<Option<i32>>) -> impl IntoView {
                             />
                         </div>
                     </div>
+                    <label class="flex gap-3 items-center text-xs cursor-pointer min-h-11">
+                        <input
+                            class="w-5 h-5 shrink-0 accent-pillbug-teal"
+                            type="checkbox"
+                            aria-label="One-click moves in puzzles"
+                            prop:checked=move || puzzle.one_click.get()
+                            on:change=move |evt| puzzle.set_one_click(event_target_checked(&evt))
+                        />
+                        "One-click moves"
+                    </label>
                 </div>
             </details>
-            <a
-                class="inline-flex items-center text-xs min-h-11 ui-text-link"
-                href="/puzzles/browse"
-            >
-                "Browse puzzle sets →"
-            </a>
-            <label class="flex gap-3 items-center text-xs cursor-pointer min-h-11">
-                <input
-                    class="w-5 h-5 shrink-0 accent-pillbug-teal"
-                    type="checkbox"
-                    aria-label="One-click moves in puzzles"
-                    prop:checked=move || puzzle.one_click.get()
-                    on:change=move |evt| puzzle.set_one_click(event_target_checked(&evt))
-                />
-                "One-click moves"
-            </label>
-            <Show when=move || signed_in.get()>
-                <a
-                    class="inline-flex items-center text-xs min-h-11 ui-text-link"
-                    href="/puzzles/history"
-                >
-                    "Your puzzle history →"
-                </a>
-            </Show>
+            {(!nav_elsewhere).then(|| view! { <PuzzleNav /> })}
             <p class="hidden text-gray-500 lg:block text-[11px]">
                 "Keys: H hint · S solution · ← → step · R retry · N next or skip · Esc cancel"
             </p>
@@ -1630,14 +1750,6 @@ fn random() -> f64 {
     }
 }
 
-fn delta_class(delta: i32) -> &'static str {
-    match delta.signum() {
-        1 => "text-sm font-semibold text-grasshopper-green",
-        0 => "text-sm font-semibold text-gray-500",
-        _ => "text-sm font-semibold text-ladybug-red",
-    }
-}
-
 pub fn signed(delta: i32) -> String {
     match delta.signum() {
         1 => format!("+{delta}"),
@@ -1650,10 +1762,13 @@ pub fn signed(delta: i32) -> String {
 /// source game is not on this server.
 fn analysis_link(puzzle: &PuzzleResponse) -> Option<String> {
     let Some(history) = puzzle.history.as_deref() else {
-        return puzzle
-            .position
-            .as_deref()
-            .map(|hop| format!("/analysis?hop={}", encode_component(hop)));
+        return puzzle.position.as_deref().map(|hop| {
+            format!(
+                "/analysis?hop={}&puzzle={}",
+                encode_component(hop),
+                puzzle.nanoid
+            )
+        });
     };
     let moves: Vec<&str> = history
         .split(';')
@@ -1672,7 +1787,11 @@ fn analysis_link(puzzle: &PuzzleResponse) -> Option<String> {
         moves.len() / 2 + 1,
         moves.join(";")
     );
-    Some(format!("/analysis?uhp={}", encode_component(&uhp)))
+    Some(format!(
+        "/analysis?uhp={}&puzzle={}",
+        encode_component(&uhp),
+        puzzle.nanoid
+    ))
 }
 
 fn encode_component(text: &str) -> String {
@@ -1684,6 +1803,55 @@ fn encode_component(text: &str) -> String {
             other => format!("%{other:02X}"),
         })
         .collect()
+}
+
+fn solution_step_label(puzzle: PuzzleContext, step: usize) -> String {
+    let steps = puzzle.solution_steps();
+    if step >= steps && steps > 0 {
+        format!(
+            "Step {step} of {steps} · {} wins",
+            color_name(puzzle.solver())
+        )
+    } else {
+        format!("Step {step} of {steps}")
+    }
+}
+
+/// Today's outcome on the puzzle-of-the-day page, counting this visit's first try too.
+fn daily_summary(puzzle: PuzzleContext) -> Option<String> {
+    let status = puzzle.daily.get()?;
+    let (result, tried, solved) = match status.my_result {
+        Some(result) => (result, status.tried, status.solved),
+        None if puzzle.reported.get() => {
+            let result = puzzle.first_result.get() == Some(true) && !puzzle.hinted.get();
+            (result, status.tried + 1, status.solved + i64::from(result))
+        }
+        None => return None,
+    };
+    let verdict = if result {
+        "You solved today's puzzle"
+    } else {
+        "You missed today's puzzle"
+    };
+    Some(format!(
+        "{verdict} · {solved} of {tried} solved it · next one in {}",
+        until_next_utc_day()
+    ))
+}
+
+fn until_next_utc_day() -> String {
+    const DAY_MS: f64 = 86_400_000.0;
+    #[cfg(not(feature = "ssr"))]
+    let now = web_sys::js_sys::Date::now();
+    #[cfg(feature = "ssr")]
+    let now = 0.0;
+    let left = ((now / DAY_MS).floor() + 1.0) * DAY_MS - now;
+    let minutes = (left / 60_000.0).ceil() as i64;
+    if minutes >= 60 {
+        format!("{}h", (minutes + 30) / 60)
+    } else {
+        format!("{minutes} min")
+    }
 }
 
 fn or_blank(text: String) -> String {
@@ -1698,4 +1866,142 @@ pub fn use_remember_return() -> impl Fn() + Copy {
     let referrer = expect_context::<crate::providers::RefererContext>().pathname;
     let pathname = leptos_router::hooks::use_location().pathname;
     move || referrer.set_value(pathname.get_untracked())
+}
+
+#[derive(Clone, Copy)]
+struct SharedLink(RwSignal<ShareState>);
+
+#[derive(Clone, PartialEq)]
+#[cfg_attr(feature = "ssr", allow(dead_code))]
+enum ShareState {
+    Idle,
+    Copied,
+    /// Copying failed, so the link is shown to copy by hand.
+    Manual(String),
+}
+
+fn share_current_puzzle(puzzle: PuzzleContext, shared: RwSignal<ShareState>) {
+    let Some((nanoid, moves, daily)) = puzzle.puzzle.with_untracked(|current| {
+        current
+            .as_ref()
+            .map(|p| (p.nanoid.clone(), p.solver_moves, p.daily_day.is_some()))
+    }) else {
+        return;
+    };
+    let task = format!(
+        "{} to win in {}",
+        color_name(puzzle.solver()),
+        moves_label(moves)
+    );
+    let title = if daily {
+        format!("Puzzle of the day: {task}")
+    } else {
+        format!("{task} · Hive puzzle")
+    };
+    #[cfg(feature = "ssr")]
+    let _ = (title, shared, nanoid);
+    #[cfg(not(feature = "ssr"))]
+    if let Some(window) = web_sys::window() {
+        use wasm_bindgen::JsCast;
+        use wasm_bindgen_futures::{js_sys, JsFuture};
+        let url = format!(
+            "{}/puzzles/{nanoid}",
+            window.location().origin().unwrap_or_default()
+        );
+        let navigator = window.navigator();
+        let touch = window
+            .match_media("(pointer: coarse)")
+            .ok()
+            .flatten()
+            .is_some_and(|query| query.matches());
+        let share = js_sys::Reflect::get(&navigator, &"share".into())
+            .ok()
+            .and_then(|share| share.dyn_into::<js_sys::Function>().ok())
+            .filter(|_| touch);
+        if let Some(share) = share {
+            let data = js_sys::Object::new();
+            let _ = js_sys::Reflect::set(&data, &"title".into(), &title.into());
+            let _ = js_sys::Reflect::set(&data, &"text".into(), &"Can you find it?".into());
+            let _ = js_sys::Reflect::set(&data, &"url".into(), &url.clone().into());
+            if let Ok(promise) = share.call1(&navigator, &data) {
+                spawn_local(async move {
+                    if let Err(error) = JsFuture::from(js_sys::Promise::from(promise)).await {
+                        let cancelled = js_sys::Reflect::get(&error, &"name".into())
+                            .ok()
+                            .and_then(|name| name.as_string())
+                            .is_some_and(|name| name == "AbortError");
+                        if !cancelled {
+                            let _ = shared.try_set(ShareState::Manual(url));
+                        }
+                    }
+                });
+            }
+            return;
+        }
+        let written = navigator.clipboard().write_text(&url);
+        spawn_local(async move {
+            if JsFuture::from(written).await.is_ok() {
+                let _ = shared.try_set(ShareState::Copied);
+                leptos::leptos_dom::helpers::set_timeout(
+                    move || {
+                        if shared.try_get_untracked() == Some(ShareState::Copied) {
+                            let _ = shared.try_set(ShareState::Idle);
+                        }
+                    },
+                    std::time::Duration::from_millis(2500),
+                );
+            } else {
+                let _ = shared.try_set(ShareState::Manual(url));
+            }
+        });
+    }
+}
+
+#[component]
+fn ManualShareLink() -> impl IntoView {
+    let shared = expect_context::<SharedLink>().0;
+    let link = move || match shared.get() {
+        ShareState::Manual(url) => Some(url),
+        _ => None,
+    };
+    view! {
+        <ShowLet some=link let:url>
+            <label class="flex flex-col gap-1 w-full text-xs">
+                "Copy this link:"
+                <input
+                    type="text"
+                    readonly
+                    class="py-2 px-2 w-full text-sm rounded border border-black/20 bg-white/80 dark:border-white/20 dark:bg-black/30"
+                    prop:value=url
+                    on:focus=move |evt| {
+                        event_target::<web_sys::HtmlInputElement>(&evt).select();
+                    }
+                />
+            </label>
+        </ShowLet>
+    }
+}
+
+#[component]
+fn ShareButton(#[prop(optional)] compact: bool) -> impl IntoView {
+    let puzzle = expect_context::<PuzzleContext>();
+    let shared = expect_context::<SharedLink>().0;
+    view! {
+        <button
+            type="button"
+            class=if compact {
+                "ui-button ui-button-secondary ui-button-sm"
+            } else {
+                "inline-flex items-center text-sm font-semibold min-h-11 ui-text-link"
+            }
+            title="Send this puzzle to a friend"
+            on:click=move |_| share_current_puzzle(puzzle, shared)
+        >
+            {move || match (shared.get(), compact) {
+                (ShareState::Copied, _) => "Copied ✓",
+                (_, true) => "Share",
+                (_, false) => "Share this puzzle",
+            }}
+        </button>
+    }
 }

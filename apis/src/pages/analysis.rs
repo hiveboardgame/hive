@@ -455,6 +455,7 @@ pub fn Analysis() -> impl IntoView {
                                             <div class="grid relative grid-cols-8 col-span-8 col-start-1 grid-rows-6 row-span-6 row-start-1 min-w-0 min-h-0">
                                                 <Board interaction=hiveground_interaction history_board />
                                                 <VariationList extend_tw_classes="absolute left-1 top-1 z-20" />
+                                                <BackToPuzzle />
                                             </div>
                                             <div class="flex flex-col col-span-2 row-span-6 gap-2 my-1 mr-1 min-h-0">
                                                 <GameDetailsPanel />
@@ -471,6 +472,7 @@ pub fn Analysis() -> impl IntoView {
                                         <div class="flex relative min-h-0 grow">
                                             <Board interaction=hiveground_interaction history_board />
                                             <VariationList extend_tw_classes="absolute left-1 top-1 z-20" />
+                                            <BackToPuzzle />
                                         </div> {mobile_player_panel(Color::Black)}
                                         <div class="order-2 shrink-0 ui-board-reserve">
                                             <AnalysisMobileHistoryControls />
@@ -498,4 +500,29 @@ fn should_block_analysis(identity: AuthIdentity, game_response: &GameResponse) -
         && matches!(game_response.game_status, GameStatus::InProgress)
         && game_response.time_mode == TimeMode::RealTime
         && (user_id == game_response.white_player.uid || user_id == game_response.black_player.uid)
+}
+
+#[component]
+fn BackToPuzzle() -> impl IntoView {
+    let queries = use_query_map();
+    let puzzle = move || {
+        queries
+            .with(|queries| queries.get("puzzle"))
+            .filter(|nanoid| {
+                !nanoid.is_empty()
+                    && nanoid
+                        .chars()
+                        .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+            })
+    };
+    view! {
+        <ShowLet some=puzzle let:nanoid>
+            <a
+                href=format!("/puzzles/{nanoid}")
+                class="flex absolute top-1 right-1 z-20 items-center px-3 text-sm font-semibold rounded-lg shadow min-h-11 no-link-style ui-button-secondary"
+            >
+                "← Back to puzzle"
+            </a>
+        </ShowLet>
+    }
 }

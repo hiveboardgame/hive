@@ -1,6 +1,7 @@
 use crate::{
     components::{
         layouts::{page_header::PageHeader, page_shell::PageShell},
+        molecules::puzzle_nav::PuzzleNav,
         organisms::puzzle_trainer::{collection_label, theme_label},
     },
     functions::puzzles::puzzle_sets,
@@ -48,32 +49,38 @@ fn cards(sets: &[PuzzleSetResponse]) -> (Vec<SetCard>, Vec<SetCard>, Vec<SetCard
         }
     };
     let book_key = format!("collection:{BOOK}");
-    let book = vec![card(
+    let book: Vec<SetCard> = vec![card(
         collection_label(BOOK),
         "By Enrique Sedano, Jonas Kronander and Christian Sperling.",
         format!("/puzzles?collection={BOOK}"),
         &[book_key.as_str()],
-    )];
-    let lengths = vec![
+    )]
+    .into_iter()
+    .filter(|card| card.total > 0)
+    .collect();
+    let lengths: Vec<SetCard> = vec![
         card(
             "Win in 1".to_string(),
             "One move to win.",
-            "/puzzles?length=1".to_string(),
-            &["moves:1"],
+            "/puzzles?theme=winIn1".to_string(),
+            &["winIn1"],
         ),
         card(
             "Win in 2".to_string(),
             "Two moves to win.",
-            "/puzzles?length=2".to_string(),
-            &["moves:2"],
+            "/puzzles?theme=winIn2".to_string(),
+            &["winIn2"],
         ),
         card(
-            "Win in 3 or more".to_string(),
-            "Three or more moves.",
-            "/puzzles?length=3".to_string(),
-            &["moves:3", "moves:4"],
+            "Win in 3".to_string(),
+            "Three moves to win.",
+            "/puzzles?theme=winIn3".to_string(),
+            &["winIn3"],
         ),
-    ];
+    ]
+    .into_iter()
+    .filter(|card| card.total > 0)
+    .collect::<Vec<_>>();
     let themes = THEMES
         .iter()
         .map(|(theme, blurb)| {
@@ -109,14 +116,7 @@ pub fn PuzzleBrowse() -> impl IntoView {
     view! {
         <PageShell>
             <PageHeader title="Puzzle sets" />
-            <div class="flex flex-wrap gap-3 justify-between items-center text-sm">
-                <a
-                    href="/puzzles"
-                    class="text-white whitespace-nowrap shadow min-h-11 ui-button ui-button-sm no-link-style bg-pillbug-teal hover:brightness-110"
-                >
-                    "Mixed puzzles"
-                </a>
-            </div>
+            <PuzzleNav />
             <Suspense fallback=|| {
                 view! { <p class="text-sm">"Loading…"</p> }
             }>
@@ -126,8 +126,9 @@ pub fn PuzzleBrowse() -> impl IntoView {
                             let (book, lengths, themes) = cards(&sets);
                             view! {
                                 <div class="flex flex-col gap-8">
-                                    {section("The puzzle book", book)}
-                                    {section("By length", lengths)} {section("By idea", themes)}
+                                    {(!book.is_empty()).then(|| section("The puzzle book", book))}
+                                    {(!lengths.is_empty()).then(|| section("By length", lengths))}
+                                    {(!themes.is_empty()).then(|| section("By idea", themes))}
                                 </div>
                             }
                                 .into_any()

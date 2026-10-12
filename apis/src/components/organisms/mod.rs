@@ -6,6 +6,7 @@ pub mod challenges;
 pub mod chat;
 pub mod config_flag_toggle;
 pub mod confirm_mode_toggle;
+pub mod daily_puzzle_card;
 pub mod darkmode_toggle;
 pub mod direct_challenge_modal;
 pub mod display_games;

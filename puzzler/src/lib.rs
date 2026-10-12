@@ -1,9 +1,13 @@
 pub mod book;
+#[cfg(feature = "cli")]
 pub mod corpus;
 pub mod game;
 pub mod line;
+#[cfg(feature = "cli")]
 pub mod mine;
 pub mod notation;
 pub mod prove;
+#[cfg(feature = "cli")]
 pub mod push;
+pub mod refute;
 pub mod select;

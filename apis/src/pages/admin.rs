@@ -7,7 +7,10 @@ use crate::{
         organisms::chat::ResolvedChatWindow,
         update_from_event::update_from_input,
     },
-    functions::home_banner,
+    functions::{
+        home_banner,
+        puzzles::{daily_schedule, queue_daily_puzzle, unqueue_daily_puzzle},
+    },
     providers::AuthContext,
     security::csrf::ActionForm,
 };
@@ -29,6 +32,9 @@ pub fn Admin() -> impl IntoView {
                 </Panel>
                 <Panel title="Edit Banner" body_class="space-y-4">
                     <EditBanner />
+                </Panel>
+                <Panel title="Puzzle of the day" body_class="space-y-4">
+                    <DailyPuzzleQueue />
                 </Panel>
                 <Panel title="Telemetry" body_class="flex flex-wrap gap-2">
                     <a class="ui-button ui-button-primary ui-button-md" href="/admin/telemetry">
@@ -137,5 +143,157 @@ fn EditBanner() -> impl IntoView {
                     })
             }}
         </Transition>
+    }
+}
+
+#[component]
+fn DailyPuzzleQueue() -> impl IntoView {
+    let refresh = RwSignal::new(0u32);
+    let schedule = Resource::new(move || refresh.get(), |_| daily_schedule());
+    let input = RwSignal::new(String::new());
+    let error = RwSignal::new(None::<String>);
+    let queue = move |_| {
+        let nanoid = input.get_untracked();
+        if nanoid.trim().is_empty() {
+            return;
+        }
+        leptos::task::spawn_local(async move {
+            match queue_daily_puzzle(nanoid).await {
+                Ok(()) => {
+                    input.set(String::new());
+                    error.set(None);
+                    refresh.update(|n| *n += 1);
+                }
+                Err(err) => error.set(Some(server_message(err))),
+            }
+        });
+    };
+    let remove = move |nanoid: String| {
+        leptos::task::spawn_local(async move {
+            if let Err(err) = unqueue_daily_puzzle(nanoid).await {
+                error.set(Some(server_message(err)));
+            }
+            refresh.update(|n| *n += 1);
+        });
+    };
+    view! {
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+            "Queued puzzles become the puzzle of the day in order, one per day (UTC). Days without a queued puzzle are picked automatically."
+        </p>
+        <div class="flex flex-wrap gap-2 items-center">
+            <input
+                class="flex-1 min-w-48 ui-field-input"
+                type="text"
+                placeholder="Puzzle id or link"
+                prop:value=input
+                on:input=update_from_input(input)
+                on:keydown=move |ev| {
+                    if ev.key() == "Enter" {
+                        queue(());
+                    }
+                }
+            />
+            <button class="ui-button ui-button-primary ui-button-md" on:click=move |_| queue(())>
+                "Queue"
+            </button>
+        </div>
+        {move || error.get().map(|error| view! { <p class="text-sm text-ladybug-red">{error}</p> })}
+        <Transition>
+            {move || {
+                schedule
+                    .get()
+                    .map(|schedule| match schedule {
+                        Ok(schedule) => {
+                            view! {
+                                <div class="grid gap-4 sm:grid-cols-2">
+                                    <div class="flex flex-col gap-1">
+                                        <h3 class="font-bold">"Coming up"</h3>
+                                        {if schedule.queued.is_empty() {
+                                            view! {
+                                                <p class="text-sm text-gray-600 dark:text-gray-400">
+                                                    "Nothing queued."
+                                                </p>
+                                            }
+                                                .into_any()
+                                        } else {
+                                            schedule
+                                                .queued
+                                                .into_iter()
+                                                .map(|entry| {
+                                                    let nanoid = entry.nanoid.clone();
+                                                    view! {
+                                                        <div class="flex gap-2 items-center text-sm">
+                                                            <span class="w-24 tabular-nums">
+                                                                {entry.day.format("%a %d %b").to_string()}
+                                                            </span>
+                                                            <a
+                                                                class="ui-text-link"
+                                                                href=format!("/puzzles/{}", entry.nanoid)
+                                                                target="_blank"
+                                                            >
+                                                                {entry.nanoid.clone()}
+                                                            </a>
+                                                            <span class="text-gray-600 dark:text-gray-400">
+                                                                {format!(
+                                                                    "{} · win in {} · {}",
+                                                                    entry.game_type,
+                                                                    entry.solver_moves,
+                                                                    entry.rating,
+                                                                )}
+                                                            </span>
+                                                            <button
+                                                                class="ml-auto ui-button ui-button-secondary ui-button-sm"
+                                                                on:click=move |_| remove(nanoid.clone())
+                                                            >
+                                                                "Remove"
+                                                            </button>
+                                                        </div>
+                                                    }
+                                                })
+                                                .collect_view()
+                                                .into_any()
+                                        }}
+                                    </div>
+                                    <div class="flex flex-col gap-1">
+                                        <h3 class="font-bold">"Recent"</h3>
+                                        {schedule
+                                            .recent
+                                            .into_iter()
+                                            .map(|(day, nanoid)| {
+                                                view! {
+                                                    <div class="flex gap-2 text-sm">
+                                                        <span class="w-24 tabular-nums">
+                                                            {day.format("%a %d %b").to_string()}
+                                                        </span>
+                                                        <a
+                                                            class="ui-text-link"
+                                                            href=format!("/puzzles/{nanoid}")
+                                                            target="_blank"
+                                                        >
+                                                            {nanoid.clone()}
+                                                        </a>
+                                                    </div>
+                                                }
+                                            })
+                                            .collect_view()}
+                                    </div>
+                                </div>
+                            }
+                                .into_any()
+                        }
+                        Err(err) => {
+                            view! { <p class="text-sm text-ladybug-red">{server_message(err)}</p> }
+                                .into_any()
+                        }
+                    })
+            }}
+        </Transition>
+    }
+}
+
+fn server_message(error: ServerFnError) -> String {
+    match error {
+        ServerFnError::ServerError(message) => message,
+        other => other.to_string(),
     }
 }

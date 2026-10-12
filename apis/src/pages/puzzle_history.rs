@@ -3,6 +3,7 @@ use crate::{
         layouts::{page_header::PageHeader, page_shell::PageShell},
         molecules::{
             empty_state::EmptyState,
+            puzzle_nav::PuzzleNav,
             puzzle_stars::PuzzleStars,
             thumbnail_pieces::ThumbnailPieces,
         },
@@ -78,6 +79,7 @@ pub fn PuzzleHistory() -> impl IntoView {
     view! {
         <PageShell>
             <PageHeader title="Puzzle history" />
+            <PuzzleNav />
             <div class="flex flex-wrap gap-3 justify-between items-center">
                 <div
                     class=move || {
@@ -107,7 +109,7 @@ pub fn PuzzleHistory() -> impl IntoView {
                                         <span>
                                             "Puzzle rating " <b>{rating.rating}</b>
                                             {format!(
-                                                " · {} played, {} solved",
+                                                " · {} rated · {} solved without help",
                                                 rating.played,
                                                 rating.won,
                                             )}
@@ -277,12 +279,24 @@ fn HistoryRow(row: PuzzleHistoryRow) -> impl IntoView {
                     )>{result.0} " " {change}</span>
                     <span class="text-xs text-gray-600 dark:text-gray-400">
                         {format!(
-                            "{} · difficulty now {} · ",
-                            if row.game_type == "Base" { "Base game" } else { "Expansions" },
+                            "{}Difficulty now {} · ",
+                            if row.game_type == "Base" { "Base game · " } else { "" },
                             row.rating,
                         )} <time datetime=played_at.to_rfc3339()>{when}</time>
                     </span>
                     <span class="flex flex-wrap gap-1">
+                        {row
+                            .daily_day
+                            .map(|day| {
+                                view! {
+                                    <span class="py-0.5 px-1.5 text-xs font-semibold rounded text-pillbug-teal bg-pillbug-teal/15">
+                                        {format!(
+                                            "Puzzle of the day · {}",
+                                            day.format("%-d %b %Y"),
+                                        )}
+                                    </span>
+                                }
+                            })}
                         {tags
                             .into_iter()
                             .map(|tag| {

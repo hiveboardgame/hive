@@ -28,6 +28,7 @@ codee = { workspace = true }
 console_error_panic_hook = { workspace = true }
 cookie = { workspace = true }
 db = { path = "../db", optional = true }
+puzzler = { path = "../puzzler", optional = true, default-features = false }
 diesel = { workspace = true, optional = true }
 diesel-async = { workspace = true, optional = true }
 diesel_migrations = { workspace = true, optional = true }
@@ -61,7 +62,7 @@ lru = { version = "0.18.1", optional = true }
 markdown = { workspace = true }
 rand = { workspace = true, optional = true }
 reqwest = { workspace = true, optional = true, features = ["query"] }
-resvg = { workspace = true, optional = true }
+resvg = { workspace = true, optional = true, features = ["text"] }
 rustls = { workspace = true, optional = true }
 web-push = { workspace = true, optional = true }
 web-time = { workspace = true }
@@ -110,6 +111,7 @@ ssr = [
   "dep:tokio",
   "dep:tokio-util",
   "dep:db",
+  "dep:puzzler",
   "dep:diesel",
   "dep:diesel_migrations",
   "dep:diesel-async",

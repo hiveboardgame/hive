@@ -9,7 +9,7 @@ pub use preview::{board_to_png, board_to_svg, PreviewOpts};
 /// SSR previews stay visually aligned with the live board without a Leptos
 /// runtime.
 #[cfg(feature = "ssr")]
-mod preview {
+pub(crate) mod preview {
     use crate::{
         common::{resolve_piece_paint, ShadowHref, SvgPos, TileDesign},
         hiveground::{build_static_render_model, PieceShadow, RenderLayerKind},
@@ -36,13 +36,13 @@ mod preview {
 
     // Match `PieceGlyph` so previews do not drift from the live board.
     const GLYPH_TRANSFORM: &str = "scale(0.56, 0.56) translate(-45, -50)";
-    const TILE_W: f32 = 88.337 * 0.56;
-    const TILE_H: f32 = 104.229 * 0.56;
+    pub(crate) const TILE_W: f32 = 88.337 * 0.56;
+    pub(crate) const TILE_H: f32 = 104.229 * 0.56;
     const PADDING: f32 = 48.0;
     // Tiny openings look noisy if a single tile fills the card.
     const MAX_SCALE: f32 = 1.8;
 
-    fn three_d_options() -> TileOptions {
+    pub(crate) fn three_d_options() -> TileOptions {
         TileOptions {
             design: TileDesign::ThreeD,
             ..TileOptions::default()
@@ -50,7 +50,7 @@ mod preview {
     }
 
     /// resvg will not fetch external tile assets, so inline namespaced defs.
-    static DEFS: LazyLock<String> = LazyLock::new(|| {
+    pub(crate) static DEFS: LazyLock<String> = LazyLock::new(|| {
         let mut defs = String::from("<defs>");
         defs.push_str(&namespace_ids(
             include_str!("../../assets/tiles/3d/3d.svg"),
@@ -132,7 +132,7 @@ mod preview {
         )
     }
 
-    fn piece_glyph(
+    pub(crate) fn piece_glyph(
         piece: hive_lib::Piece,
         design_shadow: bool,
         tiles: &TileOptions,

@@ -17,6 +17,7 @@
     "puzzles": {
         "title": "Puzzles",
         "train": "Solve puzzles",
+        "daily": "Puzzle of the day",
         "browse": "Puzzle sets",
         "history": "Your history"
     },

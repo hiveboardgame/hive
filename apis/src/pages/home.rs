@@ -6,6 +6,7 @@ use crate::{
         organisms::{
             calendar::Calendar,
             challenges::Challenges,
+            daily_puzzle_card::DailyPuzzleCard,
             featured_video::FeaturedVideo,
             quickplay::QuickPlay,
             tv::Tv,
@@ -46,11 +47,14 @@ pub fn Home() -> impl IntoView {
                     </div>
                 </div>
                 <div class="flex flex-col order-2 gap-6 items-center min-w-0 lg:order-none lg:col-start-2 lg:row-start-1">
-                    <div class="order-2 w-full lg:order-1">
+                    <div class="order-3 w-full lg:order-3">
                         <FeaturedVideo />
                     </div>
                     <div class="order-1 w-full lg:order-2">
                         <QuickPlay />
+                    </div>
+                    <div class="order-2 w-full lg:order-2">
+                        <DailyPuzzleCard />
                     </div>
                     <div class="order-3 w-full">
                         <Challenges />

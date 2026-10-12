@@ -3,6 +3,17 @@ name = "puzzler"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = ["cli"]
+# The command-line generator: mining the game export and pushing to a server. The server itself
+# only needs the prover and uses `default-features = false`.
+cli = ["dep:clap", "dep:flate2", "dep:rayon", "dep:reqwest", "dep:tracing-subscriber"]
+
+[[bin]]
+name = "puzzler"
+path = "src/main.rs"
+required-features = ["cli"]
+
 [lints]
 workspace = true
 
@@ -10,11 +21,11 @@ workspace = true
 hive = { path = "../engine" }
 shared_types = { path = "../shared_types" }
 anyhow = { workspace = true }
-clap = { workspace = true, features = ["env"] }
-flate2 = "1"
-rayon = "1"
-reqwest = { workspace = true, features = ["blocking", "json"] }
+clap = { workspace = true, features = ["env"], optional = true }
+flate2 = { version = "1", optional = true }
+rayon = { version = "1", optional = true }
+reqwest = { workspace = true, features = ["blocking", "json"], optional = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }

@@ -18,6 +18,10 @@ impl PuzzleImportToken {
                 .filter(|token| !token.is_empty()),
         )
     }
+
+    pub fn is_set(&self) -> bool {
+        self.0.is_some()
+    }
 }
 
 #[derive(Serialize, Default)]

@@ -17,6 +17,7 @@
     "puzzles": {
         "title": "Trencaclosques",
         "train": "Resol trencaclosques",
+        "daily": "Trencaclosques del dia",
         "browse": "Col·leccions",
         "history": "El teu historial"
     },

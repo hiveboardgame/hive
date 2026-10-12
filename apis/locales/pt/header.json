@@ -25,6 +25,7 @@
     "puzzles": {
         "title": "Problemas",
         "train": "Resolver problemas",
+        "daily": "Problema do dia",
         "browse": "Coleções",
         "history": "Teu histórico"
     },

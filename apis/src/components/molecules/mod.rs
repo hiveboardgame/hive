@@ -31,6 +31,7 @@ pub mod page_card;
 pub mod panel;
 pub mod ping;
 pub mod play_history_button;
+pub mod puzzle_nav;
 pub mod puzzle_stars;
 pub mod rating_and_change;
 pub mod rl_banner;

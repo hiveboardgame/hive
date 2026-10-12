@@ -13,6 +13,8 @@ todos
 site/
 docs/
 email_debug.log
+clients
+stockbee
 
 
 # Firebase Admin SDK service account JSON — the *real* push-dispatch

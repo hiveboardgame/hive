@@ -52,6 +52,22 @@ diesel::table! {
 }
 
 diesel::table! {
+    daily_puzzle_queue (puzzle_id) {
+        puzzle_id -> Uuid,
+        queued_by -> Nullable<Uuid>,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    daily_puzzles (day) {
+        day -> Date,
+        puzzle_id -> Uuid,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     email_queue (id) {
         id -> Uuid,
         user_id -> Nullable<Uuid>,
@@ -392,6 +408,9 @@ diesel::joinable!(chat_messages -> chat_channels (channel_id));
 diesel::joinable!(chat_messages -> users (sender_id));
 diesel::joinable!(chat_read_receipts -> chat_channels (channel_id));
 diesel::joinable!(chat_read_receipts -> users (user_id));
+diesel::joinable!(daily_puzzle_queue -> puzzles (puzzle_id));
+diesel::joinable!(daily_puzzle_queue -> users (queued_by));
+diesel::joinable!(daily_puzzles -> puzzles (puzzle_id));
 diesel::joinable!(email_queue -> users (user_id));
 diesel::joinable!(email_tokens -> users (user_id));
 diesel::joinable!(game_hashes -> games (game_id));
@@ -423,6 +442,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     chat_channels,
     chat_messages,
     chat_read_receipts,
+    daily_puzzle_queue,
+    daily_puzzles,
     email_queue,
     email_request_log,
     email_state,

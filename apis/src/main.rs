@@ -173,6 +173,10 @@ async fn main() -> std::io::Result<()> {
     jobs::email_drain(pool.clone(), email::EmailConfig::from_env());
     jobs::email_cleanup(pool.clone());
     let pwa_manifest = PwaManifest::from_site_root(&conf.leptos_options.site_root);
+    let puzzle_import_token = Data::new(PuzzleImportToken::from_env());
+    if !puzzle_import_token.is_set() {
+        log::warn!("Puzzle import disabled: PUZZLE_IMPORT_TOKEN is not set or empty");
+    }
 
     println!("listening on http://{}", addr);
 
@@ -191,7 +195,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::clone(&jwt_key))
             .app_data(Data::from(push_telemetry.clone()))
             .app_data(Data::new(pwa_manifest.clone()))
-            .app_data(Data::new(PuzzleImportToken::from_env()))
+            .app_data(Data::clone(&puzzle_import_token))
             // serve JS/WASM/CSS from `pkg`
             .service(Files::new("/pkg", format!("{site_root}/pkg")))
             .service(functions::pwa::worker)
@@ -208,6 +212,7 @@ async fn main() -> std::io::Result<()> {
             .service(csrf::token_endpoint)
             .service(functions::oauth::callback)
             .service(functions::og::og_game_image)
+            .service(functions::og::og_puzzle_image)
             .service(get_token)
             .service(get_identity)
             .service(api_play)

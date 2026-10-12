@@ -62,7 +62,7 @@ pub fn use_puzzle_marks(puzzle: PuzzleContext, annotations: AnnotationsSignal) {
                 }
             }
             if phase == PuzzlePhase::Failed {
-                if let Some(position) = state.board.last_move.1 {
+                if let Some(position) = puzzle.wrong_at.get() {
                     marks.markers.push(Marker {
                         position,
                         shape: MarkerShape::Cross,

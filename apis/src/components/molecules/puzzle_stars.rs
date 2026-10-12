@@ -59,7 +59,7 @@ pub fn PuzzleStars(
     };
     let frame = move || {
         if prominent.get() && my_stars.get().is_none() {
-            "flex flex-col gap-1 p-2 rounded-lg border-2 border-pillbug-teal bg-pillbug-teal/10 animate-[pulse_1.6s_ease-in-out_2]"
+            "flex flex-col gap-1"
         } else {
             "flex flex-col gap-1"
         }

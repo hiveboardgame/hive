@@ -24,6 +24,9 @@ pub use notification_preferences::NotificationPreferencesResponse;
 pub use opening_explorer::ExplorerResponse;
 pub use push_device::PushDeviceResponse;
 pub use puzzle::{
+    DailyPuzzleResponse,
+    DailyQueueEntry,
+    DailyScheduleResponse,
     PuzzleAttemptResponse,
     PuzzleHistoryRow,
     PuzzleRatingResponse,

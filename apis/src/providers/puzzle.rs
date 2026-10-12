@@ -1,6 +1,6 @@
 use crate::{
     common::{CurrentConfirm, MoveConfirm, PieceType},
-    functions::puzzles::{next_puzzle, submit_puzzle_attempt},
+    functions::puzzles::{next_puzzle, puzzle_refutation, submit_puzzle_attempt},
     hiveground::{
         HivegroundAction,
         HivegroundActions,
@@ -70,6 +70,14 @@ impl PuzzlePhase {
 struct Checkpoint {
     state: State,
     progress: PuzzleProgress,
+    opponent_move: Option<String>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct DailyStatus {
+    pub tried: i64,
+    pub solved: i64,
+    pub my_result: Option<bool>,
 }
 
 #[derive(Clone, Copy)]
@@ -88,6 +96,10 @@ pub struct PuzzleContext {
     pub hint_level: RwSignal<u8>,
     pub hint_target: RwSignal<Option<Position>>,
     pub hint_piece: RwSignal<Option<Piece>>,
+    /// The opponent answered the wrong move with a defence that ends the forced win.
+    pub refuted: RwSignal<bool>,
+    /// Where the wrong move landed, so its mark stays put after the opponent answers.
+    pub wrong_at: RwSignal<Option<Position>>,
     pub pending_notice: StoredValue<Option<String>>,
     /// Whether the solver has played a move since this puzzle loaded (skipping is then gone).
     pub moved: RwSignal<bool>,
@@ -127,6 +139,8 @@ pub struct PuzzleContext {
     pub one_click: RwSignal<bool>,
     /// Training follows the player's rating and rewrites the address bar per puzzle.
     pub training: StoredValue<bool>,
+    /// Today's tally on the puzzle-of-the-day page.
+    pub daily: RwSignal<Option<DailyStatus>>,
 }
 
 impl PuzzleContext {
@@ -143,6 +157,8 @@ impl PuzzleContext {
             hint_level: RwSignal::new(0),
             hint_target: RwSignal::new(None),
             hint_piece: RwSignal::new(None),
+            refuted: RwSignal::new(false),
+            wrong_at: RwSignal::new(None),
             pending_notice: StoredValue::new(None),
             moved: RwSignal::new(false),
             replaying: RwSignal::new(false),
@@ -162,6 +178,7 @@ impl PuzzleContext {
             solved_streak: RwSignal::new(0),
             opponent_move: RwSignal::new(None),
             setup_note: StoredValue::new(None),
+            daily: RwSignal::new(None),
             reveal_armed: RwSignal::new(false),
             first_result: RwSignal::new(None),
             ever_solved: RwSignal::new(false),
@@ -239,7 +256,7 @@ impl PuzzleContext {
         remember_seen(&puzzle.nanoid);
         scroll_to_top();
         if self.training.get_value() {
-            show_in_address_bar(&format!("/puzzles/{}", puzzle.nanoid));
+            show_in_address_bar(&format!("/puzzles/{}{}", puzzle.nanoid, self.focus_query()));
         }
         let lines = puzzle.lines.clone();
         let setup = before_setup(&puzzle);
@@ -257,6 +274,8 @@ impl PuzzleContext {
             self.opponent_move.set(None);
             self.setup_note.set_value(None);
             self.first_result.set(None);
+            self.refuted.set(false);
+            self.wrong_at.set(None);
             self.reveal_armed.set(false);
             self.ever_solved.set(false);
             self.attempt.set(None);
@@ -299,7 +318,7 @@ impl PuzzleContext {
         }
         scroll_to_top();
         if self.training.get_value() {
-            show_in_address_bar("/puzzles");
+            show_in_address_bar(&format!("/puzzles{}", self.focus_query()));
         }
         self.bump();
         batch(|| {
@@ -330,6 +349,9 @@ impl PuzzleContext {
             self.game_state.reset_with_state(checkpoint.state);
             self.game_state.clear_selection();
             self.progress.set(checkpoint.progress);
+            self.opponent_move.set(checkpoint.opponent_move);
+            self.refuted.set(false);
+            self.wrong_at.set(None);
             self.notice.set(None);
             self.phase.set(PuzzlePhase::Solving);
         });
@@ -351,6 +373,8 @@ impl PuzzleContext {
             self.notice.set(None);
             self.reveal_tokens.set(Vec::new());
             self.opponent_move.set(self.setup_note.get_value());
+            self.refuted.set(false);
+            self.wrong_at.set(None);
             self.reveal_step.set(0);
             self.hint_level.set(0);
             if self.reported.get_untracked() {
@@ -403,6 +427,7 @@ impl PuzzleContext {
         self.checkpoint.set_value(Some(Checkpoint {
             state: before.clone(),
             progress: progress.clone(),
+            opponent_move: self.opponent_move.get_untracked(),
         }));
         let verdict = progress.judge(&lines, &before, piece, target);
         self.moved.set(true);
@@ -441,10 +466,60 @@ impl PuzzleContext {
             }
             PuzzleVerdict::Wrong => {
                 self.phase.set(PuzzlePhase::Failed);
+                self.wrong_at.set(Some(target));
                 self.solved_streak.set(0);
                 self.report(false);
+                self.refute();
             }
         }
+    }
+
+    /// Asks the server for the answer that stops the win and plays it after a short pause, so the
+    /// player sees why the move failed.
+    fn refute(&self) {
+        let Some(nanoid) = self
+            .puzzle
+            .with_untracked(|puzzle| puzzle.as_ref().map(|p| p.nanoid.clone()))
+        else {
+            return;
+        };
+        let from = self
+            .start
+            .with_value(|start| start.as_ref().map(|state| state.history.moves.len()))
+            .unwrap_or(0);
+        let moves = self.game_state.state().with_untracked(|state| {
+            state.history.moves[from.min(state.history.moves.len())..]
+                .iter()
+                .map(|(piece, position)| format!("{piece} {position}"))
+                .collect::<Vec<_>>()
+                .join(";")
+        });
+        let generation = self.generation.get_value();
+        let context = *self;
+        spawn_local(async move {
+            let Ok(Some(answer)) = puzzle_refutation(nanoid, moves).await else {
+                return;
+            };
+            if !context.alive()
+                || !context.is_current(generation)
+                || context.phase.get_untracked() != PuzzlePhase::Failed
+            {
+                return;
+            }
+            set_timeout(
+                move || {
+                    if !context.is_current(generation)
+                        || context.phase.get_untracked() != PuzzlePhase::Failed
+                    {
+                        return;
+                    }
+                    context.note_opponent(&answer);
+                    context.play_on_board(&answer);
+                    context.refuted.set(true);
+                },
+                REPLY_DELAY,
+            );
+        });
     }
 
     fn report(&self, solved: bool) {
@@ -488,7 +563,7 @@ impl PuzzleContext {
 
     /// Three steps, each giving away a little more: the kind of bug, then the piece with its
     /// moves, then the exact destination. Any of them counts as a miss on a rated try.
-    pub fn hint(&self) {
+    pub fn hint(&self, costs_rating: bool) {
         if self.phase.get_untracked() != PuzzlePhase::Solving
             || self.hint_level.get_untracked() >= 3
         {
@@ -505,6 +580,7 @@ impl PuzzleContext {
         let Ok(Some((piece, target))) = resolve_move(&state, &token) else {
             return;
         };
+        let first_hint = !self.hinted.get_untracked();
         self.hinted.set(true);
         self.notice.set(None);
         let level = self.hint_level.get_untracked() + 1;
@@ -513,7 +589,7 @@ impl PuzzleContext {
         let thrown = piece.color() != state.turn_color;
         self.hint_piece.set(Some(piece));
         if level == 1 {
-            self.hint_text.set(Some(if thrown {
+            let idea = if thrown {
                 "Think about a Pillbug throw.".to_string()
             } else if from_reserve {
                 format!(
@@ -525,7 +601,13 @@ impl PuzzleContext {
                     "Think about moving {}.",
                     with_article(bug_name(piece.bug()))
                 )
-            }));
+            };
+            let cost = if costs_rating && first_hint {
+                " This try now counts as a miss."
+            } else {
+                ""
+            };
+            self.hint_text.set(Some(format!("{idea}{cost}")));
             return;
         }
         match state.board.position_of_piece(piece) {
@@ -542,14 +624,14 @@ impl PuzzleContext {
                 info.target_positions = vec![target];
             });
             self.hint_target.set(Some(target));
-            self.hint_text.set(Some(format!(
-                "{} the highlighted spot.",
-                if from_reserve {
-                    "Place it on"
-                } else {
-                    "Move it to"
-                }
-            )));
+            let bug = bug_name(piece.bug());
+            self.hint_text.set(Some(if thrown {
+                format!("Throw the {bug} to the highlighted spot.")
+            } else if from_reserve {
+                format!("Place your {bug} on the highlighted spot.")
+            } else {
+                format!("Move the {bug} to the highlighted spot.")
+            }));
         }
     }
 
@@ -580,16 +662,13 @@ impl PuzzleContext {
                 progress.open_lines.first().copied().unwrap_or(0),
             )
         });
-        let Some(remaining) = lines
-            .get(line)
-            .map(|tokens| tokens[index.min(tokens.len())..].to_vec())
+        let (Some(tokens), Some(mut state)) = (lines.get(line).cloned(), self.start.get_value())
         else {
             return;
         };
-        let mut state = self.game_state.state().get_untracked();
         let mut states = vec![state.clone()];
         let mut described = Vec::new();
-        for token in &remaining {
+        for token in &tokens {
             described.push(describe_move(&state, token));
             if play_token(&mut state, token).is_err() {
                 break;
@@ -597,11 +676,12 @@ impl PuzzleContext {
             states.push(state.clone());
         }
         let steps = states.len() - 1;
+        let index = index.min(steps);
         self.reveal_states.set_value(states);
         self.reveal_tokens.set(described);
-        self.reveal_step.set(0);
+        self.reveal_step.set(index);
         let generation = self.generation.get_value();
-        for step in 1..=steps {
+        for step in index + 1..=steps {
             let context = *self;
             set_timeout(
                 move || {
@@ -609,7 +689,7 @@ impl PuzzleContext {
                         context.show_solution_step(step, false);
                     }
                 },
-                SOLUTION_STEP * step as u32,
+                SOLUTION_STEP * (step - index) as u32,
             );
         }
     }
@@ -637,7 +717,8 @@ impl PuzzleContext {
     /// Leaves an untouched puzzle for the next one, without an attempt.
     pub fn skip(&self, next: Callback<()>) {
         if self.can_skip() {
-            self.pending_notice.set_value(Some("Skipped.".to_string()));
+            self.pending_notice
+                .set_value(Some("Skipped the last one, not rated.".to_string()));
             next.run(());
         }
     }
@@ -687,9 +768,29 @@ impl PuzzleContext {
         self.note_new_selection();
     }
 
+    /// The set being trained as a query string, so links and reloads keep it.
+    pub fn focus_query(&self) -> String {
+        match (self.collection.get_untracked(), self.theme.get_untracked()) {
+            (Some(collection), _) => format!("?collection={collection}"),
+            (None, Some(theme)) => format!("?theme={theme}"),
+            (None, None) => String::new(),
+        }
+    }
+
     pub fn set_focus(&self, theme: Option<String>, collection: Option<String>) {
         self.theme.set(theme);
         self.collection.set(collection);
+    }
+
+    pub fn leave_focus(&self) {
+        self.set_focus(None, None);
+        self.training.set_value(true);
+        if let Some(nanoid) = self
+            .puzzle
+            .with_untracked(|puzzle| puzzle.as_ref().map(|p| p.nanoid.clone()))
+        {
+            show_in_address_bar(&format!("/puzzles/{nanoid}"));
+        }
     }
 
     fn note_new_selection(&self) {
@@ -708,9 +809,10 @@ impl PuzzleContext {
         self.opponent_move.set(Some(last_move_note(&state, token)));
     }
 
-    /// Show solution with a safety catch: on a rated try the first press only arms it.
+    /// Show solution with a safety catch: on a rated try the first press only arms it. After a
+    /// hint the try is already a miss, so there is nothing left to guard.
     pub fn request_reveal(&self, costs_rating: bool) {
-        if costs_rating && !self.reveal_armed.get_untracked() {
+        if costs_rating && !self.hinted.get_untracked() && !self.reveal_armed.get_untracked() {
             self.reveal_armed.set(true);
             return;
         }
@@ -926,7 +1028,12 @@ pub fn puzzle_hiveground_interaction(puzzle: PuzzleContext) -> HivegroundInterac
         }
     };
     let dispatch = Callback::new(move |action: HivegroundAction| {
-        puzzle.reveal_armed.set(false);
+        if !matches!(
+            action,
+            HivegroundAction::ResetSelection | HivegroundAction::PreselectPiece { .. }
+        ) {
+            puzzle.reveal_armed.set(false);
+        }
         if !puzzle.solver_to_move() {
             return;
         }

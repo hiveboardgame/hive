@@ -26,6 +26,8 @@ pub struct PuzzleResponse {
     pub my_stars: Option<i16>,
     /// Whether the viewer already tried it; a repeat is an unrated replay.
     pub attempted: bool,
+    /// The day it was the puzzle of the day, if ever.
+    pub daily_day: Option<chrono::NaiveDate>,
 }
 
 impl PuzzleResponse {
@@ -34,6 +36,7 @@ impl PuzzleResponse {
         puzzle: &db_lib::models::Puzzle,
         my_stars: Option<i16>,
         attempted: bool,
+        daily_day: Option<chrono::NaiveDate>,
     ) -> Self {
         Self {
             nanoid: puzzle.nanoid.clone(),
@@ -57,6 +60,7 @@ impl PuzzleResponse {
             stars_count: puzzle.stars_count,
             my_stars,
             attempted,
+            daily_day,
         }
     }
 }
@@ -95,6 +99,7 @@ pub struct PuzzleHistoryRow {
     pub title: Option<String>,
     pub history: Option<String>,
     pub position: Option<String>,
+    pub daily_day: Option<chrono::NaiveDate>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -111,4 +116,29 @@ pub struct PuzzleSetResponse {
     pub key: String,
     pub total: i64,
     pub solved: i64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct DailyPuzzleResponse {
+    pub day: chrono::NaiveDate,
+    pub puzzle: PuzzleResponse,
+    pub tried: i64,
+    pub solved: i64,
+    /// The viewer's first try: solved without help, or missed.
+    pub my_result: Option<bool>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct DailyQueueEntry {
+    pub nanoid: String,
+    pub day: chrono::NaiveDate,
+    pub game_type: String,
+    pub solver_moves: i32,
+    pub rating: i32,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct DailyScheduleResponse {
+    pub recent: Vec<(chrono::NaiveDate, String)>,
+    pub queued: Vec<DailyQueueEntry>,
 }

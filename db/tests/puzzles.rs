@@ -1,7 +1,12 @@
 mod common;
 
+use chrono::NaiveDate;
 use common::fixtures::{create_user, rating_for};
-use db_lib::{get_conn, models::Puzzle, DbConn};
+use db_lib::{
+    get_conn,
+    models::{DailyPuzzle, Puzzle},
+    DbConn,
+};
 use shared_types::{
     GameSpeed,
     PuzzleDifficulty,
@@ -265,4 +270,104 @@ async fn set_counts_cover_themes_lengths_and_collections() {
     assert_eq!(find("throw"), Some((1, 0)));
     assert_eq!(find("collection:vol1"), Some((1, 0)));
     assert_eq!(find("winIn2"), Some((1, 1)));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_daily_puzzle_takes_the_queue_first_and_never_repeats() {
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.expect("get connection");
+    let admin = create_user("curator", false, &mut conn).await;
+    import(30, 1200.0, &mut conn).await;
+    import(31, 1250.0, &mut conn).await;
+    let queued = import(32, 1900.0, &mut conn).await;
+    DailyPuzzle::enqueue(&queued.nanoid, admin.id, &mut conn)
+        .await
+        .expect("queue");
+
+    let day = |d| NaiveDate::from_ymd_opt(2026, 10, d).expect("date");
+    let first = DailyPuzzle::for_day(day(12), &mut conn)
+        .await
+        .expect("pick")
+        .expect("a puzzle");
+    assert_eq!(first.1.id, queued.id);
+    let same = DailyPuzzle::for_day(day(12), &mut conn)
+        .await
+        .expect("pick")
+        .expect("a puzzle");
+    assert_eq!(same.1.id, queued.id);
+    assert!(DailyPuzzle::queued(&mut conn)
+        .await
+        .expect("queue")
+        .is_empty());
+
+    let second = DailyPuzzle::for_day(day(13), &mut conn)
+        .await
+        .expect("pick")
+        .expect("a puzzle");
+    let third = DailyPuzzle::for_day(day(14), &mut conn)
+        .await
+        .expect("pick")
+        .expect("a puzzle");
+    assert_ne!(second.1.id, queued.id);
+    assert_ne!(third.1.id, second.1.id);
+    assert_ne!(third.1.id, queued.id);
+    assert!(DailyPuzzle::for_day(day(15), &mut conn)
+        .await
+        .expect("pick")
+        .is_none());
+
+    assert!(DailyPuzzle::enqueue(&queued.nanoid, admin.id, &mut conn)
+        .await
+        .is_err());
+    assert_eq!(
+        DailyPuzzle::day_of(queued.id, &mut conn)
+            .await
+            .expect("day"),
+        Some(day(12))
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn one_try_never_moves_a_rating_by_more_than_the_step() {
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.expect("get connection");
+    let user = create_user("newcomer", false, &mut conn).await;
+    let puzzle = import(40, 900.0, &mut conn).await;
+    let outcome = Puzzle::record_attempt(puzzle.id, user.id, false, false, None, &mut conn)
+        .await
+        .expect("try");
+    let (before, after) = (
+        outcome.user_before.expect("rated"),
+        outcome.user_after.expect("rated"),
+    );
+    assert!(after < before);
+    assert!(before - after <= 120.0 + 1e-9);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_daily_tally_counts_first_tries_only() {
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.expect("get connection");
+    let solver = create_user("early_bird", false, &mut conn).await;
+    let misser = create_user("late_riser", false, &mut conn).await;
+    let puzzle = import(41, 1500.0, &mut conn).await;
+    let today = chrono::Utc::now().date_naive();
+    for (user, first, replay) in [(&solver, true, false), (&misser, false, true)] {
+        Puzzle::record_attempt(puzzle.id, user.id, first, false, None, &mut conn)
+            .await
+            .expect("first try");
+        Puzzle::record_attempt(puzzle.id, user.id, replay, false, None, &mut conn)
+            .await
+            .expect("replay");
+    }
+    let tally = DailyPuzzle::tally(puzzle.id, today, &mut conn)
+        .await
+        .expect("tally");
+    assert_eq!((tally.tried, tally.solved), (2, 1));
+    assert_eq!(
+        DailyPuzzle::first_result(puzzle.id, misser.id, &mut conn)
+            .await
+            .expect("result"),
+        Some(false)
+    );
 }

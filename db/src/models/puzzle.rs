@@ -88,6 +88,8 @@ pub struct PuzzleSetCount {
 const STAR_PRIOR_VOTES: f64 = 5.0;
 const STAR_PRIOR_MEAN: f64 = 3.0;
 const HISTORY_PAGE: i64 = 50;
+/// A new player's wide deviation would otherwise swing hundreds of points on one try.
+const MAX_RATING_STEP: f64 = 120.0;
 
 #[derive(Queryable, Selectable, Identifiable, Debug, Clone, Serialize, Deserialize)]
 #[diesel(table_name = puzzles)]
@@ -324,7 +326,8 @@ impl Puzzle {
             if let Some(wanted) = selection.game_type.game_type() {
                 query = query.filter(puzzle_game_type.eq(wanted));
             }
-            if let Some((shortest, longest)) = selection.length.solver_moves() {
+            if let Some((shortest, longest)) = selection.length.solver_moves().filter(|_| !in_order)
+            {
                 query = query.filter(puzzle_solver_moves.ge(shortest));
                 if let Some(longest) = longest {
                     query = query.filter(puzzle_solver_moves.le(longest));
@@ -344,7 +347,14 @@ impl Puzzle {
                 )));
             }
             let query = if in_order {
-                query.order((puzzles::created_at.asc(), puzzles::id.asc()))
+                query.order((
+                    diesel::dsl::sql::<diesel::sql_types::Nullable<diesel::sql_types::Integer>>(
+                        "substring(source from '#([0-9]+)')::int",
+                    )
+                    .asc(),
+                    puzzles::created_at.asc(),
+                    puzzles::id.asc(),
+                ))
             } else {
                 query.order(popularity.clone().desc())
             };
@@ -458,7 +468,9 @@ impl Puzzle {
                 tau: 0.75,
                 ..Default::default()
             };
-            let (user_new, puzzle_new) = glicko2(&before, &puzzle_glicko, &outcome, &config);
+            let (mut user_new, puzzle_new) = glicko2(&before, &puzzle_glicko, &outcome, &config);
+            user_new.rating = before.rating
+                + (user_new.rating - before.rating).clamp(-MAX_RATING_STEP, MAX_RATING_STEP);
 
             diesel::update(ratings::table.find(rating_id))
                 .set((

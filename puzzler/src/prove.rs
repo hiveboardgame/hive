@@ -160,6 +160,40 @@ impl Prover {
         Ok(best)
     }
 
+    /// A defence after which the attacker (the side that just moved) has no forced win within
+    /// `attacker_plies` any more; `None` when every defence still loses that fast. A move that wins
+    /// outright for the defender comes first.
+    pub fn refutation(
+        &mut self,
+        game: &mut Game,
+        attacker_plies: u32,
+    ) -> Result<Option<Action>, OutOfBudget> {
+        let defender = game.to_move;
+        let mut actions = Vec::new();
+        game.actions(&mut actions);
+        let mut holding = None;
+        for action in actions {
+            match game.result_after(&action) {
+                GameResult::Winner(color) if color == defender => return Ok(Some(action)),
+                GameResult::Winner(_) => continue,
+                _ => {}
+            }
+            if holding.is_some() {
+                continue;
+            }
+            let holds = attacker_plies == 0 || {
+                let undo = game.make(&action);
+                let win = self.win_within(game, attacker_plies, 1);
+                game.unmake(undo);
+                win?.is_none()
+            };
+            if holds {
+                holding = Some(action);
+            }
+        }
+        Ok(holding)
+    }
+
     fn tick(&mut self) -> Result<(), OutOfBudget> {
         self.nodes += 1;
         if self.nodes > self.budget {

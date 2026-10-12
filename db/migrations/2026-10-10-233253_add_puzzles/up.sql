@@ -63,3 +63,15 @@ create table puzzle_stars (
   primary key (user_id, puzzle_id),
   constraint puzzle_stars_range check (stars between 0 and 5)
 );
+
+create table daily_puzzles (
+  day date primary key not null,
+  puzzle_id uuid not null unique references puzzles(id) on delete cascade,
+  created_at timestamp with time zone not null default now()
+);
+
+create table daily_puzzle_queue (
+  puzzle_id uuid primary key not null references puzzles(id) on delete cascade,
+  queued_by uuid references users(id) on delete set null,
+  created_at timestamp with time zone not null default now()
+);

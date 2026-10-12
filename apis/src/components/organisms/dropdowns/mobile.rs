@@ -67,6 +67,9 @@ pub fn MobileDropdown() -> impl IntoView {
                     <a class="ui-dropdown-link" on:click=onclick_close href="/puzzles">
                         {t!(i18n, header.puzzles.train)}
                     </a>
+                    <a class="ui-dropdown-link" on:click=onclick_close href="/puzzles/daily">
+                        {t!(i18n, header.puzzles.daily)}
+                    </a>
                     <a class="ui-dropdown-link" on:click=onclick_close href="/puzzles/browse">
                         {t!(i18n, header.puzzles.browse)}
                     </a>

@@ -17,6 +17,7 @@
     "puzzles": {
         "title": "Problemas",
         "train": "Resolver problemas",
+        "daily": "Problema del día",
         "browse": "Colecciones",
         "history": "Tu historial"
     },

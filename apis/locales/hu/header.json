@@ -9,6 +9,7 @@
     "puzzles": {
         "title": "Feladványok",
         "train": "Feladványok megoldása",
+        "daily": "A nap feladványa",
         "browse": "Gyűjtemények",
         "history": "Előzményeid"
     },

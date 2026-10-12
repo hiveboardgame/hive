@@ -27,7 +27,7 @@ pub fn use_puzzle_keys(puzzle: PuzzleContext, next: Callback<()>) {
                 let step = puzzle.reveal_step.get_untracked();
                 puzzle.show_solution_step((step + 1).min(puzzle.solution_steps()), true);
             }
-            "h" | "H" => puzzle.hint(),
+            "h" | "H" => puzzle.hint(costs_rating()),
             "r" | "R" if phase == PuzzlePhase::Failed => puzzle.retry(),
             "r" | "R" if phase.is_over() => puzzle.restart(),
             "s" | "S" if phase == PuzzlePhase::Solving => puzzle.request_reveal(costs_rating()),
