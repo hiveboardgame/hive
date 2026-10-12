@@ -11,8 +11,89 @@ use crate::{
         Session,
     },
 };
+use hive_lib::Piece;
 use leptos::prelude::*;
 use leptos_router::{components::A, hooks::use_navigate};
+
+enum PromptPart {
+    Text(&'static str),
+    Piece(Piece),
+}
+
+fn prompt_parts(mut text: &'static str) -> Vec<PromptPart> {
+    let mut parts = Vec::new();
+    while let Some(start) = text.find("[[") {
+        if start > 0 {
+            parts.push(PromptPart::Text(&text[..start]));
+        }
+        let token_start = start + 2;
+        let Some(end) = text[token_start..].find("]]") else {
+            parts.push(PromptPart::Text(&text[start..]));
+            return parts;
+        };
+        let token_end = token_start + end;
+        let token = &text[token_start..token_end];
+        match token.parse::<Piece>() {
+            Ok(piece) => parts.push(PromptPart::Piece(piece)),
+            Err(_) => parts.push(PromptPart::Text(&text[start..token_end + 2])),
+        }
+        text = &text[token_end + 2..];
+    }
+    if !text.is_empty() {
+        parts.push(PromptPart::Text(text));
+    }
+    parts
+}
+
+fn piece_content(text: &'static str) -> impl IntoView {
+    prompt_parts(text)
+        .into_iter()
+        .map(|part| match part {
+            PromptPart::Text(text) => text.into_any(),
+            PromptPart::Piece(piece) => {
+                let src = format!("/assets/tiles/flat/{}.svg", piece.bug().name());
+                let alt = format!("{} {} piece", piece.color().name(), piece.bug().name());
+                view! {
+                    <img
+                        src=src
+                        alt=alt
+                        class="inline-block mx-1 object-contain size-5 align-text-bottom"
+                    />
+                }
+                .into_any()
+            }
+        })
+        .collect_view()
+}
+
+fn prompt_line(text: &'static str) -> impl IntoView {
+    text.split("**")
+        .enumerate()
+        .map(|(index, text)| {
+            let content = piece_content(text);
+            if index % 2 == 0 {
+                view! { {content} }.into_any()
+            } else {
+                view! { <strong>{content}</strong> }.into_any()
+            }
+        })
+        .collect_view()
+}
+
+fn tutorial_prompt(prompt: &'static str) -> impl IntoView {
+    prompt
+        .split('\n')
+        .enumerate()
+        .map(|(line_index, line)| {
+            let line = prompt_line(line);
+            if line_index == 0 {
+                view! { {line} }.into_any()
+            } else {
+                view! { <br /> {line} }.into_any()
+            }
+        })
+        .collect_view()
+}
 
 #[component]
 pub fn LessonPanel(
@@ -75,7 +156,7 @@ pub fn LessonPanel(
                 "Well done!".to_string(),
             )),
             Feedback::LessonComplete => Some((
-                "text-green-700 dark:text-green-400",
+                "text-lg font-bold text-green-700 xl:text-xl dark:text-green-400",
                 "Lesson complete!".to_string(),
             )),
             Feedback::ContinueFirst => Some((
@@ -86,6 +167,14 @@ pub fn LessonPanel(
         })
     };
     let outro = move || lesson().map_or("", |lesson| lesson.outro);
+    let completion_tip = move || {
+        tutorial.session.with(|session| {
+            session
+                .as_ref()
+                .and_then(Session::current_step)
+                .map_or("", |step| step.completion_tip)
+        })
+    };
     let written_moves = move || {
         tutorial
             .session
@@ -150,7 +239,7 @@ pub fn LessonPanel(
             <Show when=move || finished() && !outro().is_empty()>{move || paragraph(outro())}</Show>
             <ShowLet some=prompt let:prompt>
                 <div class="p-2 font-medium rounded-lg border xl:p-3 border-orange-dawn/40 bg-orange-dawn/10">
-                    {prompt}
+                    {tutorial_prompt(prompt)}
                 </div>
             </ShowLet>
             <ShowLet some=feedback let:feedback>
@@ -158,6 +247,11 @@ pub fn LessonPanel(
                     {feedback.1}
                 </div>
             </ShowLet>
+            <Show when=move || finished() && !completion_tip().is_empty()>
+                <div class="font-medium text-gray-700 dark:text-gray-200">
+                    {completion_tip}
+                </div>
+            </Show>
             <ShowLet some=written_moves let:moves>
                 <div class="flex flex-col gap-1">
                     <div class="text-xs font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">
@@ -274,7 +368,7 @@ pub fn LessonPanel(
     }
 }
 
-fn paragraph(text: &'static str) -> impl IntoView {
+fn linked_text(text: &'static str) -> impl IntoView {
     let mut parts = Vec::new();
     let mut plain = String::new();
     for word in text.split_inclusive(' ') {
@@ -301,5 +395,21 @@ fn paragraph(text: &'static str) -> impl IntoView {
     if !plain.is_empty() {
         parts.push(plain.into_any());
     }
+    parts
+}
+
+fn paragraph(text: &'static str) -> impl IntoView {
+    let parts = text
+        .split("**")
+        .enumerate()
+        .map(|(index, text)| {
+            let content = linked_text(text);
+            if index % 2 == 0 {
+                view! { {content} }.into_any()
+            } else {
+                view! { <strong>{content}</strong> }.into_any()
+            }
+        })
+        .collect_view();
     view! { <p>{parts}</p> }
 }

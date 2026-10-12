@@ -8,6 +8,7 @@ pub const CHAPTER: Chapter = Chapter {
     title: "Tactics",
     summary: "Kill spots, true pins, qualifying for the win, direct drops, and how to beat (and build) the defences around a Queen.",
     lessons: &[
+        GATES_AND_DOORS,
         KILL_SPOTS,
         TRUE_AND_FALSE_PINS,
         DOUBLE_PIN,
@@ -24,6 +25,28 @@ pub const CHAPTER: Chapter = Chapter {
         CAVERN,
         ANTI_SPAWN,
     ],
+};
+
+const GATES_AND_DOORS: Lesson = Lesson {
+    id: "tactics.gates_and_doors",
+    title: "Gates and doors",
+    intro: &[
+        "Two pieces with one empty hex between them can form a gate or a door.",
+        "If their corners point at each other, it's a gate: nothing can slide through. If their flat sides face each other, it's a door: there is room to pass through it.",
+    ],
+    brief: "hivegame.com game 3f1c6882 (2016 vs 2199), White to move at ply 15. Ring 1 (bL-) is a gate wA1 cannot enter; ring 2 (/wP) is a door between wP and bA3 (flat sides facing). wA1 slides into the door; wA1 bL- and wA1 bP- are illegal.",
+    setup: Setup::Position("A+a+p-qlL-Q+a2-a4-MP,w"),
+    steps: &[Step::play(
+        "1 is a gate: corners pointing at each other. 2 is a door: flat sides facing. Click your Ant to see which one it can reach, then slide it through the door.",
+        Move {
+            piece: "wA1",
+            to: "/wP",
+        },
+        "Your Ant can't get into 1. Move it into 2.",
+    )
+    .marked(&["bL-", "/wP"])
+    .with_arrows(&[("wA1", "/wP")])],
+    outro: "Gates trap walking pieces, including the Queen. Doors let them through, which is why narrowing a path can be as powerful as creating a threat.",
 };
 
 const KILL_SPOTS: Lesson = Lesson {

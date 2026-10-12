@@ -1,6 +1,6 @@
 use super::{
     curriculum::{find_lesson, lessons, neighbours, CHAPTERS},
-    goal::{spec_pieces, Condition, Goal},
+    goal::{hex, spec_pieces, Condition, Goal},
     lesson::{Lesson, Reply, Setup, Step},
     session::{Outcome, Session},
 };
@@ -92,12 +92,22 @@ fn ready_lessons_fill_in_every_hex_and_reply() {
                 }
                 Goal::Continue | Goal::MoveAny | Goal::Reach(_) => {}
             }
-            if let Reply::Opponent { piece, to } = step.then {
-                assert!(
-                    !piece.is_empty() && !to.is_empty(),
-                    "{}: scripted reply not filled in",
-                    lesson.id
-                );
+            match step.then {
+                Reply::LearnerAgain => {}
+                Reply::Opponent { piece, to } => {
+                    assert!(
+                        !piece.is_empty() && !to.is_empty(),
+                        "{}: scripted reply not filled in",
+                        lesson.id
+                    );
+                }
+                Reply::OpponentPlacement { piece } => {
+                    assert!(
+                        !piece.is_empty(),
+                        "{}: scripted placement reply not filled in",
+                        lesson.id
+                    );
+                }
             }
             assert!(
                 step.marks.iter().all(|mark| !mark.is_empty()),
@@ -259,6 +269,180 @@ fn conditions_read_the_board() {
     assert!(Condition::Pinned("wQ").holds(&state));
     assert!(!Condition::Surrounded("wQ").holds(&state));
     assert!(Condition::Not(&Condition::Placed("bG")).holds(&state));
+}
+
+#[test]
+fn welcome_starts_blank_and_black_replies_with_a_ladybug() {
+    let lesson = find_lesson("basics.welcome").expect("welcome lesson exists");
+    let mut session = Session::new(lesson).expect("welcome lesson loads");
+
+    assert!(session.grid().is_empty());
+    assert_eq!(
+        session
+            .state()
+            .board
+            .spawnable_positions(Color::White)
+            .count(),
+        1
+    );
+
+    let (white, target) = spawn_of(&session, |piece| piece.to_string() != "wQ");
+    assert_eq!(session.play(white, target), Outcome::LessonDone);
+
+    let white_at = session
+        .state()
+        .board
+        .position_of_piece(white)
+        .expect("White's opening piece is on the board");
+    let black: Piece = "bL".parse().expect("black Ladybug parses");
+    let black_at = session
+        .state()
+        .board
+        .position_of_piece(black)
+        .expect("Black replies with a Ladybug");
+
+    assert!(white_at.is_neighbor(black_at));
+    assert_eq!(session.state().turn_color, Color::White);
+}
+
+#[test]
+fn placing_is_second_and_black_replies_with_a_legal_queen() {
+    assert_eq!(CHAPTERS[0].lessons[1].id, "basics.placing");
+    assert_eq!(CHAPTERS[0].lessons[2].id, "basics.queen_rule");
+    assert_eq!(CHAPTERS[0].lessons[3].id, "basics.one_hive");
+    assert_eq!(CHAPTERS[0].lessons[4].id, "basics.surround");
+    assert_eq!(CHAPTERS[0].lessons[5].id, "basics.draw");
+    assert_eq!(CHAPTERS[1].lessons[0].id, "bugs.freedom_to_move");
+    assert_eq!(CHAPTERS[4].lessons[0].id, "tactics.gates_and_doors");
+
+    let lesson = find_lesson("basics.placing").expect("placing lesson exists");
+    let mut session = Session::new(lesson).expect("placing lesson loads");
+    let ant: Piece = "wA1".parse().expect("White Ant parses");
+    let target = session
+        .state()
+        .board
+        .spawnable_positions(Color::White)
+        .next()
+        .expect("White has a legal placement");
+
+    assert_eq!(session.play(ant, target), Outcome::LessonDone);
+
+    let queen: Piece = "bQ".parse().expect("Black Queen parses");
+    let queen_at = session
+        .state()
+        .board
+        .position_of_piece(queen)
+        .expect("Black replies with the Queen");
+    let ladybug: Piece = "bL".parse().expect("Black Ladybug parses");
+    let ladybug_at = session
+        .state()
+        .board
+        .position_of_piece(ladybug)
+        .expect("Black Ladybug is on the board");
+
+    assert!(queen_at.is_neighbor(ladybug_at));
+    for white in ["wL", "wA1"] {
+        let piece: Piece = white.parse().expect("White piece parses");
+        let position = session
+            .state()
+            .board
+            .position_of_piece(piece)
+            .expect("White piece is on the board");
+        assert!(!queen_at.is_neighbor(position));
+    }
+    assert_eq!(session.state().turn_color, Color::White);
+}
+
+#[test]
+fn how_to_win_has_one_highlight_and_no_arrows() {
+    let lesson = find_lesson("basics.surround").expect("How to Win lesson exists");
+    assert_eq!(lesson.title, "How to Win");
+
+    let session = Session::new(lesson).expect("How to Win lesson loads");
+    assert_eq!(session.highlights().len(), 1);
+    assert!(session.arrows().is_empty());
+}
+
+#[test]
+fn draw_only_accepts_the_grasshopper_move_that_surrounds_both_queens() {
+    let lesson = find_lesson("basics.draw").expect("Draw lesson exists");
+    let mut session = Session::new(lesson).expect("Draw lesson loads");
+    assert_eq!(session.highlights().len(), 1);
+
+    let grasshopper: Piece = "wG1".parse().expect("White Grasshopper parses");
+    let target = hex(&session.state().board, "wQ-").expect("draw target resolves");
+    let moves = legal_moves(session.state());
+    assert!(
+        moves.contains(&(grasshopper, target)),
+        "wG1 can jump into the hole between the Queens"
+    );
+
+    let drawing_moves: Vec<(Piece, Position)> = moves
+        .iter()
+        .copied()
+        .filter(|(piece, position)| {
+            let mut state = session.state().clone();
+            state.play_turn_from_position(*piece, *position).is_ok()
+                && Condition::Surrounded("wQ").holds(&state)
+                && Condition::Surrounded("bQ").holds(&state)
+        })
+        .collect();
+    let (wrong_piece, wrong_target) = drawing_moves
+        .into_iter()
+        .find(|(piece, _)| *piece != grasshopper)
+        .expect("another piece can reach the draw hex");
+    assert_eq!(session.play(wrong_piece, wrong_target), Outcome::Wrong);
+    assert!(!session.is_finished());
+
+    assert_eq!(session.play(grasshopper, target), Outcome::LessonDone);
+    assert!(Condition::Surrounded("wQ").holds(session.state()));
+    assert!(Condition::Surrounded("bQ").holds(session.state()));
+}
+
+#[test]
+fn one_hive_completes_on_a_legal_move_but_not_a_placement() {
+    let lesson = find_lesson("basics.one_hive").expect("One Hive lesson exists");
+    assert_eq!(lesson.title, "One Hive Rule");
+
+    let mut session = Session::new(lesson).expect("One Hive lesson loads");
+    let movers: HashSet<String> = session
+        .state()
+        .board
+        .moves(Color::White)
+        .into_iter()
+        .filter(|(_, targets)| !targets.is_empty())
+        .map(|((piece, _), _)| piece.to_string())
+        .collect();
+    for movable in ["wQ", "wA1", "wM"] {
+        assert!(movers.contains(movable), "{movable} should be able to move");
+    }
+    for pinned in ["wP", "wG1"] {
+        assert!(!movers.contains(pinned), "{pinned} should be pinned");
+    }
+
+    let marks = session.marks();
+    assert_eq!(marks.len(), 2);
+    assert!(marks.iter().all(|mark| mark.number.is_none()));
+
+    let before = session.state().board.clone();
+    let (reserve_piece, spawn) = spawn_of(&session, |_| true);
+    assert_eq!(session.play(reserve_piece, spawn), Outcome::Wrong);
+    assert!(session.state().board == before);
+    assert!(!session.is_finished());
+
+    let (piece, target) = session
+        .state()
+        .board
+        .moves(Color::White)
+        .into_iter()
+        .flat_map(|((piece, _), targets)| {
+            targets.into_iter().map(move |target| (piece, target))
+        })
+        .next()
+        .expect("White has a legal movement");
+
+    assert_eq!(session.play(piece, target), Outcome::LessonDone);
+    assert!(session.is_finished());
 }
 
 fn spawn_of(session: &Session, wanted: impl Fn(Piece) -> bool) -> (Piece, Position) {
@@ -453,6 +637,7 @@ fn every_real_game_lesson_links_its_game() {
     for lesson in lessons().filter(|lesson| {
         lesson.has_board()
             && !lesson.id.starts_with("openings.")
+            && lesson.id != "basics.draw"
             && !matches!(lesson.setup, Setup::Position(",w"))
     }) {
         assert!(

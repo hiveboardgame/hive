@@ -33,10 +33,12 @@ pub struct Step {
     pub prompt: &'static str,
     pub goal: Goal,
     pub marks: &'static [&'static str],
+    pub number_marks: bool,
     pub refutations: &'static [(&'static str, &'static str)],
     pub highlights: &'static [&'static str],
     pub arrows: &'static [(&'static str, &'static str)],
     pub hint: &'static str,
+    pub completion_tip: &'static str,
     pub then: Reply,
     pub grid: bool,
     pub history: bool,
@@ -48,6 +50,9 @@ pub enum Reply {
         piece: &'static str,
         to: &'static str,
     },
+    OpponentPlacement {
+        piece: &'static str,
+    },
 }
 
 impl Step {
@@ -56,10 +61,12 @@ impl Step {
             prompt,
             goal: Goal::Continue,
             marks,
+            number_marks: true,
             refutations: &[],
             highlights: &[],
             arrows: &[],
             hint: "",
+            completion_tip: "",
             then: Reply::LearnerAgain,
             grid: false,
             history: false,
@@ -71,10 +78,12 @@ impl Step {
             prompt,
             goal,
             marks: &[],
+            number_marks: true,
             refutations: &[],
             highlights: &[],
             arrows: &[],
             hint,
+            completion_tip: "",
             then: Reply::LearnerAgain,
             grid: false,
             history: false,
@@ -88,6 +97,11 @@ impl Step {
 
     pub const fn highlighted(mut self, highlights: &'static [&'static str]) -> Self {
         self.highlights = highlights;
+        self
+    }
+
+    pub const fn without_mark_numbers(mut self) -> Self {
+        self.number_marks = false;
         self
     }
 
@@ -114,8 +128,18 @@ impl Step {
         self
     }
 
+    pub const fn with_completion_tip(mut self, completion_tip: &'static str) -> Self {
+        self.completion_tip = completion_tip;
+        self
+    }
+
     pub const fn reply(mut self, piece: &'static str, to: &'static str) -> Self {
         self.then = Reply::Opponent { piece, to };
+        self
+    }
+
+    pub const fn reply_placement(mut self, piece: &'static str) -> Self {
+        self.then = Reply::OpponentPlacement { piece };
         self
     }
 }

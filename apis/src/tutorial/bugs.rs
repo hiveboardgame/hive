@@ -9,6 +9,7 @@ pub const CHAPTER: Chapter = Chapter {
     title: "The pieces",
     summary: "Eight pieces, eight ways to move. Learn each one by playing it.",
     lessons: &[
+        FREEDOM_TO_MOVE,
         QUEEN,
         ANT,
         SPIDER,
@@ -22,6 +23,41 @@ pub const CHAPTER: Chapter = Chapter {
     ],
 };
 
+const FREEDOM_TO_MOVE: Lesson = Lesson {
+    id: "bugs.freedom_to_move",
+    title: "Freedom to move",
+    intro: &[
+        "Walking pieces slide along the ground, so they only fit through an opening that is wide enough.",
+        "A narrow opening with pieces on both sides is a gate: nothing can slide through it, no matter how close the hex looks.",
+    ],
+    brief: "From a game between two 1900+ players (corpus game 8189, after 8 moves each), White to move. The slot wL- is walled in; wQ and wA3 touch it but both flanks of their way in are taken, so neither can enter (neither is pinned). wQ steps to \\wL, freeing one flank; then wA3 slides into the slot.",
+    setup: Setup::Position("A+A+A+Q+L+B-a6=m5-(l+qp1-aM),w"),
+    steps: &[
+        Step::play(
+            "Your Queen and Ant can't slide into the ringed hex: it's gated. Move your Queen along the arrow to open it.",
+            Move {
+                piece: "wQ",
+                to: "\\wL",
+            },
+            "Click your Queen, then the hex the arrow points to.",
+        )
+        .marked(&["wL-"])
+        .with_arrows(&[("wQ", "\\wL")])
+        .reply("bA3", "-bP"),
+        Step::play(
+            "The gate is open. Slide your Ant into the highlighted hex.",
+            Move {
+                piece: "wA3",
+                to: "wL-",
+            },
+            "Click the Ant the arrow starts from, then the highlighted hex.",
+        )
+        .highlighted(&["wL-"])
+        .with_arrows(&[("wA3", "wL-")]),
+    ],
+    outro: "Gates stop the Ant, the Spider, and the Queen. Jumpers and climbers ignore them, as you'll see in the next chapter.",
+};
+
 const QUEEN: Lesson = Lesson {
     id: "bugs.queen",
     title: "Queen Bee",
@@ -30,7 +66,7 @@ const QUEEN: Lesson = Lesson {
         "She moves one hex per turn, sliding along the edge of the hive.",
     ],
     brief: "From a 2000+ game (corpus game 16, after two moves each), White to move. wQ steps to -bM; Black's scripted reply bA1 bM-; then wQ steps on to -bQ. Highlight and arrow for each step.",
-    setup: Setup::Position("Q+Pm+q,w"),
+    setup: Setup::Position("A+q-lLQ4+a!,w"),
     steps: &[
         Step::play(
             "Step your Queen to the highlighted hex.",

@@ -8,66 +8,51 @@ pub const CHAPTER: Chapter = Chapter {
     id: "basics",
     title: "The basics",
     summary: "How a turn works, how pieces enter the game, and the two rules every move obeys.",
-    lessons: &[
-        WELCOME,
-        SURROUND,
-        PLACING,
-        QUEEN_RULE,
-        ONE_HIVE,
-        FREEDOM_TO_MOVE,
-        GATES_AND_DOORS,
-    ],
+    lessons: &[WELCOME, PLACING, QUEEN_RULE, ONE_HIVE, SURROUND, DRAW],
 };
 
 const WELCOME: Lesson = Lesson {
     id: "basics.welcome",
-    title: "Welcome to Hive",
-    intro: &["Hive has no board: the pieces are the board. You win by surrounding your opponent's Queen Bee."],
-    brief: "Empty board, White to move. The faint hex grid is shown while placing.",
+    title: "Welcome to Hive!",
+    intro: &["Hive has no board: the pieces are the board. Every move must still keep the hive connected, and the winner is the player who surrounds the opponent's Queen Bee.",
+        "When the game starts, all pieces are in the reserve. White goes first.",
+    ],
+    brief: "Empty board, White to move.",
     setup: Setup::Position(",w"),
-    steps: &[Step::play(
-        "White starts. Place any piece from your reserve, except the Queen.",
-        Reach(All(&[AnyPlaced(Color::White), Not(&Placed("wQ"))])),
-        "Click a piece in your reserve, then the highlighted hex. The Queen may not open the game.",
-    )
-    .with_grid()],
-    outro: "Each turn you do one thing: place a new piece or move one already in play. Pieces are never captured.",
-};
-
-const SURROUND: Lesson = Lesson {
-    id: "basics.surround",
-    title: "Surround the Queen",
-    intro: &["This is the end of a real game between two strong players. The black Queen has pieces on five of her six sides, and it's White's move."],
-    brief: "From a 2000+ game (corpus game 420, after 14 moves each), White to move and win. No stacks; bQ is uncovered with five filled sides, and wA1 and wA2 can run into the last one (-bL) and get arrows; wA3 is one of bQ's five neighbours, so it gets none. The hex gets a highlight.",
-    setup: Setup::Position("A+slLmb3+(qM+A1+G1-A)4-(s-P-Qb3+a),w"),
-    steps: &[Step::play(
-        "Move a piece into the last empty hex next to the black Queen. It's highlighted, and the arrows show the pieces that can get there.",
-        Reach(Surrounded("bQ")),
-        "Pick any of the Ants the arrows start from. Ants can run all the way around the hive, right into the highlighted hex.",
-    )
-    .highlighted(&["-bL"])
-    .with_arrows(&[("wA1", "-bL"), ("wA2", "-bL")])],
-    outro: "That's the whole goal of Hive. If both Queens are surrounded by the same move, the game is a draw. Everything else in this tutorial is about getting there before your opponent does.",
+    steps: &[
+        Step::play(
+            "You play as White. Place any piece from your reserve, except the Queen Bee [[wQ]].\nClick on the piece you choose in the reserve, then click on the highlighted hex.",
+            Reach(All(&[AnyPlaced(Color::White), Not(&Placed("wQ"))])),
+            "Click a piece in your reserve, then the highlighted hex. The Queen may not open the game.",
+        )
+        .reply_placement("bL"),
+        Step::read(
+            "Black replied by placing a Ladybug next to your piece.",
+            &[],
+        ),
+    ],
+    outro: "Well done, you played your first move! Black has replied by placing their first piece too, next to yours.",
 };
 
 const PLACING: Lesson = Lesson {
     id: "basics.placing",
     title: "Placing new pieces",
     intro: &[
-        "The first two pieces of the game simply touch each other. From then on, every new piece must touch at least one of your own pieces and none of your opponent's.",
-        "That's why the two armies grow apart at first: you can only add to your own side.",
-        "Here both players opened with their Ladybug, a popular start. Ants are your most mobile pieces, so it usually pays to keep them in reserve for now and bring them in once you can see where they're needed.",
+        "The first two pieces of the game have to touch each other.",
+        "From now on, **every new piece you place must touch at least one of your own pieces and none of your opponent's pieces**.",
+        "Here both players opened with their Ladybug, a popular start. Ants are a good piece to place next since they are very flexible",
     ],
-    brief: "From a 2000+ game (corpus game 10, after two moves each), White to move: Ladybug opening, Queens second.",
-    setup: Setup::Position("L+Q1-l-q,w"),
+    brief: "After both players open with Ladybug, White places wA1; Black replied by placing bQ on any legal hex.",
+    setup: Setup::Position("L+l!,w"),
     steps: &[
         Step::play(
-            "Pick a Grasshopper from your reserve and place it. The board only offers the hexes where it may go.",
-            Reach(Placed("wG")),
-            "Choose a Grasshopper from your reserve, then a highlighted hex.",
-        ),
+            "Play as White: pick an ant ([[wA1]]) from your reserve and place it. The board will show the hexes available for placement.",
+            Reach(Placed("wA1")),
+            "Choose an Ant from your reserve, then a highlighted hex.",
+        )
+        .reply_placement("bQ"),
         Step::read(
-            "None of the hexes touching a black piece were on offer. That rule only applies to placing: once a piece is in play, it may move right up against the enemy.",
+            "Well done! None of the hexes touching a black piece were available to your Ant. Remember this rule only applies to placing. Once a piece is in play, it may move also to hexes touching the opponent pieces.\n\nBlack replied to your move by placing their Queen Bee.",
             &[],
         ),
     ],
@@ -79,102 +64,106 @@ const QUEEN_RULE: Lesson = Lesson {
     title: "An army needs its Queen",
     intro: &[
         "Until your Queen is on the board, none of your pieces may move: you can only place new ones.",
-        "She can't open the game, and she must arrive by your fourth turn.",
+        "She cannot open the game, and she must arrive by your 4th turn.",
     ],
     brief: "From a 2000+ game (corpus game 1, after three moves each), White's fourth turn: wL, wM and wA1 placed, no wQ yet. Black's scripted reply bA1 bM- is legal wherever wQ lands; then any move of a white piece already on the board finishes the lesson.",
     setup: Setup::Position("AL+lm1-M3+q,w"),
     steps: &[
         Step::play(
-            "It's your fourth turn and your Queen is still in your reserve. Place her.",
+            "It's your 4th turn and your Queen Bee is still in your reserve. Put her in play.",
             Reach(Placed("wQ")),
             "On your fourth turn, only your Queen may be placed.",
         )
         .reply("bA1", "bM-"),
         Step::play(
-            "Your Queen is in, so your pieces can move now. Click them to see, then move one.",
+            "Your Queen Bee is in play, so your pieces can move now! Click them to see where they can go, then move one.",
             MoveAny,
             "Move a piece that's already on the board instead of placing a new one.",
         ),
+        Step::read(
+            "Once your Queen Bee is in play, you can choose on every turn whether to move a piece already in play or place a new one.",
+            &[],
+        )
+        .with_completion_tip(
+            "Tip: Bring your Queen Bee into play as soon as possible so you can move your pieces early.",
+        ),
     ],
-    outro: "Until she arrived, your army was frozen. Most players bring her in on their second or third turn.",
+    outro: "",
 };
 
 const ONE_HIVE: Lesson = Lesson {
     id: "basics.one_hive",
-    title: "One Hive",
+    title: "One Hive Rule",
     intro: &[
-        "This is the most important rule in Hive: the pieces must always form one connected group, and that includes while a piece is moving.",
-        "To check a move, imagine taking the piece into your hand. If the rest falls apart into two groups, that piece can't move at all, even if it would land somewhere that joins everything back up.",
+        "This is the most important rule in Hive: **all pieces in play must form one connected group at all times**.",
+        "A piece cannot move if moving it would break the hive into two or more groups.",
+        "To check whether a move is legal, imagine taking the piece you want to move into your hand. If the rest of the hive breaks into two or more disconnected groups, that move is illegal, even if the piece could land somewhere that would reconnect the hive.",
     ],
-    brief: "From a 2000+ game (corpus game 2, after five moves each), White to move. wP and wG1 each hold part of the hive together (pinned); wA1 and wM are free, and wA1 can reach the black Queen.",
+    brief: "From a 2000+ game (corpus game 2, after five moves each), White to move. wP and wG1 each hold part of the hive together (pinned); wQ, wA1 and wM are free. Any legal movement completes the lesson; placing a reserve piece does not.",
     setup: Setup::Position("AGl+qp+a1+P+Q1-M4+m,w"),
-    steps: &[
-        Step::read(
-            "Click your pieces to see who can move. The ringed ones each hold part of the hive together: take one into your hand and the hive falls apart, so they can't move at all. Your Ant and your Mosquito hold nothing together and are free. Press Continue when you've looked around.",
-            &["wP", "wG1"],
-        ),
-        Step::play(
-            "Find a piece that can move and bring it next to the black Queen.",
-            Reach(Touching("wA1", "bQ")),
-            "Your Ant holds nothing together, so it is free to go.",
-        ),
-    ],
-    outro: "A piece that holds the hive together is pinned. Pinning enemy pieces is one of the most important ideas in Hive, and it comes straight out of this rule.",
-};
-
-const GATES_AND_DOORS: Lesson = Lesson {
-    id: "basics.gates_and_doors",
-    title: "Gates and doors",
-    intro: &[
-        "Two pieces with one empty hex between them can form a gate or a door.",
-        "If their corners point at each other, it's a gate: nothing can slide through. If their flat sides face each other, it's a door: there's room to slide through.",
-    ],
-    brief: "hivegame.com game 3f1c6882 (2016 vs 2199), White to move at ply 15. Ring 1 (bL-) is a gate wA1 cannot enter; ring 2 (/wP) is a door between wP and bA3 (flat sides facing). wA1 slides into the door; wA1 bL- and wA1 bP- are illegal.",
-    setup: Setup::Position("A+a+p-qlL-Q+a2-a4-MP,w"),
     steps: &[Step::play(
-        "1 is a gate: corners pointing at each other. 2 is a door: flat sides facing. Click your Ant to see which one it can reach, then slide it through the door.",
-        Move {
-            piece: "wA1",
-            to: "/wP",
-        },
-        "Your Ant can't get into 1. Move it into 2.",
+        "The highlighted pieces cannot move without breaking the hive. Your Queen Bee, Ant, and Mosquito are able to move.\n\nCheck for yourself by clicking on your pieces, then move any of them to complete the lesson.",
+        MoveAny,
+        "Move a piece that's already on the board instead of placing a new one.",
     )
-    .marked(&["bL-", "/wP"])
-    .with_arrows(&[("wA1", "/wP")])],
-    outro: "Gates trap walking pieces, Queens included. Doors let them through.",
+    .marked(&["wP", "wG1"])
+    .without_mark_numbers()],
+    outro: "A piece that holds the hive together is pinned. Pinning enemy pieces is one of the most important ideas in Hive, and it comes straight out of this rule: every move must preserve one connected hive.",
 };
 
-const FREEDOM_TO_MOVE: Lesson = Lesson {
-    id: "basics.freedom_to_move",
-    title: "Freedom to move",
+const SURROUND: Lesson = Lesson {
+    id: "basics.surround",
+    title: "How to Win",
     intro: &[
-        "Walking pieces slide along the ground, so they only fit through an opening that is wide enough.",
-        "A narrow opening with pieces on both sides is a gate: nothing can slide through it.",
+        "The goal in Hive is to surround the opponent's Queen Bee on all six sides. Both your pieces and your opponent's pieces count.",
+        "This is the end of a real game between two strong players. The black Queen has pieces on five of her six sides, and it's White's move.",
     ],
-    brief: "From a game between two 1900+ players (corpus game 8189, after 8 moves each), White to move. The slot wL- is walled in; wQ and wA3 touch it but both flanks of their way in are taken, so neither can enter (neither is pinned). wQ steps to \\wL, freeing one flank; then wA3 slides into the slot.",
-    setup: Setup::Position("A+A+A+Q+L+B-a6=m5-(l+qp1-aM),w"),
+    brief: "From a 2000+ game (corpus game 420, after 14 moves each), White to move and win. No stacks; bQ is uncovered with five filled sides, and wA1 and wA2 can run into the last one (-bL). The winning hex is highlighted without arrows.",
+    setup: Setup::Position("A+slLmb3+(qM+A1+G1-A)4-(s-P-Qb3+a),w"),
     steps: &[
         Step::play(
-            "Your Queen and Ant can't slide into the ringed hex: it's gated. Move your Queen along the arrow to open it.",
-            Move {
-                piece: "wQ",
-                to: "\\wL",
-            },
-            "Click your Queen, then the hex the arrow points to.",
+            "Move one of your Ants into the highlighted hex to completely surround the black Queen Bee.",
+            Reach(Surrounded("bQ")),
+            "Move one of your Ants into the highlighted hex.",
         )
-        .marked(&["wL-"])
-        .with_arrows(&[("wQ", "\\wL")])
-        .reply("bA3", "-bP"),
-        Step::play(
-            "The gate is open. Slide your Ant into the highlighted hex.",
-            Move {
-                piece: "wA3",
-                to: "wL-",
-            },
-            "Click the Ant the arrow starts from, then the highlighted hex.",
+        .highlighted(&["-bL"]),
+        Step::read(
+            "That's the whole goal of Hive: surround your opponent's Queen Bee first.\n\nIt doesn't matter what colour the pieces surrounding the Queen Bee are. Here, the black Ladybug is actually hurting Black!",
+            &[],
         )
-        .highlighted(&["wL-"])
-        .with_arrows(&[("wA3", "wL-")]),
+        .with_completion_tip(
+            "Tip: Be careful which pieces you place next to your own Queen Bee!",
+        ),
     ],
-    outro: "Gates stop the Ant, the Spider and the Queen. Jumpers and climbers ignore them, as you'll see in the next chapter.",
+    outro: "",
+};
+
+const DRAW: Lesson = Lesson {
+    id: "basics.draw",
+    title: "Draw?",
+    intro: &[
+        "Games can also end in a draw. The most common way this happens is when both Queen Bees are surrounded at the same time.",
+        "In this game, the highlighted hex is crucial: by moving a piece there, both Queen Bees lose their last hex of freedom!",
+    ],
+    brief: "White to move. Only wG1 to wQ- completes the lesson by surrounding both Queens at the same time; every other legal move is rejected.",
+    setup: Setup::Position("A+A+MG+B+g!Qb+g3+P6-b+l-m7+a+L+q,w"),
+    steps: &[
+        Step::play(
+            "You play as White. Move your Grasshopper [[wG1]] to surround both Queen Bees.",
+            Move {
+                piece: "wG1",
+                to: "wQ-",
+            },
+            "Not quite. Move the white Grasshopper into the hole between the two Queen Bees.",
+        )
+        .highlighted(&["wQ-"]),
+        Step::read(
+            "Well done! If you hadn't done it, your opponent would have forced the draw.",
+            &[],
+        )
+        .with_completion_tip(
+            "Tip: When the Queen Bees are very close to each other, a draw is more likely!",
+        ),
+    ],
+    outro: "",
 };

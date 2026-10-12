@@ -126,8 +126,9 @@ impl Session {
     }
 
     pub fn marks(&self) -> Vec<Target> {
-        self.current_step()
-            .map_or_else(Vec::new, |step| self.targets(step.marks, |_| true))
+        self.current_step().map_or_else(Vec::new, |step| {
+            self.targets(step.marks, step.number_marks, |_| true)
+        })
     }
 
     pub fn highlights(&self) -> Vec<Position> {
@@ -154,12 +155,17 @@ impl Session {
         let Some(Goal::Visit { hexes, .. }) = self.current_step().map(|step| &step.goal) else {
             return Vec::new();
         };
-        self.targets(hexes, |index| !self.visited.contains(&index))
+        self.targets(hexes, true, |index| !self.visited.contains(&index))
     }
 
-    /// Numbered by place in the lesson, so a hex keeps its number after others are visited.
-    fn targets(&self, notations: &[&str], show: impl Fn(usize) -> bool) -> Vec<Target> {
-        let numbered = notations.len() > 1;
+    /// Optionally numbered by place in the lesson, so a hex keeps its number after others are visited.
+    fn targets(
+        &self,
+        notations: &[&str],
+        number_targets: bool,
+        show: impl Fn(usize) -> bool,
+    ) -> Vec<Target> {
+        let numbered = number_targets && notations.len() > 1;
         notations
             .iter()
             .enumerate()
@@ -303,6 +309,40 @@ impl Session {
                         "tutorial {}: scripted reply {piece} {to} failed: {error}",
                         self.lesson.id
                     );
+                }
+            }
+            Reply::OpponentPlacement { piece } => {
+                if self.state.turn_color == self.learner {
+                    self.state.pass_out_of_turn();
+                }
+                match piece.parse::<Piece>() {
+                    Ok(piece) => {
+                        let target = self
+                            .state
+                            .board
+                            .spawnable_positions(self.state.turn_color)
+                            .next();
+                        match target {
+                            Some(target) => {
+                                if let Err(error) =
+                                    self.state.play_turn_from_position(piece, target)
+                                {
+                                    log::warn!(
+                                        "tutorial {}: scripted placement {piece} failed: {error}",
+                                        self.lesson.id
+                                    );
+                                }
+                            }
+                            None => log::warn!(
+                                "tutorial {}: scripted placement {piece} has no legal target",
+                                self.lesson.id
+                            ),
+                        }
+                    }
+                    Err(error) => log::warn!(
+                        "tutorial {}: scripted placement {piece} does not parse: {error}",
+                        self.lesson.id
+                    ),
                 }
             }
         }
