@@ -12,8 +12,13 @@
         "rules": "Rules",
         "rules_summary": "Rules Summary",
         "analysis": "Analysis",
-        "puzzles": "Puzzles",
         "archive": "Archive"
+    },
+    "puzzles": {
+        "title": "Puzzles",
+        "train": "Solve puzzles",
+        "browse": "Puzzle sets",
+        "history": "Your history"
     },
     "buy_game": "Buy Game",
     "donate": "Donate",

@@ -637,9 +637,7 @@ impl PuzzleContext {
     /// Leaves an untouched puzzle for the next one, without an attempt.
     pub fn skip(&self, next: Callback<()>) {
         if self.can_skip() {
-            self.pending_notice.set_value(Some(
-                "Previous puzzle skipped. Nothing was recorded.".to_string(),
-            ));
+            self.pending_notice.set_value(Some("Skipped.".to_string()));
             next.run(());
         }
     }
@@ -696,7 +694,7 @@ impl PuzzleContext {
 
     fn note_new_selection(&self) {
         if self.phase.get_untracked() == PuzzlePhase::Solving {
-            self.tell("Your choice applies from the next puzzle.".to_string());
+            self.tell("Applies from the next puzzle.".to_string());
         }
     }
 
@@ -753,20 +751,12 @@ impl PuzzleContext {
     /// A selected piece with nowhere to go gets a reason instead of silence.
     fn explain_stuck(&self, piece: Piece, position: Position) {
         let state = self.game_state.state().get_untracked();
-        let reason = if state.board.is_pinned(piece) {
-            format!(
+        if state.board.is_pinned(piece) && state.board.top_piece(position) == Some(piece) {
+            self.tell(format!(
                 "This {} is pinned: moving it would split the hive.",
                 bug_name(piece.bug())
-            )
-        } else if state.board.top_piece(position) != Some(piece) {
-            "That piece is covered by another one.".to_string()
-        } else {
-            format!(
-                "This {} has no legal move right now.",
-                bug_name(piece.bug())
-            )
-        };
-        self.tell(reason);
+            ));
+        }
     }
 }
 
@@ -948,11 +938,6 @@ pub fn puzzle_hiveground_interaction(puzzle: PuzzleContext) -> HivegroundInterac
                     .with_untracked(|move_info| move_info.target_positions.is_empty());
                 if stuck && piece.color() == puzzle.solver() {
                     puzzle.explain_stuck(piece, position);
-                } else if stuck {
-                    puzzle.tell(format!(
-                        "That {} belongs to your opponent.",
-                        bug_name(piece.bug())
-                    ));
                 } else {
                     puzzle.notice.set(None);
                 }
@@ -1058,7 +1043,7 @@ fn last_move_note(state: &State, token: &str) -> String {
     };
     if piece.color() != state.turn_color {
         return format!(
-            "{} threw the {} {} with a Pillbug move (outlined in pink).",
+            "{} threw the {} {} with a Pillbug.",
             color_label(state.turn_color),
             color_label(piece.color()),
             bug_name(piece.bug())
@@ -1070,7 +1055,7 @@ fn last_move_note(state: &State, token: &str) -> String {
         "placed"
     };
     format!(
-        "{} {verb} their {} (outlined in pink).",
+        "{} {verb} their {}.",
         color_label(piece.color()),
         bug_name(piece.bug())
     )

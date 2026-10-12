@@ -11,7 +11,6 @@
         "rules_summary": "Résumé des règles",
         "rules": "Règles",
         "analysis": "Analyse",
-        "puzzles": "Problèmes",
         "title": "Apprendre",
         "archive": "Archives"
     },
@@ -23,6 +22,12 @@
         "logout": "Déconnexion",
         "config": "Configuration",
         "edit_account": "Modifier le compte"
+    },
+    "puzzles": {
+        "title": "Problèmes",
+        "train": "Résoudre des problèmes",
+        "browse": "Collections",
+        "history": "Ton historique"
     },
     "buy_game": "Acheter le jeu",
     "donate": "Faire un don"

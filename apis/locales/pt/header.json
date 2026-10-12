@@ -12,7 +12,6 @@
         "rules": "Regras",
         "rules_summary": "Resumo das regras",
         "analysis": "Análise",
-        "puzzles": "Problemas",
         "archive": "Arquivo"
     },
     "user_menu": {
@@ -22,6 +21,12 @@
         "edit_account": "Editar Conta",
         "logout": "Sair",
         "config": "Configurar"
+    },
+    "puzzles": {
+        "title": "Problemas",
+        "train": "Resolver problemas",
+        "browse": "Coleções",
+        "history": "Teu histórico"
     },
     "buy_game": "Comprar o jogo",
     "donate": "Doar",

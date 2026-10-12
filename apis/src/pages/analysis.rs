@@ -43,6 +43,7 @@ const MOBILE_RESERVE_SYNC_DELAY: Duration = Duration::from_millis(500);
 enum AnalysisSource {
     Blank,
     Uhp(String),
+    Hop(String),
     Game(GameId),
 }
 
@@ -106,6 +107,7 @@ pub fn Analysis() -> impl IntoView {
             .and_then(|s| s.parse::<usize>().ok())
     });
     let uhp_string = Memo::new(move |_| queries.get().get("uhp"));
+    let hop_string = Memo::new(move |_| queries.get().get("hop"));
     let vertical = expect_context::<OrientationSignal>().orientation_vertical;
     let state = game_state.state();
     let turn_color = Memo::new(move |_| state.with(|state| state.turn_color));
@@ -258,6 +260,8 @@ pub fn Analysis() -> impl IntoView {
             AnalysisSource::Game(game_id)
         } else if let Some(uhp) = uhp_string.get() {
             AnalysisSource::Uhp(uhp)
+        } else if let Some(hop) = hop_string.get() {
+            AnalysisSource::Hop(hop)
         } else {
             AnalysisSource::Blank
         }
@@ -345,6 +349,9 @@ pub fn Analysis() -> impl IntoView {
                 AnalysisSource::Uhp(uhp) => analysis_store
                     .load_uhp(game_state, uhp, requested_ply.get_untracked())
                     .map_err(|error| format!("Could not load UHP analysis: {error}")),
+                AnalysisSource::Hop(hop) => analysis_store
+                    .load_hop(game_state, hop)
+                    .map_err(|error| format!("Could not load HOP position: {error}")),
                 AnalysisSource::Game(requested_game_id) => {
                     let resource = game_resource.by_ref().await;
                     if requested_source.with_untracked(|requested| requested != &source) {

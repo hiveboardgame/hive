@@ -96,8 +96,7 @@ pub fn PuzzleTrainer(#[prop(into)] nanoid: Signal<Option<String>>) -> impl IntoV
                 && (f64::from(*difficulty) - target).abs() > 400.0
             {
                 puzzle.pending_notice.set_value(Some(
-                    "Nothing closer to that difficulty is left here; this is the nearest puzzle."
-                        .to_string(),
+                    "No closer match left; this is the nearest.".to_string(),
                 ));
             }
         },
@@ -192,7 +191,6 @@ pub fn PuzzleTrainer(#[prop(into)] nanoid: Signal<Option<String>>) -> impl IntoV
                             <div class="flex overflow-y-auto flex-col flex-1 gap-3 p-3 min-h-0 text-sm select-none ui-board-side-panel">
                                 <PuzzlePrompt />
                                 <PuzzleControls />
-                                <BuriedQueenNote />
                                 <Show when=has_puzzle>
                                     <div class="flex flex-col gap-1 py-1 px-2 rounded border border-black/5 bg-odd-light/70 dark:border-white/10 dark:bg-surface-muted">
                                         <HandRow color=opponent interaction history_board />
@@ -388,11 +386,7 @@ fn MobileHand(
         let color = color.get();
         state.with(|state| !state.board.reserve(color, state.game_type).is_empty())
     };
-    let empty_label = if framed {
-        "No pieces left in your hand"
-    } else {
-        "Opponent: no pieces in hand"
-    };
+    let empty_label = if framed { "" } else { "" };
     let has_puzzle = move || puzzle.puzzle.with(Option::is_some);
     view! {
         <div class=if framed {
@@ -628,11 +622,10 @@ fn PuzzlePrompt(#[prop(optional)] compact: bool) -> impl IntoView {
         PuzzlePhase::Setup => "Your opponent is moving…".to_string(),
         _ => {
             let (number, total) = move_number();
-            let queen = color_name(solver().opposite_color());
             let task = if total > 1 {
-                format!("Move {number} of {total}: find the forced win against the {queen} Queen.")
+                format!("Move {number} of {total}.")
             } else {
-                format!("Find the move that surrounds the {queen} Queen.")
+                String::new()
             };
             match puzzle.opponent_move.get() {
                 Some(played) => format!("{played} {task}"),
@@ -653,72 +646,53 @@ fn PuzzlePrompt(#[prop(optional)] compact: bool) -> impl IntoView {
             if let Some(notice) = puzzle.notice.get() {
                 notice
             } else if puzzle.reveal_armed.get() {
-                "Press it again to see the solution. It counts as a miss.".to_string()
+                "Press again to confirm (counts as a miss).".to_string()
             } else if awaiting_confirm() {
                 let prompt = if compact {
-                    "Tap the same spot again to play it."
+                    "Tap again to play."
                 } else {
-                    "Click or drop on the same spot again to play it (Esc cancels)."
+                    "Click again to play (Esc cancels)."
                 };
                 match puzzle.hint_text.get() {
                     Some(hint) => format!("{hint} {prompt}"),
                     None => prompt.to_string(),
                 }
             } else {
-                puzzle
-                    .hint_text
-                    .get()
-                    .or_else(|| compact.then(|| buried_queen_text(puzzle, true)).flatten())
-                    .or_else(|| {
-                        (compact && puzzle.costs_rating(signed_in.get()))
-                            .then(|| "A hint or the solution counts as a miss.".to_string())
-                    })
-                    .or_else(|| {
-                        compact.then(|| "Practice: this try won't change your rating.".to_string())
-                    })
-                    .unwrap_or_default()
+                puzzle.hint_text.get().unwrap_or_default()
             }
         }
         PuzzlePhase::Replying => "✓ Correct! The opponent answers…".to_string(),
         PuzzlePhase::Solved if puzzle.replaying.get() => {
             if puzzle.solved_before_replay.get() {
-                "Solved again (practice, not rated).".to_string()
+                "✓ Solved again.".to_string()
             } else {
-                "Solved (practice, not rated).".to_string()
+                "✓ Solved.".to_string()
             }
         }
         PuzzlePhase::Solved if puzzle.hinted.get() && puzzle.first_result.get() != Some(false) => {
             if signed_in.get() {
-                with_note("Solved with a hint, so it counted as a miss")
+                with_note("Solved with a hint")
             } else {
                 "Solved with a hint.".to_string()
             }
         }
         PuzzlePhase::Solved if puzzle.first_result.get() == Some(false) => {
             if signed_in.get() {
-                with_note("✓ Solved, but this try already counted as a miss")
+                with_note("✓ Solved, not rated")
             } else {
-                "✓ Solved, with some help.".to_string()
+                "✓ Solved.".to_string()
             }
         }
-        PuzzlePhase::Solved => with_note("✓ Solved! The Queen is surrounded"),
-        PuzzlePhase::Failed => with_note("✗ That move doesn't force the win"),
+        PuzzlePhase::Solved => with_note("✓ Solved!"),
+        PuzzlePhase::Failed => with_note("✗ Not the move"),
         PuzzlePhase::Revealed => {
             let step = puzzle.reveal_step.get();
             if compact && step > 0 {
-                let total = puzzle.solution_steps();
-                puzzle
-                    .reveal_tokens
-                    .with(|tokens| {
-                        tokens
-                            .get(step - 1)
-                            .map(|line| format!("{step}/{total}: {line}"))
-                    })
-                    .unwrap_or_default()
+                format!("Step {step} of {}", puzzle.solution_steps())
             } else if compact {
-                "Solution. Tap ▶ to step through it.".to_string()
+                "Solution".to_string()
             } else {
-                with_note("Here is the solution")
+                with_note("Solution")
             }
         }
         _ => String::new(),
@@ -812,17 +786,10 @@ fn PuzzlePrompt(#[prop(optional)] compact: bool) -> impl IntoView {
             } else {
                 "text-sm text-gray-800 dark:text-gray-200 min-h-[2.5rem]"
             }>{move || or_blank(goal())}</p>
-            <p
-                class=move || {
-                    format!(
-                        "text-sm {} {}",
-                        if compact { "min-h-[2.5rem]" } else { "min-h-[3.75rem]" },
-                        message_class(),
-                    )
-                }
-                aria-live="polite"
-            >
-                {move || or_blank(message())}
+            <p class="text-sm min-h-[2.5rem]" aria-live="polite">
+                <span class=move || {
+                    format!("box-decoration-clone {}", message_class())
+                }>{move || or_blank(message())}</span>
             </p>
         </div>
     }
@@ -837,8 +804,8 @@ fn EmptyMessage() -> impl IntoView {
         <div class="flex flex-col gap-3 items-center max-w-xs text-center ui-empty-state">
             <p class="text-base font-semibold">
                 {move || match puzzle.game_type.get() {
-                    PuzzleGameTypeFilter::Base => "You have seen every base-game puzzle for now.",
-                    PuzzleGameTypeFilter::Mlp => "You have seen every expansion puzzle for now.",
+                    PuzzleGameTypeFilter::Base => "No base-game puzzles left.",
+                    PuzzleGameTypeFilter::Mlp => "No expansion puzzles left.",
                     PuzzleGameTypeFilter::Any => "This puzzle could not be found.",
                 }}
             </p>
@@ -869,6 +836,12 @@ fn PuzzleControls(#[prop(optional)] compact: bool) -> impl IntoView {
     let puzzle = expect_context::<PuzzleContext>();
     let can_go_next = move || next_available(puzzle);
     let at_last_step = move || puzzle.reveal_step.get() >= puzzle.solution_steps();
+    let analysis = move || {
+        puzzle
+            .puzzle
+            .with(|current| current.as_ref().and_then(analysis_link))
+    };
+    let over = move || puzzle.phase.get().is_over();
     let signed_in = is_signed_in();
     let phase = puzzle.phase;
     // Buttons stay in place (disabled) while the opponent answers, so nothing jumps.
@@ -986,6 +959,18 @@ fn PuzzleControls(#[prop(optional)] compact: bool) -> impl IntoView {
                         {if compact { "Solution" } else { "Show solution" }}
                     </button>
                 </Show>
+                <Show when=move || {
+                    compact && matches!(phase.get(), PuzzlePhase::Solved | PuzzlePhase::Failed)
+                }>
+                    <ShowLet some=analysis let:href>
+                        <a
+                            href=href
+                            class="ui-button ui-button-secondary ui-button-sm no-link-style"
+                        >
+                            "Analyze"
+                        </a>
+                    </ShowLet>
+                </Show>
                 <Show when=move || compact && phase.get() == PuzzlePhase::Revealed>
                     <button
                         type="button"
@@ -1048,16 +1033,15 @@ fn PuzzleControls(#[prop(optional)] compact: bool) -> impl IntoView {
                     </button>
                 </Show>
             </div>
-            <Show when=move || !compact>
-                <p class="text-xs text-gray-600 dark:text-gray-400 min-h-4">
-                    {move || {
-                        if in_progress() && costs_rating() {
-                            "Using a hint or the solution counts as a miss for your rating."
-                        } else {
-                            "\u{a0}"
-                        }
-                    }}
-                </p>
+            <Show when=move || !compact && over()>
+                <ShowLet some=analysis let:href>
+                    <a
+                        href=href
+                        class="inline-flex items-center self-start text-sm font-semibold min-h-11 ui-text-link"
+                    >
+                        "Open in analysis →"
+                    </a>
+                </ShowLet>
             </Show>
             <Show when=move || !compact>
                 <SolutionMoves />
@@ -1070,7 +1054,6 @@ fn PuzzleControls(#[prop(optional)] compact: bool) -> impl IntoView {
 #[component]
 fn SolutionMoves() -> impl IntoView {
     let puzzle = expect_context::<PuzzleContext>();
-    let tokens = move || puzzle.reveal_tokens.get();
     let step = puzzle.reveal_step;
     let at_last_step = move || step.get() >= puzzle.solution_steps();
     view! {
@@ -1108,38 +1091,6 @@ fn SolutionMoves() -> impl IntoView {
                         {move || { format!("Step {} of {}", step.get(), puzzle.solution_steps()) }}
                     </span>
                 </div>
-                <ol class="flex flex-col gap-0.5">
-                    {move || {
-                        tokens()
-                            .into_iter()
-                            .enumerate()
-                            .map(|(index, line)| {
-                                let who = if index % 2 == 0 { "You" } else { "Opponent" };
-                                let shown = move || index < step.get();
-                                let current = move || index + 1 == step.get();
-                                view! {
-                                    <li>
-                                        <button
-                                            type="button"
-                                            class=move || {
-                                                if current() {
-                                                    "w-full text-left font-semibold rounded px-1 bg-pillbug-teal/25"
-                                                } else if shown() {
-                                                    "w-full text-left font-semibold px-1 hover:underline"
-                                                } else {
-                                                    "w-full text-left text-gray-500 px-1 hover:underline"
-                                                }
-                                            }
-                                            on:click=move |_| puzzle.show_solution_step(index + 1, true)
-                                        >
-                                            {format!("{who}: {line}")}
-                                        </button>
-                                    </li>
-                                }
-                            })
-                            .collect_view()
-                    }}
-                </ol>
             </div>
         </Show>
     }
@@ -1266,7 +1217,13 @@ fn PuzzleCredits(puzzle: PuzzleResponse) -> impl IntoView {
         .map(|game| format!("/game/{game}"));
     let analysis_link = analysis_link(&puzzle);
     let authors = puzzle.authors.join(", ");
-    let themes = puzzle.themes.clone();
+    let themes: Vec<String> = puzzle
+        .themes
+        .iter()
+        .filter(|theme| !theme.starts_with("winIn"))
+        .cloned()
+        .collect();
+    let has_themes = !themes.is_empty();
     let stats = move || {
         context.puzzle.with(|current| {
             current.as_ref().map(|p| {
@@ -1290,7 +1247,7 @@ fn PuzzleCredits(puzzle: PuzzleResponse) -> impl IntoView {
                     view! {
                         <span>
                             <span class="font-semibold">"Found by "</span>
-                            "our puzzle engine, in a real hivegame.com game"
+                            "our puzzle engine"
                         </span>
                     }
                         .into_any()
@@ -1321,10 +1278,11 @@ fn PuzzleCredits(puzzle: PuzzleResponse) -> impl IntoView {
                         </details>
                     }
                 })}
-            // Motifs give the idea away, so they only show once the puzzle is over.
-            <Show when={
-                let empty = themes.is_empty();
-                move || !empty && context.reported.get()
+            // Motifs give the idea away, so they only show once the puzzle is solved or revealed;
+            // after a miss the player may still retry.
+            <Show when=move || {
+                has_themes
+                    && matches!(context.phase.get(), PuzzlePhase::Solved | PuzzlePhase::Revealed)
             }>
                 <div class="flex flex-wrap gap-1">
                     {themes
@@ -1376,12 +1334,6 @@ fn PuzzleCredits(puzzle: PuzzleResponse) -> impl IntoView {
                 </Show>
             </div>
             <div>{stats}</div>
-            <details>
-                <summary class="py-3.5 cursor-pointer">"About this puzzle"</summary>
-                <p class="mt-1" title=puzzle.source.clone()>
-                    "Computer-verified: the win is forced against every defence."
-                </p>
-            </details>
         </div>
     }
 }
@@ -1495,7 +1447,7 @@ fn PuzzleFooter(rating: RwSignal<Option<i32>>) -> impl IntoView {
                             >
                                 "Sign in"
                             </a>
-                            " to get a puzzle rating, keep your history and rate puzzles."
+                            " to get a puzzle rating."
                         </p>
                     }
                 }
@@ -1650,7 +1602,7 @@ fn PuzzleFooter(rating: RwSignal<Option<i32>>) -> impl IntoView {
                     prop:checked=move || puzzle.one_click.get()
                     on:change=move |evt| puzzle.set_one_click(event_target_checked(&evt))
                 />
-                "One-click moves in puzzles (no confirm step)"
+                "One-click moves"
             </label>
             <Show when=move || signed_in.get()>
                 <a
@@ -1694,51 +1646,15 @@ pub fn signed(delta: i32) -> String {
     }
 }
 
-/// When the Queen to surround is buried under a stack, say so: otherwise the first question is
-/// "where is she?".
-#[component]
-fn BuriedQueenNote() -> impl IntoView {
-    let puzzle = expect_context::<PuzzleContext>();
-    let note = move || buried_queen_text(puzzle, false);
-    view! {
-        <ShowLet some=note let:note>
-            <p class="py-1 px-2 text-xs rounded bg-orange-twilight/15">{note}</p>
-        </ShowLet>
-    }
-}
-
-fn buried_queen_text(puzzle: PuzzleContext, compact: bool) -> Option<String> {
-    if matches!(
-        puzzle.phase.get(),
-        PuzzlePhase::Loading | PuzzlePhase::Empty
-    ) {
-        return None;
-    }
-    let target = puzzle.solver().opposite_color();
-    let queen = hive_lib::Piece::new_from(hive_lib::Bug::Queen, target, 0);
-    puzzle.game_state.state().with(|state| {
-        let at = state.board.position_of_piece(queen)?;
-        let top = state.board.top_piece(at)?;
-        (top != queen).then(|| {
-            format!(
-                "The {} Queen is under the {} {} ({}).",
-                color_name(target),
-                color_name(top.color()),
-                top.bug().name(),
-                if compact {
-                    "long-press a stack to look inside"
-                } else {
-                    "hold right-click or long-press a stack to look inside"
-                }
-            )
-        })
-    })
-}
-
 /// The puzzle's start as an analysis board, built from its own moves so it works even when the
 /// source game is not on this server.
 fn analysis_link(puzzle: &PuzzleResponse) -> Option<String> {
-    let history = puzzle.history.as_deref()?;
+    let Some(history) = puzzle.history.as_deref() else {
+        return puzzle
+            .position
+            .as_deref()
+            .map(|hop| format!("/analysis?hop={}", encode_component(hop)));
+    };
     let moves: Vec<&str> = history
         .split(';')
         .map(str::trim)

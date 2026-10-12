@@ -10,34 +10,13 @@ use leptos::prelude::*;
 
 const BOOK: &str = "hive-puzzles-vol1";
 const THEMES: [(&str, &str); 7] = [
-    (
-        "easy",
-        "Twenty quick wins anyone can find: the place to start.",
-    ),
-    (
-        "throw",
-        "Win with a Pillbug (or a Mosquito copying one) moving a piece next to it.",
-    ),
-    (
-        "queenThrow",
-        "The Pillbug moves the opponent's Queen herself to where she gets trapped.",
-    ),
-    (
-        "mosquito",
-        "The Mosquito climbs or jumps like the bug it copies to finish the job.",
-    ),
-    (
-        "climb",
-        "A Beetle or Mosquito climbs onto the hive to close the ring.",
-    ),
-    (
-        "quietMove",
-        "The first move does not touch the Queen yet; it sets up the net.",
-    ),
-    (
-        "missedWin",
-        "Wins the player in the real game did not see. Can you?",
-    ),
+    ("easy", "Quick, easy wins."),
+    ("throw", "The Pillbug moves a piece into place."),
+    ("queenThrow", "The Pillbug moves the Queen herself."),
+    ("mosquito", "The Mosquito climbs or jumps."),
+    ("climb", "Climb onto the hive to finish."),
+    ("quietMove", "The first move sets up the win."),
+    ("missedWin", "Wins the player missed."),
 ];
 
 #[derive(Clone)]
@@ -71,27 +50,26 @@ fn cards(sets: &[PuzzleSetResponse]) -> (Vec<SetCard>, Vec<SetCard>, Vec<SetCard
     let book_key = format!("collection:{BOOK}");
     let book = vec![card(
         collection_label(BOOK),
-        "Hand-made puzzles by strong players, from the open puzzle book by Enrique Sedano, \
-         Jonas Kronander and Christian Sperling. Every puzzle names its author.",
+        "By Enrique Sedano, Jonas Kronander and Christian Sperling.",
         format!("/puzzles?collection={BOOK}"),
         &[book_key.as_str()],
     )];
     let lengths = vec![
         card(
             "Win in 1".to_string(),
-            "Spot the move that surrounds the Queen right now.",
+            "One move to win.",
             "/puzzles?length=1".to_string(),
             &["moves:1"],
         ),
         card(
             "Win in 2".to_string(),
-            "A forcing move first, then the finish, whatever the opponent does.",
+            "Two moves to win.",
             "/puzzles?length=2".to_string(),
             &["moves:2"],
         ),
         card(
             "Win in 3 or more".to_string(),
-            "Longer forced wins: every answer of the opponent still loses.",
+            "Three or more moves.",
             "/puzzles?length=3".to_string(),
             &["moves:3", "moves:4"],
         ),
@@ -132,10 +110,6 @@ pub fn PuzzleBrowse() -> impl IntoView {
         <PageShell>
             <PageHeader title="Puzzle sets" />
             <div class="flex flex-wrap gap-3 justify-between items-center text-sm">
-                <p class="max-w-xl text-gray-700 dark:text-gray-300">
-                    "Pick a set to train on. Puzzles still come near your puzzle rating; choose "
-                    <b>"Harder"</b> " in the puzzle settings to stretch yourself."
-                </p>
                 <a
                     href="/puzzles"
                     class="text-white whitespace-nowrap shadow min-h-11 ui-button ui-button-sm no-link-style bg-pillbug-teal hover:brightness-110"

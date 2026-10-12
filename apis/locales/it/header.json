@@ -11,9 +11,14 @@
         "title": "Impara",
         "rules": "Regole",
         "analysis": "Analisi",
-        "puzzles": "Problemi",
         "rules_summary": "Sommario delle Regole",
         "archive": "Archivio"
+    },
+    "puzzles": {
+        "title": "Problemi",
+        "train": "Risolvi problemi",
+        "browse": "Raccolte",
+        "history": "La tua cronologia"
     },
     "buy_game": "Compra Hive®",
     "donate": "Fai una Donazione",

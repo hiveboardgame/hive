@@ -11,9 +11,14 @@
         "title": "Aprender",
         "rules": "Reglas",
         "analysis": "Análisis",
-        "puzzles": "Problemas",
         "rules_summary": "Resumen de reglas",
         "archive": "Archivo"
+    },
+    "puzzles": {
+        "title": "Problemas",
+        "train": "Resolver problemas",
+        "browse": "Colecciones",
+        "history": "Tu historial"
     },
     "buy_game": "Comprar juego",
     "donate": "Donar",

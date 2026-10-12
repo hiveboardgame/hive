@@ -44,9 +44,6 @@ pub fn MobileDropdown() -> impl IntoView {
                 </div>
                 <div class=section_style>
                     <span class=label_style>{t!(i18n, header.learn.title)}</span>
-                    <a class="ui-dropdown-link" on:click=onclick_close href="/puzzles">
-                        {t!(i18n, header.learn.puzzles)}
-                    </a>
                     <a class="ui-dropdown-link" on:click=onclick_close href="/analysis">
                         {t!(i18n, header.learn.analysis)}
                     </a>
@@ -63,6 +60,18 @@ pub fn MobileDropdown() -> impl IntoView {
                     </a>
                     <a class="ui-dropdown-link" on:click=onclick_close href="/rules_summary">
                         {t!(i18n, header.learn.rules_summary)}
+                    </a>
+                </div>
+                <div class=section_style>
+                    <span class=label_style>{t!(i18n, header.puzzles.title)}</span>
+                    <a class="ui-dropdown-link" on:click=onclick_close href="/puzzles">
+                        {t!(i18n, header.puzzles.train)}
+                    </a>
+                    <a class="ui-dropdown-link" on:click=onclick_close href="/puzzles/browse">
+                        {t!(i18n, header.puzzles.browse)}
+                    </a>
+                    <a class="ui-dropdown-link" on:click=onclick_close href="/puzzles/history">
+                        {t!(i18n, header.puzzles.history)}
                     </a>
                 </div>
                 <div class=section_style>

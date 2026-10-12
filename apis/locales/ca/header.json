@@ -11,9 +11,14 @@
         "title": "Aprendre",
         "rules": "Regles",
         "analysis": "Anàlisis",
-        "puzzles": "Trencaclosques",
         "rules_summary": "Resum de les regles",
         "archive": "Arxiu"
+    },
+    "puzzles": {
+        "title": "Trencaclosques",
+        "train": "Resol trencaclosques",
+        "browse": "Col·leccions",
+        "history": "El teu historial"
     },
     "buy_game": "Comprar el joc",
     "donate": "Donar",

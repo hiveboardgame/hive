@@ -6,12 +6,17 @@
         "faq": "FAQ (Gyakori kérdések)",
         "resources": "Források"
     },
+    "puzzles": {
+        "title": "Feladványok",
+        "train": "Feladványok megoldása",
+        "browse": "Gyűjtemények",
+        "history": "Előzményeid"
+    },
     "buy_game": "Játék vásárlás",
     "donate": "Adakozz",
     "learn": {
         "rules": "Szabályok",
         "analysis": "Elemzés",
-        "puzzles": "Feladványok",
         "title": "Tanulás",
         "rules_summary": "Szabályok összefoglalója",
         "archive": "Archívum"

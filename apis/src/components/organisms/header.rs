@@ -11,6 +11,7 @@ use crate::{
                 locale::LocaleDropdown,
                 mobile::MobileDropdown,
                 notification::NotificationDropdown,
+                puzzles::PuzzlesDropdown,
                 tournament::TournamentDropdown,
                 user::UserDropdown,
             },
@@ -51,6 +52,7 @@ pub fn Header(update_available: Signal<bool>) -> impl IntoView {
                     </a>
                     <CommunityDropdown />
                     <LearnDropdown />
+                    <PuzzlesDropdown />
                     <TournamentDropdown />
                     <a
                         class=HEADER_NAV_ITEM_CLASS

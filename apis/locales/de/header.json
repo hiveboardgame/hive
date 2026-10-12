@@ -12,8 +12,13 @@
         "rules": "Regeln",
         "rules_summary": "Regelübersicht",
         "analysis": "Analyse",
-        "puzzles": "Puzzles",
         "archive": "Archiv"
+    },
+    "puzzles": {
+        "title": "Puzzles",
+        "train": "Puzzles lösen",
+        "browse": "Puzzle-Sammlungen",
+        "history": "Dein Verlauf"
     },
     "buy_game": "Spiel kaufen",
     "donate": "Spenden",

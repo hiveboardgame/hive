@@ -93,7 +93,7 @@ pub fn PuzzleHistory() -> impl IntoView {
                     {tab(PuzzleHistoryFilter::All, "All")}
                     {tab(PuzzleHistoryFilter::Solved, "Solved")}
                     {tab(PuzzleHistoryFilter::Failed, "Missed")}
-                    {tab(PuzzleHistoryFilter::Unstarred, "Unrated")}
+                    {tab(PuzzleHistoryFilter::Unstarred, "Not starred")}
                 </div>
                 <div class="flex gap-3 items-center text-sm">
                     <Suspense>

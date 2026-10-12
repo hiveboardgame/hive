@@ -12,8 +12,13 @@
         "rules": "Reguli",
         "rules_summary": "Rezumat reguli",
         "analysis": "Analiză",
-        "puzzles": "Probleme",
         "archive": "Arhivă"
+    },
+    "puzzles": {
+        "title": "Probleme",
+        "train": "Rezolvă probleme",
+        "browse": "Colecții",
+        "history": "Istoricul tău"
     },
     "buy_game": "Cumpără jocul",
     "donate": "Donează",
