@@ -8,8 +8,15 @@ use leptos::prelude::*;
 #[component]
 pub fn OnlineUsers() -> impl IntoView {
     let online_users = expect_context::<OnlineUsersSignal>();
-    let fallback_users =
-        Signal::derive(move || online_users.signal.with(|ou| ou.username_user.clone()));
+    let fallback_users = Signal::derive(move || {
+        online_users.signal.with(|ou| {
+            ou.username_user
+                .iter()
+                .filter(|(_, user)| !user.bot)
+                .map(|(username, user)| (username.clone(), user.clone()))
+                .collect()
+        })
+    });
 
     view! {
         <div class="my-2 w-full min-w-0 shrink-0">
