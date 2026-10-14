@@ -55,6 +55,10 @@ fn DailyCard(daily: DailyPuzzleResponse) -> impl IntoView {
         (0, _) => "Be the first to solve it today".to_string(),
         (tried, solved) => format!("{solved} of {tried} solved it today"),
     };
+    let streak = daily
+        .streak
+        .filter(|streak| streak.current > 0)
+        .map(|streak| format!("🔥 {}-day streak", streak.current));
     let (action, action_class) = match daily.my_result {
         None => ("Solve it →", "text-white bg-pillbug-teal"),
         Some(true) => ("✓ Solved", "text-white bg-grasshopper-green"),
@@ -77,6 +81,14 @@ fn DailyCard(daily: DailyPuzzleResponse) -> impl IntoView {
                     <span class="text-sm text-gray-600 dark:text-gray-400">
                         {format!("Difficulty {} · {tally}", daily.puzzle.rating)}
                     </span>
+                    {streak
+                        .map(|streak| {
+                            view! {
+                                <span class="text-sm font-semibold text-orange-twilight">
+                                    {streak}
+                                </span>
+                            }
+                        })}
                     <span class=format!(
                         "self-start mt-1 px-4 py-2 text-sm font-semibold rounded-lg whitespace-nowrap shadow {action_class}",
                     )>{action}</span>

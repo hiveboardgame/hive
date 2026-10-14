@@ -1,7 +1,7 @@
 mod common;
 
 use chrono::NaiveDate;
-use common::fixtures::{create_user, rating_for};
+use common::fixtures::{create_bullet_game, create_user, rating_for};
 use db_lib::{
     get_conn,
     models::{DailyPuzzle, Puzzle},
@@ -91,33 +91,40 @@ async fn a_hint_turns_a_solve_into_a_miss() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn stars_aggregate_and_can_change() {
+async fn votes_aggregate_change_and_withdraw() {
     let db = common::db::test_db().await;
     let mut conn = get_conn(&db.pool).await.expect("get connection");
     let first = create_user("rater_one", false, &mut conn).await;
     let second = create_user("rater_two", false, &mut conn).await;
     let puzzle = import(4, 1500.0, &mut conn).await;
 
-    Puzzle::set_stars(puzzle.id, first.id, 5, &mut conn)
+    Puzzle::vote(puzzle.id, first.id, Some(true), &mut conn)
         .await
-        .expect("stars");
-    let updated = Puzzle::set_stars(puzzle.id, second.id, 2, &mut conn)
+        .expect("vote");
+    let updated = Puzzle::vote(puzzle.id, second.id, Some(false), &mut conn)
         .await
-        .expect("stars");
-    assert_eq!((updated.stars_sum, updated.stars_count), (7, 2));
-    let changed = Puzzle::set_stars(puzzle.id, first.id, 3, &mut conn)
+        .expect("vote");
+    assert_eq!((updated.likes, updated.dislikes), (1, 1));
+    let changed = Puzzle::vote(puzzle.id, first.id, Some(false), &mut conn)
         .await
-        .expect("change stars");
-    assert_eq!((changed.stars_sum, changed.stars_count), (5, 2));
+        .expect("change vote");
+    assert_eq!((changed.likes, changed.dislikes), (0, 2));
     assert_eq!(
-        Puzzle::stars_of(puzzle.id, first.id, &mut conn)
+        Puzzle::vote_of(puzzle.id, first.id, &mut conn)
             .await
-            .expect("stars of"),
-        Some(3)
+            .expect("vote of"),
+        Some(false)
     );
-    assert!(Puzzle::set_stars(puzzle.id, first.id, 6, &mut conn)
+    let withdrawn = Puzzle::vote(puzzle.id, first.id, None, &mut conn)
         .await
-        .is_err());
+        .expect("withdraw");
+    assert_eq!((withdrawn.likes, withdrawn.dislikes), (0, 1));
+    assert_eq!(
+        Puzzle::vote_of(puzzle.id, first.id, &mut conn)
+            .await
+            .expect("vote of"),
+        None
+    );
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -129,9 +136,9 @@ async fn a_widely_disliked_puzzle_is_hidden() {
     for index in 0..shared_types::AUTO_HIDE_MIN_VOTES {
         let user = create_user(&format!("critic{index}"), false, &mut conn).await;
         last = Some(
-            Puzzle::set_stars(puzzle.id, user.id, 1, &mut conn)
+            Puzzle::vote(puzzle.id, user.id, Some(false), &mut conn)
                 .await
-                .expect("stars"),
+                .expect("vote"),
         );
     }
     assert!(last.expect("votes").hidden);
@@ -370,4 +377,120 @@ async fn the_daily_tally_counts_first_tries_only() {
             .expect("result"),
         Some(false)
     );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn my_games_set_holds_puzzles_from_games_i_played() {
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.expect("get connection");
+    let white = create_user("own_white", false, &mut conn).await;
+    let black = create_user("own_black", false, &mut conn).await;
+    let stranger = create_user("stranger", false, &mut conn).await;
+    let game = create_bullet_game(white.id, black.id, &mut conn).await;
+    let mut puzzle = fixture();
+    puzzle.source_game = Some(game.nanoid.clone());
+    let mine = Puzzle::import(&puzzle, 50, &mut conn)
+        .await
+        .expect("import")
+        .expect("new position");
+    import(51, 1500.0, &mut conn).await;
+
+    let selection = PuzzleSelection {
+        game_type: PuzzleGameTypeFilter::Any,
+        difficulty: PuzzleDifficulty::Normal,
+        length: PuzzleLength::Any,
+        theme: None,
+        collection: Some(shared_types::MY_GAMES_COLLECTION.to_string()),
+    };
+    for player in [&white, &black] {
+        let next = Puzzle::next(1500.0, Some(player.id), &selection, &[], &mut conn)
+            .await
+            .expect("next")
+            .expect("a puzzle from my game");
+        assert_eq!(next.id, mine.id);
+    }
+    assert!(
+        Puzzle::next(1500.0, Some(stranger.id), &selection, &[], &mut conn)
+            .await
+            .expect("next")
+            .is_none()
+    );
+    let key = format!("collection:{}", shared_types::MY_GAMES_COLLECTION);
+    let counts = Puzzle::set_counts(Some(black.id), &mut conn)
+        .await
+        .expect("counts");
+    let set = counts
+        .iter()
+        .find(|count| count.key == key)
+        .expect("my games");
+    assert_eq!((set.total, set.solved_count), (1, 0));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn dailies_leave_training_and_return_as_old_dailies() {
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.expect("get connection");
+    let player = create_user("archivist", false, &mut conn).await;
+    let today = chrono::Utc::now().date_naive();
+    let yesterday = today.pred_opt().expect("yesterday");
+    let old = import(60, 1500.0, &mut conn).await;
+    let todays = import(61, 1500.0, &mut conn).await;
+    let ordinary = import(62, 1500.0, &mut conn).await;
+    DailyPuzzle::enqueue(&old.nanoid, player.id, &mut conn)
+        .await
+        .expect("queue");
+    DailyPuzzle::for_day(yesterday, &mut conn)
+        .await
+        .expect("pick")
+        .expect("yesterday's puzzle");
+    DailyPuzzle::enqueue(&todays.nanoid, player.id, &mut conn)
+        .await
+        .expect("queue");
+    DailyPuzzle::for_day(today, &mut conn)
+        .await
+        .expect("pick")
+        .expect("today's puzzle");
+
+    let mut selection = PuzzleSelection {
+        game_type: PuzzleGameTypeFilter::Any,
+        difficulty: PuzzleDifficulty::Normal,
+        length: PuzzleLength::Any,
+        theme: None,
+        collection: None,
+    };
+    let training = Puzzle::next(1500.0, Some(player.id), &selection, &[], &mut conn)
+        .await
+        .expect("next")
+        .expect("a puzzle");
+    assert_eq!(training.id, ordinary.id);
+
+    selection.collection = Some(shared_types::OLD_DAILIES_COLLECTION.to_string());
+    let fresh = Puzzle::next(1500.0, Some(player.id), &selection, &[], &mut conn)
+        .await
+        .expect("next")
+        .expect("an old daily");
+    assert_eq!(fresh.id, old.id);
+    Puzzle::record_attempt(old.id, player.id, true, false, None, &mut conn)
+        .await
+        .expect("try");
+    let repeat = Puzzle::next(1500.0, Some(player.id), &selection, &[], &mut conn)
+        .await
+        .expect("next")
+        .expect("old dailies repeat once all are seen");
+    assert_eq!(repeat.id, old.id);
+
+    let archive = DailyPuzzle::archive(today, Some(player.id), 0, &mut conn)
+        .await
+        .expect("archive");
+    let days: Vec<_> = archive.iter().map(|entry| entry.day).collect();
+    assert_eq!(days, vec![today, yesterday]);
+    assert_eq!(archive[1].my_result, Some(true));
+
+    Puzzle::record_attempt(todays.id, player.id, true, false, None, &mut conn)
+        .await
+        .expect("today's try");
+    let streak = DailyPuzzle::streak(player.id, today, &mut conn)
+        .await
+        .expect("streak");
+    assert_eq!(streak.current, 1);
 }

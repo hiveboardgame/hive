@@ -79,7 +79,7 @@ fn band(day: NaiveDate) -> Band {
     }
 }
 
-/// Players' stars count most (shrunk towards 3 until enough votes), then a solve rate near half,
+/// Players' votes count most (shrunk towards 60% liked until enough votes), then a solve rate near half,
 /// then the interesting ideas; the random term keeps equal puzzles rotating.
 const PICK: &str = "INSERT INTO daily_puzzles (day, puzzle_id)
     SELECT $1, p.id FROM puzzles p
@@ -91,7 +91,7 @@ const PICK: &str = "INSERT INTO daily_puzzles (day, puzzle_id)
       AND p.rating BETWEEN $4 AND $5
       AND NOT EXISTS (SELECT 1 FROM daily_puzzles d WHERE d.puzzle_id = p.id)
       AND NOT EXISTS (SELECT 1 FROM daily_puzzle_queue q WHERE q.puzzle_id = p.id)
-    ORDER BY (p.stars_sum + 15.0) / (p.stars_count + 5.0)
+    ORDER BY 5.0 * (p.likes + 3.0) / (p.likes + p.dislikes + 5.0)
       - CASE WHEN p.plays >= 10 THEN 2.0 * abs(p.solves::float / p.plays - 0.55) ELSE 0 END
       + CASE WHEN p.themes && ARRAY['quietMove','throw','queenThrow','mosquito','missedWin']
              THEN 0.4 ELSE 0 END
@@ -311,5 +311,158 @@ impl DailyPuzzle {
             .execute(conn)
             .await?;
         Ok(())
+    }
+}
+
+#[derive(QueryableByName)]
+struct SolvedDay {
+    #[diesel(sql_type = diesel::sql_types::Date)]
+    day: NaiveDate,
+}
+
+/// Days on which `$1` solved that day's puzzle, on the day itself and without help.
+const SOLVED_DAYS: &str = "SELECT d.day FROM daily_puzzles d
+    JOIN puzzle_attempts a ON a.puzzle_id = d.puzzle_id
+    WHERE a.user_id = $1 AND a.rated AND a.solved AND NOT a.hinted
+      AND (a.created_at AT TIME ZONE 'UTC')::date = d.day
+    ORDER BY d.day DESC";
+
+const ARCHIVE_PAGE: i64 = 30;
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct DailyStreak {
+    pub current: i64,
+    pub best: i64,
+}
+
+#[derive(Debug, Clone)]
+pub struct ArchivedDaily {
+    pub day: NaiveDate,
+    pub puzzle: Puzzle,
+    /// The viewer's first try: solved without help, or missed.
+    pub my_result: Option<bool>,
+}
+
+impl DailyPuzzle {
+    /// Puzzles of the day up to `today`, newest first, with how `user`'s first try went.
+    pub async fn archive(
+        today: NaiveDate,
+        user: Option<Uuid>,
+        page: i64,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<ArchivedDaily>, DbError> {
+        let rows: Vec<(NaiveDate, Puzzle)> = daily_puzzles::table
+            .inner_join(puzzles::table)
+            .filter(daily_day.le(today))
+            .order(daily_day.desc())
+            .offset(page.max(0) * ARCHIVE_PAGE)
+            .limit(ARCHIVE_PAGE)
+            .select((daily_day, Puzzle::as_select()))
+            .load(conn)
+            .await?;
+        let results: Vec<(Uuid, bool, bool)> = match user {
+            Some(user) => {
+                let ids: Vec<Uuid> = rows.iter().map(|(_, puzzle)| puzzle.id).collect();
+                puzzle_attempts::table
+                    .filter(attempt_user_id.eq(user))
+                    .filter(attempt_rated.eq(true))
+                    .filter(attempt_puzzle_id.eq_any(ids))
+                    .select((attempt_puzzle_id, attempt_solved, attempt_hinted))
+                    .load(conn)
+                    .await?
+            }
+            None => Vec::new(),
+        };
+        Ok(rows
+            .into_iter()
+            .map(|(day, puzzle)| {
+                let my_result = results
+                    .iter()
+                    .find(|(id, _, _)| *id == puzzle.id)
+                    .map(|(_, was_solved, was_hinted)| *was_solved && !*was_hinted);
+                ArchivedDaily {
+                    day,
+                    puzzle,
+                    my_result,
+                }
+            })
+            .collect())
+    }
+
+    /// Days in a row `user` solved the puzzle of the day on its day, and the longest such run.
+    pub async fn streak(
+        user: Uuid,
+        today: NaiveDate,
+        conn: &mut DbConn<'_>,
+    ) -> Result<DailyStreak, DbError> {
+        let days: Vec<SolvedDay> = diesel::sql_query(SOLVED_DAYS)
+            .bind::<diesel::sql_types::Uuid, _>(user)
+            .load(conn)
+            .await?;
+        let days: Vec<NaiveDate> = days.into_iter().map(|solved| solved.day).collect();
+        Ok(streak_from(&days, today))
+    }
+}
+
+/// `days` newest first. Today still counts as open, so a streak ending yesterday is current.
+fn streak_from(days: &[NaiveDate], today: NaiveDate) -> DailyStreak {
+    let mut best = 0;
+    let mut run = 0;
+    let mut previous: Option<NaiveDate> = None;
+    for day in days {
+        run = match previous {
+            Some(later) if later.pred_opt() == Some(*day) => run + 1,
+            _ => 1,
+        };
+        best = best.max(run);
+        previous = Some(*day);
+    }
+    let mut current = 0;
+    let mut expected = match days.first() {
+        Some(first) if *first == today => Some(today),
+        _ => today.pred_opt(),
+    };
+    for day in days {
+        if Some(*day) != expected {
+            break;
+        }
+        current += 1;
+        expected = day.pred_opt();
+    }
+    DailyStreak { current, best }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn day(d: u32) -> NaiveDate {
+        NaiveDate::from_ymd_opt(2026, 10, d).expect("date")
+    }
+
+    #[test]
+    fn a_streak_counts_back_from_today_or_yesterday() {
+        assert_eq!(
+            streak_from(&[day(14), day(13), day(12), day(9), day(8)], day(14)),
+            DailyStreak {
+                current: 3,
+                best: 3
+            }
+        );
+        assert_eq!(
+            streak_from(&[day(13), day(12)], day(14)),
+            DailyStreak {
+                current: 2,
+                best: 2
+            }
+        );
+        assert_eq!(
+            streak_from(&[day(12), day(5), day(4), day(3), day(2)], day(14)),
+            DailyStreak {
+                current: 0,
+                best: 4
+            }
+        );
+        assert_eq!(streak_from(&[], day(14)), DailyStreak::default());
     }
 }

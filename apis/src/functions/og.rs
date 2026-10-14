@@ -146,8 +146,8 @@ fn puzzle_card(puzzle: &db_lib::models::Puzzle, day: Option<chrono::NaiveDate>) 
             "{}% solve it",
             (puzzle.solves * 100 / puzzle.plays).clamp(0, 100)
         ));
-    } else if let Some(stars) = puzzle.average_stars().filter(|_| puzzle.stars_count >= 3) {
-        facts.push(format!("Rated {stars:.1} / 5"));
+    } else if let Some(approval) = puzzle.approval().filter(|_| puzzle.votes() >= 3) {
+        facts.push(format!("{}% liked it", (approval * 100.0).round() as i64));
     }
     PuzzleCard {
         label: if day.is_some() {

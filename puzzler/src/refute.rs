@@ -20,6 +20,38 @@ pub fn refutation(
         .map(|action| notation::notation(state, &action)))
 }
 
+/// The defender's best move while a missed puzzle is played out: a defence that stops a win
+/// within `solver_moves_left` moves when there is one, otherwise the one that holds out longest,
+/// otherwise any legal move. `None` when it is not the defender's turn or the game is over.
+pub fn best_defence(
+    state: &State,
+    solver: hive_lib::Color,
+    solver_moves_left: u32,
+    budget: u64,
+) -> Option<String> {
+    let mut game = Game::from_state(state);
+    if game.is_over() || game.to_move == solver {
+        return None;
+    }
+    let plies = (2 * solver_moves_left.max(1)).saturating_sub(1);
+    let mut prover = Prover::new(budget);
+    let action = match prover.refutation(&mut game, plies) {
+        Ok(Some(action)) => Some(action),
+        _ => {
+            prover.reset_budget(budget);
+            match prover.longest_defence(&mut game, plies + 1) {
+                Ok(Some((action, _))) => Some(action),
+                _ => {
+                    let mut actions = Vec::new();
+                    game.actions(&mut actions);
+                    actions.first().copied()
+                }
+            }
+        }
+    };
+    action.map(|action| notation::notation(state, &action))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -382,13 +382,8 @@ fn motifs(start: &Game, actions: &[crate::game::Action]) -> Vec<String> {
                 Action::Place { .. } => {}
                 Action::Pass => {}
             }
-            if index == 0 && actions.len() > 1 {
-                let touches_queen = action
-                    .to()
-                    .zip(game.queen_position(solver.opposite_color()));
-                if !touches_queen.is_some_and(|(to, queen)| to.is_neighbor(queen)) {
-                    add("quietMove");
-                }
+            if index == 0 && actions.len() > 1 && crate::select::quiet_first_move(&game, action) {
+                add("quietMove");
             }
         }
         game.make(action);

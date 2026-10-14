@@ -45,7 +45,7 @@ pub fn OG() -> impl IntoView {
             .get()
             .strip_prefix("/puzzles/")
             .filter(|rest| !rest.is_empty() && !rest.contains('/'))
-            .filter(|rest| !matches!(*rest, "history" | "browse" | "daily"))
+            .filter(|rest| !matches!(*rest, "history" | "browse" | "daily" | "dailies"))
             .map(str::to_string)
     });
     let puzzle = Resource::new_blocking(
@@ -62,7 +62,11 @@ pub fn OG() -> impl IntoView {
         let pathname = location.pathname.get();
         matches!(
             pathname.as_str(),
-            "/puzzles" | "/puzzles/daily" | "/puzzles/browse" | "/puzzles/history"
+            "/puzzles"
+                | "/puzzles/daily"
+                | "/puzzles/dailies"
+                | "/puzzles/browse"
+                | "/puzzles/history"
         )
         .then_some(pathname)
     });

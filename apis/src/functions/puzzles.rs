@@ -1,5 +1,6 @@
 use crate::{
     responses::{
+        DailyArchiveRow,
         DailyPuzzleResponse,
         DailyScheduleResponse,
         PuzzleAttemptResponse,
@@ -7,7 +8,7 @@ use crate::{
         PuzzleRatingResponse,
         PuzzleResponse,
         PuzzleSetResponse,
-        PuzzleStarsResponse,
+        PuzzleVoteResponse,
     },
     security::csrf::CsrfClient,
 };
@@ -41,15 +42,15 @@ async fn respond(
 ) -> Result<PuzzleResponse, ServerFnError> {
     use db_lib::models::{DailyPuzzle, Puzzle};
     let daily_day = DailyPuzzle::day_of(puzzle.id, conn).await?;
-    let (my_stars, attempted) = match user {
+    let (my_vote, attempted) = match user {
         Some(user) => (
-            Puzzle::stars_of(puzzle.id, user, conn).await?,
+            Puzzle::vote_of(puzzle.id, user, conn).await?,
             Puzzle::attempted(puzzle.id, user, conn).await?,
         ),
         None => (None, false),
     };
     Ok(PuzzleResponse::from_model(
-        puzzle, my_stars, attempted, daily_day,
+        puzzle, my_vote, attempted, daily_day,
     ))
 }
 
@@ -155,21 +156,21 @@ pub async fn submit_puzzle_attempt(
 }
 
 #[server(client = CsrfClient)]
-pub async fn set_puzzle_stars(
+pub async fn vote_puzzle(
     nanoid: String,
-    stars: i16,
-) -> Result<PuzzleStarsResponse, ServerFnError> {
+    vote: Option<bool>,
+) -> Result<PuzzleVoteResponse, ServerFnError> {
     use crate::functions::{auth::identity::uuid, db::pool};
     use db_lib::{get_conn, models::Puzzle};
     let user = uuid().await?;
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
     let puzzle = Puzzle::find_by_nanoid(&nanoid, &mut conn).await?;
-    let updated = Puzzle::set_stars(puzzle.id, user, stars, &mut conn).await?;
-    Ok(PuzzleStarsResponse {
-        my_stars: stars,
-        average_stars: updated.average_stars(),
-        stars_count: updated.stars_count,
+    let updated = Puzzle::vote(puzzle.id, user, vote, &mut conn).await?;
+    Ok(PuzzleVoteResponse {
+        my_vote: vote,
+        likes: updated.likes,
+        dislikes: updated.dislikes,
     })
 }
 
@@ -191,7 +192,7 @@ pub async fn puzzle_history(
     let days = DailyPuzzle::days_of(&ids, &mut conn).await?;
     Ok(rows
         .into_iter()
-        .map(|(attempt, puzzle, my_stars)| PuzzleHistoryRow {
+        .map(|(attempt, puzzle, my_vote)| PuzzleHistoryRow {
             nanoid: puzzle.nanoid.clone(),
             game_type: puzzle.game_type.clone(),
             solver_moves: puzzle.solver_moves,
@@ -203,7 +204,7 @@ pub async fn puzzle_history(
                 .zip(attempt.rating_after)
                 .map(|(before, after)| (after - before).round() as i32),
             played_at: attempt.created_at,
-            my_stars,
+            my_vote,
             themes: puzzle.themes(),
             title: puzzle.title.clone(),
             history: puzzle.history.clone(),
@@ -228,11 +229,16 @@ pub async fn my_puzzle_rating() -> Result<Option<PuzzleRatingResponse>, ServerFn
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
     let rating = puzzle_rating_of(user, &mut conn).await?;
+    let streak = db_lib::models::DailyPuzzle::streak(user, today(), &mut conn).await?;
     Ok(Some(PuzzleRatingResponse {
         rating: rating.rating.round() as i32,
         played: rating.played,
         won: rating.won,
         provisional: Certainty::from_deviation(rating.deviation) != Certainty::Rankable,
+        streak: crate::responses::PuzzleStreakResponse {
+            current: streak.current,
+            best: streak.best,
+        },
     }))
 }
 
@@ -277,6 +283,11 @@ pub async fn puzzle_sets() -> Result<Vec<PuzzleSetResponse>, ServerFnError> {
 /// Nodes the refutation search may spend; positions this short need far fewer.
 #[cfg(feature = "ssr")]
 const REFUTATION_BUDGET: u64 = 3_000_000;
+/// How many solver moves ahead the opponent looks while a missed puzzle is played out.
+#[cfg(feature = "ssr")]
+const DEFENCE_HORIZON: i32 = 2;
+#[cfg(feature = "ssr")]
+const MAX_PLAYED_OUT_PLIES: usize = 200;
 
 /// After a wrong move: the opponent's answer that leaves no forced win in the moves the puzzle
 /// still allowed. `moves` are the moves played since the puzzle's start, `;`-separated.
@@ -316,6 +327,44 @@ pub async fn puzzle_refutation(
     Ok(found.ok().flatten())
 }
 
+/// While a missed puzzle is played out: the opponent's stubbornest answer to the moves played
+/// since the puzzle's start (`;`-separated), or None when it is not the opponent's turn.
+#[server(client = CsrfClient)]
+pub async fn puzzle_defence(
+    nanoid: String,
+    moves: String,
+) -> Result<Option<String>, ServerFnError> {
+    use crate::functions::db::pool;
+    use db_lib::{get_conn, models::Puzzle};
+    use shared_types::{play_token, start_state};
+    let pool = pool().await?;
+    let mut conn = get_conn(&pool).await?;
+    let puzzle = Puzzle::find_by_nanoid(&nanoid, &mut conn).await?;
+    let mut state = start_state(
+        &puzzle.game_type,
+        puzzle.history.as_deref(),
+        puzzle.position.as_deref(),
+    )
+    .map_err(ServerFnError::new)?;
+    let solver = state.turn_color;
+    let tokens: Vec<&str> = moves
+        .split(';')
+        .map(str::trim)
+        .filter(|token| !token.is_empty())
+        .take(MAX_PLAYED_OUT_PLIES)
+        .collect();
+    for token in &tokens {
+        play_token(&mut state, token).map_err(ServerFnError::new)?;
+    }
+    let solver_moves_made = tokens.len().div_ceil(2) as i32;
+    let left = (puzzle.solver_moves - solver_moves_made).max(DEFENCE_HORIZON) as u32;
+    tokio::task::spawn_blocking(move || {
+        puzzler::refute::best_defence(&state, solver, left, REFUTATION_BUDGET)
+    })
+    .await
+    .map_err(ServerFnError::new)
+}
+
 #[cfg(feature = "ssr")]
 fn today() -> chrono::NaiveDate {
     chrono::Utc::now().date_naive()
@@ -333,9 +382,18 @@ pub async fn daily_puzzle() -> Result<Option<DailyPuzzleResponse>, ServerFnError
     };
     let user = viewer().await;
     let tally = DailyPuzzle::tally(puzzle.id, daily.day, &mut conn).await?;
-    let my_result = match user {
-        Some(user) => DailyPuzzle::first_result(puzzle.id, user, &mut conn).await?,
-        None => None,
+    let (my_result, streak) = match user {
+        Some(user) => {
+            let streak = DailyPuzzle::streak(user, today(), &mut conn).await?;
+            (
+                DailyPuzzle::first_result(puzzle.id, user, &mut conn).await?,
+                Some(crate::responses::PuzzleStreakResponse {
+                    current: streak.current,
+                    best: streak.best,
+                }),
+            )
+        }
+        None => (None, None),
     };
     Ok(Some(DailyPuzzleResponse {
         day: daily.day,
@@ -343,6 +401,7 @@ pub async fn daily_puzzle() -> Result<Option<DailyPuzzleResponse>, ServerFnError
         tried: tally.tried,
         solved: tally.solved,
         my_result,
+        streak,
     }))
 }
 
@@ -439,4 +498,28 @@ pub async fn unqueue_daily_puzzle(nanoid: String) -> Result<(), ServerFnError> {
     let mut conn = get_conn(&pool).await?;
     ensure_admin(&mut conn).await?;
     Ok(DailyPuzzle::dequeue(&nanoid, &mut conn).await?)
+}
+
+/// Earlier puzzles of the day, newest first, 30 per page.
+#[server(client = CsrfClient)]
+pub async fn daily_archive(page: i64) -> Result<Vec<DailyArchiveRow>, ServerFnError> {
+    use crate::functions::db::pool;
+    use db_lib::{get_conn, models::DailyPuzzle};
+    let pool = pool().await?;
+    let mut conn = get_conn(&pool).await?;
+    let user = viewer().await;
+    Ok(DailyPuzzle::archive(today(), user, page, &mut conn)
+        .await?
+        .into_iter()
+        .map(|entry| DailyArchiveRow {
+            day: entry.day,
+            nanoid: entry.puzzle.nanoid,
+            game_type: entry.puzzle.game_type,
+            history: entry.puzzle.history,
+            position: entry.puzzle.position,
+            solver_moves: entry.puzzle.solver_moves,
+            rating: entry.puzzle.rating.round() as i32,
+            my_result: entry.my_result,
+        })
+        .collect())
 }

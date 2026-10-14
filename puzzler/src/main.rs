@@ -176,12 +176,13 @@ fn main() -> Result<()> {
 }
 
 fn filter(input: &PathBuf, out: &PathBuf, warm_ups: usize, warm_up_rating: f64) -> Result<()> {
-    use puzzler::select::{verdict, warm_ups as pick_warm_ups, Verdict};
+    use puzzler::select::{retag_quiet, verdict, warm_ups as pick_warm_ups, Verdict};
     use shared_types::PuzzleImport;
     use std::io::Write;
     let text = std::fs::read_to_string(input).with_context(|| format!("reading {input:?}"))?;
     let mut kept = Vec::new();
     let mut plain = Vec::new();
+    let mut retagged = 0;
     for (number, line) in text
         .lines()
         .enumerate()
@@ -189,6 +190,9 @@ fn filter(input: &PathBuf, out: &PathBuf, warm_ups: usize, warm_up_rating: f64) 
     {
         let mut puzzle: PuzzleImport =
             serde_json::from_str(line).with_context(|| format!("line {}", number + 1))?;
+        if retag_quiet(&mut puzzle).with_context(|| format!("line {}", number + 1))? {
+            retagged += 1;
+        }
         match verdict(&mut puzzle).with_context(|| format!("line {}", number + 1))? {
             Verdict::Keep => kept.push(puzzle),
             Verdict::Plain => plain.push(puzzle),
@@ -204,7 +208,7 @@ fn filter(input: &PathBuf, out: &PathBuf, warm_ups: usize, warm_up_rating: f64) 
     }
     writer.flush()?;
     println!(
-        "{} kept, {} plain wins in one dropped, {} of them kept as warm-ups",
+        "{} kept, {} plain wins in one dropped, {} of them kept as warm-ups, {retagged} quiet-move tags changed",
         kept.len(),
         dropped - easy.len(),
         easy.len()

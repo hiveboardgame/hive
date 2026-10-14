@@ -1,6 +1,9 @@
 use crate::{
     db_error::DbError,
     schema::{
+        daily_puzzle_queue::{self, puzzle_id as queued_puzzle_id},
+        daily_puzzles::{self, day as daily_day, puzzle_id as daily_puzzle_id},
+        games::{self, black_id, nanoid as game_nanoid, white_id},
         puzzle_attempts::{
             self,
             created_at as attempt_created_at,
@@ -13,27 +16,27 @@ use crate::{
             time_ms,
             user_id as attempt_user_id,
         },
-        puzzle_stars::{
+        puzzle_votes::{
             self,
-            puzzle_id as star_puzzle_id,
-            stars as star_value,
-            updated_at as star_updated_at,
-            user_id as star_user_id,
+            liked,
+            puzzle_id as vote_puzzle_id,
+            updated_at as vote_updated_at,
+            user_id as vote_user_id,
         },
         puzzles::{
             self,
             collection as puzzle_collection,
             deviation as puzzle_deviation,
+            dislikes,
             game_type as puzzle_game_type,
             hidden,
+            likes,
             nanoid as puzzle_nanoid,
             plays,
             rating as puzzle_rating,
             solver_moves as puzzle_solver_moves,
             solves,
             source_game,
-            stars_count,
-            stars_sum,
             themes as puzzle_themes,
             volatility as puzzle_volatility,
         },
@@ -62,8 +65,10 @@ use shared_types::{
     PuzzleHistoryFilter,
     PuzzleImport,
     PuzzleSelection,
-    AUTO_HIDE_MAX_STARS,
+    AUTO_HIDE_MAX_APPROVAL,
     AUTO_HIDE_MIN_VOTES,
+    MY_GAMES_COLLECTION,
+    OLD_DAILIES_COLLECTION,
     PUZZLE_START_DEVIATION,
     PUZZLE_START_RATING,
     PUZZLE_START_VOLATILITY,
@@ -84,10 +89,23 @@ pub struct PuzzleSetCount {
     pub solved_count: i64,
 }
 
-/// Prior for the popularity ranking: a puzzle starts as if this many players gave it this many stars.
-const STAR_PRIOR_VOTES: f64 = 5.0;
-const STAR_PRIOR_MEAN: f64 = 3.0;
+/// Prior for the popularity ranking: a puzzle starts as if this many players voted, this share of
+/// them liking it.
+const VOTE_PRIOR_VOTES: f64 = 5.0;
+const VOTE_PRIOR_APPROVAL: f64 = 0.6;
 const HISTORY_PAGE: i64 = 50;
+const OLD_DAILIES_COUNT: &str = "SELECT $1 AS key, count(*) AS total,
+        count(*) FILTER (WHERE a.solved AND NOT a.hinted) AS solved_count
+    FROM daily_puzzles d
+    JOIN puzzles p ON p.id = d.puzzle_id
+    LEFT JOIN puzzle_attempts a ON a.puzzle_id = p.id AND a.rated AND a.user_id = $2
+    WHERE NOT p.hidden AND d.day < $3";
+const MY_GAMES_COUNT: &str = "SELECT $1 AS key, count(*) AS total,
+        count(*) FILTER (WHERE a.solved AND NOT a.hinted) AS solved_count
+    FROM puzzles p
+    JOIN games g ON g.nanoid = p.source_game
+    LEFT JOIN puzzle_attempts a ON a.puzzle_id = p.id AND a.rated AND a.user_id = $2
+    WHERE NOT p.hidden AND (g.white_id = $2 OR g.black_id = $2)";
 /// A new player's wide deviation would otherwise swing hundreds of points on one try.
 const MAX_RATING_STEP: f64 = 120.0;
 
@@ -118,8 +136,8 @@ pub struct Puzzle {
     pub volatility: f64,
     pub plays: i32,
     pub solves: i32,
-    pub stars_sum: i32,
-    pub stars_count: i32,
+    pub likes: i32,
+    pub dislikes: i32,
     pub hidden: bool,
     pub created_at: DateTime<Utc>,
 }
@@ -196,8 +214,12 @@ impl Puzzle {
             .collect()
     }
 
-    pub fn average_stars(&self) -> Option<f64> {
-        (self.stars_count > 0).then(|| f64::from(self.stars_sum) / f64::from(self.stars_count))
+    pub fn votes(&self) -> i32 {
+        self.likes + self.dislikes
+    }
+
+    pub fn approval(&self) -> Option<f64> {
+        (self.votes() > 0).then(|| f64::from(self.likes) / f64::from(self.votes()))
     }
 
     /// Stores a verified puzzle; `Ok(None)` when its position (same kind) is already stored.
@@ -296,6 +318,8 @@ impl Puzzle {
 
     /// The next puzzle for someone rated `around`: unseen by `user`, within a rating window that
     /// widens until something is found, best-loved first with some shuffling so equals rotate.
+    /// Puzzles of the day (past, today's and queued) stay out of ordinary training; the old
+    /// dailies set serves them, fresh ones first and then repeats.
     pub async fn next(
         around: f64,
         user: Option<Uuid>,
@@ -303,30 +327,52 @@ impl Puzzle {
         exclude: &[Uuid],
         conn: &mut DbConn<'_>,
     ) -> Result<Option<Puzzle>, DbError> {
+        if let Some(found) = Self::pick(around, user, selection, exclude, true, conn).await? {
+            return Ok(Some(found));
+        }
+        if selection.collection.as_deref() == Some(OLD_DAILIES_COLLECTION) {
+            return Self::pick(around, user, selection, &[], false, conn).await;
+        }
+        Ok(None)
+    }
+
+    async fn pick(
+        around: f64,
+        user: Option<Uuid>,
+        selection: &PuzzleSelection,
+        exclude: &[Uuid],
+        fresh: bool,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Option<Puzzle>, DbError> {
         let around = around + selection.difficulty.rating_offset();
         let popularity = diesel::dsl::sql::<diesel::sql_types::Double>(&format!(
-            "((stars_sum + {mean} * {prior}) / (stars_count + {prior})) + random() * 0.75",
-            mean = STAR_PRIOR_MEAN,
-            prior = STAR_PRIOR_VOTES,
+            "((likes + {approval} * {prior}) / (likes + dislikes + {prior})) + random() * 0.15",
+            approval = VOTE_PRIOR_APPROVAL,
+            prior = VOTE_PRIOR_VOTES,
         ));
+        let mine = selection.collection.as_deref() == Some(MY_GAMES_COLLECTION);
+        let old_dailies = selection.collection.as_deref() == Some(OLD_DAILIES_COLLECTION);
         // A book is read in order, whatever the rating.
-        let in_order = selection.collection.is_some();
-        let windows: &[f64] = if in_order {
+        let in_order = selection.collection.is_some() && !mine && !old_dailies;
+        let windows: &[f64] = if selection.collection.is_some() {
             &[f64::MAX]
         } else {
             &[75.0, 150.0, 300.0, 600.0, 5000.0]
         };
+        let today = Utc::now().date_naive();
         for &window in windows {
             let mut query = puzzles::table
                 .filter(hidden.eq(false))
                 .filter(puzzle_rating.between(around - window, around + window))
-                .filter(puzzles::id.ne_all(exclude.to_vec()))
                 .select(Puzzle::as_select())
                 .into_boxed();
             if let Some(wanted) = selection.game_type.game_type() {
                 query = query.filter(puzzle_game_type.eq(wanted));
             }
-            if let Some((shortest, longest)) = selection.length.solver_moves().filter(|_| !in_order)
+            if let Some((shortest, longest)) = selection
+                .length
+                .solver_moves()
+                .filter(|_| selection.collection.is_none())
             {
                 query = query.filter(puzzle_solver_moves.ge(shortest));
                 if let Some(longest) = longest {
@@ -336,17 +382,52 @@ impl Puzzle {
             if let Some(theme) = &selection.theme {
                 query = query.filter(puzzle_themes.contains(vec![Some(theme.clone())]));
             }
-            if let Some(wanted) = &selection.collection {
-                query = query.filter(puzzle_collection.eq(wanted.clone()));
+            match (&selection.collection, user) {
+                (Some(_), Some(user)) if mine => {
+                    query = query.filter(
+                        source_game.eq_any(
+                            games::table
+                                .filter(white_id.eq(user).or(black_id.eq(user)))
+                                .select(game_nanoid.nullable()),
+                        ),
+                    );
+                }
+                (Some(_), None) if mine => return Ok(None),
+                (Some(_), _) if old_dailies => {
+                    query = query.filter(
+                        puzzles::id.eq_any(
+                            daily_puzzles::table
+                                .filter(daily_day.lt(today))
+                                .select(daily_puzzle_id),
+                        ),
+                    );
+                }
+                (Some(wanted), _) => {
+                    query = query.filter(puzzle_collection.eq(wanted.clone()));
+                }
+                (None, _) => {
+                    query = query
+                        .filter(diesel::dsl::not(
+                            puzzles::id.eq_any(daily_puzzles::table.select(daily_puzzle_id)),
+                        ))
+                        .filter(diesel::dsl::not(
+                            puzzles::id.eq_any(daily_puzzle_queue::table.select(queued_puzzle_id)),
+                        ));
+                }
             }
-            if let Some(user) = user {
-                query = query.filter(diesel::dsl::not(exists(
-                    puzzle_attempts::table
-                        .filter(attempt_user_id.eq(user))
-                        .filter(attempt_puzzle_id.eq(puzzles::id)),
-                )));
+            if fresh {
+                query = query.filter(puzzles::id.ne_all(exclude.to_vec()));
+                if let Some(user) = user {
+                    query = query.filter(diesel::dsl::not(exists(
+                        puzzle_attempts::table
+                            .filter(attempt_user_id.eq(user))
+                            .filter(attempt_puzzle_id.eq(puzzles::id)),
+                    )));
+                }
             }
-            let query = if in_order {
+            let query = if !fresh {
+                query.order(diesel::dsl::sql::<diesel::sql_types::Double>("random()"))
+            } else if in_order {
                 query.order((
                     diesel::dsl::sql::<diesel::sql_types::Nullable<diesel::sql_types::Integer>>(
                         "substring(source from '#([0-9]+)')::int",
@@ -372,7 +453,7 @@ impl Puzzle {
         user: Option<Uuid>,
         conn: &mut DbConn<'_>,
     ) -> Result<Vec<PuzzleSetCount>, DbError> {
-        Ok(diesel::sql_query(
+        let mut counts: Vec<PuzzleSetCount> = diesel::sql_query(
             "SELECT key, count(*) AS total, count(*) FILTER (WHERE solved) AS solved_count FROM (
                  SELECT unnest(p.themes || ARRAY['moves:' || LEAST(p.solver_moves, 4)::text,
                                                  'collection:' || p.collection]) AS key,
@@ -381,13 +462,32 @@ impl Puzzle {
                  LEFT JOIN puzzle_attempts a
                    ON a.puzzle_id = p.id AND a.rated AND a.user_id = $1
                  WHERE NOT p.hidden
+                   AND (p.collection IS NOT NULL OR NOT EXISTS (
+                       SELECT 1 FROM daily_puzzles d WHERE d.puzzle_id = p.id
+                       UNION ALL SELECT 1 FROM daily_puzzle_queue q WHERE q.puzzle_id = p.id))
              ) sets
              WHERE key IS NOT NULL
              GROUP BY key",
         )
         .bind::<diesel::sql_types::Nullable<diesel::sql_types::Uuid>, _>(user)
         .load(conn)
-        .await?)
+        .await?;
+        if let Some(user) = user {
+            let mine: PuzzleSetCount = diesel::sql_query(MY_GAMES_COUNT)
+                .bind::<diesel::sql_types::Text, _>(format!("collection:{MY_GAMES_COLLECTION}"))
+                .bind::<diesel::sql_types::Uuid, _>(user)
+                .get_result(conn)
+                .await?;
+            counts.push(mine);
+        }
+        let old_dailies: PuzzleSetCount = diesel::sql_query(OLD_DAILIES_COUNT)
+            .bind::<diesel::sql_types::Text, _>(format!("collection:{OLD_DAILIES_COLLECTION}"))
+            .bind::<diesel::sql_types::Nullable<diesel::sql_types::Uuid>, _>(user)
+            .bind::<diesel::sql_types::Date, _>(Utc::now().date_naive())
+            .get_result(conn)
+            .await?;
+        counts.push(old_dailies);
+        Ok(counts)
     }
 
     /// Records one try. The first try of a signed-in player is rated (a hint counts as a miss);
@@ -534,56 +634,61 @@ impl Puzzle {
         Ok(())
     }
 
-    /// Sets (or changes) a player's 0-5 stars and keeps the puzzle's sum and count in step. A
-    /// puzzle enough players dislike is hidden.
-    pub async fn set_stars(
+    /// Sets, changes or (with `None`) withdraws a player's 👍/👎 and keeps the puzzle's counts in
+    /// step. A puzzle enough players dislike is hidden.
+    pub async fn vote(
         puzzle_id: Uuid,
         user_id: Uuid,
-        stars: i16,
+        vote: Option<bool>,
         conn: &mut DbConn<'_>,
     ) -> Result<Puzzle, DbError> {
-        if !(0..=5).contains(&stars) {
-            return Err(DbError::InvalidInput {
-                info: "stars".to_string(),
-                error: format!("{stars} is not between 0 and 5"),
-            });
-        }
         conn.transaction::<_, DbError, _>(async move |tc| {
-            let previous: Option<i16> = puzzle_stars::table
-                .filter(star_user_id.eq(user_id))
-                .filter(star_puzzle_id.eq(puzzle_id))
-                .select(star_value)
+            let previous: Option<bool> = puzzle_votes::table
+                .filter(vote_user_id.eq(user_id))
+                .filter(vote_puzzle_id.eq(puzzle_id))
+                .select(liked)
                 .for_update()
                 .first(tc)
                 .await
                 .optional()?;
-            diesel::insert_into(puzzle_stars::table)
-                .values((
-                    star_user_id.eq(user_id),
-                    star_puzzle_id.eq(puzzle_id),
-                    star_value.eq(stars),
-                ))
-                .on_conflict((star_user_id, star_puzzle_id))
-                .do_update()
-                .set((star_value.eq(stars), star_updated_at.eq(Utc::now())))
-                .execute(tc)
-                .await?;
-            let (added_votes, added_sum) = match previous {
-                Some(old) => (0, i32::from(stars) - i32::from(old)),
-                None => (1, i32::from(stars)),
-            };
+            match vote {
+                Some(vote) => {
+                    diesel::insert_into(puzzle_votes::table)
+                        .values((
+                            vote_user_id.eq(user_id),
+                            vote_puzzle_id.eq(puzzle_id),
+                            liked.eq(vote),
+                        ))
+                        .on_conflict((vote_user_id, vote_puzzle_id))
+                        .do_update()
+                        .set((liked.eq(vote), vote_updated_at.eq(Utc::now())))
+                        .execute(tc)
+                        .await?;
+                }
+                None => {
+                    diesel::delete(
+                        puzzle_votes::table
+                            .filter(vote_user_id.eq(user_id))
+                            .filter(vote_puzzle_id.eq(puzzle_id)),
+                    )
+                    .execute(tc)
+                    .await?;
+                }
+            }
+            let count =
+                |side: bool| i32::from(vote == Some(side)) - i32::from(previous == Some(side));
             let puzzle: Puzzle = diesel::update(puzzles::table.find(puzzle_id))
                 .set((
-                    stars_count.eq(stars_count + added_votes),
-                    stars_sum.eq(stars_sum + added_sum),
+                    likes.eq(likes + count(true)),
+                    dislikes.eq(dislikes + count(false)),
                 ))
                 .returning(Puzzle::as_returning())
                 .get_result(tc)
                 .await?;
-            let disliked = puzzle.stars_count >= AUTO_HIDE_MIN_VOTES
+            let disliked = puzzle.votes() >= AUTO_HIDE_MIN_VOTES
                 && puzzle
-                    .average_stars()
-                    .is_some_and(|stars| stars < AUTO_HIDE_MAX_STARS);
+                    .approval()
+                    .is_some_and(|approval| approval < AUTO_HIDE_MAX_APPROVAL);
             if disliked && !puzzle.hidden {
                 return Ok(diesel::update(puzzles::table.find(puzzle_id))
                     .set(hidden.eq(true))
@@ -610,27 +715,27 @@ impl Puzzle {
         .await?)
     }
 
-    pub async fn stars_of(
+    pub async fn vote_of(
         puzzle_id: Uuid,
         user_id: Uuid,
         conn: &mut DbConn<'_>,
-    ) -> Result<Option<i16>, DbError> {
-        Ok(puzzle_stars::table
-            .filter(star_user_id.eq(user_id))
-            .filter(star_puzzle_id.eq(puzzle_id))
-            .select(star_value)
+    ) -> Result<Option<bool>, DbError> {
+        Ok(puzzle_votes::table
+            .filter(vote_user_id.eq(user_id))
+            .filter(vote_puzzle_id.eq(puzzle_id))
+            .select(liked)
             .first(conn)
             .await
             .optional()?)
     }
 
-    /// A player's puzzles, most recent first: the latest try of each, plus their stars.
+    /// A player's puzzles, most recent first: the latest try of each, plus their vote.
     pub async fn history(
         user_id: Uuid,
         filter: PuzzleHistoryFilter,
         page: i64,
         conn: &mut DbConn<'_>,
-    ) -> Result<Vec<(PuzzleAttempt, Puzzle, Option<i16>)>, DbError> {
+    ) -> Result<Vec<(PuzzleAttempt, Puzzle, Option<bool>)>, DbError> {
         let all: Vec<PuzzleAttempt> = puzzle_attempts::table
             .filter(attempt_user_id.eq(user_id))
             .order(attempt_created_at.desc())
@@ -661,17 +766,17 @@ impl Puzzle {
             .select(Puzzle::as_select())
             .load(conn)
             .await?;
-        let stars: Vec<(Uuid, i16)> = puzzle_stars::table
-            .filter(star_user_id.eq(user_id))
-            .filter(star_puzzle_id.eq_any(&ids))
-            .select((star_puzzle_id, star_value))
+        let votes: Vec<(Uuid, bool)> = puzzle_votes::table
+            .filter(vote_user_id.eq(user_id))
+            .filter(vote_puzzle_id.eq_any(&ids))
+            .select((vote_puzzle_id, liked))
             .load(conn)
             .await?;
         let rows = attempts
             .into_iter()
             .filter_map(|attempt| {
                 let puzzle = found.iter().find(|p| p.id == attempt.puzzle_id)?.clone();
-                let given = stars
+                let given = votes
                     .iter()
                     .find(|(id, _)| *id == attempt.puzzle_id)
                     .map(|(_, value)| *value);
@@ -681,7 +786,7 @@ impl Puzzle {
                 PuzzleHistoryFilter::All => true,
                 PuzzleHistoryFilter::Solved => attempt.solved && !attempt.hinted,
                 PuzzleHistoryFilter::Failed => !attempt.solved || attempt.hinted,
-                PuzzleHistoryFilter::Unstarred => given.is_none(),
+                PuzzleHistoryFilter::Unvoted => given.is_none(),
             })
             .skip((page.max(0) * HISTORY_PAGE) as usize)
             .take(HISTORY_PAGE as usize)

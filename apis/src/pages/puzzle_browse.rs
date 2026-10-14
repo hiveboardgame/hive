@@ -8,6 +8,7 @@ use crate::{
     responses::PuzzleSetResponse,
 };
 use leptos::prelude::*;
+use shared_types::{MY_GAMES_COLLECTION, OLD_DAILIES_COLLECTION};
 
 const BOOK: &str = "hive-puzzles-vol1";
 const THEMES: [(&str, &str); 7] = [
@@ -37,7 +38,15 @@ fn count(sets: &[PuzzleSetResponse], keys: &[&str]) -> (i64, i64) {
         })
 }
 
-fn cards(sets: &[PuzzleSetResponse]) -> (Vec<SetCard>, Vec<SetCard>, Vec<SetCard>) {
+fn cards(
+    sets: &[PuzzleSetResponse],
+) -> (
+    Vec<SetCard>,
+    Vec<SetCard>,
+    Vec<SetCard>,
+    Vec<SetCard>,
+    Vec<SetCard>,
+) {
     let card = |title: String, blurb: &str, href: String, keys: &[&str]| {
         let (total, solved) = count(sets, keys);
         SetCard {
@@ -48,6 +57,34 @@ fn cards(sets: &[PuzzleSetResponse]) -> (Vec<SetCard>, Vec<SetCard>, Vec<SetCard
             solved,
         }
     };
+    let mine_key = format!("collection:{MY_GAMES_COLLECTION}");
+    let mine: Vec<SetCard> = vec![card(
+        collection_label(MY_GAMES_COLLECTION),
+        "Wins that came up in games you played, missed or found.",
+        format!("/puzzles?collection={MY_GAMES_COLLECTION}"),
+        &[mine_key.as_str()],
+    )]
+    .into_iter()
+    .filter(|card| card.total > 0)
+    .collect();
+    let old_key = format!("collection:{OLD_DAILIES_COLLECTION}");
+    let dailies: Vec<SetCard> = vec![
+        card(
+            collection_label(OLD_DAILIES_COLLECTION),
+            "Earlier puzzles of the day: new ones first, then they come round again.",
+            format!("/puzzles?collection={OLD_DAILIES_COLLECTION}"),
+            &[old_key.as_str()],
+        ),
+        card(
+            "Browse by date".to_string(),
+            "Every puzzle of the day so far, newest first.",
+            "/puzzles/dailies".to_string(),
+            &[old_key.as_str()],
+        ),
+    ]
+    .into_iter()
+    .filter(|card| card.total > 0)
+    .collect();
     let book_key = format!("collection:{BOOK}");
     let book: Vec<SetCard> = vec![card(
         collection_label(BOOK),
@@ -93,7 +130,7 @@ fn cards(sets: &[PuzzleSetResponse]) -> (Vec<SetCard>, Vec<SetCard>, Vec<SetCard
         })
         .filter(|card| card.total > 0)
         .collect();
-    (book, lengths, themes)
+    (mine, dailies, book, lengths, themes)
 }
 
 #[component]
@@ -123,9 +160,12 @@ pub fn PuzzleBrowse() -> impl IntoView {
                 {move || Suspend::new(async move {
                     match sets.await {
                         Ok(sets) => {
-                            let (book, lengths, themes) = cards(&sets);
+                            let (mine, dailies, book, lengths, themes) = cards(&sets);
                             view! {
                                 <div class="flex flex-col gap-8">
+                                    {(!mine.is_empty()).then(|| section("From your games", mine))}
+                                    {(!dailies.is_empty())
+                                        .then(|| section("Puzzles of the day", dailies))}
                                     {(!book.is_empty()).then(|| section("The puzzle book", book))}
                                     {(!lengths.is_empty()).then(|| section("By length", lengths))}
                                     {(!themes.is_empty()).then(|| section("By idea", themes))}

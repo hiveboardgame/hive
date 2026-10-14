@@ -149,3 +149,53 @@ mod tests {
         assert_eq!(verdict(&mut plain).expect("verdict"), Verdict::Keep);
     }
 }
+
+/// A first move is quiet when it neither lands next to the enemy Queen nor threatens to win on
+/// the very next move: the win comes from the setup, not from an obvious threat.
+pub fn quiet_first_move(start: &Game, first: &Action) -> bool {
+    let solver = start.to_move;
+    let beside_queen = first
+        .to()
+        .zip(start.queen_position(solver.opposite_color()))
+        .is_some_and(|(to, queen)| to.is_neighbor(queen));
+    if beside_queen {
+        return false;
+    }
+    let mut game = start.clone();
+    game.make(first);
+    game.make(&Action::Pass);
+    let mut wins = Vec::new();
+    game.immediate_wins(&mut wins);
+    wins.is_empty()
+}
+
+/// Recomputes the `quietMove` tag from the start and the first solver move; true when it changed.
+pub fn retag_quiet(puzzle: &mut PuzzleImport) -> Result<bool> {
+    let was_quiet = puzzle.themes.iter().any(|theme| theme == "quietMove");
+    let quiet = shared_types::solver_moves(&puzzle.solution) > 1 && {
+        let state = start_state(
+            &puzzle.game_type,
+            puzzle.history.as_deref(),
+            puzzle.position.as_deref(),
+        )
+        .context("puzzle start")?;
+        let first = puzzle.solution.first().context("empty solution")?;
+        let (piece, to) = shared_types::resolve_move(&state, first)
+            .map_err(anyhow::Error::msg)?
+            .context("first solution move is a pass")?;
+        let action = match state.board.position_of_piece(piece) {
+            Some(from) => Action::Move { piece, from, to },
+            None => Action::Place { piece, to },
+        };
+        quiet_first_move(&Game::from_state(&state), &action)
+    };
+    if quiet == was_quiet {
+        return Ok(false);
+    }
+    if quiet {
+        puzzle.themes.push("quietMove".to_string());
+    } else {
+        puzzle.themes.retain(|theme| theme != "quietMove");
+    }
+    Ok(true)
+}

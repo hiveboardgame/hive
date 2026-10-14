@@ -21,6 +21,7 @@ const TEXT_LEFT: f32 = 724.0;
 const TEAL: &str = "#40afa1";
 const AMBER: &str = "#e9ac43";
 const RED: &str = "#d61a35";
+const GREEN: &str = "#3cb043";
 const MUTED: &str = "#9fb0b6";
 const RESERVE_ORDER: [Bug; 8] = [
     Bug::Queen,
@@ -151,8 +152,10 @@ fn puzzle_card_svg(state: &State, card: &PuzzleCard) -> String {
            </linearGradient>\
            <radialGradient id=\"glow\"><stop offset=\"0\" stop-color=\"{TEAL}\" stop-opacity=\"0.22\"/>\
              <stop offset=\"1\" stop-color=\"{TEAL}\" stop-opacity=\"0\"/></radialGradient>\
-           <radialGradient id=\"target\"><stop offset=\"0\" stop-color=\"{RED}\" stop-opacity=\"0.7\"/>\
+           <radialGradient id=\"target\"><stop offset=\"0.45\" stop-color=\"{RED}\" stop-opacity=\"0.9\"/>\
              <stop offset=\"1\" stop-color=\"{RED}\" stop-opacity=\"0\"/></radialGradient>\
+           <radialGradient id=\"own\"><stop offset=\"0.45\" stop-color=\"{GREEN}\" stop-opacity=\"0.85\"/>\
+             <stop offset=\"1\" stop-color=\"{GREEN}\" stop-opacity=\"0\"/></radialGradient>\
            <pattern id=\"comb\" width=\"56\" height=\"97\" patternUnits=\"userSpaceOnUse\">\
              <path d=\"M28 0L56 16.2V48.5L28 64.7L0 48.5V16.2ZM28 64.7V97\" fill=\"none\" \
                stroke=\"#ffffff\" stroke-opacity=\"0.045\" stroke-width=\"1.5\"/>\
@@ -178,7 +181,7 @@ fn board_group(state: &State, target: Color) -> String {
     let model = build_static_render_model(&state.board);
     let tiles = three_d_options();
     let mut glyphs = String::new();
-    let mut queen = None;
+    let mut queens = String::new();
     let last_moved = state
         .history
         .moves
@@ -196,8 +199,15 @@ fn board_group(state: &State, target: Color) -> String {
             min_y = min_y.min(cy);
             max_x = max_x.max(cx);
             max_y = max_y.max(cy);
-            if piece.bug() == Bug::Queen && piece.color() == target {
-                queen = Some((cx, cy));
+            if piece.bug() == Bug::Queen && layer.level == 0 {
+                let gradient = if piece.color() == target {
+                    "target"
+                } else {
+                    "own"
+                };
+                queens.push_str(&format!(
+                    "<circle cx=\"{cx:.2}\" cy=\"{cy:.2}\" r=\"48\" fill=\"url(#{gradient})\"/>"
+                ));
             }
             if Some(*piece) == last_moved {
                 last = Some((cx, cy));
@@ -220,17 +230,6 @@ fn board_group(state: &State, target: Color) -> String {
         .min((HEIGHT - 2.0 * BOARD_PADDING) / content_h)
         .min(MAX_BOARD_SCALE);
     let (center_x, center_y) = ((min_x + max_x) / 2.0, (min_y + max_y) / 2.0);
-    let (glow, ring) = match queen {
-        Some((x, y)) => (
-            format!("<circle cx=\"{x:.2}\" cy=\"{y:.2}\" r=\"58\" fill=\"url(#target)\"/>"),
-            format!(
-                "<path d=\"{}\" fill=\"none\" stroke=\"{RED}\" stroke-width=\"3.5\" \
-                 stroke-linejoin=\"round\"/>",
-                hexagon(x, y, 31.0)
-            ),
-        ),
-        None => (String::new(), String::new()),
-    };
     let last = last
         .map(|(x, y)| {
             format!(
@@ -242,7 +241,7 @@ fn board_group(state: &State, target: Color) -> String {
         .unwrap_or_default();
     format!(
         "<g transform=\"translate({:.2},{:.2}) scale({scale:.4}) translate({:.2},{:.2})\">\
-         {glow}{glyphs}{last}{ring}</g>",
+         {queens}{glyphs}{last}</g>",
         BOARD_RIGHT / 2.0,
         HEIGHT / 2.0,
         -center_x,

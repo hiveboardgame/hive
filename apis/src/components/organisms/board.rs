@@ -8,6 +8,7 @@ use crate::{
             board_pieces::BoardPieces,
             drag_ghost::DragGhost,
             history_pieces::HistoryPieces,
+            piece_glows::{PieceGlowLayer, PieceGlows},
         },
     },
     hiveground::HivegroundInteraction,
@@ -260,6 +261,7 @@ pub fn Board(
     let game_state = expect_context::<GameStateStore>();
     let analysis = use_context::<AnalysisContext>();
     let annotations = use_context::<AnnotationsSignal>();
+    let glows = use_context::<PieceGlows>();
     // Hex where the current draw gesture started (set on the draw-button press).
     let annotation_start = RwSignal::new(None::<Position>);
     // Left-press client point, so a click (no drag) while drawing can clear all.
@@ -800,6 +802,7 @@ pub fn Board(
                     pointer-events="all"
                 />
                 <g transform=transform node_ref=g_ref>
+                    {glows.map(|glows| view! { <PieceGlowLayer glows /> })}
                     {move || {
                         if board_view.get().is_history() && !last_turn() && !in_analysis {
                             Either::Left(

@@ -35,6 +35,7 @@ pub fn DailyPuzzleView() -> impl IntoView {
                             tried: daily.tried,
                             solved: daily.solved,
                             my_result: daily.my_result,
+                            streak: daily.streak.map(|streak| streak.current),
                         };
                         view! {
                             <PuzzleTrainer

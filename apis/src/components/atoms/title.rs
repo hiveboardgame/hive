@@ -6,6 +6,7 @@ use leptos_router::hooks::use_location;
 fn page_name(path: &str) -> Option<&'static str> {
     match path {
         "/puzzles/daily" => Some("Puzzle of the day"),
+        "/puzzles/dailies" => Some("Past puzzles of the day"),
         "/puzzles/browse" => Some("Puzzle sets"),
         "/puzzles/history" => Some("Puzzle history"),
         path if path == "/puzzles" || path.starts_with("/puzzles/") => Some("Hive puzzle"),

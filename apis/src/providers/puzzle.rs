@@ -1,6 +1,6 @@
 use crate::{
     common::{CurrentConfirm, MoveConfirm, PieceType},
-    functions::puzzles::{next_puzzle, puzzle_refutation, submit_puzzle_attempt},
+    functions::puzzles::{next_puzzle, puzzle_defence, puzzle_refutation, submit_puzzle_attempt},
     hiveground::{
         HivegroundAction,
         HivegroundActions,
@@ -15,7 +15,7 @@ use crate::{
     },
     responses::{PuzzleAttemptResponse, PuzzleResponse},
 };
-use hive_lib::{Bug, Color, Piece, Position, State};
+use hive_lib::{Bug, Color, GameStatus, Piece, Position, State};
 use leptos::{leptos_dom::helpers::set_timeout, prelude::*, task::spawn_local};
 use shared_types::{
     play_token,
@@ -32,7 +32,7 @@ use std::time::Duration;
 
 const SETUP_DELAY: Duration = Duration::from_millis(600);
 const REPLY_DELAY: Duration = Duration::from_millis(1300);
-const SOLUTION_STEP: Duration = Duration::from_millis(1400);
+const SOLUTION_STEP: Duration = Duration::from_millis(2400);
 const NOTICE_DURATION: Duration = Duration::from_millis(3500);
 const GUEST_SEEN_KEY: &str = "puzzles.seen";
 const GUEST_SEEN_LIMIT: usize = 200;
@@ -66,18 +66,13 @@ impl PuzzlePhase {
     }
 }
 
-#[derive(Clone)]
-struct Checkpoint {
-    state: State,
-    progress: PuzzleProgress,
-    opponent_move: Option<String>,
-}
-
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct DailyStatus {
     pub tried: i64,
     pub solved: i64,
     pub my_result: Option<bool>,
+    /// Days in a row the viewer solved the daily before today's, for signed-in viewers.
+    pub streak: Option<i64>,
 }
 
 #[derive(Clone, Copy)]
@@ -88,8 +83,6 @@ pub struct PuzzleContext {
     pub progress: RwSignal<PuzzleProgress>,
     /// The position the puzzle starts from, after the setup move.
     start: StoredValue<Option<State>>,
-    /// The position before the solver's latest move, so a miss can be retried from there.
-    checkpoint: StoredValue<Option<Checkpoint>>,
     pub hinted: RwSignal<bool>,
     pub hint_text: RwSignal<Option<String>>,
     /// 0 = no hint yet, 1 = the piece was named, 2 = the destination was shown too.
@@ -141,6 +134,12 @@ pub struct PuzzleContext {
     pub training: StoredValue<bool>,
     /// Today's tally on the puzzle-of-the-day page.
     pub daily: RwSignal<Option<DailyStatus>>,
+    /// After a miss the board stays open so the player can see how the position plays out.
+    pub playing_out: RwSignal<bool>,
+    /// Solver moves played since the miss.
+    pub played_out: RwSignal<u32>,
+    /// A difficulty for the next pick only, e.g. a harder puzzle after solving the daily.
+    pub one_off_difficulty: StoredValue<Option<PuzzleDifficulty>>,
 }
 
 impl PuzzleContext {
@@ -151,7 +150,6 @@ impl PuzzleContext {
             phase: RwSignal::new(PuzzlePhase::Loading),
             progress: RwSignal::new(PuzzleProgress::new(&[])),
             start: StoredValue::new(None),
-            checkpoint: StoredValue::new(None),
             hinted: RwSignal::new(false),
             hint_text: RwSignal::new(None),
             hint_level: RwSignal::new(0),
@@ -179,6 +177,9 @@ impl PuzzleContext {
             opponent_move: RwSignal::new(None),
             setup_note: StoredValue::new(None),
             daily: RwSignal::new(None),
+            playing_out: RwSignal::new(false),
+            played_out: RwSignal::new(0),
+            one_off_difficulty: StoredValue::new(None),
             reveal_armed: RwSignal::new(false),
             first_result: RwSignal::new(None),
             ever_solved: RwSignal::new(false),
@@ -261,7 +262,6 @@ impl PuzzleContext {
         let lines = puzzle.lines.clone();
         let setup = before_setup(&puzzle);
         self.start.set_value(Some(start.clone()));
-        self.checkpoint.set_value(None);
         batch(|| {
             self.progress.set(PuzzleProgress::new(&lines));
             self.hinted.set(false);
@@ -276,6 +276,8 @@ impl PuzzleContext {
             self.first_result.set(None);
             self.refuted.set(false);
             self.wrong_at.set(None);
+            self.playing_out.set(false);
+            self.played_out.set(0);
             self.reveal_armed.set(false);
             self.ever_solved.set(false);
             self.attempt.set(None);
@@ -338,23 +340,9 @@ impl PuzzleContext {
         }
     }
 
-    /// After a miss: back to just before the wrong move. Practice only, the result stands.
+    /// After a miss: the whole puzzle again from its start. Practice only, the result stands.
     pub fn retry(&self) {
-        let Some(checkpoint) = self.checkpoint.get_value() else {
-            self.restart();
-            return;
-        };
-        self.bump();
-        batch(|| {
-            self.game_state.reset_with_state(checkpoint.state);
-            self.game_state.clear_selection();
-            self.progress.set(checkpoint.progress);
-            self.opponent_move.set(checkpoint.opponent_move);
-            self.refuted.set(false);
-            self.wrong_at.set(None);
-            self.notice.set(None);
-            self.phase.set(PuzzlePhase::Solving);
-        });
+        self.restart();
     }
 
     /// From the very start again (after a solve or the solution); never rated again.
@@ -364,7 +352,6 @@ impl PuzzleContext {
             return;
         };
         let lines = self.lines();
-        self.checkpoint.set_value(None);
         batch(|| {
             self.game_state.reset_with_state(start);
             self.game_state.clear_selection();
@@ -375,6 +362,8 @@ impl PuzzleContext {
             self.opponent_move.set(self.setup_note.get_value());
             self.refuted.set(false);
             self.wrong_at.set(None);
+            self.playing_out.set(false);
+            self.played_out.set(0);
             self.reveal_step.set(0);
             self.hint_level.set(0);
             if self.reported.get_untracked() {
@@ -409,26 +398,35 @@ impl PuzzleContext {
     }
 
     fn play_on_board(&self, token: &str) {
-        self.game_state.state().update(|state| {
+        self.game_state.state().maybe_update(|state| {
+            let already_passed = split_move(token).0 == "pass"
+                && state
+                    .history
+                    .moves
+                    .last()
+                    .is_some_and(|(piece, _)| piece == "pass");
+            if already_passed {
+                return false;
+            }
             if let Err(error) = play_token(state, token) {
                 log::warn!("puzzle move {token} does not play: {error}");
             }
+            true
         });
     }
 
     /// Judges the solver's move. A wrong move is shown, then the puzzle counts as failed.
     pub fn try_move(&self, piece: Piece, target: Position) {
+        if self.phase.get_untracked() == PuzzlePhase::Failed && self.playing_out.get_untracked() {
+            self.play_out(piece, target);
+            return;
+        }
         if self.phase.get_untracked() != PuzzlePhase::Solving {
             return;
         }
         let lines = self.lines();
         let before = self.game_state.state().get_untracked();
         let mut progress = self.progress.get_untracked();
-        self.checkpoint.set_value(Some(Checkpoint {
-            state: before.clone(),
-            progress: progress.clone(),
-            opponent_move: self.opponent_move.get_untracked(),
-        }));
         let verdict = progress.judge(&lines, &before, piece, target);
         self.moved.set(true);
         self.game_state.clear_selection();
@@ -474,15 +472,11 @@ impl PuzzleContext {
         }
     }
 
-    /// Asks the server for the answer that stops the win and plays it after a short pause, so the
-    /// player sees why the move failed.
-    fn refute(&self) {
-        let Some(nanoid) = self
+    /// The puzzle and the moves played on the board since its start, as the server expects them.
+    fn moves_since_start(&self) -> Option<(String, String)> {
+        let nanoid = self
             .puzzle
-            .with_untracked(|puzzle| puzzle.as_ref().map(|p| p.nanoid.clone()))
-        else {
-            return;
-        };
+            .with_untracked(|puzzle| puzzle.as_ref().map(|p| p.nanoid.clone()))?;
         let from = self
             .start
             .with_value(|start| start.as_ref().map(|state| state.history.moves.len()))
@@ -494,18 +488,29 @@ impl PuzzleContext {
                 .collect::<Vec<_>>()
                 .join(";")
         });
+        Some((nanoid, moves))
+    }
+
+    /// Asks the server for the answer that stops the win and plays it after a short pause, so the
+    /// player sees why the move failed. Then the board stays open to play the position out.
+    fn refute(&self) {
+        let Some((nanoid, moves)) = self.moves_since_start() else {
+            return;
+        };
         let generation = self.generation.get_value();
         let context = *self;
         spawn_local(async move {
-            let Ok(Some(answer)) = puzzle_refutation(nanoid, moves).await else {
-                return;
-            };
+            let answer = puzzle_refutation(nanoid, moves).await;
             if !context.alive()
                 || !context.is_current(generation)
                 || context.phase.get_untracked() != PuzzlePhase::Failed
             {
                 return;
             }
+            let Ok(Some(answer)) = answer else {
+                context.open_for_play_out();
+                return;
+            };
             set_timeout(
                 move || {
                     if !context.is_current(generation)
@@ -516,6 +521,65 @@ impl PuzzleContext {
                     context.note_opponent(&answer);
                     context.play_on_board(&answer);
                     context.refuted.set(true);
+                    context.open_for_play_out();
+                },
+                REPLY_DELAY,
+            );
+        });
+    }
+
+    fn open_for_play_out(&self) {
+        let over = self
+            .game_state
+            .state()
+            .with_untracked(|state| matches!(state.game_status, GameStatus::Finished(_)));
+        self.playing_out.set(!over);
+    }
+
+    /// After a miss the player may keep going; the opponent answers with its stubbornest defence.
+    fn play_out(&self, piece: Piece, target: Position) {
+        self.game_state.clear_selection();
+        self.notice.set(None);
+        self.wrong_at.set(None);
+        self.game_state.play_turn(piece, target);
+        self.played_out.update(|moves| *moves += 1);
+        self.playing_out.set(false);
+        let (over, solver_again) = self.game_state.state().with_untracked(|state| {
+            (
+                matches!(state.game_status, GameStatus::Finished(_)),
+                state.turn_color == self.solver(),
+            )
+        });
+        if over {
+            return;
+        }
+        if solver_again {
+            self.note_opponent("pass");
+            self.playing_out.set(true);
+            return;
+        }
+        let Some((nanoid, moves)) = self.moves_since_start() else {
+            return;
+        };
+        let generation = self.generation.get_value();
+        let context = *self;
+        spawn_local(async move {
+            let answer = puzzle_defence(nanoid, moves).await;
+            if !context.alive() || !context.is_current(generation) {
+                return;
+            }
+            set_timeout(
+                move || {
+                    if !context.is_current(generation)
+                        || context.phase.get_untracked() != PuzzlePhase::Failed
+                    {
+                        return;
+                    }
+                    if let Ok(Some(answer)) = answer {
+                        context.note_opponent(&answer);
+                        context.play_on_board(&answer);
+                    }
+                    context.open_for_play_out();
                 },
                 REPLY_DELAY,
             );
@@ -728,7 +792,11 @@ impl PuzzleContext {
         self.phase.set(PuzzlePhase::Loading);
         let context = *self;
         let game_type = self.game_type.get_untracked();
-        let difficulty = self.difficulty.get_untracked();
+        let difficulty = self
+            .one_off_difficulty
+            .try_update_value(Option::take)
+            .flatten()
+            .unwrap_or_else(|| self.difficulty.get_untracked());
         let length = self.length.get_untracked();
         let theme = self.theme.get_untracked().unwrap_or_default();
         let collection = self.collection.get_untracked().unwrap_or_default();
@@ -805,8 +873,18 @@ impl PuzzleContext {
     }
 
     fn note_opponent(&self, token: &str) {
-        let state = self.game_state.state().get_untracked();
-        self.opponent_move.set(Some(last_move_note(&state, token)));
+        // The engine passes for a side with no move as soon as the move before it is played, so by
+        // now the turn is already back with the solver.
+        let note = if split_move(token).0 == "pass" {
+            format!(
+                "{} had to pass.",
+                color_label(self.solver().opposite_color())
+            )
+        } else {
+            let state = self.game_state.state().get_untracked();
+            last_move_note(&state, token)
+        };
+        self.opponent_move.set(Some(note));
     }
 
     /// Show solution with a safety catch: on a rated try the first press only arms it. After a
@@ -846,7 +924,8 @@ impl PuzzleContext {
 
     /// Whether the side to move on the board is the solver and the puzzle is live.
     pub fn solver_to_move(&self) -> bool {
-        self.phase.get() == PuzzlePhase::Solving
+        (self.phase.get() == PuzzlePhase::Solving
+            || (self.phase.get() == PuzzlePhase::Failed && self.playing_out.get()))
             && self.game_state.state().with(|state| state.turn_color) == self.solver()
     }
 

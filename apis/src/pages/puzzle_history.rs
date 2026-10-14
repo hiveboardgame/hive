@@ -4,7 +4,7 @@ use crate::{
         molecules::{
             empty_state::EmptyState,
             puzzle_nav::PuzzleNav,
-            puzzle_stars::PuzzleStars,
+            puzzle_vote::PuzzleVote,
             thumbnail_pieces::ThumbnailPieces,
         },
     },
@@ -24,7 +24,7 @@ pub fn PuzzleHistory() -> impl IntoView {
         query.with(|query| match query.get_str("show") {
             Some("solved") => PuzzleHistoryFilter::Solved,
             Some("missed") => PuzzleHistoryFilter::Failed,
-            Some("unstarred") => PuzzleHistoryFilter::Unstarred,
+            Some("unvoted") => PuzzleHistoryFilter::Unvoted,
             _ => PuzzleHistoryFilter::All,
         })
     });
@@ -43,7 +43,7 @@ pub fn PuzzleHistory() -> impl IntoView {
             PuzzleHistoryFilter::All => "all",
             PuzzleHistoryFilter::Solved => "solved",
             PuzzleHistoryFilter::Failed => "missed",
-            PuzzleHistoryFilter::Unstarred => "unstarred",
+            PuzzleHistoryFilter::Unvoted => "unvoted",
         };
         navigate(
             &format!("/puzzles/history?show={show}&page={page}"),
@@ -95,7 +95,7 @@ pub fn PuzzleHistory() -> impl IntoView {
                     {tab(PuzzleHistoryFilter::All, "All")}
                     {tab(PuzzleHistoryFilter::Solved, "Solved")}
                     {tab(PuzzleHistoryFilter::Failed, "Missed")}
-                    {tab(PuzzleHistoryFilter::Unstarred, "Not starred")}
+                    {tab(PuzzleHistoryFilter::Unvoted, "No vote yet")}
                 </div>
                 <div class="flex gap-3 items-center text-sm">
                     <Suspense>
@@ -113,6 +113,14 @@ pub fn PuzzleHistory() -> impl IntoView {
                                                 rating.played,
                                                 rating.won,
                                             )}
+                                            {(rating.streak.best > 0)
+                                                .then(|| {
+                                                    format!(
+                                                        " · 🔥 daily streak {} (best {})",
+                                                        rating.streak.current,
+                                                        rating.streak.best,
+                                                    )
+                                                })}
                                         </span>
                                     }
                                 })
@@ -214,7 +222,7 @@ fn HistoryRow(row: PuzzleHistoryRow) -> impl IntoView {
         .filter(|theme| !theme.starts_with("winIn"))
         .map(|theme| crate::components::organisms::puzzle_trainer::theme_label(theme))
         .collect();
-    let my_stars = RwSignal::new(row.my_stars);
+    let my_vote = RwSignal::new(row.my_vote);
     let nanoid = row.nanoid.clone();
     let start = start_state(
         &row.game_type,
@@ -310,14 +318,7 @@ fn HistoryRow(row: PuzzleHistoryRow) -> impl IntoView {
                     </span>
                 </span>
             </a>
-            <div class="sm:w-80 shrink-0">
-                <PuzzleStars
-                    nanoid=Signal::derive(move || nanoid.clone())
-                    my_stars
-                    prominent=false
-                    compact=true
-                />
-            </div>
+            <PuzzleVote nanoid=Signal::derive(move || nanoid.clone()) my_vote />
         </li>
     }
 }

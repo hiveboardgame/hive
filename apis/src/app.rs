@@ -31,6 +31,7 @@ use crate::{
         play::Play,
         profile_view::{ProfileMe, ProfileView},
         puzzle_browse::PuzzleBrowse,
+        puzzle_dailies::PuzzleDailies,
         puzzle_history::PuzzleHistory,
         puzzles::{DailyPuzzleView, PuzzleView, Puzzles},
         register::Register,
@@ -302,6 +303,7 @@ pub fn App() -> impl IntoView {
                         <Route path=path!("/puzzles/history") view=|| view! { <PuzzleHistory /> } />
                         <Route path=path!("/puzzles/browse") view=|| view! { <PuzzleBrowse /> } />
                         <Route path=path!("/puzzles/daily") view=|| view! { <DailyPuzzleView /> } />
+                        <Route path=path!("/puzzles/dailies") view=|| view! { <PuzzleDailies /> } />
                         <Route path=path!("/puzzles/:nanoid") view=|| view! { <PuzzleView /> } />
                         <Route path=path!("/rules") view=|| view! { <Rules /> } />
                         <Route path=path!("/strategy") view=|| view! { <Strategy /> } />

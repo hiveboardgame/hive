@@ -41,6 +41,8 @@ struct Entry {
 const KILLER_BONUS: i32 = 1_000;
 const MAX_TT_ENTRIES: usize = 4_000_000;
 const MAX_PLY: usize = 32;
+/// How much longer than the puzzle a defence is tested, to pick the stubbornest one.
+const DEEPER_DEFENCE_PLIES: u32 = 4;
 
 pub struct Prover {
     tt: HashMap<u64, Entry, BuildHasherDefault<KeyHasher>>,
@@ -160,9 +162,11 @@ impl Prover {
         Ok(best)
     }
 
-    /// A defence after which the attacker (the side that just moved) has no forced win within
+    /// The defence after which the attacker (the side that just moved) has no forced win within
     /// `attacker_plies` any more; `None` when every defence still loses that fast. A move that wins
-    /// outright for the defender comes first.
+    /// outright for the defender comes first. Among the defences that hold, the one that also holds
+    /// against the longest attacks is chosen, so the answer is the stubbornest rather than the
+    /// first found.
     pub fn refutation(
         &mut self,
         game: &mut Game,
@@ -171,27 +175,52 @@ impl Prover {
         let defender = game.to_move;
         let mut actions = Vec::new();
         game.actions(&mut actions);
-        let mut holding = None;
+        let mut holding = Vec::new();
         for action in actions {
             match game.result_after(&action) {
                 GameResult::Winner(color) if color == defender => return Ok(Some(action)),
                 GameResult::Winner(_) => continue,
                 _ => {}
             }
-            if holding.is_some() {
-                continue;
-            }
-            let holds = attacker_plies == 0 || {
-                let undo = game.make(&action);
-                let win = self.win_within(game, attacker_plies, 1);
-                game.unmake(undo);
-                win?.is_none()
-            };
-            if holds {
-                holding = Some(action);
+            match self.holds(game, &action, attacker_plies) {
+                Ok(true) => holding.push(action),
+                Ok(false) => {}
+                Err(out) if holding.is_empty() => return Err(out),
+                Err(_) => return Ok(stubbornest(&holding)),
             }
         }
-        Ok(holding)
+        let mut plies = attacker_plies + 2;
+        while holding.len() > 1 && plies <= attacker_plies + DEEPER_DEFENCE_PLIES {
+            let mut deeper = Vec::new();
+            for action in &holding {
+                match self.holds(game, action, plies) {
+                    Ok(true) => deeper.push(*action),
+                    Ok(false) => {}
+                    Err(_) => return Ok(stubbornest(&holding)),
+                }
+            }
+            if deeper.is_empty() {
+                break;
+            }
+            holding = deeper;
+            plies += 2;
+        }
+        Ok(stubbornest(&holding))
+    }
+
+    fn holds(
+        &mut self,
+        game: &mut Game,
+        action: &Action,
+        attacker_plies: u32,
+    ) -> Result<bool, OutOfBudget> {
+        if attacker_plies == 0 {
+            return Ok(true);
+        }
+        let undo = game.make(action);
+        let win = self.win_within(game, attacker_plies, 1);
+        game.unmake(undo);
+        Ok(win?.is_none())
     }
 
     fn tick(&mut self) -> Result<(), OutOfBudget> {
@@ -423,6 +452,15 @@ impl Prover {
         }
         self.scores[ply] = scores;
     }
+}
+
+/// A real move over a pass when both hold equally long.
+fn stubbornest(holding: &[Action]) -> Option<Action> {
+    holding
+        .iter()
+        .find(|action| **action != Action::Pass)
+        .or(holding.first())
+        .copied()
 }
 
 #[cfg(test)]

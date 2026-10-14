@@ -25,7 +25,14 @@ mod user;
 pub use challenge::{Challenge, NewChallenge};
 pub use chat_channel::ChatChannelKind;
 pub use chat_message::ChatMessage;
-pub use daily_puzzle::{DailyEntry, DailyPuzzle, DailyTally, QueuedPuzzle};
+pub use daily_puzzle::{
+    ArchivedDaily,
+    DailyEntry,
+    DailyPuzzle,
+    DailyStreak,
+    DailyTally,
+    QueuedPuzzle,
+};
 pub use email_queue::{EmailQueueItem, NewEmailQueueItem};
 pub use email_request_log::{EmailRequestLog, NewEmailRequestLog};
 pub use email_state::EmailState;

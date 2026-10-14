@@ -2,7 +2,11 @@ use crate::{
     common::{CurrentConfirm, MoveConfirm},
     components::{
         layouts::base_layout::OrientationSignal,
-        molecules::{puzzle_nav::PuzzleNav, puzzle_stars::PuzzleStars},
+        molecules::{
+            piece_glows::{GlowColor, PieceGlows},
+            puzzle_nav::PuzzleNav,
+            puzzle_vote::PuzzleVote,
+        },
         organisms::{
             board::Board,
             reserve::{Alignment, Reserve},
@@ -22,9 +26,9 @@ use crate::{
         },
         Config,
     },
-    responses::{PuzzleResponse, PuzzleStarsResponse},
+    responses::{PuzzleResponse, PuzzleVoteResponse},
 };
-use hive_lib::Color;
+use hive_lib::{Bug, Color, Piece};
 use leptos::{prelude::*, task::spawn_local};
 use shared_types::{GameSpeed, PuzzleDifficulty, PuzzleGameTypeFilter, PuzzleLength};
 
@@ -45,6 +49,25 @@ pub fn PuzzleTrainer(
     let puzzle = PuzzleContext::new(game_state);
     puzzle.daily.set(daily);
     provide_context(puzzle);
+    let queens = Signal::derive(move || {
+        puzzle.puzzle.track();
+        let solver = puzzle.solver();
+        game_state.state().with(|state| {
+            [
+                (solver.opposite_color(), GlowColor::Red),
+                (solver, GlowColor::Green),
+            ]
+            .into_iter()
+            .filter_map(|(color, glow)| {
+                state
+                    .board
+                    .position_of_piece(Piece::new_from(Bug::Queen, color, 0))
+                    .map(|at| (at, glow))
+            })
+            .collect::<Vec<_>>()
+        })
+    });
+    provide_context(PieceGlows(queens));
     let confirm = Memo::new(move |_| {
         if puzzle.one_click.get() {
             return MoveConfirm::Single;
@@ -71,10 +94,12 @@ pub fn PuzzleTrainer(
     let navigate = leptos_router::hooks::use_navigate();
     let next = Callback::new(move |()| {
         if pathname.get_untracked() != "/puzzles" && !puzzle.training.get_value() {
-            navigate(
-                &format!("/puzzles{}", puzzle.focus_query()),
-                Default::default(),
-            );
+            let target = if untrack(|| daily_result(puzzle)) == Some(true) {
+                "/puzzles?after=daily".to_string()
+            } else {
+                format!("/puzzles{}", puzzle.focus_query())
+            };
+            navigate(&target, Default::default());
         } else {
             puzzle.load_next();
         }
@@ -189,6 +214,14 @@ pub fn PuzzleTrainer(
                 if let Some(length) = length {
                     puzzle.set_length(length);
                 }
+                if query.with(|query| query.get("after").as_deref() == Some("daily")) {
+                    puzzle
+                        .one_off_difficulty
+                        .set_value(Some(PuzzleDifficulty::Harder));
+                    puzzle.pending_notice.set_value(Some(
+                        "You solved today's puzzle, so here is a harder one.".to_string(),
+                    ));
+                }
                 puzzle.training.set_value(true);
                 puzzle.set_focus(theme, collection);
                 puzzle.load_next();
@@ -251,9 +284,8 @@ pub fn PuzzleTrainer(
                     </div>
                     <BottomBar solver=solver_signal interaction history_board />
                 </div>
-                // Stars and credits sit right under the controls, so rating after a result needs no hunt.
                 <div class="flex flex-col gap-3 p-3 ui-board-side-panel">
-                    <PuzzleAfter stars_elsewhere=true />
+                    <PuzzleAfter />
                     <PuzzleFooter rating />
                 </div>
             </Show>
@@ -339,7 +371,7 @@ fn BottomBar(
                 view! { <MobileHand color=solver framed=true interaction history_board /> }
             }
         >
-            <div class="flex gap-3 items-center px-3 w-full h-20 shrink-0 ui-board-reserve">
+            <div class="flex gap-2 items-center px-3 w-full h-20 shrink-0 ui-board-reserve">
                 <Show when=move || puzzle.phase.get() == PuzzlePhase::Failed>
                     <button
                         type="button"
@@ -354,14 +386,9 @@ fn BottomBar(
                     class="h-12 text-base font-bold text-white shadow ui-button bg-pillbug-teal grow basis-0"
                     on:click=move |_| next.run(())
                 >
-                    {move || {
-                        if puzzle.daily.with(Option::is_some) {
-                            "More puzzles →"
-                        } else {
-                            "Next puzzle →"
-                        }
-                    }}
+                    {move || after_daily_label(puzzle).unwrap_or("Next puzzle →")}
                 </button>
+                <TrainerVote large=true />
             </div>
         </Show>
     }
@@ -375,12 +402,37 @@ fn TopCardTray(
 ) -> impl IntoView {
     let puzzle = expect_context::<PuzzleContext>();
     let signed_in = is_signed_in();
-    let my_stars = RwSignal::new(None::<i16>);
+    let guest_done = move || !signed_in.get() && puzzle.phase.get().is_over();
+    let remember_return = use_remember_return();
+    view! {
+        <Show
+            when=guest_done
+            fallback=move || {
+                view! { <MobileHand color=opponent interaction history_board /> }
+            }
+        >
+            <a
+                href="/login"
+                class="flex items-center px-3 h-14 text-sm font-semibold border-t shrink-0 border-black/10 ui-text-link dark:border-white/10"
+                on:click=move |_| remember_return()
+            >
+                "Sign in to get a puzzle rating and vote on puzzles →"
+            </a>
+        </Show>
+    }
+}
+
+/// 👍 / 👎 for the current puzzle, offered once it is over.
+#[component]
+fn TrainerVote(#[prop(optional)] large: bool) -> impl IntoView {
+    let puzzle = expect_context::<PuzzleContext>();
+    let signed_in = is_signed_in();
+    let my_vote = RwSignal::new(None::<bool>);
     Effect::new(move |_| {
-        my_stars.set(
+        my_vote.set(
             puzzle
                 .puzzle
-                .with(|current| current.as_ref().and_then(|p| p.my_stars)),
+                .with(|current| current.as_ref().and_then(|p| p.my_vote)),
         );
     });
     let nanoid = Signal::derive(move || {
@@ -391,43 +443,18 @@ fn TopCardTray(
                 .unwrap_or_default()
         })
     });
-    let on_rated = Callback::new(move |response: PuzzleStarsResponse| {
+    let on_voted = Callback::new(move |response: PuzzleVoteResponse| {
         puzzle.puzzle.update(|current| {
             if let Some(current) = current {
-                current.my_stars = Some(response.my_stars);
-                current.average_stars = response.average_stars;
-                current.stars_count = response.stars_count;
+                current.my_vote = response.my_vote;
+                current.likes = response.likes;
+                current.dislikes = response.dislikes;
             }
         });
     });
-    let rate_now = move || signed_in.get() && puzzle.reported.get() && puzzle.phase.get().is_over();
-    let guest_done = move || !signed_in.get() && puzzle.phase.get().is_over();
-    let remember_return = use_remember_return();
     view! {
-        <Show
-            when=rate_now
-            fallback=move || {
-                view! {
-                    <Show
-                        when=guest_done
-                        fallback=move || {
-                            view! { <MobileHand color=opponent interaction history_board /> }
-                        }
-                    >
-                        <a
-                            href="/login"
-                            class="flex items-center px-3 h-14 text-sm font-semibold border-t shrink-0 border-black/10 ui-text-link dark:border-white/10"
-                            on:click=move |_| remember_return()
-                        >
-                            "Sign in to get a puzzle rating and rate puzzles →"
-                        </a>
-                    </Show>
-                }
-            }
-        >
-            <div class="flex items-center px-3 h-14 border-t shrink-0 border-black/10 dark:border-white/10">
-                <PuzzleStars nanoid my_stars prominent=false on_rated compact=true />
-            </div>
+        <Show when=move || signed_in.get() && puzzle.phase.get().is_over()>
+            <PuzzleVote nanoid my_vote on_voted large />
         </Show>
     }
 }
@@ -589,6 +616,7 @@ fn PhaseBadge(#[prop(optional)] results_only: bool) -> impl IntoView {
             "bg-orange-twilight text-white",
         )),
         PuzzlePhase::Solved => Some(("✓ Solved!".to_string(), "bg-grasshopper-green text-white")),
+        PuzzlePhase::Failed if puzzle.played_out.get() > 0 => None,
         PuzzlePhase::Failed => Some(("✗ Not the move".to_string(), "bg-ladybug-red text-white")),
         PuzzlePhase::Revealed => Some(("Solution".to_string(), "bg-pillbug-teal text-white")),
         PuzzlePhase::Empty => Some((
@@ -741,10 +769,14 @@ fn PuzzlePrompt(#[prop(optional)] compact: bool) -> impl IntoView {
             }
         }
     };
+    let tried_before =
+        move || details().is_some_and(|details| details.3) && !puzzle.replaying.get();
     let with_note = move |text: &str| {
         let note = rating_note();
         let stop = if text.ends_with('!') { "" } else { "." };
-        if compact || note.is_empty() {
+        if note.is_empty() && tried_before() {
+            format!("{text}{stop} Not rated: you tried this puzzle before.")
+        } else if compact || note.is_empty() {
             format!("{text}{stop}")
         } else {
             format!("{text}{stop} Rating {note}.")
@@ -773,6 +805,8 @@ fn PuzzlePrompt(#[prop(optional)] compact: bool) -> impl IntoView {
             } else if puzzle.solver_to_move() {
                 if puzzle.progress.with(|progress| progress.index) > 0 {
                     "✓ Good so far. Your move.".to_string()
+                } else if tried_before() {
+                    "Not rated: you tried this puzzle before. Your move.".to_string()
                 } else {
                     "Your move.".to_string()
                 }
@@ -803,6 +837,34 @@ fn PuzzlePrompt(#[prop(optional)] compact: bool) -> impl IntoView {
             }
         }
         PuzzlePhase::Solved => with_note("✓ Solved!"),
+        PuzzlePhase::Failed if puzzle.played_out.get() > 0 => {
+            let opponent = color_name(solver().opposite_color());
+            let total = details().map(|details| details.0).unwrap_or(1);
+            let status = puzzle
+                .game_state
+                .state()
+                .with(|state| state.game_status.clone());
+            match status {
+                hive_lib::GameStatus::Finished(hive_lib::GameResult::Winner(winner))
+                    if winner == solver() =>
+                {
+                    format!(
+                        "You surrounded the Queen, but not within {}.",
+                        moves_label(total)
+                    )
+                }
+                hive_lib::GameStatus::Finished(hive_lib::GameResult::Winner(_)) => {
+                    format!("{opponent} surrounded your Queen.")
+                }
+                hive_lib::GameStatus::Finished(_) => {
+                    "Both Queens are surrounded: a draw.".to_string()
+                }
+                _ if puzzle.playing_out.get() => {
+                    format!("Playing it out, not rated. {opponent} answers with its best defence.")
+                }
+                _ => format!("{opponent} is answering…"),
+            }
+        }
         PuzzlePhase::Failed if puzzle.refuted.get() => {
             let opponent = color_name(solver().opposite_color());
             let lost = puzzle.game_state.state().with(|state| {
@@ -812,12 +874,22 @@ fn PuzzlePrompt(#[prop(optional)] compact: bool) -> impl IntoView {
                         if winner != solver()
                 )
             });
+            let play_on = if puzzle.playing_out.get() {
+                " Play on to see why."
+            } else {
+                ""
+            };
             if lost {
                 with_note(&format!("✗ Not the move. {opponent} answers and wins"))
             } else {
-                with_note(&format!(
-                    "✗ Not the move. {opponent} defends, the win is gone"
-                ))
+                let total = details().map(|details| details.0).unwrap_or(1);
+                format!(
+                    "{}{play_on}",
+                    with_note(&format!(
+                        "✗ Not the move. After {opponent}'s answer it cannot be won in {} anymore",
+                        moves_label(total)
+                    ))
+                )
             }
         }
         PuzzlePhase::Failed => with_note("✗ Not the move"),
@@ -1109,7 +1181,13 @@ fn PuzzleControls(#[prop(optional)] compact: bool) -> impl IntoView {
                         }
                     >
                         {move || {
-                            if costs_rating() && !puzzle.can_skip() { "Give up" } else { "Skip" }
+                            if daily_result(puzzle) == Some(true) && puzzle.can_skip() {
+                                "Harder one →"
+                            } else if costs_rating() && !puzzle.can_skip() {
+                                "Give up"
+                            } else {
+                                "Skip"
+                            }
                         }}
                     </button>
                 </Show>
@@ -1121,7 +1199,7 @@ fn PuzzleControls(#[prop(optional)] compact: bool) -> impl IntoView {
                         } else {
                             "text-white shadow ui-button ui-button-sm bg-pillbug-teal hover:brightness-110"
                         }
-                        title="Undo the wrong move and try that move again (R)"
+                        title="Start this puzzle again from the beginning, not rated (R)"
                         on:click=move |_| puzzle.retry()
                     >
                         "Retry"
@@ -1190,30 +1268,27 @@ fn PuzzleControls(#[prop(optional)] compact: bool) -> impl IntoView {
                         on:click=move |_| puzzle.restart()
                         title="Play it again from the start, not rated (R)"
                     >
-                        {if compact { "Replay" } else { "Try it again" }}
+                        "Retry"
                     </button>
                 </Show>
                 <Show when=move || !compact && can_go_next()>
-                    <button
-                        type="button"
-                        class=move || {
-                            if phase.get() == PuzzlePhase::Failed {
-                                "ui-button ui-button-secondary ui-button-sm"
-                            } else {
-                                "text-white shadow ui-button ui-button-sm bg-pillbug-teal hover:brightness-110"
+                    <div class="flex col-span-3 gap-2 items-center [&_.ui-button]:flex-1">
+                        <button
+                            type="button"
+                            class=move || {
+                                if phase.get() == PuzzlePhase::Failed {
+                                    "ui-button ui-button-secondary ui-button-sm"
+                                } else {
+                                    "text-white shadow ui-button ui-button-sm bg-pillbug-teal hover:brightness-110"
+                                }
                             }
-                        }
-                        title="Next puzzle (N)"
-                        on:click=move |_| next.run(())
-                    >
-                        {move || {
-                            if puzzle.daily.with(Option::is_some) {
-                                "More puzzles →"
-                            } else {
-                                "Next →"
-                            }
-                        }}
-                    </button>
+                            title="Next puzzle (N)"
+                            on:click=move |_| next.run(())
+                        >
+                            {move || after_daily_label(puzzle).unwrap_or("Next →")}
+                        </button>
+                        <TrainerVote />
+                    </div>
                 </Show>
             </div>
             <Show when=move || !compact && over()>
@@ -1284,62 +1359,10 @@ fn SolutionMoves() -> impl IntoView {
 }
 
 #[component]
-fn PuzzleAfter(#[prop(optional)] stars_elsewhere: bool) -> impl IntoView {
+fn PuzzleAfter() -> impl IntoView {
     let puzzle = expect_context::<PuzzleContext>();
-    let signed_in = is_signed_in();
-    let my_stars = RwSignal::new(None::<i16>);
-    let nudge = RwSignal::new(false);
-    let last_nudged = StoredValue::new(false);
-    Effect::new(move |_| {
-        let stars = puzzle
-            .puzzle
-            .with(|current| current.as_ref().and_then(|p| p.my_stars));
-        my_stars.set(stars);
-    });
-    // Ask for stars now and then, more often after a miss, never twice in a row.
-    Effect::watch(
-        move || puzzle.phase.get(),
-        move |phase, previous, _| {
-            if !phase.is_over() || previous.is_some_and(|previous| previous.is_over()) {
-                return;
-            }
-            let chance = if *phase == PuzzlePhase::Solved {
-                0.1
-            } else {
-                0.33
-            };
-            let ask =
-                !last_nudged.get_value() && my_stars.get_untracked().is_none() && random() < chance;
-            last_nudged.set_value(ask);
-            nudge.set(ask);
-        },
-        false,
-    );
     let current = move || puzzle.puzzle.get();
-    let nanoid = Signal::derive(move || {
-        puzzle.puzzle.with(|current| {
-            current
-                .as_ref()
-                .map(|p| p.nanoid.clone())
-                .unwrap_or_default()
-        })
-    });
-    let on_rated = Callback::new(move |response: PuzzleStarsResponse| {
-        puzzle.puzzle.update(|current| {
-            if let Some(current) = current {
-                current.my_stars = Some(response.my_stars);
-                current.average_stars = response.average_stars;
-                current.stars_count = response.stars_count;
-            }
-        });
-    });
-    let has_result = move || puzzle.reported.get() && puzzle.phase.get().is_over();
     view! {
-        <Show when=has_result>
-            <Show when=move || !stars_elsewhere && signed_in.get()>
-                <PuzzleStars nanoid my_stars prominent=nudge on_rated />
-            </Show>
-        </Show>
         // Keyed by puzzle, so opened disclosures (like the book hint) never carry over.
         <For
             each=move || current().into_iter()
@@ -1354,10 +1377,14 @@ fn PuzzleCredits(puzzle: PuzzleResponse) -> impl IntoView {
     let context = expect_context::<PuzzleContext>();
     let shared = expect_context::<SharedLink>().0;
     let share = move |_| share_current_puzzle(context, shared);
-    let game_link = puzzle
-        .source_game
+    let at_position = source_position(&puzzle);
+    let game_link = at_position
         .as_ref()
-        .map(|game| format!("/game/{game}"));
+        .map(|(game, ply)| format!("/game/{game}?move={ply}"));
+    let theme_link = game_link.clone();
+    let game_analysis = at_position
+        .as_ref()
+        .map(|(game, ply)| format!("/analysis/{game}?move={ply}"));
     let authors = puzzle.authors.join(", ");
     let themes: Vec<String> = puzzle
         .themes
@@ -1374,11 +1401,7 @@ fn PuzzleCredits(puzzle: PuzzleResponse) -> impl IntoView {
                 } else {
                     format!("{} plays", p.plays)
                 };
-                let stars = match p.average_stars {
-                    Some(average) => format!("★ {average:.1} from {}", p.stars_count),
-                    None => "no stars yet".to_string(),
-                };
-                format!("{plays} · {stars}")
+                format!("{plays} · 👍 {} · 👎 {}", p.likes, p.dislikes)
             })
         })
     };
@@ -1430,10 +1453,26 @@ fn PuzzleCredits(puzzle: PuzzleResponse) -> impl IntoView {
                     {themes
                         .iter()
                         .map(|theme| {
-                            view! {
-                                <span class="py-0.5 px-1.5 rounded bg-black/5 dark:bg-white/10">
-                                    {theme_label(theme)}
-                                </span>
+                            match (theme.as_str(), theme_link.clone()) {
+                                ("missedWin", Some(href)) => {
+                                    view! {
+                                        <a
+                                            class="py-0.5 px-1.5 rounded bg-black/5 ui-text-link dark:bg-white/10"
+                                            href=href
+                                        >
+                                            {theme_label(theme)}
+                                        </a>
+                                    }
+                                        .into_any()
+                                }
+                                _ => {
+                                    view! {
+                                        <span class="py-0.5 px-1.5 rounded bg-black/5 dark:bg-white/10">
+                                            {theme_label(theme)}
+                                        </span>
+                                    }
+                                        .into_any()
+                                }
                             }
                         })
                         .collect_view()}
@@ -1452,7 +1491,7 @@ fn PuzzleCredits(puzzle: PuzzleResponse) -> impl IntoView {
                         }}
                     </button>
                 </Show>
-                // Only after the attempt: the original game and an engine-free board would be a peek.
+                // Only after this visit's try: the original game would give the answer away.
                 <Show when=move || {
                     context.reported.get()
                 }>
@@ -1462,6 +1501,15 @@ fn PuzzleCredits(puzzle: PuzzleResponse) -> impl IntoView {
                             view! {
                                 <a class="inline-flex items-center min-h-11 ui-text-link" href=href>
                                     "Original game"
+                                </a>
+                            }
+                        })}
+                    {game_analysis
+                        .clone()
+                        .map(|href| {
+                            view! {
+                                <a class="inline-flex items-center min-h-11 ui-text-link" href=href>
+                                    "Analyze the game here"
                                 </a>
                             }
                         })}
@@ -1492,6 +1540,8 @@ pub fn theme_label(theme: &str) -> String {
 pub fn collection_label(collection: &str) -> String {
     match collection {
         "hive-puzzles-vol1" => "Hive Puzzles Vol. 1".to_string(),
+        shared_types::MY_GAMES_COLLECTION => "Puzzles from my games".to_string(),
+        shared_types::OLD_DAILIES_COLLECTION => "Old puzzles of the day".to_string(),
         other => other.to_string(),
     }
 }
@@ -1599,6 +1649,14 @@ fn PuzzleFooter(
                         }}
                     </span>
                 </div>
+            </Show>
+            <Show when=move || puzzle.daily.with(Option::is_some)>
+                <a
+                    class="inline-flex items-center text-sm min-h-11 ui-text-link"
+                    href="/puzzles/dailies"
+                >
+                    "Past puzzles of the day →"
+                </a>
             </Show>
             <Show when=move || { puzzle.solved_streak.get() > 1 }>
                 <div class="text-xs text-grasshopper-green">
@@ -1739,17 +1797,6 @@ fn PuzzleFooter(
     }
 }
 
-fn random() -> f64 {
-    #[cfg(not(feature = "ssr"))]
-    {
-        web_sys::js_sys::Math::random()
-    }
-    #[cfg(feature = "ssr")]
-    {
-        1.0
-    }
-}
-
 pub fn signed(delta: i32) -> String {
     match delta.signum() {
         1 => format!("+{delta}"),
@@ -1794,6 +1841,18 @@ fn analysis_link(puzzle: &PuzzleResponse) -> Option<String> {
     ))
 }
 
+/// The game a puzzle was mined from and how many moves into it the puzzle starts.
+fn source_position(puzzle: &PuzzleResponse) -> Option<(String, usize)> {
+    let game = puzzle.source_game.clone()?;
+    let plies = puzzle
+        .history
+        .as_deref()?
+        .split(';')
+        .filter(|token| !token.trim().is_empty())
+        .count();
+    Some((game, plies))
+}
+
 fn encode_component(text: &str) -> String {
     text.bytes()
         .map(|byte| match byte {
@@ -1817,26 +1876,53 @@ fn solution_step_label(puzzle: PuzzleContext, step: usize) -> String {
     }
 }
 
+/// How today's puzzle went on the puzzle-of-the-day page: the earlier first try, else this visit's.
+fn daily_result(puzzle: PuzzleContext) -> Option<bool> {
+    let status = puzzle.daily.get()?;
+    status.my_result.or_else(|| {
+        puzzle
+            .reported
+            .get()
+            .then(|| puzzle.first_result.get() == Some(true) && !puzzle.hinted.get())
+    })
+}
+
 /// Today's outcome on the puzzle-of-the-day page, counting this visit's first try too.
 fn daily_summary(puzzle: PuzzleContext) -> Option<String> {
     let status = puzzle.daily.get()?;
-    let (result, tried, solved) = match status.my_result {
-        Some(result) => (result, status.tried, status.solved),
-        None if puzzle.reported.get() => {
-            let result = puzzle.first_result.get() == Some(true) && !puzzle.hinted.get();
-            (result, status.tried + 1, status.solved + i64::from(result))
-        }
-        None => return None,
+    let result = daily_result(puzzle)?;
+    let this_visit = status.my_result.is_none();
+    let (tried, solved) = if this_visit {
+        (status.tried + 1, status.solved + i64::from(result))
+    } else {
+        (status.tried, status.solved)
     };
     let verdict = if result {
         "You solved today's puzzle"
     } else {
         "You missed today's puzzle"
     };
+    let streak = status
+        .streak
+        .map(|streak| streak + i64::from(this_visit && result))
+        .filter(|streak| *streak > 0)
+        .map(|streak| format!(" · 🔥 {streak}-day streak"))
+        .unwrap_or_default();
     Some(format!(
-        "{verdict} · {solved} of {tried} solved it · next one in {}",
+        "{verdict}{streak} · {solved} of {tried} solved it · next one in {}",
         until_next_utc_day()
     ))
+}
+
+/// After the daily: a harder puzzle once it is solved, otherwise ordinary training.
+fn after_daily_label(puzzle: PuzzleContext) -> Option<&'static str> {
+    puzzle.daily.with(Option::is_some).then(|| {
+        if daily_result(puzzle) == Some(true) {
+            "Try a harder one →"
+        } else {
+            "More puzzles →"
+        }
+    })
 }
 
 fn until_next_utc_day() -> String {

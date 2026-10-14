@@ -6,9 +6,13 @@ use thiserror::Error;
 pub const PUZZLE_START_RATING: f64 = 1500.0;
 pub const PUZZLE_START_DEVIATION: f64 = 150.0;
 pub const PUZZLE_START_VOLATILITY: f64 = 0.06;
-/// Hidden automatically once this many players rated it below `AUTO_HIDE_MAX_STARS` on average.
+/// Hidden automatically once this many players voted and fewer than `AUTO_HIDE_MAX_APPROVAL` liked it.
 pub const AUTO_HIDE_MIN_VOTES: i32 = 20;
-pub const AUTO_HIDE_MAX_STARS: f64 = 1.5;
+pub const AUTO_HIDE_MAX_APPROVAL: f64 = 0.3;
+/// The pseudo-collection of puzzles mined from the viewer's own games.
+pub const MY_GAMES_COLLECTION: &str = "my-games";
+/// The pseudo-collection of earlier puzzles of the day.
+pub const OLD_DAILIES_COLLECTION: &str = "old-dailies";
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum PuzzleKind {
@@ -109,8 +113,8 @@ pub enum PuzzleHistoryFilter {
     All,
     Solved,
     Failed,
-    /// Puzzles the player has not given stars yet.
-    Unstarred,
+    /// Puzzles the player has not voted on yet.
+    Unvoted,
 }
 
 /// One puzzle as the generator writes it and the import endpoint receives it (one JSON per line).

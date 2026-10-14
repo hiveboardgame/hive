@@ -25,8 +25,8 @@ create table puzzles (
   volatility double precision not null default 0.06,
   plays integer not null default 0,
   solves integer not null default 0,
-  stars_sum integer not null default 0,
-  stars_count integer not null default 0,
+  likes integer not null default 0,
+  dislikes integer not null default 0,
   hidden boolean not null default false,
   created_at timestamp with time zone not null default now(),
   constraint puzzles_one_start check ((history is null) <> (position is null)),
@@ -54,14 +54,13 @@ create unique index puzzle_attempts_one_rated on puzzle_attempts (user_id, puzzl
 create index puzzle_attempts_by_user on puzzle_attempts (user_id, created_at desc);
 create index puzzle_attempts_by_puzzle on puzzle_attempts (puzzle_id);
 
-create table puzzle_stars (
+create table puzzle_votes (
   user_id uuid not null references users(id) on delete cascade,
   puzzle_id uuid not null references puzzles(id) on delete cascade,
-  stars smallint not null,
+  liked boolean not null,
   created_at timestamp with time zone not null default now(),
   updated_at timestamp with time zone not null default now(),
-  primary key (user_id, puzzle_id),
-  constraint puzzle_stars_range check (stars between 0 and 5)
+  primary key (user_id, puzzle_id)
 );
 
 create table daily_puzzles (
