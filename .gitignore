@@ -53,3 +53,6 @@ AGENTS.md
 /deploy-logs/
 /db-backups/
 /.deploy.lock
+
+# database dumps
+*.dump
