@@ -386,6 +386,7 @@ pub fn provide_schedules() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::responses::ScheduleSlotContext;
     use chrono::Duration;
     use leptos::prelude::Owner;
     use reactive_stores::Store;
@@ -406,7 +407,7 @@ mod tests {
         ScheduleResponse {
             id: Uuid::from_u128(id),
             slot_id: Uuid::from_u128(7),
-            slot_context: String::from("Game 1"),
+            slot_context: ScheduleSlotContext::Game { number: 1 },
             tournament_name: String::from("Cup"),
             tournament_id: tournament_id.clone(),
             proposer_id,

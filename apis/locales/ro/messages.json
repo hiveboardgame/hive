@@ -1,6 +1,5 @@
 {
     "chat": {
-        "players": "Jucatori",
         "spectators": "Spectatori",
         "players_chat": "Chat jucatori",
         "spectator_chat": "Chat spectatori",
@@ -12,7 +11,6 @@
         "players_chat_only": "Doar jucătorii pot vedea chatul jucătorilor.",
         "with_opponent": "Chat cu adversarul",
         "with_spectators": "Chat cu spectatorii",
-        "placeholder": "Chat",
         "composer_label": "Mesaj de chat",
         "log_label": "Mesajele chatului",
         "open_chat": "Deschide chatul",
@@ -71,11 +69,35 @@
     },
     "sections": {
         "dms": "DM-uri",
-        "games": "Jocuri",
         "recent_announcements": "Anunțuri recente",
         "no_dms": "Inca nu exista DM-uri",
         "no_tournament_chats": "Nu exista chaturi de turneu",
         "no_game_chats": "Nu exista chaturi de joc",
         "muted": "Mut"
+    },
+    "errors": {
+        "block_mute_failed": "Nu s-au putut actualiza setările de blocare sau dezactivare.",
+        "request_unavailable": "Nu s-a putut finaliza cererea.",
+        "chat_retry_conflict": "Retrimiterea acestui mesaj intră în conflict cu livrarea inițială. Trimite-l ca mesaj nou.",
+        "unauthorized": "Nu ai permisiunea de a efectua această acțiune.",
+        "chat_access_denied": "Accesul la conversație este refuzat.",
+        "chat_subscription_limited": "Prea multe încercări de abonare la conversație.",
+        "chat_send_limited": "Prea multe mesaje de chat.",
+        "tournament_name_taken": "Există deja un turneu cu acest nume.",
+        "request_origin_missing": "Adresa aplicației nu este disponibilă. Reîncarcă pagina și încearcă din nou.",
+        "request_url_invalid": "Adresa cererii este invalidă. Reîncarcă pagina și încearcă din nou.",
+        "request_origin_mismatch": "Această cerere trebuie să provină din aplicație. Reîncarcă pagina și încearcă din nou.",
+        "request_token_missing": "Reîncarcă pagina și încearcă din nou.",
+        "request_unverified": "Această cerere nu a putut fi verificată. Reîncarcă pagina și încearcă din nou.",
+        "discord_start_failed": "Nu s-a putut începe conectarea la Discord.",
+        "discord_response_invalid": "Discord a returnat un răspuns de autorizare invalid. Reîncepe din setările notificărilor.",
+        "discord_url_invalid": "Discord a returnat o adresă de autorizare invalidă. Reîncepe din setările notificărilor.",
+        "discord_state_invalid": "Discord a returnat o stare de autorizare invalidă. Reîncepe din setările notificărilor.",
+        "discord_session_required": "Autentifică-te pentru a conecta Discord.",
+        "discord_unavailable": "Conectarea la Discord nu este disponibilă momentan.",
+        "discord_unverified": "Conectarea la Discord nu a putut fi verificată. Reîncepe din setările notificărilor.",
+        "discord_failed": "Conectarea la Discord a eșuat. Reîncepe din setările notificărilor.",
+        "rating_above_band": "{{rating}} depășește limita de rating {{limit}}",
+        "rating_below_band": "{{rating}} este sub limita de rating {{limit}}"
     }
 }

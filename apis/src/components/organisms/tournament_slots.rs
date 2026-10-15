@@ -117,7 +117,7 @@ pub(crate) fn stage_text(i18n: I18nContext<Locale, I18nKeys>, stage: Stage) -> S
         Stage::SingleFinal => {
             t_string!(i18n, tournaments.view.bracket.stage.final_match).to_string()
         }
-        Stage::Bronze => t_string!(i18n, tournaments.view.bracket.stage.third_place).to_string(),
+        Stage::Bronze => t_string!(i18n, tournaments.pairing.stage.third_place).to_string(),
         Stage::WinnersRound { round_index } => t_string!(
             i18n,
             tournaments.view.bracket.stage.winners_round,
@@ -142,11 +142,8 @@ pub(crate) fn stage_text(i18n: I18nContext<Locale, I18nKeys>, stage: Stage) -> S
                 + 1,
         )
         .to_string(),
-        Stage::GrandFinal => {
-            t_string!(i18n, tournaments.view.bracket.stage.grand_final).to_string()
-        }
-        // TODO: i18n once copy is approved.
-        Stage::Reset => String::from("Reset final"),
+        Stage::GrandFinal => t_string!(i18n, tournaments.pairing.stage.grand_final).to_string(),
+        Stage::Reset => t_string!(i18n, tournaments.pairing.stage.reset_final).to_string(),
     }
 }
 
@@ -155,7 +152,6 @@ pub(crate) fn slot_card_label(
     tournament: TournamentState,
     slot: &SlotResponse,
 ) -> Option<String> {
-    // TODO: i18n once copy is approved.
     match (slot.key, tournament.format) {
         (SlotKey::RoundRobin { .. }, TournamentFormatState::RoundRobin(format)) => {
             let repeats = format.configuration().get().rules.repeats;
@@ -167,9 +163,19 @@ pub(crate) fn slot_card_label(
                     .then(|| {
                         match tournament_game_number(tournament.format, slot, round.pass_index + 1)
                         {
-                            Some(number) if repeats > 1 => format!("Game {number} of {repeats}"),
-                            Some(number) => format!("Game {number}"),
-                            None => unfinished_tournament_game_label(slot).to_string(),
+                            Some(number) if repeats > 1 => t_string!(
+                                i18n,
+                                tournaments.ui.game_of,
+                                number = (number),
+                                value1 = (repeats)
+                            )
+                            .to_string(),
+                            Some(number) => {
+                                t_string!(i18n, tournaments.schedule_context.game, game = (number))
+                                    .to_string()
+                            }
+                            None => unfinished_tournament_game_label(i18n.get_locale(), slot)
+                                .to_string(),
                         }
                     })
             })
@@ -179,11 +185,13 @@ pub(crate) fn slot_card_label(
             format.rounds().get().iter().find_map(|round| {
                 round.encounters.iter().find_map(|encounter| {
                     encounter.slot_ids.contains(&slot.id).then(|| {
-                        let base = format!(
-                            "Round {} · Board {}",
-                            round.round_index + 1,
-                            encounter.pairing_index + 1,
-                        );
+                        let base = t_string!(
+                            i18n,
+                            tournaments.schedule_context.round_board,
+                            round = (round.round_index + 1),
+                            board = (encounter.pairing_index + 1)
+                        )
+                        .to_string();
                         if kind == Format::DoubleSwiss {
                             let scheduled = if native_slot.leg == SwissLeg::Second {
                                 2
@@ -191,9 +199,18 @@ pub(crate) fn slot_card_label(
                                 1
                             };
                             match tournament_game_number(tournament.format, slot, scheduled) {
-                                Some(number) => format!("{base} · Game {number} of 2"),
+                                Some(number) => t_string!(
+                                    i18n,
+                                    tournaments.view.slots.base_game_number_of,
+                                    base = (base),
+                                    number = (number)
+                                )
+                                .to_string(),
                                 None => {
-                                    format!("{base} · {}", unfinished_tournament_game_label(slot))
+                                    format!(
+                                        "{base} · {}",
+                                        unfinished_tournament_game_label(i18n.get_locale(), slot)
+                                    )
                                 }
                             }
                         } else {
@@ -219,19 +236,30 @@ pub(crate) fn slot_card_label(
                 .count()
                 > 1
             {
-                parts.push(format!("Match {}", node.stage_ordinal + 1));
+                parts.push(
+                    t_string!(
+                        i18n,
+                        tournaments.view.slots.match_value1,
+                        value1 = (node.stage_ordinal + 1)
+                    )
+                    .to_string(),
+                );
             }
             if let Some(series) = &node.series {
                 for (set_index, set) in series.sets.iter().enumerate() {
                     if let Some(game_index) =
                         set.slots.iter().position(|entry| entry.slot_id == slot.id)
                     {
-                        parts.push(format!(
-                            "Set {} · Game {} of {}",
-                            set_index + 1,
-                            game_index + 1,
-                            set.slots.len()
-                        ));
+                        parts.push(
+                            t_string!(
+                                i18n,
+                                tournaments.view.slots.set_value1_game_value2_of_value3,
+                                value1 = (set_index + 1),
+                                value2 = (game_index + 1),
+                                value3 = (set.slots.len())
+                            )
+                            .to_string(),
+                        );
                         break;
                     }
                 }
@@ -394,8 +422,7 @@ struct AdjudicationReview {
     expected_resolution: Option<Resolution>,
     result: TournamentGameResult,
     names: [String; 2],
-    match_context: String,
-    prior_result: String,
+    slot: SlotResponse,
     pathname: String,
 }
 
@@ -404,7 +431,6 @@ fn SlotAdjudicationControls(
     slot: SlotResponse,
     white_name: String,
     black_name: String,
-    match_context: String,
 ) -> impl IntoView {
     let i18n = use_i18n();
     let context = expect_context::<OrganizerContext>();
@@ -435,8 +461,7 @@ fn SlotAdjudicationControls(
         expected_resolution: slot.resolution,
         result: TournamentGameResult::Unknown,
         names: [white_name, black_name],
-        match_context,
-        prior_result: untrack(|| organizer_result_label(i18n, &slot)),
+        slot: slot.clone(),
         pathname: context.pathname.get_untracked(),
     };
     let apply = Callback::new(move |result: TournamentGameResult| {
@@ -502,10 +527,9 @@ fn SlotAdjudicationControls(
                             apply.run(TournamentGameResult::Unknown);
                         }
                     >
-                        // TODO: i18n once copy is approved.
                         <span title=move || {
                             t_string!(i18n, tournaments.view.slots.clear).to_string()
-                        }>"Clear result"</span>
+                        }>{t!(i18n, tournaments.view.slots.clear_result)}</span>
                     </button>
                 </Show>
             </div>
@@ -518,6 +542,7 @@ fn SlotAdjudicationControls(
 
 #[component]
 fn AdjudicationDialog() -> impl IntoView {
+    let i18n = use_i18n();
     let context = expect_context::<OrganizerContext>();
     let api = expect_context::<ApiRequestsProvider>();
     let dialog_el = context.adjudication_dialog;
@@ -586,8 +611,11 @@ fn AdjudicationDialog() -> impl IntoView {
         }
     };
     view! {
-        // TODO: i18n once copy is approved.
-        <Modal dialog_el aria_label="Confirm result" on_close=cancel>
+        <Modal
+            dialog_el
+            aria_label=move || t_string!(i18n, tournaments.view.slots.confirm_result).to_string()
+            on_close=cancel
+        >
             {move || {
                 reviewed
                     .get()
@@ -598,50 +626,95 @@ fn AdjudicationDialog() -> impl IntoView {
                         let [white, black] = &review.names;
                         let result = match review.result {
                             TournamentGameResult::Winner(Color::White) => {
-                                format!("{white} wins · 1–0")
+                                t_string!(
+                                    i18n, tournaments.view.slots.white_wins_result, white = (white)
+                                )
+                                    .to_string()
                             }
                             TournamentGameResult::Winner(Color::Black) => {
-                                format!("{black} wins · 0–1")
+                                t_string!(
+                                    i18n, tournaments.view.slots.black_wins_result, black = (black)
+                                )
+                                    .to_string()
                             }
-                            TournamentGameResult::Draw => String::from("Draw · ½–½"),
+                            TournamentGameResult::Draw => {
+                                t_string!(i18n, tournaments.view.slots.draw).to_string()
+                            }
                             TournamentGameResult::DoubleForfeit => {
-                                String::from("Double forfeit · 0–0")
+                                t_string!(i18n, tournaments.view.slots.double_forfeit_result)
+                                    .to_string()
                             }
                             TournamentGameResult::Unknown => {
-                                String::from("Remove the recorded result and reopen this game.")
+                                t_string!(
+                                    i18n, tournaments.view.slots.remove_the_recorded_result_and_reopen_this_game
+                                )
+                                    .to_string()
                             }
                         };
-                        // TODO: i18n once copy is approved.
+                        let matchup_names = review.names.clone();
+                        let identity_slot = review.slot.clone();
                         view! {
                             <div class="px-4 pb-4 space-y-4 w-[min(90vw,28rem)]">
-                                // TODO: i18n once copy is approved.
                                 <h2 class="text-xl font-bold">
-                                    {if clearing { "Clear result?" } else { "Record result?" }}
+                                    {move || {
+                                        if clearing {
+                                            t_string!(i18n, tournaments.view.slots.clear_result_prompt)
+                                                .to_string()
+                                        } else {
+                                            t_string!(
+                                                i18n, tournaments.view.slots.record_result_confirmation
+                                            )
+                                                .to_string()
+                                        }
+                                    }}
                                 </h2>
                                 <div class="space-y-1">
                                     <p class="font-semibold">
-                                        {organizer_matchup_label(white, black)}
+                                        {move || organizer_matchup_label(
+                                            &matchup_names[0],
+                                            &matchup_names[1],
+                                        )}
                                     </p>
-                                    <p class="text-sm text-gray-500">{review.match_context}</p>
+                                    {move || {
+                                        organizer_match_identity(
+                                                i18n,
+                                                context.tournament,
+                                                &identity_slot,
+                                            )
+                                            .map(|identity| {
+                                                view! { <p class="text-sm text-gray-500">{identity}</p> }
+                                            })
+                                    }}
                                     <p class="font-semibold">{result}</p>
                                     {review
                                         .expected_resolution
                                         .is_some()
                                         .then(|| {
-                                            // TODO: i18n once copy is approved.
                                             view! {
                                                 <p class="text-sm">
-                                                    {format!("Previous result: {}", review.prior_result)}
+                                                    {move || {
+                                                        t_string!(
+                                                            i18n, tournaments.view.slots.previous_result_value1, value1 = organizer_result_label(i18n, &review.slot)
+                                                        )
+                                                            .to_string()
+                                                    }}
                                                 </p>
                                             }
                                         })}
                                 </div>
-                                // TODO: i18n once copy is approved.
                                 <p class="text-sm text-gray-600 dark:text-gray-300">
-                                    {if clearing {
-                                        "The game will need a new result."
-                                    } else {
-                                        "This may unlock more games or finish the tournament. Once play advances, the result may be locked."
+                                    {move || {
+                                        if clearing {
+                                            t_string!(
+                                                i18n, tournaments.view.slots.the_game_will_need_a_new_result
+                                            )
+                                                .to_string()
+                                        } else {
+                                            t_string!(
+                                                i18n, tournaments.view.slots.adjudication_progress_warning
+                                            )
+                                                .to_string()
+                                        }
                                     }}
                                 </p>
                                 <div class="flex gap-2 justify-end">
@@ -650,8 +723,7 @@ fn AdjudicationDialog() -> impl IntoView {
                                         class="ui-button ui-button-secondary ui-button-sm"
                                         on:click=move |_| cancel.run(())
                                     >
-                                        // TODO: i18n once copy is approved.
-                                        "Cancel"
+                                        {t!(i18n, common.cancel)}
                                     </button>
                                     <button
                                         type="button"
@@ -662,8 +734,15 @@ fn AdjudicationDialog() -> impl IntoView {
                                         }
                                         on:click=confirm
                                     >
-                                        // TODO: i18n once copy is approved.
-                                        {if clearing { "Clear result" } else { "Record result" }}
+                                        {move || {
+                                            if clearing {
+                                                t_string!(i18n, tournaments.view.slots.clear_result)
+                                                    .to_string()
+                                            } else {
+                                                t_string!(i18n, tournaments.view.slots.record_result)
+                                                    .to_string()
+                                            }
+                                        }}
                                     </button>
                                 </div>
                             </div>
@@ -720,34 +799,45 @@ fn DeadlineEditorBody(
         _ => None,
     };
     let previous_deadline = selected_slot.as_ref().and_then(|slot| slot.deadline_at);
-    let selected_matchup = selected_slot.as_ref().map(|slot| {
-        let names = organizer_names(&tournament.common.memberships().get_untracked(), slot);
-        let identity = slot_card_label(i18n, tournament, slot).unwrap_or_default();
-        format!(
-            "{} vs {}{}",
-            names[0],
-            names[1],
-            if identity.is_empty() {
-                String::new()
-            } else {
-                format!(" · {identity}")
-            }
-        )
+    let selected_matchup = Memo::new(move |_| {
+        selected_slot.as_ref().map(|slot| {
+            let names = organizer_names(&tournament.common.memberships().get_untracked(), slot);
+            let identity = slot_card_label(i18n, tournament, slot).unwrap_or_default();
+            t_string!(
+                i18n,
+                tournaments.view.slots.value1_vs_value2_value3,
+                value1 = (names[0].clone()),
+                value2 = (names[1].clone()),
+                value3 = (if identity.is_empty() {
+                    String::new()
+                } else {
+                    format!(" · {identity}")
+                })
+            )
+            .to_string()
+        })
     });
     let deadline = RwSignal::new(previous_deadline.unwrap_or_else(initial_deadline));
     let draft_valid = RwSignal::new(false);
-    let input_error = RwSignal::new(None::<String>);
+    let input_error = RwSignal::new(false);
     let min = Local::now() + Duration::minutes(5);
     let max = min + Duration::weeks(52);
-    // TODO: i18n once copy is approved.
-    let local_time_label = RwSignal::new(String::from("Play by · your local time"));
-    #[cfg(feature = "hydrate")]
-    Effect::new(move |_| {
-        // TODO: i18n once copy is approved.
-        local_time_label.set(format!(
-            "Play by · your local time (currently {})",
-            Local::now().format("UTC%:z"),
-        ));
+    let local_time_ready = RwSignal::new(false);
+    Effect::new(move |_| local_time_ready.set(true));
+    let local_time_label = Memo::new(move |_| {
+        if local_time_ready.get() {
+            t_string!(
+                i18n,
+                tournaments
+                    .view
+                    .slots
+                    .play_by_your_local_time_currently_value1,
+                value1 = Local::now().format("UTC%:z")
+            )
+            .to_string()
+        } else {
+            t_string!(i18n, tournaments.view.slots.play_by_your_local_time).to_string()
+        }
     });
     let apply = Callback::new(move |deadline_at: Option<DateTime<Utc>>| {
         if deadline_at.is_some()
@@ -783,13 +873,10 @@ fn DeadlineEditorBody(
             .collect::<Vec<_>>();
         let tournament_id = lifecycle.tournament_id;
         if slot_ids.is_empty() {
-            // TODO: i18n once copy is approved.
-            input_error.set(Some(String::from(
-                "No available unstarted games are in this scope.",
-            )));
+            input_error.set(true);
             return;
         }
-        input_error.set(None);
+        input_error.set(false);
         api.get().schedule_action(ScheduleAction::SetDeadline {
             tournament_id,
             slot_ids,
@@ -800,33 +887,36 @@ fn DeadlineEditorBody(
     view! {
         <div class="px-4 pb-5 mx-auto space-y-4 w-[min(94vw,32rem)]">
             <div>
-                // TODO: i18n once copy is approved.
-                <h2 class="text-xl font-bold">"Set play-by time"</h2>
-                {selected_matchup
-                    .map(|matchup| {
-                        view! { <p class="text-sm font-semibold break-words">{matchup}</p> }
-                    })}
+                <h2 class="text-xl font-bold">
+                    {t!(i18n, tournaments.view.slots.set_play_by_time)}
+                </h2>
+                {move || {
+                    selected_matchup
+                        .get()
+                        .map(|matchup| {
+                            view! { <p class="text-sm font-semibold break-words">{matchup}</p> }
+                        })
+                }}
                 {previous_deadline
                     .map(|time| {
                         view! {
-                            // TODO: i18n once copy is approved.
                             <p class="text-sm text-gray-600 dark:text-gray-300">
-                                {format!(
-                                    "Previous: {}",
-                                    format_schedule_time(i18n.get_locale(), time),
-                                )}
+                                {move || {
+                                    t_string!(
+                                        i18n, tournaments.view.slots.previous_value1, value1 = (format_schedule_time(i18n.get_locale(), time))
+                                    )
+                                        .to_string()
+                                }}
                             </p>
                         }
                     })}
-                // TODO: i18n once copy is approved.
                 <p class="text-sm text-gray-600 dark:text-gray-300">
-                    "Players should finish these games by this time. It never decides a result."
+                    {t!(i18n, tournaments.view.slots.deadline_help)}
                 </p>
             </div>
             <Show when=move || !matches!(target, DeadlineTarget::Slot(_))>
                 <label class="block">
-                    // TODO: i18n once copy is approved.
-                    <span class="ui-field-label">"Apply to"</span>
+                    <span class="ui-field-label">{t!(i18n, tournaments.view.slots.apply_to)}</span>
                     <select
                         class="w-full ui-field-select"
                         on:change=move |event| {
@@ -842,18 +932,19 @@ fn DeadlineEditorBody(
                                 );
                         }
                     >
-                        // TODO: i18n once copy is approved.
-                        <option value="all">"All available unstarted games"</option>
-                        // TODO: i18n once copy is approved.
+                        <option value="all">
+                            {t!(i18n, tournaments.view.slots.all_available_unstarted_games)}
+                        </option>
                         <option value="missing">
-                            "Available unstarted games without a play-by time"
+                            {t!(
+                                i18n, tournaments.view.slots.available_unstarted_games_without_a_play_by_time
+                            )}
                         </option>
                     </select>
                 </label>
             </Show>
             <DateTimePicker
-                input_id="schedule-deadline".to_string()
-                // TODO: i18n once copy is approved.
+                input_id=String::from("schedule-deadline").to_string()
                 text=move || {
                     current_manage_route(&route_context)
                         .and_then(|_| local_time_label.try_get())
@@ -866,13 +957,17 @@ fn DeadlineEditorBody(
                 success_callback=Callback::from(move |time: DateTime<Utc>| {
                     if current_manage_route(&route_context).is_some() {
                         deadline.set(time);
-                        input_error.set(None);
+                        input_error.set(false);
                     }
                 })
             />
-            <ShowLet some=move || input_error.get() let:error>
-                <p class="ui-field-error">{error}</p>
-            </ShowLet>
+            <Show when=move || input_error.get()>
+                <p class="ui-field-error">
+                    {t!(
+                        i18n, tournaments.view.slots.no_available_unstarted_games_are_in_this_scope
+                    )}
+                </p>
+            </Show>
             <div class="flex flex-wrap gap-2 justify-end">
                 <Show when=move || scope.get() != DeadlineTarget::MissingPlayBy>
                     <button
@@ -882,8 +977,7 @@ fn DeadlineEditorBody(
                             let _ = apply.try_run(None);
                         }
                     >
-                        // TODO: i18n once copy is approved.
-                        "Clear play-by times"
+                        {t!(i18n, tournaments.view.slots.clear_play_by_times)}
                     </button>
                 </Show>
                 <button
@@ -901,8 +995,7 @@ fn DeadlineEditorBody(
                         let _ = apply.try_run(Some(deadline));
                     }
                 >
-                    // TODO: i18n once copy is approved.
-                    "Set play-by"
+                    {t!(i18n, tournaments.view.slots.set_play_by)}
                 </button>
             </div>
         </div>
@@ -915,6 +1008,7 @@ fn DeadlineEditorDialog(
     target: RwSignal<Option<DeadlineTarget>>,
     dialog_el: NodeRef<Dialog>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let route_context = expect_context::<OrganizerContext>();
     let close_editor = Callback::new(move |_: ()| {
         if current_manage_route(&route_context).is_none() {
@@ -926,8 +1020,11 @@ fn DeadlineEditorDialog(
         target.set(None);
     });
     view! {
-        // TODO: i18n once copy is approved.
-        <Modal dialog_el aria_label="Set play-by time" on_close=close_editor>
+        <Modal
+            dialog_el
+            aria_label=move || t_string!(i18n, tournaments.view.slots.set_play_by_time).to_string()
+            on_close=close_editor
+        >
             <For
                 each=move || {
                     current_manage_route(&route_context).and_then(|_| target.try_get().flatten())
@@ -1006,35 +1103,59 @@ fn organizer_view_from_value(value: &str) -> OrganizerView {
     }
 }
 
-fn organizer_view_label(view: OrganizerView) -> &'static str {
-    // TODO: i18n once copy is approved.
+fn organizer_view_label(view: OrganizerView) -> String {
+    let i18n = use_i18n();
     match view {
-        OrganizerView::All => "All",
-        OrganizerView::NeedsAttention => "Needs attention",
-        OrganizerView::NoAttempt => "No attempt",
-        OrganizerView::ProposalPending => "Proposal pending",
-        OrganizerView::LastProposalEnded => "Last proposal ended",
-        OrganizerView::TimeAgreed => "Time agreed",
-        OrganizerView::MissingPlayBy => "Missing",
-        OrganizerView::PlayBySoon => "Due soon",
-        OrganizerView::PlayByPassed => "Passed",
-        OrganizerView::Finished => "Finished",
+        OrganizerView::All => t_string!(i18n, common.all).to_string(),
+        OrganizerView::NeedsAttention => {
+            t_string!(i18n, tournaments.view.slots.needs_attention).to_string()
+        }
+        OrganizerView::NoAttempt => t_string!(i18n, tournaments.view.slots.no_attempt).to_string(),
+        OrganizerView::ProposalPending => {
+            t_string!(i18n, tournaments.view.slots.proposal_pending).to_string()
+        }
+        OrganizerView::LastProposalEnded => {
+            t_string!(i18n, tournaments.view.slots.last_proposal_ended).to_string()
+        }
+        OrganizerView::TimeAgreed => {
+            t_string!(i18n, tournaments.view.slots.time_agreed).to_string()
+        }
+        OrganizerView::MissingPlayBy => t_string!(i18n, tournaments.view.slots.missing).to_string(),
+        OrganizerView::PlayBySoon => t_string!(i18n, tournaments.view.slots.due_soon).to_string(),
+        OrganizerView::PlayByPassed => t_string!(i18n, tournaments.view.slots.passed).to_string(),
+        OrganizerView::Finished => t_string!(i18n, common.finished).to_string(),
     }
 }
 
-fn organizer_select_label(view: OrganizerView) -> &'static str {
-    // TODO: i18n once copy is approved.
+fn organizer_select_label(view: OrganizerView) -> String {
+    let i18n = use_i18n();
     match view {
-        OrganizerView::All => "All",
-        OrganizerView::NeedsAttention => "Scheduling · Needs attention",
-        OrganizerView::NoAttempt => "Scheduling · No attempt",
-        OrganizerView::ProposalPending => "Scheduling · Proposal pending",
-        OrganizerView::LastProposalEnded => "Scheduling · Last proposal ended",
-        OrganizerView::TimeAgreed => "Scheduling · Time agreed",
-        OrganizerView::MissingPlayBy => "Play-by missing",
-        OrganizerView::PlayBySoon => "Play-by due soon",
-        OrganizerView::PlayByPassed => "Play-by passed",
-        OrganizerView::Finished => "Finished",
+        OrganizerView::All => t_string!(i18n, common.all).to_string(),
+        OrganizerView::NeedsAttention => {
+            t_string!(i18n, tournaments.view.slots.scheduling_needs_attention).to_string()
+        }
+        OrganizerView::NoAttempt => {
+            t_string!(i18n, tournaments.view.slots.scheduling_no_attempt).to_string()
+        }
+        OrganizerView::ProposalPending => {
+            t_string!(i18n, tournaments.view.slots.scheduling_proposal_pending).to_string()
+        }
+        OrganizerView::LastProposalEnded => {
+            t_string!(i18n, tournaments.view.slots.scheduling_last_proposal_ended).to_string()
+        }
+        OrganizerView::TimeAgreed => {
+            t_string!(i18n, tournaments.view.slots.scheduling_time_agreed).to_string()
+        }
+        OrganizerView::MissingPlayBy => {
+            t_string!(i18n, tournaments.view.slots.play_by_missing).to_string()
+        }
+        OrganizerView::PlayBySoon => {
+            t_string!(i18n, tournaments.view.slots.play_by_due_soon).to_string()
+        }
+        OrganizerView::PlayByPassed => {
+            t_string!(i18n, tournaments.view.slots.play_by_passed).to_string()
+        }
+        OrganizerView::Finished => t_string!(i18n, common.finished).to_string(),
     }
 }
 
@@ -1100,65 +1221,83 @@ fn organizer_lifecycle(slot: &SlotResponse) -> Option<OrganizerLifecycle> {
     }
 }
 
-fn organizer_lifecycle_label(lifecycle: OrganizerLifecycle) -> &'static str {
-    // TODO: i18n once copy is approved.
+fn organizer_lifecycle_label(lifecycle: OrganizerLifecycle) -> String {
+    let i18n = use_i18n();
     match lifecycle {
-        OrganizerLifecycle::Unstarted => "Not started",
-        OrganizerLifecycle::Finished => "Finished",
+        OrganizerLifecycle::Unstarted => t_string!(i18n, common.not_started).to_string(),
+        OrganizerLifecycle::Finished => t_string!(i18n, common.finished).to_string(),
     }
 }
 
 fn organizer_result_label(i18n: I18nContext<Locale, I18nKeys>, slot: &SlotResponse) -> String {
-    // TODO: i18n once copy is approved.
     match slot.resolution {
         Some(Resolution::Result(outcome)) => outcome_label(i18n, outcome),
         Some(Resolution::Withdrawal(GameOutcome::Played(PlayedGameOutcome::WhiteWin))) => {
-            String::from("White won by withdrawal")
+            t_string!(i18n, tournaments.view.slots.white_won_by_withdrawal).to_string()
         }
         Some(Resolution::Withdrawal(GameOutcome::Played(PlayedGameOutcome::BlackWin))) => {
-            String::from("Black won by withdrawal")
+            t_string!(i18n, tournaments.view.slots.black_won_by_withdrawal).to_string()
         }
         Some(Resolution::Withdrawal(GameOutcome::Played(PlayedGameOutcome::Draw))) => {
-            String::from("Draw · withdrawal")
+            t_string!(i18n, tournaments.view.slots.draw_withdrawal).to_string()
         }
         Some(Resolution::Withdrawal(GameOutcome::Adjudicated(outcome))) => {
             match (outcome.white(), outcome.black()) {
                 (AdjudicatedSideResult::ForfeitWin, AdjudicatedSideResult::ForfeitLoss) => {
-                    String::from("White won by withdrawal")
+                    t_string!(i18n, tournaments.view.slots.white_won_by_withdrawal).to_string()
                 }
                 (AdjudicatedSideResult::ForfeitLoss, AdjudicatedSideResult::ForfeitWin) => {
-                    String::from("Black won by withdrawal")
+                    t_string!(i18n, tournaments.view.slots.black_won_by_withdrawal).to_string()
                 }
                 (AdjudicatedSideResult::Draw, AdjudicatedSideResult::Draw) => {
-                    String::from("Draw · withdrawal")
+                    t_string!(i18n, tournaments.view.slots.draw_withdrawal).to_string()
                 }
                 (AdjudicatedSideResult::Draw, AdjudicatedSideResult::ForfeitLoss) => {
-                    String::from("White draw · Black withdrew")
+                    t_string!(i18n, tournaments.view.slots.white_draw_black_withdrew).to_string()
                 }
                 (AdjudicatedSideResult::ForfeitLoss, AdjudicatedSideResult::Draw) => {
-                    String::from("Black draw · White withdrew")
+                    t_string!(i18n, tournaments.view.slots.black_draw_white_withdrew).to_string()
                 }
                 (AdjudicatedSideResult::DoubleForfeit, AdjudicatedSideResult::DoubleForfeit) => {
-                    String::from("Double forfeit · withdrawal")
+                    t_string!(i18n, tournaments.view.slots.double_forfeit_withdrawal).to_string()
                 }
                 _ => unreachable!("validated adjudicated outcome"),
             }
         }
-        Some(Resolution::Clinched) => String::from("Not played · match already decided"),
-        Some(Resolution::CancelledByWithdrawal) => String::from("Not played · withdrawal"),
-        None => String::from("Finished"),
+        Some(Resolution::Clinched) => {
+            t_string!(i18n, tournaments.ui.not_played_match_already_decided).to_string()
+        }
+        Some(Resolution::CancelledByWithdrawal) => {
+            t_string!(i18n, tournaments.ui.not_played_withdrawal).to_string()
+        }
+        None => t_string!(i18n, common.finished).to_string(),
     }
 }
 
 fn organizer_elapsed_label(time: DateTime<Utc>, now: DateTime<Utc>) -> String {
+    let i18n = use_i18n();
     let minutes = (now - time).num_minutes().max(0);
-    // TODO: i18n once copy is approved.
     if minutes < 60 {
-        format!("{minutes} min")
+        t_string!(
+            i18n,
+            tournaments.view.slots.minutes_min,
+            minutes = (minutes)
+        )
+        .to_string()
     } else if minutes < 24 * 60 {
-        format!("{} hr", minutes / 60)
+        t_string!(
+            i18n,
+            tournaments.view.slots.value1_hr,
+            value1 = (minutes / 60)
+        )
+        .to_string()
     } else {
-        format!("{} days", minutes / (24 * 60))
+        t_string!(
+            i18n,
+            tournaments.view.slots.value1_days,
+            value1 = (minutes / (24 * 60))
+        )
+        .to_string()
     }
 }
 
@@ -1259,8 +1398,12 @@ fn organizer_row_state(
     let local_time = |time| format_schedule_time(i18n.get_locale(), time);
     let play_by_support = || {
         deadline_at.map(|time| {
-            // TODO: i18n once copy is approved.
-            format!("Play by {}", local_time(time))
+            t_string!(
+                i18n,
+                tournaments.view.slots.play_by_value1,
+                value1 = (local_time(time))
+            )
+            .to_string()
         })
     };
     let (priority_rank, sort_at, label, supporting, tone) = match lifecycle {
@@ -1269,38 +1412,48 @@ fn organizer_row_state(
             slot.resolved_at.unwrap_or(DateTime::<Utc>::MAX_UTC),
             organizer_result_label(i18n, slot),
             slot.resolved_at.map(|time| {
-                // TODO: i18n once copy is approved.
-                format!("Finished {}", local_time(time))
+                t_string!(
+                    i18n,
+                    tournaments.view.slots.finished_value1,
+                    value1 = (local_time(time))
+                )
+                .to_string()
             }),
             OrganizerTone::Finished,
         ),
         OrganizerLifecycle::Unstarted if play_by_passed => (
             0,
             deadline_at.unwrap_or(DateTime::<Utc>::MAX_UTC),
-            // TODO: i18n once copy is approved.
-            String::from("Play-by passed"),
+            t_string!(i18n, tournaments.view.slots.play_by_passed).to_string(),
             play_by_support(),
             OrganizerTone::Urgent,
         ),
         OrganizerLifecycle::Unstarted if missed_agreement => (
             1,
             scheduled_at.unwrap_or(DateTime::<Utc>::MAX_UTC),
-            // TODO: i18n once copy is approved.
-            format!(
-                "Start missed by {}",
-                organizer_elapsed_label(scheduled_at.unwrap_or(DateTime::<Utc>::MAX_UTC), now,),
-            ),
+            t_string!(
+                i18n,
+                tournaments.view.slots.start_missed_by_value1,
+                value1 = (organizer_elapsed_label(
+                    scheduled_at.unwrap_or(DateTime::<Utc>::MAX_UTC),
+                    now,
+                ))
+            )
+            .to_string(),
             scheduled_at.map(|time| {
-                // TODO: i18n once copy is approved.
-                format!("Agreed {}", local_time(time))
+                t_string!(
+                    i18n,
+                    tournaments.view.slots.agreed_value1,
+                    value1 = (local_time(time))
+                )
+                .to_string()
             }),
             OrganizerTone::Attention,
         ),
         OrganizerLifecycle::Unstarted if expired_pending_without_agreement => (
             2,
             attention_at,
-            // TODO: i18n once copy is approved.
-            String::from("Proposed times passed"),
+            t_string!(i18n, tournaments.view.slots.proposed_times_passed).to_string(),
             pending
                 .as_ref()
                 .and_then(|offer| {
@@ -1311,8 +1464,13 @@ fn organizer_row_state(
                         .map(|time| (offer, *time))
                 })
                 .map(|(offer, time)| {
-                    // TODO: i18n once copy is approved.
-                    format!("{} proposed {}", offer.proposer_username, local_time(time))
+                    t_string!(
+                        i18n,
+                        notifications.push.schedule_propose_body,
+                        proposer = (offer.proposer_username.clone()),
+                        when = (local_time(time))
+                    )
+                    .to_string()
                 }),
             OrganizerTone::Attention,
         ),
@@ -1320,11 +1478,9 @@ fn organizer_row_state(
             3,
             deadline_at.unwrap_or(DateTime::<Utc>::MAX_UTC),
             if no_attempt {
-                // TODO: i18n once copy is approved.
-                String::from("No scheduling attempt")
+                t_string!(i18n, tournaments.view.slots.no_scheduling_attempt).to_string()
             } else {
-                // TODO: i18n once copy is approved.
-                String::from("Last proposal ended")
+                t_string!(i18n, tournaments.view.slots.last_proposal_ended).to_string()
             },
             play_by_support(),
             OrganizerTone::Urgent,
@@ -1342,14 +1498,15 @@ fn organizer_row_state(
                         .copied()
                 })
                 .unwrap_or(DateTime::<Utc>::MAX_UTC),
-            // TODO: i18n once copy is approved.
-            String::from("Proposal pending"),
+            t_string!(i18n, tournaments.view.slots.proposal_pending).to_string(),
             pending.as_ref().map(|offer| {
-                // TODO: i18n once copy is approved.
-                format!(
-                    "{} proposed · waiting for {}",
-                    offer.proposer_username, offer.opponent_username
+                t_string!(
+                    i18n,
+                    tournaments.view.slots.value1_proposed_waiting_for_value2,
+                    value1 = (offer.proposer_username.clone()),
+                    value2 = (offer.opponent_username.clone())
                 )
+                .to_string()
             }),
             OrganizerTone::Pending,
         ),
@@ -1360,12 +1517,11 @@ fn organizer_row_state(
             (
                 if starting { 4 } else { 6 },
                 scheduled_at,
-                // TODO: i18n once copy is approved.
-                String::from(if starting {
-                    "Starting now"
+                if starting {
+                    t_string!(i18n, tournaments.view.slots.starting_now).to_string()
                 } else {
-                    "Time agreed"
-                }),
+                    t_string!(i18n, tournaments.view.slots.time_agreed).to_string()
+                },
                 Some(local_time(scheduled_at)),
                 OrganizerTone::Active,
             )
@@ -1373,24 +1529,21 @@ fn organizer_row_state(
         OrganizerLifecycle::Unstarted if no_attempt => (
             7,
             deadline_at.unwrap_or(DateTime::<Utc>::MAX_UTC),
-            // TODO: i18n once copy is approved.
-            String::from("No scheduling attempt"),
+            t_string!(i18n, tournaments.view.slots.no_scheduling_attempt).to_string(),
             play_by_support(),
             OrganizerTone::Neutral,
         ),
         OrganizerLifecycle::Unstarted if last_proposal_ended => (
             8,
             deadline_at.unwrap_or(DateTime::<Utc>::MAX_UTC),
-            // TODO: i18n once copy is approved.
-            String::from("Last proposal ended"),
+            t_string!(i18n, tournaments.view.slots.last_proposal_ended).to_string(),
             play_by_support(),
             OrganizerTone::Neutral,
         ),
         OrganizerLifecycle::Unstarted => (
             8,
             deadline_at.unwrap_or(DateTime::<Utc>::MAX_UTC),
-            // TODO: i18n once copy is approved.
-            String::from("Not started"),
+            t_string!(i18n, common.not_started).to_string(),
             play_by_support(),
             OrganizerTone::Neutral,
         ),
@@ -1479,8 +1632,12 @@ fn organizer_match_identity(
             format.rounds().get().iter().find_map(|round| {
                 round.encounters.iter().find_map(|encounter| {
                     encounter.slot_ids.contains(&slot.id).then(|| {
-                        // TODO: i18n once copy is approved.
-                        let board = format!("Board {}", encounter.pairing_index + 1);
+                        let board = t_string!(
+                            i18n,
+                            tournaments.view.slots.board_value1,
+                            value1 = (encounter.pairing_index + 1)
+                        )
+                        .to_string();
                         if kind == Format::DoubleSwiss {
                             let scheduled = if native_slot.leg == SwissLeg::Second {
                                 2
@@ -1488,9 +1645,21 @@ fn organizer_match_identity(
                                 1
                             };
                             match tournament_game_number(tournament.format, slot, scheduled) {
-                                Some(number) => format!("{board} · Game {number} of 2"),
+                                Some(number) => t_string!(
+                                    i18n,
+                                    tournaments.view.slots.base_game_number_of,
+                                    base = (board),
+                                    number = (number)
+                                )
+                                .to_string(),
                                 None => {
-                                    format!("{board} · {}", unfinished_tournament_game_label(slot))
+                                    format!(
+                                        "{board} · {}",
+                                        unfinished_tournament_game_label(
+                                            use_i18n().get_locale(),
+                                            slot
+                                        )
+                                    )
                                 }
                             }
                         } else {
@@ -1524,25 +1693,30 @@ fn same_matchup(left: &SlotResponse, right: &SlotResponse) -> bool {
 }
 
 fn organizer_names(memberships: &TournamentMemberships, slot: &SlotResponse) -> [String; 2] {
+    let i18n = use_i18n();
     [
         memberships
             .players
             .get(&slot.white())
             .map(|user| user.username.clone())
-            // TODO: i18n once copy is approved.
-            .unwrap_or_else(|| String::from("White")),
+            .unwrap_or_else(|| t_string!(i18n, common.white).to_string()),
         memberships
             .players
             .get(&slot.black())
             .map(|user| user.username.clone())
-            // TODO: i18n once copy is approved.
-            .unwrap_or_else(|| String::from("Black")),
+            .unwrap_or_else(|| t_string!(i18n, common.black).to_string()),
     ]
 }
 
 fn organizer_matchup_label(white: &str, black: &str) -> String {
-    // TODO: i18n once copy is approved.
-    format!("{white} vs {black}")
+    let i18n = use_i18n();
+    t_string!(
+        i18n,
+        common.versus_players,
+        white = (white),
+        black = (black)
+    )
+    .to_string()
 }
 
 fn organizer_view_slots(
@@ -1617,10 +1791,10 @@ fn organizer_view_slots(
 }
 
 fn organizer_progress_label(tournament: TournamentState) -> String {
+    let i18n = use_i18n();
     match tournament.format {
         TournamentFormatState::Swiss(format) => format.rounds().get().last().map_or_else(
-            // TODO: i18n once copy is approved.
-            || String::from("No current round"),
+            || t_string!(i18n, tournaments.view.slots.no_current_round).to_string(),
             |round| {
                 let slots = round
                     .encounters
@@ -1632,12 +1806,17 @@ fn organizer_progress_label(tournament: TournamentState) -> String {
                     .iter()
                     .filter(|slot| slot.try_get().is_some_and(|slot| slot.resolution.is_some()))
                     .count();
-                // TODO: i18n once copy is approved.
-                format!(
-                    "Round {} · {finished} of {} matches resolved",
-                    round.round_index + 1,
-                    slots.len(),
+                t_string!(
+                    i18n,
+                    tournaments
+                        .view
+                        .slots
+                        .round_value1_finished_of_value2_matches_resolved,
+                    value1 = (round.round_index + 1),
+                    finished = (finished),
+                    value2 = (slots.len())
                 )
+                .to_string()
             },
         ),
         _ => {
@@ -1646,8 +1825,13 @@ fn organizer_progress_label(tournament: TournamentState) -> String {
                 .iter()
                 .filter(|slot| slot.try_get().is_some_and(|slot| slot.resolution.is_some()))
                 .count();
-            // TODO: i18n once copy is approved.
-            format!("{finished} of {} matches resolved", slots.len())
+            t_string!(
+                i18n,
+                tournaments.view.slots.finished_of_value1_matches_resolved,
+                finished = (finished),
+                value1 = (slots.len())
+            )
+            .to_string()
         }
     }
 }
@@ -1765,7 +1949,7 @@ fn OrganizerViewLink(view: OrganizerView) -> impl IntoView {
                 }
             }
         >
-            <span class="text-sm truncate">{organizer_view_label(view)}</span>
+            <span class="text-sm truncate">{move || organizer_view_label(view)}</span>
             <span class="px-1.5 text-xs text-center text-gray-600 rounded dark:text-gray-300 min-w-6 bg-black/5 dark:bg-white/10">
                 {count}
             </span>
@@ -1775,20 +1959,19 @@ fn OrganizerViewLink(view: OrganizerView) -> impl IntoView {
 
 #[component]
 fn OrganizerViews() -> impl IntoView {
+    let i18n = use_i18n();
     view! {
         <aside class="hidden overflow-hidden flex-col min-w-0 min-h-0 border-r border-black/10 bg-odd-light/90 tournament-three:flex dark:border-white/10 dark:bg-surface-muted">
             <header class="py-2.5 px-3 border-b shrink-0 border-black/10 dark:border-white/10">
-                // TODO: i18n once copy is approved.
-                <h3 class="font-bold">"Views"</h3>
+                <h3 class="font-bold">{t!(i18n, tournaments.view.slots.views)}</h3>
             </header>
             <nav class="overflow-y-auto flex-1 min-h-0">
                 <div class="py-1 border-b border-black/10 dark:border-white/10">
                     <OrganizerViewLink view=OrganizerView::All />
                 </div>
                 <div class="py-1">
-                    // TODO: i18n once copy is approved.
                     <p class="px-3 pt-1 pb-1 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
-                        "Scheduling"
+                        {t!(i18n, common.scheduling)}
                     </p>
                     <OrganizerViewLink view=OrganizerView::NeedsAttention />
                     <OrganizerViewLink view=OrganizerView::NoAttempt />
@@ -1797,9 +1980,8 @@ fn OrganizerViews() -> impl IntoView {
                     <OrganizerViewLink view=OrganizerView::TimeAgreed />
                 </div>
                 <div class="py-1 border-t border-black/10 dark:border-white/10">
-                    // TODO: i18n once copy is approved.
                     <p class="px-3 pt-1 pb-1 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
-                        "Play by"
+                        {t!(i18n, common.play_by)}
                     </p>
                     <OrganizerViewLink view=OrganizerView::MissingPlayBy />
                     <OrganizerViewLink view=OrganizerView::PlayBySoon />
@@ -1862,7 +2044,12 @@ fn OrganizerMatchLink(slot_id: Uuid) -> impl IntoView {
             let state = state.get()?;
             let identity = identity.get();
             let names = names.get()?;
-            let href = format!("{}/matches/{slot_id}", context.manage_root.get_value());
+            let href = format!(
+                "{value1}/matches/{slot_id}",
+                value1 = (context.manage_root.get_value()),
+                slot_id = (slot_id),
+            )
+                .to_string();
             let tone = organizer_status_class(state.tone);
             let marker = organizer_marker_class(state.tone);
             Some(
@@ -1896,7 +2083,10 @@ fn OrganizerMatchLink(slot_id: Uuid) -> impl IntoView {
                                 )>{state.label}</span>
                             </span>
                             <span class="block text-sm font-bold truncate">
-                                {organizer_matchup_label(&names[0], &names[1])}
+                                {{
+                                    let names = names.clone();
+                                    move || organizer_matchup_label(&names[0], &names[1])
+                                }}
                             </span>
                             {state
                                 .supporting
@@ -1920,6 +2110,7 @@ fn OrganizerMatchLink(slot_id: Uuid) -> impl IntoView {
 
 #[component]
 fn OrganizerMatchList() -> impl IntoView {
+    let i18n = use_i18n();
     let context = expect_context::<OrganizerContext>();
     let filter_navigate = use_navigate();
     let search_navigate = use_navigate();
@@ -1933,8 +2124,7 @@ fn OrganizerMatchList() -> impl IntoView {
         }>
             <header class="p-3 space-y-2 border-b shrink-0 border-black/10 bg-odd-light dark:border-white/10 dark:bg-surface-raised">
                 <div class="flex gap-2 justify-between items-center">
-                    // TODO: i18n once copy is approved.
-                    <h3 class="font-bold">"Matches"</h3>
+                    <h3 class="font-bold">{t!(i18n, tournaments.calendar.title)}</h3>
                     <button
                         type="button"
                         class="ui-button ui-button-primary ui-button-sm"
@@ -1948,8 +2138,7 @@ fn OrganizerMatchList() -> impl IntoView {
                             }
                         }
                     >
-                        // TODO: i18n once copy is approved.
-                        "Set play-by"
+                        {t!(i18n, tournaments.view.slots.set_play_by)}
                     </button>
                 </div>
                 <select
@@ -1996,13 +2185,11 @@ fn OrganizerMatchList() -> impl IntoView {
                     </For>
                 </select>
                 <label class="block">
-                    // TODO: i18n once copy is approved.
-                    <span class="sr-only">"Search players"</span>
-                    // TODO: i18n once copy is approved.
+                    <span class="sr-only">{t!(i18n, common.search_players)}</span>
                     <input
                         type="search"
                         class="w-full ui-field-input"
-                        placeholder="Search players"
+                        placeholder=move || t_string!(i18n, common.search_players).to_string()
                         prop:value=move || {
                             current_manage_route(&context)
                                 .map(|_| context.query.get())
@@ -2025,9 +2212,8 @@ fn OrganizerMatchList() -> impl IntoView {
                 <Show when=move || {
                     current_manage_route(&context).is_some() && !context.schedules_ready.get()
                 }>
-                    // TODO: i18n once copy is approved.
                     <p class="text-xs text-gray-600 dark:text-gray-300">
-                        "Loading scheduling activity…"
+                        {t!(i18n, tournaments.view.slots.loading_scheduling_activity)}
                     </p>
                 </Show>
             </header>
@@ -2037,11 +2223,10 @@ fn OrganizerMatchList() -> impl IntoView {
                         current_manage_route(&context).is_some()
                             && !context.visible_slot_ids.with(Vec::is_empty)
                     }
-                    fallback=|| {
+                    fallback=move || {
                         view! {
-                            // TODO: i18n once copy is approved.
                             <p class="p-5 text-sm text-center text-gray-600 dark:text-gray-300">
-                                "No matches in this view"
+                                {t!(i18n, tournaments.view.slots.no_matches_in_this_view)}
                             </p>
                         }
                     }
@@ -2064,7 +2249,8 @@ fn OrganizerMatchList() -> impl IntoView {
 }
 
 #[component]
-fn OrganizerEmptyDetail(message: &'static str, show_mobile_back: bool) -> impl IntoView {
+fn OrganizerEmptyDetail(#[prop(into)] message: TextProp, show_mobile_back: bool) -> impl IntoView {
+    let i18n = use_i18n();
     let context = expect_context::<OrganizerContext>();
     let manage_root = context.manage_root.get_value();
     view! {
@@ -2075,11 +2261,10 @@ fn OrganizerEmptyDetail(message: &'static str, show_mobile_back: bool) -> impl I
                     scroll=false
                     attr:class="self-start mb-4 text-sm font-semibold no-link-style text-pillbug-teal tournament-two:hidden"
                 >
-                    // TODO: i18n once copy is approved.
-                    "‹ All matches"
+                    {t!(i18n, tournaments.view.slots.all_matches)}
                 </A>
             </Show>
-            <p class="text-sm text-gray-600 dark:text-gray-300">{message}</p>
+            <p class="text-sm text-gray-600 dark:text-gray-300">{move || message.get()}</p>
         </div>
     }
 }
@@ -2131,14 +2316,10 @@ fn OrganizerMatchDetail(slot_id: Uuid, mobile_back: bool) -> impl IntoView {
                 });
             let admin = has_result_action
                 .then(|| {
-                    let match_context = identity
-                        .clone()
-                        .unwrap_or_else(|| organizer_matchup_label(&names[0], &names[1]));
                     SlotAdjudicationControls(SlotAdjudicationControlsProps {
                         slot: slot.clone(),
                         white_name: names[0].clone(),
                         black_name: names[1].clone(),
-                        match_context,
                     })
                 });
             let status_class = organizer_status_class(state.tone);
@@ -2159,8 +2340,7 @@ fn OrganizerMatchDetail(slot_id: Uuid, mobile_back: bool) -> impl IntoView {
                                     scroll=false
                                     attr:class="inline-flex mb-2 text-sm font-semibold no-link-style text-pillbug-teal tournament-two:hidden"
                                 >
-                                    // TODO: i18n once copy is approved.
-                                    "‹ All matches"
+                                    {t!(i18n, tournaments.view.slots.all_matches)}
                                 </A>
                             </Show>
                             {identity
@@ -2172,7 +2352,10 @@ fn OrganizerMatchDetail(slot_id: Uuid, mobile_back: bool) -> impl IntoView {
                                     }
                                 })}
                             <h3 class="text-lg font-bold break-words">
-                                {organizer_matchup_label(&names[0], &names[1])}
+                                {{
+                                    let names = names.clone();
+                                    move || organizer_matchup_label(&names[0], &names[1])
+                                }}
                             </h3>
                             <p class=format!(
                                 "mt-1 text-sm font-semibold {status_class}",
@@ -2181,12 +2364,11 @@ fn OrganizerMatchDetail(slot_id: Uuid, mobile_back: bool) -> impl IntoView {
                         <div class="flex-1">
                             <section class="grid gap-3 items-center py-3 px-3 border-b sm:px-4 grid-cols-[minmax(0,1fr)_auto] border-black/10 dark:border-white/10">
                                 <div>
-                                    // TODO: i18n once copy is approved.
                                     <p class="text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
-                                        "Game"
+                                        {t!(i18n, common.game)}
                                     </p>
                                     <p class="text-sm font-semibold">
-                                        {organizer_lifecycle_label(state.lifecycle)}
+                                        {move || organizer_lifecycle_label(state.lifecycle)}
                                     </p>
                                 </div>
                                 {game_href
@@ -2196,34 +2378,37 @@ fn OrganizerMatchDetail(slot_id: Uuid, mobile_back: bool) -> impl IntoView {
                                                 class="ui-button ui-button-secondary ui-button-sm"
                                                 href=href
                                             >
-                                                // TODO: i18n once copy is approved.
-                                                "Open game"
+                                                {t!(i18n, common.open_game)}
                                             </a>
                                         }
                                     })}
                             </section>
                             <section class="py-3 px-3 space-y-2 border-b sm:px-4 border-black/10 dark:border-white/10">
-                                // TODO: i18n once copy is approved.
                                 <p class="text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
-                                    "Scheduling"
+                                    {t!(i18n, common.scheduling)}
                                 </p>
                                 {if state.lifecycle != OrganizerLifecycle::Unstarted {
-                                    // TODO: i18n once copy is approved.
-                                    view! { <p class="text-sm">"Scheduling closed"</p> }
-                                        .into_any()
-                                } else if !scheduling_relevant {
-                                    // TODO: i18n once copy is approved.
                                     view! {
                                         <p class="text-sm">
-                                            "Scheduling is not needed for this game"
+                                            {t!(i18n, tournaments.view.slots.scheduling_closed)}
+                                        </p>
+                                    }
+                                        .into_any()
+                                } else if !scheduling_relevant {
+                                    view! {
+                                        <p class="text-sm">
+                                            {t!(
+                                                i18n, tournaments.view.slots.scheduling_is_not_needed_for_this_game
+                                            )}
                                         </p>
                                     }
                                         .into_any()
                                 } else if let Some(time) = slot.scheduled_at {
                                     view! {
                                         <p class="text-sm">
-                                            // TODO: i18n once copy is approved.
-                                            <span class="font-semibold">"Agreed "</span>
+                                            <span class="font-semibold">
+                                                {t!(i18n, tournaments.view.slots.agreed)}
+                                            </span>
                                             {format_schedule_time(i18n.get_locale(), time)}
                                         </p>
                                     }
@@ -2231,21 +2416,28 @@ fn OrganizerMatchDetail(slot_id: Uuid, mobile_back: bool) -> impl IntoView {
                                 } else if proposal_pending || expired_pending {
                                     ().into_any()
                                 } else if state.no_attempt {
-                                    // TODO: i18n once copy is approved.
-                                    view! { <p class="text-sm">"No proposal yet"</p> }
-                                        .into_any()
-                                } else if state.last_proposal_ended {
-                                    // TODO: i18n once copy is approved.
                                     view! {
                                         <p class="text-sm">
-                                            "Last proposal ended without an agreement"
+                                            {t!(i18n, tournaments.view.slots.no_proposal_yet)}
+                                        </p>
+                                    }
+                                        .into_any()
+                                } else if state.last_proposal_ended {
+                                    view! {
+                                        <p class="text-sm">
+                                            {t!(
+                                                i18n, tournaments.view.slots.last_proposal_ended_without_an_agreement
+                                            )}
                                         </p>
                                     }
                                         .into_any()
                                 } else {
-                                    // TODO: i18n once copy is approved.
                                     view! {
-                                        <p class="text-sm">"No current scheduling information"</p>
+                                        <p class="text-sm">
+                                            {t!(
+                                                i18n, tournaments.view.slots.no_current_scheduling_information
+                                            )}
+                                        </p>
                                     }
                                         .into_any()
                                 }}
@@ -2257,15 +2449,16 @@ fn OrganizerMatchDetail(slot_id: Uuid, mobile_back: bool) -> impl IntoView {
                                         let attribution = if offer.status
                                             == ScheduleOfferStatus::Accepted
                                         {
-                                            format!(
-                                                "Proposed by {} · accepted by {}",
-                                                offer.proposer_username,
-                                                offer.opponent_username,
+                                            t_string!(
+                                                i18n, tournaments.view.slots.proposed_by_value1_accepted_by_value2, value1 = (offer.proposer_username.clone()), value2 = (offer.opponent_username.clone())
                                             )
+                                                .to_string()
                                         } else {
-                                            format!("Last proposal by {}", offer.proposer_username)
+                                            t_string!(
+                                                i18n, tournaments.view.slots.last_proposal_by_value1, value1 = (offer.proposer_username.clone())
+                                            )
+                                                .to_string()
                                         };
-                                        // TODO: i18n once copy is approved.
                                         view! {
                                             <p class="text-sm text-gray-600 dark:text-gray-300">
                                                 {attribution}
@@ -2275,23 +2468,21 @@ fn OrganizerMatchDetail(slot_id: Uuid, mobile_back: bool) -> impl IntoView {
                                 {pending
                                     .map(|offer| {
                                         let heading = if proposal_pending {
-                                            format!(
-                                                "{} proposed · waiting for {}",
-                                                offer.proposer_username,
-                                                offer.opponent_username,
+                                            t_string!(
+                                                i18n, tournaments.view.slots.value1_proposed_waiting_for_value2, value1 = (offer.proposer_username.clone()), value2 = (offer.opponent_username.clone())
                                             )
+                                                .to_string()
                                         } else {
-                                            format!(
-                                                "{} proposed · all times have passed",
-                                                offer.proposer_username,
+                                            t_string!(
+                                                i18n, tournaments.view.slots.value1_proposed_all_times_have_passed, value1 = (offer.proposer_username.clone())
                                             )
+                                                .to_string()
                                         };
                                         let heading_class = if proposal_pending {
                                             "text-sm font-semibold text-blue-700 dark:text-blue-300"
                                         } else {
                                             "text-sm font-semibold text-orange-700 dark:text-orange-300"
                                         };
-                                        // TODO: i18n once copy is approved.
                                         view! {
                                             <div class="space-y-1">
                                                 <p class=heading_class>{heading}</p>
@@ -2318,15 +2509,16 @@ fn OrganizerMatchDetail(slot_id: Uuid, mobile_back: bool) -> impl IntoView {
                             </section>
                             <section class="grid gap-3 items-center py-3 px-3 border-b sm:px-4 grid-cols-[minmax(0,1fr)_auto] border-black/10 dark:border-white/10">
                                 <div>
-                                    // TODO: i18n once copy is approved.
                                     <p class="text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
-                                        "Play by"
+                                        {t!(i18n, common.play_by)}
                                     </p>
                                     <p class="text-sm font-semibold">
                                         {slot
                                             .deadline_at
                                             .map(|time| format_schedule_time(i18n.get_locale(), time))
-                                            .unwrap_or_else(|| String::from("Not set"))}
+                                            .unwrap_or_else(|| {
+                                                t_string!(i18n, tournaments.view.slots.not_set).to_string()
+                                            })}
                                     </p>
                                 </div>
                                 <Show when=move || can_set_deadline>
@@ -2349,8 +2541,13 @@ fn OrganizerMatchDetail(slot_id: Uuid, mobile_back: bool) -> impl IntoView {
                                             }
                                         }
                                     >
-                                        // TODO: i18n once copy is approved.
-                                        {if slot.deadline_at.is_some() { "Change" } else { "Set" }}
+                                        {move || {
+                                            if slot.deadline_at.is_some() {
+                                                t_string!(i18n, common.change).to_string()
+                                            } else {
+                                                t_string!(i18n, common.set).to_string()
+                                            }
+                                        }}
                                     </button>
                                 </Show>
                             </section>
@@ -2358,9 +2555,8 @@ fn OrganizerMatchDetail(slot_id: Uuid, mobile_back: bool) -> impl IntoView {
                                 .map(|result| {
                                     view! {
                                         <section class="py-3 px-3 border-b sm:px-4 border-black/10 dark:border-white/10">
-                                            // TODO: i18n once copy is approved.
                                             <p class="text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
-                                                "Result"
+                                                {t!(i18n, common.result)}
                                             </p>
                                             <p class="text-sm font-semibold">{result}</p>
                                         </section>
@@ -2370,8 +2566,9 @@ fn OrganizerMatchDetail(slot_id: Uuid, mobile_back: bool) -> impl IntoView {
                                 .map(|controls| {
                                     view! {
                                         <section class="py-3 px-3 border-b sm:px-4 border-black/10 dark:border-white/10">
-                                            // TODO: i18n once copy is approved.
-                                            <h4 class="mb-2 text-sm font-bold">"Organizer actions"</h4>
+                                            <h4 class="mb-2 text-sm font-bold">
+                                                {t!(i18n, tournaments.view.slots.organizer_actions)}
+                                            </h4>
                                             {controls}
                                         </section>
                                     }
@@ -2400,6 +2597,7 @@ fn OrganizerMatchDetail(slot_id: Uuid, mobile_back: bool) -> impl IntoView {
 
 #[component]
 pub fn TournamentOrganizerIndex() -> impl IntoView {
+    let i18n = use_i18n();
     let context = expect_context::<OrganizerContext>();
     view! {
         {move || {
@@ -2413,9 +2611,13 @@ pub fn TournamentOrganizerIndex() -> impl IntoView {
                         })
                         .unwrap_or_else(|| {
                             view! {
-                                // TODO: i18n once copy is approved.
                                 <OrganizerEmptyDetail
-                                    message="No matches in this view"
+                                    message=move || {
+                                        t_string!(
+                                            i18n, tournaments.view.slots.no_matches_in_this_view
+                                        )
+                                            .to_string()
+                                    }
                                     show_mobile_back=false
                                 />
                             }
@@ -2428,6 +2630,7 @@ pub fn TournamentOrganizerIndex() -> impl IntoView {
 
 #[component]
 pub fn TournamentOrganizerMatch() -> impl IntoView {
+    let i18n = use_i18n();
     let context = expect_context::<OrganizerContext>();
     let selected_match = Memo::new(move |_| {
         let ManageRoute::Match(slot_id) = current_manage_route(&context)? else {
@@ -2450,9 +2653,11 @@ pub fn TournamentOrganizerMatch() -> impl IntoView {
                     })
                     .unwrap_or_else(|| {
                         view! {
-                            // TODO: i18n once copy is approved.
                             <OrganizerEmptyDetail
-                                message="Match unavailable"
+                                message=move || {
+                                    t_string!(i18n, tournaments.view.slots.match_unavailable)
+                                        .to_string()
+                                }
                                 show_mobile_back=true
                             />
                         }
@@ -2579,7 +2784,12 @@ pub fn TournamentOrganizerLayout(
             if game.status == GameStatus::NotStarted && !game.finished {
                 context.view.set(OrganizerView::All);
                 navigate_next(
-                    &format!("{}/matches/{}", context.manage_root.get_value(), next.id),
+                    &format!(
+                        "{value1}/matches/{value2}",
+                        value1 = (context.manage_root.get_value()),
+                        value2 = (next.id)
+                    )
+                    .to_string(),
                     NavigateOptions {
                         scroll: false,
                         ..Default::default()

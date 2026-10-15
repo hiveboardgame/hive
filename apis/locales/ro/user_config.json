@@ -51,5 +51,33 @@
         "always": "Întotdeauna",
         "never": "Niciodată",
         "casual_only": "Doar necotat"
+    },
+    "click_on_your_clock": "Clic pe ceasul tău",
+    "double_click": "Clic dublu",
+    "single_click": "Clic simplu",
+    "light_mode": "Mod luminos",
+    "dark_mode": "Mod întunecat",
+    "white_background": "Fundal alb",
+    "black_background": "Fundal negru",
+    "current_color": "Curent: {{color}}",
+    "ant_light_preview": "Furnică {{design}} (mod luminos)",
+    "ant_dark_preview": "Furnică {{design}} (mod întunecat)",
+    "tile_design": {
+        "official": "Oficial",
+        "flat": "Plat",
+        "three_d": "3D",
+        "high_contrast": "Contrast ridicat",
+        "community": "Comunitar",
+        "pride": "Pride",
+        "carbon_three_d": "Carbon 3D",
+        "carbon": "Carbon"
+    },
+    "tile_design_browser_notice": "Unele browsere nu acceptă toate stilurile de piese. Firefox oferă cea mai uniformă afișare.",
+    "settings": {
+        "settings": "Setări",
+        "tune_board_visuals_and_move_input_preferences": "Ajustează aspectul tablei și preferințele de introducere a mutărilor.",
+        "board_appearance": "Aspectul tablei",
+        "play_preferences": "Preferințe de joc",
+        "if_either_player_has_takebacks_disabled_game_controls_will": "Dacă oricare dintre jucători a dezactivat anularea mutărilor, comenzile jocului nu vor permite astfel de cereri."
     }
 }

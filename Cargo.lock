@@ -4077,6 +4077,7 @@ dependencies = [
  "icu_provider_source",
  "leptos_i18n_codegen",
  "leptos_i18n_parser",
+ "prettyplease",
  "proc-macro2",
  "syn 2.0.119",
 ]

@@ -10,6 +10,7 @@ use crate::{
         },
         molecules::user_identity::UserIdentity,
     },
+    i18n::*,
     providers::AuthContext,
     responses::UserResponse,
 };
@@ -25,6 +26,7 @@ pub fn UserRow(
     actions: Vec<UserAction>,
     #[prop(optional)] game_speed: Option<StoredValue<GameSpeed>>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let username = StoredValue::new(user.username.clone());
     let user_id = StoredValue::new(user.uid);
     let rating = StoredValue::new(if let Some(speed) = game_speed {
@@ -94,7 +96,9 @@ pub fn UserRow(
                     <StatusIndicator username=username.get_value() deleted=user_deleted />
                     <span class="text-xs font-bold truncate max-w-[120px]">
                         {user.username.clone()} <Show when=move || user_bot>
-                            <span class="ml-1 text-[80%]">"BOT"</span>
+                            <span class="ml-1 text-[80%]">
+                                {move || t_string!(i18n, common.bot)}
+                            </span>
                         </Show>
                     </span>
                 </div>

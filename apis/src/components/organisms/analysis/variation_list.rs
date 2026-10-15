@@ -1,11 +1,15 @@
-use crate::providers::{
-    analysis::{AnalysisContext, MoveDelta},
-    game_state::GameStateStore,
+use crate::{
+    i18n::*,
+    providers::{
+        analysis::{AnalysisContext, MoveDelta},
+        game_state::GameStateStore,
+    },
 };
 use leptos::prelude::*;
 
 #[component]
 pub fn VariationList(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
+    let i18n = use_i18n();
     let analysis = expect_context::<AnalysisContext>();
     let game_state = expect_context::<GameStateStore>();
     let alternate_moves = Memo::new(move |_| analysis.store.alternate_moves());
@@ -56,7 +60,7 @@ pub fn VariationList(#[prop(optional)] extend_tw_classes: &'static str) -> impl 
         <div class=list_class>
             <div class="inline-flex flex-wrap gap-2 items-center py-1 px-3 max-w-full text-sm rounded border shadow-sm min-h-10 border-black/10 bg-even-light/90 backdrop-blur dark:border-white/10 dark:bg-surface-panel/90">
                 <span class="text-xs font-semibold text-gray-600 uppercase whitespace-nowrap dark:text-gray-300 shrink-0">
-                    "Other lines"
+                    {move || t_string!(i18n, analysis.other_lines)}
                 </span>
                 {moves}
             </div>

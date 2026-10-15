@@ -1,3 +1,4 @@
+use crate::common::{TournamentPairingLabel, TournamentStageLabel};
 use shared_types::{
     tournament::elimination::Stage,
     tournament_view::{
@@ -17,26 +18,30 @@ use std::collections::{HashMap, HashSet};
 pub(super) fn released_pairing_labels(
     format: &TournamentFormatResponse,
     released: &[GameId],
-) -> HashMap<GameId, String> {
+) -> HashMap<GameId, TournamentPairingLabel> {
     let mut pairings = HashMap::new();
     if released.is_empty() {
         return pairings;
     }
     let released = released.iter().collect::<HashSet<_>>();
-    let mut add = |slot: &SlotResponse, label: String| {
+    let mut add = |slot: &SlotResponse, label: TournamentPairingLabel| {
         if let Some(id) = slot.game_id().filter(|id| released.contains(id)) {
             if slot.resolution.is_none() {
                 pairings.insert(id.clone(), label);
             }
         }
     };
-    // TODO: i18n once copy is approved.
     match format {
         TournamentFormatResponse::Swiss(SwissState { rounds, slots, .. }) => {
             for round in rounds {
                 for encounter in &round.encounters {
                     if let Some(slot) = encounter.slot_ids.first().and_then(|id| slots.get(id)) {
-                        add(slot, format!("Round {} starts", round.round_index + 1));
+                        add(
+                            slot,
+                            TournamentPairingLabel::RoundStarts {
+                                round: round.round_index + 1,
+                            },
+                        );
                     }
                 }
             }
@@ -52,9 +57,14 @@ pub(super) fn released_pairing_labels(
                         .and_then(|entry| slots.get(&entry.slot_id))
                     {
                         let label = if index == 0 {
-                            format!("New match · {stage}")
+                            TournamentPairingLabel::NewMatch {
+                                stage: stage.clone(),
+                            }
                         } else {
-                            format!("Tiebreak set {} · {stage}", index + 1)
+                            TournamentPairingLabel::TiebreakSet {
+                                set: index + 1,
+                                stage: stage.clone(),
+                            }
                         };
                         add(slot, label);
                     }
@@ -67,7 +77,7 @@ pub(super) fn released_pairing_labels(
     pairings
 }
 
-fn stage_label(stage: Stage, nodes: &[EliminationNodeResponse]) -> String {
+fn stage_label(stage: Stage, nodes: &[EliminationNodeResponse]) -> TournamentStageLabel {
     let rounds = nodes
         .iter()
         .filter_map(|node| match node.stage {
@@ -77,32 +87,30 @@ fn stage_label(stage: Stage, nodes: &[EliminationNodeResponse]) -> String {
         })
         .max()
         .unwrap_or(1);
-    // TODO: i18n once copy is approved.
     match stage {
-        Stage::SingleFinal => String::from("Final"),
-        Stage::GrandFinal => String::from("Grand final"),
-        Stage::Reset => String::from("Reset final"),
-        Stage::Bronze => String::from("Third place"),
+        Stage::SingleFinal => TournamentStageLabel::Final,
+        Stage::GrandFinal => TournamentStageLabel::GrandFinal,
+        Stage::Reset => TournamentStageLabel::ResetFinal,
+        Stage::Bronze => TournamentStageLabel::ThirdPlace,
         Stage::WinnersRound { round_index } if round_index + 1 == rounds => {
-            String::from("Upper final")
+            TournamentStageLabel::UpperFinal
         }
         Stage::SingleRound { round_index } | Stage::WinnersRound { round_index } => {
             if round_index + 2 == rounds {
-                String::from("Semifinals")
+                TournamentStageLabel::Semifinals
             } else {
-                format!("Round of {}", 1usize << (rounds - round_index))
+                TournamentStageLabel::RoundOf(1usize << (rounds - round_index))
             }
         }
         Stage::LosersMajor { round_index } if round_index + 2 == rounds => {
-            String::from("Lower final")
+            TournamentStageLabel::LowerFinal
         }
         Stage::LosersMinor { round_index } if round_index + 2 == rounds => {
-            String::from("Lower semifinal")
+            TournamentStageLabel::LowerSemifinal
         }
-        Stage::LosersMinor { .. } | Stage::LosersMajor { .. } => format!(
-            "Lower round {}",
-            stage.lower_round_ordinal().unwrap_or_default() + 1
-        ),
+        Stage::LosersMinor { .. } | Stage::LosersMajor { .. } => {
+            TournamentStageLabel::LowerRound(stage.lower_round_ordinal().unwrap_or_default() + 1)
+        }
     }
 }
 

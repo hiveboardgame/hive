@@ -1,5 +1,6 @@
 use crate::{
     common::TournamentAction,
+    i18n::*,
     providers::ApiRequestsProvider,
     responses::TournamentAbstractResponse,
 };
@@ -9,13 +10,16 @@ use leptos::prelude::*;
 pub fn TournamentOrganizerInvitationNotification(
     tournament: TournamentAbstractResponse,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let api = expect_context::<ApiRequestsProvider>().0;
     let id = StoredValue::new(tournament.tournament_id);
     view! {
         <div class="ui-notification-item">
             <a class="flex-1 min-w-0" href=format!("/tournament/{}", id.get_value())>
-                // TODO: i18n once copy is approved.
-                <div class="ui-notification-label">"Organizer invitation"</div>
+
+                <div class="ui-notification-label">
+                    {t!(i18n, tournaments.ui.organizer_invitation)}
+                </div>
                 <div class="ui-notification-title">{tournament.name}</div>
             </a>
             <div class="ui-notification-actions">
@@ -26,8 +30,8 @@ pub fn TournamentOrganizerInvitationNotification(
                         api.get().tournament(TournamentAction::OrganizerAccept(id.get_value()));
                     }
                 >
-                    // TODO: i18n once copy is approved.
-                    "Accept"
+
+                    {t!(i18n, common.accept)}
                 </button>
                 <button
                     type="button"
@@ -36,8 +40,8 @@ pub fn TournamentOrganizerInvitationNotification(
                         api.get().tournament(TournamentAction::OrganizerDecline(id.get_value()));
                     }
                 >
-                    // TODO: i18n once copy is approved.
-                    "Decline"
+
+                    {t!(i18n, common.decline)}
                 </button>
             </div>
         </div>

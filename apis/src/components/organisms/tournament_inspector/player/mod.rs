@@ -85,7 +85,7 @@ struct HistoryGame {
     board_result: String,
     selected_score: String,
     result: Option<MatchScore>,
-    state: Option<&'static str>,
+    state: Option<String>,
 }
 
 #[derive(Clone, PartialEq)]
@@ -153,41 +153,52 @@ fn PlayerStatisticsTable(
     statistics: PlayerStatistics,
     berserk_rate: Option<String>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let PlayerStatistics {
         performance,
         record,
         win_rate,
         average_opponent,
     } = statistics;
-    // TODO: i18n once copy is approved.
+
     view! {
         <dl class="grid gap-x-4 px-1 text-sm grid-cols-[minmax(0,1fr)_auto]">
             {performance
                 .map(|performance| {
                     view! {
-                        <dt class="py-0.5 text-gray-600 dark:text-gray-300">"Performance"</dt>
+                        <dt class="py-0.5 text-gray-600 dark:text-gray-300">
+                            {t!(i18n, common.performance)}
+                        </dt>
                         <dd class="py-0.5 font-semibold tabular-nums text-right">{performance}</dd>
                     }
-                })} <dt class="py-0.5 text-gray-600 dark:text-gray-300">"W–D–L"</dt>
-            <dd class="py-0.5 font-semibold tabular-nums text-right">{record}</dd>
+                })}
+            <dt class="py-0.5 text-gray-600 dark:text-gray-300">
+                {t!(i18n, tournaments.ui.record_heading)}
+            </dt> <dd class="py-0.5 font-semibold tabular-nums text-right">{record}</dd>
             {win_rate
                 .map(|win_rate| {
                     view! {
-                        <dt class="py-0.5 text-gray-600 dark:text-gray-300">"Win rate"</dt>
+                        <dt class="py-0.5 text-gray-600 dark:text-gray-300">
+                            {t!(i18n, tournaments.view.arena.win_rate)}
+                        </dt>
                         <dd class="py-0.5 font-semibold tabular-nums text-right">{win_rate}</dd>
                     }
                 })}
             {berserk_rate
                 .map(|berserk_rate| {
                     view! {
-                        <dt class="py-0.5 text-gray-600 dark:text-gray-300">"Berserk rate"</dt>
+                        <dt class="py-0.5 text-gray-600 dark:text-gray-300">
+                            {t!(i18n, tournaments.view.arena.berserk_rate)}
+                        </dt>
                         <dd class="py-0.5 font-semibold tabular-nums text-right">{berserk_rate}</dd>
                     }
                 })}
             {average_opponent
                 .map(|average_opponent| {
                     view! {
-                        <dt class="py-0.5 text-gray-600 dark:text-gray-300">"Average opponent"</dt>
+                        <dt class="py-0.5 text-gray-600 dark:text-gray-300">
+                            {t!(i18n, tournaments.view.arena.average_opponent)}
+                        </dt>
                         <dd class="py-0.5 font-semibold tabular-nums text-right">
                             {average_opponent}
                         </dd>
@@ -224,9 +235,8 @@ fn opponent_label(
     opponent: Option<Uuid>,
 ) -> OpponentLabel {
     let Some(opponent) = opponent else {
-        // TODO: i18n once copy is approved.
         return OpponentLabel {
-            name: String::from("Bye"),
+            name: t_string!(use_i18n(), common.bye).to_string(),
             rating: None,
         };
     };
@@ -279,12 +289,14 @@ fn primary_score_text(configuration: &FormatConfig, points: Score) -> String {
     primary_value_text(Value::Score(points), configuration)
 }
 
-// TODO: i18n once copy is approved.
-fn slot_state(slot: &SlotResponse) -> Option<&'static str> {
+fn slot_state(slot: &SlotResponse) -> Option<String> {
+    let i18n = use_i18n();
     match slot.resolution {
-        Some(Resolution::Withdrawal(_)) => Some("Withdrawn"),
-        Some(Resolution::Clinched) => Some("Not needed"),
-        Some(Resolution::CancelledByWithdrawal) => Some("Cancelled · withdrawal"),
+        Some(Resolution::Withdrawal(_)) => Some(t_string!(i18n, common.withdrawn).to_string()),
+        Some(Resolution::Clinched) => Some(t_string!(i18n, tournaments.ui.not_needed).to_string()),
+        Some(Resolution::CancelledByWithdrawal) => {
+            Some(t_string!(i18n, tournaments.ui.cancelled_withdrawal).to_string())
+        }
         Some(Resolution::Result(GameOutcome::Adjudicated(outcome)))
             if matches!(
                 (outcome.white(), outcome.black()),
@@ -294,25 +306,27 @@ fn slot_state(slot: &SlotResponse) -> Option<&'static str> {
                 )
             ) =>
         {
-            Some("Double forfeit")
+            Some(t_string!(i18n, game.tournament_result.double_forfeit).to_string())
         }
-        Some(Resolution::Result(GameOutcome::Adjudicated(_))) => Some("Adjudicated"),
+        Some(Resolution::Result(GameOutcome::Adjudicated(_))) => {
+            Some(t_string!(i18n, tournaments.ui.adjudicated).to_string())
+        }
         Some(Resolution::Result(GameOutcome::Played(_))) => None,
         None if slot
             .game
             .as_ref()
             .is_some_and(|game| !game.finished && game.status == GameStatus::NotStarted) =>
         {
-            Some("Not started")
+            Some(t_string!(i18n, common.not_started).to_string())
         }
         None if slot
             .game
             .as_ref()
             .is_some_and(|game| !game.finished && game.status == GameStatus::InProgress) =>
         {
-            Some("Playing")
+            Some(t_string!(i18n, common.playing).to_string())
         }
-        None if slot.game.is_none() => Some("Planned"),
+        None if slot.game.is_none() => Some(t_string!(i18n, tournaments.ui.planned).to_string()),
         None => None,
     }
 }
@@ -365,7 +379,7 @@ fn slot_history_game(
     }
 }
 
-fn empty_history_game(selected_score: String, state: Option<&'static str>) -> HistoryGame {
+fn empty_history_game(selected_score: String, state: Option<String>) -> HistoryGame {
     HistoryGame {
         order: usize::MAX,
         number: None,
@@ -392,6 +406,7 @@ fn player_header_details(
     elimination_result: Option<EliminationPlayerResultResponse>,
     player: Uuid,
 ) -> PlayerHeaderDetails {
+    let i18n = use_i18n();
     let memberships = common.memberships().get();
     let standings = common.standings().get();
     let name = player_name(&memberships, player);
@@ -423,20 +438,19 @@ fn player_header_details(
                 .get(&player)
                 .map(|seed| seed.saturating_add(1))
             {
-                // TODO: i18n once copy is approved.
-                metadata.push(format!("seed {seed}"));
+                metadata.push(t_string!(i18n, tournaments.ui.seed_detail, seed = seed).to_string());
             }
         }
         FormatConfig::RoundRobin(_) | FormatConfig::Arena(_) => {
             if let Some((_, row)) = standing.as_ref() {
                 let score = primary_value_text(row.primary_score, configuration);
-                // TODO: i18n once copy is approved.
+
                 let suffix = if matches!(configuration, FormatConfig::RoundRobin(config)
                     if config.rules.primary_score == RoundRobinPrimaryScore::MatchPoints)
                 {
-                    "match pts"
+                    t_string!(i18n, tournaments.ui.match_pts).to_string()
                 } else {
-                    "pts"
+                    t_string!(i18n, tournaments.ui.points_abbreviation).to_string()
                 };
                 metadata.push(format!("{score} {suffix}"));
             }
@@ -444,15 +458,15 @@ fn player_header_details(
         FormatConfig::Swiss(swiss) => {
             if let Some((_, row)) = standing.as_ref() {
                 let score = primary_value_text(row.primary_score, configuration);
-                // TODO: i18n once copy is approved.
+
                 let suffix = if matches!(
                     swiss.system,
                     SwissSystem::DoubleSwiss(system)
                         if system.primary_score == DoubleSwissPrimaryScore::MatchPoints
                 ) {
-                    "match pts"
+                    t_string!(i18n, tournaments.ui.match_pts).to_string()
                 } else {
-                    "pts"
+                    t_string!(i18n, tournaments.ui.points_abbreviation).to_string()
                 };
                 metadata.push(format!("{score} {suffix}"));
             }
@@ -461,7 +475,7 @@ fn player_header_details(
     PlayerHeaderDetails {
         title,
         profile_href: format!("/@/{name}"),
-        badge: elimination_result.and_then(result_label),
+        badge: elimination_result.and_then(|result| result_label(i18n.get_locale(), result)),
         metadata: metadata.join(" · "),
     }
 }

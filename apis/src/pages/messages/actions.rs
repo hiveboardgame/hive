@@ -1,4 +1,5 @@
 use crate::{
+    common::localized_error_message,
     components::{
         atoms::block_toggle_button::BlockToggleButton,
         molecules::game_thread_toggle::{GameThreadToggle, GameThreadToggleSize},
@@ -142,7 +143,9 @@ pub(super) fn TournamentActions(tournament_id: TournamentId) -> impl IntoView {
                     {button_label}
                 </button>
                 <ShowLet some=move || error.get() let:error>
-                    <span class="ui-field-error">{error}</span>
+                    <span class="ui-field-error">
+                        {move || localized_error_message(i18n, &error)}
+                    </span>
                 </ShowLet>
             </div>
         </div>

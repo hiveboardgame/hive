@@ -10,6 +10,7 @@ mod focus;
 mod game_action;
 mod game_display;
 mod game_reaction;
+mod locale;
 mod markdown;
 mod move_info;
 mod overlay_paint;
@@ -27,7 +28,9 @@ mod tournament_action;
 mod tournament_admission;
 mod tournament_display;
 mod tournament_format_label;
+mod tournament_pairing_label;
 mod tournament_standings;
+mod ui_error;
 mod ui_utils;
 mod user_action;
 #[cfg(feature = "ssr")]
@@ -52,19 +55,31 @@ pub use chat_link::{chat_link_href, external_link_destination, validated_link_ur
 pub(crate) use client_message::WEBSOCKET_PROTOCOL_VERSION;
 pub use client_message::{ChatSendRequest, ClientRequest, SubscriptionAttempt, TvInterest};
 pub use config_options::{CurrentConfirm, MoveConfirm, TileDesign, TileDots, TileRotation};
+#[cfg(feature = "ssr")]
+pub(crate) use date_time::format_utc_datetime;
 pub(crate) use date_time::{format_local_datetime, format_tournament_datetime};
 pub(crate) use fitted_pagination::use_fitted_pagination;
 pub(crate) use focus::focus_after_render;
 pub use game_action::GameAction;
 pub use game_display::{
+    color_choice_label,
+    conclusion_label,
     display_username,
+    format_clock_time_remaining,
     format_game_rating,
     format_game_result,
+    game_result_label,
     game_speed_label,
+    game_speed_label_for_locale,
     game_tournament_link,
+    result_marker_label,
+    tournament_game_result_label,
     TournamentLink,
 };
 pub use game_reaction::GameReaction;
+pub use locale::parse_locale;
+#[cfg(feature = "ssr")]
+pub(crate) use locale::request_locale;
 pub use markdown::markdown_to_html;
 pub use move_info::MoveInfo;
 pub use overlay_paint::OverlayPaint;
@@ -113,6 +128,7 @@ pub use tournament_action::{
 pub(crate) use tournament_admission::tournament_admission_viewer;
 pub use tournament_format_label::tournament_format_label;
 pub(crate) use tournament_standings::display_standing_rows;
+pub use ui_error::{localized_error_message, localized_error_message_for_locale, UiError};
 pub use ui_utils::{render_text_prop, with_class};
 pub use user_action::UserAction;
 
@@ -127,3 +143,5 @@ pub(crate) use tournament_display::{
     unfinished_tournament_game_label,
 };
 pub use tournament_display::{parse_tournament_slot_fragment, tournament_slot_fragment};
+
+pub use tournament_pairing_label::{TournamentPairingLabel, TournamentStageLabel};

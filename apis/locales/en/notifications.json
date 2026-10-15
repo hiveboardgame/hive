@@ -7,12 +7,29 @@
         "col_discord": "Discord",
         "saving": "Saving…",
         "saved": "Saved.",
-        "save_failed": "Failed to save:"
+        "save_failed": "Failed to save:",
+        "push_discord_and_device_delivery_settings": "Push, Discord, and device delivery settings.",
+        "notification_preferences": "Notification preferences",
+        "enable_browser_notifications_before_choosing_push_delivery": "Enable browser notifications before choosing push delivery.",
+        "discord_link_instructions": "Join the HiveGame Discord server and link your Discord account below to enable Discord notification settings.",
+        "discord_integration": "Discord integration",
+        "step_1": "Step 1",
+        "join_the_hivegame_discord_server": "Join the HiveGame Discord server.",
+        "join_discord": "Join Discord",
+        "step_2": "Step 2",
+        "link_this_hivegame_account_to_discord": "Link this HiveGame account to Discord.",
+        "no_discord_account_linked": "No Discord account linked",
+        "sign_in_to_link_discord": "Sign in to link Discord",
+        "discord_status_temporarily_unavailable": "Discord status temporarily unavailable",
+        "error_loading_discord_name": "Error loading Discord name",
+        "link_discord_account": "Link Discord account",
+        "push_delivery_is_enabled_for_this_browser": "Push delivery is enabled for this browser.",
+        "push_delivery_is_enabled_on_another_browser": "Push delivery is enabled on another browser.",
+        "browser_notifications_are_not_available_in_this_browser": "Browser notifications are not available in this browser."
     },
     "events": {
         "your_turn": "Your turn",
         "challenges": "Challenge received",
-        "game_ended": "Game ended",
         "tournament": "Tournament invite",
         "schedules": "Schedule proposal",
         "dms": "Direct message"
@@ -33,7 +50,6 @@
     "devices": {
         "heading": "Your devices",
         "body": "Every device currently set up to receive push. Remove any you no longer use.",
-        "remove": "Remove",
         "this_browser": "(this browser)",
         "last_active": "last active",
         "platform_web": "Browser"
@@ -62,9 +78,7 @@
         "accepted": "{{player}} accepted your game time for {{time}}"
     },
     "tournament_status": {
-        "label": "Tournament",
-        "started": "Started",
-        "finished": "Finished"
+        "label": "Tournament"
     },
     "tournament_invitation": {
         "label": "Tournament invitation",
@@ -81,7 +95,6 @@
         "challenge_casual": "{{challenger}} · {{time_control}} · casual",
         "game_started_title": "Game started",
         "game_started_body": "vs {{opponent}} · {{time_control}}",
-        "game_ended_title": "Game ended",
         "game_ended_won_resignation": "{{opponent}} resigned",
         "game_ended_won_timeout": "{{opponent}} timed out",
         "game_ended_won": "You beat {{opponent}}",
@@ -111,9 +124,93 @@
         "test_title": "HiveGame",
         "test_body": "Test notification — push is working"
     },
-    "tournament_status": {
-        "label": "Tournament",
-        "started": "Started",
-        "finished": "Finished"
+    "tournament_notice": {
+        "start_deferred": "The scheduled start had too few entrants. Start the tournament manually once enough entrants have joined.",
+        "games_ready": "{{count}} games are ready. Open the tournament to review your pairings.",
+        "recorded_one": "An organizer recorded a {{outcome}} for your game.",
+        "recorded_many": "An organizer recorded results for {{count}} of your games: {{outcomes}}.",
+        "schedule_cancelled": "{{actor}} cancelled the agreed time for your game ({{time}})",
+        "outcome": {
+            "double_forfeit": "double forfeit",
+            "draw": "draw",
+            "win": "win",
+            "loss": "loss"
+        }
+    },
+    "external": {
+        "open_description": "{{description}}. Open: {{link}}",
+        "organizer_title": "Tournament organizer invitation",
+        "organizer_body": "You've been invited to organize {{tournament_name}}.",
+        "schedule_many": "{{proposer}} offered {{count}} times for your match. Open to choose.",
+        "organizer_discord": "Invited to organize [tournament {{tournament_name}}](<https://hivegame.com/tournament/{{tournament_nanoid}}>).",
+        "schedule_many_discord": "[Schedule proposed](<{{link}}>) — {{proposer}} offered {{count}} times for your game. Open to choose.",
+        "organizer_subject": "Organizer invitation: {{tournament_name}}",
+        "organizer_email": "You've been invited to organize {{tournament_name}}. Open: {{link}}",
+        "schedule_many_subject": "{{proposer}} proposed game times",
+        "schedule_many_email": "{{proposer}} offered {{count}} times for your game. Open to choose: {{link}}",
+        "your_turn_discord": "[Your turn](<https://hivegame.com/game/{{game_nanoid}}>) in your game vs {{opponent}}.",
+        "challenge_discord": "[New challenge](<https://hivegame.com/challenge/{{challenge_nanoid}}>) from {{challenger}} · {{time_control}} · {{rated}}.",
+        "game_started_discord": "[Your game](<https://hivegame.com/game/{{game_nanoid}}>) vs {{opponent}} started · {{time_control}}.",
+        "game_ended_won_discord": "you beat {{opponent}}",
+        "game_ended_draw_agreement_discord": "you drew with {{opponent}} by agreement",
+        "game_ended_draw_discord": "you drew with {{opponent}}",
+        "game_ended_discord": "Your [game](<https://hivegame.com/game/{{game_nanoid}}>) ended — {{detail}}{{change}}.",
+        "tournament_invite_discord": "Invited to [tournament {{tournament_name}}](<https://hivegame.com/tournament/{{tournament_nanoid}}>).",
+        "tournament_started_discord": "[Tournament {{tournament_name}}](<https://hivegame.com/tournament/{{tournament_nanoid}}>) has begun! Your games are ready.",
+        "schedule_propose_discord": "[Schedule proposed](<{{link}}>) — {{proposer}} proposed {{when}} for your game.",
+        "schedule_accept_discord": "[Schedule accepted](<{{link}}>) — {{opponent}} accepted {{when}} for your game.",
+        "direct_message_discord": "DM from {{sender}}: {{preview}}",
+        "game_control_discord": "[Your game](<https://hivegame.com/game/{{game_nanoid}}>) — {{actor}} {{action}}.",
+        "your_turn_subject": "Your turn vs {{opponent}}",
+        "your_turn_email": "{{opponent}} just moved in your game. Continue at https://hivegame.com/game/{{game_nanoid}}",
+        "challenge_subject": "{{challenger}} challenged you on HiveGame",
+        "challenge_email": "{{challenger}} sent you a {{time_control}} {{rated}} challenge. Open: {{link}}",
+        "game_started_subject": "Game vs {{opponent}} started",
+        "game_started_email": "Your {{time_control}} challenge was accepted. Open: {{link}}",
+        "game_ended_email": "Review the game: {{link}}",
+        "tournament_invite_subject": "Tournament invite: {{tournament_name}}",
+        "tournament_invite_email": "You've been invited to {{tournament_name}}. Open: {{link}}",
+        "tournament_started_subject": "Tournament {{tournament_name}} started",
+        "tournament_started_email": "{{tournament_name}} has begun and your games are ready. Open: {{link}}",
+        "schedule_propose_subject": "{{proposer}} proposed a game time",
+        "schedule_propose_email": "{{proposer}} proposed {{when}} for your game. Open: {{link}}",
+        "schedule_accept_subject": "{{opponent}} accepted your proposed time",
+        "schedule_accept_email": "{{opponent}} accepted {{when}} for your game. Open: {{link}}",
+        "game_control_subject": "{{actor}} {{action}}",
+        "game_control_email": "{{title}} in your game. Open: {{link}}",
+        "test_subject": "HiveGame test notification",
+        "test_email": "Push is working.",
+        "direct_message_subject": "New message from {{sender}}"
+    },
+    "push_errors": {
+        "enable_first": "Enable notifications first.",
+        "test_failed": "Could not send the test notification.",
+        "unavailable": "Notifications are unavailable in this browser.",
+        "service_workers_unsupported": "This browser does not support service workers.",
+        "registration_lookup_failed": "Could not find the browser notification service.",
+        "service_worker_missing": "Reload the page and try again; the notification service is not ready.",
+        "permission_blocked": "Notifications are blocked for this site in browser settings.",
+        "permission_request_failed": "Could not request notification permission.",
+        "permission_not_granted": "Notification permission was not granted.",
+        "server_key_missing": "Web Push is not configured on the server.",
+        "push_manager_failed": "Could not access browser notifications.",
+        "server_key_invalid": "The server returned an invalid notification key.",
+        "subscribe_failed": "Could not subscribe to notifications.",
+        "subscription_invalid": "The browser returned an invalid subscription.",
+        "registration_failed": "Could not register browser notifications.",
+        "unsubscribe_failed": "Could not unsubscribe from notifications.",
+        "subscription_not_released": "The browser did not release the notification subscription."
+    },
+    "discord": {},
+    "email": {
+        "password_reset_body": "Hi {{username}},\n\nWe received a request to reset your password. The link expires in 1 hour.\nIf you didn't request this, ignore this email — your password has not changed.\n\n{{link}}\n\n--\nThis email was sent by hivegame.com. If you didn't sign up, you can safely ignore this message.\n\nNeed to talk to a human? Join our Discord and find Ion or leex:\nhttps://discord.gg/7EwNTJnfab\n",
+        "recipient_fallback": "there"
+    },
+    "control": {
+        "offered_draw": "offered a draw",
+        "requested_takeback": "requested a takeback",
+        "declined_draw": "declined the draw",
+        "accepted_takeback": "accepted the takeback",
+        "declined_takeback": "declined the takeback"
     }
 }

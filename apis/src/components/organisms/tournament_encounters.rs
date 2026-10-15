@@ -5,6 +5,7 @@ use crate::{
         primary_score_presentation,
         primary_value_text,
         result_marker_color,
+        result_marker_label,
         standings_value_text,
         tournament_game_number,
         tournament_player_name as player_name,
@@ -76,10 +77,12 @@ fn format_game_points(score: Score, point_system: PointSystem) -> String {
     standings_value_text(Value::Score(score), game_point_presentation(point_system))
 }
 
-fn slot_state(slot: &SlotResponse) -> &'static str {
-    // TODO: i18n once copy is approved.
+fn slot_state(slot: &SlotResponse) -> String {
+    let i18n = use_i18n();
     match slot.resolution {
-        Some(Resolution::Result(GameOutcome::Played(_))) => "Played",
+        Some(Resolution::Result(GameOutcome::Played(_))) => {
+            t_string!(i18n, tournaments.ui.played).to_string()
+        }
         Some(Resolution::Result(GameOutcome::Adjudicated(outcome)))
             if matches!(
                 (outcome.white(), outcome.black()),
@@ -89,12 +92,18 @@ fn slot_state(slot: &SlotResponse) -> &'static str {
                 )
             ) =>
         {
-            "Double forfeit"
+            t_string!(i18n, game.tournament_result.double_forfeit).to_string()
         }
-        Some(Resolution::Result(GameOutcome::Adjudicated(_))) => "Adjudicated",
-        Some(Resolution::Withdrawal(_)) => "Withdrawal",
-        Some(Resolution::Clinched) => "Not played · match already decided",
-        Some(Resolution::CancelledByWithdrawal) => "Not played · withdrawal",
+        Some(Resolution::Result(GameOutcome::Adjudicated(_))) => {
+            t_string!(i18n, tournaments.ui.adjudicated).to_string()
+        }
+        Some(Resolution::Withdrawal(_)) => t_string!(i18n, common.withdrawal).to_string(),
+        Some(Resolution::Clinched) => {
+            t_string!(i18n, tournaments.ui.not_played_match_already_decided).to_string()
+        }
+        Some(Resolution::CancelledByWithdrawal) => {
+            t_string!(i18n, tournaments.ui.not_played_withdrawal).to_string()
+        }
         None => match slot.game.as_ref() {
             Some(game)
                 if game.finished
@@ -103,13 +112,17 @@ fn slot_state(slot: &SlotResponse) -> &'static str {
                         GameStatus::Finished(_) | GameStatus::Adjudicated
                     ) =>
             {
-                "Finished · result pending"
+                t_string!(i18n, tournaments.ui.finished_result_pending).to_string()
             }
-            Some(game) if game.status == GameStatus::InProgress => "In progress",
-            _ if slot.scheduled_at.is_some() => "Scheduled",
-            Some(game) if game.status == GameStatus::NotStarted => "Not started",
-            Some(_) => "In progress",
-            None => "Planned",
+            Some(game) if game.status == GameStatus::InProgress => {
+                t_string!(i18n, common.in_progress).to_string()
+            }
+            _ if slot.scheduled_at.is_some() => t_string!(i18n, common.scheduled).to_string(),
+            Some(game) if game.status == GameStatus::NotStarted => {
+                t_string!(i18n, common.not_started).to_string()
+            }
+            Some(_) => t_string!(i18n, common.in_progress).to_string(),
+            None => t_string!(i18n, tournaments.ui.planned).to_string(),
         },
     }
 }
@@ -166,6 +179,7 @@ fn TournamentGameRow(
     game_number: Signal<Option<usize>>,
     total_games: usize,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     view! {
         {move || {
             let game_slot = game_slot.try_get()?;
@@ -188,12 +202,23 @@ fn TournamentGameRow(
                 view! {
                     <div class="grid gap-y-1 gap-x-3 py-2 px-2 text-xs grid-cols-[minmax(0,1fr)_auto] dark:odd:bg-surface-row-odd dark:even:bg-surface-row-even odd:bg-odd-light even:bg-even-light">
                         <div class="min-w-0">
-                            // TODO: i18n once copy is approved.
+
                             <div class="font-bold text-gray-700 dark:text-gray-300">
                                 {number
                                     .map_or_else(
-                                        || unfinished_tournament_game_label(&game_slot).to_string(),
-                                        |number| format!("Game {number} of {total_games}"),
+                                        || {
+                                            unfinished_tournament_game_label(
+                                                    i18n.get_locale(),
+                                                    &game_slot,
+                                                )
+                                                .to_string()
+                                        },
+                                        |number| {
+                                            t_string!(
+                                                i18n, tournaments.ui.game_of, number = number, value1 = total_games
+                                            )
+                                                .to_string()
+                                        },
                                     )}
                             </div>
                             <div class="flex flex-wrap gap-x-1 text-gray-600 dark:text-gray-400">
@@ -210,12 +235,11 @@ fn TournamentGameRow(
                             {game_id
                                 .map(|game_id| {
                                     view! {
-                                        // TODO: i18n once copy is approved.
                                         <a
                                             class="font-bold hover:underline"
                                             href=format!("/game/{game_id}")
                                         >
-                                            "Open game"
+                                            {move || { t_string!(i18n, common.open_game).to_string() }}
                                         </a>
                                     }
                                 })}
@@ -233,6 +257,7 @@ fn TournamentGamePlaceholder(
     game_slot: ArcField<SlotResponse>,
     point_system: PointSystem,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     move || {
         let slot = game_slot.try_get()?;
         let memberships = common.memberships().get();
@@ -242,8 +267,14 @@ fn TournamentGamePlaceholder(
         let players = slot
             .participants
             .map(|player| player_name(&memberships, player));
-        // TODO: i18n once copy is approved.
-        let label = format!("{} vs {}", players[0], players[1]);
+
+        let label = t_string!(
+            i18n,
+            common.versus_players,
+            white = players[0].clone(),
+            black = players[1].clone()
+        )
+        .to_string();
         let result = slot.awarded_game_points.map(|points| {
             format!(
                 "{} – {} · {state}",
@@ -287,27 +318,29 @@ fn TournamentGamePlaceholder(
                     {game_id.as_ref().map(|_| result.clone().unwrap_or_else(|| state.to_string()))}
                 </p>
                 <div class="flex justify-center items-center w-full aspect-square shrink-0">
-                    // TODO: i18n once copy is approved.
+
                     <span class="text-sm font-semibold">
                         {if game_id.is_some() {
-                            String::from("Open game")
+                            t_string!(i18n, common.open_game).to_string()
                         } else if slot.resolution.is_some() {
                             result.unwrap_or_else(|| state.to_string())
                         } else if slot.scheduled_at.is_some() {
                             state.to_string()
                         } else {
-                            String::from("Not available yet")
+                            t_string!(i18n, tournaments.ui.not_available_yet).to_string()
                         }}
                     </span>
                 </div>
                 {game_id
                     .map(|game_id| {
                         view! {
-                            // TODO: i18n once copy is approved.
                             <a
                                 class="absolute inset-0 z-10 rounded-lg no-link-style focus-visible:outline-2 focus-visible:outline-pillbug-teal"
                                 href=format!("/game/{game_id}")
-                                aria-label=format!("Open game: {label}")
+                                aria-label=move || {
+                                    t_string!(i18n, tournaments.ui.open_game, label = label.clone())
+                                        .to_string()
+                                }
                             ></a>
                         }
                     })}
@@ -345,6 +378,7 @@ fn TournamentDrawerSlot(
     game_number: Signal<Option<usize>>,
     total_games: Signal<usize>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let preview_slot = game_slot.clone();
     let played_game_id = Memo::new(move |_| {
         preview_slot
@@ -359,14 +393,24 @@ fn TournamentDrawerSlot(
     let label_slot = game_slot.clone();
     view! {
         <div class="flex flex-col gap-1 w-60 min-w-0 max-w-full">
-            // TODO: i18n once copy is approved.
+
             <p class="text-xs font-bold">
                 {move || match game_number.get() {
-                    Some(number) => Some(format!("Game {number} of {}", total_games.get())),
+                    Some(number) => {
+                        Some(
+                            t_string!(
+                                i18n, tournaments.ui.game_of, number = number, value1 = total_games.get()
+                            )
+                                .to_string(),
+                        )
+                    }
                     None => {
                         label_slot
                             .try_get()
-                            .map(|slot| unfinished_tournament_game_label(&slot).to_string())
+                            .map(|slot| {
+                                unfinished_tournament_game_label(i18n.get_locale(), &slot)
+                                    .to_string()
+                            })
                     }
                 }}
             </p>
@@ -393,7 +437,7 @@ fn TournamentDrawerSlot(
 
 #[derive(Clone)]
 pub struct TournamentDrawerSeries {
-    pub(crate) label: Option<&'static str>,
+    pub(crate) label: Option<String>,
     pub(crate) slots: Vec<ArcField<SlotResponse>>,
     pub(crate) participants: [Uuid; 2],
     pub(crate) score: Option<String>,
@@ -441,6 +485,7 @@ fn TournamentGamesDrawerBody(
     match_points: Signal<Option<String>>,
     close: Callback<()>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let names = Memo::new(move |_| {
         let participants = series.with(|series| {
             series
@@ -452,21 +497,20 @@ fn TournamentGamesDrawerBody(
             .memberships()
             .with(|memberships| participants.map(|player| player_name(memberships, player)))
     });
-    // TODO: i18n once copy is approved.
+
     let title = move || {
         series.with(|series| {
             series
                 .first()
-                .and_then(|series| series.label)
-                .unwrap_or("Matchup games")
+                .and_then(|series| series.label.clone())
+                .unwrap_or(t_string!(i18n, tournaments.ui.matchup_games).to_string())
         })
     };
     view! {
-        // TODO: i18n once copy is approved.
         <button
             type="button"
             class="fixed inset-0 z-40 bg-black/35"
-            aria-label="Close matchup games"
+            aria-label=move || t_string!(i18n, tournaments.ui.close_matchup_games).to_string()
             on:click=move |_| close.run(())
         ></button>
         <aside
@@ -476,23 +520,25 @@ fn TournamentGamesDrawerBody(
             <header class="sticky top-0 z-10 py-3 px-4 bg-white border-b border-gray-200 dark:bg-gray-900 dark:border-gray-700">
                 <div class="flex gap-3 justify-between items-start">
                     <div class="min-w-0">
-                        // TODO: i18n once copy is approved.
+
                         <p class="font-bold tracking-wide text-gray-500 uppercase text-[10px]">
                             {title}
                         </p>
                         <h2 class="overflow-hidden min-w-0 text-lg font-bold leading-tight wrap-break-word">
                             <span>{move || names.get()[0].clone()}</span>
-                            <span class="mx-1.5 font-normal text-gray-500">"vs"</span>
+                            <span class="mx-1.5 font-normal text-gray-500">
+                                {move || t_string!(i18n, tournaments.view.common.versus)}
+                            </span>
                             <span>{move || names.get()[1].clone()}</span>
                         </h2>
                     </div>
-                    // TODO: i18n once copy is approved.
+
                     <button
                         type="button"
                         class="ui-button ui-button-secondary ui-button-sm shrink-0"
                         on:click=move |_| close.run(())
                     >
-                        "Close"
+                        {t!(i18n, common.close)}
                     </button>
                 </div>
             </header>
@@ -502,9 +548,13 @@ fn TournamentGamesDrawerBody(
                         .get()
                         .map(|score| {
                             view! {
-                                // TODO: i18n once copy is approved.
                                 <p class="font-semibold tabular-nums">
-                                    {format!("Match points: {score}")}
+                                    {move || {
+                                        t_string!(
+                                            i18n, tournaments.ui.match_points, score = score.clone()
+                                        )
+                                            .to_string()
+                                    }}
                                 </p>
                             }
                         })
@@ -551,12 +601,13 @@ fn TournamentGamesSeries(
         let series = series.get()?;
         series.label.map(|_| {
             common.memberships().with(|memberships| {
-                // TODO: i18n once copy is approved.
-                format!(
-                    "{} vs {}",
-                    player_name(memberships, series.participants[0]),
-                    player_name(memberships, series.participants[1]),
+                t_string!(
+                    use_i18n(),
+                    common.versus_players,
+                    white = player_name(memberships, series.participants[0]),
+                    black = player_name(memberships, series.participants[1])
                 )
+                .to_string()
             })
         })
     };
@@ -567,7 +618,7 @@ fn TournamentGamesSeries(
                     {move || {
                         series
                             .get()
-                            .and_then(|series| series.label)
+                            .and_then(|series| series.label.clone())
                             .map(|label| view! { <h3 class="font-bold">{label}</h3> })
                     }}
                     <Show when=move || {
@@ -620,6 +671,7 @@ fn TournamentGamesSet(
     set_index: usize,
     point_system: PointSystem,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let slots = Signal::derive(move || {
         let slots = series.with(|series| match series.as_ref() {
             Some(TournamentDrawerSeries {
@@ -641,20 +693,24 @@ fn TournamentGamesSet(
                 details()
                     .map(|set| {
                         let phase = set.phase;
-                        let rules = format!(
-                            "{} games · {}",
-                            phase.games_per_set,
-                            match phase.clinch {
-                                ClinchPolicy::PlayAll => "all games played",
-                                ClinchPolicy::EarlyClinch => "ends when clinched",
-                            },
-                        );
-                        // TODO: i18n once copy is approved.
+                        let rules = t_string!(
+                            i18n, tournaments.ui.game_count_with_details, value1 = phase.games_per_set, value2 = match phase.clinch {
+                                ClinchPolicy::PlayAll => t_string!(i18n, tournaments.ui.all_games_played).to_string(),
+                                ClinchPolicy::EarlyClinch => t_string!(i18n, tournaments.ui.ends_when_clinched).to_string(),
+                            }
+                        )
+                            .to_string();
+
                         view! {
                             <div>
                                 <div class="flex gap-4 justify-between items-center">
-                                    // TODO: i18n once copy is approved.
-                                    <h3 class="font-bold">{format!("Set {}", set_index + 1)}</h3>
+
+                                    <h3 class="font-bold">
+                                        {move || {
+                                            t_string!(i18n, tournaments.ui.set, value1 = set_index + 1)
+                                                .to_string()
+                                        }}
+                                    </h3>
                                     <strong class="tabular-nums">{set.score}</strong>
                                 </div>
                                 <div class="flex flex-wrap gap-x-2 items-center text-xs text-gray-600 dark:text-gray-300">
@@ -864,6 +920,7 @@ fn RoundRobinResultStrip(
     player: Uuid,
     #[prop(default = false)] roomy: bool,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let marker_gap = if roomy { "gap-1" } else { "gap-px" };
     view! {
         <span class=format!(
@@ -883,7 +940,7 @@ fn RoundRobinResultStrip(
                             view! {
                                 <span class=format!(
                                     "inline-flex w-[1ch] shrink-0 justify-center {color}",
-                                )>{marker}</span>
+                                )>{move || result_marker_label(i18n, marker)}</span>
                             },
                         )
                     })
@@ -1141,12 +1198,12 @@ fn RoundRobinPlayerMatchup(
         )
     };
     let progress_slots = slots.clone();
-    let resolved = move || {
+    let resolved = Memo::new(move |_| {
         progress_slots
             .iter()
             .filter(|slot| slot.try_get().is_some_and(|slot| slot.resolution.is_some()))
             .count()
-    };
+    });
     let total = slots.len();
     let row_slots = slots.clone();
     let rows = move || {
@@ -1183,9 +1240,13 @@ fn RoundRobinPlayerMatchup(
                     (resolved() < total)
                         .then(|| {
                             view! {
-                                // TODO: i18n once copy is approved.
                                 <span class="tabular-nums text-right text-gray-500 dark:text-gray-400 text-[10px]">
-                                    {format!("{}/{total} games", resolved())}
+                                    {move || {
+                                        t_string!(
+                                            use_i18n(), tournaments.ui.resolved_game_count, resolved_games = resolved(), total_games = total
+                                        )
+                                            .to_string()
+                                    }}
                                 </span>
                             }
                         })
@@ -1205,6 +1266,7 @@ fn RoundRobinPlayerLedger(
     player: Uuid,
     table: Memo<RoundRobinTable>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     view! {
         <div class="space-y-3">
             {move || {
@@ -1216,8 +1278,9 @@ fn RoundRobinPlayerLedger(
                     .find(|(_, candidate, _)| *candidate == player)
                     .cloned() else {
                     return view! {
-                        // TODO: i18n once copy is approved.
-                        <p class="ui-empty-state">"Choose a player to see their results."</p>
+                        <p class="ui-empty-state">
+                            {t!(i18n, tournaments.ui.choose_a_player_to_see_their_results)}
+                        </p>
                     }
                         .into_any()
                 };
@@ -1271,25 +1334,31 @@ fn RoundRobinPlayerLedger(
                             } else {
                                 "block max-w-full font-bold truncate"
                             }>{player_name}</p>
-                            // TODO: i18n once copy is approved.
+
                             <p class="text-xs tabular-nums text-gray-500 dark:text-gray-400">
-                                {format!(
-                                    "Rank {} · {total_score} points",
-                                    rank
+                                {t_string!(
+                                    i18n, tournaments.ui.rank_points, value1 = rank
                                         .map(|rank| rank.to_string())
-                                        .unwrap_or_else(|| String::from("—")),
-                                )}
+                                        .unwrap_or_else(|| String::from("—")), total_score = total_score
+                                )
+                                    .to_string()}
                             </p>
                         </div>
-                        // TODO: i18n once copy is approved.
+
                         <p class="text-xs tabular-nums text-right text-gray-500 dark:text-gray-400 shrink-0">
-                            {format!("{resolved_games}/{total_games} games")}
+                            {move || {
+                                t_string!(
+                                    i18n, tournaments.ui.resolved_game_count, resolved_games = resolved_games, total_games = total_games
+                                )
+                                    .to_string()
+                            }}
                         </p>
                     </div>
                     {if matchup_views.is_empty() {
                         view! {
-                            // TODO: i18n once copy is approved.
-                            <p class="text-sm text-gray-500">"No opponent results yet."</p>
+                            <p class="text-sm text-gray-500">
+                                {t!(i18n, tournaments.ui.no_opponent_results_yet)}
+                            </p>
                         }
                             .into_any()
                     } else {
@@ -1361,9 +1430,9 @@ pub fn RoundRobinCrosstable(
         <Panel title=move || common.lifecycle().get().name class="min-w-0">
             <div class="space-y-3 md:hidden" data-testid="round-robin-player-results">
                 <div>
-                    // TODO: i18n once copy is approved.
+
                     <label class="block mb-1 font-bold tracking-wide text-gray-500 uppercase text-[10px]">
-                        "Player results"
+                        {t!(i18n, tournaments.ui.player_results)}
                     </label>
                     <select
                         class="w-full ui-field-select"
@@ -1422,9 +1491,7 @@ pub fn RoundRobinCrosstable(
                         <thead>
                             <tr>
                                 <th class=CROSS_STICKY_NUMBER_HEAD>"#"</th>
-                                <th class=CROSS_STICKY_PLAYER_HEAD>
-                                    {t!(i18n, tournaments.view.common.player)}
-                                </th>
+                                <th class=CROSS_STICKY_PLAYER_HEAD>{t!(i18n, common.player)}</th>
                                 <For
                                     each=move || player_order.get()
                                     key=|player| *player
@@ -1664,6 +1731,7 @@ fn swiss_encounter_result(
 }
 
 fn swiss_encounter_progress(configuration: &SwissConfig, encounter: &SwissEncounterView) -> String {
+    let i18n = use_i18n();
     let slots = encounter
         .slots
         .iter()
@@ -1674,14 +1742,13 @@ fn swiss_encounter_progress(configuration: &SwissConfig, encounter: &SwissEncoun
         .filter(|slot| slot.resolution.is_some())
         .count();
     if is_double_swiss(configuration) && finished > 0 {
-        // TODO: i18n once copy is approved.
-        return format!("{finished} of 2 finished");
+        return t_string!(i18n, tournaments.ui.of_2_finished, finished = finished).to_string();
     }
-    // TODO: i18n once copy is approved.
+
     slots
         .iter()
         .min_by_key(|slot| unresolved_slot_state_priority(slot))
-        .map_or("Pending", slot_state)
+        .map_or(t_string!(i18n, common.pending).to_string(), slot_state)
         .to_string()
 }
 
@@ -1736,6 +1803,7 @@ fn SwissRoundLedgerItem(
     open_pairing: Callback<(u32, u32)>,
     interactive: bool,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     match item {
         SwissRoundItem::Encounter(encounter) => {
             let pairing_index = encounter.pairing_index;
@@ -1769,7 +1837,8 @@ fn SwissRoundLedgerItem(
                             &configuration,
                             encounter.pre_round_primary_scores[side],
                         );
-                        format!("{rating} · {score} pts")
+                        t_string!(i18n, tournaments.ui.pts, value1 = rating, value2 = score.clone())
+                            .to_string()
                     };
                     let left = EncounterParticipant {
                         name: left_name.clone(),
@@ -1788,7 +1857,7 @@ fn SwissRoundLedgerItem(
                     );
                     let progress = swiss_encounter_progress(&configuration, &encounter);
                     if interactive {
-                        // TODO: i18n once copy is approved.
+
                         view! {
                             <article
                                 data-page-row
@@ -1805,7 +1874,9 @@ fn SwissRoundLedgerItem(
                                         right=Some(right)
                                         result
                                         progress
-                                        action="View match"
+                                        action=move || {
+                                            t_string!(i18n, tournaments.ui.view_match).to_string()
+                                        }
                                         game_count=2
                                     />
                                 </button>
@@ -1813,7 +1884,7 @@ fn SwissRoundLedgerItem(
                         }
                             .into_any()
                     } else if let Some(game_id) = game_id {
-                        // TODO: i18n once copy is approved.
+
                         view! {
                             <article
                                 data-page-row
@@ -1829,7 +1900,9 @@ fn SwissRoundLedgerItem(
                                         right=Some(right)
                                         result
                                         progress
-                                        action="Open game"
+                                        action=move || {
+                                            t_string!(i18n, common.open_game).to_string()
+                                        }
                                     />
                                 </a>
                             </article>
@@ -1870,17 +1943,22 @@ fn SwissRoundLedgerItem(
                     swiss_primary_score_text(&configuration, bye_.pre_round_primary_score),
                 )
             };
-            // TODO: i18n once copy is approved.
-            let state = String::from("Bye");
-            // TODO: i18n once copy is approved.
+
+            let state = t_string!(i18n, common.bye).to_string();
+
             let participant = EncounterParticipant {
                 name,
                 color: None,
-                detail: Some(format!(
-                    "{} · {} pts",
-                    rating.map_or_else(|| String::from("—"), |rating| rating.to_string()),
-                    score,
-                )),
+                detail: Some(
+                    t_string!(
+                        i18n,
+                        tournaments.ui.pts,
+                        value1 =
+                            rating.map_or_else(|| String::from("—"), |rating| rating.to_string()),
+                        value2 = score
+                    )
+                    .to_string(),
+                ),
             };
             view! {
                 <article
@@ -1905,6 +1983,7 @@ pub fn SwissRoundBrowser(
     common: Store<TournamentCommon>,
     swiss: Store<SwissState>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let selected = RwSignal::new(swiss.rounds().get_untracked().len().saturating_sub(1));
     let search = RwSignal::new(String::new());
     let container = NodeRef::<html::Div>::new();
@@ -1992,12 +2071,17 @@ pub fn SwissRoundBrowser(
                     Some(
                         view! {
                             <div class="flex flex-wrap gap-3 justify-between items-center pb-3 border-b border-black/10 dark:border-white/10">
-                                // TODO: i18n once copy is approved.
+
                                 <nav
-                                    aria-label="Tournament rounds"
+                                    aria-label=move || {
+                                        t_string!(i18n, tournaments.ui.tournament_rounds)
+                                            .to_string()
+                                    }
                                     class="hidden flex-wrap gap-1 items-center @min-[48rem]:flex"
                                 >
-                                    <span class="mr-2 text-sm font-semibold">"Round"</span>
+                                    <span class="mr-2 text-sm font-semibold">
+                                        {t!(i18n, tournaments.ui.round_heading)}
+                                    </span>
                                     {rounds
                                         .iter()
                                         .enumerate()
@@ -2023,7 +2107,7 @@ pub fn SwissRoundBrowser(
                                         .collect_view()}
                                 </nav>
                                 <div class="flex gap-2 justify-between items-center w-full @min-[48rem]:hidden">
-                                    // TODO: i18n once copy is approved.
+
                                     <button
                                         type="button"
                                         class="ui-button ui-button-secondary ui-button-sm"
@@ -2035,13 +2119,15 @@ pub fn SwissRoundBrowser(
                                             }
                                         }
                                     >
-                                        "Previous round"
+                                        {move || {
+                                            t_string!(i18n, tournaments.ui.previous_round).to_string()
+                                        }}
                                     </button>
-                                    // TODO: i18n once copy is approved.
+
                                     <span class="text-sm font-semibold tabular-nums">
                                         {format!("{} / {configured_rounds}", round.round_index + 1)}
                                     </span>
-                                    // TODO: i18n once copy is approved.
+
                                     <button
                                         type="button"
                                         class="ui-button ui-button-secondary ui-button-sm"
@@ -2053,7 +2139,9 @@ pub fn SwissRoundBrowser(
                                             }
                                         }
                                     >
-                                        "Next round"
+                                        {move || {
+                                            t_string!(i18n, tournaments.ui.next_round).to_string()
+                                        }}
                                     </button>
                                 </div>
                                 <TournamentStandingsControls
@@ -2070,16 +2158,26 @@ pub fn SwissRoundBrowser(
                             </div>
                             <div class="flex flex-wrap gap-y-1 gap-x-4 justify-between items-baseline py-3">
                                 <div class="flex flex-wrap gap-y-1 gap-x-3 items-baseline">
-                                    // TODO: i18n once copy is approved.
+
                                     <strong class="text-base">
-                                        {format!("Round {}", round.round_index + 1)}
+                                        {move || {
+                                            t_string!(
+                                                i18n, tournaments.view.bracket.stage.round, round = round.round_index + 1
+                                            )
+                                                .to_string()
+                                        }}
                                     </strong>
-                                    // TODO: i18n once copy is approved.
+
                                     <span class="text-xs text-gray-500">
-                                        {format!("{finished} of {encounter_count} finished")}
+                                        {move || {
+                                            t_string!(
+                                                i18n, tournaments.ui.of_finished, finished = finished, encounter_count = encounter_count
+                                            )
+                                                .to_string()
+                                        }}
                                     </span>
                                 </div>
-                                // TODO: i18n once copy is approved.
+
                                 <span class="text-xs text-gray-500">
                                     {if matches!(
                                         &configuration.system,
@@ -2087,9 +2185,13 @@ pub fn SwissRoundBrowser(
                                         if system.primary_score
                                             == DoubleSwissPrimaryScore::MatchPoints
                                     ) {
-                                        "Match points before this round"
+                                        t_string!(
+                                            i18n, tournaments.ui.match_points_before_this_round
+                                        )
+                                            .to_string()
                                     } else {
-                                        "Points before this round"
+                                        t_string!(i18n, tournaments.ui.points_before_this_round)
+                                            .to_string()
                                     }}
                                 </span>
                             </div>
@@ -2110,9 +2212,13 @@ pub fn SwissRoundBrowser(
                             .collect::<Vec<_>>();
                         if visible.is_empty() {
                             view! {
-                                // TODO: i18n once copy is approved.
                                 <p class="col-span-full ui-empty-state">
-                                    "No pairings match this search."
+                                    {move || {
+                                        t_string!(
+                                            i18n, tournaments.ui.no_pairings_match_this_search
+                                        )
+                                            .to_string()
+                                    }}
                                 </p>
                             }
                                 .into_any()

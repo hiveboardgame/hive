@@ -4,6 +4,7 @@ use super::{
         requested_raw_ply,
         wire_nodes,
         AnalysisDocument,
+        AnalysisDocumentError,
         LoadError,
         LoadedAnalysis,
         ANALYSIS_FORMAT,
@@ -136,8 +137,8 @@ impl AnalysisStore {
     }
 
     pub fn load_pgn(&self, game_state: GameStateStore, input: &str) -> Result<(), LoadError> {
-        let history =
-            History::from_pgn_str(input).map_err(|error| LoadError::Move(error.to_string()))?;
+        let history = History::from_pgn_str(input)
+            .map_err(|error| LoadError::Move(AnalysisDocumentError::Engine(error.to_string())))?;
         let loaded = LoadedAnalysis::from_moves(
             history.game_type,
             &history.moves,

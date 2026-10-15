@@ -1,13 +1,4 @@
 {
-    "game_buttons": {
-        "pending": "În așteptare",
-        "playing": "În desfășurare",
-        "finished": "Finalizate"
-    },
-    "color_buttons": {
-        "white": "Alb",
-        "black": "Negru"
-    },
     "result_buttons": {
         "win": "Victorie",
         "loss": "Înfrângere",
@@ -24,5 +15,15 @@
     "rating": "Elo",
     "games_played_one": "{{count}} partidă",
     "games_played_few": "{{count}} partide",
-    "games_played_other": "{{count}} de partide"
+    "games_played_other": "{{count}} de partide",
+    "page": {
+        "redirecting": "Se redirecționează…",
+        "user_not_found": "Utilizatorul nu a fost găsit"
+    },
+    "leaderboards": {
+        "top_rated_players": "Jucători cu cel mai mare rating",
+        "highest_rated_players_by_speed": "Jucătorii cu cel mai mare rating, după ritmul de joc.",
+        "top_rated_bots": "Boți cu cel mai mare rating",
+        "highest_rated_bots_by_speed": "Boții cu cel mai mare rating, după ritmul de joc."
+    }
 }

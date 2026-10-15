@@ -1,9 +1,10 @@
-use crate::providers::Config;
+use crate::{i18n::*, providers::Config};
 use leptos::prelude::*;
 use leptos_icons::Icon;
 
 #[component]
 pub fn DarkModeToggle(variant: DarkModeToggleVariant) -> impl IntoView {
+    let i18n = use_i18n();
     let Config(config, set_cookie) = expect_context();
     let wrapper_class = match variant {
         DarkModeToggleVariant::Button => "inline-flex items-center",
@@ -23,9 +24,9 @@ pub fn DarkModeToggle(variant: DarkModeToggleVariant) -> impl IntoView {
     };
     let mode_label = move || {
         if config().prefers_dark {
-            "Light mode"
+            t_string!(i18n, user_config.light_mode)
         } else {
-            "Dark mode"
+            t_string!(i18n, user_config.dark_mode)
         }
     };
     let mode_value = move || {

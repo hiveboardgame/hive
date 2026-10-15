@@ -17,7 +17,6 @@
     "move_confirm": "Zugbestätigung:",
     "color_scheme": "Farbschema:",
     "preview": "Vorschau:",
-
     "edit_account": {
         "confirm_password_placeholder": "Neues Passwort (nochmals)"
     },
@@ -53,5 +52,33 @@
         "always": "Immer",
         "never": "Nie",
         "casual_only": "Nur im Freizeitspiel"
+    },
+    "click_on_your_clock": "Klicke auf deine Uhr",
+    "double_click": "Doppelklick",
+    "single_click": "Einfachklick",
+    "light_mode": "Heller Modus",
+    "dark_mode": "Dunkler Modus",
+    "white_background": "Weißer Hintergrund",
+    "black_background": "Schwarzer Hintergrund",
+    "current_color": "Aktuell: {{color}}",
+    "ant_light_preview": "{{design}}-Ameise (heller Modus)",
+    "ant_dark_preview": "{{design}}-Ameise (dunkler Modus)",
+    "tile_design": {
+        "official": "Offiziell",
+        "flat": "Flach",
+        "three_d": "3D",
+        "high_contrast": "Hoher Kontrast",
+        "community": "Community",
+        "pride": "Pride",
+        "carbon_three_d": "Carbon 3D",
+        "carbon": "Carbon"
+    },
+    "tile_design_browser_notice": "Manche Browser unterstützen nicht jedes Steindesign. Firefox stellt sie am zuverlässigsten dar.",
+    "settings": {
+        "settings": "Einstellungen",
+        "tune_board_visuals_and_move_input_preferences": "Passe Brettdarstellung und Zugeingabe an.",
+        "board_appearance": "Brettdarstellung",
+        "play_preferences": "Spieleinstellungen",
+        "if_either_player_has_takebacks_disabled_game_controls_will": "Wenn einer der Spieler Rücknahmen deaktiviert hat, können keine Rücknahmen angefragt werden."
     }
 }

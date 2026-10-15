@@ -1,7 +1,6 @@
 {
     "learn_to_play": "Aprèn a jugar",
     "create_game": "Crear una partida",
-    "search_players": "Buscar jugadors",
     "online_players_one": "{{count}} Jugador online",
     "online_players_other": "{{count}} Jugadors online",
     "custom_game": {
@@ -19,11 +18,9 @@
                 "time_one": "{{count}} dia",
                 "time_other": "{{count}} dies"
             }
-        },
-        "button": "Personalitzada"
+        }
     },
     "challenge_details": {
-        "player": "Jugador",
         "time": "Temps"
     },
     "challenge_tabs": {
@@ -43,5 +40,47 @@
         "error_title": "Error en carregar les properes partides",
         "empty_title": "No hi ha properes partides de torneig",
         "empty_message": "Torna més tard per veure les partides programades"
+    },
+    "pick_your_color_and_create_a_challenge": "Tria el teu color i crea un repte:",
+    "an_introduction_to_hive": "Una introducció a Hive",
+    "learn_to_play_hive_video_thumbnail": "Aprèn a jugar a Hive - miniatura del vídeo",
+    "couldn_t_fetch_top_users": "No s'han pogut obtenir els millors usuaris",
+    "no_one_yet": "Encara ningú",
+    "not_ranked_yet": "Encara sense classificació",
+    "quick_play": "Partida ràpida",
+    "play_vs_bot": "Juga contra un bot",
+    "play_bot": "Juga amb un bot",
+    "challenge": {
+        "bot": {
+            "play_an_unrated_game_vs_our_bot": "Juga una partida no puntuada contra el nostre bot",
+            "easy": "Fàcil",
+            "medium": "Mitjà",
+            "hard": "Difícil"
+        },
+        "direct_challenge_to": "Repte directe a {{display_username}}",
+        "waiting_for_to_respond": "Esperant la resposta de {{display_username}}.",
+        "private_challenge": "Repte privat",
+        "share_the_private_link_with_the_player_you_want": "Comparteix l'enllaç privat amb el jugador que vols convidar.",
+        "public_challenge": "Repte públic",
+        "this_challenge_is_listed_publicly_while_it_is_open": "Aquest repte es mostra públicament mentre està obert.",
+        "direct_challenge_from": "Repte directe de {{display_username}}",
+        "review_the_settings_below_then_accept_or_decline": "Revisa la configuració següent i accepta o rebutja el repte.",
+        "private_challenge_from": "Repte privat de {{display_username}}",
+        "log_in_to_accept_this_challenge": "Inicia la sessió per acceptar aquest repte.",
+        "challenge_from": "Repte de {{display_username}}",
+        "review_the_settings_below_then_accept_when_you_re": "Revisa la configuració següent i accepta quan estiguis a punt per jugar.",
+        "challenger": "Reptador:",
+        "challenge_not_found": "Repte no trobat",
+        "the_challenge_you_re_looking_for_doesn_t_exist": "El repte que cerques no existeix",
+        "this_challenge_has_been_accepted_and_the_game_is": "Aquest repte s'ha acceptat i la partida està a punt.",
+        "please_wait_while_we_fetch_the_challenge_details": "Espera mentre obtenim els detalls del repte",
+        "error_loading_challenge": "Error en carregar el repte",
+        "challenge_doesn_t_seem_to_exist": "Sembla que el repte no existeix",
+        "please_wait_while_we_check_your_account": "Espera mentre comprovem el teu compte",
+        "challenge_no_longer_available": "El repte ja no està disponible",
+        "share_private_link": "Comparteix l'enllaç privat",
+        "only_players_with_this_url_can_accept_this_private": "Només els jugadors amb aquest URL poden acceptar aquest repte privat.",
+        "copy_link": "Copia l'enllaç",
+        "challenge_details": "Detalls del repte"
     }
 }

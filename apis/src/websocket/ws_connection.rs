@@ -554,6 +554,7 @@ mod tests {
             ExternalServerError,
             SubscriptionAttempt,
             SubscriptionError,
+            UiError,
         },
         websocket::{
             messages::{AuthError, SocketFormat},
@@ -647,7 +648,7 @@ mod tests {
         else {
             panic!("a game request fails with a game error");
         };
-        assert_eq!(reason, "Unable to complete request");
+        assert_eq!(reason, UiError::RequestUnavailable.encode());
     }
 
     #[test]

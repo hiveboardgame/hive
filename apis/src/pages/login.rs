@@ -38,7 +38,9 @@ pub fn Login() -> impl IntoView {
 
                     <div class="flex flex-col gap-1">
                         <h1 class="ui-page-title">{t!(i18n, user_config.login.login_button)}</h1>
-                        <p class="ui-page-subtitle">"Sign in to continue playing."</p>
+                        <p class="ui-page-subtitle">
+                            {t!(i18n, common.auth.sign_in_to_continue_playing)}
+                        </p>
                     </div>
 
                     <label class="flex flex-col gap-1.5" for="email">
@@ -82,7 +84,7 @@ pub fn Login() -> impl IntoView {
                     class="ui-text-link"
                     href=move || auth_page_url("/forgot-password", &pathname.get())
                 >
-                    "Forgot your password?"
+                    {t!(i18n, common.auth.forgot_your_password)}
                 </a>
             </p>
             <p class="text-xs text-center text-gray-500 dark:text-gray-400">

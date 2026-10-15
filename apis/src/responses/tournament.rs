@@ -1,4 +1,5 @@
 use super::UserResponse;
+use crate::i18n::*;
 use chrono::{DateTime, Utc};
 use hive_lib::Color;
 use serde::{Deserialize, Serialize};
@@ -299,22 +300,28 @@ impl TournamentAccessState {
         matches!(self, Self::Open | Self::PendingInvitation)
     }
 
-    // TODO: i18n once copy is approved.
     pub fn label(self) -> String {
+        let i18n = use_i18n();
         match self {
-            Self::Open => String::from("Open"),
-            Self::PendingInvitation => String::from("Invited"),
-            Self::Joined => String::from("Joined"),
-            Self::AuthPending => String::from("Checking your account…"),
-            Self::LoginRequired => String::from("Log in to join"),
-            Self::InvitationRequired => String::from("Invitation required"),
-            Self::RatingBelow(lower) => format!("Rating must be at least {lower}"),
-            Self::RatingAbove(upper) => format!("Rating must be at most {upper}"),
-            Self::HumansOnly => String::from("Human accounts only"),
-            Self::BotsOnly => String::from("Bot accounts only"),
-            Self::MissingClock => String::from("Tournament clock is missing"),
-            Self::Full => String::from("Full"),
-            Self::EntryClosed => String::from("Entry closed"),
+            Self::Open => t_string!(i18n, tournaments.admission.open).to_string(),
+            Self::PendingInvitation => t_string!(i18n, tournaments.admission.invited).to_string(),
+            Self::Joined => t_string!(i18n, common.joined).to_string(),
+            Self::AuthPending => t_string!(i18n, tournaments.admission.checking).to_string(),
+            Self::LoginRequired => t_string!(i18n, tournaments.admission.login).to_string(),
+            Self::InvitationRequired => {
+                t_string!(i18n, tournaments.detail.invitation_required).to_string()
+            }
+            Self::HumansOnly => t_string!(i18n, tournaments.admission.humans_only).to_string(),
+            Self::BotsOnly => t_string!(i18n, tournaments.admission.bots_only).to_string(),
+            Self::MissingClock => t_string!(i18n, tournaments.admission.missing_clock).to_string(),
+            Self::Full => t_string!(i18n, common.full).to_string(),
+            Self::EntryClosed => t_string!(i18n, tournaments.admission.closed).to_string(),
+            Self::RatingBelow(lower) => {
+                t_string!(i18n, tournaments.admission.ratingbelow, rating = lower).to_string()
+            }
+            Self::RatingAbove(upper) => {
+                t_string!(i18n, tournaments.admission.ratingabove, rating = upper).to_string()
+            }
         }
     }
 }

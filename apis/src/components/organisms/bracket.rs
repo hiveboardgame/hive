@@ -102,12 +102,14 @@ pub fn BracketPlacementPreview(
                 .players
                 .into_iter()
                 .map(|(id, player)| {
-                    // TODO: i18n once copy is approved.
                     let name = if player.deleted {
-                        format!(
-                            "Deleted player #{}",
-                            name_seeds.iter().position(|seed| *seed == id).unwrap_or(0) + 1
+                        t_string!(
+                            i18n,
+                            tournaments.ui.deleted_player,
+                            value1 =
+                                name_seeds.iter().position(|seed| *seed == id).unwrap_or(0) + 1
                         )
+                        .to_string()
                     } else {
                         player.username
                     };
@@ -561,7 +563,6 @@ struct ProjectedColumn {
     phase_index: usize,
     wave_id: usize,
     stage: Stage,
-    label: String,
     nodes: Vec<BracketNode>,
 }
 
@@ -609,19 +610,19 @@ fn semantic_phase_count(nodes: &[BracketNode], double_elimination: bool) -> usiz
 }
 
 fn semantic_phase_label(phase_count: usize, phase_index: usize) -> String {
+    let i18n = use_i18n();
     let remaining = phase_count.saturating_sub(phase_index);
     match remaining {
-        // TODO: i18n once copy is approved.
-        1 => String::from("Final"),
-        // TODO: i18n once copy is approved.
-        2 => String::from("Semifinals"),
+        1 => t_string!(i18n, tournaments.view.bracket.stage.final_match).to_string(),
+
+        2 => t_string!(i18n, tournaments.pairing.stage.semifinals).to_string(),
         _ => {
             let field_size = u32::try_from(remaining)
                 .ok()
                 .and_then(|power| 1_usize.checked_shl(power))
                 .unwrap_or(usize::MAX);
-            // TODO: i18n once copy is approved.
-            format!("Round of {field_size}")
+
+            t_string!(i18n, tournaments.pairing.stage.round_of, count = field_size).to_string()
         }
     }
 }
@@ -654,7 +655,6 @@ fn projected_stage_column(
     nodes: &[BracketNode],
     phase_index: usize,
     stage: Stage,
-    label: String,
 ) -> Option<ProjectedColumn> {
     let mut stage_nodes = nodes
         .iter()
@@ -667,7 +667,6 @@ fn projected_stage_column(
         phase_index,
         wave_id,
         stage,
-        label,
         nodes: stage_nodes,
     })
 }
@@ -681,71 +680,28 @@ fn projected_columns(
 ) -> Vec<ProjectedColumn> {
     let mut columns = Vec::new();
     for phase_index in phase_start..phase_end {
-        // TODO: i18n once copy is approved.
-        let phase_label = if matches!(tree, ProjectedTree::Upper) && phase_index + 1 == phase_count
-        {
-            String::from("Upper final")
-        } else {
-            semantic_phase_label(phase_count, phase_index)
+        let stages = match tree {
+            ProjectedTree::Single if phase_index + 1 == phase_count => vec![Stage::SingleFinal],
+            ProjectedTree::Single => vec![Stage::SingleRound {
+                round_index: phase_index,
+            }],
+            ProjectedTree::Upper => vec![Stage::WinnersRound {
+                round_index: phase_index,
+            }],
+            ProjectedTree::Lower if phase_index > 0 => vec![
+                Stage::LosersMinor {
+                    round_index: phase_index - 1,
+                },
+                Stage::LosersMajor {
+                    round_index: phase_index - 1,
+                },
+            ],
+            ProjectedTree::Lower => Vec::new(),
         };
-        match tree {
-            ProjectedTree::Single if phase_index + 1 == phase_count => {
-                let mut final_nodes = nodes
-                    .iter()
-                    .filter(|node| node.stage == Stage::SingleFinal && !structural_node(node))
-                    .cloned()
-                    .collect::<Vec<_>>();
-                final_nodes.sort_by_key(|node| (node.stage_ordinal, node.id));
-                if let Some(wave_id) = final_nodes.iter().map(|node| node.wave_id).min() {
-                    columns.push(ProjectedColumn {
-                        phase_index,
-                        wave_id,
-                        stage: Stage::SingleFinal,
-                        label: phase_label,
-                        nodes: final_nodes,
-                    });
-                }
+        for stage in stages {
+            if let Some(column) = projected_stage_column(nodes, phase_index, stage) {
+                columns.push(column);
             }
-            ProjectedTree::Single => {
-                let stage = Stage::SingleRound {
-                    round_index: phase_index,
-                };
-                if let Some(column) = projected_stage_column(nodes, phase_index, stage, phase_label)
-                {
-                    columns.push(column);
-                }
-            }
-            ProjectedTree::Upper => {
-                let stage = Stage::WinnersRound {
-                    round_index: phase_index,
-                };
-                if let Some(column) = projected_stage_column(nodes, phase_index, stage, phase_label)
-                {
-                    columns.push(column);
-                }
-            }
-            ProjectedTree::Lower if phase_index > 0 => {
-                let round_index = phase_index - 1;
-                let labels = if phase_index + 1 == phase_count {
-                    // TODO: i18n once copy is approved.
-                    [String::from("Lower semifinal"), String::from("Lower final")]
-                } else {
-                    // TODO: i18n once copy is approved.
-                    [format!("{phase_label} · I"), format!("{phase_label} · II")]
-                };
-                for (stage, label) in [
-                    Stage::LosersMinor { round_index },
-                    Stage::LosersMajor { round_index },
-                ]
-                .into_iter()
-                .zip(labels)
-                {
-                    if let Some(column) = projected_stage_column(nodes, phase_index, stage, label) {
-                        columns.push(column);
-                    }
-                }
-            }
-            ProjectedTree::Lower => {}
         }
     }
     columns
@@ -816,54 +772,76 @@ fn player_name(
 }
 
 fn match_reference(node: &BracketNode, nodes: &[BracketNode]) -> String {
+    let i18n = use_i18n();
     let number = node.stage_ordinal + 1;
     let phase_count = semantic_phase_count(nodes, is_double_elimination(nodes));
-    // TODO: i18n once copy is approved.
+
     match node.stage {
         Stage::WinnersRound { round_index } if round_index + 1 == phase_count => {
-            "Upper final".into()
+            t_string!(i18n, tournaments.pairing.stage.upper_final).to_string()
         }
         Stage::WinnersRound { round_index } => format!("U{}–{number}", round_index + 1),
         Stage::LosersMinor { round_index } if round_index + 2 == phase_count => {
-            "Lower semifinal".into()
+            t_string!(i18n, tournaments.pairing.stage.lower_semifinal).to_string()
         }
         Stage::LosersMajor { round_index } if round_index + 2 == phase_count => {
-            "Lower final".into()
+            t_string!(i18n, tournaments.pairing.stage.lower_final).to_string()
         }
         Stage::LosersMinor { round_index } => format!("L{}–{number}", round_index * 2 + 1),
         Stage::LosersMajor { round_index } => format!("L{}–{number}", round_index * 2 + 2),
         Stage::SingleRound { round_index } => format!("R{}–{number}", round_index + 1),
-        Stage::SingleFinal => "Final".into(),
-        Stage::GrandFinal => "Grand final".into(),
-        Stage::Reset => "Reset final".into(),
-        Stage::Bronze => "Third place".into(),
+        Stage::SingleFinal => {
+            t_string!(i18n, tournaments.view.bracket.stage.final_match).to_string()
+        }
+        Stage::GrandFinal => t_string!(i18n, tournaments.pairing.stage.grand_final).to_string(),
+        Stage::Reset => t_string!(i18n, tournaments.pairing.stage.reset_final).to_string(),
+        Stage::Bronze => t_string!(i18n, tournaments.pairing.stage.third_place).to_string(),
     }
 }
 
 fn match_description(node: &BracketNode, nodes: &[BracketNode]) -> String {
+    let i18n = use_i18n();
     let reference = match_reference(node, nodes);
     if !reference.contains('–') {
-        return reference.to_lowercase();
+        return reference;
     }
     let number = node.stage_ordinal + 1;
-    // TODO: i18n once copy is approved.
+
     match node.stage {
-        Stage::WinnersRound { round_index } => {
-            format!("upper bracket round {}, match {number}", round_index + 1)
+        Stage::WinnersRound { round_index } => t_string!(
+            i18n,
+            tournaments.ui.upper_bracket_round_match,
+            value1 = round_index + 1,
+            number = number
+        )
+        .to_string(),
+        Stage::LosersMinor { round_index } => t_string!(
+            i18n,
+            tournaments.ui.lower_bracket_round_match,
+            value1 = round_index * 2 + 1,
+            number = number
+        )
+        .to_string(),
+        Stage::LosersMajor { round_index } => t_string!(
+            i18n,
+            tournaments.ui.lower_bracket_round_match,
+            value1 = round_index * 2 + 2,
+            number = number
+        )
+        .to_string(),
+        Stage::SingleRound { round_index } => t_string!(
+            i18n,
+            tournaments.ui.round_match,
+            value1 = round_index + 1,
+            number = number
+        )
+        .to_string(),
+        Stage::SingleFinal => {
+            t_string!(i18n, tournaments.view.bracket.stage.final_match).to_string()
         }
-        Stage::LosersMinor { round_index } => format!(
-            "lower bracket round {}, match {number}",
-            round_index * 2 + 1
-        ),
-        Stage::LosersMajor { round_index } => format!(
-            "lower bracket round {}, match {number}",
-            round_index * 2 + 2
-        ),
-        Stage::SingleRound { round_index } => format!("round {}, match {number}", round_index + 1),
-        Stage::SingleFinal => "final".into(),
-        Stage::GrandFinal => "grand final".into(),
-        Stage::Reset => "reset final".into(),
-        Stage::Bronze => "third-place match".into(),
+        Stage::GrandFinal => t_string!(i18n, tournaments.ui.grand_final).to_string(),
+        Stage::Reset => t_string!(i18n, tournaments.ui.reset_final_description).to_string(),
+        Stage::Bronze => t_string!(i18n, tournaments.ui.third_place_match).to_string(),
     }
 }
 
@@ -940,16 +918,19 @@ fn pending_entrant_label(
         }
     }
     let reference = match_reference(source_node, nodes);
-    // TODO: i18n once copy is approved.
-    let outcome = if loser_route { "loser" } else { "winner" };
-    if reference.contains(' ') || reference == "Final" {
-        format!("{reference} {outcome}")
+
+    let outcome = if loser_route {
+        t_string!(i18n, common.loser).to_string()
     } else {
-        format!(
-            "{} of {reference}",
-            if loser_route { "Loser" } else { "Winner" }
-        )
-    }
+        t_string!(i18n, common.winner).to_string()
+    };
+    t_string!(
+        i18n,
+        tournaments.ui.of,
+        value1 = outcome,
+        value2 = reference
+    )
+    .to_string()
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -1131,9 +1112,11 @@ pub fn Bracket(
                                 let label = championship
                                     .then_some(
                                         if node.stage == Stage::Reset {
-                                            "Reset final"
+                                            t_string!(i18n, tournaments.pairing.stage.reset_final)
+                                                .to_string()
                                         } else {
-                                            "Grand final"
+                                            t_string!(i18n, tournaments.pairing.stage.grand_final)
+                                                .to_string()
                                         },
                                     );
                                 Some(TournamentDrawerSeries {
@@ -1170,19 +1153,24 @@ pub fn Bracket(
                                             Resolution::Walkover { winner, .. },
                                         ) => {
                                             Some(
-                                                format!(
-                                                    "{} won by withdrawal",
-                                                    memberships
+                                                t_string!(
+                                                    i18n, tournaments.ui.won_by_withdrawal, value1 = memberships
                                                         .players
                                                         .get(&winner)
-                                                        .map(|user| user.username.as_str())
-                                                        .unwrap_or("Player"),
-                                                ),
+                                                        .map(|user| user.username.clone())
+                                                        .unwrap_or(t_string!(i18n, common.player).to_string())
+                                                )
+                                                    .to_string(),
                                             )
                                         }
                                         EliminationNodeStateResponse::Resolved(
                                             Resolution::Vacancy,
-                                        ) => Some(String::from("Match ended without a winner")),
+                                        ) => {
+                                            Some(
+                                                t_string!(i18n, tournaments.ui.match_ended_without_a_winner)
+                                                    .to_string(),
+                                            )
+                                        }
                                         _ => None,
                                     },
                                 })
@@ -1191,8 +1179,7 @@ pub fn Bracket(
                     },
                     |_, _| true,
                 );
-                // TODO: i18n once copy is approved.
-                // TODO: i18n once copy is approved.
+
                 view! {
                     <TournamentGamesDrawer
                         common
@@ -1284,18 +1271,31 @@ fn EliminationGraph(
             .iter()
             .filter_map(|source| {
                 let parent = source_node(*source, &description_nodes)?;
-                // TODO: i18n once copy is approved.
+
                 let outcome = if matches!(source, Source::LoserOf(_)) {
-                    "Loser"
+                    t_string!(i18n, common.loser).to_string()
                 } else {
-                    "Winner"
+                    t_string!(i18n, common.winner).to_string()
                 };
                 let reference = match_reference(parent, &description_nodes);
                 let description = match_description(parent, &description_nodes);
                 Some(if reference.contains('–') {
-                    format!("{outcome} of {description} ({reference})")
+                    t_string!(
+                        i18n,
+                        tournaments.ui.source_outcome_description,
+                        outcome = outcome,
+                        description = description,
+                        reference = reference
+                    )
+                    .to_string()
                 } else {
-                    format!("{outcome} of {description}")
+                    t_string!(
+                        i18n,
+                        tournaments.ui.of,
+                        value1 = outcome,
+                        value2 = description
+                    )
+                    .to_string()
                 })
             })
             .collect::<Vec<_>>();
@@ -1333,14 +1333,11 @@ fn EliminationGraph(
         let status = model.status;
         let complete = model.complete;
         if status == TournamentStatus::NotStarted {
-            // TODO: i18n once copy is approved.
-            String::from("Bracket placement")
+            t_string!(i18n, tournaments.ui.bracket_placement).to_string()
         } else if status == TournamentStatus::Finished {
-            // TODO: i18n once copy is approved.
-            String::from("Final outcome")
+            t_string!(i18n, tournaments.ui.final_outcome).to_string()
         } else if complete {
-            // TODO: i18n once copy is approved.
-            String::from("Bracket complete")
+            t_string!(i18n, tournaments.ui.bracket_complete).to_string()
         } else {
             t_string!(i18n, tournaments.view.bracket.completion.nodes_in_progress).to_string()
         }
@@ -1386,12 +1383,17 @@ fn EliminationGraph(
                 {source_description}
             </p>
             {if double_elimination {
-                let upper_title = String::from("Upper bracket");
-                let lower_title = String::from("Lower bracket");
-                let lower_empty_label = String::from("The lower bracket begins in the next phase.");
-                // TODO: i18n once copy is approved.
-                // TODO: i18n once copy is approved.
-                // TODO: i18n once copy is approved.
+                let upper_title = move || {
+                    t_string!(i18n, tournaments.ui.upper_bracket).to_string()
+                };
+                let lower_title = move || {
+                    t_string!(i18n, tournaments.ui.lower_bracket).to_string()
+                };
+                let lower_empty_label = move || {
+                    t_string!(i18n, tournaments.ui.the_lower_bracket_begins_in_the_next_phase)
+                        .to_string()
+                };
+
                 view! {
                     <div class="space-y-8">
                         <TreeSection
@@ -1441,8 +1443,8 @@ fn EliminationGraph(
                 }
                     .into_any()
             } else {
-                let title = String::from("Bracket");
-                // TODO: i18n once copy is approved.
+                let title = move || t_string!(i18n, tournaments.ui.bracket).to_string();
+
                 view! {
                     <div class="space-y-8">
                         <TreeSection
@@ -1493,9 +1495,9 @@ fn FinalOutcome(
     let third_place_name = third_place.map(|player| player_name(i18n, &names, player));
     view! {
         <div class="flex flex-wrap gap-y-1 gap-x-4 text-sm text-gray-900 dark:text-gray-100">
-            // TODO: i18n once copy is approved.
+
             <p>
-                <strong>"Champion: "</strong>
+                <strong>{t!(i18n, tournaments.ui.champion)}</strong>
                 <button
                     type="button"
                     class="font-semibold hover:text-pillbug-teal"
@@ -1508,9 +1510,8 @@ fn FinalOutcome(
                 .zip(runner_up_name)
                 .map(|(player, name)| {
                     view! {
-                        // TODO: i18n once copy is approved.
                         <p>
-                            <strong>"Runner-up: "</strong>
+                            <strong>{t!(i18n, tournaments.ui.runner_up)}</strong>
                             <button
                                 type="button"
                                 class="font-semibold hover:text-pillbug-teal"
@@ -1527,9 +1528,8 @@ fn FinalOutcome(
                 .zip(third_place_name)
                 .map(|(player, name)| {
                     view! {
-                        // TODO: i18n once copy is approved.
                         <p>
-                            <strong>"Third place: "</strong>
+                            <strong>{t!(i18n, tournaments.ui.third_place)}</strong>
                             <button
                                 type="button"
                                 class="font-semibold hover:text-pillbug-teal"
@@ -1548,15 +1548,14 @@ fn FinalOutcome(
 
 #[component]
 fn PhaseRail(phase_count: usize, phase_cursor: RwSignal<usize>) -> impl IntoView {
-    let phases = (0..phase_count)
-        .map(|phase_index| (phase_index, semantic_phase_label(phase_count, phase_index)))
-        .collect::<Vec<_>>();
-    // TODO: i18n once copy is approved.
-    let rail_label = String::from("Bracket phase");
-    // TODO: i18n once copy is approved.
-    let earlier_label = String::from("‹ Earlier");
-    // TODO: i18n once copy is approved.
-    let later_label = String::from("Later ›");
+    let i18n = use_i18n();
+    let phases = (0..phase_count).collect::<Vec<_>>();
+
+    let rail_label = move || t_string!(i18n, tournaments.ui.bracket_phase).to_string();
+
+    let earlier_label = move || t_string!(i18n, tournaments.ui.earlier).to_string();
+
+    let later_label = move || t_string!(i18n, tournaments.ui.later).to_string();
     view! {
         <nav
             class="flex gap-2 justify-between items-center mb-6"
@@ -1574,7 +1573,7 @@ fn PhaseRail(phase_count: usize, phase_cursor: RwSignal<usize>) -> impl IntoView
             <div class="flex flex-wrap gap-1 justify-center min-w-0">
                 {phases
                     .into_iter()
-                    .map(|(phase_index, label)| {
+                    .map(|phase_index| {
                         view! {
                             <button
                                 type="button"
@@ -1591,7 +1590,7 @@ fn PhaseRail(phase_count: usize, phase_cursor: RwSignal<usize>) -> impl IntoView
                                 data-bracket-phase=phase_index.to_string()
                                 on:click=move |_| phase_cursor.set(phase_index)
                             >
-                                {label}
+                                {move || semantic_phase_label(phase_count, phase_index)}
                             </button>
                         }
                     })
@@ -1614,12 +1613,12 @@ fn PhaseRail(phase_count: usize, phase_cursor: RwSignal<usize>) -> impl IntoView
 
 #[component]
 fn TreeSection(
-    title: String,
+    #[prop(into)] title: TextProp,
     section_key: &'static str,
     layout: ProjectedTreeLayout,
     viewport_width: Signal<f64>,
     phase_cursor: RwSignal<usize>,
-    #[prop(optional)] empty_label: Option<String>,
+    #[prop(optional, into)] empty_label: Option<TextProp>,
     names: Arc<HashMap<Uuid, String>>,
     all_nodes: Arc<Vec<BracketNode>>,
     highlighted: RwSignal<Option<Uuid>>,
@@ -1649,6 +1648,9 @@ fn TreeSection(
         .map(|id| (*id, from_fn(|_| NodeRef::<Div>::new())))
         .collect::<HashMap<_, [NodeRef<Div>; 2]>>();
     let live = expect_context::<LiveBracketData>();
+    let phase_count = live.model.with_untracked(|model| {
+        semantic_phase_count(&model.nodes, is_double_elimination(&model.nodes))
+    });
     let edge_nodes = card_refs.keys().copied().collect::<HashSet<_>>();
     let edges = Memo::new(move |_| {
         live.model.with(|model| {
@@ -1663,7 +1665,7 @@ fn TreeSection(
     view! {
         <section class="min-w-0" data-bracket-section=section_key>
             <h2 class="mb-3 text-xs font-bold tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                {title}
+                {move || title.get()}
             </h2>
             <Show when=move || {
                 visible_range.with(Range::is_empty)
@@ -1672,7 +1674,9 @@ fn TreeSection(
                     .clone()
                     .map(|label| {
                         view! {
-                            <p class="py-5 text-sm text-gray-500 dark:text-gray-400">{label}</p>
+                            <p class="py-5 text-sm text-gray-500 dark:text-gray-400">
+                                {move || label.get()}
+                            </p>
                         }
                     })}
             </Show>
@@ -1703,7 +1707,39 @@ fn TreeSection(
                                     data-elimination-stage=format!("{:?}", column.stage)
                                 >
                                     <h3 class="mb-3 text-sm font-bold text-center text-gray-700 dark:text-gray-200">
-                                        {column.label}
+                                        {move || match column.stage {
+                                            Stage::WinnersRound {
+                                                round_index,
+                                            } if round_index + 1 == phase_count => {
+                                                t_string!(i18n, tournaments.pairing.stage.upper_final)
+                                                    .to_string()
+                                            }
+                                            Stage::LosersMinor {
+                                                ..
+                                            } if column.phase_index + 1 == phase_count => {
+                                                t_string!(i18n, tournaments.pairing.stage.lower_semifinal)
+                                                    .to_string()
+                                            }
+                                            Stage::LosersMajor {
+                                                ..
+                                            } if column.phase_index + 1 == phase_count => {
+                                                t_string!(i18n, tournaments.pairing.stage.lower_final)
+                                                    .to_string()
+                                            }
+                                            Stage::LosersMinor { .. } => {
+                                                t_string!(
+                                                    i18n, tournaments.ui.i, phase_label = semantic_phase_label(phase_count, column.phase_index)
+                                                )
+                                                    .to_string()
+                                            }
+                                            Stage::LosersMajor { .. } => {
+                                                t_string!(
+                                                    i18n, tournaments.ui.ii, phase_label = semantic_phase_label(phase_count, column.phase_index)
+                                                )
+                                                    .to_string()
+                                            }
+                                            _ => semantic_phase_label(phase_count, column.phase_index),
+                                        }}
                                     </h3>
                                     <div class="flex flex-col flex-1 gap-2.5 justify-around ui-bracket-feed">
                                         {column
@@ -1772,9 +1808,17 @@ fn ChampionshipSection(
                                 class="w-(--bracket-card-width)"
                                 data-final-stage=if second_final { "second-final" } else { "final" }
                             >
-                                // TODO: i18n once copy is approved.
+
                                 <h2 class="mb-2 text-sm font-semibold">
-                                    {if second_final { "Reset final" } else { "Grand final" }}
+                                    {move || {
+                                        if second_final {
+                                            t_string!(i18n, tournaments.pairing.stage.reset_final)
+                                                .to_string()
+                                        } else {
+                                            t_string!(i18n, tournaments.pairing.stage.grand_final)
+                                                .to_string()
+                                        }
+                                    }}
                                     <span class="ml-2 text-xs font-normal text-gray-500 dark:text-gray-400">
                                         {move || {
                                             live.model
@@ -1790,13 +1834,13 @@ fn ChampionshipSection(
                                                             NodeState::Resolved(Resolution::SkippedConditionalBranch),
                                                         )
                                                     ) {
-                                                        "Not needed"
+                                                        t_string!(i18n, tournaments.ui.not_needed).to_string()
                                                     } else if second_final
                                                         && matches!(state, Some(NodeState::Planned { .. }))
                                                     {
-                                                        "If needed"
+                                                        t_string!(i18n, tournaments.ui.if_needed).to_string()
                                                     } else {
-                                                        ""
+                                                        String::new()
                                                     }
                                                 })
                                         }}
@@ -1832,8 +1876,8 @@ fn BronzeSection(
 ) -> impl IntoView {
     let card_ref = NodeRef::<Article>::new();
     let visible_nodes = Signal::stored(Arc::new(HashSet::from([node.id])));
-    // TODO: i18n once copy is approved.
-    let title = String::from("Third place");
+
+    let title = move || t_string!(use_i18n(), tournaments.pairing.stage.third_place).to_string();
     view! {
         <section
             class="pt-5 border-t border-gray-200 dark:border-gray-700"
@@ -2047,15 +2091,14 @@ fn NodeContent(
                         && matches!(state, NodeState::Active | NodeState::Planned { .. });
                     let source_tooltip = source_node(sources[index], &all_nodes)
                         .map(|parent| {
-                            format!(
-                                "{} of {}",
-                                if matches!(sources[index], Source::LoserOf(_)) {
-                                    "Loser"
+                            t_string!(
+                                i18n, tournaments.ui.of, value1 = if matches!(sources[index], Source::LoserOf(_)) {
+                                    t_string!(i18n, common.loser).to_string()
                                 } else {
-                                    "Winner"
-                                },
-                                match_description(parent, &all_nodes),
+                                    t_string!(i18n, common.winner).to_string()
+                                }, value2 = match_description(parent, &all_nodes)
                             )
+                                .to_string()
                         });
                     let tooltip = editing
                         .as_ref()
@@ -2103,9 +2146,9 @@ fn NodeContent(
                     let score = match state {
                         NodeState::Resolved(Resolution::Walkover { winner, .. }) => {
                             if player == Some(winner) {
-                                String::from("Won")
+                                t_string!(i18n, common.won).to_string()
                             } else {
-                                String::from("Withdrawn")
+                                t_string!(i18n, common.withdrawn).to_string()
                             }
                         }
                         NodeState::Resolved(Resolution::Vacancy) => String::from("—"),
@@ -2153,10 +2196,7 @@ fn NodeContent(
                             "flex relative gap-2 justify-between items-center px-2 w-full text-left {height} {background} {weight}",
                         )
                     };
-                    // TODO: i18n once copy is approved.
-                    // TODO: i18n once copy is approved.
-                    // TODO: i18n once copy is approved.
-                    // TODO: i18n once copy is approved.
+
                     view! {
                         <div
                             node_ref=row_refs[index]
@@ -2193,8 +2233,7 @@ fn NodeContent(
                                                     .filter(|result| *result == EntrantResult::Withdrawn)
                                                     .map(|_| {
                                                         view! {
-                                                            // TODO: i18n once copy is approved.
-                                                            <span class="sr-only">"Withdrawn"</span>
+                                                            <span class="sr-only">{t!(i18n, common.withdrawn)}</span>
                                                         }
                                                     })}
                                             </span>
@@ -2232,12 +2271,20 @@ fn NodeContent(
                                         .get(&player.unwrap())
                                         .cloned()
                                         .unwrap_or_default();
-                                    // TODO: i18n once copy is approved.
+
                                     view! {
                                         <button
                                             type="button"
                                             class="flex absolute inset-0 gap-2 items-center px-2 w-full text-left cursor-pointer hover:bg-pillbug-teal/10 focus-visible:outline-2 focus-visible:outline-pillbug-teal focus-visible:-outline-offset-2"
-                                            aria-label=format!("Assign player: {label}")
+                                            aria-label={
+                                                let label = label.clone();
+                                                move || {
+                                                    t_string!(
+                                                        i18n, tournaments.ui.assign_player, label = label.clone()
+                                                    )
+                                                        .to_string()
+                                                }
+                                            }
                                             aria-haspopup="dialog"
                                             aria-expanded=move || {
                                                 (position.get() == Some(target)).to_string()

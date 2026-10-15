@@ -1,3 +1,5 @@
+#[cfg(feature = "ssr")]
+use crate::common::UiError;
 use crate::security::csrf::CsrfClient;
 #[cfg(feature = "ssr")]
 use db_lib::db_error::DbError;
@@ -15,7 +17,7 @@ fn blocks_mutes_unexpected_error(
     err: impl std::fmt::Display,
 ) -> ServerFnError {
     error!("blocks/mutes server function failed while {context}: {err}");
-    ServerFnError::new("Unable to update block or mute settings")
+    ServerFnError::new(UiError::BlockMuteFailed.encode())
 }
 
 #[cfg(feature = "ssr")]
@@ -26,7 +28,7 @@ fn blocks_mutes_user_action_error(context: &'static str, err: DbError) -> Server
     ) {
         error!("blocks/mutes server function failed while {context}: {err}");
     }
-    ServerFnError::new("Unable to update block or mute settings")
+    ServerFnError::new(UiError::BlockMuteFailed.encode())
 }
 
 #[cfg(feature = "ssr")]

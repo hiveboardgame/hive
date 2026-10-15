@@ -2,6 +2,8 @@
 //! and only compiles for the wasm target; on the server these stand in so UI
 //! components can call the `pwa` facade without `#[cfg]` of their own.
 
+use super::PushError;
+
 pub fn supported() -> bool {
     false
 }
@@ -48,16 +50,16 @@ pub async fn current_endpoint() -> Option<String> {
     None
 }
 
-pub async fn subscribe() -> Result<(), String> {
-    Err("not available server-side".into())
+pub async fn subscribe() -> Result<(), PushError> {
+    Err(PushError::Unavailable)
 }
 
-pub async fn unsubscribe() -> Result<(), String> {
-    Err("not available server-side".into())
+pub async fn unsubscribe() -> Result<(), PushError> {
+    Err(PushError::Unavailable)
 }
 
-pub async fn send_test() -> Result<(), String> {
-    Err("not available server-side".into())
+pub async fn send_test() -> Result<(), PushError> {
+    Err(PushError::Unavailable)
 }
 
 pub async fn reconcile_subscription() {}

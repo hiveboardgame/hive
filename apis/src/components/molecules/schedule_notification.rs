@@ -9,6 +9,7 @@ use crate::{
     hooks::arena_clock::use_ticking_now,
     i18n::*,
     providers::{ApiRequestsProvider, NotificationContext},
+    responses::ScheduleSlotContext,
     security::csrf::ActionForm,
 };
 use chrono::{DateTime, Utc};
@@ -20,7 +21,7 @@ use uuid::Uuid;
 #[component]
 pub fn ProposalNotification(
     tournament_name: String,
-    slot_context: String,
+    slot_context: ScheduleSlotContext,
     schedule_id: Uuid,
     proposer_username: String,
     tournament_id: TournamentId,
@@ -53,24 +54,19 @@ pub fn ProposalNotification(
                 time = format_local_datetime(i18n.get_locale(), *candidate),
             )
             .to_string(),
-            [] => {
-                // TODO: i18n once copy is approved.
-                String::from("This scheduling proposal has expired")
-            }
-            candidates => {
-                // TODO: i18n once copy is approved.
-                format!(
-                    "{} offered {} times",
-                    proposer_username.get_value(),
-                    candidates.len()
-                )
-            }
+            [] => t_string!(i18n, tournaments.ui.this_scheduling_proposal_has_expired).to_string(),
+            candidates => t_string!(
+                i18n,
+                tournaments.ui.offered_times,
+                value1 = proposer_username.get_value(),
+                value2 = candidates.len()
+            )
+            .to_string(),
         }
     };
     let link_label = move || {
         if valid_candidates.with(|candidates| candidates.len() > 1) {
-            // TODO: i18n once copy is approved.
-            String::from("Review times")
+            t_string!(i18n, tournaments.ui.review_times).to_string()
         } else {
             t_string!(i18n, notifications.actions.view_tournament).to_string()
         }
@@ -102,7 +98,7 @@ pub fn ProposalNotification(
             <div class="flex gap-2 items-start w-full">
                 <div class="ui-notification-item-body">
                     <div class="text-xs font-semibold break-words">
-                        {tournament_name} " · " {slot_context}
+                        {tournament_name} " · " {move || slot_context.label(i18n.get_locale())}
                     </div>
                     <div class="whitespace-normal ui-notification-title">{notification_text}</div>
                     <div class="text-sm text-gray-600 dark:text-gray-400">
@@ -137,7 +133,7 @@ pub fn ProposalNotification(
                     <button on:click=decline class="ui-button ui-button-danger ui-button-sm">
                         {move || {
                             if valid_candidates.with(|candidates| candidates.len() > 1) {
-                                String::from("None work")
+                                t_string!(i18n, tournaments.ui.none_work).to_string()
                             } else {
                                 t_string!(i18n, common.decline).to_string()
                             }

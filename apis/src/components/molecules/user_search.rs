@@ -140,7 +140,7 @@ pub fn UserSearch(
     });
 
     let input_placeholder = placeholder.unwrap_or_else(|| {
-        TextProp::from(move || t_string!(i18n, home.search_players).to_string())
+        TextProp::from(move || t_string!(i18n, common.search_players).to_string())
     });
 
     let has_select = select_callback.is_some();
@@ -204,7 +204,7 @@ pub fn UserSearch(
                             <button
                                 type="button"
                                 class="ui-button ui-button-ghost ui-button-icon-lg"
-                                aria-label="Clear selection"
+                                aria-label=move || t_string!(i18n, game.clear_selection)
                                 on:click=do_clear
                             >
                                 "×"
@@ -219,14 +219,21 @@ pub fn UserSearch(
                         <div class="h-5">
                             <Show when=move || { pattern_len() > 0 && !has_search_query() }>
                                 <span class="text-xs text-yellow-600">
-                                    {move || format!("Minimum {MIN_SEARCH_LENGTH} characters")}
+                                    {move || {
+                                        t_string!(
+                                            i18n, common.search_minimum_characters, count = MIN_SEARCH_LENGTH
+                                        )
+                                            .to_string()
+                                    }}
                                 </span>
                             </Show>
                         </div>
                         <Suspense fallback=move || {
                             view! {
                                 <div class="h-5">
-                                    <p class="text-xs text-gray-500">"Searching..."</p>
+                                    <p class="text-xs text-gray-500">
+                                        {move || t_string!(i18n, game.searching)}
+                                    </p>
                                 </div>
                             }
                         }>
@@ -243,7 +250,10 @@ pub fn UserSearch(
                                         && visible_users.get().is_empty()
                                 }>
                                     <span class="text-xs text-gray-500">
-                                        {move || format!("No users found for \"{}\"", pattern())}
+                                        {move || {
+                                            t_string!(i18n, common.no_users_matching, query = pattern())
+                                                .to_string()
+                                        }}
                                     </span>
                                 </Show>
                             </div>

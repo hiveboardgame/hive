@@ -26,3 +26,6 @@ pub use pending::PendingNotifications;
 pub use service::Notifier;
 pub use telemetry::PushTelemetry;
 pub use web_push::WebPushNotifier;
+
+mod tournament_notice;
+pub use tournament_notice::{RecordedOutcome, TournamentNotice};

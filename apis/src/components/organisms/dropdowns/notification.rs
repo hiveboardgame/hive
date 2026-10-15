@@ -83,12 +83,18 @@ pub fn NotificationDropdown(current_game_id: Signal<Option<GameId>>) -> impl Int
                 </span>
             }
             id="Notifications"
-            aria_label="Open notifications"
+            aria_label=Signal::derive(move || {
+                t_string!(i18n, tournaments.ui.open_notifications).to_string()
+            })
         >
             <Show
                 when=has_notifications
-                fallback=|| {
-                    view! { <div class="ui-notification-empty">"No notifications right now"</div> }
+                fallback=move || {
+                    view! {
+                        <div class="ui-notification-empty">
+                            {t!(i18n, tournaments.ui.no_notifications_right_now)}
+                        </div>
+                    }
                 }
             >
                 <div class="ui-notification-list">
@@ -139,7 +145,9 @@ pub fn NotificationDropdown(current_game_id: Signal<Option<GameId>>) -> impl Int
                                             view! {
                                                 <ChallengeDetails
                                                     challenge=challenge
-                                                    label="Direct Challenge"
+                                                    label=move || {
+                                                        t_string!(i18n, tournaments.ui.direct_challenge).to_string()
+                                                    }
                                                     class="ui-notification-item"
                                                 />
                                             }
@@ -223,6 +231,7 @@ pub fn NotificationDropdown(current_game_id: Signal<Option<GameId>>) -> impl Int
                         key=|notice| (notice.tournament_id.clone(), notice.game_id.clone())
                         children=move |notice| {
                             let id = StoredValue::new(notice.game_id.clone());
+                            let description = notice.clone();
                             view! {
                                 <div class="ui-notification-item">
                                     <a
@@ -237,14 +246,19 @@ pub fn NotificationDropdown(current_game_id: Signal<Option<GameId>>) -> impl Int
                                             hamburger_show.set(false);
                                         }
                                     >
-                                        // TODO: i18n once copy is approved.
+
                                         <div class="ui-notification-label">
-                                            "Tournament pairing"
+                                            {move || {
+                                                t_string!(i18n, tournaments.ui.tournament_pairing)
+                                                    .to_string()
+                                            }}
                                         </div>
                                         <div class="ui-notification-title">
                                             {notice.tournament_name}
                                         </div>
-                                        <div class="ui-notification-meta">{notice.description}</div>
+                                        <div class="ui-notification-meta">
+                                            {move || description.description(i18n.get_locale())}
+                                        </div>
                                     </a>
                                     <button
                                         class="ui-button ui-button-danger ui-button-icon"
@@ -267,8 +281,8 @@ pub fn NotificationDropdown(current_game_id: Signal<Option<GameId>>) -> impl Int
                     />
 
                     <Show when=has_tournament_notifications>
-                        <Transition fallback=|| {
-                            "Loading tournaments..."
+                        <Transition fallback=move || {
+                            t_string!(i18n, tournaments.ui.loading_tournaments).to_string()
                         }>
                             {move || {
                                 tournaments_resource

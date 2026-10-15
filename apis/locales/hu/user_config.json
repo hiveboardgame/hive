@@ -51,5 +51,33 @@
         "always": "Mindig",
         "never": "Soha",
         "casual_only": "Kötetlen játék során"
+    },
+    "click_on_your_clock": "Kattints az órádra",
+    "double_click": "Dupla kattintás",
+    "single_click": "Egy kattintás",
+    "light_mode": "Világos mód",
+    "dark_mode": "Sötét mód",
+    "white_background": "Fehér háttér",
+    "black_background": "Fekete háttér",
+    "current_color": "Jelenlegi: {{color}}",
+    "ant_light_preview": "{{design}} hangya (világos mód)",
+    "ant_dark_preview": "{{design}} hangya (sötét mód)",
+    "tile_design": {
+        "official": "Hivatalos",
+        "flat": "Sík",
+        "three_d": "3D",
+        "high_contrast": "Nagy kontraszt",
+        "community": "Közösségi",
+        "pride": "Pride",
+        "carbon_three_d": "Karbon 3D",
+        "carbon": "Karbon"
+    },
+    "tile_design_browser_notice": "Egyes böngészők nem támogatnak minden bábukészletet. A Firefox jeleníti meg őket a legmegbízhatóbban.",
+    "settings": {
+        "settings": "Beállítások",
+        "tune_board_visuals_and_move_input_preferences": "A tábla megjelenésének és a lépésbevitel beállításainak módosítása.",
+        "board_appearance": "Tábla megjelenése",
+        "play_preferences": "Játékbeállítások",
+        "if_either_player_has_takebacks_disabled_game_controls_will": "Ha bármelyik játékos letiltotta a visszavonást, a játékvezérlők nem engednek visszavonási kéréseket."
     }
 }

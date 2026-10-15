@@ -45,5 +45,33 @@
         "no_account_prompt": "Non hai un profilo? <register_link>Registrati</register_link>",
         "invalid_login": "Email o password non valida"
     },
-    "color_scheme": "Schema di colori:"
+    "color_scheme": "Schema di colori:",
+    "click_on_your_clock": "Clicca sul tuo orologio",
+    "double_click": "Doppio clic",
+    "single_click": "Clic singolo",
+    "light_mode": "Tema chiaro",
+    "dark_mode": "Tema scuro",
+    "white_background": "Sfondo bianco",
+    "black_background": "Sfondo nero",
+    "current_color": "Attuale: {{color}}",
+    "ant_light_preview": "Formica {{design}} (tema chiaro)",
+    "ant_dark_preview": "Formica {{design}} (tema scuro)",
+    "tile_design": {
+        "official": "Ufficiale",
+        "flat": "Piatto",
+        "three_d": "3D",
+        "high_contrast": "Alto contrasto",
+        "community": "Comunità",
+        "pride": "Pride",
+        "carbon_three_d": "Carbonio 3D",
+        "carbon": "Carbonio"
+    },
+    "tile_design_browser_notice": "Alcuni browser non supportano tutti gli stili delle pedine. Firefox offre la resa più uniforme.",
+    "settings": {
+        "settings": "Impostazioni",
+        "tune_board_visuals_and_move_input_preferences": "Personalizza l'aspetto del tavoliere e l'inserimento delle mosse.",
+        "board_appearance": "Aspetto del tavoliere",
+        "play_preferences": "Preferenze di gioco",
+        "if_either_player_has_takebacks_disabled_game_controls_will": "Se uno dei giocatori ha disattivato i ritiri delle mosse, i comandi di gioco non permetteranno di richiederli."
+    }
 }

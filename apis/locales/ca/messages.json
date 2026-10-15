@@ -1,6 +1,5 @@
 {
     "chat": {
-        "players": "Jugadors",
         "spectators": "Espectadors",
         "players_chat": "Xat de jugadors",
         "spectator_chat": "Xat d'espectadors",
@@ -12,7 +11,6 @@
         "players_chat_only": "Només els jugadors poden veure el xat dels jugadors.",
         "with_opponent": "Xat amb l'oponent",
         "with_spectators": "Xat amb els espectadors",
-        "placeholder": "Xat",
         "composer_label": "Missatge de xat",
         "log_label": "Missatges del xat",
         "open_chat": "Obre el xat",
@@ -71,11 +69,35 @@
     },
     "sections": {
         "dms": "MD",
-        "games": "Partides",
         "recent_announcements": "Anuncis recents",
         "no_dms": "Encara no hi ha MD",
         "no_tournament_chats": "No hi ha xats de torneig",
         "no_game_chats": "No hi ha xats de partida",
         "muted": "Silenciat"
+    },
+    "errors": {
+        "block_mute_failed": "No s'ha pogut actualitzar la configuració de bloqueig o silenci.",
+        "request_unavailable": "No s'ha pogut completar la sol·licitud.",
+        "chat_retry_conflict": "Aquest reintent d'enviament entra en conflicte amb el lliurament original. Envia'l com un missatge nou.",
+        "unauthorized": "No tens autorització per fer aquesta acció.",
+        "chat_access_denied": "Accés al xat denegat.",
+        "chat_subscription_limited": "Massa intents de subscripció al xat.",
+        "chat_send_limited": "Massa missatges de xat.",
+        "tournament_name_taken": "Ja existeix un torneig amb aquest nom.",
+        "request_origin_missing": "L'adreça de l'aplicació no està disponible. Actualitza la pàgina i torna-ho a provar.",
+        "request_url_invalid": "L'adreça de la sol·licitud no és vàlida. Actualitza la pàgina i torna-ho a provar.",
+        "request_origin_mismatch": "Aquesta sol·licitud ha de provenir de l'aplicació. Actualitza la pàgina i torna-ho a provar.",
+        "request_token_missing": "Actualitza la pàgina i torna-ho a provar.",
+        "request_unverified": "No s'ha pogut verificar aquesta sol·licitud. Actualitza la pàgina i torna-ho a provar.",
+        "discord_start_failed": "No s'ha pogut iniciar la vinculació amb Discord.",
+        "discord_response_invalid": "Discord ha retornat una resposta d'autorització no vàlida. Torna a començar des de la configuració de notificacions.",
+        "discord_url_invalid": "Discord ha retornat una adreça d'autorització no vàlida. Torna a començar des de la configuració de notificacions.",
+        "discord_state_invalid": "Discord ha retornat un estat d'autorització no vàlid. Torna a començar des de la configuració de notificacions.",
+        "discord_session_required": "Inicia la sessió per vincular Discord.",
+        "discord_unavailable": "La vinculació amb Discord no està disponible actualment.",
+        "discord_unverified": "No s'ha pogut verificar la vinculació amb Discord. Torna a començar des de la configuració de notificacions.",
+        "discord_failed": "La vinculació amb Discord ha fallat. Torna a començar des de la configuració de notificacions.",
+        "rating_above_band": "{{rating}} supera el límit superior de puntuació de {{limit}}",
+        "rating_below_band": "{{rating}} és inferior al límit mínim de puntuació de {{limit}}"
     }
 }

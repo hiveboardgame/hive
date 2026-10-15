@@ -44,12 +44,12 @@ pub fn FeaturedVideo() -> impl IntoView {
                     target="_blank"
                     rel="noopener noreferrer"
                     class="block pt-3 w-full no-underline ui-panel-body group"
-                    title="An introduction to Hive"
+                    title=move || t_string!(i18n, home.an_introduction_to_hive)
                 >
                     <div class="overflow-hidden relative w-full bg-black rounded aspect-video">
                         <img
                             src=THUMBNAIL_URL
-                            alt="Learn to play Hive - video thumbnail"
+                            alt=move || t_string!(i18n, home.learn_to_play_hive_video_thumbnail)
                             class="object-cover w-full h-full"
                             loading="lazy"
                         />

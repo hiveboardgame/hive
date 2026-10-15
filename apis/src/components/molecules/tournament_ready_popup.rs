@@ -79,7 +79,7 @@ pub fn TournamentReadyPopup(
         current_popup_candidate.with(|opt| {
             opt.as_ref()
                 .map(|(_, _, username)| username.clone())
-                .unwrap_or_else(|| "Unknown Player".to_string())
+                .unwrap_or_else(|| t_string!(i18n, game.unknown_player).to_string())
         })
     });
 

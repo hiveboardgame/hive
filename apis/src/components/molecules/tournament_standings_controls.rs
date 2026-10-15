@@ -95,10 +95,10 @@ pub fn TournamentStandingsControls(
                         class="min-w-0 h-10 max-w-52 ui-field-input"
                         type="search"
                         list=suggestions_id.clone()
-                        // TODO: i18n once copy is approved.
+
                         placeholder=move || {
                             if search_only {
-                                String::from("Find a player")
+                                t_string!(i18n, common.find_a_player).to_string()
                             } else {
                                 t_string!(i18n, archive.search).to_string()
                             }
@@ -125,11 +125,13 @@ pub fn TournamentStandingsControls(
                 on_me.is_some() && me_player.is_some_and(|me_player| me_player.get().is_some())
                     && !me_on_page.is_some_and(|me_on_page| me_on_page.get())
             }>
-                // TODO: i18n once copy is approved.
+
                 <button
                     type="button"
                     class="inline-flex justify-center items-center rounded size-10 shrink-0 ui-button ui-button-ghost"
-                    aria-label="Find your standing"
+                    aria-label=move || {
+                        t_string!(i18n, tournaments.ui.find_your_standing).to_string()
+                    }
                     on:click={
                         let mounted = mounted.clone();
                         move |_| {

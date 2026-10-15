@@ -1,3 +1,6 @@
+mod error;
+pub use error::PushError;
+
 #[cfg(not(feature = "ssr"))]
 mod client;
 #[cfg(not(feature = "ssr"))]

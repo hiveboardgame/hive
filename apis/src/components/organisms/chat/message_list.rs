@@ -5,6 +5,7 @@ use super::{
     read_eligibility::is_scrolled_near_bottom,
 };
 use crate::{
+    common::localized_error_message,
     i18n::*,
     providers::chat::{
         Chat,
@@ -452,7 +453,9 @@ pub(super) fn MessageList(
                                 view! {
                                     <div class="flex justify-center items-center h-full min-h-[8rem]">
                                         <div class="max-w-sm ui-empty-state" role="alert">
-                                            <p class="text-sm font-medium">{error}</p>
+                                            <p class="text-sm font-medium">
+                                                {move || localized_error_message(i18n, &error)}
+                                            </p>
                                             <Show when=retryable_thread_error>
                                                 <button
                                                     type="button"
@@ -492,7 +495,13 @@ pub(super) fn MessageList(
                     <div class=conversation_column_class>
                         <Show when=move || banner_error.get().is_some()>
                             <div class="mb-4 ui-warning-notice" role="alert">
-                                <span>{move || banner_error.get().unwrap_or_default()}</span>
+                                <span>
+                                    {move || {
+                                        banner_error
+                                            .get()
+                                            .map(|error| localized_error_message(i18n, &error))
+                                    }}
+                                </span>
                                 <Show when=retryable_thread_error>
                                     <button
                                         type="button"

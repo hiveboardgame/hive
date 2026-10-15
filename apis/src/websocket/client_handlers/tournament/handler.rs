@@ -73,14 +73,7 @@ pub fn handle_tournament(tournament: TournamentUpdate) {
         } => {
             expect_context::<AlertsContext>()
                 .last_alert
-                .set(Some(AlertType::Notification(
-                    // TODO: i18n once copy is approved.
-                    if count == 1 {
-                        String::from("Recorded a double forfeit.")
-                    } else {
-                        format!("Recorded {count} double forfeits.")
-                    },
-                )));
+                .set(Some(AlertType::TournamentSlotsClosed(count)));
         }
         TournamentUpdate::CreationSucceeded(tournament_id) => {
             let location = use_location();
@@ -136,10 +129,14 @@ pub fn handle_tournament(tournament: TournamentUpdate) {
             }
         }
         TournamentUpdate::StartDeferred(_) => {
-            // TODO: i18n once copy is approved.
-            expect_context::<AlertsContext>().last_alert.set(Some(AlertType::Notification(
-                String::from("Not enough entrants to start. The tournament now uses manual start; reschedule it or start it later."),
-            )));
+            expect_context::<AlertsContext>()
+                .last_alert
+                .set(Some(AlertType::TournamentStartDeferred));
+        }
+        TournamentUpdate::StartNeedsEntrants { minimum, .. } => {
+            expect_context::<AlertsContext>()
+                .last_alert
+                .set(Some(AlertType::TournamentStartNeedsEntrants(minimum)));
         }
         TournamentUpdate::Started(tournament_id) => {
             notifications.tournament_invitation_remove(&tournament_id);

@@ -22,7 +22,6 @@ use crate::{
 use chrono::{DateTime, Local, Utc};
 use hive_lib::GameStatus;
 use leptos::{html::Dialog, prelude::*};
-use leptos_i18n::I18nContext;
 use leptos_router::hooks::use_location;
 use shared_types::{tournament_view::SlotResponse, SlotAdminAction, TournamentId};
 use uuid::Uuid;
@@ -43,15 +42,12 @@ fn slot_is_closeout_eligible(slot: &SlotResponse) -> bool {
 struct ReviewedCloseoutSlot {
     id: Uuid,
     order: (u8, usize, usize, usize, usize),
-    identity: String,
-    players: String,
+    slot: SlotResponse,
+    players: [Option<String>; 2],
     scheduled_at: Option<DateTime<Utc>>,
 }
 
-fn reviewed_closeout_slots(
-    tournament: TournamentState,
-    i18n: I18nContext<Locale, I18nKeys>,
-) -> Vec<ReviewedCloseoutSlot> {
+fn reviewed_closeout_slots(tournament: TournamentState) -> Vec<ReviewedCloseoutSlot> {
     let slot_ids = match tournament.format {
         TournamentFormatState::RoundRobin(state) => state
             .slots()
@@ -70,24 +66,18 @@ fn reviewed_closeout_slots(
             if !slot_is_closeout_eligible(&slot) {
                 return None;
             }
-            // TODO: i18n once copy is approved.
-            let white = memberships
-                .players
-                .get(&slot.white())
-                .map(|user| user.username.as_str())
-                .unwrap_or("White");
-            let black = memberships
-                .players
-                .get(&slot.black())
-                .map(|user| user.username.as_str())
-                .unwrap_or("Black");
-            let identity =
-                slot_card_label(i18n, tournament, &slot).unwrap_or_else(|| String::from("Game"));
+
+            let players = [slot.white(), slot.black()].map(|player| {
+                memberships
+                    .players
+                    .get(&player)
+                    .map(|user| user.username.clone())
+            });
             Some(ReviewedCloseoutSlot {
                 id,
                 order: slot_order(&slot),
-                identity,
-                players: format!("{white} vs {black}"),
+                slot: slot.clone(),
+                players,
                 scheduled_at: slot.scheduled_at,
             })
         })
@@ -176,7 +166,7 @@ pub fn TournamentCloseout(tournament: TournamentState, organizer: Signal<bool>) 
                     if !route_active.get_untracked() {
                         return;
                     }
-                    let rows = reviewed_closeout_slots(tournament, i18n);
+                    let rows = reviewed_closeout_slots(tournament);
                     if rows.is_empty() {
                         return;
                     }
@@ -187,47 +177,62 @@ pub fn TournamentCloseout(tournament: TournamentState, organizer: Signal<bool>) 
                     }
                 }
             >
-                // TODO: i18n once copy is approved.
-                {move || format!("Close unstarted games ({})", closeout_eligible_slots.get())}
+
+                {move || {
+                    t_string!(
+                        i18n, tournaments.ui.close_unstarted_games, value1 = closeout_eligible_slots.get()
+                    )
+                        .to_string()
+                }}
             </button>
         </Show>
-        // TODO: i18n once copy is approved.
-        <Modal dialog_el aria_label="Close unstarted games" on_close=cancel>
+
+        <Modal
+            dialog_el
+            aria_label=move || {
+                t_string!(i18n, tournaments.ui.close_unstarted_games_title).to_string()
+            }
+            on_close=cancel
+        >
             <Show when=move || route_active.get() && reviewed.with(Option::is_some)>
                 <div class="px-3 pb-4 mx-auto space-y-3 sm:px-4 w-[min(94vw,48rem)]">
                     <header>
-                        // TODO: i18n once copy is approved.
+
                         <h2 class="text-xl font-bold">
                             {move || {
                                 let count = reviewed_count.get();
-                                let game = if count == 1 { "game" } else { "games" };
-                                format!("Close {count} unstarted {game}?")
+                                t_string!(i18n, tournaments.ui.close_unstarted, count = count)
+                                    .to_string()
                             }}
                         </h2>
                         <p class="text-sm text-gray-600 dark:text-gray-300">
                             {move || tournament.common.lifecycle().get().name}
                         </p>
                     </header>
-                    // TODO: i18n once copy is approved.
+
                     <p class="p-3 text-sm ui-danger-notice">
                         {move || {
-                            if reviewed_count.get() == 1 {
-                                "This records a double forfeit (0–0). Neither player receives points."
-                            } else {
-                                "Each game is recorded as a double forfeit (0–0). Neither player receives points."
-                            }
+                            t_string!(
+                                i18n, tournaments.ui.close_games_double_forfeit_help, count = reviewed_count.get()
+                            )
+                                .to_string()
                         }}
                     </p>
-                    // TODO: i18n once copy is approved.
+
                     <p class="text-xs text-gray-600 dark:text-gray-300">
-                        {format!("Your local time · currently {}", Local::now().format("UTC%:z"))}
+                        {move || {
+                            t_string!(
+                                i18n, tournaments.ui.your_local_time_currently, value1 = Local::now().format("UTC%:z")
+                            )
+                                .to_string()
+                        }}
                     </p>
                     <div class="overflow-hidden rounded border divide-y border-black/10 divide-black/10 dark:border-white/10 dark:divide-white/10">
-                        // TODO: i18n once copy is approved.
+
                         <div class="hidden gap-3 p-3 text-xs font-semibold sm:grid sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.3fr)]">
-                            <span>"Players"</span>
-                            <span>"Game"</span>
-                            <span>"Agreed time"</span>
+                            <span>{t!(i18n, common.players)}</span>
+                            <span>{t!(i18n, common.game)}</span>
+                            <span>{t!(i18n, tournaments.ui.agreed_time)}</span>
                         </div>
                         <For
                             each=move || {
@@ -251,14 +256,41 @@ pub fn TournamentCloseout(tournament: TournamentState, organizer: Signal<bool>) 
                                 class="grid gap-1 p-3 text-sm sm:gap-3 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.3fr)]"
                                 data-slot-id=row.id.to_string()
                             >
-                                <p class="font-semibold break-words">{row.players}</p>
-                                <p>{row.identity}</p>
-                                // TODO: i18n once copy is approved.
+                                <p class="font-semibold break-words">
+                                    {move || {
+                                        let white = row
+                                            .players[0]
+                                            .clone()
+                                            .unwrap_or_else(|| {
+                                                t_string!(i18n, common.white).to_string()
+                                            });
+                                        let black = row
+                                            .players[1]
+                                            .clone()
+                                            .unwrap_or_else(|| {
+                                                t_string!(i18n, common.black).to_string()
+                                            });
+                                        t_string!(
+                                            i18n, common.versus_players, white = white, black = black
+                                        )
+                                            .to_string()
+                                    }}
+                                </p>
+                                <p>
+                                    {move || {
+                                        slot_card_label(i18n, tournament, &row.slot)
+                                            .unwrap_or_else(|| t_string!(i18n, common.game).to_string())
+                                    }}
+                                </p>
+
                                 <p class="text-gray-600 dark:text-gray-300">
-                                    {row
-                                        .scheduled_at
-                                        .map(|time| format_local_datetime(i18n.get_locale(), time))
-                                        .unwrap_or_else(|| String::from("No agreed time"))}
+                                    {move || {
+                                        row.scheduled_at
+                                            .map(|time| format_local_datetime(i18n.get_locale(), time))
+                                            .unwrap_or_else(|| {
+                                                t_string!(i18n, tournaments.ui.no_agreed_time).to_string()
+                                            })
+                                    }}
                                 </p>
                             </article>
                         </For>
@@ -279,18 +311,17 @@ pub fn TournamentCloseout(tournament: TournamentState, organizer: Signal<bool>) 
                         >
                             {t!(i18n, tournaments.detail.cancel)}
                         </button>
-                        // TODO: i18n once copy is approved.
+
                         <button
                             type="button"
                             class="ui-button ui-button-danger ui-button-md"
                             on:click=move |_| confirm.run(())
                         >
                             {move || {
-                                if reviewed_count.get() == 1 {
-                                    String::from("Record double forfeit")
-                                } else {
-                                    format!("Record {} double forfeits", reviewed_count.get())
-                                }
+                                t_string!(
+                                    i18n, tournaments.ui.record_double_forfeits, count = reviewed_count.get()
+                                )
+                                    .to_string()
                             }}
                         </button>
                     </footer>

@@ -193,6 +193,10 @@ pub enum TournamentUpdate {
     },
     Started(TournamentId),
     StartDeferred(TournamentId),
+    StartNeedsEntrants {
+        tournament_id: TournamentId,
+        minimum: i32,
+    },
     Uninvited(TournamentId),
 }
 

@@ -35,7 +35,11 @@ pub fn ResetPassword() -> impl IntoView {
         <PageShell variant=PageShellVariant::Form>
             <PageCard class="p-6 sm:p-8">
                 <Suspense fallback=move || {
-                    view! { <small class="ui-page-subtitle">"Checking your reset link…"</small> }
+                    view! {
+                        <small class="ui-page-subtitle">
+                            {t!(i18n, common.auth.checking_your_reset_link)}
+                        </small>
+                    }
                 }>
                     {move || {
                         valid
@@ -48,7 +52,9 @@ pub fn ResetPassword() -> impl IntoView {
 
                                                 <input type="hidden" name="token" value=token.get_value() />
                                                 <div class="flex flex-col gap-1">
-                                                    <h1 class="ui-page-title">"Reset your password"</h1>
+                                                    <h1 class="ui-page-title">
+                                                        {t!(i18n, common.auth.reset_your_password)}
+                                                    </h1>
                                                 </div>
                                                 <label class="flex flex-col gap-1.5">
                                                     <span class="ui-field-label">
@@ -92,7 +98,9 @@ pub fn ResetPassword() -> impl IntoView {
                                                     password_invalid() && !new_password().is_empty()
                                                 }>
                                                     <small class="ui-field-error">
-                                                        "Passwords must match and be at least 8 characters."
+                                                        {t!(
+                                                            i18n, common.auth.passwords_must_match_and_be_at_least_8_characters
+                                                        )}
                                                     </small>
                                                 </Show>
                                                 <button
@@ -100,11 +108,13 @@ pub fn ResetPassword() -> impl IntoView {
                                                     type="submit"
                                                     disabled=password_invalid
                                                 >
-                                                    "Reset password"
+                                                    {t!(i18n, common.auth.reset_password)}
                                                 </button>
                                                 <Show when=display_error>
                                                     <small class="ui-field-error">
-                                                        "Couldn't reset your password. The link may have expired — request a new one."
+                                                        {t!(
+                                                            i18n, common.auth.couldn_t_reset_your_password_the_link_may_have
+                                                        )}
                                                     </small>
                                                 </Show>
                                             </ActionForm>
@@ -116,13 +126,17 @@ pub fn ResetPassword() -> impl IntoView {
                                         view! {
                                             <div class="space-y-4">
                                                 <div class="flex flex-col gap-1">
-                                                    <h1 class="ui-page-title">"This link has expired"</h1>
+                                                    <h1 class="ui-page-title">
+                                                        {t!(i18n, common.auth.this_link_has_expired)}
+                                                    </h1>
                                                     <p class="ui-page-subtitle">
-                                                        "This password reset link is invalid or has expired. Request a new one and we'll email you a fresh link."
+                                                        {t!(
+                                                            i18n, common.auth.this_password_reset_link_is_invalid_or_has_expired
+                                                        )}
                                                     </p>
                                                 </div>
                                                 <a class="ui-text-link" href="/forgot-password">
-                                                    "Request a new link"
+                                                    {t!(i18n, common.auth.request_a_new_link)}
                                                 </a>
                                             </div>
                                         },

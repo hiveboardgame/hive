@@ -15,78 +15,132 @@ use crate::{
 use chrono::{DateTime, Datelike, Duration, Local, Utc};
 use leptos::prelude::*;
 use shared_types::{tournament::BotAdmission, Clock, CorrespondenceClock, TournamentId};
-
-// TODO: i18n once copy is approved.
 pub fn format_tournament_clock(clock: Clock) -> String {
+    let i18n = use_i18n();
     match clock {
         Clock::Realtime(clock) => compact_realtime_clock(clock),
         Clock::Correspondence(clock) => {
-            let (seconds, unit) = match clock {
-                CorrespondenceClock::TotalTimeEach { seconds_each } => (seconds_each.get(), "side"),
+            let (seconds, per_move) = match clock {
+                CorrespondenceClock::TotalTimeEach { seconds_each } => (seconds_each.get(), false),
                 CorrespondenceClock::DaysPerMove { seconds_per_move } => {
-                    (seconds_per_move.get(), "move")
+                    (seconds_per_move.get(), true)
                 }
             };
             let duration = if seconds.is_multiple_of(86400) {
                 let days = seconds / 86400;
-                format!("{days} {}", if days == 1 { "day" } else { "days" })
+                if days == 1 {
+                    t_string!(i18n, tournaments.row.one_day).to_string()
+                } else {
+                    t_string!(
+                        i18n,
+                        home.custom_game.mode.correspondence.time,
+                        count = days
+                    )
+                    .to_string()
+                }
             } else {
                 format_compact_duration(seconds)
             };
-            format!("{duration}/{unit}")
+            if per_move {
+                t_string!(i18n, tournaments.row.duration_per_move, duration = duration).to_string()
+            } else {
+                t_string!(i18n, tournaments.row.duration_per_side, duration = duration).to_string()
+            }
         }
     }
 }
-
-// TODO: i18n once copy is approved.
 fn short_date(date: DateTime<Utc>, now: DateTime<Utc>) -> String {
+    let i18n = use_i18n();
     let date = date.with_timezone(&Local);
     let now = now.with_timezone(&Local);
     if date.date_naive() == now.date_naive() {
-        format!("Today, {}", date.format("%H:%M"))
+        t_string!(
+            i18n,
+            tournaments.row.today_value1,
+            value1 = (date.format("%H:%M"))
+        )
+        .to_string()
     } else if date.year() == now.year() {
-        date.format("%-d %b, %H:%M").to_string()
+        t_string!(
+            i18n,
+            common.short_datetime,
+            month = date.format("%m").to_string(),
+            day = date.format("%d").to_string(),
+            time = date.format("%H:%M").to_string()
+        )
+        .to_string()
     } else {
-        date.format("%-d %b %Y, %H:%M").to_string()
+        t_string!(
+            i18n,
+            common.date_time,
+            year = date.format("%Y").to_string(),
+            month = date.format("%m").to_string(),
+            day = date.format("%d").to_string(),
+            time = date.format("%H:%M").to_string()
+        )
+        .to_string()
     }
 }
-
-// TODO: i18n once copy is approved.
 fn entrants_text(tournament: &TournamentCardResponse) -> String {
+    let i18n = use_i18n();
     let players = tournament.players;
     match tournament.summary.progress {
         TournamentCardProgress::Entrants { minimum, .. } => {
             let count = tournament.seats.map_or_else(
-                || format!("{players} players"),
-                |capacity| format!("{players}/{capacity} players"),
+                || {
+                    t_string!(i18n, tournaments.row.players_players, players = (players))
+                        .to_string()
+                },
+                |capacity| {
+                    t_string!(
+                        i18n,
+                        tournaments.row.players_capacity_players,
+                        players = (players),
+                        capacity = (capacity)
+                    )
+                    .to_string()
+                },
             );
             if players < minimum {
-                format!("{count} · {minimum} required")
+                t_string!(
+                    i18n,
+                    tournaments.row.count_minimum_required,
+                    count = (count),
+                    minimum = (minimum)
+                )
+                .to_string()
             } else {
                 count
             }
         }
-        _ => format!("{players} players"),
+        _ => t_string!(i18n, tournaments.row.players_players, players = (players)).to_string(),
     }
 }
-
-// TODO: i18n once copy is approved.
 fn lifecycle_text(tournament: &TournamentCardResponse, now: DateTime<Utc>) -> (String, String) {
+    let i18n = use_i18n();
     let summary = &tournament.summary;
     match &summary.progress {
         TournamentCardProgress::Entrants { .. } => match summary.relevant_date {
             Some(TournamentCardDate::Starts(start)) => {
                 let remaining = start - now;
                 let countdown = if remaining.num_seconds() > 0 && remaining.num_minutes() < 60 {
-                    format!("Starts in {}", format_time_left(remaining))
+                    t_string!(
+                        i18n,
+                        tournaments.row.starts_in_value1,
+                        value1 = (format_time_left(i18n, remaining))
+                    )
+                    .to_string()
                 } else if remaining.num_seconds() <= 0 {
-                    String::from("Awaiting start")
+                    t_string!(i18n, tournaments.row.awaiting_start).to_string()
                 } else {
                     String::new()
                 };
                 (short_date(start, now), countdown)
             }
-            _ => (String::from("Organizer starts"), String::new()),
+            _ => (
+                t_string!(i18n, tournaments.row.organizer_starts).to_string(),
+                String::new(),
+            ),
         },
         TournamentCardProgress::Arena {
             elapsed_seconds,
@@ -97,36 +151,68 @@ fn lifecycle_text(tournament: &TournamentCardResponse, now: DateTime<Utc>) -> (S
                 |end| end - now,
             );
             (
-                format!("{} remaining", format_time_left(remaining)),
+                t_string!(
+                    i18n,
+                    tournaments.row.value1_remaining,
+                    value1 = (format_time_left(i18n, remaining))
+                )
+                .to_string(),
                 String::new(),
             )
         }
-        TournamentCardProgress::Slots { resolved, total } => {
-            (format!("{resolved} of {total} games"), String::new())
-        }
+        TournamentCardProgress::Slots { resolved, total } => (
+            t_string!(
+                i18n,
+                tournaments.row.resolved_of_total_games,
+                resolved = (resolved),
+                total = (total)
+            )
+            .to_string(),
+            String::new(),
+        ),
         TournamentCardProgress::Swiss {
             completed_rounds,
             total_rounds,
             current_round,
         } => match current_round {
             Some(round) => (
-                format!("Round {} of {total_rounds}", round.round),
+                t_string!(
+                    i18n,
+                    tournaments.row.round_value1_of_total_rounds,
+                    value1 = (round.round),
+                    total_rounds = (total_rounds)
+                )
+                .to_string(),
                 String::new(),
             ),
             None => (
-                format!("{completed_rounds} of {total_rounds} rounds complete"),
-                String::from("Between rounds"),
+                t_string!(
+                    i18n,
+                    tournaments
+                        .row
+                        .completed_rounds_of_total_rounds_rounds_complete,
+                    completed_rounds = (completed_rounds),
+                    total_rounds = (total_rounds)
+                )
+                .to_string(),
+                t_string!(i18n, tournaments.row.between_rounds).to_string(),
             ),
         },
         TournamentCardProgress::Elimination {
             decided_nodes,
             total_nodes,
         } => (
-            format!("{decided_nodes} of {total_nodes} matches"),
+            t_string!(
+                i18n,
+                tournaments.row.decided_nodes_of_total_nodes_matches,
+                decided_nodes = (decided_nodes),
+                total_nodes = (total_nodes)
+            )
+            .to_string(),
             String::new(),
         ),
         TournamentCardProgress::Complete => (
-            String::from("Completed"),
+            t_string!(i18n, tournaments.row.completed).to_string(),
             match summary.relevant_date {
                 Some(TournamentCardDate::Finished(date)) => short_date(date, now),
                 _ => String::new(),
@@ -134,9 +220,8 @@ fn lifecycle_text(tournament: &TournamentCardResponse, now: DateTime<Utc>) -> (S
         ),
     }
 }
-
-// TODO: i18n once copy is approved.
 fn public_entry_text(tournament: &TournamentCardResponse) -> String {
+    let i18n = use_i18n();
     let summary = &tournament.summary;
     if !matches!(summary.progress, TournamentCardProgress::Entrants { .. }) {
         return String::new();
@@ -146,11 +231,11 @@ fn public_entry_text(tournament: &TournamentCardResponse) -> String {
         .is_some_and(|capacity| i64::from(tournament.players) >= i64::from(capacity));
     let mut conditions = Vec::new();
     if !summary.entry_open {
-        conditions.push(String::from("Entry closed"));
+        conditions.push(t_string!(i18n, tournaments.admission.closed).to_string());
     } else if summary.restrictions.invite_only {
-        conditions.push(String::from("Invite only"));
+        conditions.push(t_string!(i18n, tournaments.creation.invite_only).to_string());
     } else if !full {
-        conditions.push(String::from("Open entry"));
+        conditions.push(t_string!(i18n, tournaments.detail.open_entry).to_string());
     }
     match (
         summary.restrictions.band_lower,
@@ -162,8 +247,12 @@ fn public_entry_text(tournament: &TournamentCardResponse) -> String {
         (None, None) => (),
     }
     match summary.bot_admission {
-        BotAdmission::HumansOnly => conditions.push(String::from("Humans only")),
-        BotAdmission::BotsOnly => conditions.push(String::from("Bots only")),
+        BotAdmission::HumansOnly => {
+            conditions.push(t_string!(i18n, tournaments.row.humans_only).to_string())
+        }
+        BotAdmission::BotsOnly => {
+            conditions.push(t_string!(i18n, tournaments.row.bots_only).to_string())
+        }
         BotAdmission::HumansAndBots => (),
     }
     conditions.join(" · ")
@@ -239,8 +328,7 @@ pub fn TournamentRow(
                 <Show
                     when=move || !unavailable.get()
                     fallback=move || {
-                        // TODO: i18n once copy is approved.
-                        view! { <span>"Unavailable"</span> }
+                        view! { <span>{t!(i18n, common.unavailable)}</span> }
                     }
                 >
                     <p class="tabular-nums">{move || lifecycle.get().0}</p>
@@ -267,8 +355,7 @@ pub fn TournamentRow(
                             class="relative z-20 mt-2 ui-button ui-button-secondary ui-button-sm no-link-style"
                             href=move || href.get_value()
                         >
-                            // TODO: i18n once copy is approved.
-                            "Organizer invitation"
+                            {t!(i18n, tournaments.ui.organizer_invitation)}
                         </a>
                     </Show>
                     <Show when=invitation>
@@ -277,16 +364,17 @@ pub fn TournamentRow(
                                 class="ui-button ui-button-primary ui-button-sm no-link-style"
                                 href=move || href.get_value()
                             >
-                                // TODO: i18n once copy is approved.
-                                "Review invitation"
+                                {t!(i18n, tournaments.row.review_invitation)}
                             </a>
                             <button
                                 type="button"
                                 class="ui-button ui-button-secondary ui-button-sm"
                                 disabled=move || !can_decline()
-                                // TODO: i18n once copy is approved.
                                 aria-label=move || {
-                                    format!("Decline invitation to {}", tournament.get().name)
+                                    t_string!(
+                                        i18n, tournaments.row.decline_invitation_to_value1, value1 = (tournament.get().name)
+                                    )
+                                        .to_string()
                                 }
                                 on:click=move |_| {
                                     if can_decline()
@@ -300,8 +388,7 @@ pub fn TournamentRow(
                                     }
                                 }
                             >
-                                // TODO: i18n once copy is approved.
-                                "Decline"
+                                {t!(i18n, common.decline)}
                             </button>
                         </div>
                     </Show>

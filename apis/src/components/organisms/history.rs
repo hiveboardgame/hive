@@ -1,16 +1,18 @@
 use crate::{
+    common::{conclusion_label, game_result_label},
     components::{
         molecules::history_controls::HistoryControls,
         organisms::side_board::move_query_signal,
     },
     hiveground::HivegroundInteraction,
+    i18n::*,
     providers::game_state::{GameStateStore, GameStateStoreFields},
 };
 use hive_lib::{Board, GameStatus};
 use leptos::{html, prelude::*};
 use leptos_icons::*;
 use leptos_router::hooks::{use_params_map, use_query_map};
-use shared_types::{PrettyString, TimeMode};
+use shared_types::TimeMode;
 use std::time::Duration;
 
 #[component]
@@ -85,6 +87,7 @@ pub fn HistoryMove(
 
 #[component]
 pub fn History(interaction: HivegroundInteraction, history_board: Memo<Board>) -> impl IntoView {
+    let i18n = use_i18n();
     let game_state = expect_context::<GameStateStore>();
     let params = use_params_map();
     let queries = use_query_map();
@@ -111,7 +114,7 @@ pub fn History(interaction: HivegroundInteraction, history_board: Memo<Board>) -
     let parent = NodeRef::<html::Div>::new();
     let game_result = Memo::new(move |_| {
         state.with(|state| match &state.game_status {
-            GameStatus::Finished(result) => result.to_string(),
+            GameStatus::Finished(result) => game_result_label(i18n, result),
             _ => "".to_string(),
         })
     });
@@ -119,8 +122,8 @@ pub fn History(interaction: HivegroundInteraction, history_board: Memo<Board>) -
     let conclusion = Memo::new(move |_| {
         game_response.with(|game_response| {
             game_response.as_ref().map_or_else(
-                || String::from("No data"),
-                |game| game.conclusion.pretty_string(),
+                || t_string!(i18n, game.no_data).to_string(),
+                |game| conclusion_label(i18n, &game.conclusion).to_string(),
             )
         })
     });
@@ -162,7 +165,7 @@ pub fn History(interaction: HivegroundInteraction, history_board: Memo<Board>) -
                     >
                         <div class="flex gap-1 justify-center items-center">
                             <Icon icon=icondata_tb::TbMicroscopeOutline attr:class="py-1 size-7" />
-                            "Analyze here"
+                            {move || t_string!(i18n, game.analyze_here)}
                         </div>
                     </a>
                 </div>

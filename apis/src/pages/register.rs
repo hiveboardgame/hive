@@ -97,7 +97,7 @@ pub fn Register() -> impl IntoView {
                             {t!(i18n, user_config.create_account.signup_button)}
                         </h1>
                         <p class="ui-page-subtitle">
-                            "Create an account to play and join tournaments."
+                            {t!(i18n, common.auth.create_an_account_to_play_and_join_tournaments)}
                         </p>
                     </div>
 

@@ -1,15 +1,6 @@
 {
     "game_result": "Результат партии:",
     "include_speeds": "Контроль времени:",
-    "game_buttons": {
-        "pending": "В ожидании",
-        "playing": "Активные игры",
-        "finished": "Оконченные игры"
-    },
-    "color_buttons": {
-        "black": "Чёрными",
-        "white": "Белыми"
-    },
     "result_buttons": {
         "win": "Победа",
         "loss": "Поражение",
@@ -24,5 +15,15 @@
     "rating": "Рейтинг",
     "games_played_one": "{{count}} партия",
     "games_played_few": "{{count}} партии",
-    "games_played_other": "{{count}} партий"
+    "games_played_other": "{{count}} партий",
+    "page": {
+        "redirecting": "Перенаправление…",
+        "user_not_found": "Пользователь не найден"
+    },
+    "leaderboards": {
+        "top_rated_players": "Игроки с наивысшим рейтингом",
+        "highest_rated_players_by_speed": "Лучшие игроки по рейтингу в каждом темпе.",
+        "top_rated_bots": "Боты с наивысшим рейтингом",
+        "highest_rated_bots_by_speed": "Лучшие боты по рейтингу в каждом темпе."
+    }
 }

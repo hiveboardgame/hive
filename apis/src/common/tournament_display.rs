@@ -1,5 +1,6 @@
 use crate::{
     components::molecules::time_row::format_compact_duration,
+    i18n::*,
     providers::{RoundRobinStateStoreFields, SwissStateStoreFields, TournamentFormatState},
     responses::TournamentMemberships,
 };
@@ -114,22 +115,21 @@ pub(crate) fn tournament_completion_order(
     (completion.is_none(), completion)
 }
 
-// TODO: i18n once copy is approved.
-pub(crate) fn unfinished_tournament_game_label(slot: &SlotResponse) -> &'static str {
+pub(crate) fn unfinished_tournament_game_label(locale: Locale, slot: &SlotResponse) -> String {
     if slot.game.as_ref().is_some_and(|game| game.finished) {
-        "Finished"
+        td_string!(locale, common.finished).to_string()
     } else if slot
         .game
         .as_ref()
         .is_some_and(|game| game.status == GameStatus::InProgress)
     {
-        "Playing"
+        td_string!(locale, common.playing).to_string()
     } else if slot.scheduled_at.is_some() {
-        "Scheduled"
+        td_string!(locale, common.scheduled).to_string()
     } else if slot.resolution.is_some() {
-        "Not played"
+        td_string!(locale, common.not_played).to_string()
     } else {
-        "Not started"
+        td_string!(locale, common.not_started).to_string()
     }
 }
 
@@ -147,7 +147,6 @@ pub(crate) fn result_marker_color(marker: &str) -> &'static str {
     }
 }
 
-// TODO: i18n once copy is approved.
 pub(crate) fn compact_realtime_clock(clock: RealtimeClock) -> String {
     let seconds = clock.base_seconds.get();
     let base = if seconds.is_multiple_of(60) {

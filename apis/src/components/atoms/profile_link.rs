@@ -56,7 +56,9 @@ pub fn ProfileLink(
                                 attr:class="size-2 shrink-0 self-start"
                             />
                         </Show> <Show when=bot>
-                            <span class="ml-1 text-[80%]">BOT</span>
+                            <span class="ml-1 text-[80%]">
+                                {move || t_string!(i18n, common.bot)}
+                            </span>
                         </Show>
                     </span>
                 </a>

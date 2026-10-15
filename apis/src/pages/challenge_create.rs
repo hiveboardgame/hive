@@ -140,7 +140,9 @@ pub fn ChallengeCreate(#[prop(optional, into)] opponent: Signal<Option<String>>)
     view! {
         <div class="flex flex-col items-center w-72 sm:w-96 xs:m-2 xs:w-80">
             <Show when=move || opponent.get().is_some()>
-                <div class="block">"Opponent: " {move || opponent.get().unwrap_or_default()}</div>
+                <div class="block">
+                    {t!(i18n, common.opponent_label)} {move || opponent.get().unwrap_or_default()}
+                </div>
             </Show>
             <div class="flex flex-col items-center">
                 <TimeSelect is_tournament=false params on_value_change=time_change allowed_values />
@@ -154,11 +156,11 @@ pub fn ChallengeCreate(#[prop(optional, into)] opponent: Signal<Option<String>>)
                 /> {t!(i18n, game.rated)}
             </div>
             <div class="flex gap-1 p-1">
-                Basic
+                {t!(i18n, profile.expansion_buttons.basic)}
                 <SimpleSwitchWithCallback
                     checked=params.with_expansions().into()
                     action=with_expansions_callback
-                />Full
+                />{t!(i18n, common.full)}
             </div>
 
             <Show when=move || opponent.get().is_none()>

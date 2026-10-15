@@ -45,7 +45,7 @@ const CHALLENGE_ACTIONS_CLASS: &str = "relative z-20 flex shrink-0 gap-2";
 #[component]
 pub fn ChallengeDetails(
     challenge: ChallengeResponse,
-    #[prop(optional)] label: Option<&'static str>,
+    #[prop(optional, into)] label: Option<TextProp>,
     #[prop(optional, into)] class: Option<String>,
 ) -> impl IntoView {
     let i18n = use_i18n();
@@ -71,9 +71,9 @@ pub fn ChallengeDetails(
         })
     });
     let color_label = move || match displayed_color.get() {
-        ColorChoice::White => t_string!(i18n, home.challenge_details.plays.white),
-        ColorChoice::Black => t_string!(i18n, home.challenge_details.plays.black),
-        ColorChoice::Random => t_string!(i18n, home.challenge_details.plays.random),
+        ColorChoice::White => t_string!(i18n, common.white),
+        ColorChoice::Black => t_string!(i18n, common.black),
+        ColorChoice::Random => t_string!(i18n, common.random),
     };
     let pending_action = RwSignal::new(None::<PendingAction>);
     Effect::new(move |_| {
@@ -103,7 +103,10 @@ pub fn ChallengeDetails(
     view! {
         <div class=with_class(CHALLENGE_DETAILS_CLASS, class.unwrap_or_default())>
             <div class=CHALLENGE_DETAILS_BODY_CLASS>
-                {label.map(|label| view! { <div class="ui-notification-label">{label}</div> })}
+                {label
+                    .map(|label| {
+                        view! { <div class="ui-notification-label">{move || label.get()}</div> }
+                    })}
                 <div class=CHALLENGE_PLAYER_GRID_CLASS>
                     {move || {
                         challenge
@@ -167,7 +170,7 @@ pub fn ChallengeDetails(
                             view! {
                                 <Show when=show_accept>
                                     <button
-                                        title="Accept Challenge"
+                                        title=move || t_string!(i18n, game.accept_challenge)
                                         on:click=move |_| {
                                             pending_action.set(Some(PendingAction::Accept));
                                             api.get().challenge_accept(challenge_id.get_value());
@@ -186,9 +189,9 @@ pub fn ChallengeDetails(
                                             action_flags
                                                 .with(|flags| {
                                                     if flags.cancel || flags.admin_cancel {
-                                                        "Cancel Challenge"
+                                                        t_string!(i18n, game.cancel_challenge)
                                                     } else {
-                                                        "Decline Challenge"
+                                                        t_string!(i18n, game.decline_challenge)
                                                     }
                                                 })
                                         }
@@ -206,9 +209,13 @@ pub fn ChallengeDetails(
                     >
                         <span class="inline-flex items-center py-1 px-2 text-xs font-semibold text-gray-700 rounded-sm dark:text-gray-200 bg-surface-muted">
                             {move || match pending_action.get() {
-                                Some(PendingAction::Accept) => "Accepting...",
-                                Some(PendingAction::Remove) => "Removing...",
-                                None => "",
+                                Some(PendingAction::Accept) => {
+                                    t_string!(i18n, game.accepting).to_string()
+                                }
+                                Some(PendingAction::Remove) => {
+                                    t_string!(i18n, game.removing).to_string()
+                                }
+                                None => String::new(),
                             }}
                         </span>
                     </Show>

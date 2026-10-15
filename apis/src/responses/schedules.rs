@@ -1,13 +1,116 @@
+use crate::i18n::*;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use shared_types::{ScheduleOfferStatus, TournamentId};
+use shared_types::{tournament::elimination::Stage, ScheduleOfferStatus, TournamentId};
 use uuid::Uuid;
+
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
+pub enum ScheduleSlotContext {
+    RoundBoard {
+        round: usize,
+        board: usize,
+        game: Option<(usize, u32)>,
+    },
+    Elimination {
+        stage: Stage,
+        match_number: Option<usize>,
+        game: u32,
+    },
+    Game {
+        number: u32,
+    },
+}
+
+impl ScheduleSlotContext {
+    pub fn label(&self, locale: Locale) -> String {
+        match self {
+            Self::RoundBoard { round, board, game } => {
+                let context = td_string!(
+                    locale,
+                    tournaments.schedule_context.round_board,
+                    round = round,
+                    board = board
+                )
+                .to_string();
+                match game {
+                    Some((game, total)) => td_string!(
+                        locale,
+                        tournaments.schedule_context.game_of,
+                        context = context,
+                        game = game,
+                        total = total
+                    )
+                    .to_string(),
+                    None => context,
+                }
+            }
+            Self::Elimination {
+                stage,
+                match_number,
+                game,
+            } => {
+                let stage = match *stage {
+                    Stage::SingleRound { round_index } => td_string!(
+                        locale,
+                        tournaments.view.bracket.stage.round,
+                        round = round_index + 1
+                    )
+                    .to_string(),
+                    Stage::SingleFinal => {
+                        td_string!(locale, tournaments.view.bracket.stage.final_match).to_string()
+                    }
+                    Stage::Bronze => {
+                        td_string!(locale, tournaments.pairing.stage.third_place).to_string()
+                    }
+                    Stage::WinnersRound { round_index } => td_string!(
+                        locale,
+                        tournaments.view.bracket.stage.winners_round,
+                        round = round_index + 1
+                    )
+                    .to_string(),
+                    Stage::LosersMinor { .. } | Stage::LosersMajor { .. } => td_string!(
+                        locale,
+                        tournaments.schedule_context.losers_round,
+                        round = stage.lower_round_ordinal().unwrap_or_default() + 1
+                    )
+                    .to_string(),
+                    Stage::GrandFinal => {
+                        td_string!(locale, tournaments.pairing.stage.grand_final).to_string()
+                    }
+                    Stage::Reset => {
+                        td_string!(locale, tournaments.schedule_context.reset).to_string()
+                    }
+                };
+                let context = match match_number {
+                    Some(number) => td_string!(
+                        locale,
+                        tournaments.schedule_context.match_number,
+                        stage = stage,
+                        number = number
+                    )
+                    .to_string(),
+                    None => stage,
+                };
+                td_string!(
+                    locale,
+                    tournaments.schedule_context.game_number,
+                    context = context,
+                    game = game
+                )
+                .to_string()
+            }
+            Self::Game { number } => {
+                td_string!(locale, tournaments.schedule_context.game, game = number).to_string()
+            }
+        }
+    }
+}
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct ScheduleResponse {
     pub id: Uuid,
     pub slot_id: Uuid,
-    pub slot_context: String,
+    pub slot_context: ScheduleSlotContext,
     pub tournament_name: String,
     pub tournament_id: TournamentId,
     pub proposer_id: Uuid,
@@ -48,12 +151,11 @@ use db_lib::{
 use diesel::{dsl::count_star, ExpressionMethods, QueryDsl};
 use diesel_async::RunQueryDsl;
 use std::collections::{HashMap, HashSet};
-use shared_types::tournament::{elimination::{Stage, Topology as EliminationTopology}, Format, FormatConfig, ReleasePolicy, SlotKey, SwissLeg};
+use shared_types::tournament::{elimination::Topology as EliminationTopology, Format, FormatConfig, ReleasePolicy, SlotKey, SwissLeg};
 use serde_json::Value;
 
-fn schedule_slot_contexts(tournament: &Tournament, participant_count: usize, keys: Vec<SlotKey>) -> Result<HashMap<SlotKey, String>> {
+fn schedule_slot_contexts(tournament: &Tournament, participant_count: usize, keys: Vec<SlotKey>) -> Result<HashMap<SlotKey, ScheduleSlotContext>> {
     // These definitions are the same persisted configuration projections used by the tournament view.
-    // TODO: i18n once copy is approved.
     let keys = keys.into_iter().collect::<HashSet<_>>();
     let mut contexts = HashMap::new();
     match &tournament.configuration().format {
@@ -63,10 +165,12 @@ fn schedule_slot_contexts(tournament: &Tournament, participant_count: usize, key
                 for game in round.games {
                     let key = SlotKey::RoundRobin { slot: game.id };
                     if keys.contains(&key) {
-                        let base = format!("Round {} · Board {}", game.round_index + 1, game.board_index + 1);
-                        contexts.insert(key, if config.rules.repeats > 1 && config.release_policy == ReleasePolicy::SequentialPerMatchup {
-                            format!("{base} · Game {} of {}", game.pass_index + 1, config.rules.repeats)
-                        } else { base });
+                        contexts.insert(key, ScheduleSlotContext::RoundBoard {
+                            round: game.round_index + 1,
+                            board: game.board_index + 1,
+                            game: (config.rules.repeats > 1 && config.release_policy == ReleasePolicy::SequentialPerMatchup)
+                                .then_some((game.pass_index + 1, config.rules.repeats)),
+                        });
                     }
                 }
             }
@@ -74,11 +178,13 @@ fn schedule_slot_contexts(tournament: &Tournament, participant_count: usize, key
         FormatConfig::Swiss(config) => {
             for key in keys {
                 if let SlotKey::Swiss { slot } = key {
-                    let base = format!("Round {} · Board {}", slot.round_index + 1, slot.pairing_index + 1);
-                    contexts.insert(key, if FormatConfig::Swiss(config.clone()).kind() == Format::DoubleSwiss
-                        && config.double_swiss_release_policy == ReleasePolicy::SequentialPerMatchup {
-                        format!("{base} · Game {} of 2", if slot.leg == SwissLeg::First { 1 } else { 2 })
-                    } else { base });
+                    contexts.insert(key, ScheduleSlotContext::RoundBoard {
+                        round: slot.round_index as usize + 1,
+                        board: slot.pairing_index as usize + 1,
+                        game: (FormatConfig::Swiss(config.clone()).kind() == Format::DoubleSwiss
+                            && config.double_swiss_release_policy == ReleasePolicy::SequentialPerMatchup)
+                            .then_some((if slot.leg == SwissLeg::First { 1 } else { 2 }, 2)),
+                    });
                 }
             }
         }
@@ -94,19 +200,11 @@ fn schedule_slot_contexts(tournament: &Tournament, participant_count: usize, key
                 if let SlotKey::Elimination { node, slot } = key {
                     let descriptor = nodes.get(&node)
                         .ok_or_else(|| anyhow!("Schedule elimination node is outside its definition"))?;
-                    let stage = match descriptor.stage {
-                        Stage::SingleRound { round_index } => format!("Round {}", round_index + 1),
-                        Stage::SingleFinal => String::from("Final"),
-                        Stage::Bronze => String::from("Third place"),
-                        Stage::WinnersRound { round_index } => format!("Winners round {}", round_index + 1),
-                        Stage::LosersMinor { .. } | Stage::LosersMajor { .. } => format!("Losers round {}", descriptor.stage.lower_round_ordinal().unwrap_or_default() + 1),
-                        Stage::GrandFinal => String::from("Grand Final"),
-                        Stage::Reset => String::from("Grand Final · Deciding series"),
-                    };
-                    let match_label = if stage_counts[&descriptor.stage] > 1 {
-                        format!(" · Match {}", descriptor.stage_ordinal + 1)
-                    } else { String::new() };
-                    contexts.insert(key, format!("{stage}{match_label} · Game {}", slot.value() + 1));
+                    contexts.insert(key, ScheduleSlotContext::Elimination {
+                        stage: descriptor.stage,
+                        match_number: (stage_counts[&descriptor.stage] > 1).then_some(descriptor.stage_ordinal + 1),
+                        game: slot.value() + 1,
+                    });
                 }
             }
         }
@@ -230,7 +328,7 @@ impl ScheduleResponse {
         proposer: &User,
         opponent_id: Uuid,
         opponent: &User,
-        slot_context: String,
+        slot_context: ScheduleSlotContext,
     ) -> Result<Self> {
         Ok(Self {
             id: offer.id,

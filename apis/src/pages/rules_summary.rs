@@ -21,14 +21,22 @@ pub fn RulesSummary() -> impl IntoView {
     let is_allowed = Signal::derive(move || ALLOWED_LOCALES.contains(&i18n.get_locale()));
     view! {
         <PageShell>
-            <PageHeader title="Rules Summary" />
+            <PageHeader title=move || t_string!(i18n, header.learn.rules_summary) />
             <Show
                 when=is_allowed
-                fallback=|| {
+                fallback=move || {
                     view! {
                         <EmptyState
-                            title="Rules summary unavailable"
-                            message="This language does not have a rules summary yet."
+                            title=move || {
+                                t_string!(
+                                    i18n, common.learn.rules_summary.rules_summary_unavailable
+                                )
+                            }
+                            message=move || {
+                                t_string!(
+                                    i18n, common.learn.rules_summary.this_language_does_not_have_a_rules_summary_yet
+                                )
+                            }
                         />
                     }
                 }
@@ -41,7 +49,7 @@ pub fn RulesSummary() -> impl IntoView {
                             format!("/assets/rules_summary/{locale}.png")
                         })
 
-                        alt="Rules Summary"
+                        alt=move || t_string!(i18n, header.learn.rules_summary)
                         class="w-full"
                     />
                 </PageCard>

@@ -65,7 +65,7 @@ pub fn PaginationControls(
                         type="button"
                         class=BUTTON_CLASS
                         disabled=move || !has_previous.get()
-                        aria-label=move || t_string!(i18n, archive.prev_page).to_string()
+                        aria-label=move || t_string!(i18n, common.previous).to_string()
                         on:click=move |_| {
                             if has_previous.get_untracked() {
                                 on_page_change.run(page.get_untracked() - 1);
@@ -97,7 +97,7 @@ pub fn PaginationControls(
                         type="button"
                         class=BUTTON_CLASS
                         disabled=move || !has_next.get()
-                        aria-label=move || t_string!(i18n, archive.next_page).to_string()
+                        aria-label=move || t_string!(i18n, common.next).to_string()
                         on:click=move |_| {
                             if has_next.get_untracked() {
                                 on_page_change.run(page.get_untracked() + 1);

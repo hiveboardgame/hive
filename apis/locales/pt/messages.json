@@ -1,6 +1,5 @@
 {
     "chat": {
-        "players": "Jogadores",
         "spectators": "Espectadores",
         "players_chat": "Chat dos jogadores",
         "spectator_chat": "Chat dos espectadores",
@@ -12,7 +11,6 @@
         "players_chat_only": "Só os jogadores podem ver o chat dos jogadores.",
         "with_opponent": "Chat com o oponente",
         "with_spectators": "Chat com os espectadores",
-        "placeholder": "Chat",
         "composer_label": "Mensagem do chat",
         "log_label": "Mensagens do chat",
         "open_chat": "Abrir chat",
@@ -71,11 +69,35 @@
     },
     "sections": {
         "dms": "DMs",
-        "games": "Jogos",
         "recent_announcements": "Anúncios recentes",
         "no_dms": "Ainda sem DMs",
         "no_tournament_chats": "Sem chats de torneio",
         "no_game_chats": "Sem chats de jogo",
         "muted": "Silenciado"
+    },
+    "errors": {
+        "block_mute_failed": "Não foi possível atualizar as definições de bloqueio ou silenciamento.",
+        "request_unavailable": "Não foi possível concluir o pedido.",
+        "chat_retry_conflict": "Esta nova tentativa entra em conflito com a entrega original. Envia como uma nova mensagem.",
+        "unauthorized": "Não tens autorização para realizar essa ação.",
+        "chat_access_denied": "Acesso ao chat negado.",
+        "chat_subscription_limited": "Demasiadas tentativas de subscrição do chat.",
+        "chat_send_limited": "Demasiadas mensagens de chat.",
+        "tournament_name_taken": "Já existe um torneio com esse nome.",
+        "request_origin_missing": "O endereço da aplicação está indisponível. Atualiza a página e tenta novamente.",
+        "request_url_invalid": "O endereço do pedido é inválido. Atualiza a página e tenta novamente.",
+        "request_origin_mismatch": "Este pedido deve vir da aplicação. Atualiza a página e tenta novamente.",
+        "request_token_missing": "Atualiza a página e tenta novamente.",
+        "request_unverified": "Não foi possível verificar este pedido. Atualiza a página e tenta novamente.",
+        "discord_start_failed": "Não foi possível iniciar a ligação ao Discord.",
+        "discord_response_invalid": "O Discord devolveu uma resposta de autorização inválida. Recomeça nas definições de notificações.",
+        "discord_url_invalid": "O Discord devolveu um endereço de autorização inválido. Recomeça nas definições de notificações.",
+        "discord_state_invalid": "O Discord devolveu um estado de autorização inválido. Recomeça nas definições de notificações.",
+        "discord_session_required": "Inicia sessão para ligar o Discord.",
+        "discord_unavailable": "A ligação ao Discord está indisponível de momento.",
+        "discord_unverified": "Não foi possível verificar a ligação ao Discord. Recomeça nas definições de notificações.",
+        "discord_failed": "A ligação ao Discord falhou. Recomeça nas definições de notificações.",
+        "rating_above_band": "{{rating}} excede o limite superior de classificação de {{limit}}",
+        "rating_below_band": "{{rating}} está abaixo do limite inferior de classificação de {{limit}}"
     }
 }

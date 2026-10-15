@@ -4,6 +4,7 @@ use crate::{
         tournament_inspector::TournamentSelection,
         tournament_tv::TournamentTv,
     },
+    i18n::*,
     providers::{
         games::GamesSignal,
         ArenaStateStoreFields,
@@ -39,6 +40,7 @@ pub(crate) fn TournamentOverviewRail(
                     }
                 }
                 TournamentStatus::Finished => {
+                    let i18n = use_i18n();
                     let continuing_games = match tournament.format {
                         TournamentFormatState::Arena(arena) => {
                             arena
@@ -57,9 +59,14 @@ pub(crate) fn TournamentOverviewRail(
                                 .then(|| {
                                     view! {
                                         <div class="pt-4 mt-4 space-y-2 border-t border-black/10 dark:border-white/10">
-                                            // TODO: i18n once copy is approved.
+
                                             <p class="text-sm text-gray-600 dark:text-gray-300">
-                                                "Standings are frozen. Games still in progress no longer affect them."
+                                                {move || {
+                                                    t_string!(
+                                                        i18n, tournaments.ui.standings_are_frozen_games_still_in_progress_no_longer_affect_them
+                                                    )
+                                                        .to_string()
+                                                }}
                                             </p>
                                             <div class="flex flex-wrap gap-2">
                                                 {continuing_games
@@ -77,12 +84,16 @@ pub(crate) fn TournamentOverviewRail(
                                                                     .unwrap_or_else(|| id.to_string())
                                                             });
                                                         view! {
-                                                            // TODO: i18n once copy is approved.
                                                             <a
                                                                 class="ui-button ui-button-secondary ui-button-sm"
                                                                 href=format!("/game/{}", game.game.game_id.0)
                                                             >
-                                                                {format!("{} vs {}", names[0], names[1])}
+                                                                {move || {
+                                                                    t_string!(
+                                                                        i18n, common.versus_players, white = names[0].clone(), black = names[1].clone()
+                                                                    )
+                                                                        .to_string()
+                                                                }}
                                                             </a>
                                                         }
                                                     })

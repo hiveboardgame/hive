@@ -94,9 +94,9 @@ pub fn ChallengeRow(
             .with_value(|challenge| challenge_displayed_color(challenge, viewer_role.get()))
     });
     let color_label = move || match displayed_color.get() {
-        ColorChoice::White => t_string!(i18n, home.challenge_details.plays.white),
-        ColorChoice::Black => t_string!(i18n, home.challenge_details.plays.black),
-        ColorChoice::Random => t_string!(i18n, home.challenge_details.plays.random),
+        ColorChoice::White => t_string!(i18n, common.white),
+        ColorChoice::Black => t_string!(i18n, common.black),
+        ColorChoice::Random => t_string!(i18n, common.random),
     };
     let admin_cancel_dialog = NodeRef::<Dialog>::new();
     let admin_cancel_button_classes = StoredValue::new("ui-button ui-button-danger ui-button-icon");

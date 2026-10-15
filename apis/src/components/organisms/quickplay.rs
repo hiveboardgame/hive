@@ -110,7 +110,11 @@ pub fn QuickPlay() -> impl IntoView {
                 {t!(i18n, home.create_game)}
             </h2>
             <div class="quickplay-hex-shell">
-                <div class="quickplay-hex-grid" role="group" aria-label="Quick play">
+                <div
+                    class="quickplay-hex-grid"
+                    role="group"
+                    aria-label=move || t_string!(i18n, home.quick_play)
+                >
                     <div class="quickplay-hex-cell quickplay-hex-left">
                         <GridButton time_control=Bullet1p2 />
                     </div>
@@ -137,9 +141,7 @@ pub fn QuickPlay() -> impl IntoView {
                             }
                         >
 
-                            <span class="quickplay-hex-label">
-                                {t!(i18n, home.custom_game.button)}
-                            </span>
+                            <span class="quickplay-hex-label">{t!(i18n, common.custom)}</span>
                         </button>
                     </div>
                     <div class="quickplay-hex-cell quickplay-hex-slow-top">
@@ -152,7 +154,7 @@ pub fn QuickPlay() -> impl IntoView {
                         <button
                             type="button"
                             class="quickplay-hex-button quickplay-hex-button-secondary ui-button"
-                            title="Play vs bot"
+                            title=move || t_string!(i18n, home.play_vs_bot)
                             on:pointerdown=move |event| mark_bot_pressed.run(event)
                             on:click=move |_| {
                                 if auth_context.user.with(|a| a.is_some()) {
@@ -170,7 +172,9 @@ pub fn QuickPlay() -> impl IntoView {
                                 icon=icondata_mdi::MdiRobotHappy
                                 attr:class="quickplay-hex-icon"
                             />
-                            <span class="quickplay-hex-label">"Play bot"</span>
+                            <span class="quickplay-hex-label">
+                                {move || t_string!(i18n, home.play_bot)}
+                            </span>
                         </button>
                     </div>
                 </div>

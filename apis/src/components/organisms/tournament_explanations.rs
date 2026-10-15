@@ -30,176 +30,185 @@ use shared_types::tournament::{
 };
 use tournamint::arena::ArenaConfig as NativeArenaConfig;
 
-fn release_policy_text(policy: ReleasePolicy) -> &'static str {
-    // TODO: i18n once copy is approved.
+fn release_policy_text(i18n: I18nContext<Locale, I18nKeys>, policy: ReleasePolicy) -> String {
     match policy {
-        ReleasePolicy::FullyUnlocked => "All games are available together.",
+        ReleasePolicy::FullyUnlocked => {
+            t_string!(i18n, tournaments.creation.faq.release_all).to_string()
+        }
         ReleasePolicy::SequentialPerMatchup => {
-            "The next game becomes available after the previous game is resolved."
+            t_string!(i18n, tournaments.creation.faq.release_sequential).to_string()
         }
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 struct FormatFaqContent {
-    introduction: &'static str,
-    format_entries: &'static [(&'static str, &'static str)],
-    entries: &'static [(&'static str, &'static str)],
+    introduction: String,
+    format_entries: Vec<(String, String)>,
+    entries: Vec<(String, String)>,
 }
 
-// TODO: i18n once copy is approved.
-const SWISS_COMMON_FAQ: &[(&str, &str)] = &[
-    (
-        "How are pairings chosen?",
-        "Players near the same score are paired while rematches are avoided whenever a legal pairing is available.",
-    ),
-    (
-        "What happens with an odd field?",
-        "One player receives the configured bye for that round and returns to the pairing pool next round.",
-    ),
-    (
-        "How is the winner decided?",
-        "After the planned rounds, or earlier if no legal pairing remains, players are ranked by their standings score and then the tournament's tiebreaks.",
-    ),
-];
-
-fn format_faq_content(format: Format) -> FormatFaqContent {
-    match format {
-        // TODO: i18n once copy is approved.
-        Format::Arena => FormatFaqContent {
-            introduction: "Play as many games as you can before the Arena clock expires.",
-            format_entries: &[],
-            entries: &[],
-        },
-        // TODO: i18n once copy is approved.
-        Format::RoundRobin => FormatFaqContent {
-            introduction: "Every entrant plays every other entrant the configured number of times.",
-            format_entries: &[],
-            entries: &[
-                (
-                    "How does the pairing work?",
-                    "The complete field is scheduled, so every player faces the same set of opponents.",
-                ),
-                (
-                    "When can I play my games?",
-                    "Depending on the tournament settings, games are available together or one at a time against each opponent.",
-                ),
-                (
-                    "How is the winner decided?",
-                    "Players are ranked by the configured game or match points. With 2, 4, or 6 games per opponent, all those games form one match. If scores are tied, the tournament's selected tiebreaks are applied in order.",
-                ),
-                (
-                    "How does it end?",
-                    "The tournament finishes after every scheduled game has been resolved and the final standings can be calculated.",
-                ),
-            ],
-        },
-        // TODO: i18n once copy is approved.
-        Format::Swiss => FormatFaqContent {
-            introduction: "Play one game per round against an opponent near your current score.",
-            format_entries: &[
-                (
-                    "Is Swiss a knockout?",
-                    "No. A loss changes your score and future pairings, but you remain in the tournament.",
-                ),
-            ],
-            entries: SWISS_COMMON_FAQ,
-        },
-        // TODO: i18n once copy is approved.
-        Format::DoubleSwiss => FormatFaqContent {
-            introduction: "Each round pairs you with one opponent for two games instead of one.",
-            format_entries: &[
-                (
-                    "How are scores calculated?",
-                    "The tournament ranks players by game points or by points from each two-game match. The other score can be selected as a tiebreak. The scoring mode and tiebreak order are shown in the tournament details.",
-                ),
-            ],
-            entries: SWISS_COMMON_FAQ,
-        },
-        // TODO: i18n once copy is approved.
-        Format::SingleElimination => FormatFaqContent {
-            introduction: "Win your match to stay in title contention. A loss ends that path, although a semifinal loser may still play a configured third-place match.",
-            format_entries: &[],
-            entries: &[
-                (
-                    "How is the bracket seeded?",
-                    "The default bracket separates players by rating seed. Before an organizer starts the tournament, they can swap players between the fixed bracket positions, including those receiving byes. Seed numbers stay tied to the rating order frozen when bracket setup opens. Scheduled starts use the default bracket.",
-                ),
-                (
-                    "What counts as one match?",
-                    "A match follows the configured series plan and may contain several games or sets. It can end early once a player has clinched it.",
-                ),
-                (
-                    "Is there a third-place match?",
-                    "Only when the tournament enables one. Otherwise the semifinal losers finish in the same elimination tier.",
-                ),
-                (
-                    "How does it end?",
-                    "The winner of the final is the tournament champion.",
-                ),
-            ],
-        },
-        // TODO: i18n once copy is approved.
-        Format::DoubleElimination => FormatFaqContent {
-            introduction: "One loss sends you to the lower bracket. A second loss eliminates you.",
-            format_entries: &[],
-            entries: &[
-                (
-                    "How do the brackets work?",
-                    "Undefeated players remain in the upper bracket. After a loss, they continue through the lower bracket for as long as they keep winning.",
-                ),
-                (
-                    "How is the bracket seeded?",
-                    "The default bracket separates players by rating seed. Before an organizer starts the tournament, they can swap players between the fixed bracket positions, including those receiving byes. Seed numbers stay tied to the rating order frozen when bracket setup opens. Scheduled starts use the default bracket.",
-                ),
-                (
-                    "What counts as one match?",
-                    "A match follows the configured series plan and may contain several games or sets. It can end early once a player has clinched it.",
-                ),
-                (
-                    "How does it end?",
-                    "The upper- and lower-bracket winners meet in the final. If the lower-bracket winner wins, they play a second final.",
-                ),
-            ],
-        },
-    }
-}
-
-fn arena_faq_entries(rules: NativeArenaConfig) -> Vec<(&'static str, String)> {
-    // TODO: i18n once copy is approved.
-    let mut scoring = String::from("Win: 2 points. Draw: 1. Loss: 0.");
-    if rules.scoring.fire {
-        // TODO: i18n once copy is approved.
-        scoring.push_str(" After two consecutive wins, a flame marks your double-point streak: wins earn 4 points and draws earn 2. The streak ends when you draw or lose.");
-    }
-    // TODO: i18n once copy is approved.
-    let berserk = match rules.scoring.berserk {
-        Some(policy) => {
-            // TODO: i18n once copy is approved.
-            let bonus = if policy.win_bonus.value() == 1 {
-                String::from("one extra tournament point")
-            } else {
-                format!("{} extra tournament points", policy.win_bonus.value())
-            };
-            // TODO: i18n once copy is approved.
-            format!(
-                "Berserk removes your increment and, when eligible, halves your starting time. A win earns {bonus} if the game lasts at least {} individual moves. Choose it before your first move.",
-                policy.minimum_bonus_plies,
-            )
-        }
-        None => String::from("Berserk is disabled for this Arena."),
-    };
-    // TODO: i18n once copy is approved.
+fn swiss_common_faq(i18n: I18nContext<Locale, I18nKeys>) -> Vec<(String, String)> {
     vec![
-        ("How are scores calculated?", scoring),
-        ("Berserk", berserk),
         (
-            "How does the pairing work?",
-            String::from("Initial pairings use ratings. After each game, you are paired with an opponent near your tournament rank."),
+            t_string!(i18n, tournaments.creation.faq.pairings_question).to_string(),
+            t_string!(i18n, tournaments.creation.faq.swiss_pairings).to_string(),
         ),
         (
-            "How does it end?",
-            String::from("Standings freeze when the countdown reaches zero. Finish any game still in progress; its result will not affect the standings."),
+            t_string!(i18n, tournaments.creation.faq.odd_field_question).to_string(),
+            t_string!(i18n, tournaments.creation.faq.swiss_odd_field).to_string(),
+        ),
+        (
+            t_string!(i18n, tournaments.creation.faq.winner_question).to_string(),
+            t_string!(i18n, tournaments.creation.faq.swiss_winner).to_string(),
+        ),
+    ]
+}
+
+fn format_faq_content(i18n: I18nContext<Locale, I18nKeys>, format: Format) -> FormatFaqContent {
+    match format {
+        Format::Arena => FormatFaqContent {
+            introduction: t_string!(i18n, tournaments.creation.faq.arena_intro).to_string(),
+            format_entries: vec![],
+            entries: vec![],
+        },
+
+        Format::RoundRobin => FormatFaqContent {
+            introduction: t_string!(i18n, tournaments.creation.faq.round_robin_intro).to_string(),
+            format_entries: vec![],
+            entries: vec![
+                (
+                    t_string!(i18n, tournaments.creation.faq.pairing_question).to_string(),
+                    t_string!(i18n, tournaments.creation.faq.round_robin_pairing).to_string(),
+                ),
+                (
+                    t_string!(i18n, tournaments.creation.faq.availability_question).to_string(),
+                    t_string!(i18n, tournaments.creation.faq.round_robin_availability).to_string(),
+                ),
+                (
+                    t_string!(i18n, tournaments.creation.faq.winner_question).to_string(),
+                    t_string!(i18n, tournaments.creation.faq.round_robin_winner).to_string(),
+                ),
+                (
+                    t_string!(i18n, tournaments.creation.faq.end_question).to_string(),
+                    t_string!(i18n, tournaments.creation.faq.round_robin_end).to_string(),
+                ),
+            ],
+        },
+
+        Format::Swiss => FormatFaqContent {
+            introduction: t_string!(i18n, tournaments.creation.faq.swiss_intro).to_string(),
+            format_entries: vec![(
+                t_string!(i18n, tournaments.creation.faq.knockout_question).to_string(),
+                t_string!(i18n, tournaments.creation.faq.swiss_knockout).to_string(),
+            )],
+            entries: swiss_common_faq(i18n),
+        },
+
+        Format::DoubleSwiss => FormatFaqContent {
+            introduction: t_string!(i18n, tournaments.creation.faq.double_swiss_intro).to_string(),
+            format_entries: vec![(
+                t_string!(i18n, tournaments.creation.faq.scores_question).to_string(),
+                t_string!(i18n, tournaments.creation.faq.double_swiss_scores).to_string(),
+            )],
+            entries: swiss_common_faq(i18n),
+        },
+
+        Format::SingleElimination => FormatFaqContent {
+            introduction: t_string!(i18n, tournaments.creation.faq.single_elimination_intro)
+                .to_string(),
+            format_entries: vec![],
+            entries: vec![
+                (
+                    t_string!(i18n, tournaments.creation.faq.seeding_question).to_string(),
+                    t_string!(i18n, tournaments.creation.faq.bracket_seeding).to_string(),
+                ),
+                (
+                    t_string!(i18n, tournaments.creation.faq.match_question).to_string(),
+                    t_string!(i18n, tournaments.creation.faq.elimination_match).to_string(),
+                ),
+                (
+                    t_string!(i18n, tournaments.creation.faq.third_place_question).to_string(),
+                    t_string!(i18n, tournaments.creation.faq.elimination_third_place).to_string(),
+                ),
+                (
+                    t_string!(i18n, tournaments.creation.faq.end_question).to_string(),
+                    t_string!(i18n, tournaments.creation.faq.single_elimination_end).to_string(),
+                ),
+            ],
+        },
+
+        Format::DoubleElimination => FormatFaqContent {
+            introduction: t_string!(i18n, tournaments.creation.faq.double_elimination_intro)
+                .to_string(),
+            format_entries: vec![],
+            entries: vec![
+                (
+                    t_string!(i18n, tournaments.creation.faq.brackets_question).to_string(),
+                    t_string!(i18n, tournaments.creation.faq.double_elimination_brackets)
+                        .to_string(),
+                ),
+                (
+                    t_string!(i18n, tournaments.creation.faq.seeding_question).to_string(),
+                    t_string!(i18n, tournaments.creation.faq.bracket_seeding).to_string(),
+                ),
+                (
+                    t_string!(i18n, tournaments.creation.faq.match_question).to_string(),
+                    t_string!(i18n, tournaments.creation.faq.elimination_match).to_string(),
+                ),
+                (
+                    t_string!(i18n, tournaments.creation.faq.end_question).to_string(),
+                    t_string!(i18n, tournaments.creation.faq.double_elimination_end).to_string(),
+                ),
+            ],
+        },
+    }
+}
+
+fn arena_faq_entries(
+    i18n: I18nContext<Locale, I18nKeys>,
+    rules: NativeArenaConfig,
+) -> Vec<(String, String)> {
+    let scoring = if rules.scoring.fire {
+        t_string!(i18n, tournaments.creation.faq.arena_fire_scoring).to_string()
+    } else {
+        t_string!(i18n, tournaments.creation.faq.arena_scoring).to_string()
+    };
+    let berserk = match rules.scoring.berserk {
+        Some(policy) => {
+            let bonus = if policy.win_bonus.value() == 1 {
+                t_string!(i18n, tournaments.creation.faq.berserk_bonus_one).to_string()
+            } else {
+                t_string!(
+                    i18n,
+                    tournaments.creation.faq.berserk_bonus,
+                    points = policy.win_bonus.value()
+                )
+                .to_string()
+            };
+            t_string!(
+                i18n,
+                tournaments.creation.faq.berserk_help,
+                bonus = bonus,
+                moves = policy.minimum_bonus_plies
+            )
+            .to_string()
+        }
+        None => t_string!(i18n, tournaments.creation.faq.berserk_disabled).to_string(),
+    };
+    vec![
+        (
+            t_string!(i18n, tournaments.creation.faq.scores_question).to_string(),
+            scoring,
+        ),
+        (t_string!(i18n, game.arena.berserk).to_string(), berserk),
+        (
+            t_string!(i18n, tournaments.creation.faq.pairing_question).to_string(),
+            t_string!(i18n, tournaments.creation.faq.arena_pairing).to_string(),
+        ),
+        (
+            t_string!(i18n, tournaments.creation.faq.end_question).to_string(),
+            t_string!(i18n, tournaments.creation.faq.arena_end).to_string(),
         ),
     ]
 }
@@ -209,19 +218,15 @@ pub fn TournamentFormatFaq(
     format: Signal<Format>,
     #[prop(optional)] arena_rules: Option<Signal<NativeArenaConfig>>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     view! {
         {move || {
             let format = format.get();
-            let content = format_faq_content(format);
+            let content = format_faq_content(i18n, format);
             let entries = if format == Format::Arena {
-                arena_faq_entries(arena_rules.map(|rules| rules.get()).unwrap_or_default())
+                arena_faq_entries(i18n, arena_rules.map(|rules| rules.get()).unwrap_or_default())
             } else {
-                content
-                    .format_entries
-                    .iter()
-                    .chain(content.entries.iter())
-                    .map(|&(question, answer)| (question, answer.to_owned()))
-                    .collect()
+                content.format_entries.iter().chain(content.entries.iter()).cloned().collect()
             };
             view! {
                 <div class="mx-auto space-y-5 w-full max-w-3xl text-gray-700 dark:text-gray-300">
@@ -248,37 +253,71 @@ pub fn TournamentFormatFaq(
 }
 
 pub(crate) fn phase_text(games: u16, limit: SetLimit, clinch: ClinchPolicy) -> String {
-    // TODO: i18n once copy is approved.
+    let i18n = use_i18n();
+
     let limit = match limit {
-        SetLimit::AtMost(sets) => format!("up to {sets} sets"),
-        SetLimit::UntilDecisive => String::from("sets until decisive"),
+        SetLimit::AtMost(sets) => {
+            t_string!(i18n, tournaments.ui.up_to_sets, sets = sets).to_string()
+        }
+        SetLimit::UntilDecisive => t_string!(
+            i18n,
+            tournaments.creation.rules_summary.phase_until_decisive
+        )
+        .to_string(),
     };
     let clinch = match clinch {
-        ClinchPolicy::PlayAll => "all games played",
-        ClinchPolicy::EarlyClinch => "ends when clinched",
+        ClinchPolicy::PlayAll => t_string!(i18n, tournaments.ui.all_games_played).to_string(),
+        ClinchPolicy::EarlyClinch => t_string!(i18n, tournaments.ui.ends_when_clinched).to_string(),
     };
-    format!("{games} games per set · {limit} · {clinch}")
+    t_string!(
+        i18n,
+        tournaments.creation.rules_summary.phase,
+        games = games,
+        limit = limit,
+        clinch = clinch
+    )
+    .to_string()
 }
 
 pub(crate) fn stage_plan_label(stage: Stage) -> String {
-    // TODO: i18n once copy is approved.
+    let i18n = use_i18n();
+
     match stage {
-        Stage::SingleRound { round_index } => format!("Round {}", round_index + 1),
-        Stage::SingleFinal => "Final".to_string(),
-        Stage::Bronze => "Third-place match".to_string(),
-        Stage::WinnersRound { round_index } => format!("Upper bracket round {}", round_index + 1),
-        Stage::LosersMinor { round_index } => {
-            format!("Lower bracket round {}", round_index * 2 + 1)
+        Stage::SingleRound { round_index } => t_string!(
+            i18n,
+            tournaments.view.bracket.stage.round,
+            round = round_index + 1
+        )
+        .to_string(),
+        Stage::SingleFinal => {
+            t_string!(i18n, tournaments.view.bracket.stage.final_match).to_string()
         }
-        Stage::LosersMajor { round_index } => {
-            format!("Lower bracket round {}", round_index * 2 + 2)
-        }
-        Stage::GrandFinal => "Grand final".to_string(),
-        Stage::Reset => "Reset final".to_string(),
+        Stage::Bronze => t_string!(i18n, tournaments.ui.third_place_match_title).to_string(),
+        Stage::WinnersRound { round_index } => t_string!(
+            i18n,
+            tournaments.creation.rules_summary.upper_round,
+            round = round_index + 1
+        )
+        .to_string(),
+        Stage::LosersMinor { round_index } => t_string!(
+            i18n,
+            tournaments.creation.rules_summary.lower_round,
+            round = round_index * 2 + 1
+        )
+        .to_string(),
+        Stage::LosersMajor { round_index } => t_string!(
+            i18n,
+            tournaments.creation.rules_summary.lower_round,
+            round = round_index * 2 + 2
+        )
+        .to_string(),
+        Stage::GrandFinal => t_string!(i18n, tournaments.pairing.stage.grand_final).to_string(),
+        Stage::Reset => t_string!(i18n, tournaments.pairing.stage.reset_final).to_string(),
     }
 }
 
 fn point_awards(configuration: &FormatConfig) -> Vec<String> {
+    let i18n = use_i18n();
     let (game, match_points) = match configuration {
         FormatConfig::RoundRobin(configuration) => (
             configuration.rules.point_system,
@@ -309,19 +348,27 @@ fn point_awards(configuration: &FormatConfig) -> Vec<String> {
     let awards = |name: &str, points: [Score; 4], presentation| {
         let [win, draw, loss, forfeit] =
             points.map(|score| standings_value_text(Value::Score(score), presentation));
-        // TODO: i18n once copy is approved.
-        format!("{name}: win {win} · draw {draw} · loss {loss} · forfeit loss {forfeit}")
+
+        t_string!(
+            i18n,
+            tournaments.creation.rules_summary.point_awards,
+            name = name,
+            win = win,
+            draw = draw,
+            loss = loss,
+            forfeit = forfeit
+        )
+        .to_string()
     };
-    // TODO: i18n once copy is approved.
+
     let mut rows = vec![awards(
-        "Game points",
+        t_string!(i18n, tournaments.tiebreakers.names.game_points),
         [game.win, game.draw, game.loss, game.forfeit_loss],
         game_point_presentation(game),
     )];
     if let Some(points) = match_points {
-        // TODO: i18n once copy is approved.
         rows.push(awards(
-            "Match points",
+            t_string!(i18n, tournaments.tiebreakers.names.match_points),
             [points.win, points.draw, points.loss, points.forfeit_loss],
             ScorePresentation::MatchPoints,
         ));
@@ -331,22 +378,27 @@ fn point_awards(configuration: &FormatConfig) -> Vec<String> {
 
 #[component]
 pub fn TournamentFormatConfigurationDetails(configuration: FormatConfig) -> impl IntoView {
-    match configuration {
+    let i18n = use_i18n();
+    move || {
+        match configuration.clone() {
         FormatConfig::RoundRobin(configuration) => {
-            // TODO: i18n once copy is approved.
+
             view! {
                 <ul class="pl-5 space-y-1 text-sm list-disc">
                     <li>
                         {if configuration.rules.has_matches() {
-                            format!(
-                                "One {}-game match against every opponent",
-                                configuration.rules.repeats,
+                            t_string!(
+                                i18n, tournaments.creation.rules_summary.match_per_opponent, games = configuration.rules.repeats
                             )
+                                .to_string()
                         } else {
-                            format!("{} games against every opponent", configuration.rules.repeats)
+                            t_string!(
+                                i18n, tournaments.creation.rules_summary.games_per_opponent, games = configuration.rules.repeats
+                            )
+                                .to_string()
                         }}
                     </li>
-                    <li>{release_policy_text(configuration.release_policy)}</li>
+                    <li>{release_policy_text(i18n, configuration.release_policy)}</li>
                 </ul>
             }
             .into_any()
@@ -368,20 +420,34 @@ pub fn TournamentFormatConfigurationDetails(configuration: FormatConfig) -> impl
                     {rounds
                         .map(|rounds| {
                             view! {
-                                // TODO: i18n once copy is approved.
-                                <p class="text-sm">{format!("{rounds} rounds")}</p>
+                                <p class="text-sm">
+                                    {t_string!(
+                                        i18n, tournaments.creation.rounds_count, count = rounds
+                                    )
+                                        .to_string()}
+                                </p>
                             }
                         })}
                     {double_swiss
                         .map(|(primary_score, release_policy)| {
                             let scoring = match primary_score {
-                                DoubleSwissPrimaryScore::GamePoints => "Individual game points",
-                                DoubleSwissPrimaryScore::MatchPoints => "Two-game match points",
+                                DoubleSwissPrimaryScore::GamePoints => {
+                                    t_string!(
+                                        i18n, tournaments.creation.rules_summary.individual_game_points
+                                    )
+                                        .to_string()
+                                }
+                                DoubleSwissPrimaryScore::MatchPoints => {
+                                    t_string!(
+                                        i18n, tournaments.creation.rules_summary.two_game_match_points
+                                    )
+                                        .to_string()
+                                }
                             };
-                            // TODO: i18n once copy is approved.
+
                             view! {
                                 <p class="text-sm">{scoring}</p>
-                                <p class="text-sm">{release_policy_text(release_policy)}</p>
+                                <p class="text-sm">{release_policy_text(i18n, release_policy)}</p>
                             }
                         })}
                 </div>
@@ -389,11 +455,11 @@ pub fn TournamentFormatConfigurationDetails(configuration: FormatConfig) -> impl
             .into_any()
         }
         FormatConfig::Elimination(configuration) => {
-            // TODO: i18n once copy is approved.
+
             let topology = match configuration.topology {
-                Topology::Single { bronze: true } => "Single elimination with a third-place match",
-                Topology::Single { bronze: false } => "Single elimination",
-                Topology::Double => "Double elimination",
+                Topology::Single { bronze: true } => t_string!(i18n, tournaments.creation.rules_summary.single_elimination_bronze).to_string(),
+                Topology::Single { bronze: false } => t_string!(i18n, tournaments.format.single_elimination).to_string(),
+                Topology::Double => t_string!(i18n, tournaments.format.double_elimination).to_string(),
             };
             let phases = configuration
                 .default_plan
@@ -417,14 +483,13 @@ pub fn TournamentFormatConfigurationDetails(configuration: FormatConfig) -> impl
                             })
                             .collect_view()}
                     </ol>
-                    // TODO: i18n once copy is approved.
-                    <p>"A match becomes available as soon as both players are known."</p>
+
+                    <p>{t!(i18n, tournaments.creation.rules_summary.match_availability)}</p>
                     {(configuration.topology == Topology::Double)
                         .then(|| {
                             view! {
-                                // TODO: i18n once copy is approved.
                                 <p>
-                                    "If the lower-bracket winner wins the final, a second final determines the champion. Each final appears separately in the bracket."
+                                    {t!(i18n, tournaments.creation.rules_summary.reset_final_help)}
                                 </p>
                             }
                         })}
@@ -463,6 +528,7 @@ pub fn TournamentFormatConfigurationDetails(configuration: FormatConfig) -> impl
         }
         FormatConfig::Arena(_) => ().into_any(),
     }
+    }
 }
 
 pub(crate) fn round_robin_criterion_name(
@@ -492,9 +558,14 @@ pub(crate) fn round_robin_criterion_explanation(
     } else {
         criterion
     };
-    // TODO: i18n once copy is approved.
+
     if criterion == RoundRobinCriterion::MatchPoints {
-        return format!("All {} games against each opponent form one match. Compare the total game points to determine the match win, draw, or loss. Match points are awarded only after every game has a result, even if the match is already clinched. Partial and split forfeits count in the aggregate; if every game is a double forfeit, both players receive zero match points. Resting rounds award no points.", configuration.rules.repeats);
+        return t_string!(
+            i18n,
+            tournaments.creation.rules_summary.round_robin_match_points,
+            games = configuration.rules.repeats
+        )
+        .to_string();
     }
     let explanation = criterion.explanation(i18n);
     if matches!(
@@ -505,11 +576,21 @@ pub(crate) fn round_robin_criterion_explanation(
             | RoundRobinCriterion::Progressive(_)
     ) {
         let basis = match configuration.rules.primary_score {
-            RoundRobinPrimaryScore::GamePoints => "game points",
-            RoundRobinPrimaryScore::MatchPoints => "match points",
+            RoundRobinPrimaryScore::GamePoints => {
+                t_string!(i18n, tournaments.creation.rules_summary.game_points_lower).to_string()
+            }
+            RoundRobinPrimaryScore::MatchPoints => {
+                t_string!(i18n, tournaments.creation.rules_summary.match_points_lower).to_string()
+            }
         };
-        // TODO: i18n once copy is approved.
-        return format!("{explanation} Uses {basis}, the tournament's primary score.");
+
+        return t_string!(
+            i18n,
+            tournaments.creation.rules_summary.criterion_primary_score,
+            explanation = explanation,
+            basis = basis
+        )
+        .to_string();
     }
     explanation
 }
@@ -621,8 +702,8 @@ pub(crate) fn StandingsCriteriaRules(configuration: FormatConfig) -> impl IntoVi
             };
             view! {
                 <div class="mt-3 space-y-2">
-                    // TODO: i18n once copy is approved.
-                    <h3 class="text-sm font-bold">"Scoring"</h3>
+
+                    <h3 class="text-sm font-bold">{t!(i18n, tournaments.creation.scoring)}</h3>
                     <div class="p-2 ui-setting-group">
                         <strong>{primary.0}</strong>
                         <p class="text-sm text-gray-600 dark:text-gray-300">{primary.1}</p>
@@ -634,8 +715,9 @@ pub(crate) fn StandingsCriteriaRules(configuration: FormatConfig) -> impl IntoVi
                     {(!tiebreaks.is_empty())
                         .then(|| {
                             view! {
-                                // TODO: i18n once copy is approved.
-                                <h3 class="text-sm font-bold">"Tiebreaks"</h3>
+                                <h3 class="text-sm font-bold">
+                                    {t!(i18n, tournaments.creation.rules_summary.tiebreaks)}
+                                </h3>
                                 <ol class="space-y-2">
                                     {tiebreaks
                                         .into_iter()

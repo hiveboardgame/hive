@@ -55,7 +55,7 @@ pub fn ChatInput(
                 thread: GameThread::Spectators,
                 ..
             } => t_string!(i18n, messages.chat.with_spectators).to_string(),
-            _ => t_string!(i18n, messages.chat.placeholder).to_string(),
+            _ => t_string!(i18n, common.chat).to_string(),
         },
     };
     let composer_label = move || t_string!(i18n, messages.chat.composer_label).to_string();

@@ -15,6 +15,7 @@ use crate::{
     },
     functions::challenges::get::get_challenge,
     hooks::clipboard_copy::use_clipboard_copy,
+    i18n::{t, t_string, use_i18n},
     providers::{games::GamesSignal, websocket::WebsocketContext, AuthContext},
     responses::ChallengeResponse,
 };
@@ -30,9 +31,9 @@ struct ChallengeParams {
 }
 
 struct ChallengePageSummary {
-    title: String,
-    message: String,
-    displayed_user_label: &'static str,
+    title: Signal<String>,
+    message: Signal<String>,
+    displayed_user_label: Signal<String>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -59,45 +60,135 @@ fn challenge_page_summary(
     viewer_role: ChallengeViewerRole,
     display_username: &str,
 ) -> ChallengePageSummary {
+    let i18n = use_i18n();
+    let display_username = StoredValue::new(display_username.to_string());
     let (title, message) = match (viewer_role, &challenge.visibility) {
         (ChallengeViewerRole::Challenger, ChallengeVisibility::Direct) => (
-            format!("Direct challenge to {display_username}"),
-            format!("Waiting for {display_username} to respond."),
+            Signal::derive(move || {
+                t_string!(
+                    i18n,
+                    home.challenge.direct_challenge_to,
+                    display_username = display_username.get_value()
+                )
+                .to_string()
+            }),
+            Signal::derive(move || {
+                t_string!(
+                    i18n,
+                    home.challenge.waiting_for_to_respond,
+                    display_username = display_username.get_value()
+                )
+                .to_string()
+            }),
         ),
         (ChallengeViewerRole::Challenger, ChallengeVisibility::Private) => (
-            "Private challenge".to_string(),
-            "Share the private link with the player you want to invite.".to_string(),
+            Signal::derive(move || t_string!(i18n, home.challenge.private_challenge).to_string()),
+            Signal::derive(move || {
+                t_string!(
+                    i18n,
+                    home.challenge
+                        .share_the_private_link_with_the_player_you_want
+                )
+                .to_string()
+            }),
         ),
         (ChallengeViewerRole::Challenger, ChallengeVisibility::Public) => (
-            "Public challenge".to_string(),
-            "This challenge is listed publicly while it is open.".to_string(),
+            Signal::derive(move || t_string!(i18n, home.challenge.public_challenge).to_string()),
+            Signal::derive(move || {
+                t_string!(
+                    i18n,
+                    home.challenge
+                        .this_challenge_is_listed_publicly_while_it_is_open
+                )
+                .to_string()
+            }),
         ),
         (ChallengeViewerRole::Opponent, ChallengeVisibility::Direct) => (
-            format!("Direct challenge from {display_username}"),
-            "Review the settings below, then accept or decline.".to_string(),
+            Signal::derive(move || {
+                t_string!(
+                    i18n,
+                    home.challenge.direct_challenge_from,
+                    display_username = display_username.get_value()
+                )
+                .to_string()
+            }),
+            Signal::derive(move || {
+                t_string!(
+                    i18n,
+                    home.challenge
+                        .review_the_settings_below_then_accept_or_decline
+                )
+                .to_string()
+            }),
         ),
         (ChallengeViewerRole::Anonymous, ChallengeVisibility::Private) => (
-            format!("Private challenge from {display_username}"),
-            "Log in to accept this challenge.".to_string(),
+            Signal::derive(move || {
+                t_string!(
+                    i18n,
+                    home.challenge.private_challenge_from,
+                    display_username = display_username.get_value()
+                )
+                .to_string()
+            }),
+            Signal::derive(move || {
+                t_string!(i18n, home.challenge.log_in_to_accept_this_challenge).to_string()
+            }),
         ),
         (ChallengeViewerRole::Anonymous, _) => (
-            format!("Challenge from {display_username}"),
-            "Log in to accept this challenge.".to_string(),
+            Signal::derive(move || {
+                t_string!(
+                    i18n,
+                    home.challenge.challenge_from,
+                    display_username = display_username.get_value()
+                )
+                .to_string()
+            }),
+            Signal::derive(move || {
+                t_string!(i18n, home.challenge.log_in_to_accept_this_challenge).to_string()
+            }),
         ),
         (_, ChallengeVisibility::Private) => (
-            format!("Private challenge from {display_username}"),
-            "Review the settings below, then accept when you're ready to play.".to_string(),
+            Signal::derive(move || {
+                t_string!(
+                    i18n,
+                    home.challenge.private_challenge_from,
+                    display_username = display_username.get_value()
+                )
+                .to_string()
+            }),
+            Signal::derive(move || {
+                t_string!(
+                    i18n,
+                    home.challenge
+                        .review_the_settings_below_then_accept_when_you_re
+                )
+                .to_string()
+            }),
         ),
         _ => (
-            format!("Challenge from {display_username}"),
-            "Review the settings below, then accept when you're ready to play.".to_string(),
+            Signal::derive(move || {
+                t_string!(
+                    i18n,
+                    home.challenge.challenge_from,
+                    display_username = display_username.get_value()
+                )
+                .to_string()
+            }),
+            Signal::derive(move || {
+                t_string!(
+                    i18n,
+                    home.challenge
+                        .review_the_settings_below_then_accept_when_you_re
+                )
+                .to_string()
+            }),
         ),
     };
     let displayed_user_label =
         if viewer_role == ChallengeViewerRole::Challenger && challenge.opponent.is_some() {
-            "Opponent:"
+            Signal::derive(move || t_string!(i18n, common.opponent_label).to_string())
         } else {
-            "Challenger:"
+            Signal::derive(move || t_string!(i18n, home.challenge.challenger).to_string())
         };
 
     ChallengePageSummary {
@@ -109,25 +200,32 @@ fn challenge_page_summary(
 
 #[component]
 fn ChallengeNotFound() -> impl IntoView {
+    let i18n = use_i18n();
     view! {
         <EmptyState
-            title="Challenge not found"
-            message="The challenge you're looking for doesn't exist"
+            title=move || t_string!(i18n, home.challenge.challenge_not_found)
+            message=move || {
+                t_string!(i18n, home.challenge.the_challenge_you_re_looking_for_doesn_t_exist)
+            }
         />
     }
 }
 
 #[component]
 fn GameStarted(game_id: GameId) -> impl IntoView {
+    let i18n = use_i18n();
     let game_path = format!("/game/{}", game_id.0);
 
     view! {
-        <Panel title="Game started" body_class="space-y-3">
+        <Panel
+            title=move || t_string!(i18n, notifications.push.game_started_title)
+            body_class="space-y-3"
+        >
             <p class="text-sm text-gray-600 dark:text-gray-300">
-                "This challenge has been accepted and the game is ready."
+                {t!(i18n, home.challenge.this_challenge_has_been_accepted_and_the_game_is)}
             </p>
             <a class="ui-button ui-button-primary ui-button-md no-link-style w-fit" href=game_path>
-                "Open game"
+                {t!(i18n, common.open_game)}
             </a>
         </Panel>
     }
@@ -135,6 +233,7 @@ fn GameStarted(game_id: GameId) -> impl IntoView {
 
 #[component]
 pub fn ChallengeView() -> impl IntoView {
+    let i18n = use_i18n();
     let params = use_params::<ChallengeParams>();
     let auth_context = expect_context::<AuthContext>();
     let user = auth_context.user;
@@ -194,16 +293,22 @@ pub fn ChallengeView() -> impl IntoView {
             <Suspense fallback=move || {
                 view! {
                     <EmptyState
-                        title="Loading challenge..."
-                        message="Please wait while we fetch the challenge details"
+                        title=move || t_string!(i18n, common.loading)
+                        message=move || {
+                            t_string!(
+                                i18n, home.challenge.please_wait_while_we_fetch_the_challenge_details
+                            )
+                        }
                     />
                 }
             }>
-                <ErrorBoundary fallback=|_errors| {
+                <ErrorBoundary fallback=move |_errors| {
                     view! {
                         <EmptyState
-                            title="Error loading challenge"
-                            message="Challenge doesn't seem to exist"
+                            title=move || t_string!(i18n, home.challenge.error_loading_challenge)
+                            message=move || {
+                                t_string!(i18n, home.challenge.challenge_doesn_t_seem_to_exist)
+                            }
                         />
                     }
                 }>
@@ -219,8 +324,12 @@ pub fn ChallengeView() -> impl IntoView {
                                         return EitherOf3::B(
                                             view! {
                                                 <EmptyState
-                                                    title="Loading challenge..."
-                                                    message="Please wait while we check your account"
+                                                    title=move || t_string!(i18n, common.loading)
+                                                    message=move || {
+                                                        t_string!(
+                                                            i18n, home.challenge.please_wait_while_we_check_your_account
+                                                        )
+                                                    }
                                                 />
                                             },
                                         );
@@ -269,21 +378,25 @@ pub fn ChallengeView() -> impl IntoView {
                                                         EitherOf3::B(
                                                             view! {
                                                                 <Panel
-                                                                    title="Challenge no longer available"
+                                                                    title=move || {
+                                                                        t_string!(
+                                                                            i18n, home.challenge.challenge_no_longer_available
+                                                                        )
+                                                                    }
                                                                     body_class="space-y-2"
                                                                 >
                                                                     <p class="text-sm text-gray-600 dark:text-gray-300">
-                                                                        "Challenge no longer available"
+                                                                        {t!(i18n, home.challenge.challenge_no_longer_available)}
                                                                     </p>
                                                                 </Panel>
                                                             },
                                                         )
                                                     }
                                                     ChallengePageState::Active => {
-                                                        let title = summary.title.clone();
-                                                        let message = summary.message.clone();
+                                                        let title = summary.title;
+                                                        let message = summary.message;
                                                         let displayed_user_label = summary.displayed_user_label;
-                                                        let display_username = display_username.clone();
+                                                        let display_username = display_username.to_string();
                                                         let challenge = challenge.clone();
                                                         EitherOf3::C(
 
@@ -300,9 +413,16 @@ pub fn ChallengeView() -> impl IntoView {
                                                                     </div>
                                                                 </Panel>
                                                                 <Show when=show_copy_panel>
-                                                                    <Panel title="Share private link" body_class="space-y-3">
+                                                                    <Panel
+                                                                        title=move || {
+                                                                            t_string!(i18n, home.challenge.share_private_link)
+                                                                        }
+                                                                        body_class="space-y-3"
+                                                                    >
                                                                         <p class="text-sm text-gray-600 dark:text-gray-300">
-                                                                            "Only players with this URL can accept this private challenge."
+                                                                            {t!(
+                                                                                i18n, home.challenge.only_players_with_this_url_can_accept_this_private
+                                                                            )}
                                                                         </p>
                                                                         <div class="flex gap-2 max-w-full">
                                                                             <input
@@ -313,7 +433,7 @@ pub fn ChallengeView() -> impl IntoView {
                                                                                 readonly
                                                                             />
                                                                             <button
-                                                                                title="Copy link"
+                                                                                title=move || t_string!(i18n, home.challenge.copy_link)
                                                                                 on:click=copy
                                                                                 class=copy_button_class
                                                                             >
@@ -325,7 +445,9 @@ pub fn ChallengeView() -> impl IntoView {
                                                                         </div>
                                                                     </Panel>
                                                                 </Show>
-                                                                <Panel title="Challenge details">
+                                                                <Panel title=move || {
+                                                                    t_string!(i18n, home.challenge.challenge_details)
+                                                                }>
                                                                     <ChallengeDetails challenge=challenge />
                                                                 </Panel>
                                                             },

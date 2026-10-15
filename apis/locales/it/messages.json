@@ -1,6 +1,5 @@
 {
     "chat": {
-        "players": "Giocatori",
         "spectators": "Spettatori",
         "players_chat": "Chat giocatori",
         "spectator_chat": "Chat spettatori",
@@ -12,7 +11,6 @@
         "players_chat_only": "Solo i giocatori possono vedere la chat dei giocatori.",
         "with_opponent": "Chatta con l'avversario",
         "with_spectators": "Chatta con gli spettatori",
-        "placeholder": "Chat",
         "composer_label": "Messaggio di chat",
         "log_label": "Messaggi della chat",
         "open_chat": "Apri la chat",
@@ -71,11 +69,35 @@
     },
     "sections": {
         "dms": "DM",
-        "games": "Partite",
         "recent_announcements": "Annunci recenti",
         "no_dms": "Nessun DM per ora",
         "no_tournament_chats": "Nessuna chat torneo",
         "no_game_chats": "Nessuna chat partita",
         "muted": "Silenziato"
+    },
+    "errors": {
+        "block_mute_failed": "Impossibile aggiornare le impostazioni di blocco o silenziamento.",
+        "request_unavailable": "Impossibile completare la richiesta.",
+        "chat_retry_conflict": "Questo nuovo tentativo è in conflitto con l'invio originale. Invia il testo come nuovo messaggio.",
+        "unauthorized": "Non sei autorizzato a eseguire questa azione.",
+        "chat_access_denied": "Accesso alla chat negato.",
+        "chat_subscription_limited": "Troppi tentativi di iscrizione alla chat.",
+        "chat_send_limited": "Troppi messaggi in chat.",
+        "tournament_name_taken": "Esiste già un torneo con questo nome.",
+        "request_origin_missing": "L'indirizzo dell'applicazione non è disponibile. Ricarica la pagina e riprova.",
+        "request_url_invalid": "L'indirizzo della richiesta non è valido. Ricarica la pagina e riprova.",
+        "request_origin_mismatch": "Questa richiesta deve provenire dall'applicazione. Ricarica la pagina e riprova.",
+        "request_token_missing": "Ricarica la pagina e riprova.",
+        "request_unverified": "Impossibile verificare questa richiesta. Ricarica la pagina e riprova.",
+        "discord_start_failed": "Impossibile avviare il collegamento a Discord.",
+        "discord_response_invalid": "Discord ha restituito una risposta di autorizzazione non valida. Ricomincia dalle impostazioni delle notifiche.",
+        "discord_url_invalid": "Discord ha restituito un indirizzo di autorizzazione non valido. Ricomincia dalle impostazioni delle notifiche.",
+        "discord_state_invalid": "Discord ha restituito uno stato di autorizzazione non valido. Ricomincia dalle impostazioni delle notifiche.",
+        "discord_session_required": "Accedi per collegare Discord.",
+        "discord_unavailable": "Il collegamento a Discord non è al momento disponibile.",
+        "discord_unverified": "Impossibile verificare il collegamento a Discord. Ricomincia dalle impostazioni delle notifiche.",
+        "discord_failed": "Collegamento a Discord fallito. Ricomincia dalle impostazioni delle notifiche.",
+        "rating_above_band": "{{rating}} supera il limite di punteggio di {{limit}}",
+        "rating_below_band": "{{rating}} è inferiore al limite di punteggio di {{limit}}"
     }
 }

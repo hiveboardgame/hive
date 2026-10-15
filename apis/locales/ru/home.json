@@ -1,7 +1,6 @@
 {
     "learn_to_play": "Учиться играть",
     "create_game": "Создать игру",
-    "search_players": "Поиск игроков",
     "online_players_one": "Игроков онлайн: {{count}}",
     "custom_game": {
         "title": "Новая партия",
@@ -18,11 +17,9 @@
                 "time_other": "{{count}} дн.",
                 "total_time_each": "Общее время на игрока"
             }
-        },
-        "button": "Настроить партию"
+        }
     },
     "challenge_details": {
-        "player": "Игрок",
         "time": "Контроль"
     },
     "challenge_tabs": {
@@ -43,5 +40,47 @@
         "error_title": "Ошибка загрузки предстоящих партий",
         "empty_title": "Нет предстоящих турнирных партий",
         "empty_message": "Загляните позже, чтобы увидеть запланированные партии"
+    },
+    "pick_your_color_and_create_a_challenge": "Выберите цвет и создайте вызов:",
+    "an_introduction_to_hive": "Знакомство с Hive",
+    "learn_to_play_hive_video_thumbnail": "Научитесь играть в Hive — обложка видео",
+    "couldn_t_fetch_top_users": "Не удалось загрузить лучших игроков",
+    "no_one_yet": "Пока никого",
+    "not_ranked_yet": "Пока без места",
+    "quick_play": "Быстрая игра",
+    "play_vs_bot": "Играть с ботом",
+    "play_bot": "С ботом",
+    "challenge": {
+        "bot": {
+            "play_an_unrated_game_vs_our_bot": "Сыграйте нерейтинговую партию с нашим ботом",
+            "easy": "Легко",
+            "medium": "Средне",
+            "hard": "Сложно"
+        },
+        "direct_challenge_to": "Личный вызов: {{display_username}}",
+        "waiting_for_to_respond": "Ожидается ответ от {{display_username}}.",
+        "private_challenge": "Закрытый вызов",
+        "share_the_private_link_with_the_player_you_want": "Отправьте закрытую ссылку игроку, которого хотите пригласить.",
+        "public_challenge": "Открытый вызов",
+        "this_challenge_is_listed_publicly_while_it_is_open": "Этот вызов виден всем, пока открыт.",
+        "direct_challenge_from": "Личный вызов от {{display_username}}",
+        "review_the_settings_below_then_accept_or_decline": "Проверьте настройки ниже и примите или отклоните вызов.",
+        "private_challenge_from": "Закрытый вызов от {{display_username}}",
+        "log_in_to_accept_this_challenge": "Войдите, чтобы принять вызов.",
+        "challenge_from": "Вызов от {{display_username}}",
+        "review_the_settings_below_then_accept_when_you_re": "Проверьте настройки ниже и примите вызов, когда будете готовы играть.",
+        "challenger": "Вызывает:",
+        "challenge_not_found": "Вызов не найден",
+        "the_challenge_you_re_looking_for_doesn_t_exist": "Запрашиваемый вызов не существует",
+        "this_challenge_has_been_accepted_and_the_game_is": "Вызов принят, партия готова.",
+        "please_wait_while_we_fetch_the_challenge_details": "Подождите, пока загружаются сведения о вызове",
+        "error_loading_challenge": "Ошибка загрузки вызова",
+        "challenge_doesn_t_seem_to_exist": "Похоже, вызов не существует",
+        "please_wait_while_we_check_your_account": "Подождите, пока проверяется ваша учётная запись",
+        "challenge_no_longer_available": "Вызов больше недоступен",
+        "share_private_link": "Поделиться закрытой ссылкой",
+        "only_players_with_this_url_can_accept_this_private": "Принять этот закрытый вызов могут только игроки с этой ссылкой.",
+        "copy_link": "Копировать ссылку",
+        "challenge_details": "Сведения о вызове"
     }
 }

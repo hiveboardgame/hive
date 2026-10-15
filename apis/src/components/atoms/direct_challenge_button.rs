@@ -1,4 +1,7 @@
-use crate::providers::{AuthContext, AuthIdentity, DirectChallengeOpener};
+use crate::{
+    i18n::*,
+    providers::{AuthContext, AuthIdentity, DirectChallengeOpener},
+};
 use leptos::prelude::*;
 use leptos_icons::*;
 use uuid::Uuid;
@@ -9,6 +12,7 @@ pub fn DirectChallengeButton(
     opponent: String,
     #[prop(optional, into)] disabled: Signal<bool>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let auth_context = expect_context::<AuthContext>();
     let direct_challenge = expect_context::<DirectChallengeOpener>();
     let opponent = StoredValue::new(opponent);
@@ -23,7 +27,7 @@ pub fn DirectChallengeButton(
     view! {
         <Show when=logged_in_and_not_user>
             <button
-                title="Challenge to a game"
+                title=move || t_string!(i18n, game.challenge_to_a_game)
                 prop:disabled=disabled
                 on:click=move |_| direct_challenge.open(opponent.get_value())
                 class="mx-2 ui-button ui-button-primary ui-button-icon"

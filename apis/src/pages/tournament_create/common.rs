@@ -109,11 +109,23 @@ impl FieldDraft {
     }
 
     pub fn summary(self) -> String {
-        // TODO: i18n once copy is approved.
+        let i18n = use_i18n();
+
         if self.minimum.get() == self.maximum.get() {
-            format!("{} players", self.maximum.get())
+            t_string!(
+                i18n,
+                tournaments.row.players_players,
+                players = self.maximum.get()
+            )
+            .to_string()
         } else {
-            format!("{}–{} players", self.minimum.get(), self.maximum.get())
+            t_string!(
+                i18n,
+                tournaments.creation.players_range,
+                minimum = self.minimum.get(),
+                maximum = self.maximum.get()
+            )
+            .to_string()
         }
     }
 }
@@ -194,13 +206,12 @@ fn MetadataFields(draft: MetadataDraft) -> impl IntoView {
             </Show>
         </label>
         <Show when=move || !description_open.get()>
-            // TODO: i18n once copy is approved.
             <button
                 type="button"
                 class="ui-button ui-button-ghost ui-button-sm"
                 on:click=move |_| description_open.set(true)
             >
-                "+ Add description"
+                {t!(i18n, tournaments.creation.add_description)}
             </button>
         </Show>
         <Show when=description_open>
@@ -215,13 +226,12 @@ fn MetadataFields(draft: MetadataDraft) -> impl IntoView {
                         >
                             {move || {
                                 if is_not_preview_desc() {
-                                    t_string!(i18n, tournaments.detail.preview).to_string()
+                                    t_string!(i18n, common.preview).to_string()
                                 } else {
-                                    t_string!(i18n, tournaments.detail.edit).to_string()
+                                    t_string!(i18n, common.edit).to_string()
                                 }
                             }}
                         </button>
-
                         <a
                             class="py-1 px-3 text-xs ui-button ui-button-ghost ui-button-md no-link-style"
                             href="https://commonmark.org/help/"
@@ -296,12 +306,22 @@ fn AdmissionFields(draft: AdmissionDraft) -> impl IntoView {
     };
     let rating_summary = move || {
         let (lower, upper) = rating_bounds(min_rating.get(), max_rating.get());
-        // TODO: i18n once copy is approved.
+
         match (lower, upper) {
-            (None, None) => String::from("any rating"),
-            (None, Some(upper)) => format!("rating up to {upper}"),
-            (Some(lower), None) => format!("rating {lower} and above"),
-            (Some(lower), Some(upper)) => format!("rating {lower}–{upper}"),
+            (None, None) => t_string!(i18n, tournaments.creation.any_rating).to_string(),
+            (None, Some(upper)) => {
+                t_string!(i18n, tournaments.creation.rating_up_to, upper = upper).to_string()
+            }
+            (Some(lower), None) => {
+                t_string!(i18n, tournaments.creation.rating_from, lower = lower).to_string()
+            }
+            (Some(lower), Some(upper)) => t_string!(
+                i18n,
+                tournaments.creation.rating_range,
+                lower = lower,
+                upper = upper
+            )
+            .to_string(),
         }
     };
     view! {
@@ -318,9 +338,11 @@ fn AdmissionFields(draft: AdmissionDraft) -> impl IntoView {
                 }
             })}
         <details>
-            // TODO: i18n once copy is approved.
             <summary class="text-sm font-medium cursor-pointer">
-                {move || format!("Rating limits · {}", rating_summary())}
+                {move || {
+                    t_string!(i18n, tournaments.creation.rating_limits, rating = rating_summary())
+                        .to_string()
+                }}
             </summary>
             <div class="mt-3 space-y-3">
                 <p class="ui-notice">{rating_string}</p>
@@ -363,8 +385,9 @@ fn SchedulingFields(draft: ScheduleDraft) -> impl IntoView {
             <div class="flex flex-col gap-3">
                 <Show when=move || draft.allow_manual>
                     <fieldset class="space-y-2">
-                        // TODO: i18n once copy is approved.
-                        <legend class="ui-field-label">"Start mode"</legend>
+                        <legend class="ui-field-label">
+                            {t!(i18n, tournaments.creation.start_mode)}
+                        </legend>
                         <div class="grid gap-2 sm:grid-cols-2">
                             <label class="flex gap-2 items-center text-sm">
                                 <input
@@ -373,8 +396,7 @@ fn SchedulingFields(draft: ScheduleDraft) -> impl IntoView {
                                     prop:checked=draft.manual
                                     on:change=move |_| draft.manual.set(true)
                                 />
-                                // TODO: i18n once copy is approved.
-                                "Start manually"
+                                {t!(i18n, tournaments.creation.start_manually)}
                             </label>
                             <label class="flex gap-2 items-center text-sm">
                                 <input
@@ -383,8 +405,7 @@ fn SchedulingFields(draft: ScheduleDraft) -> impl IntoView {
                                     prop:checked=move || !draft.manual.get()
                                     on:change=move |_| draft.manual.set(false)
                                 />
-                                // TODO: i18n once copy is approved.
-                                "Start at a scheduled time"
+                                {t!(i18n, tournaments.creation.start_scheduled)}
                             </label>
                         </div>
                     </fieldset>
@@ -416,7 +437,6 @@ pub(super) fn FieldSizeFields(field: FieldDraft, maximum: i32) -> impl IntoView 
     let i18n = use_i18n();
     view! {
         <div class="grid gap-4 sm:grid-cols-2">
-
             <div class="ui-setting-group">
                 <div class="flex gap-3 justify-between items-center">
                     <span class="ui-field-label">{t!(i18n, tournaments.creation.min_players)}</span>
@@ -430,7 +450,6 @@ pub(super) fn FieldSizeFields(field: FieldDraft, maximum: i32) -> impl IntoView 
                     step=1
                 />
             </div>
-
             <div class="ui-setting-group">
                 <div class="flex gap-3 justify-between items-center">
                     <span class="ui-field-label">{t!(i18n, tournaments.creation.max_players)}</span>
@@ -567,18 +586,17 @@ pub(super) fn CreationShell(
                 <div class="space-y-4">
                     <div class="flex flex-wrap gap-y-2 gap-x-3 text-sm text-gray-600 dark:text-gray-300">
                         <span>{move || tournament_format_label(i18n, format.get())}</span>
-                        // TODO: i18n once copy is approved.
                         <span>{participant_summary}</span>
                         <TimeRow time_control=Signal::derive(move || Some(clock.get())) />
-                        // TODO: i18n once copy is approved.
                         <span>
                             {move || {
                                 if draft.schedule.allow_manual && draft.schedule.manual.get() {
-                                    String::from("Manual start")
+                                    t_string!(i18n, tournaments.creation.manual_start).to_string()
                                 } else if draft.schedule.valid.get() {
                                     format_tournament_datetime(draft.schedule.starts_at.get())
                                 } else {
-                                    String::from("Choose a valid start time")
+                                    t_string!(i18n, tournaments.creation.invalid_start_time)
+                                        .to_string()
                                 }
                             }}
                         </span>
@@ -603,10 +621,12 @@ pub(super) fn CreationShell(
                     </div>
                 </div>
                 <details class="ui-panel">
-                    // TODO: i18n once copy is approved.
                     <summary class="p-4 font-semibold cursor-pointer">
                         {move || {
-                            format!("About {}", tournament_format_label(i18n, format.get()))
+                            t_string!(
+                                i18n, tournaments.creation.about_format, format = tournament_format_label(i18n, format.get())
+                            )
+                                .to_string()
                         }}
                     </summary>
                     <div class="p-4 border-t border-gray-200 dark:border-gray-700">

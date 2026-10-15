@@ -1,4 +1,7 @@
-use crate::common::{format_tournament_datetime, render_text_prop};
+use crate::{
+    common::{format_tournament_datetime, render_text_prop},
+    i18n::*,
+};
 use chrono::{DateTime, Duration, Local, LocalResult, NaiveDateTime, Utc};
 use leptos::prelude::*;
 
@@ -31,33 +34,62 @@ fn resolve_local_draft(date: NaiveDateTime) -> LocalResult<DateTime<Local>> {
     LocalResult::Single(local)
 }
 
+#[derive(Clone, Copy)]
+enum DraftError {
+    Incomplete,
+    BeforeMinimum(DateTime<Local>),
+    AfterMaximum(DateTime<Local>),
+    Ambiguous,
+    Missing,
+}
+
+impl DraftError {
+    fn label(self) -> String {
+        let i18n = use_i18n();
+        match self {
+            Self::Incomplete => {
+                t_string!(i18n, tournaments.ui.enter_a_complete_date_and_time).to_string()
+            }
+            Self::BeforeMinimum(min) => t_string!(
+                i18n,
+                tournaments.ui.choose_a_time_on_or_after,
+                value1 = format_tournament_datetime(min.to_utc())
+            )
+            .to_string(),
+            Self::AfterMaximum(max) => t_string!(
+                i18n,
+                tournaments.ui.choose_a_time_on_or_before,
+                value1 = format_tournament_datetime(max.to_utc())
+            )
+            .to_string(),
+            Self::Ambiguous => t_string!(
+                i18n,
+                tournaments
+                    .ui
+                    .this_local_time_occurs_twice_when_the_clocks_change_choose_another_time
+            )
+            .to_string(),
+            Self::Missing => t_string!(i18n, tournaments.ui.nonexistent_local_time).to_string(),
+        }
+    }
+}
+
 fn parse_draft(
     draft: &str,
     min: DateTime<Local>,
     max: DateTime<Local>,
-) -> Result<DateTime<Utc>, String> {
-    // TODO: i18n once copy is approved.
+) -> Result<DateTime<Utc>, DraftError> {
     if draft.is_empty() {
-        return Err(String::from("Enter a complete date and time."));
+        return Err(DraftError::Incomplete);
     }
     let date = NaiveDateTime::parse_from_str(draft, "%Y-%m-%dT%H:%M")
-        .map_err(|_| String::from("Enter a complete date and time."))?;
+        .map_err(|_| DraftError::Incomplete)?;
     match resolve_local_draft(date) {
-        LocalResult::Single(local) if local < min => Err(format!(
-            "Choose a time on or after {}.",
-            format_tournament_datetime(min.to_utc())
-        )),
-        LocalResult::Single(local) if local > max => Err(format!(
-            "Choose a time on or before {}.",
-            format_tournament_datetime(max.to_utc())
-        )),
+        LocalResult::Single(local) if local < min => Err(DraftError::BeforeMinimum(min)),
+        LocalResult::Single(local) if local > max => Err(DraftError::AfterMaximum(max)),
         LocalResult::Single(local) => Ok(local.to_utc()),
-        LocalResult::Ambiguous(_, _) => Err(String::from(
-            "This local time occurs twice when the clocks change. Choose another time.",
-        )),
-        LocalResult::None => Err(String::from(
-            "This local time does not exist when the clocks change. Choose another time.",
-        )),
+        LocalResult::Ambiguous(_, _) => Err(DraftError::Ambiguous),
+        LocalResult::None => Err(DraftError::Missing),
     }
 }
 
@@ -114,7 +146,9 @@ pub fn DateTimePicker(
                 {move || {
                     error
                         .get()
-                        .map(|message| view! { <span class="ui-field-error">{message}</span> })
+                        .map(|message| {
+                            view! { <span class="ui-field-error">{move || message.label()}</span> }
+                        })
                 }}
             </Show>
         </label>

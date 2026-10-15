@@ -1,6 +1,5 @@
 {
     "chat": {
-        "players": "Players",
         "spectators": "Spectators",
         "players_chat": "Players chat",
         "spectator_chat": "Spectator chat",
@@ -12,7 +11,6 @@
         "players_chat_only": "Only players can view the players chat.",
         "with_opponent": "Chat with opponent",
         "with_spectators": "Chat with spectators",
-        "placeholder": "Chat",
         "composer_label": "Chat message",
         "log_label": "Chat messages",
         "open_chat": "Open chat",
@@ -80,11 +78,35 @@
     },
     "sections": {
         "dms": "DMs",
-        "games": "Games",
         "recent_announcements": "Recent announcements",
         "no_dms": "No DMs yet",
         "no_tournament_chats": "No tournament chats",
         "no_game_chats": "No game chats",
         "muted": "Muted"
+    },
+    "errors": {
+        "block_mute_failed": "Unable to update block or mute settings.",
+        "request_unavailable": "Unable to complete request.",
+        "chat_retry_conflict": "This message retry conflicts with the original delivery. Send it as a new message.",
+        "unauthorized": "You are not authorized to perform that action.",
+        "chat_access_denied": "Chat access denied.",
+        "chat_subscription_limited": "Too many chat subscription attempts.",
+        "chat_send_limited": "Too many chat messages.",
+        "tournament_name_taken": "A tournament with that name already exists.",
+        "request_origin_missing": "The application address is unavailable. Refresh the page and try again.",
+        "request_url_invalid": "The request address is invalid. Refresh the page and try again.",
+        "request_origin_mismatch": "This request must come from the application. Refresh the page and try again.",
+        "request_token_missing": "Refresh the page and try again.",
+        "request_unverified": "This request could not be verified. Refresh the page and try again.",
+        "discord_start_failed": "Could not start Discord linking.",
+        "discord_response_invalid": "Discord returned an invalid authorization response. Start again from notification settings.",
+        "discord_url_invalid": "Discord returned an invalid authorization address. Start again from notification settings.",
+        "discord_state_invalid": "Discord returned an invalid authorization state. Start again from notification settings.",
+        "discord_session_required": "Log in to link Discord.",
+        "discord_unavailable": "Discord linking is currently unavailable.",
+        "discord_unverified": "Discord link could not be verified. Start again from notification settings.",
+        "discord_failed": "Discord linking failed. Start again from notification settings.",
+        "rating_above_band": "{{rating}} is above the rating band of {{limit}}",
+        "rating_below_band": "{{rating}} is below the rating band of {{limit}}"
     }
 }

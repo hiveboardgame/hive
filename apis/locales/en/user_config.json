@@ -17,7 +17,6 @@
     "move_confirm": "Move confirmation:",
     "color_scheme": "Color scheme:",
     "preview": "Preview:",
-
     "edit_account": {
         "confirm_password_placeholder": "New password (again)"
     },
@@ -54,10 +53,38 @@
         "no_account_prompt": "Don't have an account? <register_link>Sign up</register_link>",
         "invalid_login": "Invalid email/user or password"
     },
-   "allow_takeback": "Allow takebacks",
-   "allow_takeback_buttons": {
-    "always": "Always",
-    "never": "Never",
-    "casual_only": "Casual only"
-   }
+    "allow_takeback": "Allow takebacks",
+    "allow_takeback_buttons": {
+        "always": "Always",
+        "never": "Never",
+        "casual_only": "Casual only"
+    },
+    "click_on_your_clock": "Click on your clock",
+    "double_click": "Double click",
+    "single_click": "Single click",
+    "light_mode": "Light mode",
+    "dark_mode": "Dark mode",
+    "white_background": "White Background",
+    "black_background": "Black Background",
+    "current_color": "Current: {{color}}",
+    "ant_light_preview": "{{design}} Ant (Light Mode)",
+    "ant_dark_preview": "{{design}} Ant (Dark Mode)",
+    "tile_design": {
+        "official": "Official",
+        "flat": "Flat",
+        "three_d": "3D",
+        "high_contrast": "High contrast",
+        "community": "Community",
+        "pride": "Pride",
+        "carbon_three_d": "Carbon 3D",
+        "carbon": "Carbon"
+    },
+    "tile_design_browser_notice": "Some browsers do not support every tile design. Firefox gives the most consistent rendering.",
+    "settings": {
+        "settings": "Settings",
+        "tune_board_visuals_and_move_input_preferences": "Tune board visuals and move input preferences.",
+        "board_appearance": "Board Appearance",
+        "play_preferences": "Play Preferences",
+        "if_either_player_has_takebacks_disabled_game_controls_will": "If either player has takebacks disabled, game controls will not allow takeback requests."
+    }
 }

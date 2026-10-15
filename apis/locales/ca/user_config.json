@@ -51,5 +51,33 @@
         "casual_only": "Sols en Casual",
         "never": "Mai"
     },
-    "allow_takeback": "Permetre retrocessos"
+    "allow_takeback": "Permetre retrocessos",
+    "click_on_your_clock": "Fes clic al teu rellotge",
+    "double_click": "Doble clic",
+    "single_click": "Un clic",
+    "light_mode": "Mode clar",
+    "dark_mode": "Mode fosc",
+    "white_background": "Fons blanc",
+    "black_background": "Fons negre",
+    "current_color": "Actual: {{color}}",
+    "ant_light_preview": "Formiga {{design}} (mode clar)",
+    "ant_dark_preview": "Formiga {{design}} (mode fosc)",
+    "tile_design": {
+        "official": "Oficial",
+        "flat": "Pla",
+        "three_d": "3D",
+        "high_contrast": "Alt contrast",
+        "community": "Comunitat",
+        "pride": "Orgull",
+        "carbon_three_d": "Carboni 3D",
+        "carbon": "Carboni"
+    },
+    "tile_design_browser_notice": "Alguns navegadors no admeten tots els dissenys de peces. Firefox ofereix la visualització més coherent.",
+    "settings": {
+        "settings": "Configuració",
+        "tune_board_visuals_and_move_input_preferences": "Ajusta l'aspecte del tauler i les preferències d'entrada de jugades.",
+        "board_appearance": "Aspecte del tauler",
+        "play_preferences": "Preferències de joc",
+        "if_either_player_has_takebacks_disabled_game_controls_will": "Si algun jugador té desactivada l'opció de desfer jugades, els controls de la partida no permetran demanar-ho."
+    }
 }

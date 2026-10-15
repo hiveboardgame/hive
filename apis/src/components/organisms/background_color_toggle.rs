@@ -64,14 +64,18 @@ pub fn BackgroundColorToggle() -> impl IntoView {
                     <button
                         on:click=reset_to_default
                         class="ui-button ui-button-secondary ui-button-sm"
-                        title="Reset to default"
+                        title=move || t_string!(i18n, common.reset_to_default)
                     >
                         {t!(i18n, common.reset)}
                     </button>
                 </Show>
             </div>
 
-            <div class="ui-field-helper">{move || format!("Current: {}", current_color())}</div>
+            <div class="ui-field-helper">
+                {move || {
+                    t_string!(i18n, user_config.current_color, color = current_color()).to_string()
+                }}
+            </div>
         </div>
     }
 }

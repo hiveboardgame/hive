@@ -1,5 +1,6 @@
 use crate::{common::TileDesign, i18n::*, providers::Config};
 use leptos::prelude::*;
+use leptos_i18n::I18nContext;
 
 #[component]
 pub fn TileDesignToggle() -> impl IntoView {
@@ -8,7 +9,7 @@ pub fn TileDesignToggle() -> impl IntoView {
         <div class="flex flex-col gap-2">
             <p class="ui-field-label">{t!(i18n, user_config.piece_style)}</p>
             <p class="ui-warning-notice">
-                "Some browsers do not support every tile design. Firefox gives the most consistent rendering."
+                {move || t_string!(i18n, user_config.tile_design_browser_notice)}
             </p>
             <div class="ui-choice-group">
                 <TileDesignButton tile_design=TileDesign::Official />
@@ -51,6 +52,7 @@ pub fn TileDesignButton(tile_design: TileDesign) -> impl IntoView {
 
 #[component]
 pub fn TilePreview(tile_design: TileDesign) -> impl IntoView {
+    let i18n = use_i18n();
     let design_folder = match tile_design {
         TileDesign::Official => "official",
         TileDesign::Flat => "flat",
@@ -69,29 +71,53 @@ pub fn TilePreview(tile_design: TileDesign) -> impl IntoView {
         _ => ("Ant.svg", "Ant.svg"),
     };
 
+    let tile_design = StoredValue::new(tile_design);
     view! {
         <div class="relative size-12">
             <img
                 src=format!("/assets/tiles/{}/white.svg", design_folder)
-                alt="White Background"
+                alt=move || t_string!(i18n, user_config.white_background)
                 class="object-contain absolute inset-0 dark:hidden size-full"
             />
             <img
                 src=format!("/assets/tiles/{}/black.svg", design_folder)
-                alt="Black Background"
+                alt=move || t_string!(i18n, user_config.black_background)
                 class="hidden object-contain absolute inset-0 dark:block size-full"
             />
 
             <img
                 src=format!("/assets/tiles/{}/{}", design_folder, light_piece_name)
-                alt=format!("{:?} Ant (Light Mode)", tile_design)
+                alt=move || {
+                    t_string!(
+                        i18n, user_config.ant_light_preview, design = tile_design.with_value(|design| tile_design_label(i18n, design))
+                    )
+                        .to_string()
+                }
                 class="object-contain absolute inset-0 dark:hidden size-full"
             />
             <img
                 src=format!("/assets/tiles/{}/{}", design_folder, dark_piece_name)
-                alt=format!("{:?} Ant (Dark Mode)", tile_design)
+                alt=move || {
+                    t_string!(
+                        i18n, user_config.ant_dark_preview, design = tile_design.with_value(|design| tile_design_label(i18n, design))
+                    )
+                        .to_string()
+                }
                 class="hidden object-contain absolute inset-0 dark:block size-full"
             />
         </div>
+    }
+}
+
+fn tile_design_label(i18n: I18nContext<Locale, I18nKeys>, design: &TileDesign) -> &'static str {
+    match design {
+        TileDesign::Official => t_string!(i18n, user_config.tile_design.official),
+        TileDesign::Flat => t_string!(i18n, user_config.tile_design.flat),
+        TileDesign::ThreeD => t_string!(i18n, user_config.tile_design.three_d),
+        TileDesign::HighContrast => t_string!(i18n, user_config.tile_design.high_contrast),
+        TileDesign::Community => t_string!(i18n, user_config.tile_design.community),
+        TileDesign::Pride => t_string!(i18n, user_config.tile_design.pride),
+        TileDesign::Carbon3D => t_string!(i18n, user_config.tile_design.carbon_three_d),
+        TileDesign::Carbon => t_string!(i18n, user_config.tile_design.carbon),
     }
 }

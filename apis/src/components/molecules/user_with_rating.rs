@@ -1,3 +1,4 @@
+use crate::i18n::*;
 use hive_lib::Color;
 use leptos::{either::Either, prelude::*};
 use leptos_icons::Icon;
@@ -22,6 +23,7 @@ pub fn UserWithRating(
     #[prop(optional)] text_color: &'static str,
     #[prop(optional)] vertical: bool,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let game_state = expect_context::<GameStateStore>();
     let game_response = game_state.game_response();
     let player = Memo::new(move |_| match side() {
@@ -79,12 +81,16 @@ pub fn UserWithRating(
                             extend_tw_classes=text_color
                         />
                         <Show when=berserked>
-                            // TODO: i18n once copy is approved.
+
                             <span
                                 class="inline-flex justify-center items-center ml-1 text-amber-800 bg-amber-100 rounded size-5 shrink-0"
                                 role="img"
-                                aria-label="Berserked"
-                                title="Berserked"
+                                aria-label=move || {
+                                    t_string!(i18n, tournaments.ui.berserked).to_string()
+                                }
+                                title=move || {
+                                    t_string!(i18n, tournaments.ui.berserked).to_string()
+                                }
                             >
                                 <Icon
                                     icon=icondata_bs::BsLightningFill

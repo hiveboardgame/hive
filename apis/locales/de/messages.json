@@ -1,6 +1,5 @@
 {
     "chat": {
-        "players": "Spieler",
         "spectators": "Zuschauer",
         "players_chat": "Spieler-Chat",
         "spectator_chat": "Zuschauer-Chat",
@@ -12,7 +11,6 @@
         "players_chat_only": "Nur Spieler können den Spieler-Chat sehen.",
         "with_opponent": "Chat mit dem Gegner",
         "with_spectators": "Chat mit den Zuschauern",
-        "placeholder": "Chat",
         "composer_label": "Chatnachricht",
         "log_label": "Chatnachrichten",
         "open_chat": "Chat öffnen",
@@ -71,11 +69,35 @@
     },
     "sections": {
         "dms": "DMs",
-        "games": "Spiele",
         "recent_announcements": "Neueste Ankündigungen",
         "no_dms": "Noch keine DMs",
         "no_tournament_chats": "Keine Turnier-Chats",
         "no_game_chats": "Keine Spiel-Chats",
         "muted": "Stumm"
+    },
+    "errors": {
+        "block_mute_failed": "Blockier- oder Stummschalteinstellungen konnten nicht geändert werden.",
+        "request_unavailable": "Anfrage konnte nicht abgeschlossen werden.",
+        "chat_retry_conflict": "Dieser erneute Sendeversuch widerspricht der ursprünglichen Zustellung. Sende den Text als neue Nachricht.",
+        "unauthorized": "Du bist zu dieser Aktion nicht berechtigt.",
+        "chat_access_denied": "Zugriff auf den Chat verweigert.",
+        "chat_subscription_limited": "Zu viele Versuche, einen Chat zu abonnieren.",
+        "chat_send_limited": "Zu viele Chatnachrichten.",
+        "tournament_name_taken": "Ein Turnier mit diesem Namen existiert bereits.",
+        "request_origin_missing": "Die Anwendungsadresse ist nicht verfügbar. Lade die Seite neu und versuche es erneut.",
+        "request_url_invalid": "Die Anfrageadresse ist ungültig. Lade die Seite neu und versuche es erneut.",
+        "request_origin_mismatch": "Diese Anfrage muss aus der Anwendung kommen. Lade die Seite neu und versuche es erneut.",
+        "request_token_missing": "Lade die Seite neu und versuche es erneut.",
+        "request_unverified": "Diese Anfrage konnte nicht überprüft werden. Lade die Seite neu und versuche es erneut.",
+        "discord_start_failed": "Discord-Verknüpfung konnte nicht gestartet werden.",
+        "discord_response_invalid": "Discord hat eine ungültige Autorisierungsantwort gesendet. Starte erneut in den Benachrichtigungseinstellungen.",
+        "discord_url_invalid": "Discord hat eine ungültige Autorisierungsadresse gesendet. Starte erneut in den Benachrichtigungseinstellungen.",
+        "discord_state_invalid": "Discord hat einen ungültigen Autorisierungsstatus gesendet. Starte erneut in den Benachrichtigungseinstellungen.",
+        "discord_session_required": "Melde dich an, um Discord zu verknüpfen.",
+        "discord_unavailable": "Discord-Verknüpfung ist derzeit nicht verfügbar.",
+        "discord_unverified": "Discord-Verknüpfung konnte nicht überprüft werden. Starte erneut in den Benachrichtigungseinstellungen.",
+        "discord_failed": "Discord-Verknüpfung fehlgeschlagen. Starte erneut in den Benachrichtigungseinstellungen.",
+        "rating_above_band": "{{rating}} liegt über der Wertungsgrenze von {{limit}}",
+        "rating_below_band": "{{rating}} liegt unter der Wertungsgrenze von {{limit}}"
     }
 }

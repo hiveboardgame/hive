@@ -197,6 +197,8 @@ async fn main() -> std::io::Result<()> {
             // serve JS/WASM/CSS from `pkg`
             .service(Files::new("/pkg", format!("{site_root}/pkg")))
             .service(functions::pwa::worker)
+            .service(functions::pwa::localized_manifest)
+            .service(functions::pwa::manifest_redirect)
             // serve other assets from the `assets` directory
             .service(Files::new("/assets", site_root.as_ref()))
             // serve the favicon from /favicon.ico
@@ -232,7 +234,6 @@ async fn main() -> std::io::Result<()> {
                     view! {
                         <DocumentShell
                             leptos_options=leptos_options.clone()
-                            manifest_href=pwa_assets.manifest_href.clone()
                             apple_touch_icon_href=pwa_assets.apple_touch_icon_href.clone()
                             pwa_script_src=pwa_assets.pwa_script_src.clone()
                         >

@@ -7,4 +7,5 @@ pub struct Push {
     pub link: Option<String>,
     pub event_type: String,
     pub ttl_secs: u32,
+    pub open_label: String,
 }

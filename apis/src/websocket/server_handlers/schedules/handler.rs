@@ -1,6 +1,6 @@
 use crate::{
     common::ScheduleAction,
-    notifications::{notify, Event},
+    notifications::{notify, Event, TournamentNotice},
     responses::ScheduleResponse,
     websocket::{
         messages::{HandlerOutput, InternalServerMessage},
@@ -110,15 +110,14 @@ impl ScheduleHandler {
                         } else {
                             (response.proposer_id, response.opponent_username.as_str())
                         };
-                        // TODO: i18n once copy is approved.
                         Event::TournamentNotice {
                             recipient,
                             tournament_name: tournament.name.clone(),
                             tournament_nanoid: tournament.nanoid.clone(),
-                            description: format!(
-                                "{actor} cancelled the agreed time for your game ({})",
-                                expected_time.format("%Y-%m-%d %H:%M UTC")
-                            ),
+                            description: TournamentNotice::ScheduleCancelled {
+                                actor: actor.to_string(),
+                                time: expected_time,
+                            },
                             category: NotificationCategory::Schedules,
                         }
                     });

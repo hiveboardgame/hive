@@ -3,6 +3,8 @@ use super::{
     payload::Push,
     service::Notifier,
     web_push::WebPushNotifier,
+    RecordedOutcome,
+    TournamentNotice,
 };
 use dashmap::{mapref::entry::Entry, DashMap};
 use db_lib::{
@@ -211,31 +213,21 @@ pub async fn notify_adjudicated_slots(
         .select((tournament_slots::white_id, tournament_slots::black_id))
         .load::<(Uuid, Uuid)>(conn)
         .await?;
-    let mut recipients = HashMap::<Uuid, Vec<&str>>::new();
+    let mut recipients = HashMap::<Uuid, Vec<RecordedOutcome>>::new();
     for (white_id, black_id) in slots {
         for (recipient, color) in [(white_id, Color::White), (black_id, Color::Black)] {
-            // TODO: i18n once copy is approved.
             let outcome = match result {
-                TournamentGameResult::DoubleForfeit => "double forfeit",
-                TournamentGameResult::Draw => "draw",
-                TournamentGameResult::Winner(winner) if *winner == color => "win",
-                TournamentGameResult::Winner(_) => "loss",
+                TournamentGameResult::DoubleForfeit => RecordedOutcome::DoubleForfeit,
+                TournamentGameResult::Draw => RecordedOutcome::Draw,
+                TournamentGameResult::Winner(winner) if *winner == color => RecordedOutcome::Win,
+                TournamentGameResult::Winner(_) => RecordedOutcome::Loss,
                 TournamentGameResult::Unknown => continue,
             };
             recipients.entry(recipient).or_default().push(outcome);
         }
     }
     for (recipient, outcomes) in recipients {
-        // TODO: i18n once copy is approved.
-        let description = if outcomes.len() == 1 {
-            format!("An organizer recorded a {} for your game.", outcomes[0])
-        } else {
-            format!(
-                "An organizer recorded results for {} of your games: {}.",
-                outcomes.len(),
-                outcomes.join(", ")
-            )
-        };
+        let description = TournamentNotice::ResultsRecorded(outcomes);
         notify(Event::TournamentNotice {
             recipient,
             tournament_name: tournament.name.clone(),

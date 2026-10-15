@@ -1,4 +1,4 @@
-use crate::components::atoms::color_hex::ColorHex;
+use crate::{components::atoms::color_hex::ColorHex, i18n::*};
 use hive_lib::Color;
 use leptos::prelude::*;
 
@@ -43,7 +43,7 @@ pub(crate) fn TournamentEncounterSummary(
     right: Option<EncounterParticipant>,
     result: String,
     #[prop(optional)] progress: Option<String>,
-    #[prop(optional)] action: Option<&'static str>,
+    #[prop(optional, into)] action: Option<TextProp>,
     #[prop(optional)] game_count: Option<usize>,
 ) -> impl IntoView {
     let (first, second) = if left.color == Some(Color::Black)
@@ -75,17 +75,20 @@ pub(crate) fn TournamentEncounterSummary(
                     .map(|action| {
                         view! {
                             <span class="flex gap-2 items-baseline ml-auto whitespace-nowrap">
-                                // TODO: i18n once copy is approved.
+
                                 {game_count
                                     .map(|count| {
                                         view! {
                                             <span class="text-gray-500">
-                                                {format!("{count} games")}
+                                                {move || {
+                                                    t_string!(use_i18n(), profile.games_played, count = count)
+                                                        .to_string()
+                                                }}
                                             </span>
                                         }
                                     })}
                                 <span class="font-semibold underline underline-offset-2">
-                                    {action}
+                                    {move || action.get()}
                                 </span>
                             </span>
                         }

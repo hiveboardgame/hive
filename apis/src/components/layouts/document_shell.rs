@@ -6,7 +6,6 @@ use leptos_meta::{HashedStylesheet, MetaTags};
 #[component]
 pub fn DocumentShell(
     leptos_options: LeptosOptions,
-    manifest_href: String,
     apple_touch_icon_href: String,
     pwa_script_src: String,
     children: ChildrenFn,
@@ -16,14 +15,13 @@ pub fn DocumentShell(
 
     view! {
         <!DOCTYPE html>
-        <html lang="en">
+        <html>
             <head>
                 <meta charset="utf-8" />
                 <meta
                     name="viewport"
                     content="width=device-width, initial-scale=1, interactive-widget=resizes-content, user-scalable=no"
                 />
-                <link rel="manifest" href=manifest_href />
                 <link rel="apple-touch-icon" href=apple_touch_icon_href />
                 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#d1d5db" />
                 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#2e3e48" />

@@ -20,7 +20,7 @@ use crate::{
         authorize_chat_send,
         ChatAccessError,
     },
-    common::{ClientRequest, GameAction, ServerMessage},
+    common::{ClientRequest, GameAction, ServerMessage, UiError},
     responses::GameResponse,
     websocket::{
         messages::{AuthError, HandlerOutput, InternalServerMessage, MessageDestination, SocketTx},
@@ -65,16 +65,17 @@ impl std::fmt::Display for RequestHandlerError {
 impl RequestHandlerError {
     pub fn user_safe_reason(&self) -> String {
         match self {
-            Self::InternalError(_) => "Unable to complete request".to_string(),
-            Self::ChatClientIdConflict => {
-                "This message retry conflicts with the original delivery. Send it as a new message."
-                    .to_string()
+            Self::InternalError(_) => UiError::RequestUnavailable,
+            Self::ChatClientIdConflict => UiError::ChatRetryConflict,
+            Self::AuthError(_) => UiError::Unauthorized,
+            Self::Forbidden => UiError::ChatAccessDenied,
+            Self::RateLimited(ChatLimitError::SubscriptionAttempts { .. }) => {
+                UiError::ChatSubscriptionLimited
             }
-            Self::AuthError(error) => error.to_string(),
-            Self::Forbidden => "Chat access denied".to_string(),
-            Self::RateLimited(error) => error.reason().to_string(),
-            Self::TournamentNameTaken => "A tournament with that name already exists".to_string(),
+            Self::RateLimited(ChatLimitError::Send { .. }) => UiError::ChatSendLimited,
+            Self::TournamentNameTaken => UiError::TournamentNameTaken,
         }
+        .encode()
     }
 
     /// Why an ordinary refusal happened (illegal move, not your turn, game over, bad

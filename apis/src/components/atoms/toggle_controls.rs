@@ -1,9 +1,10 @@
-use crate::components::layouts::base_layout::ControlsSignal;
+use crate::{components::layouts::base_layout::ControlsSignal, i18n::*};
 use leptos::prelude::*;
 use leptos_icons::*;
 
 #[component]
 pub fn ToggleControls() -> impl IntoView {
+    let i18n = use_i18n();
     let controls_signal = expect_context::<ControlsSignal>();
     let toggle_controls = move |_| controls_signal.hidden.update(|b| *b = !*b);
     let icon = move || {
@@ -15,9 +16,9 @@ pub fn ToggleControls() -> impl IntoView {
     };
     let title = move || {
         if controls_signal.hidden.get() {
-            "Show controls"
+            t_string!(i18n, game.show_controls)
         } else {
-            "Hide Controls"
+            t_string!(i18n, game.hide_controls)
         }
     };
 

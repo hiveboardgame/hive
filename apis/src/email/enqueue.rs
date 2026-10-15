@@ -13,6 +13,7 @@ pub async fn enqueue_password_reset(
     let payload = serde_json::json!({
         "token": plaintext_token,
         "username": user.username,
+        "locale": user.lang,
     });
     db_lib::models::EmailQueueItem::enqueue(
         NewEmailQueueItem {

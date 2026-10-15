@@ -1,5 +1,5 @@
 use crate::{
-    common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
+    common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage, TournamentPairingLabel},
     notifications::{notify, time_control_label, Event},
     responses::GameResponse,
     websocket::{InternalServerMessage, MessageDestination},
@@ -10,15 +10,14 @@ use uuid::Uuid;
 pub(crate) fn new_game_messages(
     game: Arc<GameResponse>,
     accepted_by: Option<Uuid>,
-    pairing_label: Option<String>,
+    pairing_label: Option<TournamentPairingLabel>,
 ) -> Vec<InternalServerMessage> {
     // Every tournament release has an in-app notice. External notifications are
     // grouped at the dispatch boundary, where Arena presence is available.
-    // TODO: i18n once copy is approved.
     let pairing_label = game
         .tournament
         .as_ref()
-        .map(|_| pairing_label.unwrap_or_else(|| String::from("New game")));
+        .map(|_| pairing_label.unwrap_or(TournamentPairingLabel::NewGame));
     let mut messages = Vec::with_capacity(2);
     for (player, opponent) in [
         (&game.white_player, &game.black_player),

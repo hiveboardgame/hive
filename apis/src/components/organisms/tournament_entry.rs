@@ -2,6 +2,7 @@ use super::tournament_explanations::stage_plan_label;
 use crate::{
     common::{compact_realtime_clock, tournament_path_matches},
     components::molecules::{modal::Modal, time_row::format_compact_duration},
+    i18n::*,
     providers::{
         ArenaStateStoreFields,
         AuthContext,
@@ -44,25 +45,30 @@ fn configuration(format: TournamentFormatState) -> FormatConfig {
 }
 
 fn duration_text(seconds: u32) -> String {
-    // TODO: i18n once copy is approved.
     if seconds >= 86400 && seconds.is_multiple_of(86400) {
         let days = seconds / 86400;
-        format!("{days} {}", if days == 1 { "day" } else { "days" })
+        t_string!(use_i18n(), tournaments.ui.day_count, count = days).to_string()
     } else {
         format_compact_duration(seconds)
     }
 }
 
 fn clock_text(clock: Clock) -> String {
-    // TODO: i18n once copy is approved.
+    let i18n = use_i18n();
     match clock {
         Clock::Realtime(clock) => compact_realtime_clock(clock),
-        Clock::Correspondence(CorrespondenceClock::DaysPerMove { seconds_per_move }) => {
-            format!("{} per move", duration_text(seconds_per_move.get()))
-        }
-        Clock::Correspondence(CorrespondenceClock::TotalTimeEach { seconds_each }) => {
-            format!("{} per player", duration_text(seconds_each.get()))
-        }
+        Clock::Correspondence(CorrespondenceClock::DaysPerMove { seconds_per_move }) => t_string!(
+            i18n,
+            game.time_mode.correspondence.duration_move,
+            duration = duration_text(seconds_per_move.get())
+        )
+        .to_string(),
+        Clock::Correspondence(CorrespondenceClock::TotalTimeEach { seconds_each }) => t_string!(
+            i18n,
+            tournaments.ui.time_per_player,
+            value1 = duration_text(seconds_each.get())
+        )
+        .to_string(),
     }
 }
 
@@ -71,9 +77,9 @@ fn swiss_round_summary(
     players: usize,
     capacity: Option<i32>,
 ) -> Vec<String> {
-    // TODO: i18n once copy is approved.
+    let i18n = use_i18n();
     if let Some(rounds) = rounds.resolved_rounds() {
-        return vec![format!("Rounds: {rounds}.")];
+        return vec![t_string!(i18n, tournaments.ui.rounds, high = rounds).to_string()];
     }
     let minimum = MIN_SWISS_START_SEATS as usize;
     let resolve = |count| {
@@ -87,58 +93,97 @@ fn swiss_round_summary(
         .and_then(|count| usize::try_from(count).ok())
         .and_then(resolve);
     let mut lines = vec![match (lower, upper) {
-        (Some(low), Some(high)) if low == high => format!("Rounds: {high}."),
-        (Some(low), Some(high)) => {
-            format!("Rounds: {low}–{high}, depending on how many players join.")
+        (Some(low), Some(high)) if low == high => {
+            t_string!(i18n, tournaments.ui.rounds, high = high).to_string()
         }
-        _ => String::from("Rounds: based on the number of players at the start."),
+        (Some(low), Some(high)) => t_string!(
+            i18n,
+            tournaments.ui.rounds_depending_on_how_many_players_join,
+            low = low,
+            high = high
+        )
+        .to_string(),
+        _ => t_string!(
+            i18n,
+            tournaments
+                .ui
+                .rounds_based_on_the_number_of_players_at_the_start
+        )
+        .to_string(),
     }];
     if lower != upper {
         if players >= minimum {
             if let Some(estimate) = resolve(players) {
-                lines.push(format!(
-                    "With the current {players} players: {estimate} rounds."
-                ));
+                lines.push(
+                    t_string!(
+                        i18n,
+                        tournaments.ui.with_the_current_players_rounds,
+                        players = players,
+                        estimate = estimate
+                    )
+                    .to_string(),
+                );
             }
         }
-        lines.push(String::from(
-            "Final round count is set when the tournament starts.",
-        ));
+        lines.push(
+            t_string!(
+                i18n,
+                tournaments
+                    .ui
+                    .final_round_count_is_set_when_the_tournament_starts
+            )
+            .to_string(),
+        );
     }
     lines
 }
 
 fn series_summary(plan: &SeriesPlan) -> Vec<String> {
+    let i18n = use_i18n();
     plan.phases
         .iter()
         .enumerate()
         .map(|(index, phase)| {
-            // TODO: i18n once copy is approved.
             let prefix = if index == 0 {
-                "Each match"
+                t_string!(i18n, tournaments.ui.each_match).to_string()
             } else {
-                "If still tied"
+                t_string!(i18n, tournaments.ui.if_still_tied).to_string()
             };
             let sets = match phase.set_limit {
-                SetLimit::AtMost(sets) if sets.get() == 1 => String::from("1 set"),
-                SetLimit::AtMost(sets) => format!("up to {sets} sets"),
-                SetLimit::UntilDecisive => String::from("sets until the tie is broken"),
-            };
-            let ending = match phase.clinch {
-                ClinchPolicy::PlayAll => "All games in a set are played.",
-                ClinchPolicy::EarlyClinch => {
-                    "Remaining games are skipped once a player has won the set."
+                SetLimit::AtMost(sets) if sets.get() == 1 => {
+                    t_string!(i18n, tournaments.ui.one_set).to_string()
+                }
+                SetLimit::AtMost(sets) => {
+                    t_string!(i18n, tournaments.ui.up_to_sets, sets = sets).to_string()
+                }
+                SetLimit::UntilDecisive => {
+                    t_string!(i18n, tournaments.ui.sets_until_the_tie_is_broken).to_string()
                 }
             };
-            let games = if phase.games_per_set == 1 {
-                String::from("1 game")
-            } else {
-                format!("{} games", phase.games_per_set)
+            let ending = match phase.clinch {
+                ClinchPolicy::PlayAll => {
+                    t_string!(i18n, tournaments.ui.all_games_in_a_set_are_played).to_string()
+                }
+                ClinchPolicy::EarlyClinch => t_string!(
+                    i18n,
+                    tournaments
+                        .ui
+                        .remaining_games_are_skipped_once_a_player_has_won_the_set
+                )
+                .to_string(),
             };
-            format!(
-                "{prefix}: {games} per set, {sets}. {ending} Time control: {}.",
-                clock_text(phase.clock)
+            let games =
+                t_string!(i18n, tournaments.ui.game_count, count = phase.games_per_set).to_string();
+            t_string!(
+                i18n,
+                tournaments.ui.per_set_time_control,
+                prefix = prefix,
+                games = games,
+                sets = sets,
+                ending = ending,
+                value1 = clock_text(phase.clock)
             )
+            .to_string()
         })
         .collect()
 }
@@ -149,89 +194,206 @@ pub fn TournamentEntrySummary(
     format: TournamentFormatState,
     #[prop(optional)] joining: bool,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let identity = expect_context::<AuthContext>().identity;
     let lines = move || {
         let lifecycle = common.lifecycle().get();
         let players = common.memberships().read().players.len();
-        // TODO: i18n once copy is approved.
+
         match configuration(format) {
             FormatConfig::Swiss(config) => {
                 let mut lines = swiss_round_summary(config.rounds, players, lifecycle.seats);
                 let double = matches!(config.system, SwissSystem::DoubleSwiss(_));
-                lines.push(if double { "2 games per opponent, one with each color." } else { "1 game per opponent." }.into());
-                lines.push(format!("Time control: {}.", clock_text(config.clock)));
-                lines.push(String::from("New pairings each round, based on standings."));
+                lines.push(if double {
+                    t_string!(i18n, tournaments.ui.two_games_per_opponent).to_string()
+                } else {
+                    t_string!(i18n, tournaments.ui.one_game_per_opponent).to_string()
+                });
+                lines.push(
+                    t_string!(
+                        i18n,
+                        tournaments.ui.time_control,
+                        value1 = clock_text(config.clock)
+                    )
+                    .to_string(),
+                );
+                lines.push(
+                    t_string!(
+                        i18n,
+                        tournaments.ui.new_pairings_each_round_based_on_standings
+                    )
+                    .to_string(),
+                );
                 if double {
                     lines.push(match config.double_swiss_release_policy {
-                        ReleasePolicy::FullyUnlocked => "Both games are available together.",
-                        ReleasePolicy::SequentialPerMatchup => "The second game starts after the first finishes.",
-                    }.into());
+                        ReleasePolicy::FullyUnlocked => {
+                            t_string!(i18n, tournaments.ui.both_games_are_available_together)
+                                .to_string()
+                        }
+                        ReleasePolicy::SequentialPerMatchup => t_string!(
+                            i18n,
+                            tournaments
+                                .ui
+                                .the_second_game_starts_after_the_first_finishes
+                        )
+                        .to_string(),
+                    });
                 }
                 lines
             }
             FormatConfig::RoundRobin(config) => {
                 let games = config.rules.repeats as usize;
-                let joined = identity.get().and_then(AuthIdentity::user_id)
+                let joined = identity
+                    .get()
+                    .and_then(AuthIdentity::user_id)
                     .is_some_and(|id| common.memberships().read().players.contains_key(&id));
                 let field = players + usize::from(joining && !joined);
                 let opponents = field.saturating_sub(1);
                 let total = opponents * games;
-                let game_word = if total == 1 { "game" } else { "games" };
-                let opponent_word = if opponents == 1 { "opponent" } else { "opponents" };
                 let total_text = if joining {
-                    format!("You would play {total} {game_word}")
+                    t_string!(i18n, tournaments.ui.you_would_play, count = total).to_string()
                 } else {
-                    format!("{total} {game_word} per player")
+                    t_string!(i18n, tournaments.ui.per_player, count = total).to_string()
                 };
                 let mut lines = vec![if opponents == 0 {
-                    format!("{games} {} against each opponent who joins.", if games == 1 { "game" } else { "games" })
+                    t_string!(
+                        i18n,
+                        tournaments.ui.against_each_opponent_who_joins,
+                        count = games
+                    )
+                    .to_string()
                 } else if games == 1 || opponents == 1 {
-                    format!("{total_text} against {opponents} {opponent_word}.")
+                    t_string!(
+                        i18n,
+                        tournaments.ui.against,
+                        total_text = total_text,
+                        count = opponents
+                    )
+                    .to_string()
                 } else {
-                    format!("{total_text}: {games} against each of {opponents} opponents.")
+                    t_string!(
+                        i18n,
+                        tournaments.ui.against_each_of_opponents,
+                        total_text = total_text,
+                        games = games,
+                        opponents = opponents
+                    )
+                    .to_string()
                 }];
                 if lifecycle.status == TournamentStatus::NotStarted {
                     let basis = if joining {
-                        format!("Based on {field} players, including you.")
+                        t_string!(
+                            i18n,
+                            tournaments.ui.based_on_players_including_you,
+                            count = field
+                        )
+                        .to_string()
                     } else {
-                        format!("Based on the current {field} players.")
+                        t_string!(
+                            i18n,
+                            tournaments.ui.based_on_the_current_players,
+                            count = field
+                        )
+                        .to_string()
                     };
-                    let capacity = lifecycle.seats.and_then(|seats| usize::try_from(seats).ok());
+                    let capacity = lifecycle
+                        .seats
+                        .and_then(|seats| usize::try_from(seats).ok());
                     lines.push(match capacity {
                         Some(seats) if seats > field => {
                             let maximum = seats.saturating_sub(1) * games;
-                            format!("{basis} Up to {maximum} {} per player if all {seats} places fill.", if maximum == 1 { "game" } else { "games" })
+                            t_string!(
+                                i18n,
+                                tournaments.ui.up_to_per_player_if_all_places_fill,
+                                basis = basis,
+                                count = maximum,
+                                seats = seats
+                            )
+                            .to_string()
                         }
                         _ => basis,
                     });
                 }
-                lines.push(format!("Time control: {}.", clock_text(config.clock)));
+                lines.push(
+                    t_string!(
+                        i18n,
+                        tournaments.ui.time_control,
+                        value1 = clock_text(config.clock)
+                    )
+                    .to_string(),
+                );
                 lines.push(match config.release_policy {
-                    ReleasePolicy::FullyUnlocked => "All games are available together.",
-                    ReleasePolicy::SequentialPerMatchup => "Against each opponent, the next game starts after the previous one finishes.",
-                }.into());
+                    ReleasePolicy::FullyUnlocked => {
+                        t_string!(i18n, tournaments.creation.faq.release_all).to_string()
+                    }
+                    ReleasePolicy::SequentialPerMatchup => {
+                        t_string!(i18n, tournaments.ui.sequential_opponent_games_help).to_string()
+                    }
+                });
                 lines
             }
             FormatConfig::Elimination(config) => {
                 let mut lines = vec![match config.topology {
-                    Topology::Single { bronze: false } => "Single elimination: one match loss eliminates you.",
-                    Topology::Single { bronze: true } => "Single elimination, with a third-place match for semifinal losers.",
-                    Topology::Double => "Double elimination: two match losses eliminate you.",
-                }.into()];
-                lines.push(String::from("Win a set to win the match. Tied sets are replayed."));
+                    Topology::Single { bronze: false } => t_string!(
+                        i18n,
+                        tournaments
+                            .ui
+                            .single_elimination_one_match_loss_eliminates_you
+                    )
+                    .to_string(),
+                    Topology::Single { bronze: true } => t_string!(
+                        i18n,
+                        tournaments
+                            .ui
+                            .single_elimination_with_a_third_place_match_for_semifinal_losers
+                    )
+                    .to_string(),
+                    Topology::Double => t_string!(
+                        i18n,
+                        tournaments
+                            .ui
+                            .double_elimination_two_match_losses_eliminate_you
+                    )
+                    .to_string(),
+                }];
+                lines.push(
+                    t_string!(
+                        i18n,
+                        tournaments
+                            .ui
+                            .win_a_set_to_win_the_match_tied_sets_are_replayed
+                    )
+                    .to_string(),
+                );
                 lines.extend(series_summary(&config.default_plan));
                 for stage in &config.stage_overrides {
-                    lines.push(format!("{} — {}", stage_plan_label(stage.stage), series_summary(&stage.plan).join(" ")));
+                    lines.push(format!(
+                        "{} — {}",
+                        stage_plan_label(stage.stage),
+                        series_summary(&stage.plan).join(" ")
+                    ));
                 }
                 if config.topology == Topology::Double {
-                    lines.push(String::from("A second final is played if the lower-bracket winner wins the first."));
+                    lines.push(t_string!(i18n, tournaments.ui.a_second_final_is_played_if_the_lower_bracket_winner_wins_the_first).to_string());
                 }
                 lines
             }
             FormatConfig::Arena(config) => vec![
-                format!("Duration: {}. Time control: {}.", format_compact_duration(config.duration_seconds.get()), clock_text(Clock::Realtime(config.game_clock))),
-                String::from("You'll keep getting new opponents while the arena is running."),
-                String::from("Once it starts, you can't leave. Pause to stop new pairings; your current game continues."),
+                t_string!(
+                    i18n,
+                    tournaments.ui.duration_time_control,
+                    value1 = format_compact_duration(config.duration_seconds.get()),
+                    value2 = clock_text(Clock::Realtime(config.game_clock))
+                )
+                .to_string(),
+                t_string!(
+                    i18n,
+                    tournaments
+                        .ui
+                        .you_ll_keep_getting_new_opponents_while_the_arena_is_running
+                )
+                .to_string(),
+                t_string!(i18n, tournaments.ui.arena_leave_after_start_help).to_string(),
             ],
         }
     };
@@ -250,6 +412,7 @@ pub fn TournamentJoinButton(
     #[prop(into)] label: Signal<String>,
     on_join: Callback<()>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let dialog = NodeRef::<Dialog>::new();
     let auth = expect_context::<AuthContext>();
     let identity = auth.identity;
@@ -292,11 +455,17 @@ pub fn TournamentJoinButton(
         >
             {move || label.get()}
         </button>
-        // TODO: i18n once copy is approved.
-        <Modal dialog_el=dialog aria_label="Join tournament">
+
+        <Modal
+            dialog_el=dialog
+            aria_label=move || t_string!(i18n, tournaments.ui.join_tournament).to_string()
+        >
             <div class="p-4 space-y-4 max-w-lg">
                 <h2 class="text-lg font-bold">
-                    {move || format!("Join {}?", common.lifecycle().get().name)}
+                    {move || {
+                        t_string!(i18n, tournaments.ui.join, value1 = common.lifecycle().get().name)
+                            .to_string()
+                    }}
                 </h2>
                 <TournamentEntrySummary common format joining=true />
                 <div class="flex gap-2 justify-end">
@@ -309,7 +478,7 @@ pub fn TournamentJoinButton(
                             }
                         }
                     >
-                        "Cancel"
+                        {t!(i18n, common.cancel)}
                     </button>
                     <button
                         type="button"
@@ -324,7 +493,7 @@ pub fn TournamentJoinButton(
                             }
                         }
                     >
-                        "Join tournament"
+                        {t!(i18n, tournaments.ui.join_tournament)}
                     </button>
                 </div>
             </div>

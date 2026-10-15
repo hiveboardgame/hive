@@ -1,13 +1,4 @@
 {
-    "game_buttons": {
-        "playing": "Em curso",
-        "pending": "Pendente",
-        "finished": "Acabados"
-    },
-    "color_buttons": {
-        "black": "Pretas",
-        "white": "Brancas"
-    },
     "result_buttons": {
         "win": "Vitória",
         "loss": "Derrota",
@@ -23,5 +14,15 @@
     "player_color": "Cor do jogador",
     "rating": "ELO",
     "games_played_one": "{{count}} jogo",
-    "games_played_other": "{{count}} jogos"
+    "games_played_other": "{{count}} jogos",
+    "page": {
+        "redirecting": "A redirecionar…",
+        "user_not_found": "Utilizador não encontrado"
+    },
+    "leaderboards": {
+        "top_rated_players": "Jogadores com melhor classificação",
+        "highest_rated_players_by_speed": "Jogadores com melhor classificação por ritmo de jogo.",
+        "top_rated_bots": "Bots com melhor classificação",
+        "highest_rated_bots_by_speed": "Bots com melhor classificação por ritmo de jogo."
+    }
 }
