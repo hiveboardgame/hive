@@ -38,7 +38,7 @@ use anyhow::Result;
 use db_lib::{
     db_error::DbError,
     game_command::{self, Command, Outcome},
-    models::{Game, ScheduleOffer, Tournament, User},
+    models::{Game, ScheduleOffer, Tournament},
     tournaments::{
         fixed_field,
         public::{TournamentLoadRequest, TournamentProjectionRequest},
@@ -46,7 +46,7 @@ use db_lib::{
     },
     DbConn,
 };
-use hive_lib::GameControl;
+use hive_lib::{GameControl, GameStatus};
 use shared_types::{tournament::Format, Conclusion, GameId, GameSpeed, TournamentId};
 use std::{
     collections::{BTreeMap, HashMap},
@@ -559,26 +559,25 @@ async fn append_game_reaction(
     true
 }
 
-async fn append_urgent_games(
+async fn append_urgent_game(
     data: &WebsocketData,
+    game: &Game,
     recipient_id: Uuid,
     output: &mut HandlerOutput,
     conn: &mut DbConn<'_>,
 ) {
-    let result = async {
-        let recipient = User::find_by_uuid(&recipient_id, conn).await?;
-        let games = recipient.get_games_with_notifications(conn).await?;
-        let mut responses = Vec::with_capacity(games.len());
-        for game in &games {
-            responses.push((*data.get_or_build_response(game, conn).await?).clone());
-        }
-        Ok::<_, anyhow::Error>(responses)
+    // Match the authoritative urgent snapshot without loading unrelated games.
+    if game.finished
+        || game.current_player_id != recipient_id
+        || (game.game_status == GameStatus::NotStarted.to_string()
+            && game.tournament_slot_id.is_some())
+    {
+        return;
     }
-    .await;
-    match result {
-        Ok(responses) => output.messages.push(InternalServerMessage {
+    match data.get_or_build_response(game, conn).await {
+        Ok(response) => output.messages.push(InternalServerMessage {
             destination: MessageDestination::User(recipient_id),
-            message: ServerMessage::Game(Box::new(GameUpdate::Urgent(responses))),
+            message: ServerMessage::Game(Box::new(GameUpdate::Urgent(vec![(*response).clone()]))),
         }),
         Err(error) => log::error!("build committed urgent game update: {error}"),
     }
@@ -612,7 +611,7 @@ async fn append_action_side_effects(
     };
     match reaction {
         GameReaction::Turn(_) => {
-            append_urgent_games(data, game.current_player_id, output, conn).await;
+            append_urgent_game(data, game, game.current_player_id, output, conn).await;
             if !terminal {
                 notify_your_turn(game, actor_username.to_owned());
             }
@@ -635,7 +634,7 @@ async fn append_action_side_effects(
                 CommandAudience::Websocket => None,
             };
             if let Some(recipient_id) = urgent_recipient {
-                append_urgent_games(data, recipient_id, output, conn).await;
+                append_urgent_game(data, game, recipient_id, output, conn).await;
             }
             if context.audience == CommandAudience::Websocket {
                 if let Some(kind) = control_notification_kind(*control) {

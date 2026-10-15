@@ -130,6 +130,7 @@ pub enum ServerMessage {
     Join(Uuid),
     /// Authoritative lobby state sent on connect and Resync.
     LobbySnapshot(Box<LobbySnapshot>),
+    TvSnapshot(Vec<GameResponse>),
     ResyncRetry {
         retry_after_ms: u32,
     },
@@ -152,7 +153,6 @@ pub struct LobbySnapshot {
     pub schedule_notifications: Vec<ScheduleResponse>,
     pub urgent_games: Vec<GameResponse>,
     pub challenges: Vec<ChallengeResponse>,
-    pub tv_games: Vec<GameResponse>,
     pub online_users: Vec<UserResponse>,
 }
 

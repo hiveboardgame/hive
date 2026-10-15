@@ -1,5 +1,5 @@
 use super::{
-    snapshot::{apply_snapshot_hash_map, retain_snapshot_hash_map, snapshot_keeps},
+    snapshot::{retain_snapshot_hash_map, snapshot_keeps},
     AuthContext,
 };
 use crate::responses::{AccountResponse, GameResponse};
@@ -17,12 +17,8 @@ pub struct GamesSignal {
     pub own: RwSignal<OwnGames>,
     pub live: RwSignal<LiveGames>,
     user: Signal<Option<AccountResponse>>,
-    /// Live (TV) game IDs touched since the last `begin_resync`. Consulted by
-    /// `live_snapshot_apply` so a TV game that arrived during the resync
-    /// window isn't dropped by an older snapshot.
-    live_resync_dirty: StoredValue<HashSet<GameId>>,
-    /// Own/urgent game IDs touched since the last `begin_resync`. Same role
-    /// for `urgent_snapshot_apply`.
+    /// Own/urgent game IDs touched since `begin_resync`, preserved when
+    /// `urgent_snapshot_apply` merges the lobby snapshot.
     own_resync_dirty: StoredValue<HashSet<GameId>>,
 }
 
@@ -32,13 +28,11 @@ impl GamesSignal {
             own: RwSignal::new(OwnGames::new()),
             live: RwSignal::new(LiveGames::new()),
             user,
-            live_resync_dirty: StoredValue::new(HashSet::new()),
             own_resync_dirty: StoredValue::new(HashSet::new()),
         }
     }
 
     pub fn begin_resync(&self) {
-        self.live_resync_dirty.update_value(|d| d.clear());
         self.own_resync_dirty.update_value(|d| d.clear());
     }
 
@@ -234,12 +228,6 @@ impl GamesSignal {
         });
     }
 
-    pub fn own_games_set(&mut self, games: Vec<GameResponse>) {
-        for game in games {
-            self.own_games_add(game);
-        }
-    }
-
     fn should_show_on_live_tv(&self, game: &GameResponse) -> bool {
         let viewer = self.user.with_untracked(|a| a.as_ref().map(|u| u.id));
         tv_visible_to(
@@ -251,9 +239,6 @@ impl GamesSignal {
     }
 
     pub fn live_games_add(&mut self, game: GameResponse) {
-        self.live_resync_dirty.update_value(|d| {
-            d.insert(game.game_id.clone());
-        });
         if game.finished {
             self.live.update(|s| {
                 s.live_games.remove(&game.game_id);
@@ -268,48 +253,24 @@ impl GamesSignal {
     }
 
     pub fn live_games_remove(&mut self, game_id: &GameId) {
-        self.live_resync_dirty.update_value(|d| {
-            d.insert(game_id.clone());
-        });
         self.live.update(|s| {
             s.live_games.remove(game_id);
         });
     }
 
-    /// Race-safe replace of the TV set. Local entries touched by `live_games_add`
-    /// or `live_games_remove` since the last `begin_resync` are preserved even
-    /// if absent from the snapshot — those incremental updates ran AFTER the
-    /// server's snapshot was collected, so they're newer.
+    /// TV previews tolerate stale responses; navigation, reconnect and wake
+    /// refresh them without coordinating snapshots with incremental updates.
     pub fn live_snapshot_apply(&mut self, games: Vec<GameResponse>) {
-        let viewer_uid = self.user.with_untracked(|a| a.as_ref().map(|u| u.id));
-        let to_insert: Vec<GameResponse> = games
+        let live_games = games
             .into_iter()
-            .filter(|game| {
-                tv_visible_to(
-                    game.finished,
-                    game.white_player.uid,
-                    game.black_player.uid,
-                    viewer_uid,
-                )
-            })
+            .filter(|game| self.should_show_on_live_tv(game))
+            .map(|game| (game.game_id.clone(), game))
             .collect();
-        let dirty: HashSet<GameId> = self.live_resync_dirty.with_value(|d| d.clone());
-        let snapshot_ids: HashSet<GameId> = to_insert.iter().map(|g| g.game_id.clone()).collect();
-        self.live.update(|s| {
-            apply_snapshot_hash_map(
-                &mut s.live_games,
-                &snapshot_ids,
-                &dirty,
-                to_insert,
-                |game| game.game_id.clone(),
-            );
-        });
-        self.live_resync_dirty.update_value(|d| d.clear());
+        self.live.update(|live| live.live_games = live_games);
     }
 
-    /// Race-safe replace of the user's urgent games. Same shape as
-    /// `live_snapshot_apply`, but spans the three time-mode buckets and the
-    /// matching priority heaps inside `OwnGames`.
+    /// Preserve incremental urgent-game updates across the three time-mode
+    /// buckets and their priority heaps when applying a lobby snapshot.
     pub fn urgent_snapshot_apply(&mut self, games: Vec<GameResponse>) {
         let dirty: HashSet<GameId> = self.own_resync_dirty.with_value(|d| d.clone());
         let snapshot_ids: HashSet<GameId> = games.iter().map(|g| g.game_id.clone()).collect();

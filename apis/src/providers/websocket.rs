@@ -1,4 +1,4 @@
-use crate::common::{ClientRequest, ServerResult};
+use crate::common::{ClientRequest, ServerResult, TvInterest, WEBSOCKET_PROTOCOL_VERSION};
 use leptos::prelude::*;
 use leptos_use::use_window;
 use std::sync::Arc;
@@ -124,6 +124,44 @@ impl WebsocketContext {
         (self.reconnect_now)()
     }
 }
+
+/// Watches lobby TV or a featured game while its component is mounted.
+/// The component owner releases its interest on navigation, and a new socket
+/// re-establishes the same interest. Waking the tab refreshes its snapshot.
+#[cfg(not(feature = "ssr"))]
+pub fn use_tv_subscription(interest: impl Into<Signal<TvInterest>>) {
+    let interest = interest.into();
+    let websocket = expect_context::<WebsocketContext>();
+    let previous = ArcStoredValue::new(TvInterest::None);
+    let effect_websocket = websocket.clone();
+    let effect_previous = previous.clone();
+    Effect::new(move |_| {
+        let interest = interest.get();
+        let ready = effect_websocket.ready_state.get();
+        effect_websocket.wake_resync_epoch.track();
+        let previous_interest = effect_previous.get_value();
+        if ready != ConnectionReadyState::Open {
+            effect_previous.set_value(TvInterest::None);
+            return;
+        }
+        if previous_interest != interest && previous_interest != TvInterest::None {
+            effect_websocket.send(&ClientRequest::TvUnsubscribe(previous_interest));
+        }
+        if interest != TvInterest::None {
+            effect_websocket.send(&ClientRequest::TvSubscribe(interest.clone()));
+        }
+        effect_previous.set_value(interest);
+    });
+    on_cleanup(move || {
+        let previous = previous.get_value();
+        if previous != TvInterest::None {
+            websocket.send(&ClientRequest::TvUnsubscribe(previous));
+        }
+    });
+}
+
+#[cfg(feature = "ssr")]
+pub fn use_tv_subscription(_interest: impl Into<Signal<TvInterest>>) {}
 
 #[cfg(not(feature = "ssr"))]
 mod platform {
@@ -779,7 +817,7 @@ fn fix_wss(url: &str) -> String {
 }
 
 pub fn provide_websocket(url: &str) {
-    let url = fix_wss(url);
+    let url = fix_wss(&format!("{url}?v={WEBSOCKET_PROTOCOL_VERSION}"));
     let ready_state = RwSignal::new(ConnectionReadyState::Closed);
     let message = RwSignal::new(None::<ServerResult>);
     let wake_resync_epoch = RwSignal::new(0_u64);
