@@ -68,13 +68,17 @@ async fn main() -> std::io::Result<()> {
 
     let conf = get_configuration(None).expect("Got configuration");
     let addr = conf.leptos_options.site_addr;
-    let public_origin = match std::env::var("APP_ORIGIN") {
+    let mut public_origin = match std::env::var("APP_ORIGIN") {
         Ok(origin) => ApplicationOrigin::parse(&origin)
             .expect("APP_ORIGIN must be an HTTP(S) origin"),
         Err(_) if cfg!(debug_assertions) => ApplicationOrigin::Development { port: addr.port() },
         Err(_) => ApplicationOrigin::parse("https://hivegame.com")
             .expect("the production origin is valid"),
     };
+    if let Ok(additional) = std::env::var("APP_DEV_ORIGINS") {
+        public_origin = public_origin.with_development_origins(&additional)
+            .expect("APP_DEV_ORIGINS requires a development build and explicit HTTP(S) origins");
+    }
     let public_origin = Data::new(public_origin);
     let routes = generate_route_list(App);
 

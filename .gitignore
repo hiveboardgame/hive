@@ -42,6 +42,7 @@ cutover*.jsonl.manifest.json
 
 # direnv
 .direnv
+/.worktree.env
 
 #vscode settings
 .vscode/
