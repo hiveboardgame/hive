@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use actix_web::{
     error::{ErrorForbidden, ErrorInternalServerError},
     http::header::{HeaderMap, HeaderName, HOST, ORIGIN, REFERER},
@@ -9,7 +11,7 @@ use url::{Host, Origin, Url};
 
 #[derive(Clone, Debug)]
 pub enum ApplicationOrigin {
-    Fixed(Origin),
+    Configured(Vec<Origin>),
     Development { port: u16 },
 }
 
@@ -17,13 +19,31 @@ impl ApplicationOrigin {
     pub fn parse(value: &str) -> Result<Self, &'static str> {
         let value = value.strip_suffix('/').unwrap_or(value);
         parse_origin(value)
-            .map(Self::Fixed)
+            .map(|origin| Self::Configured(vec![origin]))
             .ok_or("Application origin must be an HTTP(S) origin without a path")
     }
 
-    fn for_request(&self, request: &HttpRequest) -> Result<Origin, Error> {
+    pub fn with_development_origins(mut self, additional: &str) -> Result<Self, &'static str> {
+        if !cfg!(debug_assertions) {
+            return Err("Additional application origins are only permitted in development builds");
+        }
+        let Self::Configured(origins) = &mut self else {
+            return Err("APP_ORIGIN must be configured before adding development origins");
+        };
+        for value in additional.split(',') {
+            let origin = parse_origin(value.trim()).ok_or(
+                "Development origins must be comma-separated HTTP(S) origins without paths",
+            )?;
+            if !origins.contains(&origin) {
+                origins.push(origin);
+            }
+        }
+        Ok(self)
+    }
+
+    fn for_request(&self, request: &HttpRequest) -> Result<Cow<'_, [Origin]>, Error> {
         match self {
-            Self::Fixed(origin) => Ok(origin.clone()),
+            Self::Configured(origins) => Ok(Cow::Borrowed(origins)),
             Self::Development { port } => {
                 let host = single_header(request.headers(), HOST)?.ok_or_else(invalid_origin)?;
                 let origin = parse_origin(&format!("http://{host}")).ok_or_else(invalid_origin)?;
@@ -36,7 +56,7 @@ impl ApplicationOrigin {
                 if !local_host || request_port != port {
                     return Err(invalid_origin());
                 }
-                Ok(origin)
+                Ok(Cow::Owned(vec![origin]))
             }
         }
     }
@@ -48,7 +68,7 @@ pub fn validate_request_origin(req: &HttpRequest, require_origin: bool) -> Resul
     let application_origin = req
         .app_data::<Data<ApplicationOrigin>>()
         .ok_or_else(|| ErrorInternalServerError("Application origin is not configured"))?;
-    let expected_origin = application_origin.for_request(req)?;
+    let expected_origins = application_origin.for_request(req)?;
     let request_origin = match single_header(req.headers(), ORIGIN)? {
         Some(value) => parse_origin(value),
         None if require_origin => return Err(invalid_origin()),
@@ -58,7 +78,10 @@ pub fn validate_request_origin(req: &HttpRequest, require_origin: bool) -> Resul
         },
     };
 
-    if request_origin != Some(expected_origin) {
+    if !request_origin
+        .as_ref()
+        .is_some_and(|origin| expected_origins.contains(origin))
+    {
         return Err(invalid_origin());
     }
     Ok(())
@@ -236,6 +259,89 @@ mod tests {
             .insert_header(("Origin", "https://hivegame.com"))
             .to_http_request();
         assert!(validate_request_origin(&req, true).is_ok());
+    }
+
+    #[test]
+    fn shared_development_origins_are_explicit_and_do_not_enable_production_sharing() {
+        let configured = ApplicationOrigin::parse("http://tournaments.localhost:8080").unwrap();
+        let shared = configured.clone().with_development_origins(
+            "http://tournaments.192-168-1-20.sslip.io:8080,http://tournaments.100-90-80-70.sslip.io:8080",
+        );
+        if !cfg!(debug_assertions) {
+            assert!(shared.is_err());
+            return;
+        }
+        let shared = shared.unwrap();
+        for origin in [
+            "http://tournaments.localhost:8080",
+            "http://tournaments.192-168-1-20.sslip.io:8080",
+            "http://tournaments.100-90-80-70.sslip.io:8080",
+        ] {
+            for websocket in [false, true] {
+                let req = TestRequest::default()
+                    .app_data(Data::new(shared.clone()))
+                    .insert_header(("Origin", origin))
+                    .to_http_request();
+                assert!(validate_request_origin(&req, websocket).is_ok(), "{origin}");
+            }
+        }
+        for origin in [
+            "http://puzzles.192-168-1-20.sslip.io:8080",
+            "http://tournaments.192-168-1-21.sslip.io:8080",
+            "http://tournaments.192-168-1-20.sslip.io:8081",
+            "https://tournaments.192-168-1-20.sslip.io:8080",
+            "http://tournaments.192-168-1-20.sslip.io.attacker.example:8080",
+            "null",
+        ] {
+            for websocket in [false, true] {
+                let req = TestRequest::default()
+                    .app_data(Data::new(shared.clone()))
+                    .insert_header(("Origin", origin))
+                    .to_http_request();
+                assert!(
+                    validate_request_origin(&req, websocket).is_err(),
+                    "{origin}"
+                );
+            }
+        }
+        let req = TestRequest::default()
+            .app_data(Data::new(configured))
+            .insert_header(("Origin", "http://tournaments.192-168-1-20.sslip.io:8080"))
+            .to_http_request();
+        assert!(validate_request_origin(&req, true).is_err());
+    }
+
+    #[test]
+    fn shared_origins_preserve_websocket_origin_and_http_referer_checks() {
+        let configured = ApplicationOrigin::parse("http://tournaments.localhost:8080").unwrap();
+        for invalid in ["", "http://example.test/path", "http://example.test,"] {
+            assert!(configured
+                .clone()
+                .with_development_origins(invalid)
+                .is_err());
+        }
+        if !cfg!(debug_assertions) {
+            return;
+        }
+        let shared = configured
+            .with_development_origins("http://tournaments.192-168-1-20.sslip.io:8080")
+            .unwrap();
+        let req = TestRequest::default()
+            .app_data(Data::new(shared.clone()))
+            .insert_header((
+                "Referer",
+                "http://tournaments.192-168-1-20.sslip.io:8080/account",
+            ))
+            .to_http_request();
+        assert!(validate_request_origin(&req, false).is_ok());
+        assert!(validate_request_origin(&req, true).is_err());
+        let req = TestRequest::default()
+            .app_data(Data::new(shared))
+            .append_header(("Origin", "http://tournaments.localhost:8080"))
+            .append_header(("Origin", "http://tournaments.192-168-1-20.sslip.io:8080"))
+            .to_http_request();
+        assert!(validate_request_origin(&req, false).is_err());
+        assert!(validate_request_origin(&req, true).is_err());
     }
 
     #[test]

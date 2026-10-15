@@ -1,18 +1,22 @@
-# shellcheck shell=bash
-set -euo pipefail
+#!/usr/bin/env bash
+set -Eeuo pipefail
 # shellcheck source=/dev/null
 source "${WT_LIB:-$(dirname "${BASH_SOURCE[0]}")}/lib.sh"
 
 usage() {
-    cat <<USAGE
+    cat << USAGE
 usage:
-  setup <branch> [--from <ref>]   worktree + databases + port + route for <branch>
-  setup --template <dump>         (re)build $TEMPLATE_DB from a pg_dump file, scrubbed
-  setup --refresh <name>          drop hive-<name> and clone it again from $TEMPLATE_DB
-  setup --ls                      list instances
+  hive-setup <branch> [--from <ref>] [--seed-template <database>]
+                                  worktree + databases + port + route for <branch>
+  hive-setup --template <dump> [--name <database>] [--scrubbed]
+                                  rebuild a template (default $TEMPLATE_DB)
+  hive-setup --refresh <name>           replace a worktree database using its saved template
+  hive-setup --ls                       list instances
 
 <branch> is used as-is if it exists locally or on origin; otherwise it is created from
 <ref> (default origin/main). Instance name = branch with everything but [a-z0-9-] as '-'.
+Templates must be named hive-template or hive-template-<name>.
+--scrubbed skips scrubbing; use only for dumps already scrubbed by a trusted process.
 USAGE
 }
 
@@ -28,72 +32,101 @@ cmd_ls() {
 }
 
 restore_dump() {
-    local dump=$1 status=0
-    if pg_restore -l "$dump" >/dev/null 2>&1; then
+    local dump=$1 database=$2 status=0
+    if pg_restore -l "$dump" > /dev/null 2>&1; then
         local toc
         toc=$(mktemp)
         pg_restore -l "$dump" | grep -vE ' (COMMENT - )?EXTENSION ' > "$toc"
-        pg_restore -L "$toc" --no-owner --no-privileges --role="$PG_USER" -j4 -h "$PG_HOST" -U "$PG_USER" -d "$TEMPLATE_DB" "$dump" || status=$?
+        pg_restore --exit-on-error -L "$toc" --no-owner --no-privileges --role="$PG_USER" -j4 -h "$PG_HOST" -U "$PG_USER" -d "$database" "$dump" || status=$?
         rm -f "$toc"
-        [ "$status" -eq 0 ] || warn "pg_restore exited with $status; check the messages above"
+        return "$status"
     elif [[ $dump == *.gz ]]; then
-        gunzip -c "$dump" | psql_db "$TEMPLATE_DB"
+        gunzip -c "$dump" | psql_db "$database"
     else
-        psql_db "$TEMPLATE_DB" -f "$dump"
+        psql_db "$database" -f "$dump"
     fi
 }
 
 cmd_template() {
-    local dump=$1
+    local dump=$1 template=$2 scrubbed=$3 staging="hive-template-restore-$$" created_staging=0
+    validate_template_name "$template"
     [ -f "$dump" ] || die "no such file: $dump"
     require_createdb
-    if db_exists "$TEMPLATE_DB"; then
-        confirm "$TEMPLATE_DB exists; drop and rebuild it from $dump?" || exit 1
-        terminate_connections "$TEMPLATE_DB"
-        dropdb --force -h "$PG_HOST" -U "$PG_USER" "$TEMPLATE_DB"
+    if db_exists "$template"; then
+        confirm "$template exists; drop and rebuild it from $dump?" || exit 1
     fi
-    create_db "$TEMPLATE_DB"
-    log "restoring $dump into $TEMPLATE_DB"
-    restore_dump "$dump"
-    log "scrubbing"
-    psql_db "$TEMPLATE_DB" -f "$WT_LIB/scrub.sql"
-    psql_db "$TEMPLATE_DB" -c 'vacuum analyze'
-    log "$TEMPLATE_DB ready: $(db_size "$TEMPLATE_DB"), $(psql_db "$TEMPLATE_DB" -tAc 'select count(*) from users') users, migration $(psql_db "$TEMPLATE_DB" -tAc 'select max(version) from __diesel_schema_migrations')"
+    db_exists "$staging" && die "temporary database $staging already exists"
+    template_failed() {
+        trap - ERR INT TERM
+        log "template restore failed; $template was not published"
+        if [ "$created_staging" = 1 ]; then
+            dropdb --if-exists --force -h "$PG_HOST" -U "$PG_USER" "$staging"
+        fi
+        exit 1
+    }
+    trap template_failed ERR INT TERM
+    create_db "$staging"
+    created_staging=1
+    log "restoring $dump for $template"
+    restore_dump "$dump" "$staging"
+    if [ "$scrubbed" = 0 ]; then
+        log "scrubbing"
+        psql_db "$staging" -f "$WT_LIB/scrub.sql"
+    fi
+    psql_db "$staging" -c 'vacuum analyze'
+    psql_db "$staging" -tAc 'select count(*) from users; select max(version) from __diesel_schema_migrations'
+    # Keep an existing seed usable until its replacement has restored and validated.
+    if db_exists "$template"; then
+        terminate_connections "$template"
+        dropdb --force -h "$PG_HOST" -U "$PG_USER" "$template"
+    fi
+    psql_admin -v staging="$staging" -v target="$template" << 'SQL'
+ALTER DATABASE :"staging" RENAME TO :"target";
+SQL
+    trap - ERR INT TERM
+    log "$template ready: $(db_size "$template")"
 }
 
 cmd_refresh() {
     local name=$1
     [ "$name" != "$MAIN_NAME" ] || die "refusing to refresh $MAIN_DB"
     load_env "$name"
-    db_exists "$TEMPLATE_DB" || die "no $TEMPLATE_DB; run: setup --template <dump>"
+    db_exists "$WT_SEED_TEMPLATE" || die "no $WT_SEED_TEMPLATE; restore it with hive-setup --template <dump> --name $WT_SEED_TEMPLATE"
     [[ $(instance_status "$name" "$WT_PORT") == running* ]] && die "$name is running on :$WT_PORT; stop it first"
-    confirm "drop $WT_DB and clone it again from $TEMPLATE_DB?" || exit 1
+    confirm "drop $WT_DB and clone it again from $WT_SEED_TEMPLATE?" || exit 1
     drop_db "$WT_DB"
-    create_db -T "$TEMPLATE_DB" "$WT_DB"
+    create_db -T "$WT_SEED_TEMPLATE" "$WT_DB"
+    mark_worktree_db "$WT_DB" "$name" dev
     log "$WT_DB refreshed ($(db_size "$WT_DB"))"
 }
 
 add_exclude() {
     local file line
-    file="$(git -C "$(main_checkout)" rev-parse --git-common-dir)/info/exclude"
+    file="$(git -C "$(main_checkout)" rev-parse --path-format=absolute --git-common-dir)/info/exclude"
     for line in "$@"; do
-        grep -qx "$line" "$file" 2>/dev/null || echo "$line" >> "$file"
+        grep -qx "$line" "$file" 2> /dev/null || echo "$line" >> "$file"
     done
 }
 
-link_shared_files() {
+share_local_files() {
     local dir=$1 main f
     main=$(main_checkout)
-    for f in "${LINKED_FILES[@]}"; do
+    for f in "${LOCAL_FILES[@]}"; do
         [ -e "$main/$f" ] || continue
-        [ -e "$dir/$f" ] && continue
+        { [ -e "$dir/$f" ] || [ -L "$dir/$f" ]; } && continue
         mkdir -p "$dir/$(dirname "$f")"
-        ln -s "$main/$f" "$dir/$f"
+        if [ "$f" = .agents ]; then
+            # Codex protects .agents in its sandbox; keep it inside this checkout.
+            cp -RL "$main/$f" "$dir/$f"
+        else
+            ln -s "$main/$f" "$dir/$f"
+        fi
     done
 }
 
 cmd_new() {
-    local branch=$1 from=$2 name dir db test_db main port
+    local branch=$1 from=$2 seed=$3 name dir db test_db main port
+    validate_template_name "$seed"
     name=$(sanitize_name "$branch")
     [ -n "$name" ] || die "branch name '$branch' sanitizes to nothing"
     [ "$name" != "$MAIN_NAME" ] || die "'$MAIN_NAME' is the main checkout"
@@ -101,11 +134,13 @@ cmd_new() {
     dir=$(wt_dir "$name")
     db=$(db_name "$name")
     test_db=$(test_db_name "$name")
+    is_protected_db "$db" && die "$db is reserved"
+    [ "${#test_db}" -le 63 ] || die "branch name is too long for a database name"
     [ ! -e "$dir" ] || die "$dir already exists"
     [ ! -f "$(env_path "$name")" ] || die "instance $name already exists"
-    db_exists "$db" && die "database $db already exists (cleanup first)"
-    db_exists "$test_db" && die "database $test_db already exists (cleanup first)"
-    db_exists "$TEMPLATE_DB" || die "no $TEMPLATE_DB; run: setup --template <dump>"
+    db_exists "$db" && die "database $db already exists (hive-cleanup first)"
+    db_exists "$test_db" && die "database $test_db already exists (hive-cleanup first)"
+    db_exists "$seed" || die "no $seed; run: hive-setup --template <dump> --name $seed"
     require_createdb
 
     local created_branch=0 created_wt=0 created_db=0 created_test_db=0
@@ -134,24 +169,28 @@ cmd_new() {
         created_branch=1
     else
         log "creating $branch from $from"
-        git -C "$main" worktree add -b "$branch" "$dir" "$from"
+        git -C "$main" worktree add --no-track -b "$branch" "$dir" "$from"
         created_branch=1
     fi
     created_wt=1
 
     local f excludes=("/$ENV_FILE")
-    for f in "${LINKED_FILES[@]}"; do excludes+=("/$f"); done
+    for f in "${LOCAL_FILES[@]}"; do excludes+=("/$f"); done
     add_exclude "${excludes[@]}"
-    link_shared_files "$dir"
-    direnv allow "$dir"
+    share_local_files "$dir"
+    if [ "$WORKTREE_RUNTIME" = nix ]; then
+        direnv allow "$dir"
+    fi
 
-    create_db -T "$TEMPLATE_DB" "$db"
+    create_db -T "$seed" "$db"
     created_db=1
+    mark_worktree_db "$db" "$name" dev
     create_db "$test_db"
     created_test_db=1
+    mark_worktree_db "$test_db" "$name" test
 
     port=$(alloc_port)
-    write_env "$name" "$branch" "$port"
+    write_env "$name" "$branch" "$port" "$seed"
     caddy_ensure
 
     if uses_claude; then
@@ -163,7 +202,7 @@ cmd_new() {
     fi
 
     trap - ERR
-    cat <<DONE
+    cat << DONE
 
 $name is ready
   worktree   $dir  ($branch)
@@ -171,34 +210,82 @@ $name is ready
   port       $port  ->  $(origin_for "$name")
 
 next:
-  run $name                        serve it (first build takes a while)
-  cd $dir && claude                a Claude on this branch
+  hive-run $name                        serve it (first build takes a while)
+  cd $dir                         open the worktree in your editor or agent
 Safari and curl need this line in /etc/hosts (Chrome and Firefox do not):
   127.0.0.1 $name.localhost
 DONE
 }
 
 main() {
-    [ $# -gt 0 ] || { usage; exit 1; }
-    case $1 in -h|--help) usage; exit 0 ;; esac
+    [ $# -gt 0 ] || {
+        usage
+        exit 1
+    }
+    case $1 in -h | --help)
+        usage
+        exit 0
+        ;;
+    esac
     require_repo
     case $1 in
-        --ls) cmd_ls ;;
-        --template) [ $# -eq 2 ] || die "usage: setup --template <dump>"; cmd_template "$2" ;;
-        --refresh) [ $# -eq 2 ] || die "usage: setup --refresh <name>"; cmd_refresh "$2" ;;
-        --*) die "unknown option $1" ;;
-        *)
-            local branch=$1 from=origin/main
-            shift
+        --ls)
+            require_commands psql lsof
+            cmd_ls
+            ;;
+        --template)
+            [ $# -ge 2 ] || die "--template needs a dump file"
+            local dump=$2 template=$TEMPLATE_DB scrubbed=0
+            shift 2
             while [ $# -gt 0 ]; do
                 case $1 in
-                    --from) [ $# -ge 2 ] || die "--from needs a ref"; from=$2; shift 2 ;;
+                    --name)
+                        [ $# -ge 2 ] || die "--name needs a database"
+                        template=$2
+                        shift 2
+                        ;;
+                    --scrubbed)
+                        scrubbed=1
+                        shift
+                        ;;
                     *) die "unexpected argument $1" ;;
                 esac
             done
-            cmd_new "$branch" "$from"
+            require_commands psql createdb dropdb pg_restore gunzip
+            cmd_template "$dump" "$template" "$scrubbed"
+            ;;
+        --refresh)
+            [ $# -eq 2 ] || die "usage: hive-setup --refresh <name>"
+            require_commands psql createdb dropdb lsof
+            cmd_refresh "$2"
+            ;;
+        --*) die "unknown option $1" ;;
+        *)
+            local branch=$1 from=origin/main seed=$TEMPLATE_DB
+            shift
+            while [ $# -gt 0 ]; do
+                case $1 in
+                    --from)
+                        [ $# -ge 2 ] || die "--from needs a ref"
+                        from=$2
+                        shift 2
+                        ;;
+                    --seed-template)
+                        [ $# -ge 2 ] || die "--seed-template needs a database"
+                        seed=$2
+                        shift 2
+                        ;;
+                    *) die "unexpected argument $1" ;;
+                esac
+            done
+            require_runtime
+            if [ "$WORKTREE_RUNTIME" = nix ]; then require_commands direnv; fi
+            require_commands git psql createdb dropdb caddy curl lsof
+            cmd_new "$branch" "$from" "$seed"
             ;;
     esac
 }
 
-main "$@"
+if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
+    main "$@"
+fi

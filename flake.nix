@@ -100,7 +100,7 @@
         worktreeCommand =
           name:
           pkgs.writeShellApplication {
-            inherit name;
+            name = "hive-${name}";
             runtimeInputs = with pkgs; [
               git
               postgresql_18
@@ -114,6 +114,7 @@
               gnugrep
             ];
             runtimeEnv.WT_LIB = "${./scripts/worktree}";
+            runtimeEnv.HIVE_WORKTREE_RUNTIME = "nix";
             text = builtins.readFile (./scripts/worktree + "/${name}.sh");
           };
         worktreeCommands = map worktreeCommand [
@@ -176,8 +177,8 @@
             echo "'migration' to 'run', 'revert', ... DB changes"
             echo "'pg-stop' to stop PosgreSQL"
             echo "'database' to connect to the PosgreSQL database"
-            echo "'setup <branch>' for a worktree with its own database and URL"
-            echo "'run <name>' to serve a worktree, 'cleanup' to remove worktrees"
+            echo "'hive-setup <branch>' for a worktree with its own database and URL"
+            echo "'hive-run <name>' to serve a worktree, 'hive-cleanup' to remove worktrees"
           '';
           LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath buildInputs;
         };

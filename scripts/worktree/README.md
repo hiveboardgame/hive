@@ -1,81 +1,97 @@
-# Worktrees: one branch, one database, one URL
+# Hive worktrees
 
-Run several branches side by side, each in its own checkout with its own database, port
-and hostname:
+Run branches side by side with separate checkouts, databases, build outputs, and URLs.
+For first use, follow [Setup](#setup).
+
+## Everyday commands
+
+Run these from your main checkout:
+
+| Command | Use |
+|---|---|
+| `hive-setup <branch>` | Create a worktree for an existing or new branch. |
+| `hive-run <name> watch` | Build and serve with hot reload. Omit `watch` to serve without watching. |
+| `hive-run <name> shell` | Open a shell with that instance's environment. |
+| `hive-setup --ls` | List instances and their URLs. |
+| `hive-setup --refresh <name>` | Replace the development database with a fresh copy of its saved template. |
+| `hive-cleanup` | Select environments to remove. |
+
+Use the instance name printed by setup. `hive` means the main checkout on its current
+branch. Worktrees live in `../hive-worktrees/<name>` by default. Each command has
+`--help` for additional options.
+
+Before running Cargo, Diesel, or SQL, enter `hive-run <name> shell`. Changing directory
+alone does not load the environment. Exit that shell before selecting another instance.
+
+Ctrl-C stops the app or watcher. The shared Caddy proxy stays running; stop it with
+`caddy stop --address localhost:2019` when no instance needs it.
+
+## Setup
+
+### Native
+
+Install the project's Rust toolchain and build dependencies, including cargo-leptos,
+the `wasm32-unknown-unknown` target, wasm-bindgen-cli, Sass, Tailwind CSS, pkg-config,
+OpenSSL, and libpq development libraries. The scripts also need Bash 4+, Git,
+PostgreSQL clients, Caddy, curl, lsof, and standard Unix utilities.
 
 ```sh
-setup tournamint        # worktree + database + http://tournamint.localhost
-run tournamint watch    # serve it
-cleanup                 # pick what to remove
+./scripts/worktree/install.sh
 ```
 
-The commands come from the nix dev shell of your main checkout (`direnv` or
-`nix develop`). They need nothing else installed: Caddy, gum and the Postgres 18 client
-tools are pinned in `flake.nix`.
+Add `~/.local/bin` to `PATH`. For native use, leave the repository's Nix `.envrc` disabled.
 
-## How it fits together
+### Nix
 
-- Worktrees live in a directory next to your main checkout: `~/src/hive` gets
-  `~/src/hive-worktrees/<name>`. Set `HIVE_WORKTREES_DIR` to put them elsewhere. Each is a
-  normal `git worktree` sharing the main checkout's repository, so you commit and push from
-  inside it as usual.
-- Each worktree gets a copy of `hive-template` as `hive-<name>` and an empty
-  `hive-<name>-test` for `cargo test -p db`. The app migrates its own database on start,
-  so branches with new migrations never touch each other or `hive-local`.
-- Each worktree gets a port pair from 3100 up (app, hot reload). Caddy on port 80 routes
-  `http://<name>.localhost` to it. Separate hostnames keep login cookies apart; ports alone
-  would not.
-- `<name>` is the branch name lowercased, with anything outside `a-z0-9-` turned into `-`.
-  `hive` is the main checkout on port 3000 at `http://hive.localhost`.
-- `.worktree.env` in each worktree holds its `DATABASE_URL`, port and origin. `.envrc`
-  loads it, so any shell in the worktree talks to the right database.
+Enter `nix develop` or use direnv. The dev shell provides the commands and dependencies.
+After editing scripts, run `direnv reload` or re-enter `nix develop`.
 
-## One-time setup
+### Database
 
-1. **Postgres role.** `hive-dev` must be allowed to create databases. The flake's `pg-start`
-   does that. With any other Postgres, run once as a superuser:
+Start with the [project's PostgreSQL setup](../../README.md#development). Grant
+`hive-dev` permission to create databases, once, as a PostgreSQL superuser
+(the Nix `pg-start` command already does this):
 
-   ```sh
-   psql -h localhost -d postgres -c 'ALTER ROLE "hive-dev" CREATEDB'
-   ```
+```sh
+psql -h localhost -d postgres -c 'ALTER ROLE "hive-dev" CREATEDB'
+```
 
-2. **Template database.** Ask a maintainer for the scrubbed dump and load it:
+Ask a maintainer for a template dump and load it with a compatible `pg_restore` version:
 
-   ```sh
-   setup --template hive-template-YYYY-MM-DD.dump
-   ```
+```sh
+hive-setup --template hive-template-YYYY-MM-DD.dump
+```
 
-   The dump holds real usernames and games. Keep it out of the repository (`*.dump` is
-   ignored) and do not pass it on. Loading scrubs it again: every password becomes
-   `hivegame`, emails become `<username>@hivegame.com`, chats, user blocks, chat mutes, push
-   devices and email tokens are removed. Log in locally as any user with the password `hivegame`.
+Loading [scrubs private data](scrub.sql) and sets local passwords to `hivegame`.
+Dumps still contain real usernames and games: keep them private and out of Git.
+Use `--scrubbed` only for dumps already scrubbed by a trusted process.
 
-3. **Linux only: port 80.** Unprivileged processes may not bind port 80 on most Linux
-   systems, so the proxy falls back to port 8080 there and URLs become
-   `http://<name>.localhost:8080`. Set `HIVE_PROXY_PORT` to choose another port, or allow
-   port 80 with `sysctl net.ipv4.ip_unprivileged_port_start=80`.
+Each worktree gets a copy of the template and a separate test database. App startup
+applies pending migrations; replacing a template leaves existing worktree data alone.
 
-4. **Safari and curl only.** Chrome and Firefox resolve `*.localhost` by themselves. For
-   Safari add a line per worktree to `/etc/hosts`; `setup` prints it.
+### Local settings
 
-## Commands
+Keep private app settings in the main checkout's ignored `.worktree.env`, with file
+permissions set to `600`. Worktrees inherit these settings and select their own
+databases, ports, and output paths.
 
-| Command | Does |
-|---|---|
-| `setup <branch> [--from <ref>]` | Checks out `<branch>` in a new worktree. Uses the local branch, else `origin/<branch>`, else creates it from `<ref>` (default `origin/main`). |
-| `setup --ls` | Lists instances with branch, port, database size, running state, URL. |
-| `setup --refresh <name>` | Replaces `hive-<name>` with a fresh copy of the template. |
-| `setup --template <dump>` | Rebuilds `hive-template` from a dump and scrubs it. |
-| `run <name> [serve\|watch]` | Serves the worktree behind its URL. Moves to a free port if its port is taken. |
-| `run <name> shell` | A dev shell in the worktree with its environment. |
-| `cleanup [<name>...]` | Lists worktrees, databases, routes and leftovers, lets you pick, asks, removes. |
+To override defaults, export these before running the commands:
 
-`cleanup` keeps branches, asks before stopping a running server, and makes you type the
-name before removing a worktree with uncommitted changes. `hive-local`, `hive-test` and
-`hive-template` are never touched.
+- `HIVE_WORKTREES_DIR`: parent directory for worktrees.
+- `HIVE_PROXY_PORT`: Caddy's port (default: 80 or 8080).
 
-The commands are copied into the nix store when the dev shell builds, so after editing a
-script run `direnv reload` (or re-enter `nix develop`) to use the new version.
+## Other devices
 
-Run the commands from the main checkout. `run` starts the build with the worktree's own
-flake, so the branch you serve does not need these scripts. Your main checkout does.
+```sh
+hive-run <name> watch --share
+```
+
+Open the printed LAN or Tailnet URL on a device that can reach your machine.
+Sharing needs DNS that allows private IP addresses and access to the proxy port.
+To stop sharing, stop the watcher, then run it again without `--share`.
+
+## Cleanup
+
+Cleanup removes selected worktrees, their databases, and proxy routes. It shows
+estimated sizes and asks before deleting, stopping a running app, or discarding
+uncommitted changes. Branches, main databases, and seed templates are kept.
