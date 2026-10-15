@@ -1,10 +1,14 @@
-use crate::providers::{
-    game_state::GameStateStore,
-    timer::TimerSignal,
-    ApiRequestsProvider,
-    AuthContext,
-    SoundType,
-    Sounds,
+use crate::{
+    common::format_clock_time_remaining,
+    i18n::*,
+    providers::{
+        game_state::GameStateStore,
+        timer::TimerSignal,
+        ApiRequestsProvider,
+        AuthContext,
+        SoundType,
+        Sounds,
+    },
 };
 use hive_lib::Color;
 use leptos::prelude::*;
@@ -22,6 +26,7 @@ use std::time::Duration;
 
 #[component]
 pub fn LiveTimer(side: Signal<Color>, #[prop(optional)] compact: bool) -> impl IntoView {
+    let i18n = use_i18n();
     let game_state = expect_context::<GameStateStore>();
     let sounds = expect_context::<Sounds>();
     let auth_context = expect_context::<AuthContext>();
@@ -151,7 +156,7 @@ pub fn LiveTimer(side: Signal<Color>, #[prop(optional)] compact: bool) -> impl I
                 timer
                     .with(|t| {
                         let time_left = t.time_left(side());
-                        t.time_mode.time_remaining(time_left)
+                        format_clock_time_remaining(i18n, t.time_mode, time_left)
                     })
             }}
 

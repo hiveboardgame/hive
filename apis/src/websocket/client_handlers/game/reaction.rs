@@ -1,5 +1,5 @@
 use crate::{
-    common::GameActionResponse,
+    common::{GameActionResponse, TournamentPairingLabel},
     providers::{
         chat::Chat,
         games::GamesSignal,
@@ -41,10 +41,7 @@ pub fn handle_control(game_control: GameControl, gar: GameActionResponse) {
             chat.request_catalog_refresh();
             let alerts = expect_context::<AlertsContext>();
             alerts.last_alert.update(|v| {
-                *v = Some(AlertType::Warn(format!(
-                    "{} aborted the game",
-                    gar.username
-                )));
+                *v = Some(AlertType::GameAborted(gar.username.clone()));
             });
 
             let location = use_location();
@@ -76,7 +73,7 @@ pub fn handle_control(game_control: GameControl, gar: GameActionResponse) {
     }
 }
 
-pub fn handle_new_game(game_response: GameResponse, pairing_label: Option<String>) {
+pub fn handle_new_game(game_response: GameResponse, pairing_label: Option<TournamentPairingLabel>) {
     let Some(recipient) = expect_context::<AuthContext>()
         .identity
         .get_untracked()
@@ -92,15 +89,14 @@ pub fn handle_new_game(game_response: GameResponse, pairing_label: Option<String
         return;
     };
     if let Some(tournament) = &game_response.tournament {
-        // TODO: i18n once copy is approved.
-        let label = pairing_label.unwrap_or_else(|| String::from("Tournament game"));
+        let label = pairing_label.unwrap_or(TournamentPairingLabel::NewGame);
         let notice = TournamentPairingNotice {
             recipient,
             tournament_id: tournament.tournament_id.clone(),
             tournament_name: tournament.name.clone(),
             game_id: game_response.game_id.clone(),
-            // TODO: i18n once copy is approved.
-            description: format!("{label} · vs {}", opponent.username),
+            pairing_label: label,
+            opponent: opponent.username.clone(),
         };
         expect_context::<NotificationContext>()
             .tournament_pairings

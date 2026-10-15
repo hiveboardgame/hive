@@ -133,7 +133,7 @@ pub fn GameThreadToggle(
                 }
                 on:click=move |_| select_thread(GameThread::Players)
             >
-                {t!(i18n, messages.chat.players)}
+                {t!(i18n, common.players)}
             </button>
             <button
                 type="button"

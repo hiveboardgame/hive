@@ -36,7 +36,7 @@ pub fn WebPushNudge(install_nudge_active: RwSignal<bool>) -> impl IntoView {
     let i18n = use_i18n();
     let dismissed = RwSignal::new(false);
     let busy = RwSignal::new(false);
-    let error = RwSignal::new(None::<String>);
+    let error = RwSignal::new(None::<pwa::PushError>);
 
     let should_show = LocalResource::new(move || {
         let logged_in = matches!(auth.identity.get(), Some(AuthIdentity::User(_)));
@@ -95,7 +95,11 @@ pub fn WebPushNudge(install_nudge_active: RwSignal<bool>) -> impl IntoView {
                         </a> {t!(i18n, notifications.nudge.body_after_link)}
                     </p>
                     <Show when=move || error.with(Option::is_some)>
-                        <p class="mt-1 ui-field-error">{move || error.get().unwrap_or_default()}</p>
+                        <p class="mt-1 ui-field-error">
+                            {move || {
+                                error.with(|error| error.as_ref().map(|error| error.message(i18n)))
+                            }}
+                        </p>
                     </Show>
                 </div>
                 <button

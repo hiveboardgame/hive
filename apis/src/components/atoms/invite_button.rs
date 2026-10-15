@@ -41,7 +41,7 @@ pub fn InviteButton(
             <button
                 title=move || {
                     if organizer {
-                        String::from("Invite as organizer")
+                        t_string!(i18n, game.invite_as_organizer).to_string()
                     } else {
                         t_string!(i18n, tournaments.admin.invite_action).to_string()
                     }

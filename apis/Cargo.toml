@@ -86,7 +86,8 @@ wasm-bindgen-futures = { workspace = true }
 web-sys = { workspace = true }
 
 [build-dependencies]
-leptos_i18n_build = { workspace = true }
+# Multiline generated Rust avoids expensive compiler source-position lookups.
+leptos_i18n_build = { workspace = true, features = ["pretty_print"] }
 
 # The integration tests are `#![cfg(feature = "ssr")]`; these only add the pieces the test
 # database harness needs on top of what `ssr` already pulls in.

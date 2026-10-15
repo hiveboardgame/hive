@@ -130,15 +130,19 @@ pub fn TournamentWithdrawal(
                     }
                 }
             >
-                // TODO: i18n once copy is approved.
-                "Withdraw"
+
+                {t!(i18n, common.withdraw)}
             </button>
         </Show>
-        // TODO: i18n once copy is approved.
-        <Modal dialog_el aria_label="Confirm withdrawal" on_close=cancel>
+
+        <Modal
+            dialog_el
+            aria_label=move || t_string!(i18n, tournaments.ui.confirm_withdrawal).to_string()
+            on_close=cancel
+        >
             <Show when=move || reviewed.with(Option::is_some)>
                 <div class="px-4 pb-4 space-y-4 w-[min(90vw,26rem)]">
-                    // TODO: i18n once copy is approved.
+
                     <h2 class="text-xl font-bold">
                         {move || {
                             if player_id.is_some() {
@@ -146,10 +150,16 @@ pub fn TournamentWithdrawal(
                                     .with(|reviewed| {
                                         reviewed
                                             .as_ref()
-                                            .map(|(_, name)| format!("Withdraw {name}?"))
+                                            .map(|(_, name)| {
+                                                t_string!(i18n, tournaments.ui.withdraw, name = name)
+                                                    .to_string()
+                                            })
                                     })
                             } else {
-                                Some(String::from("Withdraw from tournament?"))
+                                Some(
+                                    t_string!(i18n, tournaments.ui.withdraw_from_tournament)
+                                        .to_string(),
+                                )
                             }
                         }}
                     </h2>
@@ -168,8 +178,8 @@ pub fn TournamentWithdrawal(
                             class="ui-button ui-button-secondary ui-button-sm"
                             on:click=move |_| cancel.run(())
                         >
-                            // TODO: i18n once copy is approved.
-                            "Cancel"
+
+                            {t!(i18n, common.cancel)}
                         </button>
                         <button
                             type="button"
@@ -177,8 +187,8 @@ pub fn TournamentWithdrawal(
                             prop:disabled=move || !allowed.get()
                             on:click=confirm
                         >
-                            // TODO: i18n once copy is approved.
-                            "Withdraw"
+
+                            {t!(i18n, common.withdraw)}
                         </button>
                     </div>
                 </div>

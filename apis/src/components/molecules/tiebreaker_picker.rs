@@ -63,11 +63,9 @@ where
 
     view! {
         <div class="space-y-2">
-            // TODO: i18n once copy is approved.
-            <span class="ui-field-label">"Tiebreakers"</span>
+            <span class="ui-field-label">{t!(i18n, tournaments.tiebreakers.label)}</span>
             <Show when=move || selected.with(Vec::is_empty)>
-                // TODO: i18n once copy is approved.
-                <p class="ui-field-helper">"Equal scores share a place."</p>
+                <p class="ui-field-helper">{t!(i18n, tournaments.tiebreakers.equal_scores)}</p>
             </Show>
             <ol class="flex flex-col gap-1 mt-2">
                 <For each=chosen key=|criterion| *criterion let:criterion>
@@ -86,7 +84,6 @@ where
                                 </span>
                                 <span class="min-w-0" title=move || criterion.explanation(i18n)>
                                     <span class="text-sm">{move || criterion.name(i18n)}</span>
-
                                 </span>
                                 <div class="flex gap-1 shrink-0">
                                     <button
@@ -106,8 +103,11 @@ where
                                     <button
                                         type="button"
                                         class="ui-button ui-button-secondary ui-button-icon"
-                                        // TODO: i18n once copy is approved.
-                                        title="Move later"
+
+                                        title=move || {
+                                            t_string!(i18n, tournaments.tiebreakers.move_later)
+                                                .to_string()
+                                        }
                                         prop:disabled=move || index() + 1 == selected.with(Vec::len)
                                         on:click=move |_| move_down(criterion)
                                     >
@@ -135,14 +135,13 @@ where
                     }
                 </For>
             </ol>
-            // TODO: i18n once copy is approved.
             <button
                 type="button"
                 class="ui-button ui-button-secondary ui-button-sm"
                 prop:disabled=move || unused().is_empty()
                 on:click=move |_| add_open.update(|open| *open = !*open)
             >
-                "+ Add tiebreaker"
+                {t!(i18n, tournaments.tiebreakers.add)}
             </button>
             <Show when=add_open>
                 <div class="flex flex-wrap gap-2 p-3 ui-setting-group">

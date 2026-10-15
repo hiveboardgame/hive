@@ -600,7 +600,7 @@ pub fn ArchiveSearchForm(
                         </div>
                         <ArchiveSpeedField draft_options=draft_options />
                         <div class=FIELD_BLOCK_CLASS>
-                            <label class="ui-field-label">{t!(i18n, archive.result)}</label>
+                            <label class="ui-field-label">{t!(i18n, common.result)}</label>
                             <select
                                 class="ui-field-select"
                                 prop:value=Signal::derive(move || {

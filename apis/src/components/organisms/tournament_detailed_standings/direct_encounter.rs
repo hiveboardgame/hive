@@ -1,3 +1,4 @@
+use crate::i18n::*;
 use leptos::prelude::*;
 use shared_types::tournament::standings::Snapshot;
 use std::{collections::HashMap, sync::Arc};
@@ -19,16 +20,16 @@ pub(super) struct DirectEncounterValue {
 impl DirectEncounterValue {
     pub fn text(&self) -> String {
         let member = &self.members[self.member_index];
-        let suffix = match (member.place % 100, member.place % 10) {
-            (11..=13, _) => "th",
-            (_, 1) => "st",
-            (_, 2) => "nd",
-            (_, 3) => "rd",
-            _ => "th",
-        };
         let equal = if member.tied { "=" } else { "" };
-        // TODO: i18n once copy is approved.
-        format!("{equal}{}{suffix} of {}", member.place, self.members.len())
+
+        t_string!(
+            use_i18n(),
+            tournaments.ui.score_out_of,
+            equal = equal,
+            value1 = member.place,
+            value2 = self.members.len()
+        )
+        .to_string()
     }
 
     fn starts_partition(&self) -> bool {
@@ -91,7 +92,8 @@ pub(super) fn direct_encounter_values(
 
 #[component]
 pub(super) fn DirectEncounterCell(value: DirectEncounterValue) -> impl IntoView {
-    let text = value.text();
+    let text_value = value.clone();
+    let text = move || text_value.text();
     let starts_group = value.member_index == 0;
     let ends_group = value.member_index + 1 == value.members.len();
     let starts_partition = value.starts_partition();

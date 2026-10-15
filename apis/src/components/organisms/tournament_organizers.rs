@@ -4,6 +4,7 @@ use crate::{
         molecules::{user_identity::UserIdentity, user_search::UserSearch},
         organisms::tournament_admin::MEMBERSHIP_ROW_CLASS,
     },
+    i18n::*,
     providers::{
         ApiRequestsProvider,
         AuthContext,
@@ -23,6 +24,7 @@ pub fn TournamentOrganizers(
     user_is_organizer_or_admin: Signal<bool>,
     #[prop(optional)] managing: bool,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let api = expect_context::<ApiRequestsProvider>().0;
     let auth = expect_context::<AuthContext>();
     let tournament_id = StoredValue::new(tournament.tournament_id());
@@ -78,12 +80,12 @@ pub fn TournamentOrganizers(
         <section class=if managing { "space-y-4" } else { "space-y-3 ui-setting-group" }>
             <Show when=move || !managing>
                 <div class="flex flex-wrap gap-2 justify-between items-center">
-                    // TODO: i18n once copy is approved.
-                    <h3 class="font-bold">"Organizers"</h3>
+
+                    <h3 class="font-bold">{t!(i18n, tournaments.ui.organizers_heading)}</h3>
                     <Show when=move || {
                         management_available.get() && user_is_organizer_or_admin.get()
                     }>
-                        // TODO: i18n once copy is approved.
+
                         <A
                             href=move || {
                                 format!(
@@ -93,7 +95,7 @@ pub fn TournamentOrganizers(
                             }
                             attr:class="text-xs ui-text-link"
                         >
-                            "Manage organizers"
+                            {t!(i18n, tournaments.ui.manage_organizers)}
                         </A>
                     </Show>
                 </div>
@@ -104,8 +106,10 @@ pub fn TournamentOrganizers(
                 </div>
             </Show>
             <Show when=move || management_available.get() && invited.get()>
-                // TODO: i18n once copy is approved.
-                <p class="text-sm">"You have been invited to organize this tournament."</p>
+
+                <p class="text-sm">
+                    {t!(i18n, tournaments.ui.you_have_been_invited_to_organize_this_tournament)}
+                </p>
                 <div class="flex flex-wrap gap-2">
                     <button
                         type="button"
@@ -114,8 +118,8 @@ pub fn TournamentOrganizers(
                             send.run(TournamentAction::OrganizerAccept(tournament_id.get_value()))
                         }
                     >
-                        // TODO: i18n once copy is approved.
-                        "Accept organizer invitation"
+
+                        {t!(i18n, tournaments.ui.accept_organizer_invitation)}
                     </button>
                     <button
                         type="button"
@@ -124,30 +128,39 @@ pub fn TournamentOrganizers(
                             send.run(TournamentAction::OrganizerDecline(tournament_id.get_value()))
                         }
                     >
-                        // TODO: i18n once copy is approved.
-                        "Decline"
+
+                        {t!(i18n, common.decline)}
                     </button>
                 </div>
             </Show>
             <Show when=move || {
                 managing && management_available.get() && user_is_organizer_or_admin.get()
             }>
-                // TODO: i18n once copy is approved.
+
                 <h2 class="text-lg font-bold">
-                    {move || format!("Organizers ({})", organizers.with(Vec::len))}
+                    {move || {
+                        t_string!(
+                            i18n, tournaments.ui.organizers, value1 = organizers.with(Vec::len)
+                        )
+                            .to_string()
+                    }}
                 </h2>
                 <div class="w-full min-w-0">
-                    // TODO: i18n once copy is approved.
+
                     <UserSearch
                         compact=true
-                        placeholder="Invite an organizer"
+                        placeholder=move || {
+                            t_string!(i18n, tournaments.ui.invite_an_organizer).to_string()
+                        }
                         filtered_users=excluded
                         actions=vec![UserAction::InviteOrganizer(tournament_id.get_value())]
                     />
                 </div>
-                // TODO: i18n once copy is approved.
+
                 <p class="text-sm text-gray-600 dark:text-gray-300">
-                    "Organizers share tournament management. Invite them as players separately if they will also compete."
+                    {t!(
+                        i18n, tournaments.ui.organizers_share_tournament_management_invite_them_as_players_separately
+                    )}
                 </p>
                 <div class="space-y-2">
                     <For each=move || organizers.get() key=|user| user.uid let:user>
@@ -176,8 +189,10 @@ pub fn TournamentOrganizers(
                                                 }
                                             }
                                         >
-                                            // TODO: i18n once copy is approved.
-                                            "Leave role"
+
+                                            {move || {
+                                                t_string!(i18n, tournaments.ui.leave_role).to_string()
+                                            }}
                                         </button>
                                     </Show>
                                 </div>
@@ -187,10 +202,13 @@ pub fn TournamentOrganizers(
                 </div>
                 <Show when=move || !invitations.with(Vec::is_empty)>
                     <div class="space-y-2">
-                        // TODO: i18n once copy is approved.
+
                         <h3 class="text-sm font-semibold">
                             {move || {
-                                format!("Pending invitations ({})", invitations.with(Vec::len))
+                                t_string!(
+                                    i18n, tournaments.ui.pending_invitations, value1 = invitations.with(Vec::len)
+                                )
+                                    .to_string()
                             }}
                         </h3>
                         <For each=move || invitations.get() key=|user| user.uid let:user>
@@ -215,8 +233,10 @@ pub fn TournamentOrganizers(
                                                 }
                                             }
                                         >
-                                            // TODO: i18n once copy is approved.
-                                            "Cancel invite"
+
+                                            {move || {
+                                                t_string!(i18n, tournaments.ui.cancel_invite).to_string()
+                                            }}
                                         </button>
                                     </div>
                                 }
@@ -225,9 +245,11 @@ pub fn TournamentOrganizers(
                     </div>
                 </Show>
                 <Show when=move || organizing.get() && organizers.with(Vec::len) < 2>
-                    // TODO: i18n once copy is approved.
+
                     <p class="text-xs text-gray-600 dark:text-gray-300">
-                        "Another organizer must accept before you can leave."
+                        {t!(
+                            i18n, tournaments.ui.another_organizer_must_accept_before_you_can_leave
+                        )}
                     </p>
                 </Show>
             </Show>

@@ -8,7 +8,7 @@ use crate::{
         navigate_analysis_history,
         AnalysisHistoryNavigation as HistoryNavigation,
     },
-    i18n::{t, use_i18n},
+    i18n::*,
     providers::{
         analysis::{AnalysisContext, MoveDelta, VisibleRow},
         game_state::{GameStateStore, GameStateStoreFields},
@@ -73,11 +73,13 @@ fn DeleteBranchButton() -> impl IntoView {
                 pending.as_ref().map(|summary| {
                     let value = &summary.move_delta;
                     let branch = format!("{}. {} {}", value.turn, value.piece, value.position);
-                    let suffix = if summary.node_count == 1 { "" } else { "s" };
-                    format!(
-                        "Delete {branch} and {} node{suffix}? This cannot be undone.",
-                        summary.node_count,
+                    t_string!(
+                        i18n,
+                        analysis.delete_branch_confirmation,
+                        branch = branch,
+                        count = summary.node_count
                     )
+                    .to_string()
                 })
             })
             .unwrap_or_default()
@@ -88,17 +90,20 @@ fn DeleteBranchButton() -> impl IntoView {
             class="ui-board-nav-button"
             on:click=request_delete
             prop:disabled=is_disabled
-            aria-label="Delete branch"
-            title="Delete branch"
+            aria-label=move || t_string!(i18n, analysis.delete_branch)
+            title=move || t_string!(i18n, analysis.delete_branch)
         >
             <Icon icon=icondata_bi::BiTrashAltRegular attr:class="size-6" />
         </button>
         <div class="contents">
-            <Modal dialog_el=dialog_ref aria_label="Delete analysis branch">
+            <Modal
+                dialog_el=dialog_ref
+                aria_label=move || t_string!(i18n, analysis.delete_analysis_branch)
+            >
                 <div class="px-5 pb-5 space-y-4 w-80 max-w-[calc(100vw-2rem)]">
                     <div>
                         <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">
-                            "Delete this branch?"
+                            {move || t_string!(i18n, analysis.delete_this_branch)}
                         </h2>
                         <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">{summary_text}</p>
                     </div>
@@ -116,7 +121,7 @@ fn DeleteBranchButton() -> impl IntoView {
                             on:click=confirm_delete
                             class="ui-button ui-button-danger ui-button-sm"
                         >
-                            "Delete branch"
+                            {move || t_string!(i18n, analysis.delete_branch)}
                         </button>
                     </div>
                 </div>

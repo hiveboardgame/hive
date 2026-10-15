@@ -152,6 +152,7 @@ fn current_schedule_route(context: &ScheduleContext) -> Option<ScheduleRoute> {
 }
 
 fn short_game_label(tournament: TournamentState, slot: &SlotResponse) -> String {
+    let i18n = use_i18n();
     let number = match slot.key {
         SlotKey::RoundRobin { .. } => match tournament.format {
             TournamentFormatState::RoundRobin(format) => format
@@ -175,10 +176,9 @@ fn short_game_label(tournament: TournamentState, slot: &SlotResponse) -> String 
             slot: native_slot, ..
         } => native_slot.value() as usize + 1,
     };
-    // TODO: i18n once copy is approved.
     tournament_game_number(tournament.format, slot, number).map_or_else(
-        || unfinished_tournament_game_label(slot).to_string(),
-        |number| format!("Game {number}"),
+        || unfinished_tournament_game_label(i18n.get_locale(), slot).to_string(),
+        |number| t_string!(i18n, tournaments.schedule_context.game, game = (number)).to_string(),
     )
 }
 
@@ -253,18 +253,18 @@ fn editor_button_label(
     user_id: Uuid,
     scheduled: bool,
     now: DateTime<Utc>,
-) -> &'static str {
-    // TODO: i18n once copy is approved.
+) -> String {
+    let i18n = use_i18n();
     if pending.is_some_and(|offer| !offer.has_future_candidate(now)) {
-        "Suggest new times"
+        t_string!(i18n, tournaments.scheduling.suggest_new_times).to_string()
     } else if pending.is_some_and(|offer| offer.opponent_id == user_id) {
-        "Reply"
+        t_string!(i18n, common.reply).to_string()
     } else if pending.is_some() {
-        "View proposal"
+        t_string!(i18n, tournaments.scheduling.view_proposal).to_string()
     } else if scheduled {
-        "Reschedule"
+        t_string!(i18n, common.reschedule).to_string()
     } else {
-        "Propose times"
+        t_string!(i18n, tournaments.scheduling.propose_times).to_string()
     }
 }
 
@@ -277,11 +277,12 @@ fn pending_summary(
 ) -> ScheduleSummary {
     let incoming = offer.opponent_id == user_id;
     let detail = scheduled_at.map(|scheduled_at| {
-        // TODO: i18n once copy is approved.
-        format!(
-            "Currently scheduled · {}",
-            format_schedule_time(i18n.get_locale(), scheduled_at),
+        t_string!(
+            i18n,
+            tournaments.scheduling.currently_scheduled_value1,
+            value1 = (format_schedule_time(i18n.get_locale(), scheduled_at))
         )
+        .to_string()
     });
     let expired = !offer.has_future_candidate(now);
     ScheduleSummary {
@@ -294,31 +295,28 @@ fn pending_summary(
         },
         relevant_at: None,
         label: if expired {
-            // TODO: i18n once copy is approved.
-            String::from("Proposed times expired")
+            t_string!(i18n, tournaments.scheduling.proposed_times_expired).to_string()
         } else if incoming {
-            // TODO: i18n once copy is approved.
-            String::from(if scheduled_at.is_some() {
-                "Reschedule request"
+            if scheduled_at.is_some() {
+                t_string!(i18n, tournaments.scheduling.reschedule_request).to_string()
             } else {
-                "Reply needed"
-            })
+                t_string!(i18n, tournaments.scheduling.reply_needed).to_string()
+            }
         } else {
-            // TODO: i18n once copy is approved.
-            String::from("Proposed")
+            t_string!(i18n, tournaments.scheduling.proposed).to_string()
         },
         detail: detail.or_else(|| {
             incoming.then(|| {
-                // TODO: i18n once copy is approved.
-                format!(
-                    "{} proposed time{}",
-                    offer.candidate_times.len(),
-                    if offer.candidate_times.len() == 1 {
-                        ""
-                    } else {
-                        "s"
-                    },
-                )
+                if offer.candidate_times.len() == 1 {
+                    t_string!(i18n, tournaments.scheduling.one_proposed_time).to_string()
+                } else {
+                    t_string!(
+                        i18n,
+                        tournaments.scheduling.proposed_times_count,
+                        count = offer.candidate_times.len()
+                    )
+                    .to_string()
+                }
             })
         }),
         predecessor_game_href: None,
@@ -326,6 +324,7 @@ fn pending_summary(
 }
 
 fn predecessor_link(tournament: TournamentState, slot: &SlotResponse) -> Option<(String, String)> {
+    let i18n = use_i18n();
     let predecessor_id = slot.waits_for?;
     let predecessor = fixed_slot_fields(tournament)
         .into_iter()
@@ -333,9 +332,13 @@ fn predecessor_link(tournament: TournamentState, slot: &SlotResponse) -> Option<
         .get();
     let game_id = &predecessor.game.as_ref()?.game_id;
     let game = short_game_label(tournament, &predecessor);
-    // TODO: i18n once copy is approved.
     Some((
-        format!("Finish {game} first"),
+        t_string!(
+            i18n,
+            tournaments.scheduling.finish_game_first,
+            game = (game)
+        )
+        .to_string(),
         format!("/game/{}", game_id.0),
     ))
 }
@@ -359,36 +362,47 @@ fn schedule_summary(
             let (label, predecessor_game_href) = if let Some((label, href)) = predecessor {
                 (label, Some(href))
             } else if slot.game.is_none() {
-                // TODO: i18n once copy is approved.
-                (String::from("Not available yet"), None)
+                (
+                    t_string!(i18n, tournaments.ui.not_available_yet).to_string(),
+                    None,
+                )
             } else if state == ScheduleState::Starting {
-                // TODO: i18n once copy is approved.
-                (String::from("Starting"), None)
+                (
+                    t_string!(i18n, tournaments.scheduling.starting).to_string(),
+                    None,
+                )
             } else {
-                // TODO: i18n once copy is approved.
-                (String::from("Late"), None)
+                (
+                    t_string!(i18n, tournaments.scheduling.late).to_string(),
+                    None,
+                )
             };
             return ScheduleSummary {
                 state,
                 relevant_at: Some(scheduled_at),
                 label,
                 detail: Some({
-                    // TODO: i18n once copy is approved.
                     let request = pending
                         .map(|offer| {
                             if !offer.has_future_candidate(now) {
-                                " · Proposed times expired"
+                                t_string!(i18n, tournaments.scheduling.proposed_times_expired_label)
+                                    .to_string()
                             } else if offer.opponent_id == user_id {
-                                " · Reschedule request"
+                                t_string!(i18n, tournaments.scheduling.reschedule_request_label)
+                                    .to_string()
                             } else {
-                                " · Reschedule proposed"
+                                t_string!(i18n, tournaments.scheduling.reschedule_proposed)
+                                    .to_string()
                             }
                         })
                         .unwrap_or_default();
-                    format!(
-                        "Agreed · {}{request}",
-                        format_schedule_time(i18n.get_locale(), scheduled_at)
+                    t_string!(
+                        i18n,
+                        tournaments.scheduling.agreed_value1_request,
+                        value1 = (format_schedule_time(i18n.get_locale(), scheduled_at)),
+                        request = (request)
                     )
+                    .to_string()
                 }),
                 predecessor_game_href,
             };
@@ -399,8 +413,7 @@ fn schedule_summary(
         return ScheduleSummary {
             state: ScheduleState::Scheduled,
             relevant_at: Some(scheduled_at),
-            // TODO: i18n once copy is approved.
-            label: String::from("Scheduled"),
+            label: t_string!(i18n, common.scheduled).to_string(),
             detail: Some(format_schedule_time(i18n.get_locale(), scheduled_at)),
             predecessor_game_href: None,
         };
@@ -416,16 +429,14 @@ fn schedule_summary(
             ScheduleState::Unscheduled
         },
         relevant_at: slot.deadline_at,
-        // TODO: i18n once copy is approved.
-        label: String::from("Needs a time"),
+        label: t_string!(i18n, tournaments.scheduling.needs_a_time).to_string(),
         detail: slot.deadline_at.map(|deadline| {
-            // TODO: i18n once copy is approved.
             format!(
                 "{} · {}",
                 if overdue {
-                    "Play-by time passed"
+                    t_string!(i18n, tournaments.scheduling.play_by_time_passed).to_string()
                 } else {
-                    "Play by"
+                    t_string!(i18n, common.play_by).to_string()
                 },
                 format_schedule_time(i18n.get_locale(), deadline),
             )
@@ -595,15 +606,23 @@ fn status_class(state: ScheduleState) -> &'static str {
 }
 
 fn sidebar_label(summary: &ScheduleSummary) -> String {
+    let i18n = use_i18n();
     if summary.state == ScheduleState::Scheduled {
-        // TODO: i18n once copy is approved.
         summary.relevant_at.map_or_else(
             || summary.label.clone(),
             |scheduled_at| {
-                format!(
-                    "Next: {}",
-                    scheduled_at.with_timezone(&Local).format("%b %-d"),
+                t_string!(
+                    i18n,
+                    tournaments.scheduling.next_value1,
+                    value1 = (t_string!(
+                        i18n,
+                        common.short_date,
+                        month = scheduled_at.with_timezone(&Local).format("%m").to_string(),
+                        day = scheduled_at.with_timezone(&Local).format("%d").to_string()
+                    )
+                    .to_string())
                 )
+                .to_string()
             },
         )
     } else {
@@ -782,8 +801,7 @@ fn ParticipantSlotRow(slot_id: Uuid) -> impl IntoView {
                                             class="ui-button ui-button-secondary ui-button-sm"
                                             href=href
                                         >
-                                            // TODO: i18n once copy is approved.
-                                            "Game"
+                                            {t!(i18n, common.game)}
                                         </a>
                                     }
                                 })}
@@ -812,6 +830,7 @@ fn ParticipantSlotRow(slot_id: Uuid) -> impl IntoView {
 
 #[component]
 fn ParticipantOpponentDetail(opponent: OpponentGroup, show_mobile_back: bool) -> impl IntoView {
+    let i18n = use_i18n();
     let context = expect_context::<ScheduleContext>();
     let username = opponent.user.username.clone();
     let count = opponent.slot_ids.len();
@@ -826,14 +845,22 @@ fn ParticipantOpponentDetail(opponent: OpponentGroup, show_mobile_back: bool) ->
                             scroll=false
                             attr:class="inline-flex gap-1 items-center mb-1 text-sm font-semibold no-link-style text-pillbug-teal tournament-two:hidden"
                         >
-                            // TODO: i18n once copy is approved.
-                            "‹ All opponents"
+                            {t!(i18n, tournaments.scheduling.all_opponents)}
                         </A>
                     </Show>
                     <UserIdentity user=opponent.user class="h-9" />
                     <p class="text-xs text-gray-500 dark:text-gray-400">
-                        // TODO: i18n once copy is approved.
-                        {format!("{count} game{} to schedule", if count == 1 { "" } else { "s" })}
+                        {move || {
+                            if count == 1 {
+                                t_string!(i18n, tournaments.scheduling.one_game_to_schedule)
+                                    .to_string()
+                            } else {
+                                t_string!(
+                                    i18n, tournaments.scheduling.games_to_schedule, count = count
+                                )
+                                    .to_string()
+                            }
+                        }}
                     </p>
                 </div>
                 <MessageButton username />
@@ -1013,9 +1040,13 @@ pub fn ParticipantScheduleLayout(
     };
     view! {
         <div class="space-y-3">
-            // TODO: i18n once copy is approved.
             <h2 class="break-words ui-page-title">
-                {move || format!("Scheduling · {}", tournament.common.lifecycle().get().name)}
+                {move || {
+                    t_string!(
+                        i18n, tournaments.scheduling.scheduling_value1, value1 = (tournament.common.lifecycle().get().name)
+                    )
+                        .to_string()
+                }}
             </h2>
             <div class="overflow-hidden rounded-lg border shadow-sm border-black/10 bg-even-light/95 tournament-two:grid tournament-two:h-[min(68vh,44rem)] tournament-two:grid-cols-[minmax(15rem,19rem)_minmax(0,1fr)] tournament-two:grid-rows-[minmax(0,1fr)] dark:border-white/10 dark:bg-surface-panel">
                 <aside class=move || {
@@ -1029,8 +1060,7 @@ pub fn ParticipantScheduleLayout(
                     )
                 }>
                     <div class="flex gap-2 justify-between items-center py-2.5 px-3 border-b border-black/10 bg-odd-light dark:border-white/10 dark:bg-surface-raised">
-                        // TODO: i18n once copy is approved.
-                        <h3 class="font-bold">"Opponents"</h3>
+                        <h3 class="font-bold">{t!(i18n, common.opponents)}</h3>
                         <span class="text-xs text-gray-500 dark:text-gray-400">
                             {move || {
                                 if current_schedule_route(&context).is_none() {
@@ -1051,11 +1081,10 @@ pub fn ParticipantScheduleLayout(
                                     .try_with(|opponents| !opponents.is_empty())
                                     .unwrap_or(false)
                             }
-                            fallback=|| {
+                            fallback=move || {
                                 view! {
-                                    // TODO: i18n once copy is approved.
                                     <p class="p-4 text-sm text-gray-600 dark:text-gray-300">
-                                        "Nothing to schedule"
+                                        {t!(i18n, tournaments.scheduling.nothing_to_schedule)}
                                     </p>
                                 }
                             }
@@ -1088,6 +1117,7 @@ pub fn ParticipantScheduleLayout(
 
 #[component]
 pub fn ParticipantScheduleIndex() -> impl IntoView {
+    let i18n = use_i18n();
     let context = expect_context::<ScheduleContext>();
     view! {
         {move || {
@@ -1105,9 +1135,8 @@ pub fn ParticipantScheduleIndex() -> impl IntoView {
                     Some(
                         view! {
                             <div class="flex flex-1 justify-center items-center p-6">
-                                // TODO: i18n once copy is approved.
                                 <p class="text-sm text-gray-600 dark:text-gray-300">
-                                    "Nothing to schedule"
+                                    {t!(i18n, tournaments.scheduling.nothing_to_schedule)}
                                 </p>
                             </div>
                         }
@@ -1121,6 +1150,7 @@ pub fn ParticipantScheduleIndex() -> impl IntoView {
 
 #[component]
 pub fn ParticipantScheduleOpponent() -> impl IntoView {
+    let i18n = use_i18n();
     let context = expect_context::<ScheduleContext>();
     view! {
         {move || {
@@ -1151,12 +1181,10 @@ pub fn ParticipantScheduleOpponent() -> impl IntoView {
                                     scroll=false
                                     attr:class="inline-flex text-sm font-semibold no-link-style text-pillbug-teal tournament-two:hidden"
                                 >
-                                    // TODO: i18n once copy is approved.
-                                    "‹ All opponents"
+                                    {t!(i18n, tournaments.scheduling.all_opponents)}
                                 </A>
-                                // TODO: i18n once copy is approved.
                                 <p class="text-sm text-gray-600 dark:text-gray-300">
-                                    "This opponent has no remaining scheduling tasks."
+                                    {t!(i18n, tournaments.scheduling.no_remaining_tasks)}
                                 </p>
                             </div>
                         }

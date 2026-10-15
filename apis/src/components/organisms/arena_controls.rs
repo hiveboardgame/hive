@@ -189,17 +189,17 @@ pub fn ArenaAction(common: Store<TournamentCommon>, arena: Store<ArenaState>) ->
         <Show when=is_running_arena>
             <div class="flex flex-col gap-1 items-end min-w-0">
                 <Show when=is_entrant>
-                    // TODO: i18n once copy is approved.
+
                     <p class="text-xs text-gray-600 dark:text-gray-300">
                         {move || {
                             if own_active_game.get().is_some() {
-                                "Playing"
+                                t_string!(i18n, common.playing).to_string()
                             } else if own_is_paused.get().unwrap_or_default() {
-                                "Paused"
+                                t_string!(i18n, common.paused).to_string()
                             } else if !entry_window_open.get() {
-                                "Pairings closed"
+                                t_string!(i18n, tournaments.ui.pairings_closed).to_string()
                             } else {
-                                "Waiting for an opponent"
+                                t_string!(i18n, tournaments.ui.waiting_for_an_opponent).to_string()
                             }
                         }}
                     </p>
@@ -233,7 +233,7 @@ pub fn ArenaAction(common: Store<TournamentCommon>, arena: Store<ArenaState>) ->
                                         class="ui-button ui-button-primary ui-button-sm"
                                         disabled
                                     >
-                                        {t!(i18n, tournaments.arena.join)}
+                                        {t!(i18n, common.join)}
                                     </button>
                                 }
                                     .into_any()
@@ -251,7 +251,7 @@ pub fn ArenaAction(common: Store<TournamentCommon>, arena: Store<ArenaState>) ->
                                         format=TournamentFormatState::Arena(arena)
                                         can_join
                                         label=Signal::derive(move || {
-                                            t_string!(i18n, tournaments.arena.join).to_string()
+                                            t_string!(i18n, common.join).to_string()
                                         })
                                         on_join=Callback::new(move |()| {
                                             api.get()
@@ -266,10 +266,15 @@ pub fn ArenaAction(common: Store<TournamentCommon>, arena: Store<ArenaState>) ->
                         }}
                     </Show>
                     <Show when=can_pause>
-                        // TODO: i18n once copy is approved.
+
                         <button
                             class="ui-button ui-button-danger ui-button-sm"
-                            title="Pause stops new pairings. Your current game continues."
+                            title=move || {
+                                t_string!(
+                                    i18n, tournaments.ui.pause_stops_new_pairings_your_current_game_continues
+                                )
+                                    .to_string()
+                            }
                             on:click=send(TournamentAction::ArenaPause(tournament_id.get_value()))
                         >
                             {t!(i18n, tournaments.arena.pause)}

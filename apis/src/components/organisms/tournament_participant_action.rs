@@ -9,6 +9,7 @@ use crate::{
         },
     },
     hooks::arena_clock::use_ticking_now,
+    i18n::*,
     providers::{
         ApiRequestsProvider,
         ArenaState,
@@ -51,6 +52,7 @@ pub fn TournamentParticipantAction(
     format: TournamentFormatState,
     #[prop(optional, into)] next_action: Signal<Option<(String, String)>>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let auth = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
     let now = use_ticking_now();
@@ -182,9 +184,11 @@ pub fn TournamentParticipantAction(
                     ParticipantAction::Joined => {
                         view! {
                             <div class="flex flex-wrap gap-2 items-center">
-                                // TODO: i18n once copy is approved.
                                 <span class="text-sm font-medium">
-                                    "Joined · waiting to start"
+                                    {move || {
+                                        t_string!(i18n, tournaments.ui.joined_waiting_to_start)
+                                            .to_string()
+                                    }}
                                 </span>
                                 <button
                                     type="button"
@@ -193,8 +197,7 @@ pub fn TournamentParticipantAction(
                                         send.run(TournamentAction::Leave(tournament_id.get_value()))
                                     }
                                 >
-                                    // TODO: i18n once copy is approved.
-                                    "Leave"
+                                    {move || t_string!(i18n, common.leave).to_string()}
                                 </button>
                             </div>
                         }
@@ -208,12 +211,13 @@ pub fn TournamentParticipantAction(
                                         common
                                         format
                                         can_join=Signal::derive(move || admission.get().can_enter())
-                                        // TODO: i18n once copy is approved.
+
                                         label=Signal::derive(move || {
                                             if relationship.get().invited {
-                                                "Accept invitation"
+                                                t_string!(i18n, notifications.tournament_invitation.accept)
+                                                    .to_string()
                                             } else {
-                                                "Join"
+                                                t_string!(i18n, common.join).to_string()
                                             }
                                                 .to_string()
                                         })
@@ -241,8 +245,8 @@ pub fn TournamentParticipantAction(
                                                 )
                                             }
                                         >
-                                            // TODO: i18n once copy is approved.
-                                            "Decline"
+
+                                            {move || t_string!(i18n, common.decline).to_string()}
                                         </button>
                                     </Show>
                                 </div>
@@ -282,7 +286,7 @@ pub fn TournamentParticipantAction(
                                         class="text-sm text-gray-600 dark:text-gray-300"
                                         role="status"
                                     >
-                                        // TODO: i18n once copy is approved.
+
                                         {move || {
                                             if user_id
                                                 .get()
@@ -292,7 +296,7 @@ pub fn TournamentParticipantAction(
                                                         .with(|memberships| memberships.withdrawn.contains(&id))
                                                 })
                                             {
-                                                "Withdrawn"
+                                                t_string!(i18n, common.withdrawn).to_string()
                                             } else if let TournamentFormatState::Elimination(state) = format {
                                                 state
                                                     .player_results()
@@ -301,13 +305,17 @@ pub fn TournamentParticipantAction(
                                                             .iter()
                                                             .find(|result| Some(result.player) == user_id.get())
                                                         {
-                                                            Some(result) if result.placement == Some(1) => "Winner",
-                                                            Some(result) if !result.in_contention => "Eliminated",
-                                                            _ => "Playing",
+                                                            Some(result) if result.placement == Some(1) => {
+                                                                t_string!(i18n, common.winner).to_string()
+                                                            }
+                                                            Some(result) if !result.in_contention => {
+                                                                t_string!(i18n, common.eliminated).to_string()
+                                                            }
+                                                            _ => t_string!(i18n, common.playing).to_string(),
                                                         }
                                                     })
                                             } else {
-                                                "Playing"
+                                                t_string!(i18n, common.playing).to_string()
                                             }
                                         }}
                                     </span>
@@ -323,9 +331,8 @@ pub fn TournamentParticipantAction(
                     }
                     ParticipantAction::EntryClosed => {
                         view! {
-                            // TODO: i18n once copy is approved.
                             <span class="text-sm text-gray-600 dark:text-gray-300">
-                                "Entry closed · waiting to start"
+                                {t!(i18n, tournaments.ui.entry_closed_waiting_to_start)}
                             </span>
                         }
                             .into_any()

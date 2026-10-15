@@ -1,3 +1,4 @@
+use crate::common::parse_locale;
 use std::sync::Arc;
 
 use db_lib::{
@@ -170,14 +171,6 @@ fn channels_for(prefs: &NotificationPreferences, category: NotificationCategory)
     parse_channels(raw)
 }
 
-fn parse_locale(code: &str) -> Locale {
-    Locale::get_all()
-        .iter()
-        .find(|l| l.to_string() == code)
-        .copied()
-        .unwrap_or_default()
-}
-
 async fn fetch_locale(recipient: Uuid, pool: &DbPool) -> Locale {
     let Ok(mut conn) = get_conn(pool).await else {
         return Locale::default();
@@ -210,9 +203,9 @@ async fn send_channels<'a>(
                 Some(event.category()),
             ))),
             Channel::Discord if event.suppresses_discord() => {}
-            Channel::Discord => sends.push(Box::pin(send_discord(event, recipient))),
+            Channel::Discord => sends.push(Box::pin(send_discord(event, recipient, locale))),
             Channel::Email => {
-                let (subject, _body) = event.render_email();
+                let (subject, _body) = event.render_email(locale);
                 log::warn!("notify: email channel not implemented (would send '{subject}')");
             }
         }
@@ -395,8 +388,8 @@ fn schedule_retry(
     });
 }
 
-async fn send_discord(event: &Event, recipient: uuid::Uuid) {
-    let msg = event.render_discord();
+async fn send_discord(event: &Event, recipient: uuid::Uuid, locale: Locale) {
+    let msg = event.render_discord(locale);
     if let Err(err) = Busybee::msg(recipient, msg).await {
         log::warn!("notify: discord send for {recipient} failed: {err}");
     }

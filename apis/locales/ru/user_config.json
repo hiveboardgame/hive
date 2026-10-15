@@ -51,5 +51,33 @@
         "casual_only": "Только в играх без рейтинга",
         "always": "Разрешена всегда",
         "never": "Никогда"
+    },
+    "click_on_your_clock": "Нажатие на свои часы",
+    "double_click": "Двойной щелчок",
+    "single_click": "Один щелчок",
+    "light_mode": "Светлая тема",
+    "dark_mode": "Тёмная тема",
+    "white_background": "Белый фон",
+    "black_background": "Чёрный фон",
+    "current_color": "Текущий: {{color}}",
+    "ant_light_preview": "Муравей {{design}} (светлая тема)",
+    "ant_dark_preview": "Муравей {{design}} (тёмная тема)",
+    "tile_design": {
+        "official": "Официальный",
+        "flat": "Плоский",
+        "three_d": "3D",
+        "high_contrast": "Высокий контраст",
+        "community": "Сообщество",
+        "pride": "Прайд",
+        "carbon_three_d": "Карбон 3D",
+        "carbon": "Карбон"
+    },
+    "tile_design_browser_notice": "Не все браузеры поддерживают все оформления фишек. Firefox обеспечивает наиболее стабильное отображение.",
+    "settings": {
+        "settings": "Настройки",
+        "tune_board_visuals_and_move_input_preferences": "Настройка вида доски и способа ввода ходов.",
+        "board_appearance": "Вид доски",
+        "play_preferences": "Настройки игры",
+        "if_either_player_has_takebacks_disabled_game_controls_will": "Если хотя бы один игрок запретил возврат ходов, запросить возврат в меню действий будет нельзя."
     }
 }

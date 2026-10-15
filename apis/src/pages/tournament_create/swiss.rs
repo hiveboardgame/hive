@@ -216,20 +216,21 @@ pub(super) fn SwissCreationForm() -> impl IntoView {
             configuration=Callback::new(move |()| draft.configuration(clock.get_untracked()))
             field=Signal::derive(move || (Some(draft.seats.get()), MIN_SWISS_START_SEATS))
             valid=capacity_valid
-            // TODO: i18n once copy is approved.
+
             participant_summary=Signal::derive(move || {
                 if capacity_valid.get() {
-                    format!("Up to {} players", draft.seats.get())
+                    t_string!(i18n, tournaments.creation.up_to_players, count = draft.seats.get())
+                        .to_string()
                 } else {
                     String::new()
                 }
             })
         >
             <CreationDetails draft=common>
-
                 <label class="flex flex-col gap-1.5 sm:col-span-2 ui-setting-group">
-                    // TODO: i18n once copy is approved.
-                    <span class="ui-field-label">"Maximum players"</span>
+                    <span class="ui-field-label">
+                        {t!(i18n, tournaments.creation.maximum_players)}
+                    </span>
                     <input
                         class="ui-field-input"
                         name="Maximum players"
@@ -239,19 +240,21 @@ pub(super) fn SwissCreationForm() -> impl IntoView {
                         prop:value=draft.capacity
                         on:input=move |event| draft.set_capacity(event_target_value(&event))
                     />
-                    // TODO: i18n once copy is approved.
                     <small class="ui-field-helper">
-                        "At least five players are needed to start."
+                        {t!(i18n, tournaments.creation.swiss_minimum_players)}
                     </small>
                     <Show when=move || !capacity_valid.get()>
-                        // TODO: i18n once copy is approved.
-                        <small class="ui-field-error">"Choose between 5 and 160 players."</small>
+                        <small class="ui-field-error">
+                            {t!(i18n, tournaments.creation.swiss_capacity_error)}
+                        </small>
                     </Show>
                 </label>
             </CreationDetails>
             <ClockFields params />
-            // TODO: i18n once copy is approved.
-            <Panel title="Tournament rules" body_class="space-y-5">
+            <Panel
+                title=move || t_string!(i18n, tournaments.creation.rules).to_string()
+                body_class="space-y-5"
+            >
                 <label class="flex flex-col gap-1.5 max-w-md">
                     <span class="ui-field-label">{t!(i18n, tournaments.creation.mode)}</span>
                     <select
@@ -269,18 +272,10 @@ pub(super) fn SwissCreationForm() -> impl IntoView {
                     </select>
                 </label>
                 <div class="space-y-3">
-                    // TODO: i18n once copy is approved.
-                    <span class="ui-field-label">"Rounds"</span>
+                    <span class="ui-field-label">{t!(i18n, tournaments.creation.rounds)}</span>
                     <div class="grid gap-1 grid-cols-[1fr_1fr_1.7fr_1fr_1fr_1fr]">
-                        // TODO: i18n once copy is approved.
-                        {[
-                            (-2, "−2"),
-                            (-1, "−1"),
-                            (0, "Optimal"),
-                            (1, "+1"),
-                            (2, "+2"),
-                            (3, "+3"),
-                        ]
+
+                        {[(-2, "−2"), (-1, "−1"), (0, ""), (1, "+1"), (2, "+2"), (3, "+3")]
                             .into_iter()
                             .map(|(extra, label)| {
                                 view! {
@@ -298,32 +293,36 @@ pub(super) fn SwissCreationForm() -> impl IntoView {
                                         }
                                         on:click=move |_| draft.extra_rounds.set(extra)
                                     >
-                                        {label}
+                                        {move || {
+                                            if extra == 0 {
+                                                t_string!(i18n, tournaments.creation.optimal).to_string()
+                                            } else {
+                                                label.to_string()
+                                            }
+                                        }}
                                     </button>
                                 }
                             })
                             .collect_view()}
                     </div>
                     <Show when=capacity_valid>
-                        // TODO: i18n once copy is approved.
                         <p class="ui-field-helper">
                             {move || {
-                                format!(
-                                    "{} rounds with {} players; adjusted to the number who start.",
-                                    swiss_preview_rounds(draft.extra_rounds.get()),
-                                    draft.seats.get(),
+                                t_string!(
+                                    i18n, tournaments.creation.swiss_rounds_summary, rounds = swiss_preview_rounds(draft.extra_rounds.get()), players = draft.seats.get()
                                 )
+                                    .to_string()
                             }}
                         </p>
                     </Show>
                 </div>
-
                 <div class="space-y-4">
                     <Show when=draft.double>
                         <div class="grid gap-4 sm:grid-cols-2">
                             <label class="flex flex-col gap-1.5 ui-setting-group">
-                                // TODO: i18n once copy is approved.
-                                <span class="ui-field-label">"Scoring"</span>
+                                <span class="ui-field-label">
+                                    {t!(i18n, tournaments.creation.scoring)}
+                                </span>
                                 <select
                                     class="ui-field-select"
                                     prop:value=move || match draft.primary_score.get() {
@@ -340,15 +339,18 @@ pub(super) fn SwissCreationForm() -> impl IntoView {
                                         draft.set_primary_score(primary_score);
                                     }
                                 >
-                                    // TODO: i18n once copy is approved.
-                                    <option value="game_points">"Game points"</option>
-                                    // TODO: i18n once copy is approved.
-                                    <option value="match_points">"Match points"</option>
+                                    <option value="game_points">
+                                        {t!(i18n, tournaments.tiebreakers.names.game_points)}
+                                    </option>
+                                    <option value="match_points">
+                                        {t!(i18n, tournaments.tiebreakers.names.match_points)}
+                                    </option>
                                 </select>
                             </label>
                             <label class="flex flex-col gap-1.5 ui-setting-group">
-                                // TODO: i18n once copy is approved.
-                                <span class="ui-field-label">"Game availability"</span>
+                                <span class="ui-field-label">
+                                    {t!(i18n, tournaments.creation.game_availability)}
+                                </span>
                                 <select
                                     class="ui-field-select"
                                     prop:value=move || {
@@ -362,13 +364,11 @@ pub(super) fn SwissCreationForm() -> impl IntoView {
                                         }
                                     }
                                 >
-                                    // TODO: i18n once copy is approved.
                                     <option value="fully_unlocked">
-                                        "Release both games together"
+                                        {t!(i18n, tournaments.creation.release_both_games)}
                                     </option>
-                                    // TODO: i18n once copy is approved.
                                     <option value="sequential_per_matchup">
-                                        "Release Game 2 after Game 1"
+                                        {t!(i18n, tournaments.creation.release_second_game)}
                                     </option>
                                 </select>
                             </label>

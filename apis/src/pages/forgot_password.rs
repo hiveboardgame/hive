@@ -26,9 +26,13 @@ pub fn ForgotPassword() -> impl IntoView {
                             <ActionForm action=action attr:class="space-y-4">
 
                                 <div class="flex flex-col gap-1">
-                                    <h1 class="ui-page-title">"Forgot your password?"</h1>
+                                    <h1 class="ui-page-title">
+                                        {t!(i18n, common.auth.forgot_your_password)}
+                                    </h1>
                                     <p class="ui-page-subtitle">
-                                        "Enter your account email and we'll send you a link to set a new password."
+                                        {t!(
+                                            i18n, common.auth.enter_your_account_email_and_we_ll_send_you
+                                        )}
                                     </p>
                                 </div>
                                 <label class="flex flex-col gap-1.5">
@@ -46,7 +50,7 @@ pub fn ForgotPassword() -> impl IntoView {
                                     class="w-full ui-button ui-button-primary ui-button-md"
                                     type="submit"
                                 >
-                                    "Send reset link"
+                                    {t!(i18n, common.auth.send_reset_link)}
                                 </button>
                             </ActionForm>
                         }
@@ -54,16 +58,18 @@ pub fn ForgotPassword() -> impl IntoView {
                 >
                     <div class="space-y-4">
                         <div class="flex flex-col gap-1">
-                            <h1 class="ui-page-title">"Check your inbox"</h1>
+                            <h1 class="ui-page-title">{t!(i18n, common.auth.check_your_inbox)}</h1>
                             <p class="ui-page-subtitle">
-                                "If an account exists for that email, a password reset link is on its way."
+                                {t!(
+                                    i18n, common.auth.if_an_account_exists_for_that_email_a_password
+                                )}
                             </p>
                         </div>
                         <a
                             class="ui-text-link"
                             href=move || auth_page_url("/login", &pathname.get())
                         >
-                            "Back to login"
+                            {t!(i18n, common.auth.back_to_login)}
                         </a>
                     </div>
                 </Show>

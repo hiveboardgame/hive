@@ -60,12 +60,15 @@ pub fn GameDetailsPanel() -> impl IntoView {
             game_response
                 .as_ref()
                 .map(|game| {
-                    format!(
-                        "{} vs {}",
-                        game.white_player.username, game.black_player.username
+                    t_string!(
+                        i18n,
+                        common.versus_players,
+                        white = game.white_player.username.clone(),
+                        black = game.black_player.username.clone()
                     )
+                    .to_string()
                 })
-                .unwrap_or_else(|| "Game details".to_string())
+                .unwrap_or_else(|| t_string!(i18n, analysis.game_details).to_string())
         })
     });
     let game_href = Memo::new(move |_| {
@@ -126,7 +129,7 @@ pub fn GameDetailsPanel() -> impl IntoView {
                     )
                 }>
                     <span class="text-gray-700 whitespace-nowrap dark:text-gray-200 shrink-0">
-                        "Played in"
+                        {move || t_string!(i18n, game.played_in_label)}
                     </span>
                     <a
                         href=tournament_href

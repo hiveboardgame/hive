@@ -7,12 +7,29 @@
         "col_discord": "Discord",
         "saving": "S'està desant…",
         "saved": "Desat.",
-        "save_failed": "No s'ha pogut desar:"
+        "save_failed": "No s'ha pogut desar:",
+        "push_discord_and_device_delivery_settings": "Configuració de lliurament push, de Discord i de dispositius.",
+        "notification_preferences": "Preferències de notificacions",
+        "enable_browser_notifications_before_choosing_push_delivery": "Activa les notificacions del navegador abans de triar el lliurament push.",
+        "discord_link_instructions": "Uneix-te al servidor de Discord de HiveGame i vincula el teu compte de Discord a continuació per activar la configuració de notificacions de Discord.",
+        "discord_integration": "Integració amb Discord",
+        "step_1": "Pas 1",
+        "join_the_hivegame_discord_server": "Uneix-te al servidor de Discord de HiveGame.",
+        "join_discord": "Uneix-te a Discord",
+        "step_2": "Pas 2",
+        "link_this_hivegame_account_to_discord": "Vincula aquest compte de HiveGame amb Discord.",
+        "no_discord_account_linked": "Cap compte de Discord vinculat",
+        "sign_in_to_link_discord": "Inicia la sessió per vincular Discord",
+        "discord_status_temporarily_unavailable": "Estat de Discord temporalment no disponible",
+        "error_loading_discord_name": "Error en carregar el nom de Discord",
+        "link_discord_account": "Vincula el compte de Discord",
+        "push_delivery_is_enabled_for_this_browser": "El lliurament push està activat en aquest navegador.",
+        "push_delivery_is_enabled_on_another_browser": "El lliurament push està activat en un altre navegador.",
+        "browser_notifications_are_not_available_in_this_browser": "Les notificacions del navegador no estan disponibles en aquest navegador."
     },
     "events": {
         "your_turn": "El teu torn",
         "challenges": "Repte rebut",
-        "game_ended": "Partida acabada",
         "tournament": "Invitació a un torneig",
         "schedules": "Proposta d'horari",
         "dms": "Missatge directe"
@@ -33,7 +50,6 @@
     "devices": {
         "heading": "Els teus dispositius",
         "body": "Tots els dispositius configurats actualment per rebre push. Elimina els que ja no facis servir.",
-        "remove": "Elimina",
         "this_browser": "(aquest navegador)",
         "last_active": "última activitat",
         "platform_web": "Navegador"
@@ -62,9 +78,7 @@
         "accepted": "{{player}} ha acceptat jugar el {{time}}"
     },
     "tournament_status": {
-        "label": "Torneig",
-        "started": "Iniciat",
-        "finished": "Acabat"
+        "label": "Torneig"
     },
     "tournament_invitation": {
         "label": "Invitació a un torneig",
@@ -81,7 +95,6 @@
         "challenge_casual": "{{challenger}} · {{time_control}} · amistosa",
         "game_started_title": "Partida iniciada",
         "game_started_body": "contra {{opponent}} · {{time_control}}",
-        "game_ended_title": "Partida acabada",
         "game_ended_won_resignation": "{{opponent}} ha abandonat",
         "game_ended_won_timeout": "A {{opponent}} se li ha acabat el temps",
         "game_ended_won": "Has guanyat {{opponent}}",
@@ -111,9 +124,93 @@
         "test_title": "HiveGame",
         "test_body": "Notificació de prova — les notificacions funcionen"
     },
-    "tournament_status": {
-        "label": "Torneig",
-        "started": "Ha començat",
-        "finished": "Ha acabat"
+    "tournament_notice": {
+        "start_deferred": "No hi havia prou participants a l'hora prevista. Inicia el torneig manualment quan s'hi hagin inscrit prou jugadors.",
+        "games_ready": "Hi ha {{count}} partides a punt. Obre el torneig per veure els aparellaments.",
+        "recorded_one": "Un organitzador ha registrat un resultat de {{outcome}} per a la teva partida.",
+        "recorded_many": "Un organitzador ha registrat resultats de {{count}} de les teves partides: {{outcomes}}.",
+        "schedule_cancelled": "{{actor}} ha cancel·lat l'hora acordada per a la teva partida ({{time}})",
+        "outcome": {
+            "double_forfeit": "doble incompareixença",
+            "draw": "taules",
+            "win": "victòria",
+            "loss": "derrota"
+        }
+    },
+    "external": {
+        "open_description": "{{description}}. Obre: {{link}}",
+        "organizer_title": "Invitació per organitzar un torneig",
+        "organizer_body": "T'han convidat a organitzar {{tournament_name}}.",
+        "schedule_many": "{{proposer}} ha proposat {{count}} hores per al teu enfrontament. Obre per triar-ne una.",
+        "organizer_discord": "T'han convidat a organitzar el [torneig {{tournament_name}}](<https://hivegame.com/tournament/{{tournament_nanoid}}>).",
+        "schedule_many_discord": "[Horari proposat](<{{link}}>) — {{proposer}} ha proposat {{count}} hores per a la teva partida. Obre per triar-ne una.",
+        "organizer_subject": "Invitació d'organitzador: {{tournament_name}}",
+        "organizer_email": "T'han convidat a organitzar {{tournament_name}}. Obre: {{link}}",
+        "schedule_many_subject": "{{proposer}} ha proposat hores per jugar",
+        "schedule_many_email": "{{proposer}} ha proposat {{count}} hores per a la teva partida. Obre per triar-ne una: {{link}}",
+        "your_turn_discord": "[És el teu torn](<https://hivegame.com/game/{{game_nanoid}}>) a la partida contra {{opponent}}.",
+        "challenge_discord": "[Repte nou](<https://hivegame.com/challenge/{{challenge_nanoid}}>) de {{challenger}} · {{time_control}} · {{rated}}.",
+        "game_started_discord": "[La teva partida](<https://hivegame.com/game/{{game_nanoid}}>) contra {{opponent}} ha començat · {{time_control}}.",
+        "game_ended_won_discord": "has guanyat contra {{opponent}}",
+        "game_ended_draw_agreement_discord": "has fet taules amb {{opponent}} per acord",
+        "game_ended_draw_discord": "has fet taules amb {{opponent}}",
+        "game_ended_discord": "La teva [partida](<https://hivegame.com/game/{{game_nanoid}}>) ha acabat — {{detail}}{{change}}.",
+        "tournament_invite_discord": "T'han convidat al [torneig {{tournament_name}}](<https://hivegame.com/tournament/{{tournament_nanoid}}>).",
+        "tournament_started_discord": "El [torneig {{tournament_name}}](<https://hivegame.com/tournament/{{tournament_nanoid}}>) ha començat! Les teves partides estan a punt.",
+        "schedule_propose_discord": "[Horari proposat](<{{link}}>) — {{proposer}} ha proposat {{when}} per a la teva partida.",
+        "schedule_accept_discord": "[Horari acceptat](<{{link}}>) — {{opponent}} ha acceptat {{when}} per a la teva partida.",
+        "direct_message_discord": "Missatge directe de {{sender}}: {{preview}}",
+        "game_control_discord": "[La teva partida](<https://hivegame.com/game/{{game_nanoid}}>) — {{actor}} {{action}}.",
+        "your_turn_subject": "El teu torn contra {{opponent}}",
+        "your_turn_email": "{{opponent}} acaba de moure a la teva partida. Continua a https://hivegame.com/game/{{game_nanoid}}",
+        "challenge_subject": "{{challenger}} t'ha reptat a HiveGame",
+        "challenge_email": "{{challenger}} t'ha enviat un repte {{time_control}} {{rated}}. Obre: {{link}}",
+        "game_started_subject": "Ha començat la partida contra {{opponent}}",
+        "game_started_email": "El teu repte {{time_control}} s'ha acceptat. Obre: {{link}}",
+        "game_ended_email": "Revisa la partida: {{link}}",
+        "tournament_invite_subject": "Invitació al torneig: {{tournament_name}}",
+        "tournament_invite_email": "T'han convidat a {{tournament_name}}. Obre: {{link}}",
+        "tournament_started_subject": "Ha començat el torneig {{tournament_name}}",
+        "tournament_started_email": "{{tournament_name}} ha començat i les teves partides estan a punt. Obre: {{link}}",
+        "schedule_propose_subject": "{{proposer}} ha proposat un horari de partida",
+        "schedule_propose_email": "{{proposer}} ha proposat {{when}} per a la teva partida. Obre: {{link}}",
+        "schedule_accept_subject": "{{opponent}} ha acceptat l'horari proposat",
+        "schedule_accept_email": "{{opponent}} ha acceptat {{when}} per a la teva partida. Obre: {{link}}",
+        "game_control_subject": "{{actor}} {{action}}",
+        "game_control_email": "{{title}} a la teva partida. Obre: {{link}}",
+        "test_subject": "Notificació de prova de HiveGame",
+        "test_email": "Les notificacions push funcionen.",
+        "direct_message_subject": "Missatge nou de {{sender}}"
+    },
+    "push_errors": {
+        "enable_first": "Activa primer les notificacions.",
+        "test_failed": "No s'ha pogut enviar la notificació de prova.",
+        "unavailable": "Les notificacions no estan disponibles en aquest navegador.",
+        "service_workers_unsupported": "Aquest navegador no admet service workers.",
+        "registration_lookup_failed": "No s'ha pogut trobar el servei de notificacions del navegador.",
+        "service_worker_missing": "Torna a carregar la pàgina i torna-ho a provar; el servei de notificacions encara no està a punt.",
+        "permission_blocked": "Les notificacions d'aquest lloc estan bloquejades a la configuració del navegador.",
+        "permission_request_failed": "No s'ha pogut demanar permís per a les notificacions.",
+        "permission_not_granted": "No s'ha concedit permís per a les notificacions.",
+        "server_key_missing": "Web Push no està configurat al servidor.",
+        "push_manager_failed": "No s'ha pogut accedir a les notificacions del navegador.",
+        "server_key_invalid": "El servidor ha retornat una clau de notificació no vàlida.",
+        "subscribe_failed": "No s'ha pogut activar la subscripció a les notificacions.",
+        "subscription_invalid": "El navegador ha retornat una subscripció no vàlida.",
+        "registration_failed": "No s'han pogut registrar les notificacions del navegador.",
+        "unsubscribe_failed": "No s'ha pogut cancel·lar la subscripció a les notificacions.",
+        "subscription_not_released": "El navegador no ha alliberat la subscripció a les notificacions."
+    },
+    "discord": {},
+    "email": {
+        "password_reset_body": "Hola {{username}},\n\nHem rebut una sol·licitud per restablir la teva contrasenya. L'enllaç caduca en 1 hora.\nSi no ho has demanat, ignora aquest correu: la teva contrasenya no ha canviat.\n\n{{link}}\n\n--\nAquest correu l'ha enviat hivegame.com. Si no t'hi has registrat, pots ignorar aquest missatge.\n\nNecessites parlar amb algú? Uneix-te al nostre Discord i busca Ion o leex:\nhttps://discord.gg/7EwNTJnfab\n",
+        "recipient_fallback": "usuari"
+    },
+    "control": {
+        "offered_draw": "ha ofert taules",
+        "requested_takeback": "ha demanat desfer una jugada",
+        "declined_draw": "ha rebutjat les taules",
+        "accepted_takeback": "ha acceptat desfer una jugada",
+        "declined_takeback": "ha rebutjat desfer una jugada"
     }
 }

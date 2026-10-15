@@ -109,8 +109,8 @@ pub fn TournamentInvitationNotification(tournament: TournamentAbstractResponse) 
                                 href=format!("/tournament/{}", tournament_id.get_value())
                                 title=move || admission.get().label()
                             >
-                                // TODO: i18n once copy is approved.
-                                "View invitation"
+
+                                {t!(i18n, tournaments.ui.view_invitation)}
                             </a>
                         }
                     }

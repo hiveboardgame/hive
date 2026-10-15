@@ -102,8 +102,7 @@ self.addEventListener('push', (event) => {
       tag: tag,
       renotify: true,
       data: { link: link },
-      // TODO: i18n once copy is approved.
-      actions: [{ action: 'open', title: 'Open' }],
+      actions: payload.open_label ? [{ action: 'open', title: payload.open_label }] : [],
     })
   );
 });

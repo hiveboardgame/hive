@@ -42,5 +42,33 @@
         "login_button": "Login",
         "no_account_prompt": "Não tens uma conta? <register_link>Inscreve-te</register_link>"
     },
-    "piece_style": "Estilo das peças"
+    "piece_style": "Estilo das peças",
+    "click_on_your_clock": "Clica no teu relógio",
+    "double_click": "Duplo clique",
+    "single_click": "Um clique",
+    "light_mode": "Modo claro",
+    "dark_mode": "Modo escuro",
+    "white_background": "Fundo branco",
+    "black_background": "Fundo preto",
+    "current_color": "Atual: {{color}}",
+    "ant_light_preview": "Formiga {{design}} (modo claro)",
+    "ant_dark_preview": "Formiga {{design}} (modo escuro)",
+    "tile_design": {
+        "official": "Oficial",
+        "flat": "Plano",
+        "three_d": "3D",
+        "high_contrast": "Alto contraste",
+        "community": "Comunidade",
+        "pride": "Orgulho",
+        "carbon_three_d": "Carbono 3D",
+        "carbon": "Carbono"
+    },
+    "tile_design_browser_notice": "Alguns navegadores não suportam todos os desenhos de peças. O Firefox apresenta os resultados mais consistentes.",
+    "settings": {
+        "settings": "Definições",
+        "tune_board_visuals_and_move_input_preferences": "Ajusta o aspeto do tabuleiro e as preferências de introdução de jogadas.",
+        "board_appearance": "Aspeto do tabuleiro",
+        "play_preferences": "Preferências de jogo",
+        "if_either_player_has_takebacks_disabled_game_controls_will": "Se algum jogador tiver o recuo de jogadas desativado, os controlos da partida não permitirão pedi-lo."
+    }
 }

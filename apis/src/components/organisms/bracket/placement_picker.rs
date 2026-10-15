@@ -138,12 +138,12 @@ pub(super) fn PlacementPicker(editor: BracketEditingContext, root: NodeRef<Div>)
                 let bye = matches!(node.sources[index], Source::WinnerOf(node_id)
                     if model.nodes.iter().any(|source| source.id == node_id
                         && matches!(source.state, NodeState::Resolved(Resolution::AutomaticAdvance { .. }))));
-                // TODO: i18n once copy is approved.
+
                 Some(PlayerChoice {
                     id: *id,
                     name: names.get(id).cloned().unwrap_or_default(),
                     seed: seed + 1,
-                    detail: format!("{phase} · Match {} · {}vs {opponent}", node.stage_ordinal + 1, if bye { "Bye · " } else { "" }),
+                    detail: t_string!(i18n, tournaments.ui.match_vs, phase = phase, value1 = node.stage_ordinal + 1, value2 = if bye { t_string!(i18n, tournaments.ui.bye).to_string() } else { String::new() }, opponent = opponent).to_string(),
                 })
             }).collect::<Vec<_>>()
         })
@@ -168,12 +168,16 @@ pub(super) fn PlacementPicker(editor: BracketEditingContext, root: NodeRef<Div>)
         preview.with(|preview| {
             let model = &preview.as_ref()?.0;
             let node = model.nodes.iter().find(|node| node.id == target.node)?;
-            // TODO: i18n once copy is approved.
-            Some(format!(
-                "Match {} · Player {}",
-                node.stage_ordinal + 1,
-                target.index + 1
-            ))
+
+            Some(
+                t_string!(
+                    i18n,
+                    tournaments.ui.match_player,
+                    value1 = node.stage_ordinal + 1,
+                    value2 = target.index + 1
+                )
+                .to_string(),
+            )
         })
     };
     let choose = Callback::new(move |player: Uuid| {
@@ -255,7 +259,6 @@ pub(super) fn PlacementPicker(editor: BracketEditingContext, root: NodeRef<Div>)
         }
     });
 
-    // TODO: i18n once copy is approved.
     view! {
         <div
             node_ref=panel
@@ -263,7 +266,7 @@ pub(super) fn PlacementPicker(editor: BracketEditingContext, root: NodeRef<Div>)
             popover="auto"
             role="dialog"
             tabindex="-1"
-            aria-label="Assign player"
+            aria-label=move || t_string!(i18n, tournaments.ui.assign_player_title).to_string()
             class="fixed flex-col gap-2 p-3 m-0 text-gray-900 rounded-lg border border-gray-300 shadow-xl dark:text-gray-100 dark:border-gray-600 bg-even-light open:flex dark:bg-surface-panel"
             style=move || style.get()
             on:toggle=move |_| {
@@ -287,7 +290,9 @@ pub(super) fn PlacementPicker(editor: BracketEditingContext, root: NodeRef<Div>)
                 <button
                     type="button"
                     class="ui-button ui-button-ghost ui-button-icon-sm"
-                    aria-label="Close player picker"
+                    aria-label=move || {
+                        t_string!(i18n, tournaments.ui.close_player_picker).to_string()
+                    }
                     on:click=move |_| close.run(())
                 >
                     "×"
@@ -296,8 +301,8 @@ pub(super) fn PlacementPicker(editor: BracketEditingContext, root: NodeRef<Div>)
             <input
                 node_ref=input
                 type="search"
-                placeholder="Search players…"
-                aria-label="Search players"
+                placeholder=move || t_string!(i18n, common.search_players).to_string()
+                aria-label=move || t_string!(i18n, common.search_players).to_string()
                 autocomplete="off"
                 class="py-2 px-3 mb-2 w-full text-sm bg-white rounded border border-gray-300 dark:border-gray-600 shrink-0 dark:bg-surface-raised"
                 prop:value=move || query.get()
@@ -348,7 +353,7 @@ pub(super) fn PlacementPicker(editor: BracketEditingContext, root: NodeRef<Div>)
                     </button>
                 </For>
                 <Show when=move || results.with(Vec::is_empty)>
-                    <p class="p-2 text-sm text-gray-500">"No players found."</p>
+                    <p class="p-2 text-sm text-gray-500">{t!(i18n, common.no_players_found)}</p>
                 </Show>
             </div>
         </div>

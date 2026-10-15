@@ -142,13 +142,14 @@ impl StartHandler {
             } else {
                 outcome.tournament.min_seats
             };
+            let tournament_id = TournamentId(outcome.tournament.nanoid.clone());
             let mut messages = setup_messages(outcome.tournament, &mut conn).await;
             messages.push(InternalServerMessage {
                 destination: MessageDestination::User(self.user_id),
-                // TODO: i18n once copy is approved.
-                message: ServerMessage::Error(format!(
-                    "Deleted entrants were removed. At least {minimum} active entrants are needed to start. The tournament remains open for more entrants."
-                )),
+                message: ServerMessage::Tournament(TournamentUpdate::StartNeedsEntrants {
+                    tournament_id,
+                    minimum,
+                }),
             });
             return Ok(messages);
         }

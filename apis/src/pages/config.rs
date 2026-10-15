@@ -37,12 +37,20 @@ pub fn Config() -> impl IntoView {
         <PageShell variant=PageShellVariant::Dashboard>
             <div class="flex flex-col gap-6 mx-auto w-full max-w-7xl">
                 <div class="flex flex-col gap-1">
-                    <h1 class="ui-page-title">"Settings"</h1>
-                    <p class="ui-page-subtitle">"Tune board visuals and move input preferences."</p>
+                    <h1 class="ui-page-title">{t!(i18n, user_config.settings.settings)}</h1>
+                    <p class="ui-page-subtitle">
+                        {t!(
+                            i18n, user_config.settings.tune_board_visuals_and_move_input_preferences
+                        )}
+                    </p>
                 </div>
 
                 <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,24rem)]">
-                    <Panel title="Board Appearance" class="h-full" body_class="space-y-4">
+                    <Panel
+                        title=move || t_string!(i18n, user_config.settings.board_appearance)
+                        class="h-full"
+                        body_class="space-y-4"
+                    >
                         <div class="ui-setting-group">
                             <TileDesignToggle />
                         </div>
@@ -73,7 +81,11 @@ pub fn Config() -> impl IntoView {
                         </div>
                     </Panel>
 
-                    <Panel title="Play Preferences" class="h-full" body_class="space-y-4">
+                    <Panel
+                        title=move || t_string!(i18n, user_config.settings.play_preferences)
+                        class="h-full"
+                        body_class="space-y-4"
+                    >
                         <div class="ui-setting-group">
                             <label class="flex flex-col gap-1.5">
                                 <span class="ui-field-label">
@@ -162,7 +174,9 @@ pub fn Config() -> impl IntoView {
                                 <div class="flex flex-col gap-3">
                                     <TakebackConf />
                                     <p class="ui-field-helper">
-                                        "If either player has takebacks disabled, game controls will not allow takeback requests."
+                                        {t!(
+                                            i18n, user_config.settings.if_either_player_has_takebacks_disabled_game_controls_will
+                                        )}
                                     </p>
                                 </div>
                             </div>

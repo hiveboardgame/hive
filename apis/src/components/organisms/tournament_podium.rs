@@ -7,6 +7,7 @@ use crate::{
         StandingsCount,
     },
     components::organisms::tournament_inspector::TournamentSelection,
+    i18n::*,
     providers::{
         ArenaStateStoreFields,
         EliminationState,
@@ -255,40 +256,60 @@ fn podium_placements(
     }
 }
 
-fn placement_label(rank: u32, shared: bool) -> &'static str {
-    // TODO: i18n once copy is approved.
+fn placement_label(rank: u32, shared: bool) -> String {
+    let i18n = use_i18n();
     match (rank, shared) {
-        (1, false) => "First",
-        (1, true) => "Joint first",
-        (2, false) => "Second",
-        (2, true) => "Joint second",
-        (3, false) => "Third",
-        (3, true) => "Joint third",
-        _ => "Placed",
+        (1, false) => {
+            t_string!(i18n, tournaments.creation.elimination.colors.first_short).to_string()
+        }
+        (1, true) => t_string!(i18n, tournaments.ui.joint_first).to_string(),
+        (2, false) => {
+            t_string!(i18n, tournaments.creation.elimination.colors.second_short).to_string()
+        }
+        (2, true) => t_string!(i18n, tournaments.ui.joint_second).to_string(),
+        (3, false) => t_string!(i18n, common.third).to_string(),
+        (3, true) => t_string!(i18n, tournaments.ui.joint_third).to_string(),
+        _ => t_string!(i18n, tournaments.ui.placed).to_string(),
     }
 }
 
 fn player_detail(player: &PodiumPlayer, format: Format) -> String {
-    // TODO: i18n once copy is approved.
+    let i18n = use_i18n();
     if matches!(
         format,
         Format::SingleElimination | Format::DoubleElimination
     ) {
         return player
             .seed
-            .map(|seed| format!("Seed {seed}"))
-            .unwrap_or_else(|| String::from("Seed —"));
+            .map(|seed| t_string!(i18n, tournaments.ui.seed, seed = seed).to_string())
+            .unwrap_or_else(|| t_string!(i18n, common.seed).to_string());
     }
-    let record = format!("{}W · {}D · {}L", player.wins, player.draws, player.losses);
+    let record = t_string!(
+        i18n,
+        tournaments.ui.w_d_l,
+        value1 = player.wins,
+        value2 = player.draws,
+        value3 = player.losses
+    )
+    .to_string();
     if format == Format::Arena {
         let performance = player
             .performance
-            .map(|performance| format!("Perf {performance} · "))
+            .map(|performance| {
+                t_string!(i18n, tournaments.ui.perf, performance = performance).to_string()
+            })
             .unwrap_or_default();
         return if player.berserks == 0 {
             format!("{performance}{record}")
         } else {
-            format!("{performance}{record} · {} Berserks", player.berserks)
+            t_string!(
+                i18n,
+                tournaments.ui.berserks,
+                performance = performance,
+                record = record,
+                value1 = player.berserks
+            )
+            .to_string()
         };
     }
     record
@@ -300,14 +321,14 @@ pub fn TournamentPodium(
     format: TournamentFormatState,
     selection: RwSignal<Option<TournamentSelection>>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let placements =
         Memo::new_with_compare(move |_| podium_placements(common, format), |_, _| true);
     let format = format.format();
     view! {
-        // TODO: i18n once copy is approved.
         <section
             class="p-3 border-b border-black/10 dark:border-white/10"
-            aria-label="Tournament podium"
+            aria-label=move || t_string!(i18n, tournaments.ui.tournament_podium).to_string()
             data-testid="tournament-podium"
         >
             {move || {
@@ -352,7 +373,6 @@ pub fn TournamentPodium(
                                         {(count > 6)
                                             .then(|| {
                                                 view! {
-                                                    // TODO: i18n once copy is approved.
                                                     <button
                                                         type="button"
                                                         class="text-sm ui-text-link"
@@ -360,9 +380,12 @@ pub fn TournamentPodium(
                                                     >
                                                         {move || {
                                                             if expanded.get() {
-                                                                "Hide players".to_string()
+                                                                t_string!(i18n, tournaments.ui.hide_players).to_string()
                                                             } else {
-                                                                format!("Show all {count} players")
+                                                                t_string!(
+                                                                    i18n, tournaments.ui.show_all_players, count = count
+                                                                )
+                                                                    .to_string()
                                                             }
                                                         }}
                                                     </button>

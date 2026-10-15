@@ -28,12 +28,13 @@ use crate::{
         GameUpdate,
         ServerMessage,
         ServerResult,
+        TournamentPairingLabel,
         TournamentUpdate,
         TvInterest,
         UserStatus,
         UserUpdate,
     },
-    notifications::{notify, Event},
+    notifications::{notify, Event, TournamentNotice},
     responses::{HeartbeatResponse, TournamentMemberships, TournamentPatch, UserResponse},
     websocket::server_handlers::game::{
         project_committed_game,
@@ -1199,7 +1200,10 @@ impl WsHub {
             .collect::<HashSet<_>>();
         let at_game = self.watched_game_tournaments(&arena_recipients).await;
 
-        let mut groups = HashMap::<(Uuid, TournamentId), (String, Vec<(GameId, String)>)>::new();
+        let mut groups = HashMap::<
+            (Uuid, TournamentId),
+            (String, Vec<(GameId, TournamentPairingLabel, String)>),
+        >::new();
         for message in messages {
             let (MessageDestination::User(recipient), ServerMessage::Game(update)) =
                 (&message.destination, &message.message)
@@ -1240,17 +1244,17 @@ impl WsHub {
             if group
                 .1
                 .iter()
-                .any(|(game_id, _)| game_id == &response.game_id)
+                .any(|(game_id, _, _)| game_id == &response.game_id)
             {
                 continue;
             }
-            // TODO: i18n once copy is approved.
-            let description = format!(
-                "{} · vs {}",
-                pairing_label.as_deref().unwrap_or("New game"),
-                opponent.username
-            );
-            group.1.push((response.game_id.clone(), description));
+            group.1.push((
+                response.game_id.clone(),
+                pairing_label
+                    .clone()
+                    .unwrap_or(TournamentPairingLabel::NewGame),
+                opponent.username.clone(),
+            ));
         }
         for ((recipient, tournament_id), (tournament_name, games)) in groups {
             if games.len() == 1 {
@@ -1258,18 +1262,15 @@ impl WsHub {
                     recipient,
                     tournament_name,
                     game_nanoid: games[0].0 .0.clone(),
-                    description: games[0].1.clone(),
+                    pairing_label: games[0].1.clone(),
+                    opponent: games[0].2.clone(),
                 });
             } else {
-                // TODO: i18n once copy is approved.
                 notify(Event::TournamentNotice {
                     recipient,
                     tournament_name,
                     tournament_nanoid: tournament_id.0,
-                    description: format!(
-                        "{} games are ready. Open the tournament to review your pairings.",
-                        games.len()
-                    ),
+                    description: TournamentNotice::GamesReady(games.len()),
                     category: NotificationCategory::Tournament,
                 });
             }

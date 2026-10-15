@@ -1,6 +1,13 @@
 use super::{new_game_messages, tournament_pairing::released_pairing_labels};
 use crate::{
-    common::{GameActionResponse, GameReaction, GameUpdate, ScheduleUpdate, ServerMessage},
+    common::{
+        GameActionResponse,
+        GameReaction,
+        GameUpdate,
+        ScheduleUpdate,
+        ServerMessage,
+        TournamentPairingLabel,
+    },
     notifications::{
         game_end_reason_from,
         notify_game_control,
@@ -907,7 +914,7 @@ pub(crate) async fn new_tournament_game_messages(
 
 pub(crate) async fn new_tournament_game_messages_by_ids(
     released_ids: &[GameId],
-    pairing_labels: &HashMap<GameId, String>,
+    pairing_labels: &HashMap<GameId, TournamentPairingLabel>,
     conn: &mut DbConn<'_>,
 ) -> Result<Vec<InternalServerMessage>> {
     let current_games = Game::find_by_nanoids(released_ids, conn).await?;
@@ -942,7 +949,7 @@ mod tests {
     };
     use crate::{
         common::{GameReaction, ScheduleUpdate, ServerMessage},
-        responses::ScheduleResponse,
+        responses::{ScheduleResponse, ScheduleSlotContext},
         websocket::{MessageDestination, TournamentAudience},
     };
     use chrono::{DateTime, Utc};
@@ -955,7 +962,7 @@ mod tests {
         ScheduleResponse {
             id: Uuid::from_u128(id),
             slot_id: Uuid::from_u128(id + 100),
-            slot_context: String::from("Game 1"),
+            slot_context: ScheduleSlotContext::Game { number: 1 },
             tournament_name: String::from("Cup"),
             tournament_id: TournamentId(String::from("cup")),
             proposer_id: participants[0],

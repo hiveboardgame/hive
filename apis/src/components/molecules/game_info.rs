@@ -41,16 +41,23 @@ pub fn GameInfo(
         tournament_info()
             .map(|link| {
                 if compact {
-                    format!("in {}", link.name)
+                    t_string!(i18n, game.in_tournament, tournament = link.name.clone()).to_string()
                 } else {
-                    format!("played in {}", link.name)
+                    t_string!(
+                        i18n,
+                        game.played_in_tournament,
+                        tournament = link.name.clone()
+                    )
+                    .to_string()
                 }
             })
             .unwrap_or_default()
     });
     let compact_tournament_label = Memo::new(move |_| {
         tournament_info()
-            .map(|link| format!("in {}", link.name))
+            .map(|link| {
+                t_string!(i18n, game.in_tournament, tournament = link.name.clone()).to_string()
+            })
             .unwrap_or_default()
     });
     let result_text = Memo::new(move |_| {

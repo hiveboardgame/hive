@@ -1,12 +1,16 @@
-use crate::providers::{
-    websocket::{ConnectionReadyState, WebsocketContext},
-    PingContext,
+use crate::{
+    i18n::*,
+    providers::{
+        websocket::{ConnectionReadyState, WebsocketContext},
+        PingContext,
+    },
 };
 use leptos::prelude::*;
 use leptos_icons::*;
 
 #[component]
 pub fn Ping() -> impl IntoView {
+    let i18n = use_i18n();
     let websocket = expect_context::<WebsocketContext>();
     let ping = expect_context::<PingContext>();
 
@@ -21,16 +25,16 @@ pub fn Ping() -> impl IntoView {
     };
     let status_label = move || {
         if connected() {
-            "Connected"
+            t_string!(i18n, game.connected)
         } else {
-            "Disconnected"
+            t_string!(i18n, game.disconnected)
         }
     };
     let status_value = move || {
         if connected() {
             format!("{:.0}ms", ping.ping.get())
         } else {
-            "offline".to_string()
+            t_string!(i18n, game.offline).to_string()
         }
     };
     let status_icon = move || {

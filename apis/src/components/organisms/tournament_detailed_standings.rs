@@ -358,10 +358,10 @@ pub fn TournamentDetailedStandings(tournament: TournamentState) -> impl IntoView
                                     {t!(i18n, tournaments.finished_standings.position)}
                                 </th>
                                 <th class="sticky left-14 z-20 p-2 text-sm bg-even-light dark:bg-surface-panel">
-                                    {t!(i18n, tournaments.finished_standings.player)}
+                                    {t!(i18n, common.player)}
                                 </th>
-                                // TODO: i18n once copy is approved.
-                                <th class=HEAD>"Rating"</th>
+
+                                <th class=HEAD>{t!(i18n, profile.rating)}</th>
                                 <th class=HEAD>{move || primary_name.get()}</th>
                                 {columns
                                     .into_iter()
@@ -381,15 +381,18 @@ pub fn TournamentDetailedStandings(tournament: TournamentState) -> impl IntoView
                             }>
                                 <tr>
                                     <td colspan=column_count class="p-4 text-sm text-center">
-                                        // TODO: i18n once copy is approved.
-                                        <span>"No players match your search. "</span>
-                                        // TODO: i18n once copy is approved.
+
+                                        <span>{t!(i18n, common.no_players_match_your_search)}</span>
+                                        " "
+
                                         <button
                                             type="button"
                                             class="ui-text-link"
                                             on:click=move |_| on_query_change.run(String::new())
                                         >
-                                            "Clear search"
+                                            {move || {
+                                                t_string!(i18n, common.clear_search).to_string()
+                                            }}
                                         </button>
                                     </td>
                                 </tr>
@@ -412,9 +415,9 @@ pub fn TournamentDetailedStandings(tournament: TournamentState) -> impl IntoView
                 </div>
             </div>
             <details class="mx-3 mt-3 mb-3 ui-setting-group">
-                // TODO: i18n once copy is approved.
+
                 <summary class="text-sm font-semibold cursor-pointer">
-                    "Scoring and tiebreak details"
+                    {t!(i18n, tournaments.ui.scoring_and_tiebreak_details)}
                 </summary>
                 <StandingsCriteriaRules configuration=model.rules />
             </details>

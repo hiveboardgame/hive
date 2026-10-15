@@ -1,3 +1,4 @@
+use super::TournamentPairingLabel;
 use hive_lib::{GameControl, Turn};
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -12,7 +13,9 @@ pub enum GameReaction {
     Join,
     Turn(Turn),
     Ready,
-    New { pairing_label: Option<String> },
+    New {
+        pairing_label: Option<TournamentPairingLabel>,
+    },
     TimedOut,
     Finished,
     Tv,

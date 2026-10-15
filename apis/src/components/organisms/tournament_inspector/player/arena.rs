@@ -1,4 +1,5 @@
 use super::*;
+use crate::i18n::*;
 use shared_types::tournament_view::ArenaPlayerStatsResponse;
 
 use reactive_stores::ArcField;
@@ -169,7 +170,7 @@ fn ArenaPlayerHistoryRow(
                                 <ColorHex color=Signal::derive(move || color) />
                             </span>
                         </span>
-                        // TODO: i18n once copy is approved.
+
                         <a
                             class="block font-semibold tabular-nums text-right no-link-style hover:text-pillbug-teal"
                             href=format!("/game/{game_id}")
@@ -235,9 +236,10 @@ pub(super) fn ArenaPlayerDetailsBody(
                                             performance.to_string()
                                         };
                                         view! {
-                                            // TODO: i18n once copy is approved.
                                             <dt class="text-gray-600 dark:text-gray-300">
-                                                "Performance"
+                                                {move || {
+                                                    t_string!(i18n, common.performance).to_string()
+                                                }}
                                             </dt>
                                             <dd class="font-semibold tabular-nums text-right">
                                                 {value}
@@ -245,7 +247,7 @@ pub(super) fn ArenaPlayerDetailsBody(
                                         }
                                     })}
                                 <dt class="text-gray-600 dark:text-gray-300">
-                                    {t!(i18n, tournaments.finished_standings.games)}
+                                    {t!(i18n, common.games)}
                                 </dt> <dd class="font-semibold tabular-nums text-right">{games}</dd>
                                 {win_rate
                                     .map(|rate| {

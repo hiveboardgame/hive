@@ -1,12 +1,10 @@
 {
     "learn_to_play": "Learn to play",
     "create_game": "Create new game",
-    "search_players": "Search players",
     "found_players": "Found:",
     "online_players_one": "{{count}} Online player",
     "online_players_other": "{{count}} Online players",
     "custom_game": {
-        "button": "Custom",
         "title": "Create a game:",
         "private": "Private",
         "public": "Public",
@@ -24,12 +22,8 @@
         }
     },
     "challenge_details": {
-        "player": "Player",
         "plays": {
-            "title": "Plays",
-            "white": "White",
-            "black": "Black",
-            "random": "Random"
+            "title": "Plays"
         },
         "time": "Time",
         "admin_cancel_title": "Cancel this challenge (admin)",
@@ -53,5 +47,47 @@
         "error_title": "Error loading upcoming games",
         "empty_title": "No upcoming tournament games",
         "empty_message": "Check back later for scheduled games"
+    },
+    "pick_your_color_and_create_a_challenge": "Pick your color and create a challenge:",
+    "an_introduction_to_hive": "An introduction to Hive",
+    "learn_to_play_hive_video_thumbnail": "Learn to play Hive - video thumbnail",
+    "couldn_t_fetch_top_users": "Couldn't fetch top users",
+    "no_one_yet": "No one yet",
+    "not_ranked_yet": "Not ranked yet",
+    "quick_play": "Quick play",
+    "play_vs_bot": "Play vs bot",
+    "play_bot": "Play bot",
+    "challenge": {
+        "bot": {
+            "play_an_unrated_game_vs_our_bot": "Play an unrated game vs our bot",
+            "easy": "Easy",
+            "medium": "Medium",
+            "hard": "Hard"
+        },
+        "direct_challenge_to": "Direct challenge to {{display_username}}",
+        "waiting_for_to_respond": "Waiting for {{display_username}} to respond.",
+        "private_challenge": "Private challenge",
+        "share_the_private_link_with_the_player_you_want": "Share the private link with the player you want to invite.",
+        "public_challenge": "Public challenge",
+        "this_challenge_is_listed_publicly_while_it_is_open": "This challenge is listed publicly while it is open.",
+        "direct_challenge_from": "Direct challenge from {{display_username}}",
+        "review_the_settings_below_then_accept_or_decline": "Review the settings below, then accept or decline.",
+        "private_challenge_from": "Private challenge from {{display_username}}",
+        "log_in_to_accept_this_challenge": "Log in to accept this challenge.",
+        "challenge_from": "Challenge from {{display_username}}",
+        "review_the_settings_below_then_accept_when_you_re": "Review the settings below, then accept when you're ready to play.",
+        "challenger": "Challenger:",
+        "challenge_not_found": "Challenge not found",
+        "the_challenge_you_re_looking_for_doesn_t_exist": "The challenge you're looking for doesn't exist",
+        "this_challenge_has_been_accepted_and_the_game_is": "This challenge has been accepted and the game is ready.",
+        "please_wait_while_we_fetch_the_challenge_details": "Please wait while we fetch the challenge details",
+        "error_loading_challenge": "Error loading challenge",
+        "challenge_doesn_t_seem_to_exist": "Challenge doesn't seem to exist",
+        "please_wait_while_we_check_your_account": "Please wait while we check your account",
+        "challenge_no_longer_available": "Challenge no longer available",
+        "share_private_link": "Share private link",
+        "only_players_with_this_url_can_accept_this_private": "Only players with this URL can accept this private challenge.",
+        "copy_link": "Copy link",
+        "challenge_details": "Challenge details"
     }
 }

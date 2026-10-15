@@ -1,5 +1,5 @@
 use super::{snapshot::apply_snapshot_set, SchedulesContext};
-use crate::hooks::arena_clock::use_ticking_now;
+use crate::{common::TournamentPairingLabel, hooks::arena_clock::use_ticking_now, i18n::Locale};
 use leptos::prelude::*;
 use shared_types::{ChallengeId, GameId, TournamentId};
 use std::collections::{HashMap, HashSet};
@@ -11,7 +11,14 @@ pub struct TournamentPairingNotice {
     pub tournament_id: TournamentId,
     pub tournament_name: String,
     pub game_id: GameId,
-    pub description: String,
+    pub pairing_label: TournamentPairingLabel,
+    pub opponent: String,
+}
+
+impl TournamentPairingNotice {
+    pub fn description(&self, locale: Locale) -> String {
+        self.pairing_label.description(locale, &self.opponent)
+    }
 }
 
 #[derive(Clone, Copy)]

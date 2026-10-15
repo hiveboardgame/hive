@@ -36,6 +36,7 @@ pub(crate) fn EliminationCreationEditor(
     reveal_invalid: RwSignal<u32>,
     children: Children,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let custom_expanded = RwSignal::new(Some(0_usize));
     let finals_expanded = RwSignal::new(Some(0_usize));
     let focus_custom = RwSignal::new(0_u32);
@@ -72,32 +73,42 @@ pub(crate) fn EliminationCreationEditor(
     });
     let custom = Signal::derive(move || draft.with(|draft| draft.custom));
     let has_finals = move || draft.with(|draft| draft.finals.is_some());
-    // TODO: i18n once copy is approved.
+
     let finals_scope = move || match topology.get() {
-        Topology::Single { bronze: false } => "Applies to the final.",
-        Topology::Single { bronze: true } => "Applies to the final and third-place match.",
-        Topology::Double => "Applies to the grand final and reset final, if needed.",
+        Topology::Single { bronze: false } => {
+            t_string!(i18n, tournaments.creation.elimination.final_scope).to_string()
+        }
+        Topology::Single { bronze: true } => {
+            t_string!(i18n, tournaments.creation.elimination.final_bronze_scope).to_string()
+        }
+        Topology::Double => {
+            t_string!(i18n, tournaments.creation.elimination.double_final_scope).to_string()
+        }
     };
 
     view! {
         <Panel
-            // TODO: i18n once copy is approved.
-            title="Match format"
+
+            title=move || t_string!(i18n, tournaments.creation.elimination.match_format).to_string()
             body_class="space-y-5"
         >
             {children()}
             <div class="grid gap-3 sm:grid-cols-2">
-                // TODO: i18n once copy is approved.
                 <PlanChoice
-                    label="Balanced"
-                    description="Two-game sets"
+                    label=move || {
+                        t_string!(i18n, tournaments.creation.elimination.balanced).to_string()
+                    }
+                    description=move || {
+                        t_string!(i18n, tournaments.creation.elimination.two_game_sets).to_string()
+                    }
                     active=Signal::derive(move || !custom.get())
                     on_select=Callback::new(move |()| draft.update(|draft| draft.custom = false))
                 />
-                // TODO: i18n once copy is approved.
                 <PlanChoice
-                    label="Custom"
-                    description="Choose match steps"
+                    label=move || t_string!(i18n, common.custom).to_string()
+                    description=move || {
+                        t_string!(i18n, tournaments.creation.elimination.choose_steps).to_string()
+                    }
                     active=custom
                     on_select=Callback::new(move |()| draft.update(|draft| draft.custom = true))
                 />
@@ -106,9 +117,8 @@ pub(crate) fn EliminationCreationEditor(
                 when=move || custom.get()
                 fallback=move || {
                     view! {
-                        // TODO: i18n once copy is approved.
                         <p class="ui-field-helper">
-                            "Play two games, one as each color. If tied, repeat with colors reversed."
+                            {t!(i18n, tournaments.creation.elimination.balanced_help)}
                         </p>
                     }
                 }
@@ -121,18 +131,15 @@ pub(crate) fn EliminationCreationEditor(
                     focus_editor=focus_custom
                 />
             </Show>
-
             <section class="pt-5 space-y-4 border-t border-gray-200 dark:border-gray-700">
                 <div class="flex flex-wrap gap-3 justify-between items-center">
                     <div class="flex flex-wrap gap-3 items-center">
-                        // TODO: i18n once copy is approved.
                         <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                            "Finals"
+                            {t!(i18n, tournaments.creation.elimination.finals)}
                         </h3>
                         <Show when=has_finals>
-                            // TODO: i18n once copy is approved.
                             <span class="py-1 px-2 text-xs font-medium rounded border border-pillbug-teal text-pillbug-teal">
-                                "Custom format"
+                                {t!(i18n, tournaments.creation.elimination.custom_format)}
                             </span>
                         </Show>
                     </div>
@@ -142,8 +149,7 @@ pub(crate) fn EliminationCreationEditor(
                             class="ui-button ui-button-secondary ui-button-sm"
                             on:click=move |_| draft.update(|draft| draft.finals = None)
                         >
-                            // TODO: i18n once copy is approved.
-                            "Use match format"
+                            {t!(i18n, tournaments.creation.elimination.use_match_format)}
                         </button>
                     </Show>
                 </div>
@@ -151,23 +157,23 @@ pub(crate) fn EliminationCreationEditor(
                     when=move || matches!(topology.get(), Topology::Single { .. })
                     fallback=move || {
                         view! {
-                            // TODO: i18n once copy is approved.
                             <p class="ui-field-helper">
-                                "A reset final is played if the lower-bracket winner wins the grand final."
+                                {t!(i18n, tournaments.creation.elimination.reset_help)}
                             </p>
                         }
                     }
                 >
-                    // TODO: i18n once copy is approved.
                     <div
                         class="flex gap-3 items-center"
                         role="group"
-                        aria-label="Play a third-place match"
+                        aria-label=move || {
+                            t_string!(i18n, tournaments.creation.elimination.play_third_place)
+                                .to_string()
+                        }
                     >
                         <SimpleSwitch checked=bronze_match />
-                        // TODO: i18n once copy is approved.
                         <span class="text-sm font-medium text-gray-900 dark:text-gray-100">
-                            "Play a third-place match"
+                            {t!(i18n, tournaments.creation.elimination.play_third_place)}
                         </span>
                     </div>
                 </Show>
@@ -177,11 +183,15 @@ pub(crate) fn EliminationCreationEditor(
                         view! {
                             <div class="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center ui-setting-group">
                                 <div class="space-y-1">
-                                    // TODO: i18n once copy is approved.
-                                    <strong class="text-sm">"Uses match format"</strong>
-                                    // TODO: i18n once copy is approved.
+                                    <strong class="text-sm">
+                                        {t!(
+                                            i18n, tournaments.creation.elimination.uses_match_format
+                                        )}
+                                    </strong>
                                     <p class="ui-field-helper">
-                                        "Uses the format selected above. "{finals_scope}
+                                        {t!(
+                                            i18n, tournaments.creation.elimination.uses_format_above
+                                        )}{finals_scope}
                                     </p>
                                 </div>
                                 <button
@@ -195,8 +205,7 @@ pub(crate) fn EliminationCreationEditor(
                                         finals_expanded.set(Some(0));
                                     }
                                 >
-                                    // TODO: i18n once copy is approved.
-                                    "Customize final"
+                                    {t!(i18n, tournaments.creation.elimination.customize_final)}
                                 </button>
                             </div>
                         }
@@ -218,8 +227,8 @@ pub(crate) fn EliminationCreationEditor(
 
 #[component]
 fn PlanChoice(
-    label: &'static str,
-    description: &'static str,
+    #[prop(into)] label: TextProp,
+    #[prop(into)] description: TextProp,
     active: Signal<bool>,
     #[prop(optional)] disabled: Signal<bool>,
     on_select: Callback<()>,
@@ -248,8 +257,12 @@ fn PlanChoice(
                 </Show>
             </span>
             <span class="space-y-1">
-                <strong class="block text-sm text-gray-900 dark:text-gray-100">{label}</strong>
-                <span class="block text-sm text-gray-600 dark:text-gray-300">{description}</span>
+                <strong class="block text-sm text-gray-900 dark:text-gray-100">
+                    {move || label.get()}
+                </strong>
+                <span class="block text-sm text-gray-600 dark:text-gray-300">
+                    {move || description.get()}
+                </span>
             </span>
         </button>
     }
@@ -263,6 +276,7 @@ fn SeriesPlanEditor(
     expanded: RwSignal<Option<usize>>,
     focus_editor: RwSignal<u32>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     view! {
         <div class="space-y-3">
             <For
@@ -319,16 +333,24 @@ fn SeriesPlanEditor(
                                 }
                             >
                                 <span class="space-y-1 min-w-0">
-                                    // TODO: i18n once copy is approved.
                                     <strong class="text-sm">
-                                        {if index == 0 {
-                                            String::from("Step 1 · Initial games")
-                                        } else {
-                                            format!(
-                                                "Step {} · If {}tied",
-                                                index + 1,
-                                                if index > 1 { "still " } else { "" },
-                                            )
+                                        {move || {
+                                            if index == 0 {
+                                                t_string!(
+                                                    i18n, tournaments.creation.elimination.initial_step
+                                                )
+                                                    .to_string()
+                                            } else if index == 1 {
+                                                t_string!(
+                                                    i18n, tournaments.creation.elimination.tied_step, step = index + 1
+                                                )
+                                                    .to_string()
+                                            } else {
+                                                t_string!(
+                                                    i18n, tournaments.creation.elimination.still_tied_step, step = index + 1
+                                                )
+                                                    .to_string()
+                                            }
                                         }}
                                     </strong>
                                     <span class="block text-xs text-gray-600 dark:text-gray-300">
@@ -347,10 +369,13 @@ fn SeriesPlanEditor(
                                         }}
                                     </span>
                                 </span>
-                                // TODO: i18n once copy is approved.
                                 <span class="text-xs">
                                     {move || {
-                                        if expanded.get() == Some(index) { "Close" } else { "Edit" }
+                                        if expanded.get() == Some(index) {
+                                            t_string!(i18n, common.close).to_string()
+                                        } else {
+                                            t_string!(i18n, common.edit).to_string()
+                                        }
                                     }}
                                 </span>
                             </button>
@@ -368,17 +393,19 @@ fn SeriesPlanEditor(
                         <Show when=move || !is_last()>
                             <div class="pl-3 ml-3 space-y-1 border-l border-gray-400 border-dashed">
                                 <label class="block text-sm text-gray-700 dark:text-gray-300">
-                                    // TODO: i18n once copy is approved.
-                                    "If still tied after "
+                                    {t!(i18n, tournaments.creation.elimination.if_still_tied_after)}
                                     <input
                                         node_ref=set_limit_input
                                         class="inline-block mx-1 align-middle max-w-20 ui-field-input"
                                         type="number"
                                         min="1"
                                         max=EDITOR_MAX_FINITE_SETS
-                                        // TODO: i18n once copy is approved.
+
                                         aria-label=move || {
-                                            format!("Total set limit for step {}", index + 1)
+                                            t_string!(
+                                                i18n, tournaments.creation.elimination.step_set_limit, step = index + 1
+                                            )
+                                                .to_string()
                                         }
                                         aria-invalid=move || {
                                             phase()
@@ -407,17 +434,26 @@ fn SeriesPlanEditor(
                                                 |phase| phase.finite_sets = value,
                                             );
                                         }
-                                    /> // TODO: i18n once copy is approved.
+                                    />
                                     {move || {
                                         if phase().is_some_and(|phase| phase.finite_sets == 1) {
-                                            " set, use the next settings."
+                                            t_string!(
+                                                i18n, tournaments.creation.elimination.next_settings_single
+                                            )
+                                                .to_string()
                                         } else {
-                                            " sets, use the next settings."
+                                            t_string!(
+                                                i18n, tournaments.creation.elimination.next_settings_plural
+                                            )
+                                                .to_string()
                                         }
                                     }}
                                 </label>
-                                // TODO: i18n once copy is approved.
-                                <p class="ui-field-helper">"Includes the initial set."</p>
+                                <p class="ui-field-helper">
+                                    {t!(
+                                        i18n, tournaments.creation.elimination.includes_initial_set
+                                    )}
+                                </p>
                             </div>
                         </Show>
                     }
@@ -427,25 +463,40 @@ fn SeriesPlanEditor(
     }
 }
 
-// TODO: i18n once copy is approved.
 fn phase_summary(phase: &EliminationPhaseDraft, is_last: bool) -> String {
+    let i18n = use_i18n();
     let play = match phase.clinch {
-        ClinchPolicy::PlayAll => "play all games",
-        ClinchPolicy::EarlyClinch => "stop when clinched",
+        ClinchPolicy::PlayAll => {
+            t_string!(i18n, tournaments.creation.elimination.summary.play_all).to_string()
+        }
+        ClinchPolicy::EarlyClinch => {
+            t_string!(i18n, tournaments.creation.elimination.summary.early_clinch).to_string()
+        }
     };
     let clock = if phase.use_tournament_clock {
-        String::from("tournament clock")
+        t_string!(
+            i18n,
+            tournaments.creation.elimination.summary.tournament_clock
+        )
+        .to_string()
     } else {
         match phase.clock {
             Clock::Realtime(clock) => compact_realtime_clock(clock),
             Clock::Correspondence(CorrespondenceClock::TotalTimeEach { seconds_each }) => {
-                format!("{} each", format_compact_duration(seconds_each.get()))
+                t_string!(
+                    i18n,
+                    tournaments.creation.elimination.summary.time_each,
+                    time = format_compact_duration(seconds_each.get())
+                )
+                .to_string()
             }
             Clock::Correspondence(CorrespondenceClock::DaysPerMove { seconds_per_move }) => {
-                format!(
-                    "{} per move",
-                    format_compact_duration(seconds_per_move.get())
+                t_string!(
+                    i18n,
+                    game.time_mode.correspondence.duration_move,
+                    duration = format_compact_duration(seconds_per_move.get())
                 )
+                .to_string()
             }
         }
     };
@@ -454,27 +505,44 @@ fn phase_summary(phase: &EliminationPhaseDraft, is_last: bool) -> String {
         .windows(2)
         .all(|colors| colors[0] != colors[1]);
     let colors = if alternating {
-        "alternating colors"
+        t_string!(
+            i18n,
+            tournaments.creation.elimination.summary.alternating_colors
+        )
+        .to_string()
     } else {
-        "custom color order"
+        t_string!(i18n, tournaments.creation.elimination.summary.custom_colors).to_string()
     };
     let repeats = if is_last {
-        String::from("repeat until decisive")
-    } else {
-        format!(
-            "up to {} {} total",
-            phase.finite_sets,
-            if phase.finite_sets == 1 {
-                "set"
-            } else {
-                "sets"
-            }
+        t_string!(
+            i18n,
+            tournaments
+                .creation
+                .elimination
+                .summary
+                .repeat_until_decisive
         )
+        .to_string()
+    } else if phase.finite_sets == 1 {
+        t_string!(i18n, tournaments.creation.elimination.summary.one_set).to_string()
+    } else {
+        t_string!(
+            i18n,
+            tournaments.creation.elimination.summary.sets,
+            sets = phase.finite_sets
+        )
+        .to_string()
     };
-    format!(
-        "{} games per set · {repeats} · {play} · {colors} · {clock}",
-        phase.games_per_set
+    t_string!(
+        i18n,
+        tournaments.creation.elimination.summary.phase,
+        games = phase.games_per_set,
+        repeats = repeats,
+        play = play,
+        colors = colors,
+        clock = clock
     )
+    .to_string()
 }
 
 fn phase_error(
@@ -483,14 +551,16 @@ fn phase_error(
     tournament_clock: Clock,
 ) -> Option<String> {
     if !is_last && phase.finite_sets == 0 {
-        return Some(EliminationCreationError::FiniteSetLimitMustBePositive.to_string());
+        return Some(creation_error_text(
+            EliminationCreationError::FiniteSetLimitMustBePositive,
+        ));
     }
     EliminationPlanDraft {
         phases: vec![phase.clone()],
     }
     .to_plan(tournament_clock)
     .err()
-    .map(|error| error.to_string())
+    .map(creation_error_text)
 }
 
 #[component]
@@ -591,17 +661,14 @@ fn PhaseEditor(
                                 });
                         }
                     >
-                        // TODO: i18n once copy is approved.
-                        "Remove step"
+                        {t!(i18n, tournaments.creation.elimination.phases.remove)}
                     </button>
                 </div>
             </div>
-
             <div class="grid gap-3 sm:grid-cols-2">
                 <label class="flex flex-col gap-1.5">
                     <span class="ui-field-label">
-                        // TODO: i18n once copy is approved.
-                        "Games per set"
+                        {t!(i18n, tournaments.creation.elimination.phases.games_per_set)}
                     </span>
                     <input
                         node_ref=games_input
@@ -633,8 +700,7 @@ fn PhaseEditor(
                 </label>
                 <label class="flex flex-col gap-1.5">
                     <span class="ui-field-label">
-                        // TODO: i18n once copy is approved.
-                        "Finish rule"
+                        {t!(i18n, tournaments.creation.elimination.phases.finish_rule)}
                     </span>
                     <select
                         class="ui-field-select"
@@ -665,25 +731,37 @@ fn PhaseEditor(
                     </select>
                 </label>
             </div>
-
             <PhaseColorOrderEditor draft location index />
             <PhaseClockEditor draft location index tournament_clock />
             <Show when=is_last>
                 <div class="pt-3 space-y-2 border-t border-gray-200 dark:border-gray-700">
-                    // TODO: i18n once copy is approved.
-                    <h4 class="text-sm font-semibold">"If tied"</h4>
+                    <h4 class="text-sm font-semibold">
+                        {t!(i18n, tournaments.creation.elimination.if_tied)}
+                    </h4>
                     <div class="grid gap-3 sm:grid-cols-2">
-                        // TODO: i18n once copy is approved.
                         <PlanChoice
-                            label="Repeat these games"
-                            description="Keep these settings until there is a winner."
+                            label=move || {
+                                t_string!(i18n, tournaments.creation.elimination.repeat_games)
+                                    .to_string()
+                            }
+                            description=move || {
+                                t_string!(i18n, tournaments.creation.elimination.repeat_help)
+                                    .to_string()
+                            }
                             active=Signal::derive(|| true)
                             on_select=Callback::new(|()| {})
                         />
-                        // TODO: i18n once copy is approved.
                         <PlanChoice
-                            label="Use different settings"
-                            description="Continue with another set of games."
+                            label=move || {
+                                t_string!(i18n, tournaments.creation.elimination.different_settings)
+                                    .to_string()
+                            }
+                            description=move || {
+                                t_string!(
+                                    i18n, tournaments.creation.elimination.different_settings_help
+                                )
+                                    .to_string()
+                            }
                             active=Signal::derive(|| false)
                             disabled=Signal::derive(move || phase_count() >= EDITOR_MAX_PHASES)
                             on_select=Callback::new(move |()| {
@@ -700,8 +778,9 @@ fn PhaseEditor(
                         />
                     </div>
                     <Show when=move || { phase_count() >= EDITOR_MAX_PHASES }>
-                        // TODO: i18n once copy is approved.
-                        <p class="ui-field-helper">"A match can have up to eight steps."</p>
+                        <p class="ui-field-helper">
+                            {t!(i18n, tournaments.creation.elimination.max_steps)}
+                        </p>
                     </Show>
                 </div>
             </Show>
@@ -743,12 +822,10 @@ fn PhaseColorOrderEditor(
         <div class="space-y-2">
             <div>
                 <span class="ui-field-label">
-                    // TODO: i18n once copy is approved.
-                    "Who plays White"
+                    {t!(i18n, tournaments.creation.elimination.colors.who_white)}
                 </span>
                 <p class="ui-field-helper">
-                    // TODO: i18n once copy is approved.
-                    "First and Second are the two entrants. Repeated sets swap colors."
+                    {t!(i18n, tournaments.creation.elimination.colors.entrants_help)}
                 </p>
             </div>
             <div class="flex overflow-x-auto gap-2 pb-1 min-h-20">
@@ -764,9 +841,13 @@ fn PhaseColorOrderEditor(
                         };
                         view! {
                             <div class="flex flex-col items-center p-1 rounded border border-gray-300 dark:border-gray-600 shrink-0">
-                                // TODO: i18n once copy is approved.
                                 <span class="text-xs text-gray-500">
-                                    {format!("Game {}", color_index + 1)}
+                                    {move || {
+                                        t_string!(
+                                            i18n, tournaments.schedule_context.game, game = color_index + 1
+                                        )
+                                            .to_string()
+                                    }}
                                 </span>
                                 <div class="inline-flex items-center">
                                     <button
@@ -845,8 +926,7 @@ fn PhaseColorOrderEditor(
                             .to_string()
                     }
                 >
-                    // TODO: i18n once copy is approved.
-                    "Equal White games"
+                    {t!(i18n, tournaments.creation.elimination.colors.equal_white)}
                 </p>
             </Show>
             <Show when=move || phase().is_some_and(|phase| phase.games_per_set % 2 == 1)>
@@ -871,11 +951,21 @@ fn PhaseColorOrderEditor(
                             None => String::new(),
                         }
                     >
-                        // TODO: i18n once copy is approved.
+
                         {move || match phase().and_then(|phase| phase.odd_color_advantage()) {
-                            Some(EntrantSide::First) => "Extra White: First",
-                            Some(EntrantSide::Second) => "Extra White: Second",
-                            None => "",
+                            Some(EntrantSide::First) => {
+                                t_string!(
+                                    i18n, tournaments.creation.elimination.colors.extra_white_first
+                                )
+                                    .to_string()
+                            }
+                            Some(EntrantSide::Second) => {
+                                t_string!(
+                                    i18n, tournaments.creation.elimination.colors.extra_white_second
+                                )
+                                    .to_string()
+                            }
+                            None => String::new(),
                         }}
                     </span>
                     <button
@@ -910,9 +1000,7 @@ fn PhaseColorOrderEditor(
                             );
                         }
                     >
-                        // TODO: i18n once copy is approved.
-                        "Swap"
-
+                        {t!(i18n, tournaments.creation.elimination.colors.swap)}
                     </button>
                 </div>
             </Show>
@@ -956,8 +1044,9 @@ fn PhaseClockEditor(
     view! {
         <div class="space-y-2">
             <label class="flex flex-col gap-1.5 max-w-sm">
-                // TODO: i18n once copy is approved.
-                <span class="ui-field-label">"Clock"</span>
+                <span class="ui-field-label">
+                    {t!(i18n, tournaments.creation.elimination.clock.label)}
+                </span>
                 <select
                     class="ui-field-select"
                     prop:value=move || if uses_tournament_clock() { "tournament" } else { "custom" }
@@ -975,10 +1064,12 @@ fn PhaseClockEditor(
                         );
                     }
                 >
-                    // TODO: i18n once copy is approved.
-                    <option value="tournament">"Use tournament clock"</option>
-                    // TODO: i18n once copy is approved.
-                    <option value="custom">"Custom clock"</option>
+                    <option value="tournament">
+                        {t!(i18n, tournaments.creation.elimination.clock.use_tournament)}
+                    </option>
+                    <option value="custom">
+                        {t!(i18n, tournaments.creation.elimination.clock.custom)}
+                    </option>
                 </select>
             </label>
             <Show when=move || !uses_tournament_clock() && is_realtime()>
@@ -1199,5 +1290,39 @@ fn color_label(i18n: I18nContext<Locale, I18nKeys>, color: EntrantSide) -> Strin
         EntrantSide::Second => {
             t_string!(i18n, tournaments.creation.elimination.colors.second_short).to_string()
         }
+    }
+}
+
+fn creation_error_text(error: EliminationCreationError) -> String {
+    let i18n = use_i18n();
+    match error {
+        EliminationCreationError::EmptyPhaseList => t_string!(
+            i18n,
+            tournaments.creation.elimination.errors.empty_phase_list
+        )
+        .to_string(),
+        EliminationCreationError::GamesPerSetMustBePositive => {
+            t_string!(i18n, tournaments.creation.elimination.errors.games_positive).to_string()
+        }
+        EliminationCreationError::ColorOrderLengthMismatch { phase } => t_string!(
+            i18n,
+            tournaments.creation.elimination.errors.color_count,
+            phase = phase + 1
+        )
+        .to_string(),
+        EliminationCreationError::InvalidColorInventory { phase } => t_string!(
+            i18n,
+            tournaments.creation.elimination.errors.color_balance,
+            phase = phase + 1
+        )
+        .to_string(),
+        EliminationCreationError::FiniteSetLimitMustBePositive => {
+            t_string!(i18n, tournaments.creation.elimination.errors.finite_sets).to_string()
+        }
+        EliminationCreationError::MixedTimeModes => t_string!(
+            i18n,
+            tournaments.creation.elimination.errors.mixed_time_modes
+        )
+        .to_string(),
     }
 }

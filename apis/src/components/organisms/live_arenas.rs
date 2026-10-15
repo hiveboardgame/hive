@@ -3,6 +3,7 @@ use crate::{
     components::molecules::tournament_row::format_tournament_clock,
     functions::tournaments::get_live_arenas,
     hooks::arena_clock::{format_time_left, use_ticking_now},
+    i18n::*,
     providers::{
         websocket::{ConnectionReadyState, WebsocketContext},
         AuthContext,
@@ -28,6 +29,7 @@ fn viewer_identity_key(identity: Option<AuthIdentity>) -> ViewerIdentityKey {
 
 #[component]
 pub fn LiveArenas() -> impl IntoView {
+    let i18n = use_i18n();
     let auth = expect_context::<AuthContext>();
     let identity = auth.identity;
     let websocket = expect_context::<WebsocketContext>();
@@ -150,8 +152,10 @@ pub fn LiveArenas() -> impl IntoView {
                                 <section class="overflow-hidden mx-auto w-full ui-panel">
                                     <header class="py-3 px-4">
                                         <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-300">
-                                            // TODO: i18n once copy is approved.
-                                            "Arenas"
+
+                                            {move || {
+                                                t_string!(i18n, tournaments.ui.arenas).to_string()
+                                            }}
                                         </h2>
                                     </header>
                                     <ul
@@ -174,7 +178,7 @@ pub fn LiveArenas() -> impl IntoView {
                                     </ul>
                                     <Show when=move || { hidden_count > 0 }>
                                         <div class="py-2 px-4 text-right border-t border-black/10 dark:border-white/10">
-                                            // TODO: i18n once copy is approved.
+
                                             <button
                                                 type="button"
                                                 class="text-xs ui-text-link"
@@ -184,9 +188,12 @@ pub fn LiveArenas() -> impl IntoView {
                                             >
                                                 {move || {
                                                     if expanded.get() {
-                                                        String::from("Show fewer")
+                                                        t_string!(i18n, common.show_fewer).to_string()
                                                     } else {
-                                                        format!("More arenas ({hidden_count})")
+                                                        t_string!(
+                                                            i18n, tournaments.ui.more_arenas, hidden_count = hidden_count
+                                                        )
+                                                            .to_string()
                                                     }
                                                 }}
                                             </button>
@@ -207,6 +214,7 @@ fn ArenaCard(
     now: Signal<DateTime<Utc>>,
     ends_at: DateTime<Utc>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let href = format!("/tournament/{}", arena.tournament_id.0);
     let name = arena.name.clone();
     let players = arena.players;
@@ -227,13 +235,12 @@ fn ArenaCard(
         }
     });
     let countdown_label = move || {
-        // TODO: i18n once copy is approved.
         if upcoming.get() {
-            "Starts in"
+            t_string!(i18n, tournaments.ui.starts_in).to_string()
         } else if now.get() >= ends_at {
-            "Ending"
+            t_string!(i18n, tournaments.ui.ending).to_string()
         } else {
-            "Remaining"
+            t_string!(i18n, tournaments.ui.remaining).to_string()
         }
     };
 
@@ -248,9 +255,18 @@ fn ArenaCard(
                         {name}
                     </span>
                     <span class="text-xs text-gray-600 dark:text-gray-400">
-                        // TODO: i18n once copy is approved.
+
                         {time_control}" · "
-                        {format!("{players} {}", if players == 1 { "player" } else { "players" })}
+                        {move || {
+                            format!(
+                                "{players} {}",
+                                if players == 1 {
+                                    t_string!(i18n, tournaments.ui.player).to_string()
+                                } else {
+                                    t_string!(i18n, tournaments.ui.players).to_string()
+                                },
+                            )
+                        }}
                     </span>
                 </span>
                 <span class="flex flex-col gap-1 items-end shrink-0">
@@ -258,10 +274,14 @@ fn ArenaCard(
                     <time
                         class="text-sm font-semibold tabular-nums text-gray-700 dark:text-gray-200"
                         aria-label=move || {
-                            format!("{} {}", countdown_label(), format_time_left(time_left.get()))
+                            format!(
+                                "{} {}",
+                                countdown_label(),
+                                format_time_left(i18n, time_left.get()),
+                            )
                         }
                     >
-                        {move || format_time_left(time_left.get())}
+                        {move || format_time_left(i18n, time_left.get())}
                     </time>
                 </span>
                 <Icon

@@ -9,7 +9,7 @@ use leptos_use::on_click_outside;
 pub fn Modal(
     children: Children,
     dialog_el: NodeRef<Dialog>,
-    #[prop(optional, into)] aria_label: Option<String>,
+    #[prop(optional, into)] aria_label: Option<TextProp>,
     #[prop(optional, into)] aria_labelledby: Option<String>,
     #[prop(optional)] on_close: Option<Callback<()>>,
     #[prop(optional)] hide_close_button: bool,
@@ -25,7 +25,7 @@ pub fn Modal(
         <dialog
             node_ref=dialog_el
             class="ui-modal-panel"
-            aria-label=aria_label
+            aria-label=move || aria_label.as_ref().map(|label| label.get())
             aria-labelledby=aria_labelledby
             on:close=move |_| {
                 if let Some(on_close) = on_close {

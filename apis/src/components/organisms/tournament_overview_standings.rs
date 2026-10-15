@@ -3,6 +3,7 @@ use crate::{
         display_standing_rows,
         primary_score_presentation,
         result_marker_color,
+        result_marker_label,
         standings_value_text,
         tournament_completion_order,
         ScorePresentation,
@@ -536,7 +537,7 @@ fn compact_rows(
                     rating,
                     rank: result.placement,
                     score: None,
-                    state: overview_result_label(result),
+                    state: overview_result_label(use_i18n().get_locale(), result),
                     faded: result.placement.is_some_and(|place| place != 1),
                     withdrawn: memberships.withdrawn.contains(&user.uid),
                     arena: None,
@@ -877,6 +878,7 @@ fn StandardStandingRow(
     max_result_count: Signal<usize>,
     selection: RwSignal<Option<TournamentSelection>>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let player = row.player;
     let elimination = matches!(tournament.format, TournamentFormatState::Elimination(_));
     let wide_state = row.state.is_some();
@@ -991,14 +993,13 @@ fn StandardStandingRow(
                                                     view! {
                                                         <span class=format!(
                                                             "inline-flex shrink-0 justify-center {color} {marker_class}",
-                                                        )>{marker}</span>
+                                                        )>{move || result_marker_label(i18n, marker)}</span>
                                                     }
                                                 })
                                                 .collect_view()}
                                             {(result_count > 35)
                                                 .then(|| {
                                                     view! {
-                                                        // TODO: i18n once copy is approved.
                                                         <button
                                                             type="button"
                                                             class="font-sans text-xs ui-text-link"
@@ -1009,9 +1010,12 @@ fn StandardStandingRow(
                                                             on:keydown=move |event| event.stop_propagation()
                                                         >
                                                             {if condensed {
-                                                                format!("Show all {result_count}")
+                                                                t_string!(
+                                                                    i18n, tournaments.ui.show_all, result_count = result_count
+                                                                )
+                                                                    .to_string()
                                                             } else {
-                                                                "Show fewer".to_string()
+                                                                t_string!(i18n, common.show_fewer).to_string()
                                                             }}
                                                         </button>
                                                     }
@@ -1136,6 +1140,7 @@ pub fn TournamentOverviewStandings(
     selection: RwSignal<Option<TournamentSelection>>,
     children: Children,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let auth = expect_context::<AuthContext>();
     let search = RwSignal::new(String::new());
     let suggestions_id = StoredValue::new(format!(
@@ -1280,7 +1285,7 @@ pub fn TournamentOverviewStandings(
                             lifecycle
                                 .seats
                                 .map(|capacity| {
-                                    // TODO: i18n once copy is approved.
+
                                     view! {
                                         <span class="text-sm font-semibold tabular-nums text-gray-600 dark:text-gray-300">
                                             {format!(
@@ -1297,15 +1302,15 @@ pub fn TournamentOverviewStandings(
             </div> <div class="min-w-0">
                 <Show when=move || total.get() == 0 && !search.get().trim().is_empty()>
                     <div class="flex gap-3 justify-center items-center p-4 text-sm">
-                        // TODO: i18n once copy is approved.
-                        <span>"No players match your search."</span>
-                        // TODO: i18n once copy is approved.
+
+                        <span>{t!(i18n, common.no_players_match_your_search)}</span>
+
                         <button
                             type="button"
                             class="ui-text-link"
                             on:click=move |_| on_query_change.run(String::new())
                         >
-                            "Clear search"
+                            {t!(i18n, common.clear_search)}
                         </button>
                     </div>
                 </Show>

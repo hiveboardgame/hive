@@ -13,33 +13,51 @@ pub trait StandingsCriterionChoice: Clone + Copy + Eq + Hash + Send + Sync + 'st
     fn is_seed(self) -> bool;
 }
 
-fn seed_name(order: TournamentPairingNumberOrder) -> String {
-    // TODO: i18n once copy is approved.
+fn seed_name(i18n: I18nContext<Locale, I18nKeys>, order: TournamentPairingNumberOrder) -> String {
     match order {
-        TournamentPairingNumberOrder::Ascending => "Seed ↑",
-        TournamentPairingNumberOrder::Descending => "Seed ↓",
+        TournamentPairingNumberOrder::Ascending => {
+            t_string!(i18n, tournaments.tiebreakers.names.seed_ascending).to_string()
+        }
+        TournamentPairingNumberOrder::Descending => {
+            t_string!(i18n, tournaments.tiebreakers.names.seed_descending).to_string()
+        }
     }
     .to_string()
 }
 
-fn seed_explanation(order: TournamentPairingNumberOrder) -> String {
-    // TODO: i18n once copy is approved.
+fn seed_explanation(
+    i18n: I18nContext<Locale, I18nKeys>,
+    order: TournamentPairingNumberOrder,
+) -> String {
     match order {
-        TournamentPairingNumberOrder::Ascending => "Smaller rating seed numbers place first.",
-        TournamentPairingNumberOrder::Descending => "Larger rating seed numbers place first.",
+        TournamentPairingNumberOrder::Ascending => {
+            t_string!(i18n, tournaments.tiebreakers.seed_ascending).to_string()
+        }
+        TournamentPairingNumberOrder::Descending => {
+            t_string!(i18n, tournaments.tiebreakers.seed_descending).to_string()
+        }
     }
     .to_string()
 }
 
-fn cut_scores(lowest: u32, highest: u32) -> String {
-    // TODO: i18n once copy is approved.
+fn cut_scores(i18n: I18nContext<Locale, I18nKeys>, lowest: u32, highest: u32) -> String {
     match (lowest, highest) {
         (0, 0) => String::new(),
-        (1, 0) => String::from(", leaving out the lowest score"),
-        (low, 0) => format!(", leaving out the {low} lowest scores"),
-        (0, 1) => String::from(", leaving out the highest score"),
-        (0, high) => format!(", leaving out the {high} highest scores"),
-        (low, high) => format!(", leaving out the {low} lowest and {high} highest scores"),
+        (1, 0) => t_string!(i18n, tournaments.tiebreakers.cut_lowest).to_string(),
+        (low, 0) => {
+            t_string!(i18n, tournaments.tiebreakers.cut_lowest_many, count = low).to_string()
+        }
+        (0, 1) => t_string!(i18n, tournaments.tiebreakers.cut_highest).to_string(),
+        (0, high) => {
+            t_string!(i18n, tournaments.tiebreakers.cut_highest_many, count = high).to_string()
+        }
+        (low, high) => t_string!(
+            i18n,
+            tournaments.tiebreakers.cut_both,
+            low = low,
+            high = high
+        )
+        .to_string(),
     }
 }
 
@@ -54,9 +72,11 @@ impl StandingsCriterionChoice for RoundRobinCriterion {
                 t_string!(i18n, tournaments.tiebreakers.names.game_points)
             }
             Self::MatchPoints => t_string!(i18n, tournaments.tiebreakers.names.match_points),
-            // TODO: i18n once copy is approved.
-            Self::MatchesWon => return String::from("Matches won"),
-            Self::TournamentPairingNumber(order) => return seed_name(order),
+
+            Self::MatchesWon => {
+                return t_string!(i18n, tournaments.tiebreakers.names.matches_won).to_string()
+            }
+            Self::TournamentPairingNumber(order) => return seed_name(i18n, order),
             Self::Progressive(_) => t_string!(i18n, tournaments.tiebreakers.names.progressive),
             Self::DirectEncounter(_) => {
                 t_string!(i18n, tournaments.tiebreakers.names.direct_encounter)
@@ -74,36 +94,49 @@ impl StandingsCriterionChoice for RoundRobinCriterion {
         .to_string()
     }
 
-    fn explanation(self, _i18n: I18nContext<Locale, I18nKeys>) -> String {
-        // TODO: i18n once copy is approved.
+    fn explanation(self, i18n: I18nContext<Locale, I18nKeys>) -> String {
         match self {
-            Self::PrimaryScore => String::from("Points used to rank players."),
-            Self::GamePoints => String::from("Points earned from individual game results."),
-            Self::MatchPoints => String::from("Points earned from the combined result of all games against each opponent. Awarded only when every game has a result."),
-            Self::MatchesWon => String::from("Counts completed matches won, including full-match forfeit wins."),
-            Self::TournamentPairingNumber(order) => seed_explanation(order),
-            Self::Progressive(_) => {
-                String::from("Adds your running score after each round, rewarding earlier points.")
+            Self::PrimaryScore => {
+                t_string!(i18n, tournaments.tiebreakers.primary_score).to_string()
             }
-            Self::DirectEncounter(_) => String::from("Compares results between the tied players."),
-            Self::SonnebornBerger(options) => format!(
-                "Weights your results by your opponents’ scores{}.",
-                cut_scores(options.cut_lowest, 0)
-            ),
+            Self::GamePoints => {
+                t_string!(i18n, tournaments.tiebreakers.individual_games).to_string()
+            }
+            Self::MatchPoints => {
+                t_string!(i18n, tournaments.tiebreakers.round_robin_match_points).to_string()
+            }
+            Self::MatchesWon => t_string!(i18n, tournaments.tiebreakers.matches_won).to_string(),
+            Self::TournamentPairingNumber(order) => seed_explanation(i18n, order),
+            Self::Progressive(_) => {
+                t_string!(i18n, tournaments.tiebreakers.progressive).to_string()
+            }
+            Self::DirectEncounter(_) => {
+                t_string!(i18n, tournaments.tiebreakers.direct_encounter).to_string()
+            }
+            Self::SonnebornBerger(options) => t_string!(
+                i18n,
+                tournaments.tiebreakers.sonneborn_berger,
+                cut = cut_scores(i18n, options.cut_lowest, 0)
+            )
+            .to_string(),
             Self::Koya(options) => {
                 if options.threshold_numerator == 1 && options.threshold_denominator.get() == 2 {
-                    String::from(
-                        "Points against opponents who scored at least half the available points.",
-                    )
+                    t_string!(i18n, tournaments.tiebreakers.koya_half).to_string()
                 } else {
-                    format!("Points against opponents who scored at least {}/{} of the available points.", options.threshold_numerator, options.threshold_denominator)
+                    t_string!(
+                        i18n,
+                        tournaments.tiebreakers.koya_threshold,
+                        numerator = options.threshold_numerator,
+                        denominator = options.threshold_denominator.get()
+                    )
+                    .to_string()
                 }
             }
-            Self::NumberOfWins => {
-                String::from("Counts results awarded as wins, including forfeits.")
+            Self::NumberOfWins => t_string!(i18n, tournaments.tiebreakers.score_wins).to_string(),
+            Self::GamesWon => t_string!(i18n, tournaments.tiebreakers.games_won).to_string(),
+            Self::GamesWonWithBlack => {
+                t_string!(i18n, tournaments.tiebreakers.wins_as_black).to_string()
             }
-            Self::GamesWon => String::from("Counts individual games won."),
-            Self::GamesWonWithBlack => String::from("Counts games won as Black."),
         }
     }
 }
@@ -129,7 +162,7 @@ impl StandingsCriterionChoice for SwissCriterion {
                 t_string!(i18n, tournaments.tiebreakers.names.sonneborn_berger)
             }
             Self::Progressive(_) => t_string!(i18n, tournaments.tiebreakers.names.progressive),
-            Self::TournamentPairingNumber(order) => return seed_name(order),
+            Self::TournamentPairingNumber(order) => return seed_name(i18n, order),
             Self::DirectEncounter(_) => {
                 t_string!(i18n, tournaments.tiebreakers.names.direct_encounter)
             }
@@ -142,30 +175,41 @@ impl StandingsCriterionChoice for SwissCriterion {
         .to_string()
     }
 
-    fn explanation(self, _i18n: I18nContext<Locale, I18nKeys>) -> String {
-        // TODO: i18n once copy is approved.
+    fn explanation(self, i18n: I18nContext<Locale, I18nKeys>) -> String {
         match self {
-            Self::PrimaryScore => String::from("Points used to rank players."),
-            Self::GamePoints => String::from("Points earned from individual games."),
+            Self::PrimaryScore => {
+                t_string!(i18n, tournaments.tiebreakers.primary_score).to_string()
+            }
+            Self::GamePoints => {
+                t_string!(i18n, tournaments.tiebreakers.individual_games).to_string()
+            }
             Self::MatchPoints => {
-                String::from("Points earned from the combined result of each two-game match.")
+                t_string!(i18n, tournaments.tiebreakers.swiss_match_points).to_string()
             }
-            Self::Buchholz(options) => format!(
-                "Adds your opponents’ scores{}.",
-                cut_scores(options.cut_lowest, options.cut_highest)
-            ),
-            Self::SonnebornBerger(options) => format!(
-                "Weights your results by your opponents’ scores{}.",
-                cut_scores(options.cut_lowest, 0)
-            ),
+            Self::Buchholz(options) => t_string!(
+                i18n,
+                tournaments.tiebreakers.buchholz,
+                cut = cut_scores(i18n, options.cut_lowest, options.cut_highest)
+            )
+            .to_string(),
+            Self::SonnebornBerger(options) => t_string!(
+                i18n,
+                tournaments.tiebreakers.sonneborn_berger,
+                cut = cut_scores(i18n, options.cut_lowest, 0)
+            )
+            .to_string(),
             Self::Progressive(_) => {
-                String::from("Adds your running score after each round, rewarding earlier points.")
+                t_string!(i18n, tournaments.tiebreakers.progressive).to_string()
             }
-            Self::TournamentPairingNumber(order) => seed_explanation(order),
-            Self::DirectEncounter(_) => String::from("Compares results between the tied players."),
-            Self::NumberOfWins => String::from("Counts rounds awarded as wins."),
-            Self::GamesWon => String::from("Counts individual games won."),
-            Self::GamesWonWithBlack => String::from("Counts games won as Black."),
+            Self::TournamentPairingNumber(order) => seed_explanation(i18n, order),
+            Self::DirectEncounter(_) => {
+                t_string!(i18n, tournaments.tiebreakers.direct_encounter).to_string()
+            }
+            Self::NumberOfWins => t_string!(i18n, tournaments.tiebreakers.round_wins).to_string(),
+            Self::GamesWon => t_string!(i18n, tournaments.tiebreakers.games_won).to_string(),
+            Self::GamesWonWithBlack => {
+                t_string!(i18n, tournaments.tiebreakers.wins_as_black).to_string()
+            }
         }
     }
 }

@@ -1,13 +1,4 @@
 {
-    "game_buttons": {
-        "playing": "Giocare",
-        "pending": "In attesa",
-        "finished": "Completato"
-    },
-    "color_buttons": {
-        "white": "Bianco",
-        "black": "Nero"
-    },
     "result_buttons": {
         "draw": "Patta",
         "loss": "Sconfitte",
@@ -23,5 +14,15 @@
     "player_color": "Colore giocatore",
     "rating": "Rating",
     "games_played_one": "{{count}} partita",
-    "games_played_other": "{{count}} partite"
+    "games_played_other": "{{count}} partite",
+    "page": {
+        "redirecting": "Reindirizzamento…",
+        "user_not_found": "Utente non trovato"
+    },
+    "leaderboards": {
+        "top_rated_players": "Giocatori con punteggio più alto",
+        "highest_rated_players_by_speed": "Giocatori con punteggio più alto per cadenza.",
+        "top_rated_bots": "Bot con punteggio più alto",
+        "highest_rated_bots_by_speed": "Bot con punteggio più alto per cadenza."
+    }
 }

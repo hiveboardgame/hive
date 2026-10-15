@@ -1,5 +1,5 @@
 use crate::{
-    common::{ChallengeUpdate, ServerMessage},
+    common::{ChallengeUpdate, ServerMessage, UiError},
     responses::GameResponse,
     websocket::{
         messages::{InternalServerMessage, MessageDestination},
@@ -59,9 +59,13 @@ impl AcceptHandler {
             if rating > band_upper as f64 {
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::User(self.user_id),
-                    message: ServerMessage::Error(format!(
-                        "{rating} is above the rating band of {band_upper}"
-                    )),
+                    message: ServerMessage::Error(
+                        UiError::RatingAboveBand {
+                            rating: rating.to_string(),
+                            limit: band_upper.to_string(),
+                        }
+                        .encode(),
+                    ),
                 });
                 return Ok(messages);
             }
@@ -70,9 +74,13 @@ impl AcceptHandler {
             if rating < band_lower as f64 {
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::User(self.user_id),
-                    message: ServerMessage::Error(format!(
-                        "{rating} is below the rating band of {band_lower}"
-                    )),
+                    message: ServerMessage::Error(
+                        UiError::RatingBelowBand {
+                            rating: rating.to_string(),
+                            limit: band_lower.to_string(),
+                        }
+                        .encode(),
+                    ),
                 });
                 return Ok(messages);
             }

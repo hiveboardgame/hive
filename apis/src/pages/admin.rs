@@ -8,6 +8,7 @@ use crate::{
         update_from_event::update_from_input,
     },
     functions::home_banner,
+    i18n::{t, t_string, use_i18n},
     providers::AuthContext,
     security::csrf::ActionForm,
 };
@@ -16,29 +17,39 @@ use shared_types::ConversationKey;
 
 #[component]
 pub fn Admin() -> impl IntoView {
+    let i18n = use_i18n();
     let auth_context = expect_context::<AuthContext>();
 
     view! {
         <PageShell>
-            <PageHeader title="Admin" />
+            <PageHeader title=move || t_string!(i18n, common.admin.page_title) />
             <Show when=move || {
                 auth_context.user.with(|a| a.as_ref().is_some_and(|v| v.user.admin))
             }>
-                <Panel title="Send Global Warning" body_class="space-y-3">
+                <Panel
+                    title=move || t_string!(i18n, common.admin.send_global_warning)
+                    body_class="space-y-3"
+                >
                     <ResolvedChatWindow conversation=ConversationKey::Global />
                 </Panel>
-                <Panel title="Edit Banner" body_class="space-y-4">
+                <Panel
+                    title=move || t_string!(i18n, common.admin.edit_banner)
+                    body_class="space-y-4"
+                >
                     <EditBanner />
                 </Panel>
-                <Panel title="Telemetry" body_class="flex flex-wrap gap-2">
+                <Panel
+                    title=move || t_string!(i18n, common.admin.telemetry.title)
+                    body_class="flex flex-wrap gap-2"
+                >
                     <a class="ui-button ui-button-primary ui-button-md" href="/admin/telemetry">
-                        "Open WS telemetry dashboard"
+                        {t!(i18n, common.admin.open_ws_telemetry_dashboard)}
                     </a>
                     <a
                         class="ui-button ui-button-secondary ui-button-md"
                         href="/admin/push-metrics"
                     >
-                        "Open push notification metrics"
+                        {t!(i18n, common.admin.open_push_notification_metrics)}
                     </a>
                 </Panel>
             </Show>
@@ -48,6 +59,7 @@ pub fn Admin() -> impl IntoView {
 
 #[component]
 fn EditBanner() -> impl IntoView {
+    let i18n = use_i18n();
     let banner =
         OnceResource::new(async move { home_banner::get_with_display().await.unwrap_or_default() });
     view! {
@@ -67,7 +79,11 @@ fn EditBanner() -> impl IntoView {
                                 class="ui-button ui-button-secondary ui-button-md w-fit"
                             >
                                 {move || {
-                                    if !show_preview() { "Preview Banner" } else { "Edit Banner" }
+                                    if !show_preview() {
+                                        t_string!(i18n, common.admin.preview_banner).to_string()
+                                    } else {
+                                        t_string!(i18n, common.admin.edit_banner).to_string()
+                                    }
                                 }}
                             </button>
                             <ActionForm action=update>
@@ -82,14 +98,16 @@ fn EditBanner() -> impl IntoView {
                                 <div class=move || if !show_preview() { "" } else { "hidden" }>
                                     <div class="flex flex-col gap-1.5">
                                         <label class="ui-field-label" for="title">
-                                            Title
+                                            {t!(i18n, common.title)}
                                         </label>
                                         <input
                                             class="ui-field-input"
                                             name="title"
                                             type="text"
                                             prop:value=title
-                                            placeholder="banner title"
+                                            placeholder=move || {
+                                                t_string!(i18n, common.admin.banner_title)
+                                            }
                                             on:input=update_from_input(title)
                                         />
                                     </div>
@@ -107,7 +125,7 @@ fn EditBanner() -> impl IntoView {
                                             href="https://commonmark.org/help/"
                                             target="_blank"
                                         >
-                                            "Markdown Cheat Sheet"
+                                            {t!(i18n, common.admin.markdown_cheat_sheet)}
                                         </a>
                                     </div>
                                 </div>
@@ -119,10 +137,14 @@ fn EditBanner() -> impl IntoView {
                                         type="submit"
                                         class="ui-button ui-button-primary ui-button-md"
                                     >
-                                        "Submit"
+                                        {t!(i18n, common.submit)}
                                     </button>
                                     {move || {
-                                        if display() { "Display banner" } else { "Hide banner" }
+                                        if display() {
+                                            t_string!(i18n, common.admin.display_banner).to_string()
+                                        } else {
+                                            t_string!(i18n, common.admin.hide_banner).to_string()
+                                        }
                                     }}
                                     <SimpleSwitch checked=display />
                                     <input

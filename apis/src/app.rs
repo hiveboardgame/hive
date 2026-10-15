@@ -4,7 +4,7 @@ use crate::{
         layouts::base_layout::BaseLayout,
         organisms::{direct_challenge_modal::DirectChallengeModal, display_games::DisplayGames},
     },
-    i18n::I18nContextProvider,
+    i18n::{t_string, use_i18n, I18nContextProvider},
     pages::{
         account::Account,
         admin::Admin,
@@ -141,7 +141,9 @@ pub fn App() -> impl IntoView {
             .same_site(SameSite::Lax)
             .path("/")>
             <Router>
-                <Routes fallback=|| "404 Not Found">
+                <Routes fallback=move || {
+                    view! { <p>{move || t_string!(use_i18n(), common.not_found)}</p> }
+                }>
                     <ParentRoute
                         path=path!("")
                         view=|| {

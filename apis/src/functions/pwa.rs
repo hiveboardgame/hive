@@ -1,4 +1,8 @@
-use std::{fs, path::PathBuf};
+use crate::{
+    common::{parse_locale, request_locale},
+    i18n::*,
+};
+use std::{fs, path::PathBuf, sync::LazyLock};
 
 use actix_web::{get, http::header, web, HttpResponse, Responder};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
@@ -7,6 +11,50 @@ use sha2::{Digest, Sha256};
 const SERVICE_WORKER_TEMPLATE: &str = include_str!("sw-template.js");
 const CACHE_NAME_PLACEHOLDER: &str = "__HIVE_CACHE_NAME__";
 const ASSETS_PLACEHOLDER: &str = "__HIVE_ASSETS__";
+
+#[get("/assets/site.webmanifest")]
+pub async fn manifest_redirect(request: actix_web::HttpRequest) -> HttpResponse {
+    let locale = request_locale(&request);
+    HttpResponse::TemporaryRedirect()
+        .insert_header((
+            header::LOCATION,
+            format!("/manifest.webmanifest?lang={locale}"),
+        ))
+        .finish()
+}
+
+#[get("/manifest.webmanifest")]
+pub async fn localized_manifest(
+    query: web::Query<std::collections::HashMap<String, String>>,
+) -> HttpResponse {
+    let locale = parse_locale(query.get("lang").map(String::as_str).unwrap_or_default());
+    static MANIFEST: LazyLock<Result<serde_json::Value, serde_json::Error>> =
+        LazyLock::new(|| serde_json::from_str(include_str!("../../assets/site.webmanifest")));
+    let mut manifest = match &*MANIFEST {
+        Ok(manifest) => manifest.clone(),
+        Err(error) => {
+            log::error!("Invalid embedded web manifest: {error}");
+            return HttpResponse::InternalServerError().finish();
+        }
+    };
+    manifest["description"] =
+        serde_json::Value::String(td_string!(locale, common.app_description).to_string());
+    manifest["lang"] = serde_json::Value::String(locale.to_string());
+    let shortcut_names = [
+        td_string!(locale, common.profile),
+        td_string!(locale, header.learn.archive),
+        td_string!(locale, header.learn.analysis),
+    ];
+    if let Some(shortcuts) = manifest["shortcuts"].as_array_mut() {
+        for (shortcut, name) in shortcuts.iter_mut().zip(shortcut_names) {
+            shortcut["name"] = serde_json::Value::String(name.to_string());
+        }
+    }
+    HttpResponse::Ok()
+        .insert_header((header::CONTENT_TYPE, "application/manifest+json"))
+        .insert_header((header::CACHE_CONTROL, "public, max-age=0, must-revalidate"))
+        .body(manifest.to_string())
+}
 
 #[derive(Clone)]
 pub struct PwaManifest {
@@ -17,7 +65,6 @@ pub struct PwaManifest {
 
 #[derive(Clone)]
 pub struct PwaDocumentAssets {
-    pub manifest_href: String,
     pub apple_touch_icon_href: String,
     pub pwa_script_src: String,
 }
@@ -55,7 +102,6 @@ impl PwaManifest {
 impl PwaDocumentAssets {
     fn from_cache_version(cache_version: &str) -> Self {
         Self {
-            manifest_href: versioned_pwa_asset_path("/assets/site.webmanifest", cache_version),
             apple_touch_icon_href: versioned_pwa_asset_path(
                 "/assets/android-chrome-192x192.png",
                 cache_version,
@@ -163,7 +209,6 @@ mod tests {
     fn document_assets_are_versioned_from_cache_version() {
         let assets = PwaDocumentAssets::from_cache_version("abc123");
 
-        assert_eq!(assets.manifest_href, "/assets/site.webmanifest?v=abc123");
         assert_eq!(
             assets.apple_touch_icon_href,
             "/assets/android-chrome-192x192.png?v=abc123"

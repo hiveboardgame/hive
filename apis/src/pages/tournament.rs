@@ -566,6 +566,7 @@ fn TournamentSurface(
     schedules: TournamentScheduleState,
     schedules_ready: Signal<bool>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let auth = expect_context::<AuthContext>();
     let identity = auth.identity;
     let admin = auth.admin;
@@ -713,12 +714,11 @@ fn TournamentSurface(
                 if swiss.progress().get() == SwissProgress::PairingFailed
             )
         }>
-            // TODO: i18n once copy is approved.
             <p
                 role="alert"
                 class="p-3 bg-orange-50 rounded border border-orange-400 dark:text-orange-100 text-orange-950 dark:bg-orange-950"
             >
-                "Pairing failed. An administrator needs to investigate."
+                {t!(i18n, tournaments.detail.pairing_failed)}
             </p>
         </Show>
         <main class="min-w-0">
@@ -729,6 +729,7 @@ fn TournamentSurface(
 
 #[component]
 fn TournamentNavigation() -> impl IntoView {
+    let i18n = use_i18n();
     let context = expect_context::<TournamentPageContext>();
     let tournament_id = StoredValue::new(context.tournament.tournament_id());
     let pathname = use_location().pathname;
@@ -789,32 +790,27 @@ fn TournamentNavigation() -> impl IntoView {
     let manage_class = link_class("manage", true);
     view! {
         <nav class="flex sticky top-10 z-40 flex-wrap gap-1 p-1.5 min-w-0 rounded-lg border shadow-sm border-black/10 ui-top-bar-surface dark:border-white/10">
-            // TODO: i18n once copy is approved.
             <A href="" exact=true attr:class=overview_class>
-                "Overview"
+                {t!(i18n, common.overview)}
             </A>
             <Show when=show_matches>
-                // TODO: i18n once copy is approved.
                 <A href="matches" attr:class=matches_class>
-                    "Matches"
+                    {t!(i18n, tournaments.calendar.title)}
                 </A>
             </Show>
             <Show when=show_standings>
-                // TODO: i18n once copy is approved.
                 <A href="standings" attr:class=standings_class>
-                    "Standings"
+                    {t!(i18n, common.standings)}
                 </A>
             </Show>
             <Show when=show_scheduling>
-                // TODO: i18n once copy is approved.
                 <A href="schedule" attr:class=scheduling_class>
-                    "Scheduling"
+                    {t!(i18n, common.scheduling)}
                 </A>
             </Show>
             <Show when=show_manage>
-                // TODO: i18n once copy is approved.
                 <A href="manage" attr:class=manage_class>
-                    "Manage"
+                    {t!(i18n, common.manage)}
                 </A>
             </Show>
         </nav>
@@ -843,11 +839,15 @@ fn TournamentOverviewHeader() -> impl IntoView {
             user_id,
             now.get(),
         );
-        // TODO: i18n once copy is approved.
         let label = if count > 0 {
-            format!("Schedule games · {count} opponents")
+            t_string!(
+                i18n,
+                tournaments.detail.schedule_games_count_opponents,
+                count = (count)
+            )
+            .to_string()
         } else {
-            "View schedule".to_string()
+            t_string!(i18n, tournaments.detail.view_schedule).to_string()
         };
         Some((
             label,
@@ -934,6 +934,7 @@ fn TournamentOverviewHeader() -> impl IntoView {
 
 #[component]
 fn TournamentHeaderActions() -> impl IntoView {
+    let i18n = use_i18n();
     let context = expect_context::<TournamentPageContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
     let tournament_id = StoredValue::new(context.tournament.tournament_id());
@@ -980,9 +981,8 @@ fn TournamentHeaderActions() -> impl IntoView {
     });
     view! {
         <Show when=move || active_setup.get().is_some()>
-            // TODO: i18n once copy is approved.
             <p class="text-sm text-amber-700 dark:text-amber-300">
-                "Bracket review is in progress. The roster is locked until its owner finishes, cancels, or the 15-minute window ends."
+                {t!(i18n, tournaments.detail.bracket_review_locked)}
             </p>
         </Show>
         <For
@@ -1000,7 +1000,6 @@ fn TournamentHeaderActions() -> impl IntoView {
         <Show when=context.organizer>
             <div class="flex flex-wrap gap-2">
                 <Show when=manual_start>
-                    // TODO: i18n once copy is approved.
                     <button
                         type="button"
                         class="ui-button ui-button-primary ui-button-sm"
@@ -1028,7 +1027,7 @@ fn TournamentHeaderActions() -> impl IntoView {
                             }
                         }
                     >
-                        "Start"
+                        {t!(i18n, common.start)}
                     </button>
                 </Show>
                 <Show when=pre_start>
@@ -1044,25 +1043,26 @@ fn TournamentHeaderActions() -> impl IntoView {
                             }
                         }
                     >
-                        // TODO: i18n once copy is approved.
-                        "Delete"
+                        {t!(i18n, common.delete)}
                     </button>
                 </Show>
             </div>
         </Show>
-        // TODO: i18n once copy is approved.
-        <Modal dialog_el=delete_dialog aria_label="Delete tournament">
+        <Modal
+            dialog_el=delete_dialog
+            aria_label=move || t_string!(i18n, tournaments.detail.delete_tournament).to_string()
+        >
             <div class="px-4 pb-4 space-y-4 w-[min(90vw,26rem)]">
-                // TODO: i18n once copy is approved.
-                <h2 class="text-xl font-bold">"Delete this tournament?"</h2>
+                <h2 class="text-xl font-bold">
+                    {t!(i18n, tournaments.detail.delete_this_tournament)}
+                </h2>
                 <div class="flex gap-2 justify-end">
                     <button
                         type="button"
                         class="ui-button ui-button-secondary ui-button-sm"
                         on:click=move |_| close_delete.run(())
                     >
-                        // TODO: i18n once copy is approved.
-                        "Cancel"
+                        {t!(i18n, common.cancel)}
                     </button>
                     <button
                         type="button"
@@ -1083,8 +1083,7 @@ fn TournamentHeaderActions() -> impl IntoView {
                             close_delete.run(());
                         }
                     >
-                        // TODO: i18n once copy is approved.
-                        "Delete tournament"
+                        {t!(i18n, tournaments.detail.delete_tournament)}
                     </button>
                 </div>
             </div>
@@ -1094,6 +1093,7 @@ fn TournamentHeaderActions() -> impl IntoView {
 
 #[component]
 fn EliminationStartSetup(setup: TournamentStartSetup) -> impl IntoView {
+    let i18n = use_i18n();
     use std::sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
@@ -1160,11 +1160,12 @@ fn EliminationStartSetup(setup: TournamentStartSetup) -> impl IntoView {
         _ => None,
     };
     let memberships = Signal::derive(move || context.tournament.common.memberships().get());
-    // TODO: i18n once copy is approved.
     view! {
         <Modal
             dialog_el=dialog
-            aria_label="Review elimination bracket"
+            aria_label=move || {
+                t_string!(i18n, tournaments.detail.review_elimination_bracket).to_string()
+            }
             on_close=cancel
             hide_close_button=true
         >
@@ -1180,9 +1181,16 @@ fn EliminationStartSetup(setup: TournamentStartSetup) -> impl IntoView {
             >
                 <header class="py-2 px-3 border-b border-gray-200 sm:px-4 dark:border-gray-700 shrink-0">
                     <div class="flex gap-3 justify-between items-center">
-                        <h2 class="text-lg font-bold sm:text-xl">"Review bracket"</h2>
+                        <h2 class="text-lg font-bold sm:text-xl">
+                            {t!(i18n, tournaments.detail.review_bracket)}
+                        </h2>
                         <div class="flex gap-3 items-center">
-                            <span class="text-sm font-semibold tabular-nums" title="Time remaining">
+                            <span
+                                class="text-sm font-semibold tabular-nums"
+                                title=move || {
+                                    t_string!(i18n, tournaments.detail.time_remaining).to_string()
+                                }
+                            >
                                 {move || {
                                     let seconds = (deadline - now.get()).num_seconds().max(0);
                                     format!("{}:{:02}", seconds / 60, seconds % 60)
@@ -1191,7 +1199,10 @@ fn EliminationStartSetup(setup: TournamentStartSetup) -> impl IntoView {
                             <button
                                 type="button"
                                 class="ui-button ui-button-ghost ui-button-icon size-10"
-                                aria-label="Close bracket review"
+                                aria-label=move || {
+                                    t_string!(i18n, tournaments.detail.close_bracket_review)
+                                        .to_string()
+                                }
                                 on:click=move |_| {
                                     cancel.run(());
                                     if let Some(dialog) = dialog.get() {
@@ -1204,7 +1215,7 @@ fn EliminationStartSetup(setup: TournamentStartSetup) -> impl IntoView {
                         </div>
                     </div>
                     <p class="text-xs text-gray-600 dark:text-gray-400">
-                        "Select a position to assign a player."
+                        {t!(i18n, tournaments.detail.select_a_position_to_assign_a_player)}
                     </p>
                 </header>
                 <div
@@ -1216,7 +1227,7 @@ fn EliminationStartSetup(setup: TournamentStartSetup) -> impl IntoView {
                             view! {
                                 <details class="mb-3 text-sm">
                                     <summary class="font-semibold cursor-pointer">
-                                        "Series and color rules"
+                                        {t!(i18n, tournaments.detail.series_and_color_rules)}
                                     </summary>
                                     <div class="mt-2">
                                         <TournamentFormatConfigurationDetails configuration=FormatConfig::Elimination(
@@ -1238,13 +1249,15 @@ fn EliminationStartSetup(setup: TournamentStartSetup) -> impl IntoView {
                     <button
                         type="button"
                         class="mr-auto min-h-10 ui-button ui-button-ghost ui-button-sm"
-                        title="Reset to seeded bracket"
+                        title=move || {
+                            t_string!(i18n, tournaments.detail.reset_to_seeded_bracket).to_string()
+                        }
                         on:click=move |_| {
                             position.set(None);
                             order.set(defaults.get_value());
                         }
                     >
-                        "Reset"
+                        {t!(i18n, common.reset)}
                     </button>
                     <button
                         type="button"
@@ -1256,7 +1269,7 @@ fn EliminationStartSetup(setup: TournamentStartSetup) -> impl IntoView {
                             }
                         }
                     >
-                        "Cancel"
+                        {t!(i18n, common.cancel)}
                     </button>
                     <button
                         type="button"
@@ -1277,7 +1290,7 @@ fn EliminationStartSetup(setup: TournamentStartSetup) -> impl IntoView {
                             }
                         }
                     >
-                        "Confirm and start"
+                        {t!(i18n, tournaments.detail.confirm_and_start)}
                     </button>
                 </footer>
             </div>
@@ -1287,6 +1300,7 @@ fn EliminationStartSetup(setup: TournamentStartSetup) -> impl IntoView {
 
 #[component]
 fn TournamentChatUtility(visible: Signal<bool>) -> impl IntoView {
+    let i18n = use_i18n();
     let context = expect_context::<TournamentPageContext>();
     let tournament_id = StoredValue::new(context.tournament.tournament_id());
     view! {
@@ -1294,8 +1308,9 @@ fn TournamentChatUtility(visible: Signal<bool>) -> impl IntoView {
             visible.get() && (context.organizer.get() || context.user_joined.get())
         }>
             <section class="flex overflow-hidden flex-col min-w-0 h-96 ui-panel tournament-three:h-auto tournament-three:flex-1 tournament-three:min-h-0">
-                // TODO: i18n once copy is approved.
-                <h2 class="font-bold shrink-0 ui-panel-header">"Tournament chat"</h2>
+                <h2 class="font-bold shrink-0 ui-panel-header">
+                    {t!(i18n, messages.chat.tournament_title)}
+                </h2>
                 <div class="flex overflow-hidden flex-col flex-1 min-h-0">
                     <ResolvedChatWindow
                         conversation=ConversationKey::Tournament(tournament_id.get_value())
@@ -1360,10 +1375,12 @@ fn route_availability_memo(
 
 #[component]
 fn TournamentAccessPending() -> impl IntoView {
+    let i18n = use_i18n();
     view! {
         <Panel>
-            // TODO: i18n once copy is approved.
-            <p class="text-sm text-gray-600 dark:text-gray-300">"Loading tournament access…"</p>
+            <p class="text-sm text-gray-600 dark:text-gray-300">
+                {t!(i18n, tournaments.detail.loading_tournament_access)}
+            </p>
         </Panel>
     }
 }
@@ -1568,6 +1585,7 @@ pub fn TournamentSchedulingRoute() -> impl IntoView {
 
 #[component]
 pub fn TournamentManageRoute() -> impl IntoView {
+    let i18n = use_i18n();
     let context = expect_context::<TournamentPageContext>();
     let tournament_id = StoredValue::new(context.tournament.tournament_id());
     let pathname = use_location().pathname;
@@ -1589,24 +1607,24 @@ pub fn TournamentManageRoute() -> impl IntoView {
     view! {
         <Show when=route_active>
             <div class="space-y-3">
-                // TODO: i18n once copy is approved.
                 <h1 class="px-0.5 wrap-break-word ui-page-title">
                     {move || {
-                        format!(
-                            "Manage tournament · {}",
-                            context.tournament.common.lifecycle().get().name,
+                        t_string!(
+                            i18n, tournaments.detail.manage_tournament_value1, value1 = (context.tournament.common.lifecycle().get().name)
                         )
+                            .to_string()
                     }}
                 </h1>
                 <Show when=move || matches_available.get()>
-                    // TODO: i18n once copy is approved.
                     <nav
                         class="flex flex-wrap gap-1 p-1.5 ui-panel"
-                        aria-label="Tournament management"
+                        aria-label=move || {
+                            t_string!(i18n, tournaments.detail.tournament_management).to_string()
+                        }
                     >
-                        {[("matches", "Matches"), ("people", "People")]
+                        {["matches", "people"]
                             .into_iter()
-                            .map(|(tab, label)| {
+                            .map(|tab| {
                                 view! {
                                     <A
                                         href=move || {
@@ -1631,7 +1649,13 @@ pub fn TournamentManageRoute() -> impl IntoView {
                                             (section.get() == tab).then_some("page")
                                         }
                                     >
-                                        {label}
+                                        {move || {
+                                            if tab == "matches" {
+                                                t_string!(i18n, tournaments.calendar.title).to_string()
+                                            } else {
+                                                t_string!(i18n, common.people).to_string()
+                                            }
+                                        }}
                                     </A>
                                 }
                             })
@@ -1689,13 +1713,11 @@ pub fn TournamentManagePeople() -> impl IntoView {
                         == TournamentStatus::NotStarted
                     && context.tournament.common.lifecycle().get().start_setup.is_some()
             }>
-                // TODO: i18n once copy is approved.
-                <p class="ui-notice">"The roster is locked while bracket review is in progress."</p>
+                <p class="ui-notice">{t!(i18n, tournaments.detail.roster_locked)}</p>
             </Show>
             <div class="grid gap-6 min-w-0 xl:grid-cols-[minmax(0,1fr)_21rem]">
                 <div class="space-y-3 min-w-0">
-                    // TODO: i18n once copy is approved.
-                    <h2 class="text-lg font-bold">"Players"</h2>
+                    <h2 class="text-lg font-bold">{t!(i18n, common.players)}</h2>
                     <TournamentAdminControls
                         user_is_organizer_or_admin=context.organizer
                         tournament=context.tournament
@@ -1756,19 +1778,23 @@ fn TournamentEntryFacts(tournament: TournamentState) -> impl IntoView {
                         && lifecycle.status == TournamentStatus::InProgress))
                     .then(|| {
                         view! {
-                            // TODO: i18n once copy is approved.
                             <p>
                                 {lifecycle
                                     .starts_at
                                     .map(|date| {
                                         if local_time_ready.get() {
-                                            format!("Starts {}", format_tournament_datetime(date))
+                                            t_string!(
+                                                i18n, tournaments.detail.starts_value1, value1 = (format_tournament_datetime(date))
+                                            )
+                                                .to_string()
                                         } else {
                                             String::new()
                                         }
                                     })
                                     .unwrap_or_else(|| {
-                                        "Starts when the organizer begins the tournament"
+                                        t_string!(
+                                            i18n, tournaments.detail.starts_when_the_organizer_begins_the_tournament
+                                        )
                                             .to_string()
                                     })}
                             </p>
@@ -1789,7 +1815,7 @@ fn entry_requirement(
     tournament: &TournamentLifecycleDetails,
     bot_admission: BotAdmission,
 ) -> String {
-    // TODO: i18n once copy is approved.
+    let i18n = use_i18n();
     let rating = match (tournament.band_lower, tournament.band_upper) {
         (None, None) => None,
         (Some(lower), None) => Some(format!("{lower}+")),
@@ -1797,15 +1823,34 @@ fn entry_requirement(
         (Some(lower), Some(upper)) => Some(format!("{lower}–{upper}")),
     };
     let entry = match (tournament.invite_only, rating) {
-        (false, None) => String::from("Open entry"),
-        (true, None) => String::from("Invitation required"),
-        (false, Some(rating)) => format!("Entry rating {rating}"),
-        (true, Some(rating)) => format!("Invitation required · rating {rating}"),
+        (false, None) => t_string!(i18n, tournaments.detail.open_entry).to_string(),
+        (true, None) => t_string!(i18n, tournaments.detail.invitation_required).to_string(),
+        (false, Some(rating)) => t_string!(
+            i18n,
+            tournaments.detail.entry_rating_rating,
+            rating = (rating)
+        )
+        .to_string(),
+        (true, Some(rating)) => t_string!(
+            i18n,
+            tournaments.detail.invitation_required_rating_rating,
+            rating = (rating)
+        )
+        .to_string(),
     };
-    // TODO: i18n once copy is approved.
     match bot_admission {
-        BotAdmission::HumansOnly => format!("{entry} · human accounts only"),
-        BotAdmission::BotsOnly => format!("{entry} · bot accounts only"),
+        BotAdmission::HumansOnly => t_string!(
+            i18n,
+            tournaments.detail.entry_human_accounts_only,
+            entry = (entry)
+        )
+        .to_string(),
+        BotAdmission::BotsOnly => t_string!(
+            i18n,
+            tournaments.detail.entry_bot_accounts_only,
+            entry = (entry)
+        )
+        .to_string(),
         BotAdmission::HumansAndBots => entry,
     }
 }
@@ -1941,8 +1986,14 @@ fn TournamentInformation(
                             {arena_duration
                                 .map(|seconds| {
                                     view! {
-                                        // TODO: i18n once copy is approved.
-                                        <span>{format!("{} minutes", seconds / 60)}</span>
+                                        <span>
+                                            {move || {
+                                                t_string!(
+                                                    i18n, tournaments.detail.value1_minutes, value1 = (seconds / 60)
+                                                )
+                                                    .to_string()
+                                            }}
+                                        </span>
                                     }
                                 })}
                         </div>
@@ -1975,8 +2026,9 @@ fn TournamentInformation(
             </summary>
             <div node_ref=information_body class="pt-0 space-y-4 ui-panel-body">
                 <div class="flex flex-wrap gap-2 items-center">
-                    // TODO: i18n once copy is approved.
-                    <span class="text-sm text-gray-500 dark:text-gray-400">"Organized by"</span>
+                    <span class="text-sm text-gray-500 dark:text-gray-400">
+                        {t!(i18n, tournaments.detail.organized_by)}
+                    </span>
                     <For
                         each=move || tournament.common.memberships().get().organizers
                         key=|organizer| organizer.uid
@@ -2002,19 +2054,17 @@ fn TournamentInformation(
                                 && tournament.common.lifecycle().get().status
                                     == TournamentStatus::NotStarted
                         }>
-                            // TODO: i18n once copy is approved.
                             <p>
                                 {move || {
-                                    format!(
-                                        "Minimum {} entrants",
-                                        tournament.common.lifecycle().get().min_seats,
+                                    t_string!(
+                                        i18n, tournaments.detail.minimum_value1_entrants, value1 = (tournament.common.lifecycle().get().min_seats)
                                     )
+                                        .to_string()
                                 }}
                             </p>
                         </Show>
                         <Show when=scheduled_start_pending>
-                            // TODO: i18n once copy is approved.
-                            <p>"Starting… signup and configuration are briefly closed."</p>
+                            <p>{t!(i18n, tournaments.detail.starting_pending)}</p>
                         </Show>
                     </div>
                 </Show>
@@ -2023,8 +2073,7 @@ fn TournamentInformation(
                         tournament.common.lifecycle().get().status == TournamentStatus::NotStarted
                     }>
                         <div>
-                            // TODO: i18n once copy is approved.
-                            <dt class="font-semibold">"Created"</dt>
+                            <dt class="font-semibold">{t!(i18n, common.created)}</dt>
                             <dd class="text-gray-600 dark:text-gray-300">
                                 {move || {
                                     format_local_date(
@@ -2040,8 +2089,7 @@ fn TournamentInformation(
                             && lifecycle.starts_at.is_some()
                     }>
                         <div>
-                            // TODO: i18n once copy is approved.
-                            <dt class="font-semibold">"Scheduled"</dt>
+                            <dt class="font-semibold">{t!(i18n, common.scheduled)}</dt>
                             <dd class="text-gray-600 dark:text-gray-300">
                                 {move || {
                                     tournament
@@ -2061,8 +2109,7 @@ fn TournamentInformation(
                             && lifecycle.started_at.is_some()
                     }>
                         <div>
-                            // TODO: i18n once copy is approved.
-                            <dt class="font-semibold">"Started"</dt>
+                            <dt class="font-semibold">{t!(i18n, common.started)}</dt>
                             <dd class="text-gray-600 dark:text-gray-300">
                                 {move || {
                                     tournament
@@ -2082,8 +2129,7 @@ fn TournamentInformation(
                             && lifecycle.finished_at.is_some()
                     }>
                         <div>
-                            // TODO: i18n once copy is approved.
-                            <dt class="font-semibold">"Finished"</dt>
+                            <dt class="font-semibold">{t!(i18n, common.finished)}</dt>
                             <dd class="text-gray-600 dark:text-gray-300">
                                 {move || {
                                     tournament
@@ -2100,8 +2146,9 @@ fn TournamentInformation(
                 </dl>
                 <Show when=move || format != Format::Arena>
                     <details class="ui-setting-group">
-                        // TODO: i18n once copy is approved.
-                        <summary class="font-semibold cursor-pointer">"Format details"</summary>
+                        <summary class="font-semibold cursor-pointer">
+                            {t!(i18n, tournaments.detail.format_details)}
+                        </summary>
                         <div class="mt-3">
                             <TournamentEntrySummary
                                 common=tournament.common
@@ -2112,9 +2159,8 @@ fn TournamentInformation(
                 </Show>
                 <Show when=move || show_scoring>
                     <details class="ui-setting-group">
-                        // TODO: i18n once copy is approved.
                         <summary class="font-semibold cursor-pointer">
-                            "Scoring and tiebreaks"
+                            {t!(i18n, tournaments.detail.scoring_and_tiebreaks)}
                         </summary>
                         <StandingsCriteriaRules configuration=format_configuration.get_value() />
                     </details>
@@ -2123,8 +2169,9 @@ fn TournamentInformation(
                     tournament.common.lifecycle().get().status != TournamentStatus::NotStarted
                 }>
                     <details class="ui-setting-group">
-                        // TODO: i18n once copy is approved.
-                        <summary class="font-semibold cursor-pointer">"About this format"</summary>
+                        <summary class="font-semibold cursor-pointer">
+                            {t!(i18n, tournaments.detail.about_this_format)}
+                        </summary>
                         <div class="pt-3">
                             <TournamentFormatFaq
                                 format=Signal::derive(move || format)
@@ -2286,14 +2333,19 @@ fn TournamentDescriptionEditor(
                                 }
                             />
                             <Show when=overflowing>
-                                // TODO: i18n once copy is approved.
                                 <button
                                     type="button"
                                     class="inline-flex gap-1 items-center text-sm ui-text-link"
                                     aria-expanded=expanded
                                     on:click=move |_| expanded.update(|value| *value = !*value)
                                 >
-                                    {move || if expanded.get() { "Show less" } else { "Read more" }}
+                                    {move || {
+                                        if expanded.get() {
+                                            t_string!(i18n, tournaments.detail.show_less).to_string()
+                                        } else {
+                                            t_string!(i18n, tournaments.detail.read_more).to_string()
+                                        }
+                                    }}
                                     <Icon
                                         icon=icondata_lu::LuChevronDown
                                         attr:class=move || {
@@ -2327,7 +2379,8 @@ fn TournamentDescriptionEditor(
                                             t_string!(i18n, tournaments.detail.edit_description)
                                                 .to_string()
                                         } else {
-                                            "Add description".to_string()
+                                            t_string!(i18n, tournaments.detail.add_description)
+                                                .to_string()
                                         }
                                     }}
                                 </button>
@@ -2344,8 +2397,7 @@ fn TournamentDescriptionEditor(
                                                 });
                                         }
                                     >
-                                        // TODO: i18n once copy is approved.
-                                        "Remove"
+                                        {t!(i18n, common.remove)}
                                     </button>
                                 </Show>
                             </div>

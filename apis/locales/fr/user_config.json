@@ -46,5 +46,33 @@
         "email": "Adresse e-mail",
         "invalid_login": "Adresse e-mail ou mot de passe invalide",
         "login_button": "Connexion"
+    },
+    "click_on_your_clock": "Cliquez sur votre pendule",
+    "double_click": "Double clic",
+    "single_click": "Simple clic",
+    "light_mode": "Mode clair",
+    "dark_mode": "Mode sombre",
+    "white_background": "Fond blanc",
+    "black_background": "Fond noir",
+    "current_color": "Actuel : {{color}}",
+    "ant_light_preview": "Fourmi {{design}} (mode clair)",
+    "ant_dark_preview": "Fourmi {{design}} (mode sombre)",
+    "tile_design": {
+        "official": "Officiel",
+        "flat": "Plat",
+        "three_d": "3D",
+        "high_contrast": "Contraste élevé",
+        "community": "Communauté",
+        "pride": "Pride",
+        "carbon_three_d": "Carbone 3D",
+        "carbon": "Carbone"
+    },
+    "tile_design_browser_notice": "Certains navigateurs ne prennent pas en charge tous les styles de pièces. Firefox offre le rendu le plus fiable.",
+    "settings": {
+        "settings": "Paramètres",
+        "tune_board_visuals_and_move_input_preferences": "Réglez l'apparence du plateau et la saisie des coups.",
+        "board_appearance": "Apparence du plateau",
+        "play_preferences": "Préférences de jeu",
+        "if_either_player_has_takebacks_disabled_game_controls_will": "Si l'un des joueurs a désactivé les reprises, les commandes ne permettront pas d'en demander."
     }
 }

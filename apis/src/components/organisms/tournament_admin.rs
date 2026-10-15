@@ -8,6 +8,7 @@ use crate::{
         },
         organisms::tournament_withdrawal::TournamentWithdrawal,
     },
+    i18n::*,
     providers::{
         ApiRequestsProvider,
         AuthContext,
@@ -46,6 +47,7 @@ pub fn TournamentAdminControls(
     tournament: TournamentState,
     editable: Signal<bool>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let api = expect_context::<ApiRequestsProvider>().0;
     let auth = expect_context::<AuthContext>();
     let viewer = Signal::derive(move || auth.identity.get().and_then(AuthIdentity::user_id));
@@ -146,17 +148,21 @@ pub fn TournamentAdminControls(
     view! {
         <section class="space-y-4">
             <div class="flex flex-wrap gap-3 justify-between items-center">
-                // TODO: i18n once copy is approved.
-                <div class="flex flex-wrap gap-1" role="group" aria-label="Player status">
+
+                <div
+                    class="flex flex-wrap gap-1"
+                    role="group"
+                    aria-label=move || { t_string!(i18n, tournaments.ui.player_status).to_string() }
+                >
                     {[
-                        (RosterView::Accepted, "Accepted"),
-                        (RosterView::Pending, "Pending"),
-                        (RosterView::Declined, "Declined"),
-                        (RosterView::Eliminated, "Eliminated"),
-                        (RosterView::Withdrawn, "Withdrawn"),
+                        RosterView::Accepted,
+                        RosterView::Pending,
+                        RosterView::Declined,
+                        RosterView::Eliminated,
+                        RosterView::Withdrawn,
                     ]
                         .into_iter()
-                        .map(|(section, label)| {
+                        .map(|section| {
                             view! {
                                 <Show when=move || match section {
                                     RosterView::Accepted => true,
@@ -188,13 +194,30 @@ pub fn TournamentAdminControls(
                                             page.set(1);
                                         }
                                     >
-                                        // TODO: i18n once copy is approved.
+
                                         {move || {
+                                            let label = match section {
+                                                RosterView::Accepted => {
+                                                    t_string!(i18n, common.accepted).to_string()
+                                                }
+                                                RosterView::Pending => {
+                                                    t_string!(i18n, common.pending).to_string()
+                                                }
+                                                RosterView::Declined => {
+                                                    t_string!(i18n, common.declined).to_string()
+                                                }
+                                                RosterView::Eliminated => {
+                                                    t_string!(i18n, common.eliminated).to_string()
+                                                }
+                                                RosterView::Withdrawn => {
+                                                    t_string!(i18n, common.withdrawn).to_string()
+                                                }
+                                            };
                                             let label = if section == RosterView::Accepted {
                                                 if !fixed_field {
-                                                    "Joined"
+                                                    t_string!(i18n, common.joined).to_string()
                                                 } else if !pre_start.get() {
-                                                    "Playing"
+                                                    t_string!(i18n, common.playing).to_string()
                                                 } else {
                                                     label
                                                 }
@@ -212,11 +235,13 @@ pub fn TournamentAdminControls(
                 <Show when=move || allowed.get()>
                     <Show
                         when=move || !field_full.get()
-                        fallback=|| {
+                        fallback=move || {
                             view! {
-                                // TODO: i18n once copy is approved.
                                 <p class="text-sm text-gray-600 dark:text-gray-300">
-                                    "The field is full."
+                                    {move || {
+                                        t_string!(i18n, tournaments.ui.the_field_is_full)
+                                            .to_string()
+                                    }}
                                 </p>
                             }
                         }
@@ -230,12 +255,12 @@ pub fn TournamentAdminControls(
             <Show when=move || {
                 users.with(Vec::len) > ROSTER_PAGE_SIZE || !query.get().is_empty()
             }>
-                // TODO: i18n once copy is approved.
+
                 <input
                     type="search"
                     class="w-full sm:max-w-xs ui-field-input"
-                    placeholder="Search players"
-                    aria-label="Search players"
+                    placeholder=move || t_string!(i18n, common.search_players).to_string()
+                    aria-label=move || t_string!(i18n, common.search_players).to_string()
                     prop:value=move || query.get()
                     on:input=move |event| {
                         query.set(event_target_value(&event));
@@ -245,23 +270,42 @@ pub fn TournamentAdminControls(
             </Show>
             <Show when=move || filtered.with(Vec::is_empty)>
                 <p class="py-4 text-sm text-gray-600 dark:text-gray-300" role="status">
-                    // TODO: i18n once copy is approved.
+
                     {move || {
                         if !query.get().trim().is_empty() {
-                            "No players match your search."
+                            t_string!(i18n, common.no_players_match_your_search).to_string()
                         } else {
                             match active.get() {
                                 RosterView::Accepted if !fixed_field => {
-                                    "No players yet. Players can join from Overview."
+                                    t_string!(
+                                        i18n, tournaments.ui.no_players_yet_players_can_join_from_overview
+                                    )
+                                        .to_string()
                                 }
                                 RosterView::Accepted if pre_start.get() => {
-                                    "No accepted players yet. Invite a player to get started."
+                                    t_string!(
+                                        i18n, tournaments.ui.no_accepted_players_yet_invite_a_player_to_get_started
+                                    )
+                                        .to_string()
                                 }
-                                RosterView::Accepted => "No active players.",
-                                RosterView::Pending => "No pending invitations.",
-                                RosterView::Declined => "No declined invitations.",
-                                RosterView::Eliminated => "No eliminated players.",
-                                RosterView::Withdrawn => "No withdrawn players.",
+                                RosterView::Accepted => {
+                                    t_string!(i18n, tournaments.ui.no_active_players).to_string()
+                                }
+                                RosterView::Pending => {
+                                    t_string!(i18n, tournaments.ui.no_pending_invitations)
+                                        .to_string()
+                                }
+                                RosterView::Declined => {
+                                    t_string!(i18n, tournaments.ui.no_declined_invitations)
+                                        .to_string()
+                                }
+                                RosterView::Eliminated => {
+                                    t_string!(i18n, tournaments.ui.no_eliminated_players)
+                                        .to_string()
+                                }
+                                RosterView::Withdrawn => {
+                                    t_string!(i18n, tournaments.ui.no_withdrawn_players).to_string()
+                                }
                             }
                         }
                     }}
@@ -326,12 +370,20 @@ pub fn TournamentAdminControls(
                                                 api.get().tournament(action);
                                             }
                                         >
-                                            // TODO: i18n once copy is approved.
+
                                             {move || match active.get() {
-                                                RosterView::Accepted => "Remove",
-                                                RosterView::Pending => "Cancel invite",
-                                                RosterView::Declined => "Re-invite",
-                                                RosterView::Eliminated | RosterView::Withdrawn => "",
+                                                RosterView::Accepted => {
+                                                    t_string!(i18n, common.remove).to_string()
+                                                }
+                                                RosterView::Pending => {
+                                                    t_string!(i18n, tournaments.ui.cancel_invite).to_string()
+                                                }
+                                                RosterView::Declined => {
+                                                    t_string!(i18n, tournaments.ui.re_invite).to_string()
+                                                }
+                                                RosterView::Eliminated | RosterView::Withdrawn => {
+                                                    String::new()
+                                                }
                                             }}
                                         </button>
                                     </Show>
@@ -358,9 +410,9 @@ pub fn TournamentAdminControls(
                 />
             </Show>
             <Show when=move || fixed_field && pre_start.get()>
-                // TODO: i18n once copy is approved.
+
                 <p class="text-xs text-gray-600 dark:text-gray-300">
-                    "Only accepted players count toward the field."
+                    {t!(i18n, tournaments.ui.only_accepted_players_count_toward_the_field)}
                 </p>
             </Show>
         </section>

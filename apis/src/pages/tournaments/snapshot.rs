@@ -4,6 +4,7 @@ use crate::{
     components::molecules::tournament_row::TournamentRow,
     functions::tournaments::get_tournament_cards_by_ids,
     hooks::arena_clock::use_ticking_now,
+    i18n::*,
     providers::{
         websocket::{ConnectionReadyState, WebsocketContext},
         AuthContext,
@@ -164,6 +165,9 @@ pub(super) fn TournamentBrowseSnapshot(
                 | TournamentUpdate::OrganizerLeft(id, _)
                 | TournamentUpdate::Started(id)
                 | TournamentUpdate::StartDeferred(id)
+                | TournamentUpdate::StartNeedsEntrants {
+                    tournament_id: id, ..
+                }
                 | TournamentUpdate::Finished(id) => id,
                 _ => return,
             };
@@ -251,6 +255,7 @@ pub(super) fn TournamentBrowseSnapshot(
 
 #[component]
 fn BrowsePagination(page: usize, total: usize, on_page_change: Callback<usize>) -> impl IntoView {
+    let i18n = use_i18n();
     let pages = total.div_ceil(TOURNAMENT_BROWSE_PAGE_SIZE).max(1);
     let start = ((page - 1) * TOURNAMENT_BROWSE_PAGE_SIZE + 1).min(total);
     let end = (page * TOURNAMENT_BROWSE_PAGE_SIZE).min(total);
@@ -258,13 +263,17 @@ fn BrowsePagination(page: usize, total: usize, on_page_change: Callback<usize>) 
     let previous_disabled = page <= 1;
     let next_disabled = page >= pages;
     view! {
-        // TODO: i18n once copy is approved.
         <nav
             class="flex flex-wrap gap-y-2 gap-x-4 justify-between items-center text-sm"
-            aria-label="Tournament pagination"
+            aria-label=move || t_string!(i18n, tournaments.list.tournament_pagination).to_string()
         >
             <p class="text-gray-600 dark:text-gray-300">
-                {format!("Showing {start}–{end} of {total} tournaments")}
+                {move || {
+                    t_string!(
+                        i18n, tournaments.list.showing_start_end_of_total_tournaments, start = (start), end = (end), total = (total)
+                    )
+                        .to_string()
+                }}
             </p>
             <div class="flex gap-2 items-center">
                 <button
@@ -277,10 +286,15 @@ fn BrowsePagination(page: usize, total: usize, on_page_change: Callback<usize>) 
                         }
                     }
                 >
-                    "Previous"
+                    {t!(i18n, common.previous)}
                 </button>
                 <span class="text-xs tabular-nums text-gray-600 dark:text-gray-300">
-                    {format!("Page {page} of {pages}")}
+                    {move || {
+                        t_string!(
+                            i18n, tournaments.list.page_page_of_pages, page = (page), pages = (pages)
+                        )
+                            .to_string()
+                    }}
                 </span>
                 <button
                     type="button"
@@ -292,7 +306,7 @@ fn BrowsePagination(page: usize, total: usize, on_page_change: Callback<usize>) 
                         }
                     }
                 >
-                    "Next"
+                    {t!(i18n, common.next)}
                 </button>
             </div>
         </nav>

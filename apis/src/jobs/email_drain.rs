@@ -1,4 +1,8 @@
-use crate::email::{deliver, render_password_reset, EmailConfig};
+use crate::{
+    common::parse_locale,
+    email::{deliver, render_password_reset, EmailConfig},
+    i18n::*,
+};
 use chrono::{Duration as ChronoDuration, Utc};
 use db_lib::{get_conn, models::EmailQueueItem, DbConn, DbPool};
 use std::time::Duration;
@@ -82,12 +86,26 @@ fn render(config: &EmailConfig, item: &EmailQueueItem) -> Option<(String, String
     match item.kind.as_str() {
         "password_reset" => {
             let token = item.payload.get("token")?.as_str()?;
+            let locale = item
+                .payload
+                .get("locale")
+                .and_then(|value| value.as_str())
+                .unwrap_or("en");
+            let locale = parse_locale(locale);
             let username = item
                 .payload
                 .get("username")
                 .and_then(|v| v.as_str())
-                .unwrap_or("there");
-            Some(render_password_reset(&config.base_url, username, token))
+                .map(str::to_owned)
+                .unwrap_or_else(|| {
+                    td_string!(locale, notifications.email.recipient_fallback).to_string()
+                });
+            Some(render_password_reset(
+                locale,
+                &config.base_url,
+                &username,
+                token,
+            ))
         }
         _ => None,
     }

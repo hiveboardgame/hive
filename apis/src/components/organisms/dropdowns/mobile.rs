@@ -18,7 +18,9 @@ pub fn MobileDropdown() -> impl IntoView {
             dropdown_style="ui-dropdown-menu ui-dropdown-menu-left ui-header-dropdown-menu ui-mobile-dropdown-menu"
             content=view! { <Icon icon=icondata_ch::ChMenuHamburger attr:class="size-6" /> }
             id="Mobile"
-            aria_label="Open navigation menu"
+            aria_label=Signal::derive(move || {
+                t_string!(i18n, game.open_navigation_menu).to_string()
+            })
         >
 
             <div class=div_style>

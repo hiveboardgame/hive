@@ -6,7 +6,16 @@ use tokio::sync::mpsc;
 use uuid::Uuid;
 
 use crate::{
-    common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage, ServerResult},
+    common::{
+        localized_error_message_for_locale,
+        ExternalServerError,
+        GameActionResponse,
+        GameReaction,
+        GameUpdate,
+        ServerMessage,
+        ServerResult,
+    },
+    i18n::Locale,
     responses::GameResponse,
 };
 use codee::{binary::MsgpackSerdeCodec, Decoder, Encoder};
@@ -225,11 +234,10 @@ impl<'a> Outbound<'a> {
             SocketFormat::Json => {
                 if self.json.is_none() {
                     self.json = match &self.source {
-                        Source::Typed(message) => serde_json::to_vec(message).ok().map(Bytes::from),
+                        Source::Typed(message) => json_bytes(message),
                         Source::Encoded(bytes) => MsgpackSerdeCodec::decode(bytes)
                             .ok()
-                            .and_then(|message: ServerResult| serde_json::to_vec(&message).ok())
-                            .map(Bytes::from),
+                            .and_then(|message: ServerResult| json_bytes(&message)),
                     };
                 }
                 self.json.as_ref()
@@ -238,9 +246,91 @@ impl<'a> Outbound<'a> {
     }
 }
 
+// JSON clients do not run the browser's i18n renderer. Keep their documented readable
+// errors while msgpack clients retain the codes needed to render in their own locale.
+fn json_bytes(message: &ServerResult) -> Option<Bytes> {
+    let translated;
+    let message = match message {
+        ServerResult::Err(error) => {
+            let mut error = error.clone();
+            match &mut error {
+                ExternalServerError::Unauthorized { reason }
+                | ExternalServerError::Request { reason }
+                | ExternalServerError::Game { reason, .. } => {
+                    *reason = localized_error_message_for_locale(Locale::default(), reason);
+                }
+                _ => {}
+            }
+            translated = ServerResult::Err(error);
+            &translated
+        }
+        ServerResult::Ok(ok) => match ok.as_ref() {
+            ServerMessage::Error(reason) => {
+                translated = ServerResult::Ok(Box::new(ServerMessage::Error(
+                    localized_error_message_for_locale(Locale::default(), reason),
+                )));
+                &translated
+            }
+            _ => message,
+        },
+    };
+    serde_json::to_vec(message).ok().map(Bytes::from)
+}
+
 #[cfg(test)]
 mod outbound_tests {
     use super::*;
+    use crate::common::UiError;
+
+    #[test]
+    fn json_errors_are_readable_while_msgpack_preserves_localization_codes() {
+        let error = UiError::RequestUnavailable;
+        let encoded = error.encode();
+        let readable = error.message(Locale::default());
+        let game_id = GameId("bot-game".into());
+        for (message, expected) in [
+            (
+                ServerResult::Err(ExternalServerError::Game {
+                    game_id: game_id.clone(),
+                    reason: encoded.clone(),
+                }),
+                ServerResult::Err(ExternalServerError::Game {
+                    game_id,
+                    reason: readable.clone(),
+                }),
+            ),
+            (
+                ServerResult::Err(ExternalServerError::Request {
+                    reason: encoded.clone(),
+                }),
+                ServerResult::Err(ExternalServerError::Request {
+                    reason: readable.clone(),
+                }),
+            ),
+            (
+                ServerResult::Err(ExternalServerError::Unauthorized {
+                    reason: encoded.clone(),
+                }),
+                ServerResult::Err(ExternalServerError::Unauthorized {
+                    reason: readable.clone(),
+                }),
+            ),
+            (
+                ServerResult::Ok(Box::new(ServerMessage::Error(encoded.clone()))),
+                ServerResult::Ok(Box::new(ServerMessage::Error(readable.clone()))),
+            ),
+        ] {
+            let msgpack = Bytes::from(MsgpackSerdeCodec::encode(&message).unwrap());
+            for mut outbound in [
+                Outbound::typed(&message),
+                Outbound::encoded(msgpack.clone()),
+            ] {
+                assert_eq!(outbound.bytes(SocketFormat::Msgpack), Some(&msgpack));
+                let json = outbound.bytes(SocketFormat::Json).unwrap();
+                assert_eq!(json.as_ref(), serde_json::to_vec(&expected).unwrap());
+            }
+        }
+    }
 
     fn message() -> ServerResult {
         ServerResult::Ok(Box::new(ServerMessage::Error("boom".to_string())))

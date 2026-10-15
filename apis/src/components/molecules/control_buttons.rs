@@ -208,12 +208,12 @@ pub fn ControlButtons() -> impl IntoView {
         rematch_present.with(|challenge| {
             if let Some((_, challenger_id)) = challenge {
                 if *challenger_id == user_id() {
-                    "Sent"
+                    t_string!(i18n, game.rematch_sent)
                 } else {
-                    "Accept"
+                    t_string!(i18n, common.accept)
                 }
             } else {
-                "Rematch"
+                t_string!(i18n, game.rematch)
             }
         })
     };
@@ -365,10 +365,14 @@ pub fn ControlButtons() -> impl IntoView {
 
                     <div class="flex justify-center w-full h-5">
                         <Show when=pending_takeback>
-                            <span class="font-bold">"Opponent wants a takeback"</span>
+                            <span class="font-bold">
+                                {move || t_string!(i18n, game.opponent_wants_a_takeback)}
+                            </span>
                         </Show>
                         <Show when=pending_draw>
-                            <span class="font-bold">"Opponent offers a draw"</span>
+                            <span class="font-bold">
+                                {move || t_string!(i18n, game.opponent_offers_a_draw)}
+                            </span>
                         </Show>
                     </div>
                 </div>

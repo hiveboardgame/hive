@@ -1,4 +1,8 @@
-use crate::{common::schedule_slot_fragment, i18n::*};
+use super::TournamentNotice;
+use crate::{
+    common::{game_speed_label_for_locale, schedule_slot_fragment, TournamentPairingLabel},
+    i18n::*,
+};
 use chrono::{DateTime, Utc};
 use shared_types::{GameId, GameSpeed, NotificationCategory};
 use uuid::Uuid;
@@ -7,25 +11,41 @@ use super::payload::Push;
 
 const DEFAULT_PUSH_TTL_SECS: u32 = 4 * 3600;
 
+#[derive(Debug, Clone)]
+pub struct NotificationTimeControl {
+    speed: GameSpeed,
+    base: Option<i32>,
+    increment: Option<i32>,
+}
+
 pub fn time_control_label(
     speed: GameSpeed,
-    time_base: Option<i32>,
-    time_increment: Option<i32>,
-) -> String {
-    match speed {
-        GameSpeed::Untimed | GameSpeed::Correspondence => speed.to_string(),
-        _ => match (time_base, time_increment) {
-            (Some(base), Some(inc)) => format!("{speed} {}+{inc}", base / 60),
-            _ => speed.to_string(),
-        },
+    base: Option<i32>,
+    increment: Option<i32>,
+) -> NotificationTimeControl {
+    NotificationTimeControl {
+        speed,
+        base,
+        increment,
     }
 }
 
-fn rated_word(rated: bool) -> &'static str {
+impl NotificationTimeControl {
+    fn localized(&self, locale: Locale) -> String {
+        let speed = game_speed_label_for_locale(locale, self.speed);
+        match (self.speed, self.base, self.increment) {
+            (GameSpeed::Untimed | GameSpeed::Correspondence, _, _) => speed.to_string(),
+            (_, Some(base), Some(increment)) => format!("{speed} {}+{increment}", base / 60),
+            _ => speed.to_string(),
+        }
+    }
+}
+
+fn rated_word(locale: Locale, rated: bool) -> String {
     if rated {
-        "rated"
+        td_string!(locale, game.rated).to_string()
     } else {
-        "casual"
+        td_string!(locale, game.casual).to_string()
     }
 }
 
@@ -43,18 +63,55 @@ fn schedule_link(
     format!("https://hivegame.com/tournament/{tournament_nanoid}/schedule/{opponent}#{fragment}")
 }
 
-fn game_ended_phrase(outcome: GameOutcome, reason: GameEndReason, opponent: &str) -> String {
+fn game_ended_phrase(
+    locale: Locale,
+    outcome: GameOutcome,
+    reason: GameEndReason,
+    opponent: &str,
+) -> String {
     match (outcome, reason) {
-        (GameOutcome::Won, GameEndReason::Resignation) => format!("{opponent} resigned"),
-        (GameOutcome::Won, GameEndReason::Timeout) => format!("{opponent} timed out"),
-        (GameOutcome::Won, _) => format!("You beat {opponent}"),
-        (GameOutcome::Lost, GameEndReason::Resignation) => "You resigned".to_string(),
-        (GameOutcome::Lost, GameEndReason::Timeout) => "You timed out".to_string(),
-        (GameOutcome::Lost, _) => format!("{opponent} beat you"),
-        (GameOutcome::Drew, GameEndReason::Agreement) => {
-            format!("Drew with {opponent} (agreement)")
+        (GameOutcome::Won, GameEndReason::Resignation) => td_string!(
+            locale,
+            notifications.push.game_ended_won_resignation,
+            opponent = opponent
+        )
+        .to_string(),
+        (GameOutcome::Won, GameEndReason::Timeout) => td_string!(
+            locale,
+            notifications.push.game_ended_won_timeout,
+            opponent = opponent
+        )
+        .to_string(),
+        (GameOutcome::Won, _) => td_string!(
+            locale,
+            notifications.push.game_ended_won,
+            opponent = opponent
+        )
+        .to_string(),
+        (GameOutcome::Lost, GameEndReason::Resignation) => {
+            td_string!(locale, notifications.push.game_ended_lost_resignation).to_string()
         }
-        (GameOutcome::Drew, _) => format!("Drew with {opponent}"),
+        (GameOutcome::Lost, GameEndReason::Timeout) => {
+            td_string!(locale, notifications.push.game_ended_lost_timeout).to_string()
+        }
+        (GameOutcome::Lost, _) => td_string!(
+            locale,
+            notifications.push.game_ended_lost,
+            opponent = opponent
+        )
+        .to_string(),
+        (GameOutcome::Drew, GameEndReason::Agreement) => td_string!(
+            locale,
+            notifications.push.game_ended_drew_agreement,
+            opponent = opponent
+        )
+        .to_string(),
+        (GameOutcome::Drew, _) => td_string!(
+            locale,
+            notifications.push.game_ended_drew,
+            opponent = opponent
+        )
+        .to_string(),
     }
 }
 
@@ -71,14 +128,14 @@ pub enum Event {
         recipient: Uuid,
         challenger: String,
         challenge_nanoid: String,
-        time_control: String,
+        time_control: NotificationTimeControl,
         rated: bool,
     },
     GameStarted {
         recipient: Uuid,
         opponent: String,
         game_nanoid: String,
-        time_control: String,
+        time_control: NotificationTimeControl,
         speed: GameSpeed,
     },
     GameEnded {
@@ -103,13 +160,14 @@ pub enum Event {
         recipient: Uuid,
         tournament_name: String,
         game_nanoid: String,
-        description: String,
+        pairing_label: TournamentPairingLabel,
+        opponent: String,
     },
     TournamentNotice {
         recipient: Uuid,
         tournament_name: String,
         tournament_nanoid: String,
-        description: String,
+        description: TournamentNotice,
         category: NotificationCategory,
     },
     TournamentStarted {
@@ -158,23 +216,43 @@ pub enum GameControlKind {
 }
 
 impl GameControlKind {
-    fn title(&self) -> &'static str {
+    fn title(&self, locale: Locale) -> String {
         match self {
-            GameControlKind::DrawOffered => "Draw offer",
-            GameControlKind::TakebackRequested => "Takeback request",
-            GameControlKind::DrawRejected => "Draw declined",
-            GameControlKind::TakebackAccepted => "Takeback accepted",
-            GameControlKind::TakebackRejected => "Takeback declined",
+            GameControlKind::DrawOffered => {
+                td_string!(locale, notifications.push.draw_offer_title).to_string()
+            }
+            GameControlKind::TakebackRequested => {
+                td_string!(locale, notifications.push.takeback_request_title).to_string()
+            }
+            GameControlKind::DrawRejected => {
+                td_string!(locale, notifications.push.draw_declined_title).to_string()
+            }
+            GameControlKind::TakebackAccepted => {
+                td_string!(locale, notifications.push.takeback_accepted_title).to_string()
+            }
+            GameControlKind::TakebackRejected => {
+                td_string!(locale, notifications.push.takeback_declined_title).to_string()
+            }
         }
     }
 
-    fn action(&self) -> &'static str {
+    fn action(&self, locale: Locale) -> String {
         match self {
-            GameControlKind::DrawOffered => "offered a draw",
-            GameControlKind::TakebackRequested => "requested a takeback",
-            GameControlKind::DrawRejected => "declined the draw",
-            GameControlKind::TakebackAccepted => "accepted the takeback",
-            GameControlKind::TakebackRejected => "declined the takeback",
+            GameControlKind::DrawOffered => {
+                td_string!(locale, notifications.control.offered_draw).to_string()
+            }
+            GameControlKind::TakebackRequested => {
+                td_string!(locale, notifications.control.requested_takeback).to_string()
+            }
+            GameControlKind::DrawRejected => {
+                td_string!(locale, notifications.control.declined_draw).to_string()
+            }
+            GameControlKind::TakebackAccepted => {
+                td_string!(locale, notifications.control.accepted_takeback).to_string()
+            }
+            GameControlKind::TakebackRejected => {
+                td_string!(locale, notifications.control.declined_takeback).to_string()
+            }
         }
     }
 }
@@ -333,7 +411,7 @@ impl Event {
                 tournament_name,
                 description,
                 ..
-            } => (tournament_name.clone(), description.clone()),
+            } => (tournament_name.clone(), description.description(locale)),
             Event::YourTurn {
                 opponent,
                 time_left,
@@ -370,7 +448,7 @@ impl Event {
                         locale,
                         notifications.push.challenge_rated,
                         challenger = challenger,
-                        time_control = time_control
+                        time_control = time_control.localized(locale)
                     )
                     .to_string()
                 } else {
@@ -378,7 +456,7 @@ impl Event {
                         locale,
                         notifications.push.challenge_casual,
                         challenger = challenger,
-                        time_control = time_control
+                        time_control = time_control.localized(locale)
                     )
                     .to_string()
                 };
@@ -397,7 +475,7 @@ impl Event {
                     locale,
                     notifications.push.game_started_body,
                     opponent = opponent,
-                    time_control = time_control
+                    time_control = time_control.localized(locale)
                 )
                 .to_string(),
             ),
@@ -457,10 +535,7 @@ impl Event {
                     Some(d) => format!("{result} · {d:+}"),
                     None => result,
                 };
-                (
-                    td_string!(locale, notifications.push.game_ended_title).to_string(),
-                    body,
-                )
+                (td_string!(locale, common.game_ended).to_string(), body)
             }
             Event::TournamentInvite {
                 tournament_name, ..
@@ -476,15 +551,23 @@ impl Event {
             Event::TournamentOrganizerInvite {
                 tournament_name, ..
             } => (
-                // TODO: i18n once copy is approved.
-                String::from("Tournament organizer invitation"),
-                format!("You've been invited to organize {tournament_name}."),
+                td_string!(locale, notifications.external.organizer_title).to_string(),
+                td_string!(
+                    locale,
+                    notifications.external.organizer_body,
+                    tournament_name = tournament_name
+                )
+                .to_string(),
             ),
             Event::TournamentPairing {
                 tournament_name,
-                description,
+                pairing_label,
+                opponent,
                 ..
-            } => (tournament_name.clone(), description.clone()),
+            } => (
+                tournament_name.clone(),
+                pairing_label.description(locale, opponent),
+            ),
             Event::TournamentStarted {
                 tournament_name, ..
             } => (
@@ -512,13 +595,13 @@ impl Event {
                         )
                         .to_string()
                     }
-                    candidates => {
-                        // TODO: i18n once copy is approved.
-                        format!(
-                            "{proposer} offered {} times for your match. Open to choose.",
-                            candidates.len()
-                        )
-                    }
+                    candidates => td_string!(
+                        locale,
+                        notifications.external.schedule_many,
+                        proposer = proposer,
+                        count = candidates.len()
+                    )
+                    .to_string(),
                 };
                 (
                     td_string!(locale, notifications.push.schedule_propose_title).to_string(),
@@ -600,39 +683,60 @@ impl Event {
             link: self.link(),
             event_type: self.event_type_tag().to_string(),
             ttl_secs: self.ttl_secs(),
+            open_label: td_string!(locale, common.open).to_string(),
         }
     }
 
-    pub fn render_discord(&self) -> String {
+    pub fn render_discord(&self, locale: Locale) -> String {
         match self {
-            Event::TournamentNotice { tournament_name, tournament_nanoid, description, .. } => format!(
-                "[{tournament_name}](<https://hivegame.com/tournament/{tournament_nanoid}>) · {description}"
+            Event::TournamentNotice {
+                tournament_name,
+                tournament_nanoid,
+                description,
+                ..
+            } => format!(
+                "[{tournament_name}](<https://hivegame.com/tournament/{tournament_nanoid}>) · {}",
+                description.description(locale)
             ),
             Event::YourTurn {
                 opponent,
                 game_nanoid,
                 ..
-            } => format!(
-                "[Your turn](<https://hivegame.com/game/{game_nanoid}>) in your game vs {opponent}."
-            ),
+            } => td_string!(
+                locale,
+                notifications.external.your_turn_discord,
+                game_nanoid = game_nanoid,
+                opponent = opponent
+            )
+            .to_string(),
             Event::ChallengeReceived {
                 challenger,
                 challenge_nanoid,
                 time_control,
                 rated,
                 ..
-            } => format!(
-                "[New challenge](<https://hivegame.com/challenge/{challenge_nanoid}>) from {challenger} · {time_control} · {}.",
-                rated_word(*rated)
-            ),
+            } => td_string!(
+                locale,
+                notifications.external.challenge_discord,
+                challenge_nanoid = challenge_nanoid,
+                challenger = challenger,
+                time_control = time_control.localized(locale),
+                rated = rated_word(locale, *rated)
+            )
+            .to_string(),
             Event::GameStarted {
                 opponent,
                 game_nanoid,
                 time_control,
                 ..
-            } => format!(
-                "[Your game](<https://hivegame.com/game/{game_nanoid}>) vs {opponent} started · {time_control}."
-            ),
+            } => td_string!(
+                locale,
+                notifications.external.game_started_discord,
+                game_nanoid = game_nanoid,
+                opponent = opponent,
+                time_control = time_control.localized(locale)
+            )
+            .to_string(),
             Event::GameEnded {
                 opponent,
                 game_nanoid,
@@ -642,50 +746,118 @@ impl Event {
                 ..
             } => {
                 let detail = match (outcome, reason) {
-                    (GameOutcome::Won, GameEndReason::Move) => format!("you beat {opponent}"),
-                    (GameOutcome::Won, GameEndReason::Resignation) => {
-                        format!("{opponent} resigned")
+                    (GameOutcome::Won, GameEndReason::Move) => td_string!(
+                        locale,
+                        notifications.external.game_ended_won_discord,
+                        opponent = opponent
+                    )
+                    .to_string(),
+                    (GameOutcome::Won, GameEndReason::Resignation) => td_string!(
+                        locale,
+                        notifications.push.game_ended_won_resignation,
+                        opponent = opponent
+                    )
+                    .to_string(),
+                    (GameOutcome::Won, GameEndReason::Timeout) => td_string!(
+                        locale,
+                        notifications.push.game_ended_won_timeout,
+                        opponent = opponent
+                    )
+                    .to_string(),
+                    (GameOutcome::Lost, GameEndReason::Move) => td_string!(
+                        locale,
+                        notifications.push.game_ended_lost,
+                        opponent = opponent
+                    )
+                    .to_string(),
+                    (GameOutcome::Lost, GameEndReason::Resignation) => {
+                        td_string!(locale, notifications.push.game_ended_lost_resignation)
+                            .to_string()
                     }
-                    (GameOutcome::Won, GameEndReason::Timeout) => format!("{opponent} timed out"),
-                    (GameOutcome::Lost, GameEndReason::Move) => format!("{opponent} beat you"),
-                    (GameOutcome::Lost, GameEndReason::Resignation) => "you resigned".to_string(),
-                    (GameOutcome::Lost, GameEndReason::Timeout) => "you timed out".to_string(),
-                    (GameOutcome::Drew, GameEndReason::Agreement) => {
-                        format!("you drew with {opponent} by agreement")
+                    (GameOutcome::Lost, GameEndReason::Timeout) => {
+                        td_string!(locale, notifications.push.game_ended_lost_timeout).to_string()
                     }
-                    (GameOutcome::Won, GameEndReason::Agreement) => format!("you beat {opponent}"),
-                    (GameOutcome::Lost, GameEndReason::Agreement) => format!("{opponent} beat you"),
-                    (GameOutcome::Drew, _) => format!("you drew with {opponent}"),
+                    (GameOutcome::Drew, GameEndReason::Agreement) => td_string!(
+                        locale,
+                        notifications.external.game_ended_draw_agreement_discord,
+                        opponent = opponent
+                    )
+                    .to_string(),
+                    (GameOutcome::Won, GameEndReason::Agreement) => td_string!(
+                        locale,
+                        notifications.external.game_ended_won_discord,
+                        opponent = opponent
+                    )
+                    .to_string(),
+                    (GameOutcome::Lost, GameEndReason::Agreement) => td_string!(
+                        locale,
+                        notifications.push.game_ended_lost,
+                        opponent = opponent
+                    )
+                    .to_string(),
+                    (GameOutcome::Drew, _) => td_string!(
+                        locale,
+                        notifications.external.game_ended_draw_discord,
+                        opponent = opponent
+                    )
+                    .to_string(),
                 };
                 let change = match rating_change {
                     Some(d) => format!(" ({d:+})"),
                     None => String::new(),
                 };
-                format!(
-                    "Your [game](<https://hivegame.com/game/{game_nanoid}>) ended — {detail}{change}."
+                td_string!(
+                    locale,
+                    notifications.external.game_ended_discord,
+                    game_nanoid = game_nanoid,
+                    detail = detail,
+                    change = change
                 )
+                .to_string()
             }
             Event::TournamentInvite {
                 tournament_name,
                 tournament_nanoid,
                 ..
+            } => td_string!(
+                locale,
+                notifications.external.tournament_invite_discord,
+                tournament_name = tournament_name,
+                tournament_nanoid = tournament_nanoid
+            )
+            .to_string(),
+            Event::TournamentOrganizerInvite {
+                tournament_name,
+                tournament_nanoid,
+                ..
+            } => td_string!(
+                locale,
+                notifications.external.organizer_discord,
+                tournament_name = tournament_name,
+                tournament_nanoid = tournament_nanoid
+            )
+            .to_string(),
+            Event::TournamentPairing {
+                tournament_name,
+                pairing_label,
+                opponent,
+                game_nanoid,
+                ..
             } => format!(
-                "Invited to [tournament {tournament_name}](<https://hivegame.com/tournament/{tournament_nanoid}>)."
-            ),
-            // TODO: i18n once copy is approved.
-            Event::TournamentOrganizerInvite { tournament_name, tournament_nanoid, .. } => format!(
-                "Invited to organize [tournament {tournament_name}](<https://hivegame.com/tournament/{tournament_nanoid}>)."
-            ),
-            Event::TournamentPairing { tournament_name, description, game_nanoid, .. } => format!(
-                "[{tournament_name}](<https://hivegame.com/game/{game_nanoid}>) · {description}"
+                "[{tournament_name}](<https://hivegame.com/game/{game_nanoid}>) · {}",
+                pairing_label.description(locale, opponent)
             ),
             Event::TournamentStarted {
                 tournament_name,
                 tournament_nanoid,
                 ..
-            } => format!(
-                "[Tournament {tournament_name}](<https://hivegame.com/tournament/{tournament_nanoid}>) has begun! Your games are ready."
-            ),
+            } => td_string!(
+                locale,
+                notifications.external.tournament_started_discord,
+                tournament_name = tournament_name,
+                tournament_nanoid = tournament_nanoid
+            )
+            .to_string(),
             Event::SchedulePropose {
                 proposer,
                 tournament_nanoid,
@@ -695,17 +867,22 @@ impl Event {
             } => {
                 let link = schedule_link(tournament_nanoid, proposer, *slot_id, true);
                 match candidate_times.as_slice() {
-                    [when] => format!(
-                        "[Schedule proposed](<{link}>) — {proposer} proposed {} for your game.",
-                        when.format("%Y-%m-%d %H:%M UTC")
-                    ),
-                    candidates => {
-                        // TODO: i18n once copy is approved.
-                        format!(
-                            "[Schedule proposed](<{link}>) — {proposer} offered {} times for your game. Open to choose.",
-                            candidates.len()
-                        )
-                    }
+                    [when] => td_string!(
+                        locale,
+                        notifications.external.schedule_propose_discord,
+                        link = link,
+                        proposer = proposer,
+                        when = when.format("%Y-%m-%d %H:%M UTC").to_string()
+                    )
+                    .to_string(),
+                    candidates => td_string!(
+                        locale,
+                        notifications.external.schedule_many_discord,
+                        link = link,
+                        proposer = proposer,
+                        count = candidates.len()
+                    )
+                    .to_string(),
                 }
             }
             Event::ScheduleAccept {
@@ -716,42 +893,76 @@ impl Event {
                 ..
             } => {
                 let link = schedule_link(tournament_nanoid, opponent, *slot_id, false);
-                format!(
-                    "[Schedule accepted](<{link}>) — {opponent} accepted {} for your game.",
-                    when.format("%Y-%m-%d %H:%M UTC")
+                td_string!(
+                    locale,
+                    notifications.external.schedule_accept_discord,
+                    link = link,
+                    opponent = opponent,
+                    when = when.format("%Y-%m-%d %H:%M UTC").to_string()
                 )
+                .to_string()
             }
-            Event::DirectMessage { sender, preview, .. } => {
-                format!("DM from {sender}: {preview}")
-            }
+            Event::DirectMessage {
+                sender, preview, ..
+            } => td_string!(
+                locale,
+                notifications.external.direct_message_discord,
+                sender = sender,
+                preview = preview
+            )
+            .to_string(),
             Event::GameControl {
                 actor,
                 game_nanoid,
                 kind,
                 ..
-            } => format!(
-                "[Your game](<https://hivegame.com/game/{game_nanoid}>) — {actor} {}.",
-                kind.action()
-            ),
-            Event::TestPush { .. } => "Test notification — push is working.".to_string(),
+            } => td_string!(
+                locale,
+                notifications.external.game_control_discord,
+                game_nanoid = game_nanoid,
+                actor = actor,
+                action = kind.action(locale)
+            )
+            .to_string(),
+            Event::TestPush { .. } => td_string!(locale, notifications.push.test_body).to_string(),
         }
     }
 
-    pub fn render_email(&self) -> (String, String) {
+    pub fn render_email(&self, locale: Locale) -> (String, String) {
         let link = self.link().unwrap_or_default();
         match self {
-            Event::TournamentNotice { tournament_name, description, .. } => (
-                tournament_name.clone(), format!("{description}. Open: {link}"),
+            Event::TournamentNotice {
+                tournament_name,
+                description,
+                ..
+            } => (
+                tournament_name.clone(),
+                td_string!(
+                    locale,
+                    notifications.external.open_description,
+                    description = description.description(locale),
+                    link = link
+                )
+                .to_string(),
             ),
             Event::YourTurn {
                 opponent,
                 game_nanoid,
                 ..
             } => (
-                format!("Your turn vs {opponent}"),
-                format!(
-                    "{opponent} just moved in your game. Continue at https://hivegame.com/game/{game_nanoid}"
-                ),
+                td_string!(
+                    locale,
+                    notifications.external.your_turn_subject,
+                    opponent = opponent
+                )
+                .to_string(),
+                td_string!(
+                    locale,
+                    notifications.external.your_turn_email,
+                    opponent = opponent,
+                    game_nanoid = game_nanoid
+                )
+                .to_string(),
             ),
             Event::ChallengeReceived {
                 challenger,
@@ -759,19 +970,40 @@ impl Event {
                 rated,
                 ..
             } => (
-                format!("{challenger} challenged you on HiveGame"),
-                format!(
-                    "{challenger} sent you a {time_control} {} challenge. Open: {link}",
-                    rated_word(*rated)
-                ),
+                td_string!(
+                    locale,
+                    notifications.external.challenge_subject,
+                    challenger = challenger
+                )
+                .to_string(),
+                td_string!(
+                    locale,
+                    notifications.external.challenge_email,
+                    challenger = challenger,
+                    time_control = time_control.localized(locale),
+                    rated = rated_word(locale, *rated),
+                    link = link
+                )
+                .to_string(),
             ),
             Event::GameStarted {
                 opponent,
                 time_control,
                 ..
             } => (
-                format!("Game vs {opponent} started"),
-                format!("Your {time_control} challenge was accepted. Open: {link}"),
+                td_string!(
+                    locale,
+                    notifications.external.game_started_subject,
+                    opponent = opponent
+                )
+                .to_string(),
+                td_string!(
+                    locale,
+                    notifications.external.game_started_email,
+                    time_control = time_control.localized(locale),
+                    link = link
+                )
+                .to_string(),
             ),
             Event::GameEnded {
                 opponent,
@@ -780,32 +1012,82 @@ impl Event {
                 rating_change,
                 ..
             } => {
-                let subj_base = game_ended_phrase(*outcome, *reason, opponent);
+                let subj_base = game_ended_phrase(locale, *outcome, *reason, opponent);
                 let subj = match rating_change {
                     Some(d) => format!("{subj_base} ({d:+})"),
                     None => subj_base,
                 };
-                (subj, format!("Review the game: {link}"))
+                (
+                    subj,
+                    td_string!(locale, notifications.external.game_ended_email, link = link)
+                        .to_string(),
+                )
             }
             Event::TournamentInvite {
                 tournament_name, ..
             } => (
-                format!("Tournament invite: {tournament_name}"),
-                format!("You've been invited to {tournament_name}. Open: {link}"),
+                td_string!(
+                    locale,
+                    notifications.external.tournament_invite_subject,
+                    tournament_name = tournament_name
+                )
+                .to_string(),
+                td_string!(
+                    locale,
+                    notifications.external.tournament_invite_email,
+                    tournament_name = tournament_name,
+                    link = link
+                )
+                .to_string(),
             ),
-            // TODO: i18n once copy is approved.
-            Event::TournamentOrganizerInvite { tournament_name, .. } => (
-                format!("Organizer invitation: {tournament_name}"),
-                format!("You've been invited to organize {tournament_name}. Open: {link}"),
+            Event::TournamentOrganizerInvite {
+                tournament_name, ..
+            } => (
+                td_string!(
+                    locale,
+                    notifications.external.organizer_subject,
+                    tournament_name = tournament_name
+                )
+                .to_string(),
+                td_string!(
+                    locale,
+                    notifications.external.organizer_email,
+                    tournament_name = tournament_name,
+                    link = link
+                )
+                .to_string(),
             ),
-            Event::TournamentPairing { tournament_name, description, .. } => (
-                tournament_name.clone(), format!("{description}. Open: {link}"),
+            Event::TournamentPairing {
+                tournament_name,
+                pairing_label,
+                opponent,
+                ..
+            } => (
+                tournament_name.clone(),
+                td_string!(
+                    locale,
+                    notifications.external.open_description,
+                    description = pairing_label.description(locale, opponent),
+                    link = link
+                )
+                .to_string(),
             ),
             Event::TournamentStarted {
                 tournament_name, ..
             } => (
-                format!("Tournament {tournament_name} started"),
-                format!("{tournament_name} has begun and your games are ready. Open: {link}"),
+                td_string!(
+                    locale,
+                    notifications.external.tournament_started_subject,
+                    tournament_name = tournament_name
+                )
+                .to_string(),
+                td_string!(
+                    locale,
+                    notifications.external.tournament_started_email,
+                    tournament_name = tournament_name,
+                    link = link
+                )
+                .to_string(),
             ),
             Event::SchedulePropose {
                 proposer,
@@ -813,43 +1095,84 @@ impl Event {
                 ..
             } => match candidate_times.as_slice() {
                 [when] => (
-                    format!("{proposer} proposed a game time"),
-                    format!(
-                        "{proposer} proposed {} for your game. Open: {link}",
-                        when.format("%Y-%m-%d %H:%M UTC")
-                    ),
-                ),
-                candidates => {
-                    // TODO: i18n once copy is approved.
-                    (
-                        format!("{proposer} proposed game times"),
-                        format!(
-                            "{proposer} offered {} times for your game. Open to choose: {link}",
-                            candidates.len()
-                        ),
+                    td_string!(
+                        locale,
+                        notifications.external.schedule_propose_subject,
+                        proposer = proposer
                     )
-                }
-            },
-            Event::ScheduleAccept {
-                opponent, when, ..
-            } => (
-                format!("{opponent} accepted your proposed time"),
-                format!(
-                    "{opponent} accepted {} for your game. Open: {link}",
-                    when.format("%Y-%m-%d %H:%M UTC")
+                    .to_string(),
+                    td_string!(
+                        locale,
+                        notifications.external.schedule_propose_email,
+                        proposer = proposer,
+                        when = when.format("%Y-%m-%d %H:%M UTC").to_string(),
+                        link = link
+                    )
+                    .to_string(),
                 ),
+                candidates => (
+                    td_string!(
+                        locale,
+                        notifications.external.schedule_many_subject,
+                        proposer = proposer
+                    )
+                    .to_string(),
+                    td_string!(
+                        locale,
+                        notifications.external.schedule_many_email,
+                        proposer = proposer,
+                        count = candidates.len(),
+                        link = link
+                    )
+                    .to_string(),
+                ),
+            },
+            Event::ScheduleAccept { opponent, when, .. } => (
+                td_string!(
+                    locale,
+                    notifications.external.schedule_accept_subject,
+                    opponent = opponent
+                )
+                .to_string(),
+                td_string!(
+                    locale,
+                    notifications.external.schedule_accept_email,
+                    opponent = opponent,
+                    when = when.format("%Y-%m-%d %H:%M UTC").to_string(),
+                    link = link
+                )
+                .to_string(),
             ),
-            Event::DirectMessage { sender, preview, .. } => (
-                format!("New message from {sender}"),
+            Event::DirectMessage {
+                sender, preview, ..
+            } => (
+                td_string!(
+                    locale,
+                    notifications.external.direct_message_subject,
+                    sender = sender
+                )
+                .to_string(),
                 format!("{sender}: {preview}"),
             ),
             Event::GameControl { actor, kind, .. } => (
-                format!("{actor} {}", kind.action()),
-                format!("{} in your game. Open: {link}", kind.title()),
+                td_string!(
+                    locale,
+                    notifications.external.game_control_subject,
+                    actor = actor,
+                    action = kind.action(locale)
+                )
+                .to_string(),
+                td_string!(
+                    locale,
+                    notifications.external.game_control_email,
+                    title = kind.title(locale),
+                    link = link
+                )
+                .to_string(),
             ),
             Event::TestPush { .. } => (
-                "HiveGame test notification".to_string(),
-                "Push is working.".to_string(),
+                td_string!(locale, notifications.external.test_subject).to_string(),
+                td_string!(locale, notifications.external.test_email).to_string(),
             ),
         }
     }
@@ -899,7 +1222,7 @@ mod tests {
             recipient: uid(),
             opponent: "a".into(),
             game_nanoid: "g".into(),
-            time_control: "Blitz 5+5".into(),
+            time_control: time_control_label(GameSpeed::Blitz, Some(300), Some(5)),
             speed: GameSpeed::Blitz,
         };
         assert!(matches!(
@@ -994,7 +1317,7 @@ mod tests {
             recipient: uid(),
             challenger: "c".into(),
             challenge_nanoid: "ch1".into(),
-            time_control: "Blitz 5+5".into(),
+            time_control: time_control_label(GameSpeed::Blitz, Some(300), Some(5)),
             rated: true,
         };
         let body = e.render_push(Locale::default()).body;
@@ -1008,7 +1331,7 @@ mod tests {
             recipient: uid(),
             challenger: "c".into(),
             challenge_nanoid: "ch1".into(),
-            time_control: "Blitz 5+5".into(),
+            time_control: time_control_label(GameSpeed::Blitz, Some(300), Some(5)),
             rated: false,
         };
         assert_eq!(
@@ -1041,8 +1364,8 @@ mod tests {
         };
 
         let push = event.render_push(Locale::default()).body;
-        let discord = event.render_discord();
-        let email = event.render_email().1;
+        let discord = event.render_discord(Locale::default());
+        let email = event.render_email(Locale::default()).1;
         for rendered in [push, discord, email] {
             assert!(rendered.contains("2 times"), "rendered was {rendered:?}");
             assert!(

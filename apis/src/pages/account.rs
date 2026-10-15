@@ -72,11 +72,16 @@ pub fn Account() -> impl IntoView {
     view! {
         <PageShell variant=PageShellVariant::Form>
             <div class="flex flex-col gap-1">
-                <h1 class="ui-page-title">"Account"</h1>
-                <p class="ui-page-subtitle">"Manage password changes and account deletion."</p>
+                <h1 class="ui-page-title">{t!(i18n, common.account.title)}</h1>
+                <p class="ui-page-subtitle">
+                    {t!(i18n, common.account.manage_password_changes_and_account_deletion)}
+                </p>
             </div>
 
-            <Panel title="Change Password" body_class="space-y-4">
+            <Panel
+                title=move || t_string!(i18n, common.account.change_password)
+                body_class="space-y-4"
+            >
                 <ActionForm action=account_action attr:class="space-y-4">
 
                     <label class="flex flex-col gap-1.5" for="old_password">
@@ -137,7 +142,9 @@ pub fn Account() -> impl IntoView {
                     </label>
                     <Show when=move || password_invalid() && !new_password().is_empty()>
                         <small class="ui-field-error">
-                            "Password must be at least 8 characters and match confirmation"
+                            {t!(
+                                i18n, common.account.password_must_be_at_least_8_characters_and_match
+                            )}
                         </small>
                     </Show>
                     <input type="hidden" name="pathname" value=pathname />
@@ -150,7 +157,7 @@ pub fn Account() -> impl IntoView {
                     </button>
                     <Show when=display_account_error>
                         <small class="ui-field-error">
-                            "Error updating password. Please check your current password and try again."
+                            {t!(i18n, common.account.password_update_failed)}
                         </small>
                     </Show>
                 </ActionForm>

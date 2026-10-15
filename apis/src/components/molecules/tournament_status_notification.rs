@@ -33,9 +33,9 @@ pub fn TournamentStatusNotification(
                 <div class="ui-notification-title">{tournament_name}</div>
                 <div class="ui-notification-meta">
                     {if finished {
-                        t_string!(i18n, notifications.tournament_status.finished).to_string()
+                        t_string!(i18n, common.finished).to_string()
                     } else {
-                        t_string!(i18n, notifications.tournament_status.started).to_string()
+                        t_string!(i18n, common.started).to_string()
                     }}
                 </div>
                 <a

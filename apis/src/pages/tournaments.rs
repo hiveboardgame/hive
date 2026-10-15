@@ -157,79 +157,70 @@ pub fn Tournaments(children: Children) -> impl IntoView {
                         title=move || t_string!(i18n, tournaments.list.title)
                         subtitle=move || t_string!(i18n, tournaments.list.subtitle)
                     />
-                    // TODO: i18n once copy is approved.
                     <A
                         href="/tournaments/create"
                         attr:class="ui-button ui-button-primary ui-button-md no-link-style"
                     >
-                        "Create tournament"
+                        {t!(i18n, tournaments.creation.title)}
                     </A>
                 </div>
                 <nav class="flex flex-wrap gap-2">
-                    // TODO: i18n once copy is approved.
                     <A
                         href=move || tab_url("/tournaments")
                         attr:class=move || tournament_tab_class(path_is("/tournaments"))
                     >
-                        "Upcoming"
+                        {t!(i18n, common.upcoming)}
                     </A>
-                    // TODO: i18n once copy is approved.
                     <A
                         href=move || tab_url("/tournaments/in-progress")
                         attr:class=move || tournament_tab_class(path_is("/tournaments/in-progress"))
                     >
-                        "In progress"
+                        {t!(i18n, common.in_progress)}
                     </A>
-                    // TODO: i18n once copy is approved.
                     <A
                         href=move || tab_url("/tournaments/finished")
                         attr:class=move || tournament_tab_class(path_is("/tournaments/finished"))
                     >
-                        "Finished"
+                        {t!(i18n, common.finished)}
                     </A>
                     <Show when=logged_in>
-                        // TODO: i18n once copy is approved.
                         <A
                             href=move || tab_url("/tournaments/mine/joined")
                             attr:class=move || tournament_tab_class(mine_is_active())
                         >
-                            "Mine"
+                            {t!(i18n, tournaments.list.mine)}
                         </A>
                     </Show>
                 </nav>
                 <Show when=mine_is_active>
                     <nav class="flex overflow-x-auto gap-0 min-w-0 border-b border-gray-200 dark:border-gray-700">
-                        // TODO: i18n once copy is approved.
                         <A
                             href=move || tab_url("/tournaments/mine/joined")
                             attr:class=move || mine_tab_class(path_is("/tournaments/mine/joined"))
                         >
-                            "Joined"
+                            {t!(i18n, common.joined)}
                         </A>
-                        // TODO: i18n once copy is approved.
                         <A
                             href=move || tab_url("/tournaments/mine/organizing")
                             attr:class=move || mine_tab_class(
                                 path_is("/tournaments/mine/organizing"),
                             )
                         >
-                            "Organizing"
+                            {t!(i18n, common.organizing)}
                         </A>
-                        // TODO: i18n once copy is approved.
                         <A
                             href=move || tab_url("/tournaments/mine/invitations")
                             attr:class=move || mine_tab_class(
                                 path_is("/tournaments/mine/invitations"),
                             )
                         >
-                            "Invitations"
+                            {t!(i18n, common.invitations)}
                         </A>
-                        // TODO: i18n once copy is approved.
                         <A
                             href=move || tab_url("/tournaments/mine/history")
                             attr:class=move || mine_tab_class(path_is("/tournaments/mine/history"))
                         >
-                            "History"
+                            {t!(i18n, common.history)}
                         </A>
                     </nav>
                 </Show>
@@ -278,14 +269,18 @@ fn empty_list_title(
         TournamentCategory::Finished => {
             t_string!(i18n, tournaments.list.empty_finished).to_string()
         }
-        // TODO: i18n once copy is approved.
-        TournamentCategory::Joined => String::from("No joined tournaments"),
-        // TODO: i18n once copy is approved.
-        TournamentCategory::Organizing => String::from("No tournaments you organize"),
-        // TODO: i18n once copy is approved.
-        TournamentCategory::Invitations => String::from("No pending invitations"),
-        // TODO: i18n once copy is approved.
-        TournamentCategory::History => String::from("No tournament history"),
+        TournamentCategory::Joined => {
+            t_string!(i18n, tournaments.list.no_joined_tournaments).to_string()
+        }
+        TournamentCategory::Organizing => {
+            t_string!(i18n, tournaments.list.no_tournaments_you_organize).to_string()
+        }
+        TournamentCategory::Invitations => {
+            t_string!(i18n, tournaments.list.no_pending_invitations).to_string()
+        }
+        TournamentCategory::History => {
+            t_string!(i18n, tournaments.list.no_tournament_history).to_string()
+        }
     }
 }
 
@@ -502,9 +497,8 @@ pub fn TournamentList(category: TournamentCategory) -> impl IntoView {
         <Panel body_class="space-y-3">
             <div class="flex flex-wrap gap-2 items-center">
                 <TournamentSearch search on_search />
-                // TODO: i18n once copy is approved.
                 <label class="min-w-0 grow sm:grow-0">
-                    <span class="sr-only">"Format"</span>
+                    <span class="sr-only">{t!(i18n, common.format)}</span>
                     <select
                         class="ui-field-select"
                         prop:value=move || format.get().map_or("", |value| value.as_str())
@@ -512,17 +506,20 @@ pub fn TournamentList(category: TournamentCategory) -> impl IntoView {
                             on_format.run(event_target_value(&event).parse().ok())
                         }
                     >
-                        <option value="">"All formats"</option>
-                        <option value="swiss">"Swiss"</option>
-                        <option value="round_robin">"Round robin"</option>
-                        <option value="arena">"Arena"</option>
-                        <option value="elimination">"Elimination"</option>
+                        <option value="">{t!(i18n, tournaments.list.all_formats)}</option>
+                        <option value="swiss">{t!(i18n, tournaments.format.swiss)}</option>
+                        <option value="round_robin">
+                            {t!(i18n, tournaments.format.round_robin)}
+                        </option>
+                        <option value="arena">{t!(i18n, tournaments.format.arena)}</option>
+                        <option value="elimination">
+                            {t!(i18n, tournaments.creation.elimination_title)}
+                        </option>
                     </select>
                 </label>
                 <Show when=move || format.get() != Some(TournamentFamily::Arena)>
-                    // TODO: i18n once copy is approved.
                     <label class="min-w-0 grow sm:grow-0">
-                        <span class="sr-only">"Time mode"</span>
+                        <span class="sr-only">{t!(i18n, common.time_mode)}</span>
                         <select
                             class="ui-field-select"
                             prop:value=move || mode.get().as_str()
@@ -530,9 +527,11 @@ pub fn TournamentList(category: TournamentCategory) -> impl IntoView {
                                 on_mode.run(event_target_value(&event).parse().unwrap_or_default())
                             }
                         >
-                            <option value="both">"Both"</option>
-                            <option value="live">"Live"</option>
-                            <option value="correspondence">"Correspondence"</option>
+                            <option value="both">{t!(i18n, tournaments.list.both)}</option>
+                            <option value="live">{t!(i18n, tournaments.list.live)}</option>
+                            <option value="correspondence">
+                                {t!(i18n, game.speeds.correspondence)}
+                            </option>
                         </select>
                     </label>
                 </Show>
@@ -541,12 +540,12 @@ pub fn TournamentList(category: TournamentCategory) -> impl IntoView {
                     class="min-h-10 ui-button ui-button-secondary ui-button-sm"
                     on:click=move |_| refresh.run(())
                 >
-                    // TODO: i18n once copy is approved.
-                    "Refresh"
+                    {t!(i18n, common.refresh)}
                 </button>
             </div>
-            // TODO: i18n once copy is approved.
-            <p class="text-xs text-gray-500 dark:text-gray-400">"Times shown in your local time"</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+                {t!(i18n, tournaments.list.times_shown_in_your_local_time)}
+            </p>
             <Suspense fallback=move || {
                 view! {
                     <div role="status" aria-busy="true">
@@ -562,8 +561,7 @@ pub fn TournamentList(category: TournamentCategory) -> impl IntoView {
                             class="ui-button ui-button-secondary ui-button-sm"
                             on:click=move |_| refresh.run(())
                         >
-                            // TODO: i18n once copy is approved.
-                            "Retry"
+                            {t!(i18n, common.retry)}
                         </button>
                     }
                 }>{results}</ErrorBoundary>

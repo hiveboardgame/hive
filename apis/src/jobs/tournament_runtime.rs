@@ -1,7 +1,7 @@
 use crate::{
     active_instance::wait_until_active,
     common::{ServerMessage, TournamentUpdate},
-    notifications::{notify, Event},
+    notifications::{notify, Event, TournamentNotice},
     websocket::{
         server_handlers::{
             game::{append_fixed_field_commit, settle_deadline},
@@ -184,12 +184,11 @@ async fn scheduled_start_deferred(
                 destination: MessageDestination::User(organizer.id),
                 message: ServerMessage::Tournament(TournamentUpdate::StartDeferred(TournamentId(tournament.nanoid.clone()))),
             }).await;
-            // TODO: i18n once copy is approved.
             notify(Event::TournamentNotice {
                 recipient: organizer.id,
                 tournament_name: tournament.name.clone(),
                 tournament_nanoid: tournament.nanoid.clone(),
-                description: String::from("The scheduled start had too few entrants. Start the tournament manually once enough entrants have joined."),
+                description: TournamentNotice::StartDeferred,
                 category: NotificationCategory::Tournament,
             });
         },

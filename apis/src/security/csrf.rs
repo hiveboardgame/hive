@@ -80,7 +80,10 @@ pub use server::{
 #[cfg(feature = "ssr")]
 mod server {
     use super::{TOKEN_COOKIE, TOKEN_KEY};
-    use crate::security::origin::validate_request_origin;
+    use crate::{
+        common::{request_locale, UiError},
+        security::origin::validate_request_origin,
+    };
     use actix_session::{Session, SessionExt};
     use actix_web::{
         body::{EitherBody, MessageBody},
@@ -196,14 +199,14 @@ mod server {
         };
         if let Err(error) = validation {
             let status = error.as_response_error().status_code();
-            let message = "This request could not be verified. Refresh the page and try again.";
+            let error = UiError::RequestUnverified;
             let mut response = HttpResponse::build(status);
             response.insert_header((header::CACHE_CONTROL, "private, no-store"));
             let response =
                 if let Some(service) = get_server_fn_service(request.path(), request.method()) {
-                    response.body((service.ser)(ServerFnErrorErr::ServerError(message.into())))
+                    response.body((service.ser)(ServerFnErrorErr::ServerError(error.encode())))
                 } else {
-                    response.body(message)
+                    response.body(error.message(request_locale(request.request())))
                 };
             return Ok(request.into_response(response).map_into_right_body());
         }

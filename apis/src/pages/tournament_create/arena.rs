@@ -85,20 +85,25 @@ pub(super) fn ArenaCreationForm() -> impl IntoView {
             participant_summary=Signal::derive(String::new)
         >
             <CreationDetails draft=common>
-
                 <div class="flex flex-col gap-1.5">
                     <div class="flex gap-3 justify-between items-center">
                         <span class="ui-field-label">
                             {t!(i18n, tournaments.creation.arena_length_minutes)}
                         </span>
                         <span class="font-bold text-gray-900 dark:text-gray-100">
-                            // TODO: i18n once copy is approved.
+
                             {move || {
                                 let minutes = draft.duration_minutes.get();
                                 if minutes % 60 == 0 {
-                                    format!("{} h", minutes / 60)
+                                    t_string!(
+                                        i18n, tournaments.creation.duration_hours, hours = minutes / 60
+                                    )
+                                        .to_string()
                                 } else {
-                                    format!("{} h {} min", minutes / 60, minutes % 60)
+                                    t_string!(
+                                        i18n, tournaments.creation.duration_hours_minutes, hours = minutes / 60, minutes = minutes % 60
+                                    )
+                                        .to_string()
                                 }
                             }}
                         </span>

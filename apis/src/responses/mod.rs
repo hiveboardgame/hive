@@ -21,7 +21,7 @@ pub use opening_explorer::ExplorerResponse;
 pub use push_device::PushDeviceResponse;
 pub use rating::RatingResponse;
 pub use rating_history::RatingHistoryResponse;
-pub use schedules::ScheduleResponse;
+pub use schedules::{ScheduleResponse, ScheduleSlotContext};
 pub use tournament::{
     AdmissionRestrictions,
     TournamentAbstractResponse,

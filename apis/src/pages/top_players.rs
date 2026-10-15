@@ -1,3 +1,4 @@
+use crate::i18n::{t_string, use_i18n};
 use leptos::prelude::*;
 use shared_types::{GameSpeed, LeaderboardKind};
 
@@ -35,10 +36,11 @@ fn LeaderboardPage(
 
 #[component]
 pub fn TopPlayers() -> impl IntoView {
+    let i18n = use_i18n();
     view! {
         <LeaderboardPage
-            title="Top Rated Players"
-            subtitle="Highest rated players by speed."
+            title=move || t_string!(i18n, profile.leaderboards.top_rated_players)
+            subtitle=move || t_string!(i18n, profile.leaderboards.highest_rated_players_by_speed)
             kind=LeaderboardKind::Humans
         />
     }
@@ -46,10 +48,11 @@ pub fn TopPlayers() -> impl IntoView {
 
 #[component]
 pub fn TopBots() -> impl IntoView {
+    let i18n = use_i18n();
     view! {
         <LeaderboardPage
-            title="Top Rated Bots"
-            subtitle="Highest rated bots by speed."
+            title=move || t_string!(i18n, profile.leaderboards.top_rated_bots)
+            subtitle=move || t_string!(i18n, profile.leaderboards.highest_rated_bots_by_speed)
             kind=LeaderboardKind::Bots
         />
     }

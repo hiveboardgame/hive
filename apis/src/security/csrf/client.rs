@@ -1,4 +1,5 @@
 use super::csrf_token;
+use crate::common::UiError;
 use futures_util::{Sink, Stream};
 use leptos::prelude::window;
 use server_fn::{
@@ -24,8 +25,9 @@ where
     type Response = BrowserResponse;
 
     fn send(request: BrowserRequest) -> impl Future<Output = Result<BrowserResponse, E>> + Send {
-        let validation = attach_token(&request)
-            .map_err(|message| E::from_server_fn_error(ServerFnErrorErr::Request(message.into())));
+        let validation = attach_token(&request).map_err(|message| {
+            E::from_server_fn_error(ServerFnErrorErr::Request(message.encode()))
+        });
         async move {
             validation?;
             <BrowserClient as Client<E, I, O>>::send(request).await
@@ -51,21 +53,22 @@ where
     }
 }
 
-fn attach_token(request: &BrowserRequest) -> Result<(), &'static str> {
+fn attach_token(request: &BrowserRequest) -> Result<(), UiError> {
     if request.method().is_safe() {
         return Ok(());
     }
     let origin = window()
         .location()
         .origin()
-        .map_err(|_| "Missing application origin")?;
-    let url = Url::new_with_base(&request.url(), &origin).map_err(|_| "Invalid request URL")?;
+        .map_err(|_| UiError::RequestOriginMissing)?;
+    let url =
+        Url::new_with_base(&request.url(), &origin).map_err(|_| UiError::RequestUrlInvalid)?;
     if url.origin() != origin {
-        return Err("Server functions must use the application origin");
+        return Err(UiError::RequestOriginMismatch);
     }
     let token = csrf_token();
     if token.is_empty() {
-        return Err("Missing CSRF token. Refresh the page and try again.");
+        return Err(UiError::RequestTokenMissing);
     }
     request.headers().set("X-CSRF-Token", &token);
     Ok(())

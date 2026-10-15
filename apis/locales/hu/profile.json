@@ -1,14 +1,5 @@
 {
     "game_result": "Játék eredménye:",
-    "game_buttons": {
-        "pending": "Függő",
-        "playing": "Folyamatban lévő",
-        "finished": "Befejezett"
-    },
-    "color_buttons": {
-        "white": "Fehér",
-        "black": "Fekete"
-    },
     "result_buttons": {
         "win": "Győzelem",
         "loss": "Vereség",
@@ -23,5 +14,15 @@
     "player_color": "Játékos színe",
     "rating": "ELO",
     "games_played_one": "{{count}} játszma",
-    "games_played_other": "{{count}} játszma"
+    "games_played_other": "{{count}} játszma",
+    "page": {
+        "redirecting": "Átirányítás…",
+        "user_not_found": "A felhasználó nem található"
+    },
+    "leaderboards": {
+        "top_rated_players": "Legjobb értékelt játékosok",
+        "highest_rated_players_by_speed": "Legmagasabb értékszámú játékosok tempónként.",
+        "top_rated_bots": "Legjobb értékelt botok",
+        "highest_rated_bots_by_speed": "Legmagasabb értékszámú botok tempónként."
+    }
 }

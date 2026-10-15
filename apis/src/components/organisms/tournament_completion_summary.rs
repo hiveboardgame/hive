@@ -1,5 +1,6 @@
 use crate::{
     common::rounded_percentage,
+    i18n::*,
     providers::{
         ArenaStateStoreFields,
         EliminationStateStoreFields,
@@ -199,10 +200,10 @@ fn percentage(numerator: u32, denominator: u32) -> String {
 }
 
 #[component]
-fn CompletionRow(label: String, value: String) -> impl IntoView {
+fn CompletionRow(#[prop(into)] label: TextProp, value: String) -> impl IntoView {
     view! {
         <div class="contents">
-            <dt class="text-gray-600 dark:text-gray-300">{label}</dt>
+            <dt class="text-gray-600 dark:text-gray-300">{move || label.get()}</dt>
             <dd class="font-semibold tabular-nums text-right">{value}</dd>
         </div>
     }
@@ -210,57 +211,66 @@ fn CompletionRow(label: String, value: String) -> impl IntoView {
 
 #[component]
 pub fn TournamentCompletionSummary(tournament: TournamentState) -> impl IntoView {
+    let i18n = use_i18n();
     view! {
         <div class="space-y-4" data-testid="tournament-completion-summary">
-            // TODO: i18n once copy is approved.
-            <h2 class="text-lg font-bold">"Tournament complete"</h2>
+
+            <h2 class="text-lg font-bold">{t!(i18n, tournaments.ui.tournament_complete)}</h2>
             {move || {
                 let statistics = completion_statistics(tournament);
                 let outcomes = statistics.outcomes;
                 view! {
                     <dl class="grid gap-y-1 gap-x-4 text-sm grid-cols-[minmax(0,1fr)_auto]">
-                        // TODO: i18n once copy is approved.
+
                         <CompletionRow
-                            label=String::from("Games recorded")
+                            label=move || {
+                                t_string!(i18n, tournaments.ui.games_recorded).to_string()
+                            }
                             value=outcomes.games_recorded.to_string()
                         />
                         {statistics
                             .average_rating
                             .map(|rating| {
                                 view! {
-                                    // TODO: i18n once copy is approved.
                                     <CompletionRow
-                                        label=String::from("Average participant rating")
+                                        label=move || {
+                                            t_string!(i18n, tournaments.ui.average_participant_rating)
+                                                .to_string()
+                                        }
                                         value=rating.to_string()
                                     />
                                 }
                             })}
-                        // TODO: i18n once copy is approved.
+
                         <CompletionRow
-                            label=String::from("White wins")
+                            label=move || { t_string!(i18n, archive.result_white_wins).to_string() }
                             value=percentage(outcomes.white_wins, outcomes.games_recorded)
                         />
-                        // TODO: i18n once copy is approved.
+
                         <CompletionRow
-                            label=String::from("Black wins")
+                            label=move || { t_string!(i18n, archive.result_black_wins).to_string() }
                             value=percentage(outcomes.black_wins, outcomes.games_recorded)
                         />
-                        // TODO: i18n once copy is approved.
+
                         <CompletionRow
-                            label=String::from("Draws")
+                            label=move || t_string!(i18n, tournaments.ui.draws).to_string()
                             value=percentage(outcomes.draws, outcomes.games_recorded)
                         />
-                        // TODO: i18n once copy is approved.
+
                         <CompletionRow
-                            label=String::from("Double forfeits")
+                            label=move || {
+                                t_string!(i18n, tournaments.ui.double_forfeits).to_string()
+                            }
                             value=percentage(outcomes.double_forfeits, outcomes.games_recorded)
                         />
                         {(outcomes.other_adjudicated > 0)
                             .then(|| {
                                 view! {
-                                    // TODO: i18n once copy is approved.
                                     <CompletionRow
-                                        label=String::from("Other adjudicated outcomes")
+                                        label=move || {
+                                            t_string!(i18n, tournaments.ui.other_adjudicated_outcomes)
+                                                .to_string()
+                                        }
                                         value=percentage(
                                             outcomes.other_adjudicated,
                                             outcomes.games_recorded,
@@ -271,9 +281,11 @@ pub fn TournamentCompletionSummary(tournament: TournamentState) -> impl IntoView
                         {(outcomes.missing_outcomes > 0)
                             .then(|| {
                                 view! {
-                                    // TODO: i18n once copy is approved.
                                     <CompletionRow
-                                        label=String::from("Outcome unavailable")
+                                        label=move || {
+                                            t_string!(i18n, tournaments.ui.outcome_unavailable)
+                                                .to_string()
+                                        }
                                         value=percentage(
                                             outcomes.missing_outcomes,
                                             outcomes.games_recorded,
@@ -287,9 +299,11 @@ pub fn TournamentCompletionSummary(tournament: TournamentState) -> impl IntoView
                             .map(|detail| match detail {
                                 CompletionDetail::BerserkRate { berserks, player_seats } => {
                                     view! {
-                                        // TODO: i18n once copy is approved.
                                         <CompletionRow
-                                            label=String::from("Berserk rate")
+                                            label=move || {
+                                                t_string!(i18n, tournaments.view.arena.berserk_rate)
+                                                    .to_string()
+                                            }
                                             value=percentage(berserks, player_seats)
                                         />
                                     }
@@ -297,9 +311,10 @@ pub fn TournamentCompletionSummary(tournament: TournamentState) -> impl IntoView
                                 }
                                 CompletionDetail::ByeRate { byes, player_rounds } => {
                                     view! {
-                                        // TODO: i18n once copy is approved.
                                         <CompletionRow
-                                            label=String::from("Bye rate")
+                                            label=move || {
+                                                t_string!(i18n, tournaments.ui.bye_rate).to_string()
+                                            }
                                             value=percentage(byes, player_rounds)
                                         />
                                     }
@@ -307,9 +322,10 @@ pub fn TournamentCompletionSummary(tournament: TournamentState) -> impl IntoView
                                 }
                                 CompletionDetail::WalkoverRate { walkovers, resolved_slots } => {
                                     view! {
-                                        // TODO: i18n once copy is approved.
                                         <CompletionRow
-                                            label=String::from("Walkover rate")
+                                            label=move || {
+                                                t_string!(i18n, tournaments.ui.walkover_rate).to_string()
+                                            }
                                             value=percentage(walkovers, resolved_slots)
                                         />
                                     }
@@ -318,11 +334,18 @@ pub fn TournamentCompletionSummary(tournament: TournamentState) -> impl IntoView
                                 CompletionDetail::SwissEndedEarly => {
                                     view! {
                                         <div class="col-span-2 pt-3 mt-2 min-w-0 border-t border-black/10 dark:border-white/10">
-                                            // TODO: i18n once copy is approved.
-                                            <dt class="font-semibold">"Ended early"</dt>
-                                            // TODO: i18n once copy is approved.
+
+                                            <dt class="font-semibold">
+                                                {t!(i18n, tournaments.ui.ended_early)}
+                                            </dt>
+
                                             <dd class="mt-1 text-gray-600 dark:text-gray-300">
-                                                "No legal non-rematch pairing remained"
+                                                {move || {
+                                                    t_string!(
+                                                        i18n, tournaments.ui.no_legal_non_rematch_pairing_remained
+                                                    )
+                                                        .to_string()
+                                                }}
                                             </dd>
                                         </div>
                                     }

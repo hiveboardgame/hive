@@ -1,6 +1,6 @@
 use crate::{
     common::with_class,
-    i18n::{t_string, use_i18n},
+    i18n::*,
     providers::game_state::{GameStateStore, GameStateStoreFields},
 };
 use hive_lib::{GameControl, GameStatus};
@@ -171,15 +171,27 @@ pub fn ConfirmButton(
 
 fn get_icon_and_title(
     game_control: GameControl,
-) -> (&'static icondata_core::IconData, &'static str) {
-    match game_control {
-        GameControl::Abort(_) => (icondata_ai::AiStopOutlined, "Abort"),
-        GameControl::DrawAccept(_) => (icondata_fa::FaHandshakeSimpleSolid, "Accept Draw"),
-        GameControl::DrawOffer(_) => (icondata_fa::FaHandshakeSimpleSolid, "Offer Draw"),
-        GameControl::DrawReject(_) => (icondata_fa::FaHandshakeSimpleSolid, "Reject Draw"),
-        GameControl::Resign(_) => (icondata_ai::AiFlagOutlined, "Resign"),
-        GameControl::TakebackAccept(_) => (icondata_bi::BiUndoRegular, "Accept Takeback"),
-        GameControl::TakebackReject(_) => (icondata_bi::BiUndoRegular, "Reject Takeback"),
-        GameControl::TakebackRequest(_) => (icondata_bi::BiUndoRegular, "Request Takeback"),
-    }
+) -> (&'static icondata_core::IconData, impl Fn() -> String + Copy) {
+    let i18n = use_i18n();
+    let icon = match game_control {
+        GameControl::Abort(_) => icondata_ai::AiStopOutlined,
+        GameControl::DrawAccept(_) | GameControl::DrawOffer(_) | GameControl::DrawReject(_) => {
+            icondata_fa::FaHandshakeSimpleSolid
+        }
+        GameControl::Resign(_) => icondata_ai::AiFlagOutlined,
+        GameControl::TakebackAccept(_)
+        | GameControl::TakebackReject(_)
+        | GameControl::TakebackRequest(_) => icondata_bi::BiUndoRegular,
+    };
+    let title = move || match game_control {
+        GameControl::Abort(_) => t_string!(i18n, game.abort).to_string(),
+        GameControl::DrawAccept(_) => t_string!(i18n, game.accept_draw).to_string(),
+        GameControl::DrawOffer(_) => t_string!(i18n, game.offer_draw).to_string(),
+        GameControl::DrawReject(_) => t_string!(i18n, game.reject_draw).to_string(),
+        GameControl::Resign(_) => t_string!(i18n, game.resign).to_string(),
+        GameControl::TakebackAccept(_) => t_string!(i18n, game.accept_takeback).to_string(),
+        GameControl::TakebackReject(_) => t_string!(i18n, game.reject_takeback).to_string(),
+        GameControl::TakebackRequest(_) => t_string!(i18n, game.request_takeback).to_string(),
+    };
+    (icon, title)
 }

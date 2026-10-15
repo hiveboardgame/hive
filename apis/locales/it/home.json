@@ -1,7 +1,6 @@
 {
     "learn_to_play": "Impara a giocare",
     "create_game": "Crea una partita",
-    "search_players": "Cerca giocatori",
     "online_players_one": "{{count}} Giocatore online",
     "online_players_other": "{{count}} Giocatori online",
     "custom_game": {
@@ -22,7 +21,6 @@
         "private": "Privata"
     },
     "challenge_details": {
-        "player": "Giocatore",
         "time": "Tempo"
     },
     "challenge_tabs": {
@@ -42,5 +40,47 @@
         "error_title": "Errore nel caricamento delle prossime partite",
         "empty_title": "Nessuna partita di torneo in programma",
         "empty_message": "Torna più tardi per le partite programmate"
+    },
+    "pick_your_color_and_create_a_challenge": "Scegli il colore e crea una sfida:",
+    "an_introduction_to_hive": "Un'introduzione a Hive",
+    "learn_to_play_hive_video_thumbnail": "Impara a giocare a Hive - anteprima video",
+    "couldn_t_fetch_top_users": "Impossibile caricare i migliori giocatori",
+    "no_one_yet": "Ancora nessuno",
+    "not_ranked_yet": "Non ancora classificato",
+    "quick_play": "Partita rapida",
+    "play_vs_bot": "Gioca contro un bot",
+    "play_bot": "Gioca col bot",
+    "challenge": {
+        "bot": {
+            "play_an_unrated_game_vs_our_bot": "Gioca una partita non classificata contro il nostro bot",
+            "easy": "Facile",
+            "medium": "Medio",
+            "hard": "Difficile"
+        },
+        "direct_challenge_to": "Sfida diretta a {{display_username}}",
+        "waiting_for_to_respond": "In attesa della risposta di {{display_username}}.",
+        "private_challenge": "Sfida privata",
+        "share_the_private_link_with_the_player_you_want": "Condividi il link privato con il giocatore che vuoi invitare.",
+        "public_challenge": "Sfida pubblica",
+        "this_challenge_is_listed_publicly_while_it_is_open": "Questa sfida è visibile pubblicamente finché è aperta.",
+        "direct_challenge_from": "Sfida diretta da {{display_username}}",
+        "review_the_settings_below_then_accept_or_decline": "Controlla le impostazioni qui sotto, poi accetta o rifiuta.",
+        "private_challenge_from": "Sfida privata da {{display_username}}",
+        "log_in_to_accept_this_challenge": "Accedi per accettare questa sfida.",
+        "challenge_from": "Sfida da {{display_username}}",
+        "review_the_settings_below_then_accept_when_you_re": "Controlla le impostazioni qui sotto, poi accetta quando sei pronto a giocare.",
+        "challenger": "Sfidante:",
+        "challenge_not_found": "Sfida non trovata",
+        "the_challenge_you_re_looking_for_doesn_t_exist": "La sfida che cerchi non esiste",
+        "this_challenge_has_been_accepted_and_the_game_is": "Questa sfida è stata accettata e la partita è pronta.",
+        "please_wait_while_we_fetch_the_challenge_details": "Attendi il caricamento dei dettagli della sfida",
+        "error_loading_challenge": "Errore nel caricamento della sfida",
+        "challenge_doesn_t_seem_to_exist": "La sfida sembra non esistere",
+        "please_wait_while_we_check_your_account": "Attendi la verifica del tuo account",
+        "challenge_no_longer_available": "Sfida non più disponibile",
+        "share_private_link": "Condividi link privato",
+        "only_players_with_this_url_can_accept_this_private": "Solo i giocatori con questo URL possono accettare questa sfida privata.",
+        "copy_link": "Copia link",
+        "challenge_details": "Dettagli sfida"
     }
 }

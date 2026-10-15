@@ -1,5 +1,5 @@
 use crate::{
-    common::{format_game_result, TvInterest},
+    common::{format_clock_time_remaining, format_game_result, TvInterest},
     components::{
         molecules::thumbnail_pieces::ThumbnailPieces,
         organisms::tournament_inspector::{player_standing, TournamentSelection},
@@ -20,6 +20,7 @@ use crate::{
 use chrono::{DateTime, Utc};
 use hive_lib::{Color, GameStatus};
 use leptos::prelude::*;
+use leptos_i18n::I18nContext;
 use reactive_stores::{ArcField, Store};
 use shared_types::{tournament_view::ArenaGameResponse, GameId, TimeMode, TournamentStatus};
 use std::{collections::HashMap, sync::Arc};
@@ -115,7 +116,7 @@ fn ArenaTvPlayerRow(
                 if clock_game.finished {
                     return None;
                 }
-                arena_tv_clock_text(&clock_game, color, now.get())
+                arena_tv_clock_text(i18n, &clock_game, color, now.get())
                     .map(|clock| {
                         view! { <span class=clock_class>{clock}</span> }
                     })
@@ -138,7 +139,12 @@ fn arena_tv_active_color(game: &GameResponse) -> Option<Color> {
     })
 }
 
-fn arena_tv_clock_text(game: &GameResponse, color: Color, now: DateTime<Utc>) -> Option<String> {
+fn arena_tv_clock_text(
+    i18n: I18nContext<Locale, I18nKeys>,
+    game: &GameResponse,
+    color: Color,
+    now: DateTime<Utc>,
+) -> Option<String> {
     if game.finished {
         return None;
     }
@@ -156,7 +162,7 @@ fn arena_tv_clock_text(game: &GameResponse, color: Color, now: DateTime<Utc>) ->
             .unwrap_or_default();
         remaining = remaining.checked_sub(elapsed).unwrap_or_default();
     }
-    Some(game.time_mode.time_remaining(remaining))
+    Some(format_clock_time_remaining(i18n, game.time_mode, remaining))
 }
 
 #[component]

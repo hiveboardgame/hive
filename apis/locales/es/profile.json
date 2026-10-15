@@ -1,13 +1,4 @@
 {
-    "game_buttons": {
-        "pending": "Pendiente",
-        "playing": "Jugando",
-        "finished": "Finalizadas"
-    },
-    "color_buttons": {
-        "white": "Blanco",
-        "black": "Negro"
-    },
     "result_buttons": {
         "win": "Victorias",
         "loss": "Derrotas",
@@ -23,5 +14,15 @@
     "player_color": "Color del jugador",
     "rating": "Puntuación",
     "games_played_one": "{{count}} partida",
-    "games_played_other": "{{count}} partidas"
+    "games_played_other": "{{count}} partidas",
+    "page": {
+        "redirecting": "Redirigiendo…",
+        "user_not_found": "Usuario no encontrado"
+    },
+    "leaderboards": {
+        "top_rated_players": "Jugadores con mayor puntuación",
+        "highest_rated_players_by_speed": "Jugadores con mayor puntuación por ritmo de juego.",
+        "top_rated_bots": "Bots con mayor puntuación",
+        "highest_rated_bots_by_speed": "Bots con mayor puntuación por ritmo de juego."
+    }
 }

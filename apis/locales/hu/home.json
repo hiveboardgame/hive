@@ -1,7 +1,6 @@
 {
     "learn_to_play": "Tanulj meg játszani",
     "create_game": "Játék létrehozása",
-    "search_players": "Játékos keresés",
     "online_players_one": "{{count}} online játékos",
     "custom_game": {
         "title": "Játék létrehozása:",
@@ -18,12 +17,10 @@
                 "time_one": "{{count}} nap",
                 "time_other": "{{count}} nap"
             }
-        },
-        "button": "Egyéni"
+        }
     },
     "online_players_other": "{{count}} online játékos",
     "challenge_details": {
-        "player": "Játékos",
         "time": "Idő"
     },
     "challenge_tabs": {
@@ -43,5 +40,47 @@
         "error_title": "Hiba a közelgő játszmák betöltésekor",
         "empty_title": "Nincsenek közelgő versenyjátszmák",
         "empty_message": "Nézz vissza később az ütemezett játszmákért"
+    },
+    "pick_your_color_and_create_a_challenge": "Válassz színt, és hozz létre kihívást:",
+    "an_introduction_to_hive": "Bevezetés a Hive-ba",
+    "learn_to_play_hive_video_thumbnail": "Tanulj meg Hive-ot játszani – videóelőnézet",
+    "couldn_t_fetch_top_users": "Nem sikerült lekérni a legjobb játékosokat",
+    "no_one_yet": "Még senki",
+    "not_ranked_yet": "Még nincs helyezés",
+    "quick_play": "Gyors játék",
+    "play_vs_bot": "Játék bot ellen",
+    "play_bot": "Bot ellen",
+    "challenge": {
+        "bot": {
+            "play_an_unrated_game_vs_our_bot": "Játssz egy nem értékelt játszmát a botunk ellen",
+            "easy": "Könnyű",
+            "medium": "Közepes",
+            "hard": "Nehéz"
+        },
+        "direct_challenge_to": "Közvetlen kihívás neki: {{display_username}}",
+        "waiting_for_to_respond": "{{display_username}} válaszára várunk.",
+        "private_challenge": "Privát kihívás",
+        "share_the_private_link_with_the_player_you_want": "Oszd meg a privát hivatkozást azzal a játékossal, akit meg szeretnél hívni.",
+        "public_challenge": "Nyilvános kihívás",
+        "this_challenge_is_listed_publicly_while_it_is_open": "Ez a kihívás nyilvánosan látható, amíg nyitva van.",
+        "direct_challenge_from": "Közvetlen kihívás tőle: {{display_username}}",
+        "review_the_settings_below_then_accept_or_decline": "Ellenőrizd az alábbi beállításokat, majd fogadd el vagy utasítsd el.",
+        "private_challenge_from": "Privát kihívás tőle: {{display_username}}",
+        "log_in_to_accept_this_challenge": "Jelentkezz be a kihívás elfogadásához.",
+        "challenge_from": "Kihívás tőle: {{display_username}}",
+        "review_the_settings_below_then_accept_when_you_re": "Ellenőrizd az alábbi beállításokat, majd fogadd el, amikor készen állsz a játékra.",
+        "challenger": "Kihívó:",
+        "challenge_not_found": "A kihívás nem található",
+        "the_challenge_you_re_looking_for_doesn_t_exist": "A keresett kihívás nem létezik",
+        "this_challenge_has_been_accepted_and_the_game_is": "Ezt a kihívást elfogadták, és a játszma készen áll.",
+        "please_wait_while_we_fetch_the_challenge_details": "Kérjük, várj, amíg betöltjük a kihívás adatait",
+        "error_loading_challenge": "Hiba a kihívás betöltésekor",
+        "challenge_doesn_t_seem_to_exist": "Úgy tűnik, a kihívás nem létezik",
+        "please_wait_while_we_check_your_account": "Kérjük, várj, amíg ellenőrizzük a fiókodat",
+        "challenge_no_longer_available": "A kihívás már nem érhető el",
+        "share_private_link": "Privát hivatkozás megosztása",
+        "only_players_with_this_url_can_accept_this_private": "Csak az ezzel a hivatkozással rendelkező játékosok fogadhatják el ezt a privát kihívást.",
+        "copy_link": "Hivatkozás másolása",
+        "challenge_details": "Kihívás adatai"
     }
 }

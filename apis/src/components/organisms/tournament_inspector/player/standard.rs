@@ -1,5 +1,8 @@
 use super::*;
-use crate::common::{half_point_text, tournament_game_number, unfinished_tournament_game_label};
+use crate::{
+    common::{half_point_text, tournament_game_number, unfinished_tournament_game_label},
+    i18n::*,
+};
 use tournamint::PointSystem;
 
 #[derive(Clone, PartialEq)]
@@ -27,7 +30,7 @@ fn result_class(result: Option<MatchScore>) -> &'static str {
 }
 
 #[component]
-fn CompactGameRow(game: HistoryGame, label: String) -> impl IntoView {
+fn CompactGameRow(game: HistoryGame, #[prop(into)] label: TextProp) -> impl IntoView {
     let color = game.color;
     let state = game.state;
     let result = game.board_result;
@@ -35,7 +38,7 @@ fn CompactGameRow(game: HistoryGame, label: String) -> impl IntoView {
     let game_id = game.game_id;
     let content = view! {
         <span class="min-w-0">
-            <span class="block font-medium truncate">{label}</span>
+            <span class="block font-medium truncate">{move || label.get()}</span>
             {state
                 .map(|state| {
                     view! {
@@ -137,6 +140,7 @@ fn ExpandableHistoryGroup(
     ordinal: Option<usize>,
     expanded_score: Option<String>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let child_rows = games
         .into_iter()
         .enumerate()
@@ -146,11 +150,25 @@ fn ExpandableHistoryGroup(
             } else {
                 game.number
             };
-            // TODO: i18n once copy is approved.
-            let label = number.map_or_else(
-                || game.state.take().unwrap_or("Not started").to_string(),
-                |number| format!("Game {number}"),
-            );
+
+            let state = if number.is_none() {
+                game.state.take()
+            } else {
+                None
+            };
+            let label = move || {
+                number.map_or_else(
+                    || {
+                        state
+                            .clone()
+                            .unwrap_or_else(|| t_string!(i18n, common.not_started).to_string())
+                    },
+                    |number| {
+                        t_string!(i18n, tournaments.schedule_context.game, game = number)
+                            .to_string()
+                    },
+                )
+            };
             view! { <CompactGameRow game label /> }
         })
         .collect_view();
@@ -210,6 +228,7 @@ fn round_robin_history(
     round_robin: Store<RoundRobinState>,
     player: Uuid,
 ) -> Vec<StandardHistoryRow> {
+    let i18n = use_i18n();
     let configuration = FormatConfig::RoundRobin(round_robin.configuration().get());
     let rounds = round_robin.rounds().get();
     let matches = round_robin.matches().get();
@@ -252,7 +271,7 @@ fn round_robin_history(
                 round.pass_index + 1,
             );
             if game.number.is_none() {
-                game.state = Some(unfinished_tournament_game_label(&slot));
+                game.state = Some(unfinished_tournament_game_label(i18n.get_locale(), &slot));
             }
             if let Some(group) = groups.iter_mut().find(|group| group.opponent == opponent) {
                 if position > group.latest_position {
@@ -316,8 +335,8 @@ fn round_robin_history(
                     format!("{}–{}", primary_score_text(&configuration, completed.match_points[side]),
                         primary_score_text(&configuration, completed.match_points[1 - side]))
                 })).unwrap_or_else(|| String::from("—"));
-                // TODO: i18n once copy is approved.
-                (match_points, Some(format!("Game points: {headline_score}")))
+
+                (match_points, Some(t_string!(i18n, tournaments.ui.headline_game_points, headline_score = headline_score).to_string()))
             } else { (headline_score, None) };
             Some(StandardHistoryRow::Group {
                 games: group.games,
@@ -383,6 +402,7 @@ fn swiss_history(
     swiss: Store<SwissState>,
     player: Uuid,
 ) -> Vec<StandardHistoryRow> {
+    let i18n = use_i18n();
     let swiss_configuration = swiss.configuration().get();
     let configuration = FormatConfig::Swiss(swiss_configuration.clone());
     let rounds = swiss.rounds().get();
@@ -440,7 +460,8 @@ fn swiss_history(
                                 order + 1,
                             );
                             if game.number.is_none() {
-                                game.state = Some(unfinished_tournament_game_label(slot));
+                                game.state =
+                                    Some(unfinished_tournament_game_label(i18n.get_locale(), slot));
                             }
                             game
                         })
@@ -466,12 +487,13 @@ fn swiss_history(
                         })
                         .flatten()
                         .map(|points| {
-                            // TODO: i18n once copy is approved.
-                            format!(
-                                "Game points: {}–{}",
-                                game_points_text(&configuration, points[0]),
-                                game_points_text(&configuration, points[1]),
+                            t_string!(
+                                i18n,
+                                tournaments.ui.game_points,
+                                value1 = game_points_text(&configuration, points[0]),
+                                value2 = game_points_text(&configuration, points[1])
                             )
+                            .to_string()
                         });
                     history.push((
                         round.round_index,
@@ -508,6 +530,7 @@ fn elimination_history(
     elimination: Store<EliminationState>,
     player: Uuid,
 ) -> Vec<StandardHistoryRow> {
+    let i18n = use_i18n();
     let configuration = FormatConfig::Elimination(elimination.configuration().get());
     let nodes = elimination.nodes().get();
     let mut nodes = nodes
@@ -557,15 +580,15 @@ fn elimination_history(
                 .map(|(order, slot)| slot_history_game(&configuration, &slot, player, order))
                 .collect::<Vec<_>>();
             let has_result = games.iter().any(|game| game.result.is_some());
-            // TODO: i18n once copy is approved.
+
             let headline_score = if let EliminationNodeStateResponse::Resolved(
                 EliminationNodeResolution::Walkover { winner, .. },
             ) = node.state
             {
                 if winner == player {
-                    String::from("Won by withdrawal")
+                    t_string!(i18n, tournaments.ui.withdrawal_win).to_string()
                 } else {
-                    String::from("Withdrawn")
+                    t_string!(i18n, common.withdrawn).to_string()
                 }
             } else if has_result {
                 format!(

@@ -1,3 +1,5 @@
+#[cfg(feature = "ssr")]
+use crate::common::UiError;
 use crate::security::csrf::CsrfClient;
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -12,7 +14,10 @@ pub enum DiscordHandleStatus {
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 
-use crate::security::csrf::session_fingerprint;
+use crate::{
+    security::csrf::session_fingerprint,
+    common::{localized_error_message_for_locale, request_locale},
+};
 use actix_identity::Identity;
 use actix_session::SessionExt;
 use actix_web::{
@@ -53,7 +58,7 @@ fn discord_link_key(request: &HttpRequest) -> Result<&Key, Error> {
     request
         .app_data::<web::Data<DiscordLinkKey>>()
         .map(|key| &key.get_ref().0)
-        .ok_or_else(|| ErrorInternalServerError("Discord link cookie key is not configured"))
+        .ok_or_else(|| ErrorInternalServerError(UiError::DiscordUnavailable.encode()))
 }
 
 fn discord_link_cookie(value: String) -> Cookie<'static> {
@@ -72,7 +77,7 @@ fn pending_discord_link_cookie(
     state: String,
 ) -> Result<Cookie<'static>, Error> {
     let fingerprint = session_fingerprint(&request.get_session())?
-        .ok_or_else(|| ErrorForbidden("Discord linking requires an existing login session"))?;
+        .ok_or_else(|| ErrorForbidden(UiError::DiscordSessionRequired.encode()))?;
     let pending = PendingDiscordLink {
         state,
         user_id,
@@ -134,9 +139,17 @@ pub async fn callback(
     let user_id = identity
         .and_then(|identity| identity.id().ok())
         .and_then(|id| Uuid::parse_str(&id).ok());
-    if !validate_pending_discord_link(&request, user_id, &params.state)? {
+    let valid = match validate_pending_discord_link(&request, user_id, &params.state) {
+        Ok(valid) => valid,
+        Err(error) => {
+            return Ok(HttpResponse::build(error.as_response_error().status_code()).body(
+                localized_error_message_for_locale(request_locale(&request), &error.to_string()),
+            ));
+        }
+    };
+    if !valid {
         return Ok(HttpResponse::Forbidden()
-            .body("Discord link could not be verified. Start again from notification settings."));
+            .body(UiError::DiscordUnverified.message(request_locale(&request))));
     }
 
     let client = Client::builder().build().map_err(ErrorInternalServerError)?;
@@ -151,7 +164,7 @@ pub async fn callback(
         // Do not log reqwest errors here: their URLs contain the authorization code/state.
         log::warn!("Discord OAuth callback exchange failed");
         HttpResponse::BadGateway()
-            .body("Discord linking failed. Start again from notification settings.")
+            .body(UiError::DiscordFailed.message(request_locale(&request)))
     } else {
         HttpResponse::Found()
             .insert_header(("Location", "/notifications"))
@@ -173,7 +186,7 @@ pub async fn start_discord_link() -> Result<(), ServerFnError> {
         .send()
         .await
         .and_then(Response::error_for_status)
-        .map_err(|_| ServerFnError::new("Could not start Discord linking"))?;
+        .map_err(|_| ServerFnError::new(UiError::DiscordStartFailed.encode()))?;
 
     #[derive(Deserialize)]
     struct AuthorizationUrl {
@@ -183,14 +196,14 @@ pub async fn start_discord_link() -> Result<(), ServerFnError> {
     let authorization: AuthorizationUrl = response
         .json()
         .await
-        .map_err(|_| ServerFnError::new("Invalid Discord authorization response"))?;
+        .map_err(|_| ServerFnError::new(UiError::DiscordResponseInvalid.encode()))?;
     let url = Url::parse(&authorization.url)
-        .map_err(|_| ServerFnError::new("Invalid Discord authorization URL"))?;
+        .map_err(|_| ServerFnError::new(UiError::DiscordUrlInvalid.encode()))?;
     let mut states = url.query_pairs().filter(|(key, _)| key == "state");
     let state = states.next().map(|(_, state)| state.into_owned());
     let state = state
         .filter(|state| !state.is_empty() && states.next().is_none())
-        .ok_or_else(|| ServerFnError::new("Invalid Discord authorization state"))?;
+        .ok_or_else(|| ServerFnError::new(UiError::DiscordStateInvalid.encode()))?;
     // OAuth responses must not rewrite the login snapshot carried by this request.
     let cookie =
         pending_discord_link_cookie(&request, user_id, state).map_err(ServerFnError::new)?;

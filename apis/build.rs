@@ -18,6 +18,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         // .add_locales(["cs", "ja", "nl", "sv"])?
         .add_namespaces([
             "common",
+            "analysis",
             "header",
             "home",
             "faq",

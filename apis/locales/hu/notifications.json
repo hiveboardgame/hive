@@ -7,12 +7,29 @@
         "col_discord": "Discord",
         "saving": "Mentés…",
         "saved": "Mentve.",
-        "save_failed": "A mentés sikertelen:"
+        "save_failed": "A mentés sikertelen:",
+        "push_discord_and_device_delivery_settings": "Push-, Discord- és eszközértesítések beállításai.",
+        "notification_preferences": "Értesítési beállítások",
+        "enable_browser_notifications_before_choosing_push_delivery": "Engedélyezd a böngésző értesítéseit a pushkézbesítés kiválasztása előtt.",
+        "discord_link_instructions": "Csatlakozz a HiveGame Discord-szerveréhez, és alább kapcsold össze a Discord-fiókodat az értesítések beállításához.",
+        "discord_integration": "Discord-integráció",
+        "step_1": "1. lépés",
+        "join_the_hivegame_discord_server": "Csatlakozz a HiveGame Discord-szerveréhez.",
+        "join_discord": "Csatlakozás Discordhoz",
+        "step_2": "2. lépés",
+        "link_this_hivegame_account_to_discord": "Kapcsold össze ezt a HiveGame-fiókot a Discorddal.",
+        "no_discord_account_linked": "Nincs összekapcsolt Discord-fiók",
+        "sign_in_to_link_discord": "Jelentkezz be a Discord összekapcsolásához",
+        "discord_status_temporarily_unavailable": "A Discord állapota átmenetileg nem érhető el",
+        "error_loading_discord_name": "Nem sikerült betölteni a Discord-nevet",
+        "link_discord_account": "Discord-fiók összekapcsolása",
+        "push_delivery_is_enabled_for_this_browser": "A pushértesítések engedélyezve vannak ebben a böngészőben.",
+        "push_delivery_is_enabled_on_another_browser": "A pushértesítések egy másik böngészőben vannak engedélyezve.",
+        "browser_notifications_are_not_available_in_this_browser": "Ebben a böngészőben nem érhetők el böngészőértesítések."
     },
     "events": {
         "your_turn": "Te jössz",
         "challenges": "Kihívás érkezett",
-        "game_ended": "A játszma véget ért",
         "tournament": "Versenymeghívó",
         "schedules": "Időpontjavaslat",
         "dms": "Közvetlen üzenet"
@@ -33,7 +50,6 @@
     "devices": {
         "heading": "Az eszközeid",
         "body": "Minden eszköz, amely jelenleg push fogadására van beállítva. Távolítsd el azokat, amelyeket már nem használsz.",
-        "remove": "Eltávolítás",
         "this_browser": "(ez a böngésző)",
         "last_active": "utolsó aktivitás",
         "platform_web": "Böngésző"
@@ -62,9 +78,7 @@
         "accepted": "{{player}} elfogadta ezt a játékidőt: {{time}}"
     },
     "tournament_status": {
-        "label": "Verseny",
-        "started": "Elkezdődött",
-        "finished": "Befejeződött"
+        "label": "Verseny"
     },
     "tournament_invitation": {
         "label": "Versenymeghívó",
@@ -81,7 +95,6 @@
         "challenge_casual": "{{challenger}} · {{time_control}} · kötetlen",
         "game_started_title": "Játszma elkezdődött",
         "game_started_body": "{{opponent}} ellen · {{time_control}}",
-        "game_ended_title": "Játszma véget ért",
         "game_ended_won_resignation": "{{opponent}} feladta",
         "game_ended_won_timeout": "{{opponent}} kifutott az időből",
         "game_ended_won": "Győztél {{opponent}} ellen",
@@ -111,9 +124,93 @@
         "test_title": "HiveGame",
         "test_body": "Teszt értesítés — a push működik"
     },
-    "tournament_status": {
-        "label": "Verseny",
-        "started": "Elkezdődött",
-        "finished": "Befejeződött"
+    "tournament_notice": {
+        "start_deferred": "A tervezett kezdéskor túl kevés induló volt. Indítsd el kézzel a versenyt, ha már elegen csatlakoztak.",
+        "games_ready": "{{count}} játszma készen áll. Nyisd meg a versenyt a párosításaid megtekintéséhez.",
+        "recorded_one": "Egy szervező ezt az eredményt rögzítette a játszmádhoz: {{outcome}}.",
+        "recorded_many": "Egy szervező {{count}} játszmád eredményét rögzítette: {{outcomes}}.",
+        "schedule_cancelled": "{{actor}} lemondta a játszmád egyeztetett időpontját ({{time}})",
+        "outcome": {
+            "double_forfeit": "kettős vereség",
+            "draw": "döntetlen",
+            "win": "győzelem",
+            "loss": "vereség"
+        }
+    },
+    "external": {
+        "open_description": "{{description}}. Megnyitás: {{link}}",
+        "organizer_title": "Versenyszervezői meghívó",
+        "organizer_body": "Meghívtak a(z) {{tournament_name}} szervezésére.",
+        "schedule_many": "{{proposer}} {{count}} időpontot ajánlott a mérkőzésedhez. Nyisd meg a választáshoz.",
+        "organizer_discord": "Meghívtak a [{{tournament_name}} verseny](<https://hivegame.com/tournament/{{tournament_nanoid}}>) szervezésére.",
+        "schedule_many_discord": "[Időpontjavaslat](<{{link}}>) — {{proposer}} {{count}} időpontot ajánlott a játszmádhoz. Nyisd meg a választáshoz.",
+        "organizer_subject": "Szervezői meghívó: {{tournament_name}}",
+        "organizer_email": "Meghívtak a(z) {{tournament_name}} szervezésére. Megnyitás: {{link}}",
+        "schedule_many_subject": "{{proposer}} játékidőpontokat javasolt",
+        "schedule_many_email": "{{proposer}} {{count}} időpontot ajánlott a játszmádhoz. Válassz itt: {{link}}",
+        "your_turn_discord": "[Te jössz](<https://hivegame.com/game/{{game_nanoid}}>) a(z) {{opponent}} elleni játszmában.",
+        "challenge_discord": "[Új kihívás](<https://hivegame.com/challenge/{{challenge_nanoid}}>) tőle: {{challenger}} · {{time_control}} · {{rated}}.",
+        "game_started_discord": "Elkezdődött a(z) {{opponent}} elleni [játszmád](<https://hivegame.com/game/{{game_nanoid}}>) · {{time_control}}.",
+        "game_ended_won_discord": "legyőzted őt: {{opponent}}",
+        "game_ended_draw_agreement_discord": "megegyezéses döntetlent játszottál vele: {{opponent}}",
+        "game_ended_draw_discord": "döntetlent játszottál vele: {{opponent}}",
+        "game_ended_discord": "Véget ért a [játszmád](<https://hivegame.com/game/{{game_nanoid}}>) – {{detail}}{{change}}.",
+        "tournament_invite_discord": "Meghívtak a(z) [{{tournament_name}} versenyre](<https://hivegame.com/tournament/{{tournament_nanoid}}>).",
+        "tournament_started_discord": "Elkezdődött a(z) [{{tournament_name}} verseny](<https://hivegame.com/tournament/{{tournament_nanoid}}>)! A játszmáid készen állnak.",
+        "schedule_propose_discord": "[Időpontjavaslat](<{{link}}>) – {{proposer}} ezt az időpontot javasolta a játszmádra: {{when}}.",
+        "schedule_accept_discord": "[Időpont elfogadva](<{{link}}>) – {{opponent}} elfogadta ezt az időpontot a játszmádra: {{when}}.",
+        "direct_message_discord": "Privát üzenet tőle: {{sender}}: {{preview}}",
+        "game_control_discord": "[A játszmád](<https://hivegame.com/game/{{game_nanoid}}>) – {{actor}} {{action}}.",
+        "your_turn_subject": "Te jössz {{opponent}} ellen",
+        "your_turn_email": "{{opponent}} lépett a játszmádban. Folytatás: https://hivegame.com/game/{{game_nanoid}}",
+        "challenge_subject": "{{challenger}} kihívott a HiveGame-en",
+        "challenge_email": "{{challenger}} kihívást küldött: {{time_control}} · {{rated}}. Megnyitás: {{link}}",
+        "game_started_subject": "Elkezdődött a(z) {{opponent}} elleni játszma",
+        "game_started_email": "A(z) {{time_control}} kihívásodat elfogadták. Megnyitás: {{link}}",
+        "game_ended_email": "Játszma áttekintése: {{link}}",
+        "tournament_invite_subject": "Versenymeghívó: {{tournament_name}}",
+        "tournament_invite_email": "Meghívtak a(z) {{tournament_name}} versenyre. Megnyitás: {{link}}",
+        "tournament_started_subject": "Elkezdődött a(z) {{tournament_name}} verseny",
+        "tournament_started_email": "{{tournament_name}} elkezdődött, és a játszmáid készen állnak. Megnyitás: {{link}}",
+        "schedule_propose_subject": "{{proposer}} játékidőpontot javasolt",
+        "schedule_propose_email": "{{proposer}} ezt az időpontot javasolta a játszmádra: {{when}}. Megnyitás: {{link}}",
+        "schedule_accept_subject": "{{opponent}} elfogadta a javasolt időpontodat",
+        "schedule_accept_email": "{{opponent}} elfogadta a játszmád időpontját: {{when}}. Megnyitás: {{link}}",
+        "game_control_subject": "{{actor}} {{action}}",
+        "game_control_email": "{{title}} a játszmádban. Megnyitás: {{link}}",
+        "test_subject": "HiveGame-tesztértesítés",
+        "test_email": "A pushértesítések működnek.",
+        "direct_message_subject": "Új üzenet tőle: {{sender}}"
+    },
+    "push_errors": {
+        "enable_first": "Előbb engedélyezd az értesítéseket.",
+        "test_failed": "Nem sikerült elküldeni a tesztértesítést.",
+        "unavailable": "Ebben a böngészőben nem érhetők el értesítések.",
+        "service_workers_unsupported": "Ez a böngésző nem támogatja a service workereket.",
+        "registration_lookup_failed": "Nem található a böngésző értesítési szolgáltatása.",
+        "service_worker_missing": "Frissítsd az oldalt, és próbáld újra; az értesítési szolgáltatás még nem áll készen.",
+        "permission_blocked": "Az értesítések le vannak tiltva ehhez az oldalhoz a böngésző beállításaiban.",
+        "permission_request_failed": "Nem sikerült értesítési engedélyt kérni.",
+        "permission_not_granted": "Az értesítési engedély nem lett megadva.",
+        "server_key_missing": "A szerveren nincs beállítva a Web Push.",
+        "push_manager_failed": "Nem sikerült elérni a böngésző értesítéseit.",
+        "server_key_invalid": "A szerver érvénytelen értesítési kulcsot küldött.",
+        "subscribe_failed": "Nem sikerült feliratkozni az értesítésekre.",
+        "subscription_invalid": "A böngésző érvénytelen feliratkozást küldött.",
+        "registration_failed": "Nem sikerült regisztrálni a böngésző értesítéseit.",
+        "unsubscribe_failed": "Nem sikerült leiratkozni az értesítésekről.",
+        "subscription_not_released": "A böngésző nem szüntette meg az értesítési feliratkozást."
+    },
+    "discord": {},
+    "email": {
+        "password_reset_body": "Szia {{username}}!\n\nKérést kaptunk a jelszavad visszaállítására. A hivatkozás 1 óra múlva lejár.\nHa nem te kérted, hagyd figyelmen kívül ezt az e-mailt – a jelszavad nem változott meg.\n\n{{link}}\n\n--\nEzt az e-mailt a hivegame.com küldte. Ha nem regisztráltál, nyugodtan figyelmen kívül hagyhatod.\n\nEmberrel szeretnél beszélni? Csatlakozz Discordunkhoz, és keresd Iont vagy leexet:\nhttps://discord.gg/7EwNTJnfab\n",
+        "recipient_fallback": "játékos"
+    },
+    "control": {
+        "offered_draw": "döntetlent ajánlott",
+        "requested_takeback": "visszavonást kért",
+        "declined_draw": "elutasította a döntetlent",
+        "accepted_takeback": "elfogadta a visszavonást",
+        "declined_takeback": "elutasította a visszavonást"
     }
 }

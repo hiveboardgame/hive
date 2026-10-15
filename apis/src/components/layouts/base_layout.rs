@@ -16,6 +16,7 @@ use crate::{
         web_push_nav_listener::use_web_push_nav_listener,
         web_push_reconcile::use_web_push_reconcile,
     },
+    i18n::{t, use_i18n},
     providers::{
         game_state::{GameStateStore, GameStateStoreFields},
         refocus::RefocusSignal,
@@ -56,6 +57,7 @@ pub struct OrientationSignal {
 
 #[component]
 pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
+    let i18n = use_i18n();
     let config = expect_context::<Config>().0;
     let ping = expect_context::<PingContext>();
     let ws = expect_context::<WebsocketContext>();
@@ -193,9 +195,22 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         },
         1000,
     );
+    let manifest_href = format!(
+        "/manifest.webmanifest?lang={}",
+        untrack(move || i18n.get_locale())
+    );
+    // Link's href is static in leptos_meta; update the existing head element on locale changes.
+    #[cfg(not(feature = "ssr"))]
+    Effect::new(move |_| {
+        let href = format!("/manifest.webmanifest?lang={}", i18n.get_locale());
+        if let Ok(Some(manifest)) = document().query_selector("link[rel=manifest]") {
+            let _ = manifest.set_attribute("href", &href);
+        }
+    });
     view! {
         <Title />
         <OG />
+        <Link rel="manifest" href=manifest_href />
         <Html attr:class=move || {
             config
                 .with(|cfg| match cfg.prefers_dark {
@@ -220,7 +235,9 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
             <Show when=move || ws_ready() != ConnectionReadyState::Open>
                 <div class="flex absolute top-1/2 left-1/2 gap-2 items-center -translate-x-1/2 -translate-y-1/2 z-[60]">
                     <div class="rounded-full border-t-2 border-b-2 border-blue-500 animate-spin size-10"></div>
-                    <div class="text-lg font-bold text-ladybug-red">Connecting..</div>
+                    <div class="text-lg font-bold text-ladybug-red">
+                        {t!(i18n, common.connecting)}
+                    </div>
                 </div>
             </Show>
             {children()}

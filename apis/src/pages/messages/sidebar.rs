@@ -70,7 +70,7 @@ pub(super) fn MessagesSidebar(current_path: Signal<String>) -> impl IntoView {
     let tournaments_title = Signal::derive(move || t_string!(i18n, common.tournaments).to_string());
     let tournaments_empty_label =
         Signal::derive(move || t_string!(i18n, messages.sections.no_tournament_chats).to_string());
-    let games_title = Signal::derive(move || t_string!(i18n, messages.sections.games).to_string());
+    let games_title = Signal::derive(move || t_string!(i18n, common.games).to_string());
     let games_empty_label =
         Signal::derive(move || t_string!(i18n, messages.sections.no_game_chats).to_string());
     let snapshot = catalog.snapshot();

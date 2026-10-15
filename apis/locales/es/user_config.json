@@ -52,5 +52,33 @@
         "casual_only": "A veces",
         "never": "Nunca"
     },
-    "allow_takeback": "Permitir retrocesos"
+    "allow_takeback": "Permitir retrocesos",
+    "click_on_your_clock": "Haz clic en tu reloj",
+    "double_click": "Doble clic",
+    "single_click": "Un clic",
+    "light_mode": "Modo claro",
+    "dark_mode": "Modo oscuro",
+    "white_background": "Fondo blanco",
+    "black_background": "Fondo negro",
+    "current_color": "Actual: {{color}}",
+    "ant_light_preview": "Hormiga {{design}} (modo claro)",
+    "ant_dark_preview": "Hormiga {{design}} (modo oscuro)",
+    "tile_design": {
+        "official": "Oficial",
+        "flat": "Plano",
+        "three_d": "3D",
+        "high_contrast": "Alto contraste",
+        "community": "Comunidad",
+        "pride": "Orgullo",
+        "carbon_three_d": "Carbono 3D",
+        "carbon": "Carbono"
+    },
+    "tile_design_browser_notice": "Algunos navegadores no admiten todos los diseños de fichas. Firefox ofrece la visualización más uniforme.",
+    "settings": {
+        "settings": "Configuración",
+        "tune_board_visuals_and_move_input_preferences": "Ajusta el aspecto del tablero y las preferencias de entrada de jugadas.",
+        "board_appearance": "Aspecto del tablero",
+        "play_preferences": "Preferencias de juego",
+        "if_either_player_has_takebacks_disabled_game_controls_will": "Si algún jugador tiene desactivada la opción de deshacer jugadas, los controles de la partida no permitirán solicitarlo."
+    }
 }

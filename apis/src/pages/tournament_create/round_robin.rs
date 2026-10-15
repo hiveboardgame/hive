@@ -15,6 +15,7 @@ use crate::{
         atoms::input_slider::InputSliderWithCallback,
         molecules::{panel::Panel, tiebreaker_picker::TiebreakerPicker},
     },
+    i18n::*,
     providers::ChallengeParams,
 };
 use leptos::prelude::*;
@@ -152,33 +153,70 @@ fn round_robin_dimensions(player_count: i32, repeats: i32) -> (i32, i32) {
 }
 
 fn round_robin_size_summary(min_players: i32, max_players: i32, repeats: i32) -> String {
+    let i18n = use_i18n();
     let (minimum_rounds, minimum_games) = round_robin_dimensions(min_players, repeats);
     let (maximum_rounds, maximum_games) = round_robin_dimensions(max_players, repeats);
-    // TODO: i18n once copy is approved.
-    let count_range = |minimum: i32, maximum: i32, singular: &str, plural: &str| {
-        if minimum == maximum {
-            let label = if minimum == 1 { singular } else { plural };
-            format!("{minimum} {label}")
-        } else {
-            format!("{minimum}–{maximum} {plural}")
-        }
-    };
-    let rounds = count_range(minimum_rounds, maximum_rounds, "round", "rounds");
-    let games = count_range(minimum_games, maximum_games, "total game", "total games");
-    if min_players == max_players {
-        let player_label = if min_players == 1 {
-            "player"
-        } else {
-            "players"
-        };
-        format!("With {min_players} {player_label}: {rounds} and {games}.")
+    let rounds = if minimum_rounds != maximum_rounds {
+        t_string!(
+            i18n,
+            tournaments.creation.rounds_range,
+            minimum = minimum_rounds,
+            maximum = maximum_rounds
+        )
+        .to_string()
+    } else if minimum_rounds == 1 {
+        t_string!(i18n, tournaments.creation.one_round).to_string()
     } else {
-        format!("With {min_players}–{max_players} players: {rounds} and {games}.")
+        t_string!(
+            i18n,
+            tournaments.creation.rounds_count,
+            count = minimum_rounds
+        )
+        .to_string()
+    };
+    let games = if minimum_games != maximum_games {
+        t_string!(
+            i18n,
+            tournaments.creation.games_range,
+            minimum = minimum_games,
+            maximum = maximum_games
+        )
+        .to_string()
+    } else if minimum_games == 1 {
+        t_string!(i18n, tournaments.creation.one_game).to_string()
+    } else {
+        t_string!(
+            i18n,
+            tournaments.creation.games_count,
+            count = minimum_games
+        )
+        .to_string()
+    };
+    if min_players == max_players {
+        t_string!(
+            i18n,
+            tournaments.creation.round_robin_size,
+            players = min_players,
+            rounds = rounds,
+            games = games
+        )
+        .to_string()
+    } else {
+        t_string!(
+            i18n,
+            tournaments.creation.round_robin_size_range,
+            minimum = min_players,
+            maximum = max_players,
+            rounds = rounds,
+            games = games
+        )
+        .to_string()
     }
 }
 
 #[component]
 pub(super) fn RoundRobinCreationForm() -> impl IntoView {
+    let i18n = use_i18n();
     let common = CommonDraft::new(true, true);
     let draft = RoundRobinDraft::new();
     let params = Store::new(ChallengeParams::default());
@@ -207,13 +245,15 @@ pub(super) fn RoundRobinCreationForm() -> impl IntoView {
                 <FieldSizeFields field=draft.field maximum=MAX_ROUND_ROBIN_SEATS />
             </CreationDetails>
             <ClockFields params />
-            // TODO: i18n once copy is approved.
-            <Panel title="Tournament rules" body_class="space-y-5">
-
+            <Panel
+                title=move || t_string!(i18n, tournaments.creation.rules).to_string()
+                body_class="space-y-5"
+            >
                 <div class="space-y-3 ui-setting-group">
                     <div class="flex gap-3 justify-between items-center">
-                        // TODO: i18n once copy is approved.
-                        <span class="ui-field-label">"Games per opponent"</span>
+                        <span class="ui-field-label">
+                            {t!(i18n, tournaments.creation.games_per_opponent)}
+                        </span>
                         <span class="font-bold text-gray-900 dark:text-gray-100">
                             {draft.repeats}
                         </span>
@@ -234,11 +274,9 @@ pub(super) fn RoundRobinCreationForm() -> impl IntoView {
                         )}
                     </p>
                 </div>
-
                 <div class="space-y-4">
                     <label class="flex flex-col gap-1.5">
-                        // TODO: i18n once copy is approved.
-                        <span class="ui-field-label">"Scoring"</span>
+                        <span class="ui-field-label">{t!(i18n, tournaments.creation.scoring)}</span>
                         <select
                             class="ui-field-select"
                             prop:value=move || match draft.primary_score.get() {
@@ -256,35 +294,34 @@ pub(super) fn RoundRobinCreationForm() -> impl IntoView {
                                 draft.set_primary_score(primary);
                             }
                         >
-                            // TODO: i18n once copy is approved.
-                            <option value="game_points">"Game points"</option>
-                            // TODO: i18n once copy is approved.
+                            <option value="game_points">
+                                {t!(i18n, tournaments.tiebreakers.names.game_points)}
+                            </option>
                             <option
                                 value="match_points"
                                 disabled=move || !round_robin_has_matches.get()
                             >
-                                "Match points"
+                                {t!(i18n, tournaments.tiebreakers.names.match_points)}
                             </option>
                         </select>
-                        // TODO: i18n once copy is approved.
                         <p class="ui-field-helper">
                             {move || {
                                 if round_robin_has_matches.get() {
-                                    format!(
-                                        "All {} games against each opponent form one match. A completed match awards 2 points for a win, 1 for a draw, and 0 for a loss.",
-                                        draft.repeats.get(),
+                                    t_string!(
+                                        i18n, tournaments.creation.round_robin_match_help, games = draft.repeats.get()
                                     )
+                                        .to_string()
                                 } else {
-                                    String::from(
-                                        "Match points require 2, 4, or 6 games per opponent.",
-                                    )
+                                    t_string!(i18n, tournaments.creation.match_points_requirement)
+                                        .to_string()
                                 }
                             }}
                         </p>
                     </label>
                     <label class="flex flex-col gap-1.5">
-                        // TODO: i18n once copy is approved.
-                        <span class="ui-field-label">"Game availability"</span>
+                        <span class="ui-field-label">
+                            {t!(i18n, tournaments.creation.game_availability)}
+                        </span>
                         <select
                             class="ui-field-select"
                             prop:value=move || { release_policy_token(draft.release_policy.get()) }
@@ -296,11 +333,11 @@ pub(super) fn RoundRobinCreationForm() -> impl IntoView {
                                 }
                             }
                         >
-                            // TODO: i18n once copy is approved.
-                            <option value="fully_unlocked">"All games together"</option>
-                            // TODO: i18n once copy is approved.
+                            <option value="fully_unlocked">
+                                {t!(i18n, tournaments.creation.all_games_together)}
+                            </option>
                             <option value="sequential_per_matchup">
-                                "One game per opponent at a time"
+                                {t!(i18n, tournaments.creation.one_game_per_opponent)}
                             </option>
                         </select>
                     </label>
@@ -308,9 +345,8 @@ pub(super) fn RoundRobinCreationForm() -> impl IntoView {
                         selected=draft.tiebreakers
                         available=round_robin_available_tiebreakers
                     />
-                    // TODO: i18n once copy is approved.
                     <p class="ui-field-helper">
-                        "Direct encounter, Sonneborn–Berger, and Koya use the selected primary score."
+                        {t!(i18n, tournaments.creation.primary_score_tiebreakers)}
                     </p>
                 </div>
             </Panel>

@@ -1,6 +1,5 @@
 {
     "chat": {
-        "players": "Jatekosok",
         "spectators": "Nezok",
         "players_chat": "Jatekos cseveges",
         "spectator_chat": "Nezoi cseveges",
@@ -12,7 +11,6 @@
         "players_chat_only": "Csak a játékosok láthatják a játékosok csevegését.",
         "with_opponent": "Cseveges az ellenfellel",
         "with_spectators": "Cseveges a nezokkel",
-        "placeholder": "Cseveges",
         "composer_label": "Csevegőüzenet",
         "log_label": "A csevegés üzenetei",
         "open_chat": "Csevegés megnyitása",
@@ -71,11 +69,35 @@
     },
     "sections": {
         "dms": "DM-ek",
-        "games": "Jatekok",
         "recent_announcements": "Legutóbbi bejelentések",
         "no_dms": "Meg nincsenek DM-ek",
         "no_tournament_chats": "Nincsenek torna csevegesek",
         "no_game_chats": "Nincsenek jatek csevegesek",
         "muted": "Nemitva"
+    },
+    "errors": {
+        "block_mute_failed": "Nem sikerült módosítani a tiltás vagy némítás beállításait.",
+        "request_unavailable": "Nem sikerült teljesíteni a kérést.",
+        "chat_retry_conflict": "Az üzenet újraküldése ütközik az eredeti kézbesítéssel. Küldd el új üzenetként.",
+        "unauthorized": "Nincs jogosultságod ehhez a művelethez.",
+        "chat_access_denied": "Nincs hozzáférésed a csevegéshez.",
+        "chat_subscription_limited": "Túl sok csevegési feliratkozási kísérlet.",
+        "chat_send_limited": "Túl sok csevegőüzenet.",
+        "tournament_name_taken": "Már létezik ilyen nevű verseny.",
+        "request_origin_missing": "Az alkalmazás címe nem érhető el. Frissítsd az oldalt, és próbáld újra.",
+        "request_url_invalid": "A kérés címe érvénytelen. Frissítsd az oldalt, és próbáld újra.",
+        "request_origin_mismatch": "Ennek a kérésnek az alkalmazásból kell érkeznie. Frissítsd az oldalt, és próbáld újra.",
+        "request_token_missing": "Frissítsd az oldalt, és próbáld újra.",
+        "request_unverified": "A kérést nem sikerült ellenőrizni. Frissítsd az oldalt, és próbáld újra.",
+        "discord_start_failed": "Nem sikerült elindítani a Discord összekapcsolását.",
+        "discord_response_invalid": "A Discord érvénytelen engedélyezési választ küldött. Kezdd újra az értesítési beállításoknál.",
+        "discord_url_invalid": "A Discord érvénytelen engedélyezési címet küldött. Kezdd újra az értesítési beállításoknál.",
+        "discord_state_invalid": "A Discord érvénytelen engedélyezési állapotot küldött. Kezdd újra az értesítési beállításoknál.",
+        "discord_session_required": "Jelentkezz be a Discord összekapcsolásához.",
+        "discord_unavailable": "A Discord összekapcsolása jelenleg nem érhető el.",
+        "discord_unverified": "A Discord összekapcsolását nem sikerült ellenőrizni. Kezdd újra az értesítési beállításoknál.",
+        "discord_failed": "A Discord összekapcsolása nem sikerült. Kezdd újra az értesítési beállításoknál.",
+        "rating_above_band": "{{rating}} a {{limit}} értékszámhatár fölött van",
+        "rating_below_band": "{{rating}} a {{limit}} értékszámhatár alatt van"
     }
 }

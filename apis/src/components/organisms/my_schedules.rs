@@ -25,15 +25,21 @@ use shared_types::{tournament_view::SlotResponse, ScheduleOfferStatus, Tournamen
 use std::cmp::Reverse;
 use uuid::Uuid;
 
-fn offer_status_label(status: ScheduleOfferStatus) -> &'static str {
-    // TODO: i18n once copy is approved.
+fn offer_status_label(status: ScheduleOfferStatus) -> String {
+    let i18n = use_i18n();
     match status {
-        ScheduleOfferStatus::Pending => "Waiting for a response",
-        ScheduleOfferStatus::Accepted => "Accepted",
-        ScheduleOfferStatus::Declined => "Declined",
-        ScheduleOfferStatus::Withdrawn => "Withdrawn",
-        ScheduleOfferStatus::Superseded => "Replaced by newer times",
-        ScheduleOfferStatus::Cancelled => "Closed",
+        ScheduleOfferStatus::Pending => {
+            t_string!(i18n, tournaments.scheduling.waiting_for_a_response).to_string()
+        }
+        ScheduleOfferStatus::Accepted => t_string!(i18n, common.accepted).to_string(),
+        ScheduleOfferStatus::Declined => t_string!(i18n, common.declined).to_string(),
+        ScheduleOfferStatus::Withdrawn => t_string!(i18n, common.withdrawn).to_string(),
+        ScheduleOfferStatus::Superseded => {
+            t_string!(i18n, tournaments.scheduling.replaced_by_newer_times).to_string()
+        }
+        ScheduleOfferStatus::Cancelled => {
+            t_string!(i18n, tournaments.scheduling.closed).to_string()
+        }
     }
 }
 
@@ -72,7 +78,7 @@ fn PendingOfferPanel(
 
     if incoming {
         let selected_candidate = RwSignal::new(candidates.get().first().copied());
-        let accept_error = RwSignal::new(Option::<String>::None);
+        let accept_error = RwSignal::new(false);
         Effect::new(move |_| {
             let available = candidates.get();
             if selected_candidate
@@ -85,44 +91,55 @@ fn PendingOfferPanel(
         view! {
             <section class="p-3 space-y-3 ui-warning-notice">
                 <div>
-                    // TODO: i18n once copy is approved.
-                    <h3 class="font-bold">"Select a proposed time"</h3>
-                    // TODO: i18n once copy is approved.
+                    <h3 class="font-bold">
+                        {t!(i18n, tournaments.scheduling.select_a_proposed_time)}
+                    </h3>
                     <p class="text-sm">
-                        {format!(
-                            "{} suggested these times in your timezone.",
-                            offer.proposer_username,
-                        )}
+                        {move || {
+                            t_string!(
+                                i18n, tournaments.scheduling.value1_suggested_these_times_in_your_timezone, value1 = (offer.proposer_username.clone())
+                            )
+                                .to_string()
+                        }}
                     </p>
                 </div>
                 <Show
                     when=move || !candidates.get().is_empty()
                     fallback=move || {
                         view! {
-                            // TODO: i18n once copy is approved.
                             <p class="text-sm">
-                                {if can_propose.get() {
-                                    "These proposed times have passed. Suggest new times instead."
-                                } else {
-                                    "These proposed times have passed. Decline the proposal."
+                                {move || {
+                                    if can_propose.get() {
+                                        t_string!(
+                                            i18n, tournaments.scheduling.expired_times_suggest
+                                        )
+                                            .to_string()
+                                    } else {
+                                        t_string!(
+                                            i18n, tournaments.scheduling.expired_times_decline
+                                        )
+                                            .to_string()
+                                    }
                                 }}
                             </p>
                         }
                     }
                 >
                     <fieldset class="grid gap-2">
-                        // TODO: i18n once copy is approved.
-                        <legend class="sr-only">"Choose one proposed time"</legend>
+                        <legend class="sr-only">
+                            {t!(i18n, tournaments.scheduling.choose_one_proposed_time)}
+                        </legend>
                         <For each=move || candidates.get() key=|candidate| *candidate let:candidate>
                             <label class="flex gap-3 items-center p-3 cursor-pointer ui-card-row">
                                 <input
                                     type="radio"
-                                    name=format!("schedule-offer-{offer_id}")
+                                    name=format!("schedule-offer-{offer_id}", offer_id = (offer_id))
+                                        .to_string()
                                     prop:checked=move || selected_candidate.get() == Some(candidate)
                                     prop:disabled=move || acceptance_sent.get().is_some()
                                     on:change=move |_| {
                                         selected_candidate.set(Some(candidate));
-                                        accept_error.set(None);
+                                        accept_error.set(false);
                                     }
                                 />
                                 <time class="font-semibold" datetime=candidate.to_rfc3339()>
@@ -131,9 +148,13 @@ fn PendingOfferPanel(
                             </label>
                         </For>
                     </fieldset>
-                    <ShowLet some=move || accept_error.get() let:error>
-                        <p class="ui-field-error">{error}</p>
-                    </ShowLet>
+                    <Show when=move || accept_error.get()>
+                        <p class="ui-field-error">
+                            {t!(
+                                i18n, tournaments.scheduling.that_time_has_passed_choose_another_proposed_time
+                            )}
+                        </p>
+                    </Show>
                     <button
                         type="button"
                         class="w-full ui-button ui-button-primary ui-button-md"
@@ -154,14 +175,7 @@ fn PendingOfferPanel(
                             };
                             if selected_time <= Utc::now() {
                                 selected_candidate.set(None);
-                                accept_error
-                                    .set(
-                                        Some(
-                                            String::from(
-                                                "That time has passed. Choose another proposed time.",
-                                            ),
-                                        ),
-                                    );
+                                accept_error.set(true);
                                 return;
                             }
                             show_proposal_form.set(false);
@@ -173,20 +187,23 @@ fn PendingOfferPanel(
                                 });
                         }
                     >
-                        // TODO: i18n once copy is approved.
                         {move || {
                             if acceptance_sent.get().is_some() {
-                                String::from("Confirming selected time…")
+                                t_string!(i18n, tournaments.scheduling.confirming_selected_time)
+                                    .to_string()
                             } else {
                                 selected_candidate
                                     .get()
                                     .map(|time| {
-                                        format!(
-                                            "Confirm {}",
-                                            format_schedule_time(i18n.get_locale(), time),
+                                        t_string!(
+                                            i18n, tournaments.scheduling.confirm_value1, value1 = (format_schedule_time(i18n.get_locale(), time))
                                         )
+                                            .to_string()
                                     })
-                                    .unwrap_or_else(|| String::from("Choose a time"))
+                                    .unwrap_or_else(|| {
+                                        t_string!(i18n, tournaments.scheduling.choose_a_time)
+                                            .to_string()
+                                    })
                             }
                         }}
                     </button>
@@ -198,18 +215,18 @@ fn PendingOfferPanel(
                         prop:disabled=move || acceptance_sent.get().is_some()
                         on:click=move |_| show_proposal_form.set(true)
                     >
-                        // TODO: i18n once copy is approved.
                         {move || {
                             if candidates.with(Vec::is_empty) {
-                                "Suggest new times"
+                                t_string!(i18n, tournaments.scheduling.suggest_new_times)
+                                    .to_string()
                             } else {
-                                "Suggest other times instead"
+                                t_string!(i18n, tournaments.scheduling.suggest_other_times_instead)
+                                    .to_string()
                             }
                         }}
                     </button>
-                    // TODO: i18n once copy is approved.
                     <p class="text-xs text-gray-600 dark:text-gray-300">
-                        "This sends a counterproposal; it does not accept one of the times above."
+                        {t!(i18n, tournaments.scheduling.counterproposal_help)}
                     </p>
                 </Show>
                 <button
@@ -224,8 +241,7 @@ fn PendingOfferPanel(
                         let _ = close_editor.try_run(());
                     }
                 >
-                    // TODO: i18n once copy is approved.
-                    "None of these work"
+                    {t!(i18n, tournaments.scheduling.none_of_these_work)}
                 </button>
             </section>
         }
@@ -234,31 +250,43 @@ fn PendingOfferPanel(
         view! {
             <section class="p-3 space-y-2 ui-notice">
                 <div>
-                    // TODO: i18n once copy is approved.
                     <h3 class="font-bold">
                         {move || {
                             if candidates.with(Vec::is_empty) {
-                                "Proposed times expired"
+                                t_string!(i18n, tournaments.scheduling.proposed_times_expired)
+                                    .to_string()
                             } else {
-                                "Waiting for your opponent"
+                                t_string!(i18n, tournaments.scheduling.waiting_for_your_opponent)
+                                    .to_string()
                             }
                         }}
                     </h3>
-                    // TODO: i18n once copy is approved.
                     <p class="text-sm">
-                        {format!("{} can accept one of these times.", offer.opponent_username)}
+                        {move || {
+                            t_string!(
+                                i18n, tournaments.scheduling.value1_can_accept_one_of_these_times, value1 = (offer.opponent_username.clone())
+                            )
+                                .to_string()
+                        }}
                     </p>
                 </div>
                 <Show
                     when=move || !candidates.get().is_empty()
                     fallback=move || {
                         view! {
-                            // TODO: i18n once copy is approved.
                             <p class="text-sm">
-                                {if can_propose.get() {
-                                    "All of your proposed times have passed. Replace or withdraw this proposal."
-                                } else {
-                                    "All of your proposed times have passed. Withdraw this proposal."
+                                {move || {
+                                    if can_propose.get() {
+                                        t_string!(
+                                            i18n, tournaments.scheduling.expired_times_replace
+                                        )
+                                            .to_string()
+                                    } else {
+                                        t_string!(
+                                            i18n, tournaments.scheduling.expired_times_withdraw
+                                        )
+                                            .to_string()
+                                    }
                                 }}
                             </p>
                         }
@@ -282,12 +310,13 @@ fn PendingOfferPanel(
                             class="ui-button ui-button-secondary ui-button-sm"
                             on:click=move |_| show_proposal_form.set(true)
                         >
-                            // TODO: i18n once copy is approved.
                             {move || {
                                 if candidates.with(Vec::is_empty) {
-                                    "Suggest new times"
+                                    t_string!(i18n, tournaments.scheduling.suggest_new_times)
+                                        .to_string()
                                 } else {
-                                    "Replace proposed times"
+                                    t_string!(i18n, tournaments.scheduling.replace_proposed_times)
+                                        .to_string()
                                 }
                             }}
                         </button>
@@ -303,8 +332,7 @@ fn PendingOfferPanel(
                             let _ = close_editor.try_run(());
                         }
                     >
-                        // TODO: i18n once copy is approved.
-                        "Withdraw proposal"
+                        {t!(i18n, tournaments.scheduling.withdraw_proposal)}
                     </button>
                 </div>
             </section>
@@ -329,8 +357,7 @@ fn OfferHistoryCandidates(
                         {move || format_schedule_time(i18n.get_locale(), candidate)}
                     </time>
                     <Show when=move || selected_time == Some(candidate)>
-                        // TODO: i18n once copy is approved.
-                        <span class="font-semibold">"Selected"</span>
+                        <span class="font-semibold">{t!(i18n, common.selected)}</span>
                     </Show>
                 </li>
             </For>
@@ -340,18 +367,20 @@ fn OfferHistoryCandidates(
 
 #[component]
 fn OfferHistory(offers: Memo<Vec<ScheduleResponse>>) -> impl IntoView {
+    let i18n = use_i18n();
     view! {
         <Show when=move || !offers.with(Vec::is_empty)>
             <details class="pt-2 border-t border-gray-200 dark:border-gray-700">
-                // TODO: i18n once copy is approved.
-                <summary class="text-sm font-semibold cursor-pointer">"Scheduling history"</summary>
+                <summary class="text-sm font-semibold cursor-pointer">
+                    {t!(i18n, tournaments.scheduling.scheduling_history)}
+                </summary>
                 <ol class="mt-3 space-y-2 text-sm">
                     <For each=move || offers.get() key=|offer| offer.id let:offer>
                         <li class="p-2 ui-card-row">
                             <div class="flex flex-wrap gap-2 justify-between">
                                 <span>{offer.proposer_username}</span>
                                 <span class="text-xs font-semibold">
-                                    {offer_status_label(offer.status)}
+                                    {move || offer_status_label(offer.status)}
                                 </span>
                             </div>
                             <OfferHistoryCandidates
@@ -364,6 +393,12 @@ fn OfferHistory(offers: Memo<Vec<ScheduleResponse>>) -> impl IntoView {
             </details>
         </Show>
     }
+}
+
+#[derive(Clone, Copy)]
+enum ProposalInputError {
+    Incomplete,
+    NotFuture,
 }
 
 #[component]
@@ -399,7 +434,7 @@ fn ScheduleEditorBody(
             .take(candidate_count.get())
             .all(|valid| valid.get())
     });
-    let input_error = RwSignal::new(Option::<String>::None);
+    let input_error = RwSignal::new(Option::<ProposalInputError>::None);
     let slot_id = slot.get_untracked().id;
     let stored_tournament_id = StoredValue::new(tournament_id.clone());
     let pending_offer = move || {
@@ -446,10 +481,7 @@ fn ScheduleEditorBody(
             return;
         }
         if !drafts_valid.get_untracked() {
-            // TODO: i18n once copy is approved.
-            input_error.set(Some(String::from(
-                "Complete each proposed date and time before sending.",
-            )));
+            input_error.set(Some(ProposalInputError::Incomplete));
             return;
         }
         let mut candidates = candidate_times
@@ -460,8 +492,7 @@ fn ScheduleEditorBody(
         candidates.sort();
         candidates.dedup();
         if candidates.is_empty() || candidates.iter().any(|candidate| *candidate <= Utc::now()) {
-            // TODO: i18n once copy is approved.
-            input_error.set(Some(String::from("Choose future times before sending.")));
+            input_error.set(Some(ProposalInputError::NotFuture));
             return;
         }
         input_error.set(None);
@@ -479,23 +510,29 @@ fn ScheduleEditorBody(
     view! {
         <div class="px-3 pb-4 mx-auto space-y-3 sm:px-4 w-[min(94vw,34rem)]">
             <div>
-                // TODO: i18n once copy is approved.
                 <p class="text-xs font-semibold text-gray-500 break-words">{tournament_name}</p>
-                // TODO: i18n once copy is approved.
                 <h2 class="text-xl font-bold break-words">
-                    {move || format!("Schedule with {}", opponent_name.get())}
+                    {move || {
+                        t_string!(
+                            i18n, tournaments.scheduling.schedule_with_value1, value1 = (opponent_name.get())
+                        )
+                            .to_string()
+                    }}
                 </h2>
                 <p class="text-sm">{slot_label}</p>
-                // TODO: i18n once copy is approved.
                 <p class="text-sm text-gray-600 dark:text-gray-300">
-                    {format!("Your local time · currently {}", Local::now().format("UTC%:z"))}
+                    {move || {
+                        t_string!(
+                            i18n, tournaments.ui.your_local_time_currently, value1 = (Local::now().format("UTC%:z"))
+                        )
+                            .to_string()
+                    }}
                 </p>
             </div>
 
             <Show when=move || current_time.get().is_some()>
                 <section class="p-3 ui-success-notice">
-                    // TODO: i18n once copy is approved.
-                    <p class="text-xs font-bold">"Agreed time"</p>
+                    <p class="text-xs font-bold">{t!(i18n, tournaments.ui.agreed_time)}</p>
                     {move || {
                         current_time
                             .get()
@@ -512,13 +549,11 @@ fn ScheduleEditorBody(
 
             <Show when=move || deadline.get().is_some()>
                 <p class="text-sm text-gray-600 dark:text-gray-300">
-                    // TODO: i18n once copy is approved.
-                    <span class="font-semibold">"Play by: "</span>
+                    <span class="font-semibold">{t!(i18n, tournaments.scheduling.play_by)}</span>
                     {move || {
                         deadline.get().map(|time| format_schedule_time(i18n.get_locale(), time))
                     }}
-                    // TODO: i18n once copy is approved.
-                    <span>" · no automatic result consequence"</span>
+                    <span>{t!(i18n, tournaments.scheduling.no_automatic_result_consequence)}</span>
                 </p>
             </Show>
 
@@ -547,8 +582,7 @@ fn ScheduleEditorBody(
                     && pending_offer().is_none()
             }>
                 <p class="text-sm ui-notice">
-                    // TODO: i18n once copy is approved.
-                    "Saving the agreed time…"
+                    {t!(i18n, tournaments.scheduling.saving_the_agreed_time)}
                 </p>
             </Show>
 
@@ -567,8 +601,7 @@ fn ScheduleEditorBody(
                             let _ = close_editor.try_run(());
                         }
                     >
-                        // TODO: i18n once copy is approved.
-                        "Done"
+                        {t!(i18n, common.done)}
                     </button>
                     <Show when=move || can_propose.get()>
                         <button
@@ -590,16 +623,14 @@ fn ScheduleEditorBody(
                                 }
                             }
                         >
-                            // TODO: i18n once copy is approved.
-                            "Cancel agreed time"
+                            {t!(i18n, tournaments.scheduling.cancel_agreed_time)}
                         </button>
                         <button
                             type="button"
                             class="ui-button ui-button-secondary ui-button-md"
                             on:click=move |_| show_proposal_form.set(true)
                         >
-                            // TODO: i18n once copy is approved.
-                            "Propose a different time"
+                            {t!(i18n, tournaments.scheduling.propose_a_different_time)}
                         </button>
                     </Show>
                 </div>
@@ -610,8 +641,7 @@ fn ScheduleEditorBody(
                 fallback=move || {
                     view! {
                         <p class="text-sm ui-notice">
-                            // TODO: i18n once copy is approved.
-                            "This match can no longer be rescheduled. Its scheduling history remains available below."
+                            {t!(i18n, tournaments.scheduling.rescheduling_closed)}
                         </p>
                     }
                 }
@@ -619,21 +649,24 @@ fn ScheduleEditorBody(
                 <Show when=move || show_proposal_form.get() && acceptance_sent.get().is_none()>
                     <section class="space-y-3">
                         <div>
-                            // TODO: i18n once copy is approved.
                             <h3 class="font-bold">
                                 {move || {
                                     if pending_offer().is_some() {
-                                        "Suggest other times"
+                                        t_string!(i18n, tournaments.scheduling.suggest_other_times)
+                                            .to_string()
                                     } else if current_time.get().is_some() {
-                                        "Change the time"
+                                        t_string!(i18n, tournaments.scheduling.change_the_time)
+                                            .to_string()
                                     } else {
-                                        "Propose a time"
+                                        t_string!(i18n, tournaments.scheduling.propose_a_time)
+                                            .to_string()
                                     }
                                 }}
                             </h3>
-                            // TODO: i18n once copy is approved.
                             <p class="text-sm text-gray-600 dark:text-gray-300">
-                                "Offer up to three alternatives at once."
+                                {t!(
+                                    i18n, tournaments.scheduling.offer_up_to_three_alternatives_at_once
+                                )}
                             </p>
                         </div>
                         <div class="grid gap-3 sm:grid-cols-2">
@@ -643,9 +676,18 @@ fn ScheduleEditorBody(
                                 let:index
                             >
                                 <DateTimePicker
-                                    input_id=format!("schedule-candidate-{slot_id}-{index}")
-                                    // TODO: i18n once copy is approved.
-                                    text=format!("Option {}", index + 1)
+                                    input_id=format!(
+                                        "schedule-candidate-{slot_id}-{index}",
+                                        slot_id = (slot_id),
+                                        index = (index),
+                                    )
+                                        .to_string()
+                                    text=move || {
+                                        t_string!(
+                                            i18n, tournaments.scheduling.option_value1, value1 = (index + 1)
+                                        )
+                                            .to_string()
+                                    }
                                     min
                                     max
                                     draft_valid=candidate_valid[index]
@@ -666,8 +708,7 @@ fn ScheduleEditorBody(
                                     class="ui-button ui-button-secondary ui-button-sm"
                                     on:click=move |_| candidate_count.update(|count| *count += 1)
                                 >
-                                    // TODO: i18n once copy is approved.
-                                    "Add another time"
+                                    {t!(i18n, tournaments.scheduling.add_another_time)}
                                 </button>
                             </Show>
                             <Show when=move || { candidate_count.get() > 1 }>
@@ -676,13 +717,27 @@ fn ScheduleEditorBody(
                                     class="ui-button ui-button-ghost ui-button-sm"
                                     on:click=move |_| candidate_count.update(|count| *count -= 1)
                                 >
-                                    // TODO: i18n once copy is approved.
-                                    "Remove last"
+                                    {t!(i18n, tournaments.scheduling.remove_last)}
                                 </button>
                             </Show>
                         </div>
                         <ShowLet some=move || input_error.get() let:error>
-                            <p class="ui-field-error">{error}</p>
+                            <p class="ui-field-error">
+                                {move || match error {
+                                    ProposalInputError::Incomplete => {
+                                        t_string!(
+                                            i18n, tournaments.scheduling.complete_each_proposed_date_and_time_before_sending
+                                        )
+                                            .to_string()
+                                    }
+                                    ProposalInputError::NotFuture => {
+                                        t_string!(
+                                            i18n, tournaments.scheduling.choose_future_times_before_sending
+                                        )
+                                            .to_string()
+                                    }
+                                }}
+                            </p>
                         </ShowLet>
                         <button
                             type="button"
@@ -692,8 +747,7 @@ fn ScheduleEditorBody(
                                 let _ = send.try_run(());
                             }
                         >
-                            // TODO: i18n once copy is approved.
-                            "Send proposed times"
+                            {t!(i18n, tournaments.scheduling.send_proposed_times)}
                         </button>
                     </section>
                 </Show>
@@ -724,8 +778,11 @@ pub(crate) fn ScheduleEditorDialog(
         selected_slot.set(None);
     });
     view! {
-        // TODO: i18n once copy is approved.
-        <Modal dialog_el aria_label="Schedule match" on_close=close_editor>
+        <Modal
+            dialog_el
+            aria_label=move || t_string!(i18n, tournaments.scheduling.schedule_match).to_string()
+            on_close=close_editor
+        >
             <For
                 each=move || {
                     if route_active.try_get() != Some(true) {
@@ -776,7 +833,10 @@ pub(crate) fn ScheduleEditorDialog(
                                 opponent
                                     .and_then(|id| memberships.players.get(&id))
                                     .map(|player| player.username.clone())
-                                    .unwrap_or_else(|| String::from("your opponent"))
+                                    .unwrap_or_else(|| {
+                                        t_string!(i18n, tournaments.scheduling.your_opponent)
+                                            .to_string()
+                                    })
                             })
                     });
                     let tournament_name = Signal::derive(move || {
@@ -784,7 +844,7 @@ pub(crate) fn ScheduleEditorDialog(
                     });
                     let slot_label = Signal::derive(move || {
                         slot_card_label(i18n, tournament, &slot.get())
-                            .unwrap_or_else(|| String::from("Not started"))
+                            .unwrap_or_else(|| t_string!(i18n, common.not_started).to_string())
                     });
                     ScheduleEditorBody(ScheduleEditorBodyProps {
                         tournament_id,
