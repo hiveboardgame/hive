@@ -189,11 +189,14 @@ deployment does not deploy production.
 
 ## Synthetic tournament QA fixtures
 
-The synthetic fixture command is an explicit local-only operator action. It
-requires both the supplied confirmation and PostgreSQL's `current_database()`
-to be exactly `hive-local`; it is never called by the application.
+Run fixtures from the checkout's `hive-run <instance> shell`. The confirmation
+and connected database must match its development database: `hive-local` for
+`hive`, or `hive-<instance>` for a managed worktree. Other checkouts, test databases,
+and seed templates are refused. Links use `APP_ORIGIN` unless `--app-url` is supplied.
 
 ```sh
+SHELL=/bin/bash hive-run hive shell
+
 cargo run -p script -- synthetic-tournaments seed \
   --confirm-database-name hive-local
 
@@ -206,6 +209,14 @@ cargo run -p script -- synthetic-tournaments arm-due \
 
 cargo run -p script -- synthetic-tournaments cleanup \
   --confirm-database-name hive-local
+```
+
+For a managed worktree named `example` (exit any current instance shell first):
+
+```sh
+SHELL=/bin/bash hive-run example shell
+cargo run -p script -- synthetic-tournaments seed \
+  --confirm-database-name hive-example
 ```
 
 Seed creates 162 QA accounts (one organizer, 160 players, and one dedicated

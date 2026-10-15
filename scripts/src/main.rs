@@ -36,7 +36,7 @@ enum SyntheticTournamentCommand {
         confirm_database_name: String,
         #[arg(long)]
         database_url: Option<String>,
-        #[arg(long, default_value = "http://localhost:3000")]
+        #[arg(long, default_value_t = local_app_url())]
         app_url: String,
         /// Reproduce a particular randomized fixture cohort.
         #[arg(long)]
@@ -48,7 +48,7 @@ enum SyntheticTournamentCommand {
         confirm_database_name: String,
         #[arg(long)]
         database_url: Option<String>,
-        #[arg(long, default_value = "http://localhost:3000")]
+        #[arg(long, default_value_t = local_app_url())]
         app_url: String,
     },
     /// Delete only tournaments and accounts owned by the synthetic marker.
@@ -58,6 +58,10 @@ enum SyntheticTournamentCommand {
         #[arg(long)]
         database_url: Option<String>,
     },
+}
+
+fn local_app_url() -> String {
+    std::env::var("APP_ORIGIN").unwrap_or_else(|_| String::from("http://localhost:3000"))
 }
 
 #[derive(Subcommand)]
