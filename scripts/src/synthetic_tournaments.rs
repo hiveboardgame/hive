@@ -78,13 +78,13 @@ use shared_types::{
 use std::{
     collections::{HashMap, HashSet},
     num::{NonZeroU16, NonZeroU32},
+    path::Path,
 };
 use tournamint::swiss::SwissLeg;
 use uuid::Uuid;
 
 pub const ACCOUNT_PREFIX: &str = "zz_qa_t_";
 pub const QA_PASSWORD: &str = "hivegame";
-const ALLOWED_DATABASE: &str = "hive-local";
 const FIXTURE_DESCRIPTION: &str = "Synthetic tournament for local manual QA.";
 const QA_PLAYER_COUNT: usize = 160;
 const QA_ACCOUNT_COUNT: usize = QA_PLAYER_COUNT + 2;
@@ -217,7 +217,7 @@ pub async fn seed(
         );
     }
     println!(
-        "Cleanup: cargo run -p script -- synthetic-tournaments cleanup --confirm-database-name {ALLOWED_DATABASE}"
+        "Cleanup: cargo run -p script -- synthetic-tournaments cleanup --confirm-database-name {confirmed}"
     );
     Ok(())
 }
@@ -785,19 +785,65 @@ async fn verify_cleanup(conn: &mut DbConn<'_>) -> Result<()> {
 }
 
 async fn confirm_local_database(conn: &mut DbConn<'_>, confirmed: &str) -> Result<()> {
-    ensure!(
-        confirmed == ALLOWED_DATABASE,
-        "refusing: --confirm-database-name must be exactly {ALLOWED_DATABASE:?}"
-    );
+    let instance = std::env::var("HIVE_WORKTREE")
+        .context("enter 'hive-run <instance> shell' before running synthetic-tournaments")?;
+    let selected_root = std::env::var_os("HIVE_WORKTREE_ROOT")
+        .context("reopen 'hive-run <instance> shell' to select this checkout")?;
+    let selected_root = Path::new(&selected_root)
+        .canonicalize()
+        .context("could not resolve the selected worktree root")?;
+    let checkout_root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .context("could not determine this script's checkout")?
+        .canonicalize()?;
     let actual = sql_query("select current_database()::text as name")
         .get_result::<DatabaseName>(conn)
         .await
         .context("could not read current_database()")?;
+    validate_local_database(
+        &instance,
+        &selected_root,
+        &checkout_root,
+        confirmed,
+        &actual.name,
+    )
+}
+
+fn validate_local_database(
+    instance: &str,
+    selected_root: &Path,
+    checkout_root: &Path,
+    confirmed: &str,
+    actual: &str,
+) -> Result<()> {
     ensure!(
-        actual.name == ALLOWED_DATABASE && actual.name == confirmed,
-        "refusing: connected database is {:?}, expected explicitly confirmed local database {:?}",
-        actual.name,
-        ALLOWED_DATABASE,
+        selected_root == checkout_root,
+        "refusing: selected worktree differs from this script's checkout; reopen 'hive-run <instance> shell'"
+    );
+    ensure!(
+        !instance.is_empty()
+            && instance
+                .bytes()
+                .all(|byte| { byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-' })
+            && !instance.starts_with('-')
+            && !instance.ends_with('-'),
+        "refusing: invalid selected worktree name"
+    );
+    let expected = if instance == "hive" {
+        String::from("hive-local")
+    } else {
+        ensure!(
+            instance != "local"
+                && instance != "test"
+                && instance != "template"
+                && !instance.starts_with("template-"),
+            "refusing: selected worktree aliases a main, test or template database"
+        );
+        format!("hive-{instance}")
+    };
+    ensure!(
+        confirmed == expected && actual == expected,
+        "refusing: selected development database is {expected:?}, confirmation is {confirmed:?}, connected database is {actual:?}"
     );
     Ok(())
 }
@@ -3280,6 +3326,62 @@ mod tests {
             env!("CARGO_MANIFEST_DIR"),
             "/../db/tests/common/tournament.rs"
         ));
+    }
+
+    #[test]
+    fn synthetic_writes_require_the_selected_development_database() {
+        let root = Path::new("/checkout");
+        for (instance, development, test) in [
+            ("hive", "hive-local", "hive-test"),
+            ("example", "hive-example", "hive-example-test"),
+            (
+                "regression-test",
+                "hive-regression-test",
+                "hive-regression-test-test",
+            ),
+        ] {
+            assert!(
+                validate_local_database(instance, root, root, development, development).is_ok()
+            );
+            for (confirmed, actual) in [
+                (development, test),
+                (test, test),
+                ("hive-other", "hive-other"),
+                ("hive-other", development),
+                (development, "hive-other"),
+                ("hive-template", "hive-template"),
+            ] {
+                assert!(validate_local_database(instance, root, root, confirmed, actual).is_err());
+            }
+        }
+    }
+
+    #[test]
+    fn synthetic_writes_reject_a_sibling_worktree_shell() {
+        assert!(validate_local_database(
+            "example",
+            Path::new("/sibling"),
+            Path::new("/checkout"),
+            "hive-example",
+            "hive-example",
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn synthetic_writes_reject_protected_database_aliases() {
+        let root = Path::new("/checkout");
+        for instance in [
+            "",
+            "local",
+            "test",
+            "template",
+            "template-legacy",
+            "../other",
+        ] {
+            let database = format!("hive-{instance}");
+            assert!(validate_local_database(instance, root, root, &database, &database).is_err());
+        }
     }
 
     async fn register_account(id: Uuid, conn: &mut DbConn<'_>) {

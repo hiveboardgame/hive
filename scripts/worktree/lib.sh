@@ -123,7 +123,7 @@ EOT
 export_instance_env() {
     local name=$1 port=$2 db=$3 test_db=$4 origin
     origin=$(origin_for "$name")
-    export DATABASE_URL TEST_DATABASE_URL LEPTOS_SITE_ADDR LEPTOS_RELOAD_PORT APP_ORIGIN EMAIL_BASE_URL WS_TELEMETRY_INTERVAL_SECS HIVE_WORKTREE
+    export DATABASE_URL TEST_DATABASE_URL LEPTOS_SITE_ADDR LEPTOS_RELOAD_PORT APP_ORIGIN EMAIL_BASE_URL WS_TELEMETRY_INTERVAL_SECS HIVE_WORKTREE HIVE_WORKTREE_ROOT
     DATABASE_URL=$(db_url "$db")
     TEST_DATABASE_URL=$(db_url "$test_db")
     LEPTOS_SITE_ADDR="127.0.0.1:$port"
@@ -132,6 +132,7 @@ export_instance_env() {
     EMAIL_BASE_URL=$origin
     WS_TELEMETRY_INTERVAL_SECS=0
     HIVE_WORKTREE=$name
+    HIVE_WORKTREE_ROOT=$WT_DIR
 }
 
 psql_admin() { psql -X -q -v ON_ERROR_STOP=1 -h "$PG_HOST" -U "$PG_USER" -d postgres "$@"; }
