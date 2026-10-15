@@ -1,15 +1,25 @@
 mod common;
 
-use chrono::Utc;
+use chrono::{Duration, Utc};
 use db_lib::{
+    game_command::{execute, Command},
     get_conn,
     models::{Game, GameFinishContext, GameHash, NewGame, NewUser, User},
     schema::{game_hashes as gh_schema, games},
+    DbConn,
 };
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
-use hive_lib::{GameStatus, GameType, State};
-use shared_types::{Conclusion, GameSpeed, GameStart, TimeMode, TournamentGameResult};
+use hive_lib::{Color, GameControl, GameStatus, GameType, State};
+use shared_types::{
+    Conclusion,
+    ExplorerFilters,
+    GameSpeed,
+    GameStart,
+    TimeMode,
+    TournamentGameResult,
+};
+use uuid::Uuid;
 
 fn test_ctx(white_rating: Option<f64>, black_rating: Option<f64>) -> GameFinishContext {
     GameFinishContext {
@@ -29,7 +39,7 @@ fn test_ctx(white_rating: Option<f64>, black_rating: Option<f64>) -> GameFinishC
 
 #[test]
 fn alternates_white_and_black_ratings_by_turn() {
-    let id = uuid::Uuid::new_v4();
+    let id = Uuid::new_v4();
     let ctx = test_ctx(Some(1500.0), Some(1700.0));
     let entries = GameHash::from_engine_hashes(id, &[10, 20, 30, 40], &[], &ctx);
 
@@ -51,7 +61,7 @@ fn alternates_white_and_black_ratings_by_turn() {
 
 #[test]
 fn none_rating_propagates_to_matching_turns() {
-    let id = uuid::Uuid::new_v4();
+    let id = Uuid::new_v4();
     let ctx = test_ctx(None, Some(1600.0));
     let entries = GameHash::from_engine_hashes(id, &[1, 2], &[], &ctx);
 
@@ -62,7 +72,7 @@ fn none_rating_propagates_to_matching_turns() {
 #[test]
 fn empty_hashes_produce_no_entries() {
     let ctx = test_ctx(Some(1.0), Some(2.0));
-    let entries = GameHash::from_engine_hashes(uuid::Uuid::new_v4(), &[], &[], &ctx);
+    let entries = GameHash::from_engine_hashes(Uuid::new_v4(), &[], &[], &ctx);
     assert!(entries.is_empty());
 }
 
@@ -70,7 +80,7 @@ fn empty_hashes_produce_no_entries() {
 fn u64_i64_roundtrip_preserves_high_bit_values() {
     let big: u64 = 0xFFFF_FFFF_FFFF_FFFF;
     let ctx = test_ctx(None, None);
-    let entries = GameHash::from_engine_hashes(uuid::Uuid::new_v4(), &[big], &[], &ctx);
+    let entries = GameHash::from_engine_hashes(Uuid::new_v4(), &[big], &[], &ctx);
     // The stored i64 is the bitwise reinterpretation: -1
     assert_eq!(entries[0].hash, -1_i64);
     // Converting back gives the original u64
@@ -129,7 +139,7 @@ async fn same_hash_across_multiple_games() {
         .unwrap();
     assert_eq!(found.len(), 2);
 
-    let game_ids: Vec<uuid::Uuid> = found.iter().map(|e| e.game_id).collect();
+    let game_ids: Vec<Uuid> = found.iter().map(|e| e.game_id).collect();
     assert!(game_ids.contains(&game_a.id));
     assert!(game_ids.contains(&game_b.id));
 }
@@ -171,7 +181,16 @@ async fn cascade_delete_removes_hash_entries_when_game_deleted() {
         1
     );
 
-    game.delete(&mut conn).await.unwrap();
+    execute(
+        game.id,
+        Command::Control {
+            user_id: game.white_id,
+            control: GameControl::Abort(Color::White),
+        },
+        &mut conn,
+    )
+    .await
+    .unwrap();
 
     assert!(GameHash::find_by_hash(777, &mut conn)
         .await
@@ -536,8 +555,8 @@ async fn backfill_replays_history_and_populates_both_tables() {
 // Integration tests — next_moves / aggregate_one (opening explorer)
 // ---------------------------------------------------------------------------
 
-fn nm_filters() -> shared_types::ExplorerFilters {
-    shared_types::ExplorerFilters {
+fn nm_filters() -> ExplorerFilters {
+    ExplorerFilters {
         game_type: GameType::MLP,
         speeds: Vec::new(),
         rated: None,
@@ -551,7 +570,7 @@ async fn seed_game(
     hashes: &[u64],
     moves: &[(&str, &str)],
     result: &str,
-    conn: &mut db_lib::DbConn<'_>,
+    conn: &mut DbConn<'_>,
 ) -> Game {
     let (game, _, _) = setup_game_named(w, b, conn).await;
     let owned: Vec<(String, String)> = moves
@@ -715,11 +734,11 @@ async fn next_moves_filters_out_short_games() {
 // Helpers
 // ---------------------------------------------------------------------------
 
-async fn setup_game(conn: &mut db_lib::DbConn<'_>) -> (Game, User, User) {
+async fn setup_game(conn: &mut DbConn<'_>) -> (Game, User, User) {
     setup_game_with_history("alice", "bob", "", conn).await
 }
 
-async fn setup_game_named(w: &str, b: &str, conn: &mut db_lib::DbConn<'_>) -> (Game, User, User) {
+async fn setup_game_named(w: &str, b: &str, conn: &mut DbConn<'_>) -> (Game, User, User) {
     setup_game_with_history(w, b, "", conn).await
 }
 
@@ -727,7 +746,7 @@ async fn setup_game_with_history(
     white_name: &str,
     black_name: &str,
     history: &str,
-    conn: &mut db_lib::DbConn<'_>,
+    conn: &mut DbConn<'_>,
 ) -> (Game, User, User) {
     let white = User::create(
         NewUser::new(white_name, "password", &format!("{white_name}@test.com")).unwrap(),
@@ -746,13 +765,14 @@ async fn setup_game_with_history(
     let time_left = Some(60_000_000_000_i64);
     let turn = history.split_terminator(';').count() as i32;
     let timeout_at = if turn > 0 {
-        time_left.map(|nanos| now + chrono::Duration::nanoseconds(nanos))
+        time_left.map(|nanos| now + Duration::nanoseconds(nanos))
     } else {
         None
     };
 
     let game = Game::create(
         NewGame {
+            tournament_id: None,
             nanoid: nanoid::nanoid!(12),
             current_player_id: if turn % 2 == 0 { white.id } else { black.id },
             black_id: black.id,
@@ -784,11 +804,15 @@ async fn setup_game_with_history(
             speed: GameSpeed::Bullet.to_string(),
             hashes: Vec::new(),
             conclusion: Conclusion::Unknown.to_string(),
-            tournament_id: None,
             tournament_game_result: TournamentGameResult::Unknown.to_string(),
             game_start: GameStart::Moves.to_string(),
             move_times: Vec::new(),
+            white_berserked: false,
+            black_berserked: false,
+            arena_move_due_at: None,
             timeout_at,
+            tournament_slot_id: None,
+            arena_ordinal: None,
         },
         conn,
     )

@@ -9,7 +9,7 @@ pub mod ping;
 pub mod push_device_sweep;
 pub mod timeout_sweeper;
 pub mod tournament_cleanup;
-pub mod tournament_start;
+pub mod tournament_runtime;
 pub mod ws_telemetry;
 pub(crate) use advisory_lock::{
     advisory_session_unlock,
@@ -18,7 +18,6 @@ pub(crate) use advisory_lock::{
     CHALLENGE_CLEANUP_LOCK,
     GAME_CLEANUP_LOCK,
     HASH_BACKFILL_LOCK,
-    TOURNAMENT_START_LOCK,
 };
 pub use challenge_cleanup::run as challenge_cleanup;
 pub use email_cleanup::run as email_cleanup;
@@ -30,5 +29,5 @@ pub use ping::run as ping;
 pub use push_device_sweep::run as push_device_sweep;
 pub use timeout_sweeper::run as timeout_sweeper;
 pub use tournament_cleanup::run as tournament_cleanup;
-pub use tournament_start::run as tournament_start;
+pub use tournament_runtime::run as tournament_runtime;
 pub use ws_telemetry::run as ws_telemetry;

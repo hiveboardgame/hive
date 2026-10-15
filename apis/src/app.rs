@@ -1,4 +1,5 @@
 use crate::{
+    common::login_redirect_url,
     components::{
         layouts::base_layout::BaseLayout,
         organisms::{direct_challenge_modal::DirectChallengeModal, display_games::DisplayGames},
@@ -38,9 +39,14 @@ use crate::{
         rules_summary::RulesSummary,
         strategy::Strategy,
         top_players::{TopBots, TopPlayers},
-        tournament::Tournament,
-        tournament_create::TournamentCreate,
-        tournaments::{HostingTournaments, JoinedTournaments, Tournaments, TournamentsByStatus},
+        tournament::TournamentRoutes,
+        tournament_create::{TournamentCreate, TournamentCreateChooser, TournamentCreationKind},
+        tournaments::{
+            LegacyTournamentsRedirect,
+            MineTournamentsRedirect,
+            TournamentList,
+            Tournaments,
+        },
         tutorial::Tutorial,
     },
     providers::{
@@ -48,6 +54,7 @@ use crate::{
         chat::provide_chat,
         games::provide_games,
         online_users::provide_users,
+        provide_active_tournament_state,
         provide_alerts,
         provide_api_requests,
         provide_auth,
@@ -57,7 +64,6 @@ use crate::{
         provide_game_state,
         provide_notifications,
         provide_ping,
-        provide_referer,
         provide_server_updates,
         provide_sounds,
         refocus::provide_refocus,
@@ -66,6 +72,7 @@ use crate::{
         AuthContext,
         AuthIdentity,
     },
+    responses::TournamentCategory,
 };
 use leptos::prelude::*;
 use leptos_i18n::context::CookieOptions;
@@ -83,7 +90,7 @@ use leptos_router::{
     path,
 };
 use leptos_use::SameSite;
-use shared_types::{GameProgress, GameThread, TournamentStatus};
+use shared_types::{GameProgress, GameThread};
 
 // 1 year in milliseconds
 const LOCALE_MAX_AGE: i64 = 1000 * 60 * 60 * 24 * 365;
@@ -95,11 +102,11 @@ pub fn App() -> impl IntoView {
 
     //These dont expect any other context, can be provided in any order
     provide_ping();
-    provide_referer();
     provide_server_updates();
     provide_schedules();
     provide_notifications();
     provide_sounds();
+    provide_active_tournament_state();
     provide_refocus();
     provide_alerts();
     provide_challenge_params();
@@ -190,7 +197,7 @@ pub fn App() -> impl IntoView {
                         <ProtectedParentRoute
                             condition=is_logged_in
                             path=path!("/message")
-                            redirect_path=|| "/login"
+                            redirect_path=|| untrack(login_redirect_url)
                             view=MessagesLayout
                         >
                             <Route path=path!("") view=MessagesIndex />
@@ -211,7 +218,7 @@ pub fn App() -> impl IntoView {
                         <ProtectedRoute
                             condition=is_logged_in
                             path=path!("/account")
-                            redirect_path=|| "/login"
+                            redirect_path=|| untrack(login_redirect_url)
                             view=|| view! { <Account /> }
                         />
                         <Route
@@ -223,21 +230,57 @@ pub fn App() -> impl IntoView {
                         <ProtectedRoute
                             condition=is_logged_in
                             path=path!("/config")
-                            redirect_path=|| "/login"
+                            redirect_path=|| untrack(login_redirect_url)
                             view=|| view! { <Config /> }
                         />
                         <ProtectedRoute
                             condition=is_logged_in
                             path=path!("/notifications")
-                            redirect_path=|| "/login"
+                            redirect_path=|| untrack(login_redirect_url)
                             view=|| view! { <Notifications /> }
                         />
-                        <Route path=path!("/tournament/:nanoid") view=|| view! { <Tournament /> } />
+                        <TournamentRoutes />
                         <ProtectedRoute
                             condition=is_logged_in
                             path=path!("/tournaments/create")
-                            redirect_path=|| "/login"
-                            view=|| view! { <TournamentCreate /> }
+                            redirect_path=|| untrack(login_redirect_url)
+                            view=|| view! { <TournamentCreateChooser /> }
+                        />
+                        <ProtectedRoute
+                            condition=is_logged_in
+                            path=path!("/tournaments/create/arena")
+                            redirect_path=|| untrack(login_redirect_url)
+                            view=|| {
+                                view! { <TournamentCreate kind=TournamentCreationKind::Arena /> }
+                            }
+                        />
+                        <ProtectedRoute
+                            condition=is_logged_in
+                            path=path!("/tournaments/create/swiss")
+                            redirect_path=|| untrack(login_redirect_url)
+                            view=|| {
+                                view! { <TournamentCreate kind=TournamentCreationKind::Swiss /> }
+                            }
+                        />
+                        <ProtectedRoute
+                            condition=is_logged_in
+                            path=path!("/tournaments/create/round-robin")
+                            redirect_path=|| untrack(login_redirect_url)
+                            view=|| {
+                                view! {
+                                    <TournamentCreate kind=TournamentCreationKind::RoundRobin />
+                                }
+                            }
+                        />
+                        <ProtectedRoute
+                            condition=is_logged_in
+                            path=path!("/tournaments/create/elimination")
+                            redirect_path=|| untrack(login_redirect_url)
+                            view=|| {
+                                view! {
+                                    <TournamentCreate kind=TournamentCreationKind::Elimination />
+                                }
+                            }
                         />
                         <ParentRoute
                             path=path!("/tournaments")
@@ -253,23 +296,15 @@ pub fn App() -> impl IntoView {
                                 path=path!("")
                                 view=|| {
                                     view! {
-                                        <TournamentsByStatus status=TournamentStatus::NotStarted />
+                                        <TournamentList category=TournamentCategory::Upcoming />
                                     }
                                 }
                             />
                             <Route
-                                path=path!("future")
+                                path=path!("in-progress")
                                 view=|| {
                                     view! {
-                                        <TournamentsByStatus status=TournamentStatus::NotStarted />
-                                    }
-                                }
-                            />
-                            <Route
-                                path=path!("inprogress")
-                                view=|| {
-                                    view! {
-                                        <TournamentsByStatus status=TournamentStatus::InProgress />
+                                        <TournamentList category=TournamentCategory::InProgress />
                                     }
                                 }
                             />
@@ -277,22 +312,78 @@ pub fn App() -> impl IntoView {
                                 path=path!("finished")
                                 view=|| {
                                     view! {
-                                        <TournamentsByStatus status=TournamentStatus::Finished />
+                                        <TournamentList category=TournamentCategory::Finished />
                                     }
                                 }
                             />
-                            <ProtectedRoute
-                                condition=is_logged_in
+                            <Route
+                                path=path!("future")
+                                view=|| view! { <LegacyTournamentsRedirect path="/tournaments" /> }
+                            />
+                            <Route
+                                path=path!("inprogress")
+                                view=|| {
+                                    view! {
+                                        <LegacyTournamentsRedirect path="/tournaments/in-progress" />
+                                    }
+                                }
+                            />
+                            <Route
                                 path=path!("joined")
-                                redirect_path=|| "/login"
-                                view=|| view! { <JoinedTournaments /> }
+                                view=|| {
+                                    view! {
+                                        <LegacyTournamentsRedirect path="/tournaments/mine/joined" />
+                                    }
+                                }
                             />
-                            <ProtectedRoute
-                                condition=is_logged_in
+                            <Route
                                 path=path!("hosting")
-                                redirect_path=|| "/login"
-                                view=|| view! { <HostingTournaments /> }
+                                view=|| {
+                                    view! {
+                                        <LegacyTournamentsRedirect path="/tournaments/mine/organizing" />
+                                    }
+                                }
                             />
+                            <ProtectedParentRoute
+                                condition=is_logged_in
+                                path=path!("mine")
+                                redirect_path=|| untrack(login_redirect_url)
+                                view=|| view! { <Outlet /> }
+                            >
+                                <Route path=path!("") view=MineTournamentsRedirect />
+                                <Route
+                                    path=path!("joined")
+                                    view=|| {
+                                        view! {
+                                            <TournamentList category=TournamentCategory::Joined />
+                                        }
+                                    }
+                                />
+                                <Route
+                                    path=path!("organizing")
+                                    view=|| {
+                                        view! {
+                                            <TournamentList category=TournamentCategory::Organizing />
+                                        }
+                                    }
+                                />
+                                <Route
+                                    path=path!("invitations")
+                                    view=|| {
+                                        view! {
+                                            <TournamentList category=TournamentCategory::Invitations />
+                                        }
+                                    }
+                                />
+                                <Route
+                                    path=path!("history")
+                                    view=|| {
+                                        view! {
+                                            <TournamentList category=TournamentCategory::History />
+                                        }
+                                    }
+                                />
+                            </ProtectedParentRoute>
                         </ParentRoute>
                         <Route path=path!("/donate") view=|| view! { <Donate /> } />
                         <Route path=path!("/faq") view=|| view! { <Faq /> } />

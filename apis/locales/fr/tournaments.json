@@ -1,13 +1,127 @@
 {
-    "tiebreakers": {
-        "raw_points": "Points totaux du tournoi obtenus",
-        "head_to_head": "Parties gagnées entre joueurs à égalité",
-        "wins_as_black": "Parties gagnées en jouant avec les noirs",
-        "sonneborn_berger": "Somme des points des adversaires contre lesquels vous avez marqué"
+    "unavailable": "Tournoi indisponible.",
+    "not_found": "Tournoi introuvable.",
+    "format": {
+        "round_robin": "Toutes rondes",
+        "swiss": "Suisse",
+        "double_swiss": "Suisse double",
+        "single_elimination": "Élimination simple",
+        "double_elimination": "Double élimination",
+        "arena": "Arène"
+    },
+    "creation": {
+        "choose_format": "Choisissez un format, puis concentrez-vous sur les paramètres qui lui sont utiles.",
+        "arena_description": "Une compétition continue et chronométrée où les joueurs sont appariés au fil des parties terminées.",
+        "swiss_title": "Système suisse",
+        "swiss_description": "Appariez les joueurs pendant un nombre fixe de rondes selon le système suisse ou suisse double.",
+        "round_robin_description": "Chaque participant rencontre tous les autres dans un groupe fixe et compact.",
+        "elimination_title": "Élimination",
+        "elimination_description": "Organisez un tableau à élimination simple ou double avec des séries de parties configurables.",
+        "elimination": {
+            "overrides": {
+                "cancel": "Annuler"
+            },
+            "colors": {
+                "move_left": "Avancer {{color}} d'une partie",
+                "move_right": "Reculer {{color}} d'une partie",
+                "even_inventory": "Ce set pair donne les Blancs autant de fois à chaque participant.",
+                "odd_advantage_first": "Set impair : le premier participant reçoit inévitablement une partie supplémentaire avec les Blancs (le camp qui commence).",
+                "odd_advantage_second": "Set impair : le second participant reçoit inévitablement une partie supplémentaire avec les Blancs (le camp qui commence).",
+                "give_extra_first": "Donner les Blancs supplémentaires au premier participant",
+                "give_extra_second": "Donner les Blancs supplémentaires au second participant",
+                "invalid_inventory": "L'ordre des couleurs doit contenir exactement une attribution par partie et répartir les Blancs également, sauf une attribution supplémentaire dans un set impair."
+            },
+            "clock": {
+                "realtime": "{{minutes}}+{{increment}}"
+            }
+        },
+        "arena_length_minutes": "Durée de l'arène (minutes)",
+        "invalid_configuration": "La configuration de tournoi sélectionnée n'est pas valide."
+    },
+    "arena": {
+        "live_title": "Arènes en cours",
+        "time_left": "Temps restant",
+        "players_active": "{{count}} en jeu",
+        "join": "Rejoindre",
+        "pause": "Pause",
+        "resume": "Reprendre",
+        "view": "Voir",
+        "resume_title": "Revenir dans le groupe d'appariement."
+    },
+    "finished_standings": {
+        "position": "Pos.",
+        "player": "Joueur",
+        "games": "Parties"
+    },
+    "list": {
+        "search": "Nom du tournoi",
+        "empty_finished": "Aucun tournoi terminé n'a encore été enregistré.",
+        "no_results": "Aucun tournoi ne correspond à ce nom.",
+        "empty_upcoming": "Aucun tournoi à venir pour le moment.",
+        "empty_in_progress": "Aucun tournoi en cours pour le moment.",
+        "title": "Tournois",
+        "subtitle": "Parcourez les tournois à venir, en cours et terminés.",
+        "search_placeholder": "Rechercher un tournoi par nom",
+        "loading": "Chargement des tournois…",
+        "error": "Erreur lors du chargement des tournois"
+    },
+    "admin": {
+        "invite_placeholder": "Inviter un joueur",
+        "invite_action": "Inviter au tournoi",
+        "kick_action": "Retirer le joueur du tournoi",
+        "uninvite_action": "Retirer l’invitation au tournoi"
+    },
+    "calendar": {
+        "title": "Parties",
+        "last_updated": "Dernière mise à jour : {{time}}",
+        "loading": "Chargement…",
+        "loading_games": "Chargement des prochaines parties…",
+        "loading_help": "Récupération des parties programmées",
+        "error": "Impossible de charger les prochaines parties",
+        "empty": "Aucune partie de tournoi à venir",
+        "empty_help": "Les parties programmées apparaîtront ici",
+        "unknown_tournament": "Tournoi inconnu",
+        "join_game": "Rejoindre la partie",
+        "watch": "Regarder"
+    },
+    "detail": {
+        "markdown": "Markdown",
+        "start_worker_pending": "Le tournoi va bientôt commencer."
+    },
+    "view": {
+        "manage": {
+            "description_pending": "Mise à jour de la description…",
+            "description_error": "Impossible de mettre à jour la description."
+        },
+        "common": {
+            "versus": "vs"
+        },
+        "bracket": {
+            "completion": {
+                "nodes_in_progress": "Matchs en cours"
+            }
+        },
+        "slots": {
+            "record_result": "Enregistrer le résultat",
+            "double_forfeit_help": "Le score 0-0 enregistre un double forfait ; aucun joueur ne reçoit de points."
+        },
+        "withdrawal": {
+            "self_confirmation": "Se retirer de ce tournoi ? Cette action est irréversible.",
+            "entrant_confirmation": "Retirer ce participant ? Cette action est irréversible."
+        },
+        "arena": {
+            "close": "Fermer",
+            "current_game": "Partie en cours",
+            "online": "En ligne",
+            "offline": "Hors ligne",
+            "on_fire": "En feu",
+            "win_rate": "Taux de victoire",
+            "berserk_rate": "Taux de berserk",
+            "average_opponent": "Adversaire moyen"
+        }
     },
     "create": "Créer un tournoi",
     "view_list": "Voir les tournois",
-    "view": "Voir le tournoi",
     "view_named": "Voir le tournoi : {{name}}",
     "rating_range_summary": "Classement min. : {{min}} / Classement max. : {{max}}"
 }

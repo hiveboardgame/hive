@@ -13,10 +13,11 @@ pub fn DirectChallengeButton(
     let direct_challenge = expect_context::<DirectChallengeOpener>();
     let opponent = StoredValue::new(opponent);
     let logged_in_and_not_user = move || {
-        matches!(
-            auth_context.identity.get(),
-            Some(AuthIdentity::User(current_user_id)) if current_user_id != user_id
-        )
+        auth_context
+            .identity
+            .get()
+            .and_then(AuthIdentity::user_id)
+            .is_some_and(|current_user_id| current_user_id != user_id)
     };
 
     view! {

@@ -1,11 +1,19 @@
+use hive_lib::GameStatus;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
 #[derive(Debug, Serialize, PartialEq, Eq, Deserialize, Clone, Hash)]
 pub enum GameStart {
     Ready,
+    Arena,
     Immediate,
     Moves,
+}
+
+impl GameStart {
+    pub fn is_resumed_move_opening(&self, ordinary: bool, status: GameStatus, turn: usize) -> bool {
+        ordinary && *self == Self::Moves && status == GameStatus::InProgress && turn < 2
+    }
 }
 
 impl fmt::Display for GameStart {
@@ -15,6 +23,7 @@ impl fmt::Display for GameStart {
             "{}",
             match self {
                 GameStart::Ready => "Ready",
+                GameStart::Arena => "Arena",
                 GameStart::Moves => "Moves",
                 GameStart::Immediate => "Immediate",
             }
@@ -35,11 +44,24 @@ impl std::str::FromStr for GameStart {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "Ready" => Ok(GameStart::Ready),
+            "Arena" => Ok(GameStart::Arena),
             "Immediate" => Ok(GameStart::Immediate),
             "Moves" => Ok(GameStart::Moves),
             s => Err(GameStartError::InvalidGameStart {
                 found: s.to_string(),
             }),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::str::FromStr;
+
+    #[test]
+    fn arena_start_round_trips_without_ready_semantics() {
+        assert_eq!(GameStart::Arena.to_string(), "Arena");
+        assert_eq!(GameStart::from_str("Arena").unwrap(), GameStart::Arena);
     }
 }

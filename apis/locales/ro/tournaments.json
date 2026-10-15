@@ -1,13 +1,127 @@
 {
-    "tiebreakers": {
-        "raw_points": "Puncte totale de turneu câștigate",
-        "head_to_head": "Jocuri câștigate între jucători la egalitate",
-        "wins_as_black": "Jocuri câștigate jucând cu negrul",
-        "sonneborn_berger": "Suma punctelor adversarilor împotriva cărora ai punctat"
+    "unavailable": "Turneul nu este disponibil.",
+    "not_found": "Turneul nu a fost găsit.",
+    "format": {
+        "round_robin": "Fiecare cu fiecare",
+        "swiss": "Elvețian",
+        "double_swiss": "Elvețian dublu",
+        "single_elimination": "Eliminare simplă",
+        "double_elimination": "Eliminare dublă",
+        "arena": "Arenă"
+    },
+    "creation": {
+        "choose_format": "Alege un format, apoi concentrează-te pe setările importante pentru acesta.",
+        "arena_description": "O competiție continuă și cronometrată, în care jucătorii sunt împerecheați pe măsură ce încheie partidele.",
+        "swiss_title": "Sistem elvețian",
+        "swiss_description": "Împerechează jucătorii într-un număr fix de runde prin sistemul elvețian sau elvețian dublu.",
+        "round_robin_description": "Fiecare participant joacă împotriva tuturor celorlalți într-un grup fix și compact.",
+        "elimination_title": "Eliminare",
+        "elimination_description": "Organizează un tablou cu eliminare simplă sau dublă și serii de partide configurabile.",
+        "elimination": {
+            "overrides": {
+                "cancel": "Anulează"
+            },
+            "colors": {
+                "move_left": "Mută {{color}} cu o partidă mai devreme",
+                "move_right": "Mută {{color}} cu o partidă mai târziu",
+                "even_inventory": "Acest set par oferă fiecărui participant piesele albe de același număr de ori.",
+                "odd_advantage_first": "Set impar: primul participant primește inevitabil o partidă în plus cu albele (partea care începe).",
+                "odd_advantage_second": "Set impar: al doilea participant primește inevitabil o partidă în plus cu albele (partea care începe).",
+                "give_extra_first": "Dă partida în plus cu albele primului participant",
+                "give_extra_second": "Dă partida în plus cu albele celui de-al doilea participant",
+                "invalid_inventory": "Ordinea culorilor trebuie să conțină exact o atribuire pentru fiecare partidă și să împartă albele egal, cu excepția unei atribuiri în plus într-un set impar."
+            },
+            "clock": {
+                "realtime": "{{minutes}}+{{increment}}"
+            }
+        },
+        "arena_length_minutes": "Durata arenei (minute)",
+        "invalid_configuration": "Configurația de turneu selectată nu este validă."
+    },
+    "arena": {
+        "live_title": "Arene în desfășurare",
+        "time_left": "Timp rămas",
+        "players_active": "{{count}} joacă",
+        "join": "Intră",
+        "pause": "Pauză",
+        "resume": "Reia",
+        "view": "Vezi",
+        "resume_title": "Revino în grupul de împerechere."
+    },
+    "finished_standings": {
+        "position": "Loc",
+        "player": "Jucător",
+        "games": "Partide"
+    },
+    "list": {
+        "search": "Numele turneului",
+        "empty_finished": "Nu a fost înregistrat încă niciun turneu încheiat.",
+        "no_results": "Niciun turneu nu corespunde acestui nume.",
+        "empty_upcoming": "Nu există turnee viitoare în acest moment.",
+        "empty_in_progress": "Nu există turnee în desfășurare în acest moment.",
+        "title": "Turnee",
+        "subtitle": "Explorează turneele viitoare, în desfășurare și încheiate.",
+        "search_placeholder": "Caută turnee după nume",
+        "loading": "Se încarcă turneele…",
+        "error": "Eroare la încărcarea turneelor"
+    },
+    "admin": {
+        "invite_placeholder": "Invită un jucător",
+        "invite_action": "Invită la turneu",
+        "kick_action": "Elimină jucătorul din turneu",
+        "uninvite_action": "Retrage invitația la turneu"
+    },
+    "calendar": {
+        "title": "Partide",
+        "last_updated": "Ultima actualizare: {{time}}",
+        "loading": "Se încarcă…",
+        "loading_games": "Se încarcă partidele viitoare…",
+        "loading_help": "Se preiau partidele programate",
+        "error": "Partidele viitoare nu au putut fi încărcate",
+        "empty": "Nu există partide de turneu viitoare",
+        "empty_help": "Partidele programate vor apărea aici",
+        "unknown_tournament": "Turneu necunoscut",
+        "join_game": "Intră în partidă",
+        "watch": "Urmărește"
+    },
+    "detail": {
+        "markdown": "Markdown",
+        "start_worker_pending": "Turneul va începe în curând."
+    },
+    "view": {
+        "manage": {
+            "description_pending": "Se actualizează descrierea…",
+            "description_error": "Descrierea nu a putut fi actualizată."
+        },
+        "common": {
+            "versus": "vs"
+        },
+        "bracket": {
+            "completion": {
+                "nodes_in_progress": "Meciuri în desfășurare"
+            }
+        },
+        "slots": {
+            "record_result": "Înregistrează rezultatul",
+            "double_forfeit_help": "Scorul 0-0 înregistrează un dublu forfait; niciun jucător nu primește puncte."
+        },
+        "withdrawal": {
+            "self_confirmation": "Te retragi din acest turneu? Acțiunea nu poate fi anulată.",
+            "entrant_confirmation": "Retragi acest participant? Acțiunea nu poate fi anulată."
+        },
+        "arena": {
+            "close": "Închide",
+            "current_game": "Partida curentă",
+            "online": "Online",
+            "offline": "Offline",
+            "on_fire": "În flăcări",
+            "win_rate": "Rată de victorii",
+            "berserk_rate": "Rată berserk",
+            "average_opponent": "Adversar mediu"
+        }
     },
     "create": "Creează turneu",
     "view_list": "Vezi turnee",
-    "view": "Vezi turneul",
     "view_named": "Vezi turneul: {{name}}",
     "rating_range_summary": "Elo min.: {{min}} / Elo max.: {{max}}"
 }

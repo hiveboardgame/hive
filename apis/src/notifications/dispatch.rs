@@ -5,14 +5,22 @@ use super::{
     web_push::WebPushNotifier,
 };
 use dashmap::{mapref::entry::Entry, DashMap};
-use db_lib::models::User;
+use db_lib::{
+    models::{Tournament, User},
+    schema::tournament_slots,
+    DbConn,
+};
+use diesel::{ExpressionMethods, QueryDsl};
+use diesel_async::RunQueryDsl;
 use hive_lib::{Color, GameResult, GameStatus};
-use shared_types::{Conclusion, TimeMode};
+use shared_types::{Conclusion, GameSpeed, NotificationCategory, TimeMode, TournamentGameResult};
 use std::{
+    collections::HashMap,
     str::FromStr,
     sync::{LazyLock, OnceLock},
     time::{Duration, Instant},
 };
+use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub enum NotifyOutcome {
@@ -164,6 +172,17 @@ pub fn notify_game_control(
 }
 
 pub fn notify_your_turn(game: &db_lib::models::Game, opponent: String) {
+    let speed = match game.speed.parse::<GameSpeed>() {
+        Ok(speed) => speed,
+        Err(error) => {
+            log::error!(
+                "Game {} has invalid notification speed {:?}: {error}",
+                game.nanoid,
+                game.speed
+            );
+            return;
+        }
+    };
     let time_left = match TimeMode::from_str(&game.time_mode) {
         Ok(TimeMode::Untimed) => None,
         _ => Some(game.str_time_left_for_player(game.current_player_id)),
@@ -173,6 +192,57 @@ pub fn notify_your_turn(game: &db_lib::models::Game, opponent: String) {
         opponent,
         game_nanoid: game.nanoid.clone(),
         time_left,
-        speed: shared_types::GameSpeed::from_base_increment(game.time_base, game.time_increment),
+        speed,
     });
+}
+
+pub async fn notify_adjudicated_slots(
+    tournament: &Tournament,
+    slot_ids: &[Uuid],
+    result: &TournamentGameResult,
+    conn: &mut DbConn<'_>,
+) -> anyhow::Result<()> {
+    if slot_ids.is_empty() || *result == TournamentGameResult::Unknown {
+        return Ok(());
+    }
+    let slots = tournament_slots::table
+        .filter(tournament_slots::tournament_id.eq(tournament.id))
+        .filter(tournament_slots::id.eq_any(slot_ids))
+        .select((tournament_slots::white_id, tournament_slots::black_id))
+        .load::<(Uuid, Uuid)>(conn)
+        .await?;
+    let mut recipients = HashMap::<Uuid, Vec<&str>>::new();
+    for (white_id, black_id) in slots {
+        for (recipient, color) in [(white_id, Color::White), (black_id, Color::Black)] {
+            // TODO: i18n once copy is approved.
+            let outcome = match result {
+                TournamentGameResult::DoubleForfeit => "double forfeit",
+                TournamentGameResult::Draw => "draw",
+                TournamentGameResult::Winner(winner) if *winner == color => "win",
+                TournamentGameResult::Winner(_) => "loss",
+                TournamentGameResult::Unknown => continue,
+            };
+            recipients.entry(recipient).or_default().push(outcome);
+        }
+    }
+    for (recipient, outcomes) in recipients {
+        // TODO: i18n once copy is approved.
+        let description = if outcomes.len() == 1 {
+            format!("An organizer recorded a {} for your game.", outcomes[0])
+        } else {
+            format!(
+                "An organizer recorded results for {} of your games: {}.",
+                outcomes.len(),
+                outcomes.join(", ")
+            )
+        };
+        notify(Event::TournamentNotice {
+            recipient,
+            tournament_name: tournament.name.clone(),
+            tournament_nanoid: tournament.nanoid.clone(),
+            description,
+            category: NotificationCategory::GameEnded,
+        });
+    }
+    Ok(())
 }

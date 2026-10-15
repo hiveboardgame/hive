@@ -44,7 +44,7 @@ impl AuthIdentity {
 enum AuthState {
     Loading,
     Anonymous,
-    User(AccountResponse),
+    User(Box<AccountResponse>),
 }
 
 impl AuthState {
@@ -70,7 +70,7 @@ pub struct AuthContext {
 impl AuthContext {
     pub fn accept_user(&self, account: AccountResponse) {
         self.session_actions
-            .accept_session(AuthState::User(account));
+            .accept_session(AuthState::User(Box::new(account)));
     }
 
     pub fn accept_anonymous(&self) {
@@ -138,7 +138,7 @@ fn apply_same_user_refresh(
     );
     if same_user {
         bump_refresh_generation(refresh_generation);
-        state.set(AuthState::User(account));
+        state.set(AuthState::User(Box::new(account)));
     }
     same_user
 }
@@ -152,7 +152,8 @@ fn replace_state(state: RwSignal<AuthState>, next: AuthState) -> bool {
     let previous_identity = state.with_untracked(AuthState::identity);
     let next_identity = next.identity();
     state.set(next);
-    previous_identity.is_some() && previous_identity != next_identity
+    (previous_identity.is_some() && previous_identity != next_identity)
+        || (previous_identity.is_none() && matches!(next_identity, Some(AuthIdentity::User(_))))
 }
 
 fn apply_account_refresh(
@@ -162,7 +163,7 @@ fn apply_account_refresh(
     force_reconnect: bool,
 ) {
     let next = match account {
-        Some(account) => AuthState::User(account),
+        Some(account) => AuthState::User(Box::new(account)),
         None => AuthState::Anonymous,
     };
     if replace_state(state, next) || force_reconnect {
@@ -241,11 +242,12 @@ pub fn provide_auth() {
 
     let user = Signal::derive(move || {
         state.with(|state| match state {
-            AuthState::User(account) => Some(account.clone()),
+            AuthState::User(account) => Some(account.as_ref().clone()),
             AuthState::Loading | AuthState::Anonymous => None,
         })
     });
-    let identity = Signal::derive(move || state.with(AuthState::identity));
+    // Account refreshes must not rebuild protected pages for an unchanged session.
+    let identity = Memo::new(move |_| state.with(AuthState::identity)).into();
     let admin = Signal::derive(move || {
         state.with(|state| match state {
             AuthState::Loading => None,
@@ -319,6 +321,7 @@ mod tests {
 
     fn account(user_id: Uuid, username: &str) -> AccountResponse {
         AccountResponse {
+            admission_ratings: Default::default(),
             username: username.to_string(),
             email: format!("{username}@example.com"),
             id: user_id,
@@ -358,11 +361,71 @@ mod tests {
     }
 
     #[test]
+    fn account_refresh_only_invalidates_identity_consumers_when_identity_changes() {
+        let owner = Owner::new();
+        owner.set();
+        let (websocket, _, _) = websocket_with_transition_counts();
+        provide_context(websocket.clone());
+        provide_auth();
+        let auth = expect_context::<AuthContext>();
+        let state = auth.session_actions.state;
+        let refresh_generation = auth.session_actions.account_refresh_generation;
+        let evaluations = Arc::new(AtomicUsize::new(0));
+        let count = Arc::clone(&evaluations);
+        let identity_consumer = Memo::new(move |_| {
+            count.fetch_add(1, Ordering::Relaxed);
+            auth.identity.get()
+        });
+
+        assert_eq!(identity_consumer.get(), None);
+        let user_id = Uuid::new_v4();
+        apply_account_refresh(state, &websocket, Some(account(user_id, "initial")), false);
+        assert_eq!(identity_consumer.get(), Some(AuthIdentity::User(user_id)));
+        assert_eq!(evaluations.load(Ordering::Relaxed), 2);
+
+        apply_account_refresh(
+            state,
+            &websocket,
+            Some(account(user_id, "refreshed")),
+            false,
+        );
+        assert_eq!(identity_consumer.get(), Some(AuthIdentity::User(user_id)));
+        assert_eq!(auth.user.get().unwrap().username, "refreshed");
+        assert_eq!(evaluations.load(Ordering::Relaxed), 2);
+
+        assert!(apply_same_user_refresh(
+            state,
+            refresh_generation,
+            account(user_id, "edited")
+        ));
+        assert_eq!(identity_consumer.get(), Some(AuthIdentity::User(user_id)));
+        assert_eq!(auth.user.get().unwrap().username, "edited");
+        assert_eq!(evaluations.load(Ordering::Relaxed), 2);
+
+        let next_user_id = Uuid::new_v4();
+        apply_account_refresh(
+            state,
+            &websocket,
+            Some(account(next_user_id, "other")),
+            false,
+        );
+        assert_eq!(
+            identity_consumer.get(),
+            Some(AuthIdentity::User(next_user_id))
+        );
+        assert_eq!(evaluations.load(Ordering::Relaxed), 3);
+
+        apply_account_refresh(state, &websocket, None, false);
+        assert_eq!(identity_consumer.get(), Some(AuthIdentity::Anonymous));
+        assert_eq!(evaluations.load(Ordering::Relaxed), 4);
+    }
+
+    #[test]
     fn same_user_refresh_updates_metadata_without_replacing_the_session() {
         let owner = Owner::new();
         owner.set();
         let user_id = Uuid::new_v4();
-        let state = RwSignal::new(AuthState::User(account(user_id, "before")));
+        let state = RwSignal::new(AuthState::User(Box::new(account(user_id, "before"))));
         let refresh_generation = RwSignal::new(0);
         let (websocket, opens, closes) = websocket_with_transition_counts();
 
@@ -389,7 +452,7 @@ mod tests {
     }
 
     #[test]
-    fn initial_refresh_updates_state_without_reconnecting() {
+    fn initial_user_refresh_reconnects_to_bind_the_socket_to_resolved_identity() {
         let owner = Owner::new();
         owner.set();
         let user_id = Uuid::new_v4();
@@ -413,8 +476,10 @@ mod tests {
             state.with_untracked(AuthState::identity),
             Some(AuthIdentity::User(user_id))
         );
-        assert_eq!(opens.load(Ordering::Relaxed), 0);
-        assert_eq!(closes.load(Ordering::Relaxed), 0);
+        // The socket may have authenticated under a different cross-tab
+        // session while HTTP auth was still Loading, so it must be replaced.
+        assert_eq!(opens.load(Ordering::Relaxed), 1);
+        assert_eq!(closes.load(Ordering::Relaxed), 1);
     }
 
     #[test]
@@ -452,7 +517,7 @@ mod tests {
         let owner = Owner::new();
         owner.set();
         let user_id = Uuid::new_v4();
-        let state = RwSignal::new(AuthState::User(account(user_id, "before")));
+        let state = RwSignal::new(AuthState::User(Box::new(account(user_id, "before"))));
         let refresh_generation = RwSignal::new(0);
         let force_reconnect_pending = RwSignal::new(true);
         let (websocket, opens, closes) = websocket_with_transition_counts();
@@ -529,7 +594,7 @@ mod tests {
         let owner = Owner::new();
         owner.set();
         let user_id = Uuid::new_v4();
-        let state = RwSignal::new(AuthState::User(account(user_id, "retained")));
+        let state = RwSignal::new(AuthState::User(Box::new(account(user_id, "retained"))));
         let refresh_generation = RwSignal::new(0);
         let force_reconnect_pending = RwSignal::new(true);
         let (websocket, opens, closes) = websocket_with_transition_counts();
@@ -600,7 +665,7 @@ mod tests {
             state,
             refresh_generation,
             &websocket,
-            AuthState::User(account(login_id, "login")),
+            AuthState::User(Box::new(account(login_id, "login"))),
         );
         apply_account_refresh_result(
             state,

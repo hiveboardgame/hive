@@ -9,6 +9,7 @@ use leptos::prelude::*;
 pub fn UserIdentity(
     user: UserResponse,
     #[prop(optional, default = true)] show_hover_ratings: bool,
+    #[prop(optional, default = true)] show_unknown_status: bool,
     #[prop(optional, into)] class: Option<String>,
     #[prop(optional)] link_class: &'static str,
 ) -> impl IntoView {
@@ -16,7 +17,11 @@ pub fn UserIdentity(
 
     view! {
         <div class=with_class("flex items-center min-w-0", class.unwrap_or_default())>
-            <StatusIndicator username=user.username.clone() deleted=user.deleted />
+            <StatusIndicator
+                username=user.username.clone()
+                deleted=user.deleted
+                show_unknown=show_unknown_status
+            />
             <ProfileLink
                 patreon=user.patreon
                 bot=user.bot

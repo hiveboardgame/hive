@@ -2,7 +2,14 @@ use crate::{common::ChallengeAction, responses::user::UserResponse};
 use chrono::prelude::*;
 use hive_lib::{ColorChoice, GameType};
 use serde::{Deserialize, Serialize};
-use shared_types::{ChallengeDetails, ChallengeId, ChallengeVisibility, GameSpeed, TimeMode};
+use shared_types::{
+    clock::Clock,
+    ChallengeDetails,
+    ChallengeId,
+    ChallengeVisibility,
+    GameSpeed,
+    TimeMode,
+};
 use std::{str, str::FromStr};
 use uuid::Uuid;
 
@@ -24,6 +31,13 @@ pub struct ChallengeResponse {
     pub speed: GameSpeed,
     pub band_upper: Option<i32>,
     pub band_lower: Option<i32>,
+}
+
+impl ChallengeResponse {
+    pub fn time_control(&self) -> Option<Clock> {
+        Clock::from_time_parts(self.time_mode, self.time_base, self.time_increment)
+            .expect("challenge response time control is validated when constructed")
+    }
 }
 
 use cfg_if::cfg_if;
@@ -93,8 +107,9 @@ impl ChallengeResponse {
         challenger: UserResponse,
         opponent: Option<UserResponse>,
     ) -> Result<Self> {
-        let game_speed =
-            GameSpeed::from_base_increment(challenge.time_base, challenge.time_increment);
+        let time_control = challenge.time_control()?;
+        let time_mode = time_control.map_or(TimeMode::Untimed, Clock::mode);
+        let game_speed = time_control.map_or(GameSpeed::Untimed, GameSpeed::from);
         let challenger_rating = challenger.rating_for_speed(&game_speed);
         Ok(ChallengeResponse {
             id: challenge.id,
@@ -107,7 +122,7 @@ impl ChallengeResponse {
             color_choice: ColorChoice::from_str(&challenge.color_choice)?,
             created_at: challenge.created_at,
             challenger_rating,
-            time_mode: TimeMode::from_str(&challenge.time_mode)?,
+            time_mode,
             time_base: challenge.time_base,
             time_increment: challenge.time_increment,
             speed: game_speed,

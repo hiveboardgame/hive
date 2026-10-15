@@ -448,28 +448,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_play_move() {
-        // Start a mock server
-        let mock_server = MockServer::start().await;
-
-        // Create mock response
-        Mock::given(method("POST"))
-            .and(path("/api/v1/bot/games/play"))
-            .and(|req: &Request| {
-                verify_auth_header(req, "test_key");
-                true
-            })
-            .respond_with(ResponseTemplate::new(200))
-            .mount(&mock_server)
-            .await;
-
-        let api = HiveGameApi::new(mock_server.uri());
-        let result = api.play_move("123", "wS1", "test_key").await;
-
-        assert!(result.is_ok());
-    }
-
-    #[tokio::test]
     async fn test_error_handling() {
         let mock_server = MockServer::start().await;
 

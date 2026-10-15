@@ -35,10 +35,9 @@ pub fn BlockToggleButton(blocked_user_id: Uuid) -> impl IntoView {
 
     let pending = action.pending();
     let logged_in_and_not_self = move || {
-        matches!(
-            chat.identity(),
-            Some(AuthIdentity::User(current_user_id)) if current_user_id != blocked_user_id
-        )
+        chat.identity()
+            .and_then(AuthIdentity::user_id)
+            .is_some_and(|current_user_id| current_user_id != blocked_user_id)
     };
 
     Effect::watch(

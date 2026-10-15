@@ -26,24 +26,9 @@ impl RatingHistoryResponse {
         Ok(
             games
                 .into_iter()
-                .map(|g| {
-                    let (r, ts) = if g.white_id == *id {
-                        (
-                            g.white_rating.expect("missing white_rating"),
-                            g.updated_at,
-                        )
-                    } else if g.black_id == *id {
-                        (
-                            g.black_rating.expect("missing black_rating"),
-                            g.updated_at,
-                        )
-                    } else {
-                        unreachable!("Game does not match the given player ID");
-                    };
-                    RatingHistoryResponse {
-                        rating: r.floor() as u64,
-                        updated_at: ts,
-                    }
+                .map(|game| RatingHistoryResponse {
+                    rating: game.rating.floor() as u64,
+                    updated_at: game.updated_at,
                 })
                 .collect::<Vec<_>>(),
         )

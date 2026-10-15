@@ -2,7 +2,6 @@ use db_lib::DbConn;
 use diesel::QueryableByName;
 use diesel_async::RunQueryDsl;
 
-pub(crate) const TOURNAMENT_START_LOCK: i64 = 0x6869_7665_0000_0001;
 pub(crate) const GAME_CLEANUP_LOCK: i64 = 0x6869_7665_0000_0002;
 pub(crate) const CHALLENGE_CLEANUP_LOCK: i64 = 0x6869_7665_0000_0003;
 pub(crate) const HASH_BACKFILL_LOCK: i64 = 0x6869_7665_0000_0004;

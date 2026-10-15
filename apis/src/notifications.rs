@@ -11,6 +11,7 @@ pub use dispatch::{
     game_end_reason_from,
     init,
     notify,
+    notify_adjudicated_slots,
     notify_game_control,
     notify_game_ended,
     notify_game_ended_excluding,

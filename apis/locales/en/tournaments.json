@@ -1,13 +1,261 @@
 {
+    "unavailable": "Tournament unavailable.",
+    "not_found": "Tournament not found.",
+    "format": {
+        "round_robin": "Round robin",
+        "swiss": "Swiss",
+        "double_swiss": "Double Swiss",
+        "single_elimination": "Single elimination",
+        "double_elimination": "Double elimination",
+        "arena": "Arena"
+    },
+    "creation": {
+        "title": "Create tournament",
+        "choose_format": "Choose a format, then focus on the settings that matter for it.",
+        "arena_description": "A continuous, timed event where players are paired as games finish.",
+        "swiss_title": "Swiss",
+        "swiss_description": "Pair players across a fixed number of rounds using Swiss or Double Swiss.",
+        "round_robin_description": "Every entrant meets every other entrant in a compact fixed field.",
+        "elimination_title": "Elimination",
+        "elimination_description": "Run a single- or double-elimination bracket with configurable match series.",
+        "details_title": "Tournament details",
+        "name": "Tournament name",
+        "name_placeholder": "At least a 4 character name",
+        "name_too_short": "Name needs at least 4 characters.",
+        "description": "Description",
+        "description_placeholder": "Optional description. Markdown supported.",
+        "min_players": "Min players",
+        "max_players": "Max players",
+        "mode": "Mode",
+        "invite_only": "Invite only",
+        "choose_start": "Choose a start time",
+        "time_controls_title": "Time controls",
+        "game_time_control": "Game time control",
+        "arena_control_title": "{{speed}}\n{{minutes}} min base time\n+{{seconds}} sec per move",
+        "min_rating": "Min rating",
+        "max_rating": "Max rating",
+        "any_rating": "Any",
+        "rating_summary": "Min rating: {{minimum}} / Max rating: {{maximum}}",
+        "create": "Create tournament",
+        "elimination": {
+            "overrides": {
+                "add": "Add stage override",
+                "stage": "Stage",
+                "remove": "Remove override",
+                "cancel": "Cancel"
+            },
+            "colors": {
+                "first_short": "First",
+                "second_short": "Second",
+                "move_left": "Move {{color}} one game earlier",
+                "move_right": "Move {{color}} one game later",
+                "even_inventory": "This even set gives each entrant White the same number of times.",
+                "odd_advantage_first": "Odd set: the first entrant gets the unavoidable extra White (starting-side) game.",
+                "odd_advantage_second": "Odd set: the second entrant gets the unavoidable extra White (starting-side) game.",
+                "give_extra_first": "Give the extra White to the first entrant",
+                "give_extra_second": "Give the extra White to the second entrant",
+                "invalid_inventory": "The color order must contain exactly one assignment per game and split White evenly, apart from one extra assignment in an odd set."
+            },
+            "phases": {
+                "move_up": "Move up",
+                "move_down": "Move down",
+                "clinch_policy": "Clinch policy",
+                "play_all": "Play all games",
+                "early_clinch": "Early clinch"
+            },
+            "clock": {
+                "base_minutes": "Base minutes",
+                "increment_seconds": "Increment seconds",
+                "correspondence_control": "Correspondence control",
+                "days_per_move": "Days per move",
+                "total_days_each": "Total days for each player",
+                "days": "Days",
+                "mode_mismatch": "Every phase must use the tournament's time mode.",
+                "realtime": "{{minutes}}+{{increment}}",
+                "days_per_move_summary": "{{days}} days per move",
+                "total_days_each_summary": "{{days}} total days each"
+            },
+            "preview": {
+                "title": "Series preview",
+                "phase_finite": "Phase {{phase}}: {{games}} games per set, at most {{sets}} sets, {{clinch}}, {{clock}}",
+                "phase_until": "Phase {{phase}}: {{games}} games per set, repeat until decisive, {{clinch}}, {{clock}}",
+                "clinch_play_all": "play every game",
+                "clinch_early": "stop after an early clinch",
+                "game": "Series game {{series_game}} · phase {{phase}}, set {{set}}, game {{set_game}} · White: {{white}} · Black: {{black}}",
+                "next_phase": "If tied, continue from phase {{from_phase}} to phase {{to_phase}}.",
+                "first_entrant": "first entrant",
+                "second_entrant": "second entrant"
+            },
+            "stages": {
+                "single_round": "Single-elimination round",
+                "single_final": "Single-elimination final",
+                "bronze": "Bronze match",
+                "winners_round": "Winners-bracket round",
+                "losers_minor": "Losers minor round",
+                "losers_major": "Losers major round"
+            },
+            "errors": {
+                "empty_phases": "Add at least one series phase.",
+                "games_positive": "Games per set must be positive.",
+                "finite_positive": "A finite set limit must be positive.",
+                "same_time_mode": "Every phase must use the same tournament time mode.",
+                "preview_overflow": "The series preview is too large."
+            }
+        },
+        "arena_length_minutes": "Arena length (minutes)",
+        "invalid_configuration": "The selected tournament configuration is invalid."
+    },
+    "arena": {
+        "live_title": "Arenas running now",
+        "time_left": "Time left",
+        "players_active": "{{count}} playing",
+        "join": "Join",
+        "pause": "Pause",
+        "resume": "Resume",
+        "view": "View",
+        "resume_title": "Go back into the pairing pool."
+    },
+    "finished_standings": {
+        "position": "Pos",
+        "player": "Player",
+        "games": "Games"
+    },
+    "detail": {
+        "loading": "Loading tournament…",
+        "edit_description": "Edit description",
+        "description_placeholder": "Describe the tournament",
+        "update_description": "Update description",
+        "cancel": "Cancel",
+        "edit": "Edit",
+        "preview": "Preview",
+        "markdown": "Markdown",
+        "start_worker_pending": "The tournament will start shortly."
+    },
+    "list": {
+        "title": "Tournaments",
+        "subtitle": "Browse upcoming, active, and completed tournaments.",
+        "search": "Tournament name",
+        "empty_finished": "No finished tournaments have been recorded yet.",
+        "no_results": "No tournaments match that name.",
+        "empty_upcoming": "There are no upcoming tournaments right now.",
+        "empty_in_progress": "There are no tournaments in progress right now.",
+        "search_placeholder": "Search tournaments by name",
+        "loading": "Loading tournaments…",
+        "error": "Error loading tournaments"
+    },
+    "admin": {
+        "invite_placeholder": "Invite a player",
+        "invite_action": "Invite to tournament",
+        "kick_action": "Remove player from tournament",
+        "uninvite_action": "Withdraw tournament invitation"
+    },
+    "calendar": {
+        "title": "Matches",
+        "last_updated": "Last updated: {{time}}",
+        "loading": "Loading…",
+        "loading_games": "Loading upcoming games…",
+        "loading_help": "Fetching your scheduled games",
+        "error": "Could not load upcoming games",
+        "empty": "No upcoming tournament games",
+        "empty_help": "Scheduled games will appear here",
+        "unknown_tournament": "Unknown tournament",
+        "join_game": "Join game",
+        "watch": "Watch"
+    },
+    "view": {
+        "manage": {
+            "description_pending": "Updating description…",
+            "description_error": "Could not update the description."
+        },
+        "common": {
+            "player": "Player",
+            "versus": "vs"
+        },
+        "bracket": {
+            "unavailable": "The bracket will appear when the tournament starts.",
+            "vacant": "Vacant",
+            "to_be_determined": "To be determined",
+            "unknown_participant": "Unknown participant",
+            "completion": {
+                "nodes_in_progress": "Matches in progress"
+            },
+            "stage": {
+                "round": "Round {{round}}",
+                "final_match": "Final",
+                "third_place": "Third place",
+                "winners_round": "Winners round {{round}}",
+                "losers_minor": "Losers minor {{round}}",
+                "losers_major": "Losers major {{round}}",
+                "grand_final": "Grand final"
+            }
+        },
+        "encounters": {
+            "total": "Total"
+        },
+        "slots": {
+            "record_result": "Record result",
+            "double_forfeit_help": "0-0 records a double forfeit; neither player receives points.",
+            "clear": "Clear",
+            "outcome": {
+                "played_white_win": "played — White won",
+                "played_draw": "played — draw",
+                "played_black_win": "played — Black won",
+                "white_forfeit_win": "adjudicated — White forfeit win",
+                "black_forfeit_win": "adjudicated — Black forfeit win",
+                "adjudicated_draw": "adjudicated — draw",
+                "white_draw_black_forfeit": "adjudicated — White draw, Black forfeit loss",
+                "white_forfeit_black_draw": "adjudicated — White forfeit loss, Black draw",
+                "double_forfeit": "adjudicated — double forfeit"
+            },
+            "game": {
+                "finished": "Game finished"
+            }
+        },
+        "arena": {
+            "close": "Close",
+            "current_game": "Current game",
+            "online": "Online",
+            "offline": "Offline",
+            "on_fire": "On fire",
+            "win_rate": "Win rate",
+            "berserk_rate": "Berserk rate",
+            "average_opponent": "Average opponent"
+        },
+        "standings": {
+            "no_results": "No scored results yet."
+        },
+        "withdrawal": {
+            "self_confirmation": "Withdraw from this tournament? This cannot be undone.",
+            "entrant_confirmation": "Withdraw this entrant? This cannot be undone.",
+            "self_action": "Withdraw from tournament",
+            "select_entrant": "Select entrant",
+            "entrant_action": "Withdraw entrant"
+        }
+    },
     "tiebreakers": {
-        "raw_points": "Total tournament points earned",
-        "head_to_head": "Number of games won between tied players",
-        "wins_as_black": "Number of games won while playing black",
-        "sonneborn_berger": "Sum of points earned by all opponents you won/drew against"
+        "move_earlier": "Apply this one earlier",
+        "remove": "Stop using this tiebreaker",
+        "names": {
+            "progressive": "Progressive score",
+            "direct_encounter": "Direct encounter",
+            "sonneborn_berger": "Sonneborn-Berger",
+            "koya": "Koya",
+            "score_wins": "Wins by score",
+            "round_wins": "Round wins",
+            "games_won": "Games won",
+            "wins_as_black": "Wins as black",
+            "game_points": "Game points",
+            "match_points": "Match points",
+            "buchholz": "Buchholz",
+            "buchholz_cut_1": "Buchholz cut 1",
+            "buchholz_cut_2": "Buchholz cut 2",
+            "buchholz_median": "Median Buchholz"
+        },
+        "match_points": "Points counting each match as a single result",
+        "game_points": "Points counting every individual game"
     },
     "create": "Create Tournament",
     "view_list": "View Tournaments",
-    "view": "View tournament",
     "view_named": "View tournament: {{name}}",
     "rating_range_summary": "Min Rating: {{min}}/ Max Rating: {{max}}"
 }

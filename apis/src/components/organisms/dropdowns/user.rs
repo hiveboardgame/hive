@@ -1,15 +1,15 @@
 use crate::{
+    common::{auth_page_url, current_page_path},
     components::{
         atoms::unread_badge::UnreadBadge,
         molecules::{hamburger::Hamburger, ping::Ping},
         organisms::{
             darkmode_toggle::{DarkModeToggle, DarkModeToggleVariant},
-            header::set_redirect,
             logout::Logout,
         },
     },
     i18n::*,
-    providers::{chat::Chat, AuthContext, RefererContext},
+    providers::{chat::Chat, AuthContext},
 };
 use leptos::prelude::*;
 use leptos_icons::Icon;
@@ -23,7 +23,6 @@ pub fn UserDropdown(
     update_available: Signal<bool>,
 ) -> impl IntoView {
     let i18n = use_i18n();
-    let pathname = expect_context::<RefererContext>().pathname;
     let auth_context = expect_context::<AuthContext>();
     let chat = expect_context::<Chat>();
     let hamburger_show = RwSignal::new(false);
@@ -91,12 +90,7 @@ pub fn UserDropdown(
             >
                 {t!(i18n, common.profile)}
             </a>
-            <a
-                class="ui-dropdown-link"
-                href="/message"
-                on:focus=move |_| set_redirect(pathname)
-                on:click=move |_| onclick_close()
-            >
+            <a class="ui-dropdown-link" href="/message" on:click=move |_| onclick_close()>
                 <span>{t!(i18n, common.messages)}</span>
                 <span class="ml-auto">
                     <UnreadBadge
@@ -115,26 +109,15 @@ pub fn UserDropdown(
             </a>
             <a
                 class="ui-dropdown-link"
-                href="/account"
-                on:focus=move |_| set_redirect(pathname)
+                href=move || auth_page_url("/account", &current_page_path())
                 on:click=move |_| onclick_close()
             >
                 {t!(i18n, header.user_menu.edit_account)}
             </a>
-            <a
-                class="ui-dropdown-link"
-                href="/config"
-                on:focus=move |_| set_redirect(pathname)
-                on:click=move |_| onclick_close()
-            >
+            <a class="ui-dropdown-link" href="/config" on:click=move |_| onclick_close()>
                 {t!(i18n, header.user_menu.config)}
             </a>
-            <a
-                class="ui-dropdown-link"
-                href="/notifications"
-                on:focus=move |_| set_redirect(pathname)
-                on:click=move |_| onclick_close()
-            >
+            <a class="ui-dropdown-link" href="/notifications" on:click=move |_| onclick_close()>
                 {t!(i18n, common.notifications)}
             </a>
             <Show when=move || auth_context.user.with(|a| a.as_ref().is_some_and(|v| v.user.admin))>

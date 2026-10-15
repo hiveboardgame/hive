@@ -11,6 +11,7 @@ use super::{
     },
     read_eligibility::{
         is_element_in_scroll_view,
+        scroll_element_to_container_top,
         use_bottom_visibility,
         use_thread_read_eligibility,
     },
@@ -359,7 +360,7 @@ fn ResolvedChatWindowBody(
                         (first_unread, container.as_ref())
                     {
                         if !is_element_in_scroll_view(container, &first_unread) {
-                            first_unread.scroll_into_view_with_bool(true);
+                            scroll_element_to_container_top(container, &first_unread);
                         }
                     } else if let Some(container) = container.as_ref() {
                         container.set_scroll_top(container.scroll_height());

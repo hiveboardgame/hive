@@ -26,17 +26,20 @@ use super::{
     analysis::AnalysisContext,
     api_requests::ApiRequests,
     auth_context::{AuthContext, AuthIdentity},
+    timer::TimerSignal,
     ApiRequestsProvider,
 };
 
 #[derive(Clone, Copy, Debug)]
-pub struct GameStateStore(Store<GameState>);
+pub struct GameStateStore {
+    store: Store<GameState>,
+}
 
 impl Deref for GameStateStore {
     type Target = Store<GameState>;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &self.store
     }
 }
 
@@ -48,7 +51,9 @@ impl Default for GameStateStore {
 
 impl GameStateStore {
     pub fn new() -> Self {
-        Self(Store::new(GameState::new()))
+        Self {
+            store: Store::new(GameState::new()),
+        }
     }
 
     pub fn full_reset(&self) {
@@ -69,8 +74,24 @@ impl GameStateStore {
         self.replace(GameState::from_response(game));
     }
 
+    pub(crate) fn apply_authoritative_response(&self, timer: &TimerSignal, game: &GameResponse) {
+        let previous = self
+            .game_id()
+            .with_untracked(|id| id.as_ref() == Some(&game.game_id))
+            .then(|| self.board_view().get_untracked());
+        batch(|| {
+            self.reset_from_response(game);
+            if let Some(BoardView::History { turn }) = previous {
+                let turn =
+                    turn.and_then(|turn| game.turn.checked_sub(1).map(|last| turn.min(last)));
+                self.board_view().set(BoardView::History { turn });
+            }
+            timer.update_from(game);
+        });
+    }
+
     pub(crate) fn replace(&self, game_state: GameState) {
-        self.0.set(game_state);
+        self.store.set(game_state);
     }
 
     pub fn user_color_as_signal(
@@ -643,7 +664,7 @@ mod tests {
     use hive_lib::Direction as BoardDirection;
     use leptos::prelude::Owner;
     use shared_types::{Conclusion, GameSpeed, GameStart, TimeMode, TournamentGameResult};
-    use std::collections::HashMap;
+    use std::{collections::HashMap, time::Duration};
 
     fn piece(piece: &str) -> Piece {
         piece.parse().expect("test piece parses")
@@ -716,14 +737,17 @@ mod tests {
             speed: GameSpeed::Untimed,
             black_time_left: None,
             white_time_left: None,
+            white_berserked: false,
+            black_berserked: false,
             last_interaction: None,
+            finished_at: None,
+            arena_move_due_at: None,
             created_at: now,
             updated_at: now,
             hashes: Vec::new(),
             conclusion: Conclusion::Unknown,
             repetitions: Vec::new(),
             game_start: GameStart::Immediate,
-            game_speed: GameSpeed::Untimed,
             move_times: Vec::new(),
             tournament_game_result: TournamentGameResult::Unknown,
         }
@@ -749,6 +773,75 @@ mod tests {
         response.history = state.history.moves;
         response.hashes = state.hashes;
         response
+    }
+
+    #[test]
+    fn started_move_opening_response_reports_a_running_clock_at_turns_zero_and_one() {
+        with_store(|_| {
+            let timer = TimerSignal::new();
+            for (time_mode, time_base, time_increment, speed) in [
+                (TimeMode::RealTime, Some(60), Some(0), GameSpeed::Bullet),
+                (
+                    TimeMode::Correspondence,
+                    None,
+                    Some(60),
+                    GameSpeed::Correspondence,
+                ),
+            ] {
+                for turn in [0, 1] {
+                    let mut response = game_response();
+                    response.game_start = GameStart::Moves;
+                    response.game_status = GameStatus::InProgress;
+                    response.turn = turn;
+                    response.time_mode = time_mode;
+                    response.time_base = time_base;
+                    response.time_increment = time_increment;
+                    response.speed = speed;
+                    response.white_time_left = Some(Duration::from_secs(60));
+                    response.black_time_left = Some(Duration::from_secs(60));
+                    response.last_interaction = Some(Utc::now());
+
+                    let time_left = response.time_left().expect("read live opening clock");
+                    assert!(time_left > Duration::ZERO);
+                    assert!(time_left <= Duration::from_secs(60));
+
+                    timer.update_from(&response);
+                    timer.signal.with_untracked(|timer| {
+                        assert!(timer.ordinary_clock_running);
+                        assert_eq!(timer.turn, turn);
+                    });
+                }
+            }
+        });
+    }
+
+    #[test]
+    fn authoritative_berserk_response_updates_game_and_timer_together() {
+        with_store(|game_state| {
+            let timer = TimerSignal::new();
+            let mut response = game_response();
+            response.time_mode = TimeMode::RealTime;
+            response.time_base = Some(60);
+            response.time_increment = Some(0);
+            response.white_time_left = Some(Duration::from_secs(30));
+            response.black_time_left = Some(Duration::from_secs(60));
+            response.white_berserked = true;
+
+            game_state.apply_authoritative_response(&timer, &response);
+
+            assert!(
+                game_state
+                    .game_response()
+                    .get_untracked()
+                    .expect("full game response is stored")
+                    .white_berserked
+            );
+            timer.signal.with_untracked(|state| {
+                assert_eq!(state.game_id, response.game_id);
+                assert_eq!(state.white_time_left, Some(Duration::from_secs(30)));
+                assert_eq!(state.black_time_left, Some(Duration::from_secs(60)));
+            });
+        });
     }
 
     fn dirty_game_a(game_state: GameStateStore) {
@@ -1186,6 +1279,41 @@ mod tests {
             game_state
                 .move_info()
                 .with_untracked(|move_info| assert_eq!(*move_info, queued));
+        });
+    }
+
+    #[test]
+    fn authoritative_updates_preserve_history_and_clamp_shortened_games() {
+        with_store(|game_state| {
+            let timer = TimerSignal::new();
+            let mut response = game_response_with_valid_history("same-game");
+            game_state.reset_from_response(&response);
+            game_state
+                .board_view()
+                .set(BoardView::History { turn: Some(0) });
+            response.game_status = GameStatus::Adjudicated;
+            response.finished = true;
+            game_state.apply_authoritative_response(&timer, &response);
+            assert_eq!(
+                game_state.board_view().get_untracked(),
+                BoardView::History { turn: Some(0) }
+            );
+            game_state
+                .board_view()
+                .set(BoardView::History { turn: Some(20) });
+            game_state.apply_authoritative_response(&timer, &response);
+            assert_eq!(
+                game_state.board_view().get_untracked(),
+                BoardView::History { turn: Some(1) }
+            );
+            response.history.clear();
+            response.hashes.clear();
+            response.turn = 0;
+            game_state.apply_authoritative_response(&timer, &response);
+            assert_eq!(
+                game_state.board_view().get_untracked(),
+                BoardView::History { turn: None }
+            );
         });
     }
 

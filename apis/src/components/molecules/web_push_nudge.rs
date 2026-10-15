@@ -1,13 +1,38 @@
 use crate::{
     i18n::*,
-    providers::{AuthContext, AuthIdentity},
+    providers::{
+        game_state::{GameStateStore, GameStateStoreFields},
+        AuthContext,
+        AuthIdentity,
+    },
     pwa,
 };
 use leptos::{prelude::*, task::spawn_local};
+use leptos_router::hooks::use_location;
 
 #[component]
 pub fn WebPushNudge(install_nudge_active: RwSignal<bool>) -> impl IntoView {
     let auth = expect_context::<AuthContext>();
+    let game_response = expect_context::<GameStateStore>().game_response();
+    let pathname = use_location().pathname;
+    let hide_during_game = Signal::derive(move || {
+        pathname.with(|pathname| {
+            let Some(game_id) = pathname
+                .strip_prefix("/game/")
+                .filter(|id| !id.is_empty() && !id.contains('/'))
+            else {
+                return false;
+            };
+            // Wait for this route's response; retained state can belong to the
+            // previous game while the new game is still loading.
+            game_response.with(|response| {
+                response
+                    .as_ref()
+                    .filter(|game| game.game_id.0 == game_id)
+                    .is_none_or(|game| !game.finished)
+            })
+        })
+    });
     let i18n = use_i18n();
     let dismissed = RwSignal::new(false);
     let busy = RwSignal::new(false);
@@ -30,7 +55,10 @@ pub fn WebPushNudge(install_nudge_active: RwSignal<bool>) -> impl IntoView {
         }
     });
     let show = Signal::derive(move || {
-        !dismissed.get() && !install_nudge_active.get() && should_show.get().unwrap_or(false)
+        !dismissed.get()
+            && !install_nudge_active.get()
+            && !hide_during_game.get()
+            && should_show.get().unwrap_or(false)
     });
 
     let enable = move |_| {

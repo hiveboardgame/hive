@@ -34,6 +34,12 @@ engine/flamegraph.svg
 engine/log
 engine/perf.data
 
+# Sensitive legacy tournament cutover bundles
+*.dump
+legacy-tournament-exports/
+cutover*.jsonl
+cutover*.jsonl.manifest.json
+
 # direnv
 .direnv
 

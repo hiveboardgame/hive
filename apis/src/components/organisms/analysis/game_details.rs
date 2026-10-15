@@ -1,11 +1,5 @@
 use crate::{
-    common::{
-        format_game_rating,
-        format_game_result,
-        game_time_info,
-        game_tournament_link,
-        untimed_time_info,
-    },
+    common::{format_game_rating, format_game_result, game_tournament_link},
     components::molecules::{time_row::TimeRow, user_with_rating::UserWithRating},
     i18n::*,
     providers::game_state::{GameStateStore, GameStateStoreFields},
@@ -26,20 +20,16 @@ pub fn GameDetailsPanel() -> impl IntoView {
             if has_game_response() { "" } else { "hidden" },
         )
     };
-    let time_info = Memo::new(move |_| {
+    let game_metadata = Memo::new(move |_| {
         game_response.with(|game_response| {
             game_response
                 .as_ref()
-                .map(|game| (game_time_info(game), game.rated))
+                .map(|game| (game.time_control(), game.rated))
         })
     });
-    let time_row_info = Memo::new(move |_| {
-        time_info()
-            .map(|(time, _)| time)
-            .unwrap_or_else(untimed_time_info)
-    });
+    let time_control = Memo::new(move |_| game_metadata().and_then(|(clock, _)| clock));
     let rated_text = move || {
-        time_info()
+        game_metadata()
             .map(|(_, rated)| format_game_rating(i18n, rated))
             .unwrap_or_default()
     };
@@ -106,10 +96,10 @@ pub fn GameDetailsPanel() -> impl IntoView {
                 <div class=move || {
                     format!(
                         "flex flex-wrap gap-x-3 gap-y-1 items-center min-w-0 text-xs leading-tight {}",
-                        if time_info().is_none() { "hidden" } else { "" },
+                        if game_metadata().is_none() { "hidden" } else { "" },
                     )
                 }>
-                    <TimeRow time_info=time_row_info extend_tw_classes="whitespace-nowrap" />
+                    <TimeRow time_control extend_tw_classes="whitespace-nowrap" />
                     <span class="text-gray-700 dark:text-gray-200">{rated_text}</span>
                     <span class="text-gray-700 whitespace-nowrap dark:text-gray-200">
                         {date_text}

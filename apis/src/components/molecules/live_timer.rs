@@ -1,12 +1,12 @@
 use crate::providers::{
-    game_state::{GameStateStore, GameStateStoreFields},
+    game_state::GameStateStore,
     timer::TimerSignal,
     ApiRequestsProvider,
     AuthContext,
     SoundType,
     Sounds,
 };
-use hive_lib::{Color, GameStatus};
+use hive_lib::Color;
 use leptos::prelude::*;
 use leptos_router::hooks::use_params_map;
 use leptos_use::{
@@ -35,14 +35,6 @@ pub fn LiveTimer(side: Signal<Color>, #[prop(optional)] compact: bool) -> impl I
             .unwrap_or_default()
     };
     let user_color = game_state.user_color_as_signal(auth_context.identity);
-    let game_response = game_state.game_response();
-    let in_progress = Memo::new(move |_| {
-        game_response.with(|game_response| {
-            game_response
-                .as_ref()
-                .is_some_and(|gr| gr.game_status == GameStatus::InProgress)
-        })
-    });
     let timer = expect_context::<TimerSignal>().signal;
     let tick_rate = Duration::from_millis(100);
     let Pausable { pause, resume, .. } = use_interval_fn_with_options(
@@ -64,7 +56,7 @@ pub fn LiveTimer(side: Signal<Color>, #[prop(optional)] compact: bool) -> impl I
     );
     let should_resume = Signal::derive(move || {
         timer.with(|t| {
-            in_progress() && (side() == Color::White) == (t.turn.is_multiple_of(2)) && !t.finished
+            t.ordinary_clock_running && (side() == Color::White) == (t.turn.is_multiple_of(2))
         })
     });
     let time_is_zero = Signal::derive(move || timer.with(|t| t.time_left(side()).is_zero()));
@@ -72,7 +64,7 @@ pub fn LiveTimer(side: Signal<Color>, #[prop(optional)] compact: bool) -> impl I
         user_color().is_some_and(|color| {
             timer.with(|t| {
                 t.warning_trigger().is_some_and(|trigger_at| {
-                    if color == side() && !t.finished {
+                    if color == side() && t.ordinary_clock_running {
                         t.time_left(color) < trigger_at
                     } else {
                         false
@@ -85,7 +77,7 @@ pub fn LiveTimer(side: Signal<Color>, #[prop(optional)] compact: bool) -> impl I
         user_color().is_some_and(|color| {
             timer.with(|t| {
                 t.warning_refresh().is_some_and(|refresh_at| {
-                    if color == side() && !t.finished {
+                    if color == side() && t.ordinary_clock_running {
                         t.time_left(color) > refresh_at
                     } else {
                         false
@@ -119,7 +111,7 @@ pub fn LiveTimer(side: Signal<Color>, #[prop(optional)] compact: bool) -> impl I
     );
 
     let _ = whenever_with_options(
-        move || time_is_zero() && !timer().finished,
+        move || time_is_zero() && timer().ordinary_clock_running,
         move |_, _, _| {
             // When time runs out declare winner and style timer that ran out
             let api = api.get();

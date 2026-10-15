@@ -1,5 +1,5 @@
 use crate::{
-    common::with_class,
+    common::{login_redirect_url, with_class},
     components::{
         atoms::{
             block_toggle_button::BlockToggleButton,
@@ -57,7 +57,7 @@ pub fn ProfileMe() -> impl IntoView {
             (Some(AuthIdentity::User(_)), Some(account)) => {
                 navigate(&format!("/@/{}", account.username), opts)
             }
-            (Some(AuthIdentity::Anonymous), _) => navigate("/login", opts),
+            (Some(AuthIdentity::Anonymous), _) => navigate(&untrack(login_redirect_url), opts),
             _ => {}
         }
     });

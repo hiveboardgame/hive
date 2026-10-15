@@ -280,7 +280,7 @@ pub fn Challenges() -> impl IntoView {
     };
 
     view! {
-        <div class="overflow-hidden mx-auto w-full max-w-screen-md ui-panel">
+        <div class="overflow-hidden mx-auto w-full ui-panel">
             <div
                 class=CHALLENGE_SEGMENTED_CLASS
                 on:pointerdown=move |event| mark_tab_press.run(event)

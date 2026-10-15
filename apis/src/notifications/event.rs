@@ -1,4 +1,4 @@
-use crate::i18n::*;
+use crate::{common::schedule_slot_fragment, i18n::*};
 use chrono::{DateTime, Utc};
 use shared_types::{GameId, GameSpeed, NotificationCategory};
 use uuid::Uuid;
@@ -27,6 +27,20 @@ fn rated_word(rated: bool) -> &'static str {
     } else {
         "casual"
     }
+}
+
+fn schedule_link(
+    tournament_nanoid: &str,
+    opponent: &str,
+    slot_id: Uuid,
+    open_editor: bool,
+) -> String {
+    let fragment = if open_editor {
+        schedule_slot_fragment(slot_id)
+    } else {
+        format!("tournament-slot-{slot_id}")
+    };
+    format!("https://hivegame.com/tournament/{tournament_nanoid}/schedule/{opponent}#{fragment}")
 }
 
 fn game_ended_phrase(outcome: GameOutcome, reason: GameEndReason, opponent: &str) -> String {
@@ -80,6 +94,24 @@ pub enum Event {
         tournament_name: String,
         tournament_nanoid: String,
     },
+    TournamentOrganizerInvite {
+        recipient: Uuid,
+        tournament_name: String,
+        tournament_nanoid: String,
+    },
+    TournamentPairing {
+        recipient: Uuid,
+        tournament_name: String,
+        game_nanoid: String,
+        description: String,
+    },
+    TournamentNotice {
+        recipient: Uuid,
+        tournament_name: String,
+        tournament_nanoid: String,
+        description: String,
+        category: NotificationCategory,
+    },
     TournamentStarted {
         recipient: Uuid,
         tournament_name: String,
@@ -88,13 +120,15 @@ pub enum Event {
     SchedulePropose {
         recipient: Uuid,
         proposer: String,
-        game_nanoid: String,
-        when: DateTime<Utc>,
+        tournament_nanoid: String,
+        slot_id: Uuid,
+        candidate_times: Vec<DateTime<Utc>>,
     },
     ScheduleAccept {
         recipient: Uuid,
         opponent: String,
-        game_nanoid: String,
+        tournament_nanoid: String,
+        slot_id: Uuid,
         when: DateTime<Utc>,
     },
     DirectMessage {
@@ -168,7 +202,10 @@ impl Event {
             | Event::GameStarted { recipient, .. }
             | Event::GameEnded { recipient, .. }
             | Event::TournamentInvite { recipient, .. }
+            | Event::TournamentOrganizerInvite { recipient, .. }
             | Event::TournamentStarted { recipient, .. }
+            | Event::TournamentPairing { recipient, .. }
+            | Event::TournamentNotice { recipient, .. }
             | Event::SchedulePropose { recipient, .. }
             | Event::ScheduleAccept { recipient, .. }
             | Event::DirectMessage { recipient, .. }
@@ -179,14 +216,16 @@ impl Event {
 
     pub fn category(&self) -> NotificationCategory {
         match self {
+            Event::TournamentNotice { category, .. } => *category,
             Event::YourTurn { .. } => NotificationCategory::YourTurn,
             Event::ChallengeReceived { .. } | Event::GameStarted { .. } => {
                 NotificationCategory::Challenges
             }
             Event::GameEnded { .. } => NotificationCategory::GameEnded,
-            Event::TournamentInvite { .. } | Event::TournamentStarted { .. } => {
-                NotificationCategory::Tournament
-            }
+            Event::TournamentInvite { .. }
+            | Event::TournamentOrganizerInvite { .. }
+            | Event::TournamentStarted { .. }
+            | Event::TournamentPairing { .. } => NotificationCategory::Tournament,
             Event::SchedulePropose { .. } | Event::ScheduleAccept { .. } => {
                 NotificationCategory::Schedules
             }
@@ -203,7 +242,10 @@ impl Event {
             Event::GameStarted { .. } => "game_started",
             Event::GameEnded { .. } => "game_ended",
             Event::TournamentInvite { .. } => "tournament_invite",
+            Event::TournamentOrganizerInvite { .. } => "tournament_organizer_invite",
             Event::TournamentStarted { .. } => "tournament_started",
+            Event::TournamentNotice { .. } => "tournament_notice",
+            Event::TournamentPairing { .. } => "tournament_pairing",
             Event::SchedulePropose { .. } => "schedule_propose",
             Event::ScheduleAccept { .. } => "schedule_accept",
             Event::DirectMessage { .. } => "dm",
@@ -231,18 +273,35 @@ impl Event {
             Event::YourTurn { game_nanoid, .. }
             | Event::GameStarted { game_nanoid, .. }
             | Event::GameEnded { game_nanoid, .. }
-            | Event::SchedulePropose { game_nanoid, .. }
-            | Event::ScheduleAccept { game_nanoid, .. }
-            | Event::GameControl { game_nanoid, .. } => {
+            | Event::GameControl { game_nanoid, .. }
+            | Event::TournamentPairing { game_nanoid, .. } => {
                 Some(format!("https://hivegame.com/game/{game_nanoid}"))
             }
+            Event::SchedulePropose {
+                proposer,
+                tournament_nanoid,
+                slot_id,
+                ..
+            } => Some(schedule_link(tournament_nanoid, proposer, *slot_id, true)),
+            Event::ScheduleAccept {
+                opponent,
+                tournament_nanoid,
+                slot_id,
+                ..
+            } => Some(schedule_link(tournament_nanoid, opponent, *slot_id, false)),
             Event::ChallengeReceived {
                 challenge_nanoid, ..
             } => Some(format!("https://hivegame.com/challenge/{challenge_nanoid}")),
             Event::TournamentInvite {
                 tournament_nanoid, ..
             }
+            | Event::TournamentOrganizerInvite {
+                tournament_nanoid, ..
+            }
             | Event::TournamentStarted {
+                tournament_nanoid, ..
+            }
+            | Event::TournamentNotice {
                 tournament_nanoid, ..
             } => Some(format!(
                 "https://hivegame.com/tournament/{tournament_nanoid}"
@@ -270,6 +329,11 @@ impl Event {
 
     pub fn render_push(&self, locale: Locale) -> Push {
         let (title, body) = match self {
+            Event::TournamentNotice {
+                tournament_name,
+                description,
+                ..
+            } => (tournament_name.clone(), description.clone()),
             Event::YourTurn {
                 opponent,
                 time_left,
@@ -409,6 +473,18 @@ impl Event {
                 )
                 .to_string(),
             ),
+            Event::TournamentOrganizerInvite {
+                tournament_name, ..
+            } => (
+                // TODO: i18n once copy is approved.
+                String::from("Tournament organizer invitation"),
+                format!("You've been invited to organize {tournament_name}."),
+            ),
+            Event::TournamentPairing {
+                tournament_name,
+                description,
+                ..
+            } => (tournament_name.clone(), description.clone()),
             Event::TournamentStarted {
                 tournament_name, ..
             } => (
@@ -420,17 +496,33 @@ impl Event {
                 )
                 .to_string(),
             ),
-            Event::SchedulePropose { proposer, when, .. } => {
-                let when = when.format("%Y-%m-%d %H:%M UTC").to_string();
+            Event::SchedulePropose {
+                proposer,
+                candidate_times,
+                ..
+            } => {
+                let body = match candidate_times.as_slice() {
+                    [when] => {
+                        let when = when.format("%Y-%m-%d %H:%M UTC").to_string();
+                        td_string!(
+                            locale,
+                            notifications.push.schedule_propose_body,
+                            proposer = proposer,
+                            when = when
+                        )
+                        .to_string()
+                    }
+                    candidates => {
+                        // TODO: i18n once copy is approved.
+                        format!(
+                            "{proposer} offered {} times for your match. Open to choose.",
+                            candidates.len()
+                        )
+                    }
+                };
                 (
                     td_string!(locale, notifications.push.schedule_propose_title).to_string(),
-                    td_string!(
-                        locale,
-                        notifications.push.schedule_propose_body,
-                        proposer = proposer,
-                        when = when
-                    )
-                    .to_string(),
+                    body,
                 )
             }
             Event::ScheduleAccept { opponent, when, .. } => {
@@ -513,6 +605,9 @@ impl Event {
 
     pub fn render_discord(&self) -> String {
         match self {
+            Event::TournamentNotice { tournament_name, tournament_nanoid, description, .. } => format!(
+                "[{tournament_name}](<https://hivegame.com/tournament/{tournament_nanoid}>) · {description}"
+            ),
             Event::YourTurn {
                 opponent,
                 game_nanoid,
@@ -577,6 +672,13 @@ impl Event {
             } => format!(
                 "Invited to [tournament {tournament_name}](<https://hivegame.com/tournament/{tournament_nanoid}>)."
             ),
+            // TODO: i18n once copy is approved.
+            Event::TournamentOrganizerInvite { tournament_name, tournament_nanoid, .. } => format!(
+                "Invited to organize [tournament {tournament_name}](<https://hivegame.com/tournament/{tournament_nanoid}>)."
+            ),
+            Event::TournamentPairing { tournament_name, description, game_nanoid, .. } => format!(
+                "[{tournament_name}](<https://hivegame.com/game/{game_nanoid}>) · {description}"
+            ),
             Event::TournamentStarted {
                 tournament_name,
                 tournament_nanoid,
@@ -586,22 +688,39 @@ impl Event {
             ),
             Event::SchedulePropose {
                 proposer,
-                game_nanoid,
-                when,
+                tournament_nanoid,
+                slot_id,
+                candidate_times,
                 ..
-            } => format!(
-                "[Schedule proposed](<https://hivegame.com/game/{game_nanoid}>) — {proposer} proposed {} for your game.",
-                when.format("%Y-%m-%d %H:%M UTC")
-            ),
+            } => {
+                let link = schedule_link(tournament_nanoid, proposer, *slot_id, true);
+                match candidate_times.as_slice() {
+                    [when] => format!(
+                        "[Schedule proposed](<{link}>) — {proposer} proposed {} for your game.",
+                        when.format("%Y-%m-%d %H:%M UTC")
+                    ),
+                    candidates => {
+                        // TODO: i18n once copy is approved.
+                        format!(
+                            "[Schedule proposed](<{link}>) — {proposer} offered {} times for your game. Open to choose.",
+                            candidates.len()
+                        )
+                    }
+                }
+            }
             Event::ScheduleAccept {
                 opponent,
-                game_nanoid,
+                tournament_nanoid,
+                slot_id,
                 when,
                 ..
-            } => format!(
-                "[Schedule accepted](<https://hivegame.com/game/{game_nanoid}>) — {opponent} accepted {} for your game.",
-                when.format("%Y-%m-%d %H:%M UTC")
-            ),
+            } => {
+                let link = schedule_link(tournament_nanoid, opponent, *slot_id, false);
+                format!(
+                    "[Schedule accepted](<{link}>) — {opponent} accepted {} for your game.",
+                    when.format("%Y-%m-%d %H:%M UTC")
+                )
+            }
             Event::DirectMessage { sender, preview, .. } => {
                 format!("DM from {sender}: {preview}")
             }
@@ -621,6 +740,9 @@ impl Event {
     pub fn render_email(&self) -> (String, String) {
         let link = self.link().unwrap_or_default();
         match self {
+            Event::TournamentNotice { tournament_name, description, .. } => (
+                tournament_name.clone(), format!("{description}. Open: {link}"),
+            ),
             Event::YourTurn {
                 opponent,
                 game_nanoid,
@@ -671,6 +793,14 @@ impl Event {
                 format!("Tournament invite: {tournament_name}"),
                 format!("You've been invited to {tournament_name}. Open: {link}"),
             ),
+            // TODO: i18n once copy is approved.
+            Event::TournamentOrganizerInvite { tournament_name, .. } => (
+                format!("Organizer invitation: {tournament_name}"),
+                format!("You've been invited to organize {tournament_name}. Open: {link}"),
+            ),
+            Event::TournamentPairing { tournament_name, description, .. } => (
+                tournament_name.clone(), format!("{description}. Open: {link}"),
+            ),
             Event::TournamentStarted {
                 tournament_name, ..
             } => (
@@ -678,14 +808,28 @@ impl Event {
                 format!("{tournament_name} has begun and your games are ready. Open: {link}"),
             ),
             Event::SchedulePropose {
-                proposer, when, ..
-            } => (
-                format!("{proposer} proposed a game time"),
-                format!(
-                    "{proposer} proposed {} for your game. Open: {link}",
-                    when.format("%Y-%m-%d %H:%M UTC")
+                proposer,
+                candidate_times,
+                ..
+            } => match candidate_times.as_slice() {
+                [when] => (
+                    format!("{proposer} proposed a game time"),
+                    format!(
+                        "{proposer} proposed {} for your game. Open: {link}",
+                        when.format("%Y-%m-%d %H:%M UTC")
+                    ),
                 ),
-            ),
+                candidates => {
+                    // TODO: i18n once copy is approved.
+                    (
+                        format!("{proposer} proposed game times"),
+                        format!(
+                            "{proposer} offered {} times for your game. Open to choose: {link}",
+                            candidates.len()
+                        ),
+                    )
+                }
+            },
             Event::ScheduleAccept {
                 opponent, when, ..
             } => (
@@ -714,7 +858,7 @@ impl Event {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::i18n::Locale;
+    use chrono::Duration;
 
     fn uid() -> Uuid {
         Uuid::nil()
@@ -882,5 +1026,29 @@ mod tests {
             preview: "hi".into(),
         };
         assert!(e.link().is_none());
+    }
+
+    #[test]
+    fn multi_candidate_proposals_are_rendered_as_a_choice_across_channels() {
+        let first = Utc::now() + Duration::hours(1);
+        let second = Utc::now() + Duration::hours(2);
+        let event = Event::SchedulePropose {
+            recipient: uid(),
+            proposer: String::from("alice"),
+            tournament_nanoid: String::from("cup"),
+            slot_id: uid(),
+            candidate_times: vec![first, second],
+        };
+
+        let push = event.render_push(Locale::default()).body;
+        let discord = event.render_discord();
+        let email = event.render_email().1;
+        for rendered in [push, discord, email] {
+            assert!(rendered.contains("2 times"), "rendered was {rendered:?}");
+            assert!(
+                !rendered.contains(&first.format("%Y-%m-%d %H:%M UTC").to_string()),
+                "rendered was {rendered:?}"
+            );
+        }
     }
 }

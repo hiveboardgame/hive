@@ -1,13 +1,127 @@
 {
-    "tiebreakers": {
-        "raw_points": "Pontos totais do torneio obtidos",
-        "head_to_head": "Jogos ganhos entre jogadores empatados",
-        "wins_as_black": "Jogos ganhos jogando com as pretas",
-        "sonneborn_berger": "Soma dos pontos dos oponentes contra os quais pontuou"
+    "unavailable": "Torneio indisponível.",
+    "not_found": "Torneio não encontrado.",
+    "format": {
+        "round_robin": "Todos contra todos",
+        "swiss": "Suíço",
+        "double_swiss": "Suíço duplo",
+        "single_elimination": "Eliminação simples",
+        "double_elimination": "Eliminação dupla",
+        "arena": "Arena"
+    },
+    "creation": {
+        "choose_format": "Escolhe um formato e concentra-te nas definições importantes para esse formato.",
+        "arena_description": "Um evento contínuo e cronometrado em que os jogadores são emparelhados à medida que terminam as partidas.",
+        "swiss_title": "Suíço",
+        "swiss_description": "Emparelha os jogadores durante um número fixo de rondas pelo sistema suíço ou suíço duplo.",
+        "round_robin_description": "Cada participante enfrenta todos os outros num grupo fixo e compacto.",
+        "elimination_title": "Eliminação",
+        "elimination_description": "Organiza um quadro de eliminação simples ou dupla com séries de partidas configuráveis.",
+        "elimination": {
+            "overrides": {
+                "cancel": "Cancelar"
+            },
+            "colors": {
+                "move_left": "Mover {{color}} uma partida para antes",
+                "move_right": "Mover {{color}} uma partida para depois",
+                "even_inventory": "Este set par dá as Brancas o mesmo número de vezes a cada participante.",
+                "odd_advantage_first": "Set ímpar: o primeiro participante recebe inevitavelmente uma partida extra de Brancas (o lado que começa).",
+                "odd_advantage_second": "Set ímpar: o segundo participante recebe inevitavelmente uma partida extra de Brancas (o lado que começa).",
+                "give_extra_first": "Dar as Brancas extra ao primeiro participante",
+                "give_extra_second": "Dar as Brancas extra ao segundo participante",
+                "invalid_inventory": "A ordem das cores deve conter exatamente uma atribuição por partida e dividir as Brancas igualmente, exceto por uma atribuição extra num set ímpar."
+            },
+            "clock": {
+                "realtime": "{{minutes}}+{{increment}}"
+            }
+        },
+        "arena_length_minutes": "Duração da arena (minutos)",
+        "invalid_configuration": "A configuração de torneio selecionada é inválida."
+    },
+    "arena": {
+        "live_title": "Arenas em curso",
+        "time_left": "Tempo restante",
+        "players_active": "{{count}} a jogar",
+        "join": "Entrar",
+        "pause": "Pausar",
+        "resume": "Retomar",
+        "view": "Ver",
+        "resume_title": "Volte ao grupo de emparelhamento."
+    },
+    "finished_standings": {
+        "position": "Pos.",
+        "player": "Jogador",
+        "games": "Jogos"
+    },
+    "list": {
+        "search": "Nome do torneio",
+        "empty_finished": "Ainda não foi registado nenhum torneio concluído.",
+        "no_results": "Nenhum torneio corresponde a esse nome.",
+        "empty_upcoming": "Não há torneios futuros neste momento.",
+        "empty_in_progress": "Não há torneios em andamento neste momento.",
+        "title": "Torneios",
+        "subtitle": "Explora torneios futuros, em andamento e concluídos.",
+        "search_placeholder": "Pesquisar torneios por nome",
+        "loading": "A carregar torneios…",
+        "error": "Erro ao carregar os torneios"
+    },
+    "admin": {
+        "invite_placeholder": "Convidar um jogador",
+        "invite_action": "Convidar para o torneio",
+        "kick_action": "Remover jogador do torneio",
+        "uninvite_action": "Retirar convite para o torneio"
+    },
+    "calendar": {
+        "title": "Partidas",
+        "last_updated": "Última atualização: {{time}}",
+        "loading": "A carregar…",
+        "loading_games": "A carregar as próximas partidas…",
+        "loading_help": "A obter as partidas agendadas",
+        "error": "Não foi possível carregar as próximas partidas",
+        "empty": "Não há próximas partidas de torneio",
+        "empty_help": "As partidas agendadas aparecerão aqui",
+        "unknown_tournament": "Torneio desconhecido",
+        "join_game": "Entrar na partida",
+        "watch": "Assistir"
+    },
+    "detail": {
+        "markdown": "Markdown",
+        "start_worker_pending": "O torneio começará em breve."
+    },
+    "view": {
+        "manage": {
+            "description_pending": "A atualizar a descrição…",
+            "description_error": "Não foi possível atualizar a descrição."
+        },
+        "common": {
+            "versus": "vs"
+        },
+        "bracket": {
+            "completion": {
+                "nodes_in_progress": "Partidas em andamento"
+            }
+        },
+        "slots": {
+            "record_result": "Registar resultado",
+            "double_forfeit_help": "O 0-0 regista uma dupla derrota por falta; nenhum jogador recebe pontos."
+        },
+        "withdrawal": {
+            "self_confirmation": "Sair deste torneio? Esta ação não pode ser desfeita.",
+            "entrant_confirmation": "Retirar este participante? Esta ação não pode ser desfeita."
+        },
+        "arena": {
+            "close": "Fechar",
+            "current_game": "Partida atual",
+            "online": "Online",
+            "offline": "Offline",
+            "on_fire": "Em chamas",
+            "win_rate": "Taxa de vitórias",
+            "berserk_rate": "Taxa de berserk",
+            "average_opponent": "Adversário médio"
+        }
     },
     "create": "Criar torneio",
     "view_list": "Ver torneios",
-    "view": "Ver torneio",
     "view_named": "Ver torneio: {{name}}",
     "rating_range_summary": "ELO mín.: {{min}} / ELO máx.: {{max}}"
 }

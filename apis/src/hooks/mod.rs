@@ -1,3 +1,4 @@
+pub mod arena_clock;
 pub mod clipboard_copy;
 pub mod history_nav;
 pub mod install_nudge;

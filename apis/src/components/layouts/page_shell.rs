@@ -5,6 +5,7 @@ use leptos::prelude::*;
 pub enum PageShellVariant {
     Content,
     Dashboard,
+    Tournament,
     Form,
 }
 
@@ -12,10 +13,13 @@ impl PageShellVariant {
     fn class(self) -> &'static str {
         match self {
             PageShellVariant::Content => {
-                "mx-auto flex w-full max-w-5xl flex-col gap-6 px-3 pb-10 pt-14 min-[360px]:px-4 sm:px-6 sm:pt-20"
+                "mx-auto flex w-full max-w-5xl flex-col gap-3 px-3 pb-10 pt-page-gutter min-[360px]:px-4 sm:gap-6 sm:px-6"
             }
             PageShellVariant::Dashboard => {
-                "flex w-full flex-col items-center justify-start gap-6 px-1.5 pb-8 pt-14 min-[360px]:px-2 sm:px-4 sm:pt-20"
+                "flex w-full flex-col items-center justify-start gap-3 px-1.5 pb-8 pt-page-gutter min-[360px]:px-2 sm:gap-6 sm:px-4"
+            }
+            PageShellVariant::Tournament => {
+                "flex w-full flex-col items-center justify-start gap-3 px-1.5 pb-8 pt-page-gutter min-[360px]:px-2 sm:px-[1vw]"
             }
             PageShellVariant::Form => {
                 "mx-auto flex min-h-screen w-full max-w-3xl flex-col justify-center px-3 py-14 min-[360px]:px-4 sm:px-6 sm:py-20"

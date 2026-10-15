@@ -1,5 +1,5 @@
 use leptos::prelude::{provide_context, RwSignal};
-use shared_types::{GameId, ReadyUser, TournamentId};
+use shared_types::{GameId, ReadyUser};
 use std::collections::HashMap;
 
 use crate::{common::GameActionResponse, responses::HeartbeatResponse};
@@ -9,7 +9,6 @@ pub struct UpdateNotifier {
     pub game_response: RwSignal<Option<GameActionResponse>>,
     pub heartbeat: RwSignal<HeartbeatResponse>,
     pub tournament_ready: RwSignal<HashMap<GameId, Vec<ReadyUser>>>,
-    pub tournament_update: RwSignal<TournamentId>,
 }
 
 pub fn provide_server_updates() {
@@ -17,6 +16,5 @@ pub fn provide_server_updates() {
         game_response: RwSignal::new(None),
         heartbeat: RwSignal::new(HeartbeatResponse::default()),
         tournament_ready: RwSignal::new(HashMap::new()),
-        tournament_update: RwSignal::new(TournamentId::default()),
     });
 }

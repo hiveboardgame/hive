@@ -19,15 +19,22 @@ use chrono::Utc;
 use hive_lib::{Color, GameResult, GameStatus};
 use leptos::prelude::*;
 use leptos_icons::*;
-use shared_types::{GameStart, PrettyString, TimeInfo, TournamentId};
+use shared_types::{GameStart, PrettyString, TournamentId};
 
 #[component]
 pub fn GameRow(game: GameResponse) -> impl IntoView {
     let i18n = use_i18n();
     let white_rating = game.white_rating();
     let black_rating = game.black_rating();
+    let time_control = game.time_control();
     let ratings = StoredValue::new(RatingChangeInfo::from_game_response(&game));
     let board = game.create_state().board;
+    let tournament_result_text = game.tournament_game_result.to_string();
+    let rated = game.rated;
+    let updated_at = game.updated_at;
+    let created_at = game.created_at;
+    let game_start = game.game_start.clone();
+    let game_id = game.game_id.clone();
     let game_stored = StoredValue::new(game.clone());
     let game_status = StoredValue::new(game.game_status);
     let turn = game.turn;
@@ -41,19 +48,14 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
     let conclusion = game.conclusion;
     let finished = game.finished;
     let history = game.history;
-    let time_info = TimeInfo {
-        mode: game.time_mode,
-        base: game.time_base,
-        increment: game.time_increment,
-    };
-    let rated_string = move || match game.rated {
+    let rated_string = move || match rated {
         true => t_string!(i18n, game.rated),
         false => t_string!(i18n, game.casual),
     };
 
     let ago = move || match finished {
         true => {
-            let time = Utc::now().signed_duration_since(game.updated_at);
+            let time = Utc::now().signed_duration_since(updated_at);
             if time.num_weeks() >= 1 {
                 t_string!(i18n, game.finished_ago.weeks, count = time.num_weeks())
             } else if time.num_days() >= 1 {
@@ -67,7 +69,7 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
             }
         }
         false => {
-            let time = Utc::now().signed_duration_since(game.created_at);
+            let time = Utc::now().signed_duration_since(created_at);
             if time.num_weeks() >= 1 {
                 t_string!(i18n, game.created_ago.weeks, count = time.num_weeks())
             } else if time.num_days() >= 1 {
@@ -100,13 +102,13 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
     let status_string = move || {
         let status = match game_status.get_value() {
             GameStatus::NotStarted => {
-                if game.game_start == GameStart::Ready {
+                if game_start == GameStart::Ready {
                     t_string!(i18n, game.start_when.both_agree).to_string()
                 } else {
                     "Not started".to_string()
                 }
             }
-            GameStatus::Adjudicated => game.tournament_game_result.to_string(),
+            GameStatus::Adjudicated => tournament_result_text.clone(),
             GameStatus::InProgress => "Playing now".to_string(),
             GameStatus::Finished(ref res) => match res {
                 GameResult::Winner(c) => GameResult::Winner(*c).to_string(),
@@ -145,7 +147,7 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
         )>
             <div class="flex justify-between items-start m-2">
                 <div class="flex flex-col gap-1">
-                    <p class="flex gap-1 truncate">{rated_string} <TimeRow time_info /></p>
+                    <p class="flex gap-1 truncate">{rated_string} <TimeRow time_control /></p>
                     <p class="text-sm opacity-75">{ago}</p>
                 </div>
                 <div class="z-30">
@@ -228,7 +230,7 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
             </div>
             <a
                 class="absolute inset-0 z-10"
-                href=format!("/game/{}", game.game_id)
+                href=format!("/game/{}", game_id)
                 aria-label="View game details"
             ></a>
         </article>
