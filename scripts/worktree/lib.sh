@@ -4,9 +4,28 @@
 WT_LIB=${WT_LIB:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)}
 
 main_checkout_or_empty() {
-    local common
-    common=$(git rev-parse --git-common-dir 2> /dev/null) || return 0
-    (cd "$common/.." && pwd -P)
+    local identity root git_dir common field main
+    identity=$(env -u GIT_DIR -u GIT_WORK_TREE -u GIT_COMMON_DIR git rev-parse --path-format=absolute --show-toplevel --absolute-git-dir --git-common-dir 2> /dev/null) || return 0
+    {
+        IFS= read -r root
+        IFS= read -r git_dir
+        IFS= read -r common
+    } <<< "$identity"
+    if [ "$(cd "$git_dir" && pwd -P)" = "$(cd "$common" && pwd -P)" ]; then
+        (cd "$root" && pwd -P)
+        return
+    fi
+    while IFS= read -r -d '' field; do
+        if [[ $field == 'worktree '* ]]; then
+            main=${field#worktree }
+            if [ ! -e "$main/.git" ]; then
+                printf '%s\n' "error: Git cannot resolve the main checkout from this linked worktree's metadata layout; 'git worktree list' must report the main checkout" >&2
+                return 0
+            fi
+            (cd "$main" && pwd -P)
+            return
+        fi
+    done < <(env -u GIT_DIR -u GIT_WORK_TREE -u GIT_COMMON_DIR git worktree list --porcelain -z 2> /dev/null)
 }
 
 default_proxy_port() {
@@ -17,6 +36,7 @@ default_proxy_port() {
 
 MAIN_DIR=$(main_checkout_or_empty)
 WT_ROOT="${HIVE_WORKTREES_DIR:-${MAIN_DIR:+$(dirname "$MAIN_DIR")/$(basename "$MAIN_DIR")-worktrees}}"
+if [ -n "$WT_ROOT" ] && [[ $WT_ROOT != /* ]]; then WT_ROOT="$PWD/$WT_ROOT"; fi
 PROXY_PORT="${HIVE_PROXY_PORT:-$(default_proxy_port)}"
 CADDYFILE="$WT_ROOT/Caddyfile"
 CADDY_DIR="$WT_ROOT/caddy"
@@ -242,7 +262,7 @@ load_env() {
 write_env() {
     local name=$1 branch=$2 port=$3 seed=${4:-${WT_SEED_TEMPLATE:-$TEMPLATE_DB}} origin dir
     origin=$(origin_for "$name")
-    dir=$(wt_dir "$name")
+    dir=$(cd "$(wt_dir "$name")" && pwd -P) || die "could not resolve the selected worktree root"
     # This file is also sourced by run/direnv; quote branch names and paths as shell data.
     (
         umask 077
@@ -263,32 +283,34 @@ EOT
 }
 
 export_instance_env() {
-    local name=$1 port=$2 db=$3 test_db=$4 origin address additional=""
+    local name=$1 port=$2 db=$3 test_db=$4 dir origin address additional=""
+    dir=$(cd "$5" && pwd -P) || die "could not resolve the selected worktree root"
     origin=$(origin_for "$name")
+    additional="http://localhost:$port,http://127.0.0.1:$port"
     if [ "$name" != "$MAIN_NAME" ]; then
-        export DATABASE_URL TEST_DATABASE_URL LEPTOS_SITE_ADDR EMAIL_BASE_URL
+        export DATABASE_URL TEST_DATABASE_URL EMAIL_BASE_URL
         DATABASE_URL=$(db_url "$db")
         TEST_DATABASE_URL=$(db_url "$test_db")
-        LEPTOS_SITE_ADDR="127.0.0.1:$port"
         EMAIL_BASE_URL=$origin
     else
-        additional="http://localhost:$port,http://127.0.0.1:$port,http://localhost:$PROXY_PORT,http://127.0.0.1:$PROXY_PORT"
+        additional+=",http://localhost:$PROXY_PORT,http://127.0.0.1:$PROXY_PORT"
     fi
     for address in "${SHARE_IPS[@]}"; do
-        additional+="${additional:+,}$(shared_origin_for "$name" "$address")"
+        additional+=",$(shared_origin_for "$name" "$address")"
     done
-    unset APP_DEV_ORIGINS
-    if [ -n "$additional" ]; then export APP_DEV_ORIGINS=$additional; fi
-    export LEPTOS_RELOAD_PORT LEPTOS_RELOAD_EXTERNAL_PORT LEPTOS_RELOAD_WS_PROTOCOL APP_ORIGIN WS_TELEMETRY_INTERVAL_SECS HIVE_WORKTREE HIVE_WORKTREE_ROOT CARGO_TARGET_DIR LEPTOS_SITE_ROOT
+    export APP_DEV_ORIGINS=$additional
+    export LEPTOS_SITE_ADDR="127.0.0.1:$port"
+    export LEPTOS_RELOAD_PORT LEPTOS_RELOAD_EXTERNAL_PORT LEPTOS_RELOAD_WS_PROTOCOL APP_ORIGIN WS_TELEMETRY_INTERVAL_SECS HIVE_WORKTREE HIVE_WORKTREE_ROOT HIVE_WORKTREE_DB CARGO_TARGET_DIR LEPTOS_SITE_ROOT
     LEPTOS_RELOAD_PORT=$((port + 1))
     LEPTOS_RELOAD_EXTERNAL_PORT=$PROXY_PORT
     LEPTOS_RELOAD_WS_PROTOCOL=WS
     APP_ORIGIN=$origin
     WS_TELEMETRY_INTERVAL_SECS=0
     HIVE_WORKTREE=$name
-    HIVE_WORKTREE_ROOT=$WT_DIR
-    CARGO_TARGET_DIR="$WT_DIR/.cargo/target"
-    LEPTOS_SITE_ROOT="$WT_DIR/target/site"
+    HIVE_WORKTREE_ROOT=$dir
+    HIVE_WORKTREE_DB=$db
+    CARGO_TARGET_DIR="$dir/.cargo/target"
+    LEPTOS_SITE_ROOT="$dir/target/site"
 }
 
 psql_admin() { psql -X -q -v ON_ERROR_STOP=1 -h "$PG_HOST" -U "$PG_USER" -d postgres "$@"; }
@@ -380,7 +402,8 @@ alloc_port() {
 }
 
 listener_is_instance() {
-    local pid=$1 dir=$2
+    local pid=$1 dir
+    dir=$(cd "$2" && pwd -P) || return 1
     [ "$(listener_cwd "$pid")" = "$dir" ] || [[ $(ps -o command= -p "$pid" 2> /dev/null) == *"$dir/"* ]]
 }
 

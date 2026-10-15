@@ -1,12 +1,9 @@
 use anyhow::{Context, Result};
 use db_lib::{get_conn, get_pool, DbConn};
-use dotenvy::dotenv;
 
 /// Leaks the pool so the connection can be `'static`, which is harmless in a
 /// one-shot binary and saves threading a lifetime through every command.
 pub async fn setup_database(database_url: Option<String>) -> Result<DbConn<'static>> {
-    dotenv().ok();
-
     let database_url = database_url
         .or_else(|| std::env::var("DATABASE_URL").ok())
         .context("DATABASE_URL must be set, or --database-url provided")?;

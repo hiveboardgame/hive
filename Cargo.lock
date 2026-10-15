@@ -5909,6 +5909,7 @@ dependencies = [
  "hive",
  "rand 0.10.2",
  "shared_types",
+ "tempfile",
  "tokio",
  "tournamint",
  "tracing",

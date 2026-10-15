@@ -5,11 +5,34 @@ application server.
 
 ## Synthetic tournament QA fixtures
 
-The synthetic fixture command is an explicit local-only operator action. It
-requires both the supplied confirmation and PostgreSQL's `current_database()`
-to be exactly `hive-local`; it is never called by the application.
+Run fixtures from the checkout's `hive-run <instance> shell`. The confirmation
+and connected database must match its development database: `hive-local` for
+`hive`, or `hive-<instance>` for a managed worktree. Other checkouts, test databases,
+and seed templates are refused. The command checks the runtime Git checkout and
+`hive-run`'s selected development database (`HIVE_WORKTREE_DB`). Managed databases
+must also carry that checkout's `dev` ownership marker; recreated or unmarked
+databases are refused. Use the current worktree commands from
+[worktree setup](worktree/README.md#setup), then reopen any older instance shell
+that lacks the selection variables. Reopening a shell does not add a missing
+ownership marker. For an unmarked legacy development database, verify its identity
+and ownership first, then execute the exact `COMMENT ON DATABASE` statement printed
+by the refusal in `psql "$DATABASE_URL"` inside the selected instance shell. This
+preserves its data. A conflicting marker must not be overwritten; `--refresh`
+replaces data and is not needed just to assign missing ownership.
+
+Main checkouts with separate Git metadata are supported. Linked worktrees require
+Git's worktree list to identify the real main checkout; layouts that report its
+metadata directory instead are refused with a specific diagnostic.
+
+Printed links use the direct `LEPTOS_SITE_ADDR` exported for every instance, so they
+work while Caddy is stopped. Wildcard bind hosts become `localhost` in printed links.
+Without that address, a nonempty `APP_ORIGIN` is used, falling back to
+`http://localhost:3000`. `.env` is loaded before resolving these settings.
+Use `--app-url` to override the link base (for example, with a shared device URL).
 
 ```sh
+SHELL=/bin/bash hive-run hive shell
+
 cargo run -p script -- synthetic-tournaments seed \
   --confirm-database-name hive-local
 
@@ -22,6 +45,14 @@ cargo run -p script -- synthetic-tournaments arm-due \
 
 cargo run -p script -- synthetic-tournaments cleanup \
   --confirm-database-name hive-local
+```
+
+For a managed worktree named `example` (exit any current instance shell first):
+
+```sh
+SHELL=/bin/bash hive-run example shell
+cargo run -p script -- synthetic-tournaments seed \
+  --confirm-database-name hive-example
 ```
 
 Seed creates 162 QA accounts (one organizer, 160 players, and one dedicated
