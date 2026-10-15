@@ -170,6 +170,7 @@ pub enum MessageDestination {
         audience: GameSpectatorAudience,
     },
     Global,
+    TvSubscribers(GameId),
     Tournament {
         tournament_id: TournamentId,
         audience: TournamentAudience,

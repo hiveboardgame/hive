@@ -33,7 +33,6 @@ fn handle_lobby_snapshot(snapshot: LobbySnapshotPayload) {
     handle_schedule_notification_snapshot(snapshot.schedule_notifications);
     handle_urgent_games_snapshot(snapshot.urgent_games);
     handle_challenge_snapshot(snapshot.challenges);
-    handle_tv_snapshot(snapshot.tv_games);
     handle_user_status_snapshot(snapshot.online_users);
 }
 
@@ -72,6 +71,7 @@ pub fn handle_response(m: ServerResult) {
             Ping { value, nonce } => handle_ping(nonce, value),
             UserStatus(user_update) => handle_user_status(user_update),
             LobbySnapshot(snapshot) => handle_lobby_snapshot(*snapshot),
+            TvSnapshot(games) => handle_tv_snapshot(games),
             ResyncRetry { .. } => {}
             Game(game_update) => handle_game(*game_update),
             Join(_uuid) => {

@@ -49,7 +49,8 @@ pub use challenge_viewer::{
     ChallengeViewerRole,
 };
 pub use chat_link::{chat_link_href, external_link_destination, validated_link_url};
-pub use client_message::{ChatSendRequest, ClientRequest, SubscriptionAttempt};
+pub(crate) use client_message::WEBSOCKET_PROTOCOL_VERSION;
+pub use client_message::{ChatSendRequest, ClientRequest, SubscriptionAttempt, TvInterest};
 pub use config_options::{CurrentConfirm, MoveConfirm, TileDesign, TileDots, TileRotation};
 pub(crate) use date_time::{format_local_datetime, format_tournament_datetime};
 pub(crate) use fitted_pagination::use_fitted_pagination;

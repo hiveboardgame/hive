@@ -8,6 +8,11 @@ use serde::{Deserialize, Serialize};
 use shared_types::{ConversationKey, GameId, TournamentId};
 use uuid::Uuid;
 
+// Bump when browser/server message shapes become incompatible, so stale tabs
+// are rejected before authentication and lobby snapshot work. Keep the upgrade
+// probe in scripts/smoke.sh in sync.
+pub(crate) const WEBSOCKET_PROTOCOL_VERSION: u16 = 1;
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ChatSendRequest {
     pub key: ConversationKey,
@@ -24,6 +29,13 @@ pub struct SubscriptionAttempt {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum TvInterest {
+    None,
+    Lobby,
+    Game(GameId),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ClientRequest {
     Chat(ChatSendRequest),
     ChatSubscribe(SubscriptionAttempt),
@@ -37,6 +49,8 @@ pub enum ClientRequest {
     Tournament(TournamentAction),
     TournamentWatch(TournamentId),
     TournamentUnwatch(TournamentId),
+    TvSubscribe(TvInterest),
+    TvUnsubscribe(TvInterest),
     // leptos-use idle or window unfocused will send
     Away, // Online and Offline are not needed because they will be handled by the WS connection
     // being established/torn down

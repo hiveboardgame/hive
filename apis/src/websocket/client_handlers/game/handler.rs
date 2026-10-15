@@ -27,7 +27,9 @@ pub fn handle_game(game_update: GameUpdate) {
             games_signal.live_games_add((*game).clone());
         }
         GameUpdate::Urgent(games) => {
-            games_signal.own_games_set(games);
+            for game in games {
+                games_signal.own_games_add(game);
+            }
         }
         GameUpdate::OwnGameRemoved(game_id) => {
             games_signal.own_games_remove(&game_id);

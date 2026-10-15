@@ -152,6 +152,18 @@ async fn tied_viewer_at_limit_boundary_gets_its_rank() {
         tied_one
     };
 
+    // Higher ratings outside this board's eligibility must not inflate the viewer rank.
+    ranked_user("rank_other_kind", true, 2000.0, RANKABLE, 10, &mut conn).await;
+    ranked_user(
+        "rank_provisional",
+        false,
+        2000.0,
+        PROVISIONAL,
+        10,
+        &mut conn,
+    )
+    .await;
+
     let rows = top(LeaderboardKind::Humans, Some(excluded.id), 10, &mut conn).await;
     assert_eq!(rows.len(), 11);
 

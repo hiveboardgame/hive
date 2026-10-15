@@ -49,7 +49,6 @@ use diesel::{
     dsl::{exists, sql},
     query_dsl::BelongingToDsl,
     select,
-    sql_types::BigInt,
     BoolExpressionMethods,
     ExpressionMethods,
     Identifiable,
@@ -1034,7 +1033,7 @@ impl User {
             .filter(finished.eq(false))
             .filter(
                 game_status
-                    .ne("NotStarted")
+                    .ne(GameStatus::NotStarted.to_string())
                     .or(games::tournament_slot_id.is_null()),
             )
             .filter(games::timeout_at.is_null().or(games::timeout_at.gt(now)))
@@ -1091,30 +1090,35 @@ impl User {
             return Ok(top);
         }
 
-        let viewer_row = match users::table
+        let viewer = users::table
+            .inner_join(ratings::table)
+            .filter(users::id.eq(user_id))
+            .filter(users::deleted.eq(false))
+            .filter(users::bot.eq(kind.is_bots()))
+            .filter(ratings::speed.eq(&speed))
+            .filter(ratings::played.ge(gate.min_played))
+            .filter(ratings::deviation.le(gate.max_deviation))
+            .select((User::as_select(), Rating::as_select()))
+            .first::<(User, Rating)>(conn)
+            .await
+            .optional()?;
+        let Some((viewer, viewer_rating)) = viewer else {
+            return Ok(top);
+        };
+
+        // RANK gives equal ratings the same place, independent of display tie-breakers.
+        let higher_rated = users::table
             .inner_join(ratings::table)
             .filter(users::deleted.eq(false))
             .filter(users::bot.eq(kind.is_bots()))
-            .filter(ratings::speed.eq(speed))
+            .filter(ratings::speed.eq(&speed))
             .filter(ratings::played.ge(gate.min_played))
             .filter(ratings::deviation.le(gate.max_deviation))
-            .select((
-                User::as_select(),
-                Rating::as_select(),
-                sql::<BigInt>("RANK() OVER (ORDER BY ratings.rating DESC)"),
-            ))
-            .order_by(ratings::rating.desc())
-            .load::<(User, Rating, i64)>(conn)
-            .await
-        {
-            Ok(rows) => match rows.into_iter().find(|(user, _, _)| user.id == user_id) {
-                Some(row) => row,
-                None => return Ok(top),
-            },
-            Err(_) => return Ok(top),
-        };
-
-        top.push(viewer_row);
+            .filter(ratings::rating.gt(viewer_rating.rating))
+            .count()
+            .get_result::<i64>(conn)
+            .await?;
+        top.push((viewer, viewer_rating, higher_rated + 1));
 
         Ok(top)
     }

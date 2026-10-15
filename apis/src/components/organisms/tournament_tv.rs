@@ -1,5 +1,5 @@
 use crate::{
-    common::format_game_result,
+    common::{format_game_result, TvInterest},
     components::{
         molecules::thumbnail_pieces::ThumbnailPieces,
         organisms::tournament_inspector::{player_standing, TournamentSelection},
@@ -9,6 +9,7 @@ use crate::{
     i18n::*,
     providers::{
         games::GamesSignal,
+        websocket::use_tv_subscription,
         ArenaState,
         ArenaStateStoreFields,
         TournamentCommon,
@@ -234,6 +235,12 @@ pub fn TournamentTv(
         let finished_at = game.try_get()?.game.finished_at;
         Some((game_id, finished_at))
     });
+    use_tv_subscription(Signal::derive(move || {
+        featured_game_request
+            .get()
+            .map(|(game_id, _)| TvInterest::Game(game_id))
+            .unwrap_or(TvInterest::None)
+    }));
     let fallback_game = Resource::new(
         move || featured_game_request.get(),
         |request| async move {

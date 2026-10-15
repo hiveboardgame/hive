@@ -399,6 +399,106 @@ pub struct Game {
     pub arena_ordinal: Option<i64>,
 }
 
+#[derive(Queryable, Selectable)]
+#[diesel(table_name = games)]
+pub struct GameHeartbeat {
+    pub id: Uuid,
+    pub nanoid: String,
+    pub finished: bool,
+    pub game_status: String,
+    pub updated_at: DateTime<Utc>,
+    pub time_mode: String,
+    pub game_start: String,
+    pub arena_move_due_at: Option<DateTime<Utc>>,
+    pub timeout_at: Option<DateTime<Utc>>,
+    pub turn: i32,
+    pub last_interaction: Option<DateTime<Utc>>,
+    pub white_time_left: Option<i64>,
+    pub black_time_left: Option<i64>,
+}
+
+impl From<&Game> for GameHeartbeat {
+    fn from(game: &Game) -> Self {
+        Self {
+            id: game.id,
+            nanoid: game.nanoid.clone(),
+            finished: game.finished,
+            game_status: game.game_status.clone(),
+            updated_at: game.updated_at,
+            time_mode: game.time_mode.clone(),
+            game_start: game.game_start.clone(),
+            arena_move_due_at: game.arena_move_due_at,
+            timeout_at: game.timeout_at,
+            turn: game.turn,
+            last_interaction: game.last_interaction,
+            white_time_left: game.white_time_left,
+            black_time_left: game.black_time_left,
+        }
+    }
+}
+
+impl GameHeartbeat {
+    pub async fn find_by_nanoids(
+        game_ids: &[GameId],
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Self>, DbError> {
+        let nanoids: Vec<&str> = game_ids.iter().map(|game_id| game_id.0.as_str()).collect();
+        Ok(games::table
+            .filter(nanoid.eq_any(nanoids))
+            .select(Self::as_select())
+            .load(conn)
+            .await?)
+    }
+
+    pub fn get_heartbeat(&self) -> Result<(GameId, Duration, Duration), DbError> {
+        let (white, black) = clock_time_left(
+            stored_time_left(self.white_time_left, Color::White)?,
+            stored_time_left(self.black_time_left, Color::Black)?,
+            &self.game_status,
+            self.last_interaction,
+            self.turn,
+            Utc::now(),
+        );
+        Ok((GameId(self.nanoid.clone()), white, black))
+    }
+}
+
+fn stored_time_left(value: Option<i64>, color: Color) -> Result<Duration, DbError> {
+    value
+        .map(|time| Duration::from_nanos(time as u64))
+        .ok_or_else(|| DbError::TimeNotFound {
+            reason: format!(
+                "Could not find {}",
+                match color {
+                    Color::White => "white_time",
+                    Color::Black => "black_time",
+                }
+            ),
+        })
+}
+
+fn clock_time_left(
+    white: Duration,
+    black: Duration,
+    status: &str,
+    last: Option<DateTime<Utc>>,
+    ply: i32,
+    observed_at: DateTime<Utc>,
+) -> (Duration, Duration) {
+    if status == GameStatus::NotStarted.to_string() {
+        return (white, black);
+    }
+    if let Some(last) = last {
+        if let Ok(time_passed) = observed_at.signed_duration_since(last).to_std() {
+            if ply % 2 == 0 {
+                return (white.saturating_sub(time_passed), black);
+            }
+            return (white, black.saturating_sub(time_passed));
+        }
+    }
+    (white, black)
+}
+
 pub(crate) enum DeadlineSettlement {
     Active(Game),
     Terminal {
@@ -462,35 +562,6 @@ impl Game {
                 .await?;
         };
         Ok((game, deleted))
-    }
-
-    pub fn get_heartbeat(&self) -> Result<(GameId, Duration, Duration), DbError> {
-        let (white, black) = self.get_time_left()?;
-        Ok((GameId(self.nanoid.clone()), white, black))
-    }
-
-    pub fn get_time_left(&self) -> Result<(Duration, Duration), DbError> {
-        let white = self.time_left_duration(Color::White)?;
-        let black = self.time_left_duration(Color::Black)?;
-        if self.game_status == GameStatus::NotStarted.to_string() {
-            return Ok((white, black));
-        }
-        if let Some(last) = self.last_interaction {
-            if let Ok(time_passed) = Utc::now().signed_duration_since(last).to_std() {
-                if self.turn % 2 == 0 {
-                    if white < time_passed {
-                        return Ok((Duration::from_secs(0), black));
-                    }
-                    return Ok((white - time_passed, black));
-                } else {
-                    if black < time_passed {
-                        return Ok((white, Duration::from_secs(0)));
-                    }
-                    return Ok((white, black - time_passed));
-                };
-            }
-        }
-        Ok((white, black))
     }
 
     pub(crate) fn arena_absent_color(ply_count: i32) -> Color {
@@ -667,16 +738,13 @@ impl Game {
     }
 
     pub fn time_left_duration(&self, color: Color) -> Result<Duration, DbError> {
-        let (time_left, missing_field) = match color {
-            Color::White => (self.white_time_left, "white_time"),
-            Color::Black => (self.black_time_left, "black_time"),
-        };
-
-        time_left
-            .map(|time| Duration::from_nanos(time as u64))
-            .ok_or_else(|| DbError::TimeNotFound {
-                reason: format!("Could not find {missing_field}"),
-            })
+        stored_time_left(
+            match color {
+                Color::White => self.white_time_left,
+                Color::Black => self.black_time_left,
+            },
+            color,
+        )
     }
 
     pub fn berserked(&self, color: Color) -> bool {
@@ -1579,9 +1647,6 @@ impl Game {
             .await?)
     }
 
-    /// Read-only batched lookup used by TV snapshots and websocket heartbeat.
-    /// Heartbeat observes due deadlines through the explicit game-command
-    /// path after this load; response construction never advances a tournament.
     pub async fn find_by_nanoids(
         game_ids: &[GameId],
         conn: &mut DbConn<'_>,
@@ -1589,6 +1654,22 @@ impl Game {
         let nanoids: Vec<&str> = game_ids.iter().map(|game_id| game_id.0.as_str()).collect();
         Ok(games::table
             .filter(nanoid.eq_any(nanoids))
+            .select(Self::as_select())
+            .load(conn)
+            .await?)
+    }
+
+    pub async fn find_tv_games(
+        game_ids: &[GameId],
+        viewer: Uuid,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Game>, DbError> {
+        let nanoids: Vec<&str> = game_ids.iter().map(|game_id| game_id.0.as_str()).collect();
+        Ok(games::table
+            .filter(nanoid.eq_any(nanoids))
+            .filter(game_status.eq(GameStatus::InProgress.to_string()))
+            .filter(white_id.ne(viewer))
+            .filter(black_id.ne(viewer))
             .select(Self::as_select())
             .load(conn)
             .await?)
@@ -1834,9 +1915,52 @@ impl Game {
 
 #[cfg(test)]
 mod tests {
-    use super::conclusion_for;
+    use super::{clock_time_left, conclusion_for};
+    use chrono::{TimeZone, Utc};
     use hive_lib::{Color, GameResult, GameStatus};
     use shared_types::Conclusion;
+    use std::time::Duration;
+
+    #[test]
+    fn clock_elapsed_time_only_reduces_the_active_player_and_saturates_at_zero() {
+        let last = Utc.timestamp_opt(1_700_000_000, 0).unwrap();
+        let observed = last + chrono::Duration::seconds(7);
+        let white = Duration::from_secs(5);
+        let black = Duration::from_secs(12);
+        assert_eq!(
+            clock_time_left(
+                white,
+                black,
+                &GameStatus::InProgress.to_string(),
+                Some(last),
+                2,
+                observed
+            ),
+            (Duration::ZERO, black)
+        );
+        assert_eq!(
+            clock_time_left(
+                white,
+                black,
+                &GameStatus::InProgress.to_string(),
+                Some(last),
+                3,
+                observed
+            ),
+            (white, Duration::from_secs(5))
+        );
+        assert_eq!(
+            clock_time_left(
+                white,
+                black,
+                &GameStatus::NotStarted.to_string(),
+                Some(last),
+                0,
+                observed
+            ),
+            (white, black)
+        );
+    }
 
     /// The final occurrence is the final ply (index 33 of 34), so the repetition ended the game.
     #[test]

@@ -129,9 +129,12 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
             node_ref=el
             class="overflow-y-auto overflow-x-hidden h-full sm:grid sm:grid-cols-2 sm:content-start lg:grid-cols-3"
         >
-            {move || {
-                ctx.games.get().into_iter().map(|game| view! { <GameRow game /> }).collect_view()
-            }}
+            <For
+                each=move || ctx.games.get()
+                // A committed revision replaces its row; pagination preserves existing boards.
+                key=|game| (game.uuid, game.updated_at)
+                children=|game| view! { <GameRow game /> }
+            />
         </div>
     }
 }

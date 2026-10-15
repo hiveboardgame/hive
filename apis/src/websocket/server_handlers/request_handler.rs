@@ -21,13 +21,15 @@ use crate::{
         ChatAccessError,
     },
     common::{ClientRequest, GameAction, ServerMessage},
+    responses::GameResponse,
     websocket::{
         messages::{AuthError, HandlerOutput, InternalServerMessage, MessageDestination, SocketTx},
         WebsocketData,
         WsHub,
     },
 };
-use db_lib::{db_error::DbError, DbConn, DbPool};
+use anyhow::Context;
+use db_lib::{db_error::DbError, get_conn, models::Game, DbConn, DbPool};
 use hive_lib::GameError;
 use shared_types::{normalize_chat_message, ConversationKey, GameId, SimpleUser};
 use thiserror::Error;
@@ -193,6 +195,33 @@ impl RequestHandler {
         })
     }
 
+    async fn tv_snapshot(&self) -> anyhow::Result<Vec<GameResponse>> {
+        let game_ids = self
+            .hub
+            .tv_snapshot_ids(self.user_id, self.received_from.socket_id);
+        if game_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        let mut conn = get_conn(&self.pool)
+            .await
+            .context("TV snapshot connection")?;
+        let games = Game::find_tv_games(&game_ids, self.user_id, &mut conn)
+            .await
+            .context("load TV snapshot games")?;
+        let mut responses = Vec::with_capacity(games.len());
+        for game in games {
+            responses.push(
+                (*self
+                    .data
+                    .get_or_build_response(&game, &mut conn)
+                    .await
+                    .context("build TV snapshot response")?)
+                .clone(),
+            );
+        }
+        Ok(responses)
+    }
+
     pub async fn handle(&self) -> Result<HandlerOutput> {
         let output: HandlerOutput = match self.command.clone() {
             ClientRequest::Chat(request) => {
@@ -250,6 +279,35 @@ impl RequestHandler {
             ClientRequest::ChatUnsubscribe(channel_key) => {
                 self.hub
                     .unsubscribe_chat(self.user_id, self.received_from.socket_id, &channel_key);
+                HandlerOutput::empty()
+            }
+            ClientRequest::TvSubscribe(interest) => {
+                if !self
+                    .hub
+                    .subscribe_tv(self.user_id, self.received_from.socket_id, &interest)
+                    || !self.hub.allow_tv_snapshot(self.received_from.socket_id)
+                {
+                    return Ok(HandlerOutput::empty());
+                }
+                let Some(_permit) = self.hub.try_tv_snapshot_permit() else {
+                    return Ok(HandlerOutput::empty());
+                };
+                let games = match self.tv_snapshot().await {
+                    Ok(games) => games,
+                    Err(error) => {
+                        log::error!("TV subscription snapshot failed: {error:#}");
+                        Vec::new()
+                    }
+                };
+                vec![InternalServerMessage {
+                    destination: MessageDestination::Direct(self.received_from.clone()),
+                    message: ServerMessage::TvSnapshot(games),
+                }]
+                .into()
+            }
+            ClientRequest::TvUnsubscribe(interest) => {
+                self.hub
+                    .unsubscribe_tv(self.user_id, self.received_from.socket_id, &interest);
                 HandlerOutput::empty()
             }
             ClientRequest::TournamentWatch(tournament_id) => {
