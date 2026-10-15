@@ -27,3 +27,4 @@ uuid = { workspace = true }
 [dev-dependencies]
 diesel-async = { workspace = true, features = ["migrations"] }
 diesel_migrations = { workspace = true }
+tempfile = "3"
