@@ -1,6 +1,7 @@
 mod blocks_mutes;
 mod chat;
 mod games_query_builder;
+mod transaction;
 
 pub use blocks_mutes::{
     block_user,
@@ -28,3 +29,11 @@ pub use chat::{
     DbChatTarget,
 };
 pub use games_query_builder::GameQueryBuilder;
+pub use transaction::{run_read_only_repeatable_read, run_serializable};
+
+pub(crate) fn stable_unique_uuids(ids: &[uuid::Uuid]) -> Vec<uuid::Uuid> {
+    let mut ids = ids.to_vec();
+    ids.sort_unstable();
+    ids.dedup();
+    ids
+}

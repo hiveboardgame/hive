@@ -18,7 +18,8 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     pub use telemetry::{TelemetrySnapshot, WsTelemetry};
     pub(crate) use tournament_game_start::TournamentGameStart;
     pub use ws_hub::{WsHub, SOCKET_BUFFER_CAPACITY};
-    pub use messages::{reaction_messages, GameFinalize, InternalServerMessage, MessageDestination, Reaction};
+    pub use messages::{GameFinalize, InternalServerMessage, MessageDestination, Reaction, TournamentAudience};
+    pub(crate) use messages::HandlerOutput;
 
     use crate::notifications::PendingNotifications;
     use chrono::{DateTime, Utc};
@@ -73,6 +74,10 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     }
 
     impl WebsocketData {
+        pub(crate) fn invalidate_game_response(&self, game_id: &GameId) {
+            self.game_response_cache.remove(game_id);
+        }
+
         /// Return a cached `GameResponse` if fresh; otherwise build, cache, and return it.
         ///
         /// Singleflight semantics: concurrent callers on the same `GameId` share

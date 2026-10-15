@@ -18,34 +18,35 @@ impl TournamentGameStart {
     }
 
     pub fn should_start(&self, game: &Game, user_id: Uuid) -> Result<bool> {
-        if game.black_id != user_id && game.white_id != user_id {
-            return Err(anyhow!("Not your game to start"));
-        }
-        if let Ok(mut games_date) = self.games_date.try_write() {
-            // The 35-second window above means anything older is dead state.
+        if let Ok(mut games_date) = self.games_date.write() {
+            let now = Utc::now();
+            // Readiness expires after 35 seconds; older entries can be discarded.
             // Sweep on insert (cheap O(N) since N is concurrent active starts,
             // not lifetime tournament games). Without this, every tournament
             // game ever started leaked one entry forever.
-            let cutoff = Utc::now() - chrono::Duration::seconds(60);
+            let cutoff = now - chrono::Duration::seconds(60);
             games_date.retain(|_, (_, ts)| *ts > cutoff);
 
             if let Some((uuid, then)) = games_date.get_mut(&GameId(game.nanoid.clone())) {
-                let since = Utc::now().signed_duration_since(then).abs().num_seconds();
+                let since = now.signed_duration_since(then).abs().num_seconds();
                 if *uuid == user_id {
-                    games_date.insert(GameId(game.nanoid.clone()), (user_id, Utc::now()));
+                    games_date.insert(GameId(game.nanoid.clone()), (user_id, now));
                     return Ok(false);
                 }
                 if since < 35 {
                     return Ok(true);
                 }
             }
-            games_date.insert(GameId(game.nanoid.clone()), (user_id, Utc::now()));
+            games_date.insert(GameId(game.nanoid.clone()), (user_id, now));
             Ok(false)
         } else {
-            println!("Could not aquire write lock for TournamentGameStart");
-            Err(anyhow!(
-                "Could not aquire write lock for TournamentGameStart"
-            ))
+            Err(anyhow!("Tournament readiness lock is poisoned"))
+        }
+    }
+
+    pub fn forget(&self, game_id: &GameId) {
+        if let Ok(mut games_date) = self.games_date.write() {
+            games_date.remove(game_id);
         }
     }
 }

@@ -1,7 +1,4 @@
-use crate::{
-    i18n::{t, t_string, use_i18n},
-    providers::NotificationContext,
-};
+use crate::{i18n::*, providers::NotificationContext};
 use leptos::prelude::*;
 use leptos_icons::*;
 use shared_types::TournamentId;
@@ -15,13 +12,6 @@ pub fn TournamentStatusNotification(
     let i18n = use_i18n();
     let notifications = expect_context::<NotificationContext>();
     let tournament_id = StoredValue::new(tournament_id);
-    let status = move || {
-        if finished {
-            t_string!(i18n, notifications.tournament_status.finished)
-        } else {
-            t_string!(i18n, notifications.tournament_status.started)
-        }
-    };
     let dismiss = move |_| {
         if !finished {
             notifications.tournament_started.update(|t| {
@@ -41,14 +31,20 @@ pub fn TournamentStatusNotification(
                     {t!(i18n, notifications.tournament_status.label)}
                 </div>
                 <div class="ui-notification-title">{tournament_name}</div>
-                <div class="ui-notification-meta">{status}</div>
+                <div class="ui-notification-meta">
+                    {if finished {
+                        t_string!(i18n, notifications.tournament_status.finished).to_string()
+                    } else {
+                        t_string!(i18n, notifications.tournament_status.started).to_string()
+                    }}
+                </div>
                 <a
                     class="absolute top-0 left-0 z-10 size-full"
                     href=format!("/tournament/{}", &tournament_id.get_value())
                 ></a>
             </div>
             <button
-                title=move || t_string!(i18n, common.dismiss)
+                title=move || t_string!(i18n, common.dismiss).to_string()
                 on:click=dismiss
                 class="z-20 ui-button ui-button-danger ui-button-icon"
             >

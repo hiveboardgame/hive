@@ -5,6 +5,7 @@ use crate::{
         molecules::{
             analysis_and_download::AnalysisAndDownload,
             annotation_toolbar::AnnotationToggle,
+            arena_opening_deadline::ArenaOpeningDeadline,
             control_buttons::ControlButtons,
             game_info::GameInfo,
             play_history_button::{HistoryButton, PlayHistoryNavigation as HistoryNavigation},
@@ -47,8 +48,8 @@ use uuid::Uuid;
 
 #[component]
 pub fn Play() -> impl IntoView {
-    provide_context(TimerSignal::new());
-    let timer = expect_context::<TimerSignal>();
+    let timer = TimerSignal::new();
+    provide_context(timer);
     let game_state = expect_context::<GameStateStore>();
     let orientation_signal = expect_context::<OrientationSignal>();
     let vertical = orientation_signal.orientation_vertical;
@@ -262,8 +263,7 @@ pub fn Play() -> impl IntoView {
                     return;
                 }
                 batch(|| {
-                    game_state.reset_from_response(&game);
-                    timer.update_from(&game);
+                    game_state.apply_authoritative_response(&timer, &game);
                     let url_number = move_number.get_untracked();
                     let state_turn = game_state.state().with_untracked(|state| state.turn);
                     if let Some(url_number) =
@@ -285,6 +285,7 @@ pub fn Play() -> impl IntoView {
             if let Some(gar) = gar {
                 let game_id = game_id.get_untracked();
                 if gar.game_id == game_id {
+                    let response = gar.game.clone();
                     match gar.game_action.clone() {
                         GameReaction::Turn(turn) => {
                             sounds.play_sound(SoundType::Turn);
@@ -297,15 +298,15 @@ pub fn Play() -> impl IntoView {
                                     )
                                 });
                             let history_changed = game_state.state().with_untracked(|state| {
-                                state.history.moves.as_slice() != gar.game.history.as_slice()
+                                state.history.moves.as_slice() != response.history.as_slice()
                             });
                             let board_view = game_state.board_view().get_untracked();
                             let was_at_history_edge =
                                 board_view.is_history() && game_state.is_last_turn_untracked();
                             batch(|| {
-                                timer.update_from(&gar.game);
-                                if gar.game.finished {
-                                    game_state.reset_from_response(&gar.game);
+                                timer.update_from(&response);
+                                if response.finished {
+                                    game_state.reset_from_response(&response);
                                     if board_view.is_history() {
                                         if was_at_history_edge && history_changed {
                                             sync_play_move_query(game_state, &set_move);
@@ -317,7 +318,7 @@ pub fn Play() -> impl IntoView {
                                 }
 
                                 game_state.game_control_pending().set(None);
-                                game_state.set_game_response(gar.game.clone());
+                                game_state.set_game_response(response.clone());
                                 if history_changed {
                                     match turn {
                                         Turn::Move(piece, position) => {
@@ -356,17 +357,17 @@ pub fn Play() -> impl IntoView {
                         GameReaction::Control(game_control) => {
                             let board_view = game_state.board_view().get_untracked();
                             batch(|| {
-                                if gar.game.finished {
-                                    game_state.reset_from_response(&gar.game);
+                                if response.finished {
+                                    game_state.reset_from_response(&response);
                                     if board_view.is_history() {
                                         game_state.board_view().set(board_view);
                                     }
-                                    timer.update_from(&gar.game);
+                                    timer.update_from(&response);
                                 } else {
                                     match game_control {
                                         GameControl::TakebackAccept(_) => {
-                                            timer.update_from(&gar.game);
-                                            game_state.reset_from_response(&gar.game);
+                                            timer.update_from(&response);
+                                            game_state.reset_from_response(&response);
                                         }
                                         GameControl::TakebackRequest(_)
                                         | GameControl::DrawOffer(_) => {
@@ -385,11 +386,14 @@ pub fn Play() -> impl IntoView {
                                 }
                             });
                         }
-                        GameReaction::Started | GameReaction::TimedOut => {
-                            batch(|| {
-                                game_state.reset_from_response(&gar.game);
-                                timer.update_from(&gar.game);
-                            });
+                        GameReaction::Adjudicated
+                        | GameReaction::Berserk
+                        | GameReaction::Reopened
+                        | GameReaction::Started
+                        | GameReaction::TimedOut
+                        | GameReaction::Finished => {
+                            game_state.apply_authoritative_response(&timer, &response);
+                            sync_play_move_query(game_state, &set_move);
                         }
                         GameReaction::Join => {
                             // TODO: Do we want anything here?
@@ -508,7 +512,7 @@ fn HorizontalLayout(
             history_board
         />
         <div
-            class="grid grid-cols-2 col-span-2 col-start-9 grid-rows-6 row-span-full row-start-1 gap-2 p-1"
+            class="grid grid-cols-2 col-span-2 col-start-9 row-span-full row-start-1 gap-2 p-1 grid-rows-[minmax(min-content,1fr)_repeat(4,minmax(0,1fr))_minmax(min-content,1fr)]"
             style=background_style
         >
             <DisplayTimer placement=Placement::Top vertical />
@@ -593,6 +597,11 @@ fn VerticalLayout(
                 white_and_black_ids
                 interaction
                 history_board
+            />
+            <ArenaOpeningDeadline
+                side=Signal::derive(move || player_color.get())
+                viewer_only=true
+                class="shrink-0"
             />
             <div class="flex flex-col shrink ui-board-reserve">
                 <div class="grid grid-cols-[minmax(0,1fr)_4rem] bg-inherit ui-board-separator-top">

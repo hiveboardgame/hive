@@ -6,7 +6,15 @@ use crate::{
 use bytes::Bytes;
 use codee::{binary::MsgpackSerdeCodec, Encoder};
 use db_lib::{
-    models::{Challenge, Game, Schedule, Tournament, TournamentInvitation, User},
+    models::{
+        Challenge,
+        Game,
+        ScheduleOffer,
+        Tournament,
+        TournamentInvitation,
+        TournamentOrganizerInvitation,
+        User,
+    },
     DbConn,
 };
 use hive_lib::GameStatus;
@@ -21,8 +29,8 @@ type SnapshotSection<T> = Result<T, SocketDisconnected>;
 
 impl WsHub {
     /// Authoritative lobby snapshot for one socket — tournament invitations,
-    /// schedule notifications, urgent games, challenges, TV set, and the
-    /// online roster.
+    /// schedule notifications, urgent games,
+    /// challenges, TV set, and the online roster.
     ///
     /// Sent on initial connect and in response to `ClientRequest::Resync`. The
     /// receiving client applies the best-effort snapshot through `snapshot_apply`
@@ -32,9 +40,9 @@ impl WsHub {
     /// applied the snapshot.
     ///
     /// The caller owns the DB connection so the connect path can reuse the
-    /// one it already holds without round-tripping the pool. Each `await`
-    /// re-checks `is_socket_connected` so a fast disconnect doesn't waste
-    /// the remaining DB work or fan out to a dead socket.
+    /// one it already holds without round-tripping the pool. Section loaders
+    /// re-check `is_socket_connected` around slow DB work so a fast disconnect
+    /// does not fan out to a dead socket.
     pub(in crate::websocket) async fn send_lobby_snapshot(
         &self,
         conn: &mut DbConn<'_>,
@@ -47,6 +55,9 @@ impl WsHub {
             let snapshot = LobbySnapshot {
                 tournament_invitations: self
                     .invitation_notification_snapshot(conn, user_id, socket, user)
+                    .await?,
+                tournament_organizer_invitations: self
+                    .organizer_invitation_snapshot(conn, user_id, socket, user)
                     .await?,
                 schedule_notifications: self
                     .schedule_notification_snapshot(conn, user_id, socket, user)
@@ -132,6 +143,42 @@ impl WsHub {
         }
     }
 
+    async fn organizer_invitation_snapshot(
+        &self,
+        conn: &mut DbConn<'_>,
+        user_id: Uuid,
+        socket: &SocketTx,
+        user: Option<&User>,
+    ) -> SnapshotSection<Vec<TournamentId>> {
+        let Some(user) = user else {
+            return Ok(Vec::new());
+        };
+        let invitations = TournamentOrganizerInvitation::find_by_user(user.id, conn).await;
+        self.ensure_socket_connected(user_id, socket)?;
+        let result = match invitations {
+            Ok(invitations) => {
+                let ids = invitations
+                    .into_iter()
+                    .map(|row| row.tournament_id)
+                    .collect::<Vec<_>>();
+                Tournament::find_by_uuids(&ids, conn)
+                    .await
+                    .map(|tournaments| {
+                        tournaments
+                            .into_iter()
+                            .map(|tournament| TournamentId(tournament.nanoid))
+                            .collect()
+                    })
+            }
+            Err(error) => Err(error),
+        };
+        self.ensure_socket_connected(user_id, socket)?;
+        Ok(result.unwrap_or_else(|error| {
+            error!("Failed to load organizer invitations for {user_id}: {error}");
+            Vec::new()
+        }))
+    }
+
     async fn schedule_notification_snapshot(
         &self,
         conn: &mut DbConn<'_>,
@@ -143,7 +190,7 @@ impl WsHub {
             return Ok(Vec::new());
         };
 
-        let schedules = Schedule::find_user_notifications(user.id, conn).await;
+        let schedules = ScheduleOffer::find_user_notifications(user.id, conn).await;
         self.ensure_socket_connected(user_id, socket)?;
         let schedules = match schedules {
             Ok(schedules) => schedules,

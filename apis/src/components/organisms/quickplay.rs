@@ -1,5 +1,5 @@
 use crate::{
-    common::{game_speed_label, ChallengeAction},
+    common::{game_speed_label, login_redirect_url, ChallengeAction},
     components::{atoms::rating::icon_for_speed, molecules::modal::Modal},
     hooks::tap_feedback::use_tap_feedback,
     i18n::*,
@@ -75,7 +75,7 @@ pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
                     api.challenge(challenge_action);
                 } else {
                     let navigate = use_navigate();
-                    navigate("/login", Default::default());
+                    navigate(&untrack(login_redirect_url), Default::default());
                 }
             }
         >
@@ -99,7 +99,7 @@ pub fn QuickPlay() -> impl IntoView {
         set_cookie.set(Some(params.get()));
     });
     view! {
-        <div class="flex flex-col gap-3 items-center py-2 mx-auto w-full max-w-screen-md">
+        <div class="flex flex-col gap-3 items-center py-2 mx-auto w-full">
             <Modal dialog_el>
                 <ChallengeCreate />
             </Modal>
@@ -132,7 +132,7 @@ pub fn QuickPlay() -> impl IntoView {
                                     }
                                 } else {
                                     let navigate = use_navigate();
-                                    navigate("/login", Default::default());
+                                    navigate(&untrack(login_redirect_url), Default::default());
                                 }
                             }
                         >
@@ -161,7 +161,7 @@ pub fn QuickPlay() -> impl IntoView {
                                     }
                                 } else {
                                     let navigate = use_navigate();
-                                    navigate("/login", Default::default());
+                                    navigate(&untrack(login_redirect_url), Default::default());
                                 }
                             }
                         >

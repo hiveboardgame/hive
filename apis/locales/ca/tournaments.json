@@ -1,13 +1,127 @@
 {
-    "tiebreakers": {
-        "raw_points": "Punts totals del torneig obtinguts",
-        "head_to_head": "Partides guanyades entre jugadors empatats",
-        "wins_as_black": "Partides guanyades jugant amb negres",
-        "sonneborn_berger": "Suma de punts dels oponents contra els quals vas puntuar"
+    "unavailable": "Torneig no disponible.",
+    "not_found": "No s'ha trobat el torneig.",
+    "format": {
+        "round_robin": "Tots contra tots",
+        "swiss": "Suís",
+        "double_swiss": "Suís doble",
+        "single_elimination": "Eliminació simple",
+        "double_elimination": "Eliminació doble",
+        "arena": "Arena"
+    },
+    "creation": {
+        "choose_format": "Tria un format i centra't en les opcions que hi són rellevants.",
+        "arena_description": "Un esdeveniment continu i cronometrat en què els jugadors s'aparellen a mesura que acaben les partides.",
+        "swiss_title": "Suís",
+        "swiss_description": "Aparella els jugadors durant un nombre fix de rondes amb el sistema suís o suís doble.",
+        "round_robin_description": "Cada participant s'enfronta amb tots els altres en un grup fix i compacte.",
+        "elimination_title": "Eliminació",
+        "elimination_description": "Organitza un quadre d'eliminació simple o doble amb sèries de partides configurables.",
+        "elimination": {
+            "overrides": {
+                "cancel": "Cancel·la"
+            },
+            "colors": {
+                "move_left": "Mou {{color}} una partida abans",
+                "move_right": "Mou {{color}} una partida després",
+                "even_inventory": "Aquest set parell dona les blanques el mateix nombre de vegades a cada participant.",
+                "odd_advantage_first": "Set senar: el primer participant rep inevitablement una partida extra amb blanques (el bàndol que comença).",
+                "odd_advantage_second": "Set senar: el segon participant rep inevitablement una partida extra amb blanques (el bàndol que comença).",
+                "give_extra_first": "Dona les blanques extra al primer participant",
+                "give_extra_second": "Dona les blanques extra al segon participant",
+                "invalid_inventory": "L'ordre de colors ha de tenir una assignació per partida i repartir les blanques per igual, excepte una assignació extra en un set senar."
+            },
+            "clock": {
+                "realtime": "{{minutes}}+{{increment}}"
+            }
+        },
+        "arena_length_minutes": "Durada de l'arena (minuts)",
+        "invalid_configuration": "La configuració de torneig seleccionada no és vàlida."
+    },
+    "arena": {
+        "live_title": "Arenes en curs",
+        "time_left": "Temps restant",
+        "players_active": "{{count}} jugant",
+        "join": "Uneix-t'hi",
+        "pause": "Pausa",
+        "resume": "Reprèn",
+        "view": "Mostra",
+        "resume_title": "Torna al grup d'emparellament."
+    },
+    "finished_standings": {
+        "position": "Pos.",
+        "player": "Jugador",
+        "games": "Partides"
+    },
+    "list": {
+        "search": "Nom del torneig",
+        "empty_finished": "Encara no s'ha registrat cap torneig acabat.",
+        "no_results": "No hi ha cap torneig amb aquest nom.",
+        "empty_upcoming": "Ara mateix no hi ha cap torneig proper.",
+        "empty_in_progress": "Ara mateix no hi ha cap torneig en curs.",
+        "title": "Tornejos",
+        "subtitle": "Explora tornejos propers, actius i completats.",
+        "search_placeholder": "Cerca tornejos pel nom",
+        "loading": "S'estan carregant els tornejos…",
+        "error": "Error en carregar els tornejos"
+    },
+    "admin": {
+        "invite_placeholder": "Convida un jugador",
+        "invite_action": "Convida al torneig",
+        "kick_action": "Expulsa el jugador del torneig",
+        "uninvite_action": "Retira la invitació al torneig"
+    },
+    "calendar": {
+        "title": "Partides",
+        "last_updated": "Última actualització: {{time}}",
+        "loading": "Carregant…",
+        "loading_games": "Carregant les properes partides…",
+        "loading_help": "Cercant les partides programades",
+        "error": "No s'han pogut carregar les properes partides",
+        "empty": "No hi ha properes partides de torneig",
+        "empty_help": "Les partides programades apareixeran aquí",
+        "unknown_tournament": "Torneig desconegut",
+        "join_game": "Entra a la partida",
+        "watch": "Mira"
+    },
+    "detail": {
+        "markdown": "Markdown",
+        "start_worker_pending": "El torneig començarà aviat."
+    },
+    "view": {
+        "manage": {
+            "description_pending": "S’està actualitzant la descripció…",
+            "description_error": "No s’ha pogut actualitzar la descripció."
+        },
+        "common": {
+            "versus": "vs"
+        },
+        "bracket": {
+            "completion": {
+                "nodes_in_progress": "Partits en curs"
+            }
+        },
+        "slots": {
+            "record_result": "Registra el resultat",
+            "double_forfeit_help": "El 0-0 registra una doble incompareixença; cap jugador rep punts."
+        },
+        "withdrawal": {
+            "self_confirmation": "Vols retirar-te d’aquest torneig? Aquesta acció no es pot desfer.",
+            "entrant_confirmation": "Vols retirar aquest participant? Aquesta acció no es pot desfer."
+        },
+        "arena": {
+            "close": "Tanca",
+            "current_game": "Partida actual",
+            "online": "En línia",
+            "offline": "Fora de línia",
+            "on_fire": "En ratxa",
+            "win_rate": "Percentatge de victòries",
+            "berserk_rate": "Percentatge de berserk",
+            "average_opponent": "Mitjana dels rivals"
+        }
     },
     "create": "Crear torneig",
     "view_list": "Veure torneigs",
-    "view": "Mostra el torneig",
     "view_named": "Mostra el torneig: {{name}}",
     "rating_range_summary": "Puntuació mín.: {{min}} / Puntuació màx.: {{max}}"
 }

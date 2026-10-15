@@ -1,13 +1,127 @@
 {
-    "tiebreakers": {
-        "raw_points": "Gesamte Turnierpunkte erhalten",
-        "head_to_head": "Gewonnene Spiele zwischen punktgleichen Spielern",
-        "wins_as_black": "Gewonnene Spiele mit schwarzen Steinen",
-        "sonneborn_berger": "Summe der Punkte aller Gegner gegen die Sie punkteten"
+    "unavailable": "Turnier nicht verfügbar.",
+    "not_found": "Turnier nicht gefunden.",
+    "format": {
+        "round_robin": "Rundenturnier",
+        "swiss": "Schweizer System",
+        "double_swiss": "Doppel-Schweizer System",
+        "single_elimination": "Einfach-K.-o.",
+        "double_elimination": "Doppel-K.-o.",
+        "arena": "Arena"
+    },
+    "creation": {
+        "choose_format": "Wähle ein Format und konzentriere dich dann auf die dafür wichtigen Einstellungen.",
+        "arena_description": "Ein fortlaufendes Turnier auf Zeit, bei dem Spieler nach jeder beendeten Partie neu gepaart werden.",
+        "swiss_title": "Schweizer System",
+        "swiss_description": "Paare die Spieler über eine feste Rundenzahl nach dem Schweizer oder doppelten Schweizer System.",
+        "round_robin_description": "Jeder Teilnehmer spielt in einem kompakten festen Feld gegen jeden anderen.",
+        "elimination_title": "K.-o.-System",
+        "elimination_description": "Spiele ein einfaches oder doppeltes K.-o.-Turnier mit konfigurierbaren Matchserien.",
+        "elimination": {
+            "overrides": {
+                "cancel": "Abbrechen"
+            },
+            "colors": {
+                "move_left": "{{color}} eine Partie nach vorne verschieben",
+                "move_right": "{{color}} eine Partie nach hinten verschieben",
+                "even_inventory": "In diesem geraden Satz erhält jeder Teilnehmer gleich oft Weiß.",
+                "odd_advantage_first": "Ungerader Satz: Der erste Teilnehmer erhält unvermeidlich eine zusätzliche Partie mit Weiß (Anzugsrecht).",
+                "odd_advantage_second": "Ungerader Satz: Der zweite Teilnehmer erhält unvermeidlich eine zusätzliche Partie mit Weiß (Anzugsrecht).",
+                "give_extra_first": "Zusätzliches Weiß dem ersten Teilnehmer geben",
+                "give_extra_second": "Zusätzliches Weiß dem zweiten Teilnehmer geben",
+                "invalid_inventory": "Die Farbreihenfolge muss genau eine Zuweisung pro Partie enthalten und Weiß gleich verteilen, abgesehen von einer zusätzlichen Zuweisung in einem ungeraden Satz."
+            },
+            "clock": {
+                "realtime": "{{minutes}}+{{increment}}"
+            }
+        },
+        "arena_length_minutes": "Arena-Dauer (Minuten)",
+        "invalid_configuration": "Die gewählte Turnierkonfiguration ist ungültig."
+    },
+    "arena": {
+        "live_title": "Laufende Arenen",
+        "time_left": "Verbleibende Zeit",
+        "players_active": "{{count}} spielen",
+        "join": "Beitreten",
+        "pause": "Pausieren",
+        "resume": "Fortsetzen",
+        "view": "Ansehen",
+        "resume_title": "Zurück in den Paarungspool."
+    },
+    "finished_standings": {
+        "position": "Platz",
+        "player": "Spieler",
+        "games": "Partien"
+    },
+    "list": {
+        "search": "Turniername",
+        "empty_finished": "Es wurden noch keine beendeten Turniere erfasst.",
+        "no_results": "Kein Turnier entspricht diesem Namen.",
+        "empty_upcoming": "Derzeit gibt es keine bevorstehenden Turniere.",
+        "empty_in_progress": "Derzeit laufen keine Turniere.",
+        "title": "Turniere",
+        "subtitle": "Bevorstehende, laufende und abgeschlossene Turniere durchsuchen.",
+        "search_placeholder": "Turniere nach Namen suchen",
+        "loading": "Turniere werden geladen…",
+        "error": "Fehler beim Laden der Turniere"
+    },
+    "admin": {
+        "invite_placeholder": "Spieler einladen",
+        "invite_action": "Zum Turnier einladen",
+        "kick_action": "Spieler aus dem Turnier entfernen",
+        "uninvite_action": "Turniereinladung zurückziehen"
+    },
+    "calendar": {
+        "title": "Partien",
+        "last_updated": "Zuletzt aktualisiert: {{time}}",
+        "loading": "Wird geladen…",
+        "loading_games": "Anstehende Partien werden geladen…",
+        "loading_help": "Geplante Partien werden abgerufen",
+        "error": "Anstehende Partien konnten nicht geladen werden",
+        "empty": "Keine anstehenden Turnierpartien",
+        "empty_help": "Geplante Partien erscheinen hier",
+        "unknown_tournament": "Unbekanntes Turnier",
+        "join_game": "Partie öffnen",
+        "watch": "Zuschauen"
+    },
+    "detail": {
+        "markdown": "Markdown",
+        "start_worker_pending": "Das Turnier beginnt in Kürze."
+    },
+    "view": {
+        "manage": {
+            "description_pending": "Beschreibung wird aktualisiert…",
+            "description_error": "Die Beschreibung konnte nicht aktualisiert werden."
+        },
+        "common": {
+            "versus": "vs"
+        },
+        "bracket": {
+            "completion": {
+                "nodes_in_progress": "Laufende Partien"
+            }
+        },
+        "slots": {
+            "record_result": "Ergebnis eintragen",
+            "double_forfeit_help": "0-0 erfasst einen doppelten kampflosen Verlust; keiner der Spieler erhält Punkte."
+        },
+        "withdrawal": {
+            "self_confirmation": "Aus diesem Turnier zurückziehen? Dies kann nicht rückgängig gemacht werden.",
+            "entrant_confirmation": "Diesen Teilnehmer zurückziehen? Dies kann nicht rückgängig gemacht werden."
+        },
+        "arena": {
+            "close": "Schließen",
+            "current_game": "Aktuelle Partie",
+            "online": "Online",
+            "offline": "Offline",
+            "on_fire": "In Flammen",
+            "win_rate": "Gewinnrate",
+            "berserk_rate": "Berserkrate",
+            "average_opponent": "Durchschnittlicher Gegner"
+        }
     },
     "create": "Turnier erstellen",
     "view_list": "Turniere ansehen",
-    "view": "Turnier ansehen",
     "view_named": "Turnier ansehen: {{name}}",
     "rating_range_summary": "Min. Bewertung: {{min}} / Max. Bewertung: {{max}}"
 }

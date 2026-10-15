@@ -1,6 +1,7 @@
+use super::{append_public_tournament_patches, PublicTournamentSection};
 use crate::{
     common::{ServerMessage, TournamentUpdate},
-    websocket::messages::{InternalServerMessage, MessageDestination},
+    websocket::messages::{HandlerOutput, InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
 use db_lib::{get_conn, models::Tournament, DbPool};
@@ -27,21 +28,24 @@ impl InvitationDecline {
         let mut conn = get_conn(&self.pool).await?;
         let tournament = conn
             .transaction::<_, anyhow::Error, _>(async move |tc| {
-                let tournament = Tournament::find_by_tournament_id(&self.tournament_id, tc).await?;
+                let tournament =
+                    Tournament::find_by_tournament_id_for_update(&self.tournament_id, tc).await?;
                 Ok(tournament.decline_invitation(&self.user_id, tc).await?)
             })
             .await?;
 
         let response = TournamentId(tournament.nanoid.clone());
-        Ok(vec![
-            InternalServerMessage {
-                destination: MessageDestination::User(self.user_id),
-                message: ServerMessage::Tournament(TournamentUpdate::Declined(response.clone())),
-            },
-            InternalServerMessage {
-                destination: MessageDestination::Global,
-                message: ServerMessage::Tournament(TournamentUpdate::StateChanged(response)),
-            },
-        ])
+        let mut output = HandlerOutput::from(vec![InternalServerMessage {
+            destination: MessageDestination::User(self.user_id),
+            message: ServerMessage::Tournament(TournamentUpdate::Declined(response)),
+        }]);
+        append_public_tournament_patches(
+            tournament.id,
+            &[PublicTournamentSection::Memberships],
+            &mut output,
+            &mut conn,
+        )
+        .await;
+        Ok(output.messages)
     }
 }

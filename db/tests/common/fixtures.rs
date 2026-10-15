@@ -3,6 +3,7 @@
 use chrono::Utc;
 use db_lib::{
     db_error::DbError,
+    game_command::{execute, Command, Outcome},
     get_conn,
     models::{Game, NewGame, NewUser, Rating, User},
     schema::ratings::{self, deviation, played, rating, speed, user_uid},
@@ -10,7 +11,7 @@ use db_lib::{
     DbPool,
 };
 use diesel::prelude::*;
-use diesel_async::{AsyncConnection, RunQueryDsl};
+use diesel_async::RunQueryDsl;
 use hive_lib::{Color, GameControl, GameStatus, GameType};
 use shared_types::{Conclusion, GameSpeed, GameStart, TimeMode, TournamentGameResult};
 use uuid::Uuid;
@@ -68,7 +69,7 @@ pub fn new_game(white_id: Uuid, black_id: Uuid, game_speed: GameSpeed, rated: bo
         finished: false,
         game_status: GameStatus::InProgress.to_string(),
         game_type: GameType::MLP.to_string(),
-        history: String::from("wQ -;bQ /wQ;"),
+        history: String::from("wQ ;bQ /wQ;"),
         game_control_history: String::new(),
         rated,
         tournament_queen_rule: false,
@@ -94,6 +95,11 @@ pub fn new_game(white_id: Uuid, black_id: Uuid, game_speed: GameSpeed, rated: bo
         game_start: GameStart::Moves.to_string(),
         move_times: Vec::new(),
         timeout_at,
+        tournament_slot_id: None,
+        arena_ordinal: None,
+        white_berserked: false,
+        black_berserked: false,
+        arena_move_due_at: None,
     }
 }
 
@@ -111,10 +117,23 @@ pub async fn create_bullet_game(white_id: Uuid, black_id: Uuid, conn: &mut DbCon
 
 pub async fn resign_as(game: Game, color: Color, pool: &DbPool) -> Result<Game, DbError> {
     let mut conn = get_conn(pool).await.expect("get finalizer connection");
-    conn.transaction::<_, DbError, _>(async move |tc| {
-        game.resign(&GameControl::Resign(color), tc).await
-    })
-    .await
+    let user_id = match color {
+        Color::White => game.white_id,
+        Color::Black => game.black_id,
+    };
+    let outcome = execute(
+        game.id,
+        Command::Control {
+            user_id,
+            control: GameControl::Resign(color),
+        },
+        &mut conn,
+    )
+    .await?;
+    let Outcome::Applied { game, .. } = outcome else {
+        panic!("resignation must update the fixture game: {outcome:?}");
+    };
+    Ok(game)
 }
 
 pub async fn resign_as_white(game: Game, pool: &DbPool) -> Result<Game, DbError> {
@@ -123,13 +142,26 @@ pub async fn resign_as_white(game: Game, pool: &DbPool) -> Result<Game, DbError>
 
 pub async fn draw_game(game: Game, pool: &DbPool) -> Result<Game, DbError> {
     let mut conn = get_conn(pool).await.expect("get finalizer connection");
-    conn.transaction::<_, DbError, _>(async move |tc| {
-        let offered = game
-            .write_game_control(&GameControl::DrawOffer(Color::White), tc)
-            .await?;
-        offered
-            .accept_draw(&GameControl::DrawAccept(Color::Black), tc)
-            .await
-    })
-    .await
+    execute(
+        game.id,
+        Command::Control {
+            user_id: game.white_id,
+            control: GameControl::DrawOffer(Color::White),
+        },
+        &mut conn,
+    )
+    .await?;
+    let outcome = execute(
+        game.id,
+        Command::Control {
+            user_id: game.black_id,
+            control: GameControl::DrawAccept(Color::Black),
+        },
+        &mut conn,
+    )
+    .await?;
+    let Outcome::Applied { game, .. } = outcome else {
+        panic!("draw acceptance must update the fixture game: {outcome:?}");
+    };
+    Ok(game)
 }

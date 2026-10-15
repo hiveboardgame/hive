@@ -1,4 +1,5 @@
 use crate::{
+    common::{auth_page_url, use_return_path},
     components::{
         layouts::page_shell::{PageShell, PageShellVariant},
         molecules::page_card::PageCard,
@@ -12,6 +13,7 @@ use leptos::prelude::*;
 #[component]
 pub fn ForgotPassword() -> impl IntoView {
     let i18n = use_i18n();
+    let pathname = use_return_path();
     let action = ServerAction::<ForgotPassword>::new();
     let submitted = move || action.value().get().is_some_and(|result| result.is_ok());
     view! {
@@ -57,7 +59,10 @@ pub fn ForgotPassword() -> impl IntoView {
                                 "If an account exists for that email, a password reset link is on its way."
                             </p>
                         </div>
-                        <a class="ui-text-link" href="/login">
+                        <a
+                            class="ui-text-link"
+                            href=move || auth_page_url("/login", &pathname.get())
+                        >
                             "Back to login"
                         </a>
                     </div>

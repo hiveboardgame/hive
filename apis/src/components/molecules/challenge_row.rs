@@ -23,7 +23,7 @@ use hive_lib::ColorChoice;
 use leptos::{html::Dialog, prelude::*};
 use leptos_icons::*;
 use leptos_use::use_window;
-use shared_types::{ChallengeId, TimeInfo};
+use shared_types::ChallengeId;
 
 const CHALLENGE_LEADING_RAIL_CLASS: &str = "flex items-center justify-center gap-1";
 const CHALLENGE_MOBILE_ACTIONS_CLASS: &str =
@@ -38,13 +38,11 @@ pub fn ChallengeRow(
     #[prop(default = Vec::new())] challenge_ids: Vec<ChallengeId>,
 ) -> impl IntoView {
     let challenge_value = StoredValue::new(challenge.clone());
+    let time_control = challenge.time_control();
     let ChallengeResponse {
         challenge_id,
         game_type,
         rated,
-        time_mode,
-        time_base,
-        time_increment,
         ..
     } = challenge;
     let i18n = use_i18n();
@@ -167,11 +165,6 @@ pub fn ChallengeRow(
         }
     };
 
-    let time_info = TimeInfo {
-        mode: time_mode,
-        base: time_base,
-        increment: time_increment,
-    };
     view! {
         <tr class="cursor-pointer ui-dense-table-row">
             <td class=format!("w-20 sm:w-12 {td_class}")>
@@ -282,7 +275,7 @@ pub fn ChallengeRow(
             <td class=td_class>
                 <div class="flex justify-center items-center">
                     <TimeRow
-                        time_info
+                        time_control
                         extend_tw_classes="break-words text-xs sm:text-sm max-w-[40px] xs:max-w-[50px] sm:max-w-[60px] md:max-w-[80px] lg:max-w-[100px] whitespace-normal"
                     />
                 </div>

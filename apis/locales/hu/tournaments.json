@@ -1,13 +1,127 @@
 {
-    "tiebreakers": {
-        "raw_points": "Összesen szerzett versenypont",
-        "head_to_head": "Nyert játékok egyenpontszámú játékosok között",
-        "wins_as_black": "Fekete bábukkkal nyert játékok",
-        "sonneborn_berger": "Az ellenfelek pontjainak összege akik ellen pontot szereztél"
+    "unavailable": "A verseny nem érhető el.",
+    "not_found": "A verseny nem található.",
+    "format": {
+        "round_robin": "Körmérkőzés",
+        "swiss": "Svájci",
+        "double_swiss": "Dupla svájci",
+        "single_elimination": "Egyenes kiesés",
+        "double_elimination": "Dupla kiesés",
+        "arena": "Aréna"
+    },
+    "creation": {
+        "choose_format": "Válassz formátumot, majd állítsd be a hozzá tartozó fontos lehetőségeket.",
+        "arena_description": "Folyamatos, időre zajló verseny, ahol a játékosok a játszmák befejezésekor új párosítást kapnak.",
+        "swiss_title": "Svájci rendszer",
+        "swiss_description": "A játékosok párosítása rögzített számú fordulóban svájci vagy dupla svájci rendszerrel.",
+        "round_robin_description": "A rögzített mezőny minden résztvevője játszik mindenki mással.",
+        "elimination_title": "Kieséses",
+        "elimination_description": "Egyenes vagy dupla kieséses ág beállítható mérkőzéssorozatokkal.",
+        "elimination": {
+            "overrides": {
+                "cancel": "Mégse"
+            },
+            "colors": {
+                "move_left": "{{color}} mozgatása egy játszmával korábbra",
+                "move_right": "{{color}} mozgatása egy játszmával későbbre",
+                "even_inventory": "Ebben a páros szettben mindkét résztvevő ugyanannyiszor kapja a világost.",
+                "odd_advantage_first": "Páratlan szett: az első résztvevő elkerülhetetlenül eggyel több világos (kezdő) játszmát kap.",
+                "odd_advantage_second": "Páratlan szett: a második résztvevő elkerülhetetlenül eggyel több világos (kezdő) játszmát kap.",
+                "give_extra_first": "Az extra világos az első résztvevőé legyen",
+                "give_extra_second": "Az extra világos a második résztvevőé legyen",
+                "invalid_inventory": "A színsorrendben játszmánként pontosan egy kiosztásnak kell lennie, és a világost egyenlően kell elosztani, kivéve a páratlan szett egy extra kiosztását."
+            },
+            "clock": {
+                "realtime": "{{minutes}}+{{increment}}"
+            }
+        },
+        "arena_length_minutes": "Aréna hossza (perc)",
+        "invalid_configuration": "A kiválasztott versenybeállítás érvénytelen."
+    },
+    "arena": {
+        "live_title": "Folyamatban lévő arénák",
+        "time_left": "Hátralévő idő",
+        "players_active": "{{count}} játékos",
+        "join": "Csatlakozás",
+        "pause": "Szünet",
+        "resume": "Folytatás",
+        "view": "Megtekintés",
+        "resume_title": "Visszatérés a párosítási csoportba."
+    },
+    "finished_standings": {
+        "position": "Hely",
+        "player": "Játékos",
+        "games": "Játszmák"
+    },
+    "list": {
+        "search": "Verseny neve",
+        "empty_finished": "Még nem rögzítettek befejezett versenyt.",
+        "no_results": "Nincs ilyen nevű verseny.",
+        "empty_upcoming": "Jelenleg nincs közelgő verseny.",
+        "empty_in_progress": "Jelenleg nincs folyamatban lévő verseny.",
+        "title": "Versenyek",
+        "subtitle": "Közelgő, folyamatban lévő és befejezett versenyek böngészése.",
+        "search_placeholder": "Versenyek keresése név alapján",
+        "loading": "Versenyek betöltése…",
+        "error": "Hiba a versenyek betöltésekor"
+    },
+    "admin": {
+        "invite_placeholder": "Játékos meghívása",
+        "invite_action": "Meghívás a versenyre",
+        "kick_action": "Játékos eltávolítása a versenyből",
+        "uninvite_action": "Versenymeghívás visszavonása"
+    },
+    "calendar": {
+        "title": "Játszmák",
+        "last_updated": "Legutóbbi frissítés: {{time}}",
+        "loading": "Betöltés…",
+        "loading_games": "Közelgő játszmák betöltése…",
+        "loading_help": "Az ütemezett játszmák lekérése",
+        "error": "Nem sikerült betölteni a közelgő játszmákat",
+        "empty": "Nincs közelgő versenyjátszma",
+        "empty_help": "Az ütemezett játszmák itt jelennek meg",
+        "unknown_tournament": "Ismeretlen verseny",
+        "join_game": "Belépés a játszmába",
+        "watch": "Megtekintés"
+    },
+    "detail": {
+        "markdown": "Markdown",
+        "start_worker_pending": "A verseny hamarosan elkezdődik."
+    },
+    "view": {
+        "manage": {
+            "description_pending": "A leírás frissítése…",
+            "description_error": "Nem sikerült frissíteni a leírást."
+        },
+        "common": {
+            "versus": "vs"
+        },
+        "bracket": {
+            "completion": {
+                "nodes_in_progress": "Folyamatban lévő mérkőzések"
+            }
+        },
+        "slots": {
+            "record_result": "Eredmény rögzítése",
+            "double_forfeit_help": "A 0-0 kettős vereséget rögzít; egyik játékos sem kap pontot."
+        },
+        "withdrawal": {
+            "self_confirmation": "Visszalépsz erről a versenyről? Ez a művelet nem vonható vissza.",
+            "entrant_confirmation": "Visszalépteted ezt a nevezőt? Ez a művelet nem vonható vissza."
+        },
+        "arena": {
+            "close": "Bezárás",
+            "current_game": "Aktuális játszma",
+            "online": "Online",
+            "offline": "Offline",
+            "on_fire": "Lángol",
+            "win_rate": "Győzelmi arány",
+            "berserk_rate": "Berserk arány",
+            "average_opponent": "Átlagos ellenfél"
+        }
     },
     "create": "Verseny létrehozása",
     "view_list": "Versenyek böngészése",
-    "view": "Verseny megtekintése",
     "view_named": "Verseny megtekintése: {{name}}",
     "rating_range_summary": "Min. ELO: {{min}} / Max. ELO: {{max}}"
 }

@@ -104,7 +104,7 @@ pub fn handle_challenge(challenge: ChallengeUpdate) {
             handle_challenge_removed(challenge_id);
         }
         ChallengeUpdate::Created(challenge) | ChallengeUpdate::Direct(challenge) => {
-            handle_challenge_added(challenge);
+            handle_challenge_added(*challenge);
         }
     }
 }

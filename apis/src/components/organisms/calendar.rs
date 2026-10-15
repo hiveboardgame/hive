@@ -1,8 +1,8 @@
 use crate::{
-    common::with_class,
+    common::{format_local_datetime, with_class},
     components::molecules::{empty_state::EmptyState, upcoming_game_row::UpcomingGameRow},
     functions::schedules::get_upcoming_tournament_games,
-    i18n::{t, t_string, use_i18n},
+    i18n::*,
 };
 use chrono::{DateTime, Duration, Local};
 use leptos::prelude::*;
@@ -66,15 +66,22 @@ pub fn Calendar() -> impl IntoView {
                 "ui-panel-header",
                 "sticky top-0 z-10 flex-col justify-center text-center",
             )>
-                <h2 class="text-xl font-bold">{t!(i18n, home.calendar.title)}</h2>
+                <h2 class="text-xl font-bold">{t!(i18n, tournaments.calendar.title)}</h2>
                 <div class="text-xs opacity-75">
                     {move || {
                         match last_updated.get() {
                             Some(timestamp) => {
-                                let time = timestamp.format("%m/%d %I:%M %p").to_string();
-                                t_string!(i18n, home.calendar.last_updated, time = time).to_string()
+                                t_string!(
+                                    i18n,
+                                    tournaments.calendar.last_updated,
+                                    time = format_local_datetime(
+                                        i18n.get_locale(),
+                                        timestamp.to_utc(),
+                                    ),
+                                )
+                                    .to_string()
                             }
-                            None => t_string!(i18n, common.loading).to_string(),
+                            None => t_string!(i18n, tournaments.calendar.loading).to_string(),
                         }
                     }}
                 </div>
@@ -84,27 +91,41 @@ pub fn Calendar() -> impl IntoView {
                 <Suspense fallback=move || {
                     view! {
                         <EmptyState
-                            title=move || t_string!(i18n, home.calendar.loading_title)
-                            message=move || t_string!(i18n, home.calendar.loading_message)
+                            title=move || {
+                                t_string!(i18n, tournaments.calendar.loading_games).to_string()
+                            }
+                            message=move || {
+                                t_string!(i18n, tournaments.calendar.loading_help).to_string()
+                            }
                         />
                     }
                 }>
                     <ErrorBoundary fallback=move |_errors| {
                         view! {
-                            <EmptyState title=move || t_string!(i18n, home.calendar.error_title) />
+                            <EmptyState title=move || {
+                                t_string!(i18n, tournaments.calendar.error).to_string()
+                            } />
                         }
                     }>
                         {move || {
                             upcoming_games
                                 .get()
-                                .map(|games_result| {
+                                .map(move |games_result| {
                                     games_result
-                                        .map(|games| {
+                                        .map(move |games| {
                                             if games.is_empty() {
                                                 view! {
                                                     <EmptyState
-                                                        title=move || t_string!(i18n, home.calendar.empty_title)
-                                                        message=move || t_string!(i18n, home.calendar.empty_message)
+                                                        title=t_string!(
+                                                            i18n,
+                                                            tournaments.calendar.empty
+                                                        )
+                                                            .to_string()
+                                                        message=t_string!(
+                                                            i18n,
+                                                            tournaments.calendar.empty_help
+                                                        )
+                                                            .to_string()
                                                     />
                                                 }
                                                     .into_any()

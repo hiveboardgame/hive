@@ -3,7 +3,7 @@ use crate::{
     i18n::{t_string, use_i18n},
     providers::game_state::{GameStateStore, GameStateStoreFields},
 };
-use hive_lib::GameControl;
+use hive_lib::{GameControl, GameStatus};
 use icondata_core;
 use leptos::prelude::*;
 use leptos_icons::*;
@@ -56,6 +56,7 @@ pub fn ConfirmButton(
     let i18n = use_i18n();
     let game_state = expect_context::<GameStateStore>();
     let game_control_pending = game_state.game_control_pending();
+    let game_response = game_state.game_response();
     let state = game_state.state();
     let turn = Memo::new(move |_| state.with(|state| state.turn as i32));
     let (icon, title) = get_icon_and_title(game_control);
@@ -101,7 +102,32 @@ pub fn ConfirmButton(
 
     let disabled = move || {
         let game_control = game_control;
-        if game_control.allowed_on_turn(turn()) {
+        let begun_tournament_resignation = matches!(game_control, GameControl::Resign(_))
+            && game_response.with(|response| {
+                response.as_ref().is_some_and(|game| {
+                    game.tournament.is_some() && game.game_status == GameStatus::InProgress
+                })
+            });
+        let resumed_move_opening_turn = game_response.with(|response| {
+            response.as_ref().and_then(|game| {
+                game.game_start
+                    .is_resumed_move_opening(
+                        game.tournament.is_none(),
+                        game.game_status.clone(),
+                        game.turn,
+                    )
+                    .then_some(game.turn)
+            })
+        });
+        let allowed_on_turn = resumed_move_opening_turn.map_or_else(
+            || game_control.allowed_on_turn(turn()),
+            |turn| match game_control {
+                GameControl::Abort(_) => false,
+                GameControl::TakebackRequest(_) => turn > 0,
+                _ => true,
+            },
+        );
+        if begun_tournament_resignation || allowed_on_turn {
             !matches!(game_control, GameControl::Resign(_))
                 && (pending(GameControl::DrawOffer(color))
                     || pending(GameControl::TakebackRequest(color)))

@@ -5,7 +5,7 @@ use crate::{
 use chrono::{DateTime, Utc};
 use hive_lib::{Color, GameResult, GameStatus};
 use leptos::prelude::*;
-use shared_types::{Conclusion, GameId, TimeMode};
+use shared_types::{Conclusion, GameId, GameStart, TimeMode};
 use std::time::Duration;
 
 #[derive(Clone, Debug, Copy)]
@@ -46,10 +46,30 @@ impl TimerSignal {
                 .map(|inc| Duration::from_secs(inc as u64));
             timer.time_mode = game.time_mode;
             timer.last_interaction = game.last_interaction;
+            timer.ordinary_clock_running = ordinary_clock_should_run(
+                game.finished,
+                &game.game_status,
+                &game.game_start,
+                game.last_interaction.is_some(),
+                game.arena_move_due_at.is_some(),
+            );
             timer.time_base = game.time_base.map(|base| Duration::from_secs(base as u64));
             timer.set_timed_out_color(timeout_loser(game));
         });
     }
+}
+
+fn ordinary_clock_should_run(
+    finished: bool,
+    game_status: &GameStatus,
+    game_start: &GameStart,
+    has_last_interaction: bool,
+    has_arena_opening_deadline: bool,
+) -> bool {
+    !finished
+        && matches!(game_status, GameStatus::InProgress)
+        && has_last_interaction
+        && !(game_start == &GameStart::Arena && has_arena_opening_deadline)
 }
 
 fn timeout_loser(response: &GameResponse) -> Option<Color> {
@@ -114,6 +134,7 @@ pub struct Timer {
     pub time_increment: Option<Duration>,
     pub time_mode: TimeMode,
     pub last_interaction: Option<DateTime<Utc>>,
+    pub ordinary_clock_running: bool,
 }
 
 impl Timer {
@@ -130,6 +151,7 @@ impl Timer {
             time_increment: None,
             time_mode: TimeMode::Untimed,
             last_interaction: None,
+            ordinary_clock_running: false,
         }
     }
     pub fn time_left(&self, color: Color) -> Duration {

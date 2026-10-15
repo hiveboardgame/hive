@@ -1,5 +1,5 @@
 use super::membership_removed_messages;
-use crate::websocket::messages::InternalServerMessage;
+use crate::websocket::messages::HandlerOutput;
 use anyhow::Result;
 use db_lib::{get_conn, models::Tournament, DbPool};
 use diesel_async::AsyncConnection;
@@ -21,18 +21,20 @@ impl LeaveHandler {
         }
     }
 
-    pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
+    pub async fn handle(&self) -> Result<HandlerOutput> {
         let mut conn = get_conn(&self.pool).await?;
-        let tournament = Tournament::find_by_tournament_id(&self.tournament_id, &mut conn).await?;
-
-        let tournament = conn
+        let (tournament, retained_chat_access) = conn
             .transaction::<_, anyhow::Error, _>(async move |tc| {
-                Ok(tournament.leave(&self.user_id, tc).await?)
+                let tournament =
+                    Tournament::find_by_tournament_id_for_update(&self.tournament_id, tc).await?;
+                let tournament = tournament.leave(&self.user_id, tc).await?;
+                let retained_chat_access = tournament.retains_chat_access(self.user_id, tc).await?;
+                Ok((tournament, retained_chat_access))
             })
             .await?;
-        Ok(membership_removed_messages(
-            TournamentId(tournament.nanoid.clone()),
-            self.user_id,
-        ))
+        Ok(
+            membership_removed_messages(&tournament, self.user_id, retained_chat_access, &mut conn)
+                .await,
+        )
     }
 }

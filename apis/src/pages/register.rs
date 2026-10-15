@@ -1,4 +1,5 @@
 use crate::{
+    common::{auth_page_url, use_return_path},
     components::{
         layouts::page_shell::{PageShell, PageShellVariant},
         molecules::page_card::PageCard,
@@ -6,7 +7,7 @@ use crate::{
     },
     functions::{auth::register::Register, users::username_taken},
     i18n::*,
-    providers::{AuthContext, RefererContext},
+    providers::AuthContext,
     security::csrf::ActionForm,
 };
 use leptos::{html, leptos_dom::helpers::debounce, prelude::*};
@@ -23,7 +24,7 @@ pub fn Register() -> impl IntoView {
         let user = user.clone();
         async move { username_taken(user).await }
     });
-    let pathname = expect_context::<RefererContext>().pathname;
+    let pathname = use_return_path();
     let my_input = NodeRef::<html::Input>::new();
     Effect::new(move |_| {
         let _ = my_input.get_untracked().map(|el| el.focus());
@@ -202,7 +203,7 @@ pub fn Register() -> impl IntoView {
                             {t!(i18n, user_config.create_account.password_error)}
                         </small>
                     </Show>
-                    <input type="hidden" name="pathname" value=pathname.get_value() />
+                    <input type="hidden" name="pathname" value=pathname />
                     <div class="flex gap-2 items-start">
                         <input
                             id="agree-checkbox"
@@ -237,7 +238,7 @@ pub fn Register() -> impl IntoView {
                 {t!(
                     i18n, user_config.create_account.existing_account_prompt,
                     < login_link > =
-                    <a class="ui-text-link" href="/login"/>
+                    <a class="ui-text-link" href=move || auth_page_url("/login", &pathname.get())/>
                 )}
             </p>
         </PageShell>

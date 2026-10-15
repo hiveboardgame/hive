@@ -1,3 +1,265 @@
+# Hive scripts
+
+`script` contains explicit operator utilities. It never runs as part of the
+application server.
+
+The tournament rewrite requires a maintenance window. The blue/green deployment
+instructions below apply to compatible releases; they cannot perform this
+legacy export, destructive migration, and import while the old application is
+still writing. Recovery for this cutover restores the full database backup.
+
+## Legacy tournament cutover
+
+The cutover tooling separates legacy interpretation, a canonical accepted
+bundle, and final-schema import:
+
+```sh
+cargo run -p script -- legacy-tournaments audit
+
+cargo run -p script -- legacy-tournaments export \
+  --output legacy-tournament-exports/cutover.jsonl \
+  --confirm-database-name hive-local \
+  --confirm-writes-stopped
+
+cargo run -p script -- legacy-tournaments import \
+  --input legacy-tournament-exports/cutover.jsonl \
+  --confirm-source-database-name hive-local \
+  --confirm-database-name hive-local \
+  --confirm-bundle-sha256 '<manifest jsonl_sha256>' \
+  --confirm-writes-stopped
+```
+
+`DATABASE_URL` must point at the database for the current command.
+`--database-url` is available for an explicit connection string, but
+credentials must not be placed in shell history or committed files.
+
+### Production utility artifact
+
+Build the utility from the same finalized commit and lockfile as the application
+before the maintenance window:
+
+```sh
+cargo build --locked --release -p script
+.cargo/target/release/script legacy-tournaments --help
+```
+
+Keep that executable and the candidate's `db/migrations/` together with the
+application release artifacts. It needs the native PostgreSQL client library
+(`libpq`) on the operator host, just like the application. Invoke the built
+`script` executable in place of `cargo run -p script --` in the examples above,
+using the production environment that supplies `DATABASE_URL`. Run all commands
+against the explicitly confirmed database, and store exports in a private
+directory outside the public site assets. Neither a sibling tournamint checkout
+nor Cargo is needed to run the built utility.
+
+Build and audit do not start the application or apply embedded migrations.
+Keep the new application stopped until export, explicit Diesel migration,
+committed import, and database verification have all succeeded. Both old and
+new application writers, bots, and other database writers must remain stopped
+during that interval. Take and verify the full backup after stopping writers
+and before export. An unsuccessful import can be retried only after verifying
+that its transaction rolled back; a populated target is refused. A failed
+cutover requires restoring the full backup before restarting the old release.
+The migration's `down.sql` cannot recover the removed legacy tournament facts.
+
+The preliminary `audit` is safe to run while the old application is live. It
+uses the same classification and translation as export, prints a structured
+report, and exits unsuccessfully if it finds an unsupported or malformed
+shape. Its result is only a rehearsal because live data can change afterward.
+
+The authoritative export and import are one maintenance-window operation:
+
+1. Stop the application and freeze writes.
+2. Run export with the exact value returned by `current_database()`.
+3. Review the emitted audit report and the JSON manifest accepted, skipped,
+   rejected, and per-record counts plus its checksum. The latest scheduled time
+   among agreements on an unstarted game becomes the Slot's scheduled time;
+   discarded agreements are reported. One to three future
+   proposals from one player become a current offer; expired, conflicting, or
+   otherwise ambiguous schedule rows are reported as skipped, not imported.
+4. Apply the final migration without reopening application writes.
+5. Run import with the manifest's source name, the connected target name, and
+   its exact checksum.
+6. Verify the summary and representative Tournament pages before reopening
+   writes.
+
+Export reads one repeatable-read snapshot and rejects a missing or incompatible
+legacy column that is required to interpret Tournament facts. Unrelated
+tables, columns, indexes, and migration entries do not affect it. It refuses
+an existing data or manifest path, writes private (`0600`) same-directory
+temporary files, publishes deterministic JSONL first, and publishes
+`<output>.manifest.json` last as the acceptance marker. A bundle without its
+manifest is not accepted.
+
+The accepted bundle contains only canonical Tournament records: final Config
+and lifecycle, Series relationships, organizers, memberships, invitations,
+native Swiss/elimination facts, deterministic Slots, retained Game
+ownership, accepted scheduled times, unambiguous current offers, and final
+outcomes. For legacy Double-Swiss rounds, each pairing's first-finished game
+supplies both stored pre-result ratings. Administrative awards without stored
+ratings use the player's nearest stored rating within that tournament, or the
+standard starting rating of 1500 if none exists. The audit reports every
+estimate and its source. Missing ratings on played games and invalid stored
+ratings still fail export. Historical rounds are recovered from complete
+reciprocal creation batches; later administrative result updates are reported
+and do not redefine round boundaries. It does not contain a source schema fingerprint, migration ledger,
+chat/history data, or a second legacy representation. Treat it as sensitive
+export material. The recommended
+`legacy-tournament-exports/` directory and conventional cutover filenames are
+gitignored; still verify `git status` before committing.
+
+None of these commands runs Diesel migrations, alters `schema.rs`, or writes
+the migration ledger. Import validates the manifest counts,
+operator checksum, and both explicit database confirmations. It accepts only
+an empty canonical Tournament target, then inserts the canonical records and
+relinks retained Games in one transaction and dependency order. Final-schema
+foreign keys and CHECK constraints validate relational integrity. Any missing
+Game, constraint failure, duplicate, or partial target rolls the entire import
+back. Import never reconstructs or re-audits the legacy source and performs no
+engine replay.
+
+The migration retains Tournament lobby channels, messages, read receipts, and
+mute preferences in place. Their two Tournament foreign keys temporarily keep
+existing rows unvalidated while the canonical target is empty; new writes still
+enforce the links. Import validates both foreign keys inside its transaction
+after restoring every Tournament identity. A retained link without an imported
+parent therefore fails the entire import. Fresh databases validate immediately.
+
+Each retained legacy agreement also becomes an Accepted scheduling offer so
+players can cancel it before the game starts. The original proposer, opponent,
+and agreed game time are preserved. Legacy rows do not record an acceptance actor
+or timestamp, so the opponent is recorded as acceptor and export time is used for
+creation and acceptance bookkeeping. These imported acceptances are already
+marked notified; importing them does not replay historical acceptance alerts.
+
+During legacy interpretation, a Round Robin with every result recorded is
+exported as finished even if its old manual lifecycle still says `InProgress`.
+Its final standings come from the mapped results, and its finish timestamp is
+no earlier than its last recorded result. Round Robins still missing results
+remain ongoing, with their retained Games linked to unresolved Slots so normal
+game completion can finish the tournament after cutover.
+
+After import, verify the concise imported, retained, skipped, and rejected
+counts, Tournament pages, Game links, scheduled times, current offers,
+and final standings before reopening writes. Legacy scheduling history is
+intentionally not reconstructed.
+Re-running import against the populated target fails closed instead of trying
+to continue a partial cutover.
+
+### Full local cutover rehearsal
+
+Use an isolated database restored from an untouched production backup and the
+exact candidate application, migration files, utility, and lockfile. Record the
+candidate commit and resolved tournamint commit. Do not start the candidate
+application before export: startup applies its embedded destructive migration.
+
+1. Restore the full legacy backup. Record source counts and representative
+   standings, participants, organizers, invitations, series, Game IDs/history,
+   accepted schedules, and pending proposals. Keep a legacy browser tab open.
+2. With all writers stopped, time audit, export, explicit Diesel migration,
+   committed import, and verification separately. Keep the audit, manifest,
+   checksum, import summary, and any intentionally skipped records together.
+   Import commits on success; it has no dry-run mode.
+3. Compare the imported records and retained Games with the source and accepted
+   bundle. Confirm series links, standings, memberships, organizer permissions,
+   invitations, Game links/history, scheduled times, and current offers. Account
+   for the audit's explicit exclusions rather than requiring raw legacy and
+   canonical table counts to match.
+4. Start the candidate. Continue unfinished tournaments through readiness,
+   moves, result recording, and the next match/round. Check scheduling and the
+   tab left open across maintenance, including reconnect and the release-update
+   navigation. Record migration/import time and total maintenance time through
+   the final browser smoke check.
+5. Stop writers again. Repeat import against the populated target and verify
+   refusal leaves it unchanged. On a separate fresh restore/migration, induce a
+   database-stage import failure (for example, remove one retained Game before
+   import). Verify the transaction leaves no canonical Tournament records or
+   partially relinked Games; a rejected checksum alone does not exercise rollback.
+6. Rehearse restoring the full untouched backup and starting the previous
+   release. Verify legacy facts and Game history again, and record recovery time.
+   Never substitute the down migration for full-backup recovery.
+
+If any rehearsal reveals a fix, rebuild and validate the updated candidate, then
+repeat the entire successful cutover from the untouched backup. Production
+cutover is an operator-run maintenance window following the same sequence:
+stop writers, take and verify a fresh full backup, export, migrate, import,
+verify, start and smoke-test, then reopen access. Do not use `deploy.sh` or
+`rollback.sh` for this legacy cutover. Fly is staging; its disabled automatic
+deployment does not deploy production.
+
+## Synthetic tournament QA fixtures
+
+The synthetic fixture command is an explicit local-only operator action. It
+requires both the supplied confirmation and PostgreSQL's `current_database()`
+to be exactly `hive-local`; it is never called by the application.
+
+```sh
+cargo run -p script -- synthetic-tournaments seed \
+  --confirm-database-name hive-local
+
+# Reproduce a useful randomized cohort exactly:
+cargo run -p script -- synthetic-tournaments seed \
+  --confirm-database-name hive-local --seed 123456
+
+cargo run -p script -- synthetic-tournaments arm-due \
+  --confirm-database-name hive-local
+
+cargo run -p script -- synthetic-tournaments cleanup \
+  --confirm-database-name hive-local
+```
+
+Seed creates 162 QA accounts (one organizer, 160 players, and one dedicated
+account-deletion test player), all with the
+password `hivegame`, and a bounded, deterministic matrix of 24 recognizable
+`QA ...` scenarios through tournament services. It prints the reproduction
+seed, QA accounts, shared password, tournament IDs/URLs, expected states, and
+manual checks. The matrix includes
+at least one unstarted, ongoing, and finished fixture for every tournament
+format. Large fixtures include maximum-size elimination brackets, a 160-player
+Swiss, a 120-player Arena scheduled roughly a year ahead, a maximum-density
+finished Round Robin, and varied realtime and correspondence clocks. Live
+fixtures have
+completed history plus a mixed active frontier rather than stopping at their
+opening round. Elimination releases ready matches independently of unrelated
+matches, and its started fixtures use custom player placement. Round Robin and
+Swiss exercise optional seed tiebreaks; Double Swiss uses the opposite score as
+a tiebreak. Finished Swiss fixtures must materialize and resolve
+every configured round or the seed transaction fails. The printed seed keeps
+participant selection, clocks, pairings, and result details reproducible while
+field sizes and lifecycle coverage remain stable. Every generated account starts
+with `zz_qa_t_`. If that account namespace is already in use, seed refuses to
+run until cleanup succeeds.
+
+The undersubscribed scheduled fixture is initially set to become due 65 seconds
+after seed starts. Open its printed URL immediately to observe the future-start
+boundary, the due waiting state, and the worker clearing only `starts_at` on its
+following sweep. If that transition has already completed, keep the page open
+and run `arm-due`; it schedules the same organizer-owned, still-unstarted,
+still-undersubscribed fixture 65 seconds ahead for another observation.
+
+Seed, `arm-due`, and cleanup share a transaction advisory lock. Conflict
+checking happens under that lock, so overlapping operator commands serialize
+instead of reporting a stale cleanup or an incidental uniqueness failure.
+
+The final 33-player bracket review fixture has two organizers and a pending
+organizer invitation. Its 15-minute setup belongs to `zz_qa_t_organizer`. Use
+`zz_qa_t_delete_test` to check account deletion during setup; that account
+participates only in this fixture. After expiry, use Start to open a fresh setup.
+
+Cleanup captures account and tournament IDs registered when seeding in the
+operator-only `synthetic_tournament_qa` schema. Those IDs survive account
+anonymization and organizer changes. Before deleting anything, cleanup refuses
+if a QA account participates in or organizes a tournament outside that cohort.
+Shared series are also protected. Resolve those memberships deliberately before
+retrying; inviting a QA account never makes a real tournament a cleanup target.
+
+The successful path removes the captured tournament structures, tournament and
+casual Games involving the QA accounts, challenges, schedules, chat and email
+rows, account preferences/devices/ratings/blocks, and the QA accounts in one
+transaction. It verifies that no captured account or reference remains before
+committing. Unrelated rows are preserved; cleanup does not truncate permanent
+tables, run migrations, or reset the database.
+
 # Blue-Green Deployment
 
 Two systemd instances, `hive@blue` (127.0.0.1:3000) and `hive@green` (127.0.0.1:3001), sit

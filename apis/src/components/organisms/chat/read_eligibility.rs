@@ -27,6 +27,16 @@ pub(super) fn is_element_in_scroll_view(
         && element_bounds.top() < container_bounds.bottom()
 }
 
+pub(super) fn scroll_element_to_container_top(
+    container: &web_sys::HtmlElement,
+    element: &web_sys::HtmlElement,
+) {
+    let offset =
+        element.get_bounding_client_rect().top() - container.get_bounding_client_rect().top();
+    let scroll_top = container.scroll_top().saturating_add(offset.round() as i32);
+    container.set_scroll_top(scroll_top);
+}
+
 pub(super) fn use_bottom_visibility(bottom_ref: NodeRef<html::Div>) -> RwSignal<bool> {
     let bottom_visible = RwSignal::new(false);
     _ = use_intersection_observer_with_options(

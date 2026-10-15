@@ -26,7 +26,7 @@ use crate::{
         WsHub,
     },
 };
-use db_lib::{DbConn, DbPool};
+use db_lib::{db_error::DbError, DbConn, DbPool};
 use shared_types::{normalize_chat_message, ConversationKey, SimpleUser};
 use thiserror::Error;
 use uuid::Uuid;
@@ -38,6 +38,7 @@ pub enum RequestHandlerError {
     AuthError(#[from] AuthError),
     Forbidden,
     RateLimited(ChatLimitError),
+    TournamentNameTaken,
 }
 
 impl std::fmt::Display for RequestHandlerError {
@@ -50,6 +51,9 @@ impl std::fmt::Display for RequestHandlerError {
             RequestHandlerError::AuthError(e) => write!(f, "{e}"),
             RequestHandlerError::Forbidden => write!(f, "Chat access denied"),
             RequestHandlerError::RateLimited(error) => write!(f, "{}", error.reason()),
+            RequestHandlerError::TournamentNameTaken => {
+                write!(f, "A tournament with that name already exists")
+            }
         }
     }
 }
@@ -65,6 +69,7 @@ impl RequestHandlerError {
             Self::AuthError(error) => error.to_string(),
             Self::Forbidden => "Chat access denied".to_string(),
             Self::RateLimited(error) => error.reason().to_string(),
+            Self::TournamentNameTaken => "A tournament with that name already exists".to_string(),
         }
     }
 }
@@ -196,17 +201,38 @@ impl RequestHandler {
                     .unsubscribe_chat(self.user_id, self.received_from.socket_id, &channel_key);
                 HandlerOutput::empty()
             }
+            ClientRequest::TournamentWatch(tournament_id) => {
+                self.hub.watch_tournament(
+                    self.user_id,
+                    self.received_from.socket_id,
+                    &tournament_id,
+                );
+                HandlerOutput::empty()
+            }
+            ClientRequest::TournamentUnwatch(tournament_id) => {
+                self.hub.unwatch_tournament(
+                    self.user_id,
+                    self.received_from.socket_id,
+                    &tournament_id,
+                );
+                HandlerOutput::empty()
+            }
             ClientRequest::Tournament(tournament_action) => {
                 self.ensure_auth()?;
                 TournamentHandler::new(
                     tournament_action,
                     &self.username,
                     self.user_id,
+                    self.received_from.clone(),
                     self.hub.clone(),
                     &self.pool,
                 )
                 .handle()
-                .await?
+                .await
+                .map_err(|error| match error.downcast_ref::<DbError>() {
+                    Some(DbError::TournamentNameTaken) => RequestHandlerError::TournamentNameTaken,
+                    _ => RequestHandlerError::InternalError(error),
+                })?
             }
             ClientRequest::Pong(nonce) => {
                 self.data.pings.update(self.user_id, nonce);
@@ -228,7 +254,10 @@ impl RequestHandler {
                 game_id,
             } => {
                 match game_action {
-                    GameAction::Turn(_) | GameAction::Control(_) => self.ensure_auth()?,
+                    GameAction::Turn(_)
+                    | GameAction::Control(_)
+                    | GameAction::Berserk
+                    | GameAction::Start => self.ensure_auth()?,
                     _ => {}
                 };
                 GameActionHandler::new(
@@ -246,17 +275,10 @@ impl RequestHandler {
             }
             ClientRequest::Challenge(challenge_action) => {
                 self.ensure_auth()?;
-                ChallengeHandler::new(
-                    challenge_action,
-                    &self.username,
-                    self.user_id,
-                    self.admin,
-                    &self.pool,
-                )
-                .await?
-                .handle()
-                .await?
-                .into()
+                ChallengeHandler::new(challenge_action, self.user_id, self.admin, &self.pool)
+                    .handle()
+                    .await?
+                    .into()
             }
             ClientRequest::NotificationSeen { game_id } => {
                 self.ensure_auth()?;
@@ -267,12 +289,8 @@ impl RequestHandler {
             }
             ClientRequest::Away => UserStatusHandler::new().await?.handle().await?.into(),
             ClientRequest::Schedule(action) => {
-                match action {
-                    crate::common::ScheduleAction::TournamentPublic(_) => {}
-                    _ => self.ensure_auth()?,
-                }
+                self.ensure_auth()?;
                 ScheduleHandler::new(self.user_id, action, &self.pool)
-                    .await?
                     .handle()
                     .await?
                     .into()
@@ -289,7 +307,7 @@ mod tests {
         common::{ChatSendRequest, ClientRequest, SubscriptionAttempt},
         websocket::{messages::SocketTx, WebsocketData},
     };
-    use shared_types::ConversationKey;
+    use shared_types::{ConversationKey, TournamentId};
     use tokio::sync::mpsc;
 
     async fn test_handler(command: ClientRequest, user: SimpleUser) -> RequestHandler {
@@ -310,6 +328,34 @@ mod tests {
             user,
             pool,
         )
+    }
+
+    #[tokio::test]
+    async fn anonymous_tournament_watch_requests_need_no_authentication_or_database() {
+        let user_id = Uuid::new_v4();
+        let tournament_id = TournamentId("watched-route".to_string());
+        let mut handler = test_handler(
+            ClientRequest::TournamentWatch(tournament_id.clone()),
+            SimpleUser {
+                user_id,
+                username: "anonymous".to_string(),
+                authed: false,
+                admin: false,
+            },
+        )
+        .await;
+        let socket_id = handler.received_from.socket_id;
+
+        handler.handle().await.unwrap();
+        assert!(handler
+            .hub
+            .has_tournament_watch(user_id, socket_id, &tournament_id));
+
+        handler.command = ClientRequest::TournamentUnwatch(tournament_id.clone());
+        handler.handle().await.unwrap();
+        assert!(!handler
+            .hub
+            .has_tournament_watch(user_id, socket_id, &tournament_id));
     }
 
     #[tokio::test]
