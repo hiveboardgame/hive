@@ -3,5 +3,5 @@ mod lesson_panel;
 mod side_board;
 
 pub use chapter_list::{ChapterList, TutorialOverview};
-pub use lesson_panel::LessonPanel;
+pub use lesson_panel::{LessonPanel, MobileLessonAbout};
 pub use side_board::{TutorialGameControls, TutorialSideboard};

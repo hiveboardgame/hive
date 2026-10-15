@@ -9,6 +9,7 @@ use crate::{
             tutorial::{
                 ChapterList,
                 LessonPanel,
+                MobileLessonAbout,
                 TutorialGameControls,
                 TutorialOverview,
                 TutorialSideboard,
@@ -151,46 +152,67 @@ pub fn Tutorial() -> impl IntoView {
                         }
                     }
                 >
-                    <div class="overflow-y-auto shrink-0 h-[40%]">
-                        <LessonPanel lesson_id compact=true />
-                    </div>
-                    <Show when=clocked>
-                        <div class="flex shrink-0 ui-board-reserve">
-                            <TutorialGameControls />
+                    <For
+                        each=move || {
+                            chosen.get().into_iter().collect::<Vec<_>>()
+                        }
+                        key=|id| *id
+                        children=move |id| {
+                            view! {
+                                <LessonPanel lesson_id=Signal::derive(move || id) compact=true />
+                            }
+                        }
+                    />
+                    <div class="flex relative flex-col pt-11 min-h-0 grow">
+                        <For
+                            each=move || {
+                                chosen.get().into_iter().collect::<Vec<_>>()
+                            }
+                            key=|id| *id
+                            children=move |id| {
+                                view! {
+                                    <MobileLessonAbout lesson_id=Signal::derive(move || id) />
+                                }
+                            }
+                        />
+                        <Show when=clocked>
+                            <div class="flex shrink-0 ui-board-reserve">
+                                <TutorialGameControls />
+                            </div>
+                        </Show>
+                        <div class="flex justify-between ml-1 h-12 max-h-12 shrink-0 ui-board-reserve">
+                            <Reserve
+                                color=opponent
+                                alignment=Alignment::SingleRow
+                                viewbox_str=MOBILE_RESERVE_VIEWBOX
+                                interaction
+                                history_board
+                            />
+                            <Show when=clocked>
+                                <div class="flex w-16 min-h-0 shrink-0">
+                                    <DisplayTimer vertical=true placement=Placement::Top />
+                                </div>
+                            </Show>
                         </div>
-                    </Show>
-                    <div class="flex justify-between ml-1 h-12 max-h-12 shrink-0 ui-board-reserve">
-                        <Reserve
-                            color=opponent
-                            alignment=Alignment::SingleRow
-                            viewbox_str=MOBILE_RESERVE_VIEWBOX
-                            interaction
-                            history_board
-                        />
-                        <Show when=clocked>
-                            <div class="flex w-16 min-h-0 shrink-0">
-                                <DisplayTimer vertical=true placement=Placement::Top />
-                            </div>
-                        </Show>
-                    </div>
-                    <div class="flex relative min-h-0 grow">
-                        <Show when=has_board fallback=board_placeholder>
-                            <Board interaction history_board fit_on=tutorial.generation />
-                        </Show>
-                    </div>
-                    <div class="flex justify-between ml-1 h-20 max-h-20 shrink-0 ui-board-reserve">
-                        <Reserve
-                            color=learner
-                            alignment=Alignment::SingleRow
-                            viewbox_str=MOBILE_RESERVE_VIEWBOX
-                            interaction
-                            history_board
-                        />
-                        <Show when=clocked>
-                            <div class="flex w-16 min-h-0 shrink-0">
-                                <DisplayTimer vertical=true placement=Placement::Bottom />
-                            </div>
-                        </Show>
+                        <div class="flex relative min-h-0 grow">
+                            <Show when=has_board fallback=board_placeholder>
+                                <Board interaction history_board fit_on=tutorial.generation />
+                            </Show>
+                        </div>
+                        <div class="flex justify-between ml-1 h-20 max-h-20 shrink-0 ui-board-reserve">
+                            <Reserve
+                                color=learner
+                                alignment=Alignment::SingleRow
+                                viewbox_str=MOBILE_RESERVE_VIEWBOX
+                                interaction
+                                history_board
+                            />
+                            <Show when=clocked>
+                                <div class="flex w-16 min-h-0 shrink-0">
+                                    <DisplayTimer vertical=true placement=Placement::Bottom />
+                                </div>
+                            </Show>
+                        </div>
                     </div>
                 </Show>
             </div>
