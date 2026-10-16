@@ -1,0 +1,34 @@
+{
+    "appeal": {
+        "title": "Улей бесплатно для всех, навсегда",
+        "body": "На hivegame.com нет рекламы, а код открыт. Сайт создают волонтёры, и он полностью существует на пожертвования таких игроков, как вы.",
+        "button": "Поддержать нас"
+    },
+    "thanks": "Спасибо, что поддерживаете hivegame.com! 👑",
+    "community": {
+        "title": "Сообщество",
+        "hivegame_discord": "Discord Hivegame",
+        "world_hive_discord": "World Hive Community",
+        "resources": "Полезные ссылки",
+        "faq": "Частые вопросы"
+    },
+    "open_source": {
+        "title": "Открытый код",
+        "source_code": "Исходный код",
+        "contribute": "Участвовать",
+        "report_bug": "Сообщить об ошибке",
+        "license": "Лицензия AGPL-3.0"
+    },
+    "support": {
+        "title": "Поддержка",
+        "donate": "Пожертвовать",
+        "kofi": "Ko-fi",
+        "patreon": "Patreon",
+        "buy_game": "Купить игру"
+    },
+    "legal": {
+        "privacy": "Конфиденциальность",
+        "terms": "Условия",
+        "trademark": "Hive® — зарегистрированный товарный знак Gen42 Games. Официальные иллюстрации Hive принадлежат Gen42 Games и не подпадают под нашу лицензию с открытым кодом."
+    }
+}

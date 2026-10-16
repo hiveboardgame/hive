@@ -1,0 +1,34 @@
+{
+    "appeal": {
+        "title": "Ingyenes Hive mindenkinek, örökre",
+        "body": "A hivegame.com reklámmentes és nyílt forráskódú. Önkéntesek építik, és teljes egészében a hozzád hasonló játékosok finanszírozzák.",
+        "button": "Támogass minket"
+    },
+    "thanks": "Köszönjük, hogy támogatod a hivegame.com-ot! 👑",
+    "community": {
+        "title": "Közösség",
+        "hivegame_discord": "Hivegame Discord",
+        "world_hive_discord": "World Hive Community",
+        "resources": "Források",
+        "faq": "GYIK"
+    },
+    "open_source": {
+        "title": "Nyílt forráskód",
+        "source_code": "Forráskód",
+        "contribute": "Közreműködés",
+        "report_bug": "Hiba bejelentése",
+        "license": "AGPL-3.0 licenc"
+    },
+    "support": {
+        "title": "Támogatás",
+        "donate": "Adományozás",
+        "kofi": "Ko-fi",
+        "patreon": "Patreon",
+        "buy_game": "A játék megvásárlása"
+    },
+    "legal": {
+        "privacy": "Adatvédelem",
+        "terms": "Felhasználási feltételek",
+        "trademark": "A Hive® a Gen42 Games bejegyzett védjegye. A hivatalos Hive grafikák a Gen42 Games tulajdonát képezik, és nem tartoznak a nyílt forráskódú licencünk hatálya alá."
+    }
+}

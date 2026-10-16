@@ -30,6 +30,7 @@ use crate::{
         },
         notifications::Notifications,
         play::Play,
+        privacy::Privacy,
         profile_view::{ProfileMe, ProfileView},
         puzzles::Puzzles,
         register::Register,
@@ -38,6 +39,7 @@ use crate::{
         rules::Rules,
         rules_summary::RulesSummary,
         strategy::Strategy,
+        terms::Terms,
         top_players::{TopBots, TopPlayers},
         tournament::TournamentRoutes,
         tournament_create::{TournamentCreate, TournamentCreateChooser, TournamentCreationKind},
@@ -387,6 +389,8 @@ pub fn App() -> impl IntoView {
                         </ParentRoute>
                         <Route path=path!("/donate") view=|| view! { <Donate /> } />
                         <Route path=path!("/faq") view=|| view! { <Faq /> } />
+                        <Route path=path!("/privacy") view=|| view! { <Privacy /> } />
+                        <Route path=path!("/terms") view=|| view! { <Terms /> } />
                         <Route path=path!("/puzzles") view=|| view! { <Puzzles /> } />
                         <Route path=path!("/rules") view=|| view! { <Rules /> } />
                         <Route path=path!("/strategy") view=|| view! { <Strategy /> } />

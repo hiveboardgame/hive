@@ -50,7 +50,7 @@ mod locale_tests {
     /// directories but are commented out there as too incomplete, so they are not checked.
     const ACTIVE_LOCALES: [&str; 9] = ["ca", "de", "es", "fr", "hu", "it", "pt", "ro", "ru"];
 
-    const NAMESPACES: [&str; 12] = [
+    const NAMESPACES: [&str; 13] = [
         "header",
         "home",
         "faq",
@@ -60,6 +60,7 @@ mod locale_tests {
         "game",
         "tournaments",
         "donate",
+        "footer",
         "archive",
         "notifications",
         "messages",

@@ -27,6 +27,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             "game",
             "tournaments",
             "donate",
+            "footer",
             "archive",
             "notifications",
             "messages",
