@@ -65,7 +65,6 @@ use diesel_async::RunQueryDsl;
 use hive_lib::{GameControl, GameResult, GameStatus};
 use lazy_static::lazy_static;
 use regex::Regex;
-use serde::{Deserialize, Serialize};
 use shared_types::{
     tournament::{arena::PairingIntent, Format},
     Conclusion,
@@ -333,7 +332,9 @@ impl NewUser {
     }
 }
 
-#[derive(Queryable, Identifiable, Serialize, Selectable, Deserialize, Debug, Clone)]
+// Deliberately not `Serialize`: the row carries the password hash and private emails, so it
+// must never reach a response. Serialize a `UserResponse` instead.
+#[derive(Queryable, Identifiable, Selectable, Debug, Clone)]
 #[diesel(primary_key(id))]
 pub struct User {
     pub id: Uuid,
@@ -1003,11 +1004,20 @@ impl User {
         .await
     }
 
+    // A game past its deadline is already lost on time; it only waits for the sweeper to
+    // finalize it, so it is not one the player can still act in.
     pub async fn get_ongoing_games(&self, conn: &mut DbConn<'_>) -> Result<Vec<Game>, DbError> {
+        let now = Utc::now();
         Ok(GameUser::belonging_to(self)
             .inner_join(games::table)
             .select(Game::as_select())
             .filter(finished.eq(false))
+            .filter(games::timeout_at.is_null().or(games::timeout_at.gt(now)))
+            .filter(
+                games::arena_move_due_at
+                    .is_null()
+                    .or(games::arena_move_due_at.gt(now)),
+            )
             .get_results(conn)
             .await?)
     }
@@ -1016,6 +1026,7 @@ impl User {
         &self,
         conn: &mut DbConn<'_>,
     ) -> Result<Vec<Game>, DbError> {
+        let now = Utc::now();
         Ok(GameUser::belonging_to(self)
             .inner_join(games::table)
             .select(Game::as_select())
@@ -1025,6 +1036,12 @@ impl User {
                 game_status
                     .ne("NotStarted")
                     .or(games::tournament_slot_id.is_null()),
+            )
+            .filter(games::timeout_at.is_null().or(games::timeout_at.gt(now)))
+            .filter(
+                games::arena_move_due_at
+                    .is_null()
+                    .or(games::arena_move_due_at.gt(now)),
             )
             .get_results(conn)
             .await?)

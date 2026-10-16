@@ -22,7 +22,7 @@ pub fn run(pool: DbPool, hub: Data<Arc<WsHub>>) {
                                 tournament_id,
                             )),
                         };
-                        let _ = hub.dispatch_message(message).await;
+                        hub.dispatch_message(message).await;
                     }
                 }
             }

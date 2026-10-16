@@ -69,7 +69,7 @@ fn handle_chat_subscription_ready(acknowledgement: SubscriptionAttempt) {
 pub fn handle_response(m: ServerResult) {
     match m {
         ServerResult::Ok(message) => match *message {
-            Ping { value, nonce } => handle_ping(nonce, value),
+            Ping { value, .. } => handle_ping(value),
             UserStatus(user_update) => handle_user_status(user_update),
             LobbySnapshot(snapshot) => handle_lobby_snapshot(*snapshot),
             ResyncRetry { .. } => {}
@@ -117,7 +117,8 @@ pub fn handle_response(m: ServerResult) {
                         chat.handle_failed_chat_send(key, client_id, error.into());
                     }
                 }
-                ExternalServerError::Request { reason } => {
+                ExternalServerError::Request { reason }
+                | ExternalServerError::Game { reason, .. } => {
                     if let Some(alerts) = use_context::<AlertsContext>() {
                         alerts.last_alert.set(Some(AlertType::Error(reason)));
                     }

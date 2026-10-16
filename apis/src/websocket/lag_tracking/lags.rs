@@ -8,6 +8,13 @@ pub struct Lags {
     trackers: RwLock<HashMap<(Uuid, GameId), LagTracker>>,
 }
 
+#[derive(Debug)]
+pub struct PendingLag {
+    key: (Uuid, GameId),
+    pub seconds: f64,
+    tracker: LagTracker,
+}
+
 impl Lags {
     pub fn new() -> Self {
         Self {
@@ -15,23 +22,34 @@ impl Lags {
         }
     }
 
-    pub fn track_lag(
+    // The budget only moves once the move is accepted, so a rejected attempt can neither spend
+    // nor refill it.
+    pub fn preview(
         &self,
         uuid: Uuid,
         game: GameId,
-        lag: f64,
+        lag_ms: f64,
         base: usize,
         inc: usize,
-    ) -> Option<f64> {
-        if let Ok(mut uuids_lags) = self.trackers.write() {
-            let user_lags = uuids_lags
-                .entry((uuid, game))
-                .or_insert(LagTracker::new(base, inc));
-            user_lags.record_lag(lag / 1000.0);
-            let comp = Some(user_lags.on_move(lag / 1000.0));
-            return comp;
+    ) -> PendingLag {
+        let mut tracker = self
+            .trackers
+            .read()
+            .ok()
+            .and_then(|trackers| trackers.get(&(uuid, game.clone())).cloned())
+            .unwrap_or_else(|| LagTracker::new(base, inc));
+        let seconds = tracker.on_move(lag_ms / 1000.0);
+        PendingLag {
+            key: (uuid, game),
+            seconds,
+            tracker,
         }
-        None
+    }
+
+    pub fn commit(&self, pending: PendingLag) {
+        if let Ok(mut trackers) = self.trackers.write() {
+            trackers.insert(pending.key, pending.tracker);
+        }
     }
 
     pub fn remove(&self, uuid: Uuid, game: GameId) {

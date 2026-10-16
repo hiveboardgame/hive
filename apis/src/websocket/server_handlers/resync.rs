@@ -103,7 +103,7 @@ impl ResyncHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::websocket::WebsocketData;
+    use crate::websocket::{messages::SocketFormat, WebsocketData};
     use db_lib::get_pool;
     use tokio::sync::mpsc;
 
@@ -115,7 +115,11 @@ mod tests {
         let hub = WsHub::new(Arc::new(WebsocketData::default()), pool.clone());
         let socket_id = Uuid::new_v4();
         let (tx, _rx) = mpsc::channel(2);
-        let socket = SocketTx { socket_id, tx };
+        let socket = SocketTx {
+            socket_id,
+            format: SocketFormat::Msgpack,
+            tx,
+        };
         assert!(hub.allow_resync(socket_id));
         let output = ResyncHandler::new(
             hub.clone(),
@@ -140,6 +144,7 @@ mod tests {
             pool,
             SocketTx {
                 socket_id: busy_id,
+                format: socket.format,
                 tx: socket.tx.clone(),
             },
             Uuid::new_v4(),

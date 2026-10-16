@@ -24,7 +24,7 @@ pub fn handle_game(game_update: GameUpdate) {
     match game_update {
         GameUpdate::Reaction(game) => handle_reaction(game),
         GameUpdate::Tv(game) => {
-            games_signal.live_games_add(game);
+            games_signal.live_games_add((*game).clone());
         }
         GameUpdate::Urgent(games) => {
             games_signal.own_games_set(games);
@@ -36,6 +36,8 @@ pub fn handle_game(game_update: GameUpdate) {
         GameUpdate::Heartbeat(hb) => {
             game_updater.heartbeat.set(hb);
         }
+        // `GetGame` is a bot request, and bots do not run this client.
+        GameUpdate::Fetched(_) | GameUpdate::Ongoing(_) => {}
     }
 }
 
@@ -61,10 +63,10 @@ fn handle_reaction(gar: GameActionResponse) {
     }
     match gar.game_action.clone() {
         GameReaction::New { pairing_label } => {
-            handle_new_game(gar.game.clone(), pairing_label);
+            handle_new_game((*gar.game).clone(), pairing_label);
         }
         GameReaction::Tv => {
-            games.live_games_add(gar.game);
+            games.live_games_add((*gar.game).clone());
         }
         GameReaction::Adjudicated | GameReaction::TimedOut | GameReaction::Finished => {
             let game_id = &gar.game.game_id;
@@ -76,12 +78,12 @@ fn handle_reaction(gar: GameActionResponse) {
             chat.request_catalog_refresh();
         }
         GameReaction::Berserk => {
-            games.own_games_add(gar.game.clone());
+            games.own_games_add((*gar.game).clone());
             update_notifier.game_response.set(Some(gar));
         }
         GameReaction::Reopened => {
             clear_ready_proposals(&update_notifier, &gar.game.game_id);
-            games.own_games_add(gar.game.clone());
+            games.own_games_add((*gar.game).clone());
             update_notifier.game_response.set(Some(gar.clone()));
         }
         GameReaction::Turn(_) => {
@@ -92,7 +94,7 @@ fn handle_reaction(gar: GameActionResponse) {
                 let chat = expect_context::<Chat>();
                 chat.request_catalog_refresh();
             } else {
-                games.own_games_add(gar.game.clone());
+                games.own_games_add((*gar.game).clone());
             }
             ack_seen_if_watching(&gar.game.game_id, gar.game.current_player_id);
         }
@@ -107,7 +109,7 @@ fn handle_reaction(gar: GameActionResponse) {
         }
         GameReaction::Started => {
             clear_ready_proposals(&update_notifier, &gar.game.game_id);
-            games.own_games_add(gar.game.clone());
+            games.own_games_add((*gar.game).clone());
             navigate_to_actionable_game(&gar.game, true);
             update_notifier.game_response.set(Some(gar.clone()));
         }

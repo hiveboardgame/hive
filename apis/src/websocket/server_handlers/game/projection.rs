@@ -48,7 +48,10 @@ use db_lib::{
 };
 use hive_lib::GameControl;
 use shared_types::{tournament::Format, Conclusion, GameId, GameSpeed, TournamentId};
-use std::collections::{BTreeMap, HashMap};
+use std::{
+    collections::{BTreeMap, HashMap},
+    sync::Arc,
+};
 use uuid::Uuid;
 
 pub(crate) struct TerminalGameFanout<'a> {
@@ -503,11 +506,9 @@ async fn append_game_reaction(
     } = projection;
     let response = if deleted_row {
         data.telemetry.inc_from_model();
-        GameResponse::from_model(game, conn).await
+        GameResponse::from_model(game, conn).await.map(Arc::new)
     } else {
-        data.get_or_build_response(game, conn)
-            .await
-            .map(|response| (*response).clone())
+        data.get_or_build_response(game, conn).await
     };
     let response = match response {
         Ok(response) => response,
@@ -918,7 +919,7 @@ pub(crate) async fn new_tournament_game_messages_by_ids(
             continue;
         }
         let pairing_label = pairing_labels.get(&game.game_id).cloned();
-        messages.extend(new_game_messages(game, None, pairing_label));
+        messages.extend(new_game_messages(Arc::new(game), None, pairing_label));
     }
     Ok(messages)
 }

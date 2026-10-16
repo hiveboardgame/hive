@@ -1,9 +1,7 @@
-use crate::providers::{ApiRequestsProvider, PingContext};
+use crate::providers::PingContext;
 use leptos::prelude::*;
 
-pub fn handle_ping(nonce: u64, value: f64) {
+pub fn handle_ping(value: f64) {
     let mut ping = expect_context::<PingContext>();
-    let api = expect_context::<ApiRequestsProvider>().0.get();
     ping.update_ping(value);
-    api.pong(nonce);
 }

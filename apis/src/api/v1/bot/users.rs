@@ -11,17 +11,7 @@ use uuid::Uuid;
 
 #[get("/api/v1/bot/user/{id}")]
 pub async fn api_get_user(id: Path<Uuid>, Auth(bot): Auth, pool: Data<DbPool>) -> HttpResponse {
-    let id = id.into_inner();
-    if id == bot.id {
-        return HttpResponse::Ok().json(json!({
-          "success": true,
-          "data": {
-            "bot": bot.email,
-            "user": bot,
-          }
-        }));
-    }
-    match get_user(id, pool).await {
+    match get_user(id.into_inner(), pool).await {
         Ok(user) => HttpResponse::Ok().json(json!({
           "success": true,
           "data": {

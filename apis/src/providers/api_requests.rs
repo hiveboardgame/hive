@@ -42,11 +42,6 @@ impl ApiRequests {
         games.own_games_remove(&game_id);
     }
 
-    pub fn pong(&self, nonce: u64) {
-        let msg = ClientRequest::Pong(nonce);
-        self.websocket.send(&msg);
-    }
-
     pub fn game_control(&self, game_id: GameId, gc: GameControl) {
         let msg = ClientRequest::Game {
             game_id,

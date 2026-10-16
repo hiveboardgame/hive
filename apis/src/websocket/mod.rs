@@ -1,19 +1,21 @@
-mod lag_tracking;
-pub use lag_tracking::{Lags, Pings};
 #[cfg(feature = "ssr")]
 pub mod busybee;
 pub mod client_handlers;
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
+    mod lag_tracking;
     mod lobby_snapshot;
     mod messages;
     mod start_conn;
     mod telemetry;
+    #[cfg(test)]
+    mod test_db;
     mod tournament_game_start;
     mod ws_connection;
     mod ws_hub;
     pub mod server_handlers;
 
+    pub use lag_tracking::{Lags, SocketLags};
     pub use start_conn::start_connection;
     pub use telemetry::{TelemetrySnapshot, WsTelemetry};
     pub(crate) use tournament_game_start::TournamentGameStart;
@@ -45,8 +47,8 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     #[derive(Debug)]
     pub struct WebsocketData {
         pub game_start: TournamentGameStart,
-        pub pings: Pings,
         pub lags: Lags,
+        pub socket_lags: SocketLags,
         pub telemetry: Arc<WsTelemetry>,
         /// Per-game cache: `(response, cached_at)`. Validated by both
         /// `updated_at` equality and a TTL to catch stale user-derived fields.
@@ -63,8 +65,8 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
         fn default() -> Self {
             Self {
                 game_start: TournamentGameStart::default(),
-                pings: Pings::default(),
                 lags: Lags::default(),
+                socket_lags: SocketLags::default(),
                 telemetry: Arc::new(WsTelemetry::default()),
                 game_response_cache: DashMap::new(),
                 game_response_inflight: DashMap::new(),
