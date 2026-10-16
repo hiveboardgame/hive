@@ -1,5 +1,8 @@
 use super::{accept::AcceptHandler, create::CreateHandler, delete::DeleteHandler};
-use crate::{common::ChallengeAction, websocket::messages::InternalServerMessage};
+use crate::{
+    common::{ChallengeAction, ServerMessage},
+    websocket::messages::{InternalServerMessage, MessageDestination},
+};
 use anyhow::Result;
 use db_lib::DbPool;
 use uuid::Uuid;
@@ -39,13 +42,35 @@ impl ChallengeHandler {
                     .await?
             }
             ChallengeAction::DeleteMany(ids) => {
+                // Each delete commits on its own, so one failure must not swallow the
+                // removals already made: their broadcasts still go out.
                 let mut messages = Vec::new();
+                let mut failed = Vec::new();
                 for challenge_id in ids {
-                    let mut msgs =
-                        DeleteHandler::new(challenge_id, self.user_id, self.admin, &self.pool)
-                            .handle()
-                            .await?;
-                    messages.append(&mut msgs);
+                    match DeleteHandler::new(
+                        challenge_id.clone(),
+                        self.user_id,
+                        self.admin,
+                        &self.pool,
+                    )
+                    .handle()
+                    .await
+                    {
+                        Ok(mut removed) => messages.append(&mut removed),
+                        Err(error) => {
+                            log::warn!("Deleting challenge {challenge_id} failed: {error}");
+                            failed.push(challenge_id.0);
+                        }
+                    }
+                }
+                if !failed.is_empty() {
+                    messages.push(InternalServerMessage {
+                        destination: MessageDestination::User(self.user_id),
+                        message: ServerMessage::Error(format!(
+                            "Could not delete challenges: {}",
+                            failed.join(", ")
+                        )),
+                    });
                 }
                 messages
             }

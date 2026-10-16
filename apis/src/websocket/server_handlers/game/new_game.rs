@@ -4,10 +4,11 @@ use crate::{
     responses::GameResponse,
     websocket::{InternalServerMessage, MessageDestination},
 };
+use std::sync::Arc;
 use uuid::Uuid;
 
 pub(crate) fn new_game_messages(
-    game: GameResponse,
+    game: Arc<GameResponse>,
     accepted_by: Option<Uuid>,
     pairing_label: Option<String>,
 ) -> Vec<InternalServerMessage> {

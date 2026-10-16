@@ -180,7 +180,7 @@ async fn scheduled_start_deferred(
     hub.dispatch_handler_output(output).await;
     match tournament.organizers(conn).await {
         Ok(organizers) => for organizer in organizers {
-            let _ = hub.dispatch_message(InternalServerMessage {
+            hub.dispatch_message(InternalServerMessage {
                 destination: MessageDestination::User(organizer.id),
                 message: ServerMessage::Tournament(TournamentUpdate::StartDeferred(TournamentId(tournament.nanoid.clone()))),
             }).await;

@@ -1,31 +1,34 @@
 use super::{
-    messages::{InternalServerMessage, MessageDestination, SocketTx},
+    messages::{InternalServerMessage, MessageDestination, Outbound, SocketFormat, SocketTx},
     server_handlers::request_handler::{RequestHandler, RequestHandlerError},
     telemetry::{DisconnectReason, WsTelemetry},
     ws_hub::WsHub,
     WebsocketData,
 };
-use crate::common::{
-    ChatSendError,
-    ClientRequest,
-    ExternalServerError,
-    GameAction,
-    ServerMessage,
-    ServerResult,
-    SubscriptionError,
-    TournamentAction,
-    TournamentUpdate,
+use crate::{
+    api::v1::auth::{decode::jwt_decode, jwt_secret::JwtSecret},
+    common::{
+        ChatSendError,
+        ClientRequest,
+        ExternalServerError,
+        GameAction,
+        ServerMessage,
+        ServerResult,
+        SubscriptionError,
+        TournamentAction,
+        TournamentUpdate,
+    },
+    responses::UserResponse,
 };
 use actix_ws::{AggregatedMessage, AggregatedMessageStream, Session};
-use bytes::Bytes;
-use codee::{binary::MsgpackSerdeCodec, Decoder, Encoder};
-use db_lib::DbPool;
+use codee::{binary::MsgpackSerdeCodec, Decoder};
+use db_lib::{get_conn, models::User, DbPool};
 use futures_util::StreamExt;
 use indoc::printdoc;
 use shared_types::{ConversationKey, GameThread, SimpleUser};
 use std::{
     cell::Cell,
-    sync::Arc,
+    sync::{Arc, Mutex, PoisonError},
     time::{Duration, Instant},
 };
 use uuid::Uuid;
@@ -42,7 +45,7 @@ struct DisconnectGuard {
     hub: Arc<WsHub>,
     telemetry: Arc<WsTelemetry>,
     socket_id: Uuid,
-    user: SimpleUser,
+    identity: Arc<Mutex<SimpleUser>>,
     reason: Cell<DisconnectReason>,
 }
 
@@ -55,26 +58,56 @@ impl DisconnectGuard {
 impl Drop for DisconnectGuard {
     fn drop(&mut self) {
         self.telemetry.record_disconnect(self.reason.get());
-        self.hub.on_disconnect(self.socket_id, self.user.clone());
+        // Read after any `Auth` swap, so cleanup unbinds the user the socket ended as.
+        self.hub
+            .on_disconnect(self.socket_id, current_identity(&self.identity));
     }
+}
+
+// A panic while holding the lock cannot leave a half-written `SimpleUser`: the only write
+// is a whole-value swap.
+fn current_identity(identity: &Mutex<SimpleUser>) -> SimpleUser {
+    identity
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .clone()
+}
+
+/// The four services every frame handler needs. They are built once per connection and
+/// never vary, so they travel as one rather than as four repeated parameters.
+pub struct Deps {
+    pub hub: Arc<WsHub>,
+    pub data: Arc<WebsocketData>,
+    pub pool: DbPool,
+    pub jwt_secret: Arc<JwtSecret>,
 }
 
 pub async fn reader_task(
     mut session: Session,
     mut msg_stream: AggregatedMessageStream,
     socket: SocketTx,
-    hub: Arc<WsHub>,
-    data: Arc<WebsocketData>,
-    pool: DbPool,
+    deps: Deps,
     user: SimpleUser,
 ) {
-    Arc::clone(&hub).on_connect(socket.socket_id, socket.tx.clone(), user.clone());
+    let Deps {
+        hub,
+        data,
+        pool,
+        jwt_secret,
+    } = deps;
+    Arc::clone(&hub).on_connect(
+        socket.socket_id,
+        socket.tx.clone(),
+        socket.format,
+        user.clone(),
+    );
+    let identity = Arc::new(Mutex::new(user));
 
     let guard = DisconnectGuard {
         hub: Arc::clone(&hub),
         telemetry: data.telemetry.clone(),
         socket_id: socket.socket_id,
-        user: user.clone(),
+        identity: Arc::clone(&identity),
         reason: Cell::new(DisconnectReason::Close),
     };
 
@@ -107,14 +140,18 @@ pub async fn reader_task(
                 }
                 Some(Ok(AggregatedMessage::Binary(bytes))) => {
                     last_hb = Instant::now();
-                    handle_binary(&bytes, &hub, &socket, &data, &pool, &user).await;
+                    handle_binary(&bytes, &hub, &socket, &data, &pool, &jwt_secret, &identity).await;
                 }
                 Some(Ok(AggregatedMessage::Close(_))) => break,
                 None => {
                     guard.set_reason(DisconnectReason::StreamErr);
                     break;
                 }
-                Some(Ok(AggregatedMessage::Text(_))) => {}
+                Some(Ok(AggregatedMessage::Text(text))) => {
+                    last_hb = Instant::now();
+                    handle_text(&text, &hub, &socket, &data, &pool, &jwt_secret, &identity)
+                        .await;
+                }
                 Some(Err(_)) => {
                     guard.set_reason(DisconnectReason::StreamErr);
                     break;
@@ -133,14 +170,64 @@ async fn handle_binary(
     socket: &SocketTx,
     data: &Arc<WebsocketData>,
     pool: &DbPool,
-    user: &SimpleUser,
+    jwt_secret: &Arc<JwtSecret>,
+    identity: &Arc<Mutex<SimpleUser>>,
 ) {
     data.telemetry.record_message_received(bytes.len());
 
-    let request: Result<ClientRequest, _> = MsgpackSerdeCodec::decode(bytes);
-    let Ok(request) = request else {
+    let Ok(request) = MsgpackSerdeCodec::decode(bytes) else {
         return;
     };
+    handle_request(request, hub, socket, data, pool, jwt_secret, identity).await;
+}
+
+async fn handle_text(
+    text: &str,
+    hub: &Arc<WsHub>,
+    socket: &SocketTx,
+    data: &Arc<WebsocketData>,
+    pool: &DbPool,
+    jwt_secret: &Arc<JwtSecret>,
+    identity: &Arc<Mutex<SimpleUser>>,
+) {
+    data.telemetry.record_message_received(text.len());
+
+    // Only bots send text frames, and they are writing the JSON by hand: tell them what is
+    // wrong instead of leaving them waiting for a reply that will never come.
+    let request = match serde_json::from_str(text) {
+        Ok(request) => request,
+        Err(error) => {
+            let message = ServerResult::Err(ExternalServerError::Request {
+                reason: format!("Malformed request: {error}"),
+            });
+            hub.dispatch_out(
+                &MessageDestination::Direct(socket.clone()),
+                &mut Outbound::typed(&message),
+            )
+            .await;
+            return;
+        }
+    };
+    handle_request(request, hub, socket, data, pool, jwt_secret, identity).await;
+}
+
+async fn handle_request(
+    request: ClientRequest,
+    hub: &Arc<WsHub>,
+    socket: &SocketTx,
+    data: &Arc<WebsocketData>,
+    pool: &DbPool,
+    jwt_secret: &Arc<JwtSecret>,
+    identity: &Arc<Mutex<SimpleUser>>,
+) {
+    if let ClientRequest::Auth(token) = request {
+        // Boxed so the login, profile build and lobby snapshot behind it stay out of the
+        // future every *other* frame — an ordinary move included — is dispatched through.
+        Box::pin(handle_auth(&token, hub, socket, pool, jwt_secret, identity)).await;
+        return;
+    }
+
+    let user = current_identity(identity);
 
     // Unwatch needs hub access and no DB — handle it here before RequestHandler.
     if let ClientRequest::Game {
@@ -170,14 +257,14 @@ async fn handle_binary(
                     hub,
                     socket,
                     &request,
-                    user,
+                    &user,
                     RequestHandlerError::InternalError(error),
                 )
                 .await;
             }
         }
         Err(err) => {
-            dispatch_request_error(hub, socket, &request, user, err).await;
+            dispatch_request_error(hub, socket, &request, &user, err).await;
         }
     }
 }
@@ -192,7 +279,14 @@ async fn dispatch_request_error(
     if matches!(err, RequestHandlerError::RateLimited(_)) {
         hub.data.telemetry.record_chat_rate_limit_rejection();
     }
-    if should_log_request_error(&err) {
+    if let Some(reason) = rejection(request, &err) {
+        log::warn!(
+            "Rejected {} from {} {}: {reason}",
+            request_log_summary(request),
+            user.username,
+            user.user_id
+        );
+    } else if should_log_request_error(&err) {
         let request_summary = request_log_summary(request);
         printdoc! {r#"
             -----------------ERROR-----------------
@@ -218,20 +312,35 @@ async fn dispatch_request_error(
         _ => None,
     };
     if let Some(update) = failure {
-        let _ = hub
-            .dispatch_message(InternalServerMessage {
-                destination: MessageDestination::Direct(socket.clone()),
-                message: ServerMessage::Tournament(update),
-            })
-            .await;
-    }
-    let message = ServerResult::Err(external_server_error(request, &err));
-    if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-        hub.dispatch(
-            &MessageDestination::Direct(socket.clone()),
-            Bytes::from(serialized),
-        )
+        hub.dispatch_message(InternalServerMessage {
+            destination: MessageDestination::Direct(socket.clone()),
+            message: ServerMessage::Tournament(update),
+        })
         .await;
+    }
+    let message = ServerResult::Err(for_format(
+        external_server_error(request, &err),
+        socket.format,
+    ));
+    hub.dispatch_out(
+        &MessageDestination::Direct(socket.clone()),
+        &mut Outbound::typed(&message),
+    )
+    .await;
+}
+
+/// Requests a bot makes, where it needs to know why it was refused. Other requests keep the
+/// generic reason, because their internal errors can carry private tournament details.
+fn rejection(request: &ClientRequest, error: &RequestHandlerError) -> Option<String> {
+    match request {
+        ClientRequest::Game { .. }
+        | ClientRequest::Challenge(_)
+        | ClientRequest::GetGame(_)
+        | ClientRequest::GetPendingGames
+        | ClientRequest::GetOngoingGames
+        | ClientRequest::GetUser(_)
+        | ClientRequest::GetUsername(_) => error.rejection_reason(),
+        _ => None,
     }
 }
 
@@ -296,9 +405,24 @@ fn external_server_error(
                 error: subscription_error,
             }
         }
-        _ => ExternalServerError::Request {
-            reason: error.user_safe_reason(),
+        ClientRequest::Game { game_id, .. } => ExternalServerError::Game {
+            game_id: game_id.clone(),
+            reason: rejection(request, error).unwrap_or_else(|| error.user_safe_reason()),
         },
+        _ => ExternalServerError::Request {
+            reason: rejection(request, error).unwrap_or_else(|| error.user_safe_reason()),
+        },
+    }
+}
+
+// Tabs keep the bundle they loaded across a deploy, and one from before `Game` existed cannot
+// decode it. Browsers have no use for the game id.
+fn for_format(error: ExternalServerError, format: SocketFormat) -> ExternalServerError {
+    match (format, error) {
+        (SocketFormat::Msgpack, ExternalServerError::Game { reason, .. }) => {
+            ExternalServerError::Request { reason }
+        }
+        (_, error) => error,
     }
 }
 
@@ -324,9 +448,104 @@ fn should_log_request_error(err: &RequestHandlerError) -> bool {
     )
 }
 
+async fn send_direct(hub: &Arc<WsHub>, socket: &SocketTx, message: ServerMessage) {
+    let message = ServerResult::Ok(Box::new(message));
+    hub.dispatch_out(
+        &MessageDestination::Direct(socket.clone()),
+        &mut Outbound::typed(&message),
+    )
+    .await;
+}
+
+async fn handle_auth(
+    token: &str,
+    hub: &Arc<WsHub>,
+    socket: &SocketTx,
+    pool: &DbPool,
+    jwt_secret: &Arc<JwtSecret>,
+    identity: &Arc<Mutex<SimpleUser>>,
+) {
+    let failed = |hub: &Arc<WsHub>, socket: &SocketTx| {
+        let hub = hub.clone();
+        let socket = socket.clone();
+        async move {
+            send_direct(
+                &hub,
+                &socket,
+                ServerMessage::Error("Auth failed".to_string()),
+            )
+            .await;
+        }
+    };
+
+    // A second `Auth` would re-run the Offline/Online broadcast and reset the socket's rate
+    // limits, so a socket authenticates once.
+    if current_identity(identity).authed {
+        send_direct(
+            hub,
+            socket,
+            ServerMessage::Error("Already authenticated".to_string()),
+        )
+        .await;
+        return;
+    }
+    if !hub.allow_auth_attempt(socket.socket_id) {
+        send_direct(
+            hub,
+            socket,
+            ServerMessage::Error("Too many Auth attempts".to_string()),
+        )
+        .await;
+        return;
+    }
+
+    let Ok(email) = jwt_decode(token, &jwt_secret.decoding) else {
+        failed(hub, socket).await;
+        return;
+    };
+    let Ok(mut conn) = get_conn(pool).await else {
+        failed(hub, socket).await;
+        return;
+    };
+    let Ok(user) = User::find_for_login(&email, &mut conn).await else {
+        failed(hub, socket).await;
+        return;
+    };
+    // The same gate the HTTP bot API applies, so the socket cannot become a second way in
+    // for a token the HTTP side would refuse.
+    if !user.bot {
+        failed(hub, socket).await;
+        return;
+    }
+
+    let authenticated = SimpleUser {
+        user_id: user.id,
+        username: user.username.clone(),
+        admin: user.admin,
+        authed: true,
+    };
+
+    // Built before the identity swap: a failure here must leave the socket anonymous,
+    // matching the "Auth failed" we send back.
+    let Ok(user_response) = UserResponse::from_model(&user, &mut conn).await else {
+        failed(hub, socket).await;
+        return;
+    };
+
+    let previous = {
+        let mut guard = identity.lock().unwrap_or_else(PoisonError::into_inner);
+        std::mem::replace(&mut *guard, authenticated.clone())
+    };
+
+    // The ack goes out before the re-bind so it precedes every message the new
+    // registration produces, including our own Online.
+    send_direct(hub, socket, ServerMessage::Authenticated(user_response)).await;
+    Arc::clone(hub).on_authenticate(socket, previous, authenticated);
+}
+
 #[cfg(test)]
 mod tests {
-    use super::external_server_error;
+    use super::{external_server_error, for_format};
     use crate::{
         common::{
             ChatSendError,
@@ -337,7 +556,7 @@ mod tests {
             SubscriptionError,
         },
         websocket::{
-            messages::AuthError,
+            messages::{AuthError, SocketFormat},
             server_handlers::{chat::limits::ChatLimitError, request_handler::RequestHandlerError},
         },
     };
@@ -370,6 +589,86 @@ mod tests {
         };
         assert!(!reason.contains("internal tournament context"));
         assert!(!reason.contains("internal pairing failure"));
+    }
+
+    #[test]
+    fn a_refused_move_names_its_game_and_the_reason() {
+        let game_id = GameId("bot-game".to_string());
+        let request = ClientRequest::Game {
+            game_id: game_id.clone(),
+            action: crate::common::GameAction::Play("wA1 -bQ".to_string()),
+        };
+        let refused = RequestHandlerError::InternalError(
+            DbError::InvalidAction {
+                info: "It is not this player's turn".to_string(),
+            }
+            .into(),
+        );
+
+        assert_eq!(
+            external_server_error(&request, &refused),
+            ExternalServerError::Game {
+                game_id,
+                reason: "Invalid action: It is not this player's turn".to_string(),
+            }
+        );
+    }
+
+    #[test]
+    fn a_browser_gets_a_refused_move_in_the_shape_old_tabs_decode() {
+        let refused = ExternalServerError::Game {
+            game_id: GameId("browser-game".to_string()),
+            reason: "Invalid action: It is not this player's turn".to_string(),
+        };
+
+        assert_eq!(
+            for_format(refused.clone(), SocketFormat::Msgpack),
+            ExternalServerError::Request {
+                reason: "Invalid action: It is not this player's turn".to_string(),
+            }
+        );
+        assert_eq!(for_format(refused.clone(), SocketFormat::Json), refused);
+    }
+
+    #[test]
+    fn an_internal_failure_behind_a_move_stays_generic() {
+        let request = ClientRequest::Game {
+            game_id: GameId("bot-game".to_string()),
+            action: crate::common::GameAction::Play("wA1 -bQ".to_string()),
+        };
+        let internal = RequestHandlerError::InternalError(
+            DbError::InternalError {
+                reason: "connection reset by peer".to_string(),
+            }
+            .into(),
+        );
+
+        let ExternalServerError::Game { reason, .. } = external_server_error(&request, &internal)
+        else {
+            panic!("a game request fails with a game error");
+        };
+        assert_eq!(reason, "Unable to complete request");
+    }
+
+    #[test]
+    fn bad_notation_is_reported_as_such() {
+        let request = ClientRequest::Game {
+            game_id: GameId("bot-game".to_string()),
+            action: crate::common::GameAction::Play("wA1".to_string()),
+        };
+        let unparsable = RequestHandlerError::InternalError(
+            hive_lib::GameError::ParsingError {
+                found: "wA1".to_string(),
+                typ: "move, expected 'piece position'".to_string(),
+            }
+            .into(),
+        );
+
+        let ExternalServerError::Game { reason, .. } = external_server_error(&request, &unparsable)
+        else {
+            panic!("a game request fails with a game error");
+        };
+        assert!(reason.contains("wA1"), "{reason}");
     }
 
     #[test]
@@ -458,6 +757,207 @@ mod tests {
                 client_id,
                 error: ChatSendError::ClientIdConflict,
             },
+        );
+    }
+
+    /// Acked first, so a bot learns its own uid before anything else; no lobby snapshot
+    /// follows, the bot asks for its games; and a second `Auth` on the same socket is refused
+    /// rather than re-running the rebind.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn auth_acks_once_and_sends_no_snapshot() {
+        use crate::{
+            api::v1::auth::{
+                encode::{jwt_encode, Bot},
+                jwt_secret::JwtSecret,
+            },
+            common::{ServerMessage, ServerResult},
+            responses::UserResponse,
+            websocket::{
+                messages::{SocketFormat, SocketTx},
+                test_db::test_db,
+                ws_hub::{WsHub, SOCKET_BUFFER_CAPACITY},
+                WebsocketData,
+            },
+        };
+        use db_lib::{
+            get_conn,
+            models::{NewUser, User},
+        };
+        use shared_types::SimpleUser;
+        use std::sync::{Arc, Mutex};
+
+        let db = test_db().await;
+        let pool = db.pool.clone();
+        // The rebind spawns its loader with `actix_rt::spawn`, which needs a local task set.
+        tokio::task::LocalSet::new()
+            .run_until(async move {
+                let mut conn = get_conn(&pool).await.expect("test database connection");
+                let mut new_user = NewUser::new("ackbot", "password", "ackbot@example.com")
+                    .expect("valid bot user");
+                new_user.bot = true;
+                let user = User::create(new_user, &mut conn)
+                    .await
+                    .expect("bot user is created");
+
+                let jwt_secret = Arc::new(JwtSecret::new("test-secret".to_string()));
+                let token = jwt_encode(
+                    Bot {
+                        email: "ackbot@example.com".to_string(),
+                        password: "password".to_string(),
+                    },
+                    &jwt_secret.encoding,
+                )
+                .expect("token encodes");
+
+                let hub = WsHub::new(Arc::new(WebsocketData::default()), pool.clone());
+                let (tx, mut rx) = tokio::sync::mpsc::channel(SOCKET_BUFFER_CAPACITY);
+                let socket = SocketTx {
+                    socket_id: Uuid::new_v4(),
+                    format: SocketFormat::Json,
+                    tx,
+                };
+                let identity = Arc::new(Mutex::new(SimpleUser {
+                    user_id: Uuid::new_v4(),
+                    username: "anonymous".to_string(),
+                    admin: false,
+                    authed: false,
+                }));
+
+                super::handle_auth(&token, &hub, &socket, &pool, &jwt_secret, &identity).await;
+                assert!(super::current_identity(&identity).authed);
+                super::handle_auth(&token, &hub, &socket, &pool, &jwt_secret, &identity).await;
+
+                let mut frames = Vec::new();
+                while let Ok(Some(bytes)) =
+                    tokio::time::timeout(std::time::Duration::from_millis(500), rx.recv()).await
+                {
+                    let decoded: ServerResult =
+                        serde_json::from_slice(&bytes).expect("a json socket is sent JSON");
+                    let ServerResult::Ok(message) = decoded else {
+                        panic!("no frame here is an error envelope");
+                    };
+                    frames.push(*message);
+                }
+
+                let Some(ServerMessage::Authenticated(UserResponse { uid, .. })) = frames.first()
+                else {
+                    panic!("a bot learns it is authenticated before any other frame: {frames:?}");
+                };
+                assert_eq!(*uid, user.id);
+                assert!(
+                    !frames
+                        .iter()
+                        .any(|frame| matches!(frame, ServerMessage::LobbySnapshot(_))),
+                    "Auth must not push a lobby snapshot: {frames:?}"
+                );
+                assert!(
+                    frames.iter().any(|frame| matches!(
+                        frame,
+                        ServerMessage::Error(reason) if reason == "Already authenticated"
+                    )),
+                    "a second Auth on the same socket is refused: {frames:?}"
+                );
+            })
+            .await;
+    }
+
+    #[tokio::test]
+    async fn a_junk_token_leaves_the_socket_anonymous() {
+        use crate::{
+            api::v1::auth::jwt_secret::JwtSecret,
+            websocket::{messages::SocketTx, ws_hub::WsHub, WebsocketData},
+        };
+        use shared_types::SimpleUser;
+        use std::sync::{Arc, Mutex};
+
+        let pool = db_lib::get_pool("postgresql://test:test@127.0.0.1:9/test")
+            .await
+            .expect("bb8 pool builds without connecting");
+        let data = Arc::new(WebsocketData::default());
+        let hub = WsHub::new(data.clone(), pool.clone());
+        let (tx, _rx) = tokio::sync::mpsc::channel(8);
+        let socket = SocketTx {
+            socket_id: Uuid::new_v4(),
+            format: crate::websocket::messages::SocketFormat::Msgpack,
+            tx,
+        };
+        let anonymous = SimpleUser {
+            user_id: Uuid::nil(),
+            username: "anonymous".to_string(),
+            admin: false,
+            authed: false,
+        };
+        let identity = Arc::new(Mutex::new(anonymous.clone()));
+        let jwt_secret = Arc::new(JwtSecret::new("test-secret".to_string()));
+
+        // Decoding fails before any database access, so the unreachable pool is never touched.
+        super::handle_auth("not-a-jwt", &hub, &socket, &pool, &jwt_secret, &identity).await;
+
+        let after = identity.lock().expect("identity mutex poisoned").clone();
+        assert!(!after.authed);
+        assert_eq!(after.user_id, anonymous.user_id);
+    }
+
+    /// The frame dispatcher is the parent frame of every handler chain, so its size is
+    /// paid by requests that never touch the branch responsible for it — `handle_auth`
+    /// inlines a login, a profile build and a whole lobby snapshot into the same future an
+    /// ordinary move is dispatched through. Debug builds neither pack async state machines
+    /// nor elide the temporaries used to build them, so this is what decides whether the
+    /// chain below still fits an Actix worker stack.
+    #[tokio::test]
+    async fn the_frame_dispatch_future_fits_a_worker_stack() {
+        use crate::{
+            api::v1::auth::jwt_secret::JwtSecret,
+            common::GameAction,
+            websocket::{
+                messages::{SocketFormat, SocketTx},
+                ws_hub::WsHub,
+                WebsocketData,
+            },
+        };
+        use shared_types::SimpleUser;
+        use std::sync::{Arc, Mutex};
+
+        const DISPATCH_FUTURE_BUDGET: usize = 16 * 1024;
+
+        let pool = db_lib::get_pool("postgresql://test:test@127.0.0.1:9/test")
+            .await
+            .expect("bb8 pool builds without connecting");
+        let data = Arc::new(WebsocketData::default());
+        let hub = WsHub::new(data.clone(), pool.clone());
+        let (tx, _rx) = tokio::sync::mpsc::channel(8);
+        let socket = SocketTx {
+            socket_id: Uuid::new_v4(),
+            format: SocketFormat::Msgpack,
+            tx,
+        };
+        let identity = Arc::new(Mutex::new(SimpleUser {
+            user_id: Uuid::nil(),
+            username: "anonymous".to_string(),
+            admin: false,
+            authed: false,
+        }));
+        let jwt_secret = Arc::new(JwtSecret::new("test-secret".to_string()));
+        let request = ClientRequest::Game {
+            game_id: GameId("some-game".to_string()),
+            action: GameAction::Play("wA1 -bQ".to_string()),
+        };
+
+        let size = std::mem::size_of_val(&super::handle_request(
+            request,
+            &hub,
+            &socket,
+            &data,
+            &pool,
+            &jwt_secret,
+            &identity,
+        ));
+
+        println!("handle_request future: {size} bytes of {DISPATCH_FUTURE_BUDGET}");
+        assert!(
+            size <= DISPATCH_FUTURE_BUDGET,
+            "handle_request is a {size} byte future, budget is {DISPATCH_FUTURE_BUDGET}; \
+             box the branch futures that grew it"
         );
     }
 }

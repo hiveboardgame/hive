@@ -3,7 +3,7 @@ use super::{
     join_handler::JoinHandler,
     start::StartHandler,
     timeout_handler::TimeoutHandler,
-    turn_handler::TurnHandler,
+    turn_handler::{TurnHandler, TurnInput},
 };
 use crate::{
     common::GameAction,
@@ -57,6 +57,19 @@ impl GameActionHandler {
         })
     }
 
+    async fn turn(&self, input: TurnInput) -> Result<HandlerOutput> {
+        TurnHandler::new(
+            input,
+            &self.game,
+            &self.username,
+            self.user_id,
+            self.data.clone(),
+            &self.pool,
+        )
+        .handle()
+        .await
+    }
+
     pub async fn handle(&self) -> Result<HandlerOutput> {
         let output = match self.game_action.clone() {
             GameAction::Berserk => {
@@ -74,18 +87,8 @@ impl GameActionHandler {
                 .handle()
                 .await?
             }
-            GameAction::Turn(turn) => {
-                TurnHandler::new(
-                    turn,
-                    &self.game,
-                    &self.username,
-                    self.user_id,
-                    self.data.clone(),
-                    &self.pool,
-                )
-                .handle()
-                .await?
-            }
+            GameAction::Turn(turn) => self.turn(TurnInput::Structured(turn)).await?,
+            GameAction::Play(notation) => self.turn(TurnInput::Notation(notation)).await?,
             GameAction::Control(control) => {
                 GameControlHandler::new(
                     &control,

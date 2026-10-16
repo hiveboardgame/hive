@@ -11,6 +11,7 @@ use crate::{
 use chrono::prelude::*;
 use diesel::{dsl::exists, prelude::*, select};
 use diesel_async::RunQueryDsl;
+use hive_lib::GameType;
 use nanoid::nanoid;
 use serde::Serialize;
 use shared_types::{
@@ -51,6 +52,34 @@ fn validate_opponent_visibility(
     Ok(())
 }
 
+fn invalid(info: &str) -> DbError {
+    DbError::InvalidInput {
+        info: info.to_string(),
+        error: String::new(),
+    }
+}
+
+// The rules every way of creating a challenge shares: the browser form, the HTTP bot API and
+// the websocket. Time ranges are not among them: a rematch inherits a tournament game's clock,
+// which may be far outside what the challenge forms offer.
+fn validate_challenge_rules(d: &ChallengeDetails) -> Result<(), DbError> {
+    if d.game_type != GameType::Base && d.game_type != GameType::MLP {
+        return Err(invalid("Only Base and MLP games can be challenged."));
+    }
+    if d.rated && d.game_type == GameType::Base {
+        return Err(invalid("Base games cannot be rated."));
+    }
+    if d.rated && d.time_mode == TimeMode::Untimed {
+        return Err(invalid("Untimed games cannot be rated."));
+    }
+    if matches!((d.band_lower, d.band_upper), (Some(lower), Some(upper)) if lower > upper) {
+        return Err(invalid(
+            "The rating band's lower bound is above its upper bound.",
+        ));
+    }
+    Ok(())
+}
+
 #[derive(Insertable, Debug)]
 #[diesel(table_name = challenges)]
 pub struct NewChallenge {
@@ -84,6 +113,7 @@ impl NewChallenge {
             }
         })?;
         validate_opponent_visibility(challenger_id, opponent_id, &d.visibility)?;
+        validate_challenge_rules(d)?;
         let mut nanoid: String;
         loop {
             nanoid = nanoid!(12);
@@ -244,5 +274,75 @@ impl Challenge {
         .execute(conn)
         .await?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hive_lib::ColorChoice;
+
+    fn details() -> ChallengeDetails {
+        ChallengeDetails {
+            rated: true,
+            game_type: GameType::MLP,
+            visibility: ChallengeVisibility::Public,
+            opponent: None,
+            color_choice: ColorChoice::Random,
+            time_mode: TimeMode::RealTime,
+            time_base: Some(300),
+            time_increment: Some(3),
+            band_upper: None,
+            band_lower: None,
+        }
+    }
+
+    #[test]
+    fn an_ordinary_rated_challenge_passes() {
+        assert!(validate_challenge_rules(&details()).is_ok());
+    }
+
+    #[test]
+    fn rated_base_is_refused() {
+        let d = ChallengeDetails {
+            game_type: GameType::Base,
+            ..details()
+        };
+        assert!(validate_challenge_rules(&d).is_err());
+        let unrated = ChallengeDetails { rated: false, ..d };
+        assert!(validate_challenge_rules(&unrated).is_ok());
+    }
+
+    #[test]
+    fn rated_untimed_is_refused() {
+        let d = ChallengeDetails {
+            time_mode: TimeMode::Untimed,
+            time_base: None,
+            time_increment: None,
+            ..details()
+        };
+        assert!(validate_challenge_rules(&d).is_err());
+        let unrated = ChallengeDetails { rated: false, ..d };
+        assert!(validate_challenge_rules(&unrated).is_ok());
+    }
+
+    #[test]
+    fn only_base_and_mlp_are_allowed() {
+        let d = ChallengeDetails {
+            rated: false,
+            game_type: GameType::ML,
+            ..details()
+        };
+        assert!(validate_challenge_rules(&d).is_err());
+    }
+
+    #[test]
+    fn an_inverted_rating_band_is_refused() {
+        let d = ChallengeDetails {
+            band_lower: Some(1600),
+            band_upper: Some(1400),
+            ..details()
+        };
+        assert!(validate_challenge_rules(&d).is_err());
     }
 }
