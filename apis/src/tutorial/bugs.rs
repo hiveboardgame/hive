@@ -9,9 +9,13 @@ pub const CHAPTER: Chapter = Chapter {
     title: "The pieces",
     summary: "Eight pieces, eight ways to move. Learn each one by playing it.",
     lessons: &[
-        FREEDOM_TO_MOVE,
         QUEEN,
+        FREEDOM_TO_MOVE,
+        DONT_BREAK_THE_HIVE,
+        ANT_FIRST_MOVES,
         ANT,
+        ANT_ATTACK,
+        ANT_PIN,
         SPIDER,
         SPIDER_DEAD_END,
         GRASSHOPPER,
@@ -23,100 +27,186 @@ pub const CHAPTER: Chapter = Chapter {
     ],
 };
 
-const FREEDOM_TO_MOVE: Lesson = Lesson {
-    id: "bugs.freedom_to_move",
-    title: "Freedom to move",
-    intro: &[
-        "Walking pieces slide along the ground, so they only fit through an opening that is wide enough.",
-        "A narrow opening with pieces on both sides is a gate: nothing can slide through it, no matter how close the hex looks.",
-    ],
-    brief: "From a game between two 1900+ players (corpus game 8189, after 8 moves each), White to move. The slot wL- is walled in; wQ and wA3 touch it but both flanks of their way in are taken, so neither can enter (neither is pinned). wQ steps to \\wL, freeing one flank; then wA3 slides into the slot.",
-    setup: Setup::Position("A+A+A+Q+L+B-a6=m5-(l+qp1-aM),w"),
-    steps: &[
-        Step::play(
-            "Your Queen and Ant can't slide into the ringed hex: it's gated. Move your Queen along the arrow to open it.",
-            Move {
-                piece: "wQ",
-                to: "\\wL",
-            },
-            "Click your Queen, then the hex the arrow points to.",
-        )
-        .marked(&["wL-"])
-        .with_arrows(&[("wQ", "\\wL")])
-        .reply("bA3", "-bP"),
-        Step::play(
-            "The gate is open. Slide your Ant into the highlighted hex.",
-            Move {
-                piece: "wA3",
-                to: "wL-",
-            },
-            "Click the Ant the arrow starts from, then the highlighted hex.",
-        )
-        .highlighted(&["wL-"])
-        .with_arrows(&[("wA3", "wL-")]),
-    ],
-    outro: "Gates stop the Ant, the Spider, and the Queen. Jumpers and climbers ignore them, as you'll see in the next chapter.",
-};
-
 const QUEEN: Lesson = Lesson {
     id: "bugs.queen",
     title: "Queen Bee",
     intro: &[
-        "Your Queen is your most important piece: lose her and you lose the game. Think of her like the king in chess.",
-        "She moves one hex per turn, sliding along the edge of the hive.",
+        "Your Queen [[wQ]] is your most important piece: if she gets surrounded, you lose the game. Think of her like the king in chess.",
+        "She moves by **crawling** one hex per turn. Many pieces in Hive move by crawling.",
+        "**Crawling** simply means sliding along the edge of the hive.",
     ],
-    brief: "From a 2000+ game (corpus game 16, after two moves each), White to move. wQ steps to -bM; Black's scripted reply bA1 bM-; then wQ steps on to -bQ. Highlight and arrow for each step.",
-    setup: Setup::Position("A+q-lLQ4+a!,w"),
+    brief: "Supplied HOP, White to move. wQ steps to bA2\\, touching the black Ant; Black places bG1 at bL\\; wQ then reaches bA2-, the green hex in line with both black Ants, pinning them both.",
+    setup: Setup::Position("A+q+M2-(l+La!-a2-Q),w"),
     steps: &[
         Step::play(
-            "Step your Queen to the highlighted hex.",
+            "You play as White. Make your Queen [[wQ]] reach the green hex in 2 moves to complete the lesson. Click on your pieces to see where they can move.",
             Move {
                 piece: "wQ",
-                to: "-bM",
+                to: "bA2\\",
             },
-            "The Queen only moves one hex per turn.",
+            "Aim to reach the green hex as quickly as possible.",
         )
-        .highlighted(&["-bM"])
-        .with_arrows(&[("wQ", "-bM")])
-        .reply("bA1", "bM-"),
+        .highlighted(&["bA2-"])
+        .hint_after(2)
+        .reply("bG1", "bL\\")
+        .your_turn(),
         Step::play(
-            "Black answered. One more step: move your Queen to the next highlighted hex.",
+            "You play as White. Make your Queen [[wQ]] reach the green hex in 2 moves to complete the lesson. Click on your pieces to see where they can move.",
             Move {
                 piece: "wQ",
-                to: "-bQ",
+                to: "bA2-",
             },
-            "The Queen only moves one hex per turn.",
+            "Aim to reach the green hex as quickly as possible.",
         )
-        .highlighted(&["-bQ"])
-        .with_arrows(&[("wQ", "-bQ")]),
+        .highlighted(&["bA2-"])
+        .hint_after(2),
+        Step::read(
+            "Well done! The Queen [[wQ]] has reached her destination and pinned the two Ants [[bA1]] [[bA2]] in the process.",
+            &[],
+        )
+        .with_completion_tip(
+            "Tip: The Queen [[wQ]] doesn't need to move often, but take your chances to escape from your opponent's pieces if you can!",
+        ),
     ],
-    outro: "Slow but precious. Most of the time your Queen should be somewhere she can still step away from trouble.",
+    outro: "",
+};
+
+const FREEDOM_TO_MOVE: Lesson = Lesson {
+    id: "bugs.freedom_to_move",
+    title: "Freedom to Move Rule",
+    intro: &[
+        "Crawling is only possible if pieces can slide along the edges of the hive. Here, the White Ladybug [[wL]] and Ant [[wA2]] obstruct the movement of the Queen [[wQ]] according to the Freedom to Move Rule.",
+        "These formations are also called Gates (you will learn more about them later!).",
+    ],
+    brief: "Supplied HOP, White to move. The hex -wL is gated by wL and wA2. Move wA2 anywhere except -wL to open the Gate; Black places bG1 beside bA2 when legal, or elsewhere if White blocks every adjacent placement. Then wQ crawls into -wL.",
+    setup: Setup::Position("AB-M+B1-(q-l+La+s!3-(Qa1+ab1-A)),w"),
+    steps: &[
+        Step::play(
+            "You play as White. Move your Ant [[wA2]] to allow your Queen [[wQ]] to reach the green hex.",
+            MoveExcept {
+                piece: "wA2",
+                except: "-wL",
+            },
+            "Aim to reach the green hex as quickly as possible.",
+        )
+        .highlighted(&["-wL"])
+        .hint_after(2)
+        .reply_placement_near("bG1", "bA2")
+        .your_turn(),
+        Step::play(
+            "You play as White. Move your Queen [[wQ]] into the green hex.",
+            Move {
+                piece: "wQ",
+                to: "-wL",
+            },
+            "Aim to reach the green hex as quickly as possible.",
+        )
+        .highlighted(&["-wL"])
+        .hint_after(2),
+        Step::read(
+            "Well done! Your Ant [[wA2]] opened the Gate, allowing your Queen [[wQ]] to crawl through.",
+            &[],
+        ),
+    ],
+    outro: "",
+};
+
+const DONT_BREAK_THE_HIVE: Lesson = Lesson {
+    id: "bugs.dont_break_the_hive",
+    title: "Don't break the hive",
+    intro: &[
+        "You are not allowed to break the hive during a move, even if it would reconnect at the end of the move.",
+        "Only your White Queen [[wQ]] can move here. The blank White and Black tiles stay fixed and form the hive.",
+        "Keep your Queen [[wQ]] touching the hive as she crawls around it. Reach the green hex to completely surround the Black Queen [[bQ]].",
+    ],
+    brief: "Supplied HOP with fixed blank tiles for every non-Queen piece. Only wQ may move. Crawl around the hive to bQ/, the last hole beside bQ. No opponent moves. The adjacent wM/ hex is red because wQ would lose contact while sliding there directly.",
+    setup: Setup::BlankPosition("A+B-aa1-(lqA1-L+A-a2+M)3+m!3-Q,w"),
+    steps: &[
+        Step::play(
+            "You play as White. Move your Queen [[wQ]] around the hive into the green hex to surround the Black Queen [[bQ]].",
+            Travel { piece: "wQ", to: "bQ/" },
+            "Keep your Queen touching the hive and aim for the green hex.",
+        )
+        .highlighted(&["bQ/"])
+        .forbidden(&["wM/"])
+        .hint_after(2),
+        Step::read("Well done!", &[]).forbidden(&["wM/"]),
+    ],
+    outro: "",
+};
+
+const ANT_FIRST_MOVES: Lesson = Lesson {
+    id: "bugs.ant_first_moves",
+    title: "Ant (first moves)",
+    intro: &[
+        "The Ant [[wA1]] can crawl around the edge of the hive in a single turn.",
+        "Move your Ant [[wA1]] next to the Black Queen [[bQ]] to begin an attack.",
+    ],
+    brief: "Supplied HOP ALl-qp!1+Q,w. Move the existing wA1 to any legal hex adjacent to bQ.",
+    setup: Setup::Position("ALl-qp!1+Q,w"),
+    steps: &[
+        Step::play(
+            "You play as White. Move your Ant [[wA1]] to any space next to the Black Queen [[bQ]].",
+            MovePiece { piece: "wA1", touching: Some("bQ") },
+            "Move your Ant next to the Black Queen.",
+        )
+        .hint_after(2),
+        Step::read("Well done! Your Ant [[wA1]] is attacking the Black Queen [[bQ]].", &[]),
+    ],
+    outro: "",
 };
 
 const ANT: Lesson = Lesson {
     id: "bugs.ant",
     title: "Ant",
     intro: &[
-        "The Ant slides around the outside of the hive as far as it likes. In one move it can reach almost any free hex on the edge.",
-        "Like every walking piece it can't slide through gates, so a hole with a narrow entrance stays out of reach.",
+        "The Ant [[wA1]] crawls around the edge of the hive, moving as many steps as you like.",
+        "According to the Freedom to Move Rule, the Ant [[wA1]] cannot slide through narrow entrances (red hex).",
+        "Each player starts the game with 3 Ants [[wA1]] in reserve.",
     ],
-    brief: "From a 2000+ game (corpus game 4, after four moves each), White to move. Green hexes for wA1: bB1/ and wP-, both reachable from the start (the Ant is put back after each try). Ring: -bP, a hole the Ant cannot reach.",
+    brief: "From a 2000+ game (corpus game 4, after four moves each), White to move. The hole -bP between the Queens is gated and red. wA1 must move to either bQ- or bQ/, the only reachable hexes adjacent to bQ. Show those two green destinations only after two incorrect attempts.",
     setup: Setup::Position("A+P+QL-lb5-q-p,w"),
     steps: &[
         Step::play(
-            "Send your Ant to green hex 1, then to green hex 2. It comes back after each try.",
-            Visit {
+            "You play as White. Play any move with your Ant [[wA1]] to attack the opponent's Queen [[bQ]].",
+            MovePiece {
                 piece: "wA1",
-                hexes: &["bB1/", "wP-"],
+                touching: Some("bQ"),
             },
-            "The Ant can travel the whole way round in a single move.",
-        ),
+            "Move your Ant next to the Black Queen.",
+        )
+        .forbidden(&["-bP"])
+        .highlight_hint_after(2, &["bQ-", "bQ/"]),
         Step::read(
-            "The ringed hex is empty, but it's walled in and its way in is a gate. Not even an Ant can get in there.",
-            &["-bP"],
+            "Well done! Feel free to restart the lesson and try to move the Ant [[wA1]] differently.",
+            &[],
+        )
+        .forbidden(&["-bP"])
+        .with_completion_tip(
+            "Tip: The Ant [[wA1]] can reach almost any space immediately. It's the most flexible piece you have!",
         ),
     ],
-    outro: "Ants are your best pieces for controlling the outside of the hive. That also makes them the pieces your opponent will most want to pin.",
+    outro: "",
+};
+
+const ANT_ATTACK: Lesson = Lesson {
+    id: "bugs.ant_attack",
+    title: "Ant (attack!)",
+    intro: &["This lesson is being prepared."],
+    brief: "Placeholder for a future Ant attack lesson; position and instructions to follow.",
+    setup: Setup::Pending,
+    steps: &[Step::read("This lesson is being prepared.", &[])],
+    outro: "",
+};
+
+const ANT_PIN: Lesson = Lesson {
+    id: "bugs.ant_pin",
+    title: "Ant (pin!)",
+    intro: &["This lesson is being prepared."],
+    brief: "Placeholder for a future Ant pin lesson; position and instructions to follow.",
+    setup: Setup::Pending,
+    steps: &[Step::read("This lesson is being prepared.", &[])],
+    outro: "",
 };
 
 const SPIDER: Lesson = Lesson {

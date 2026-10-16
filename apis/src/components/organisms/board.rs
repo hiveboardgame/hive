@@ -194,6 +194,17 @@ impl ViewBoxControls {
 
     /// `max_zoom` caps how far a small position is blown up; 1.0 keeps the normal tile size.
     fn fit(&mut self, tiles: &[TileBounds], width: f32, height: f32, max_zoom: f32) -> bool {
+        self.fit_with_padding(tiles, width, height, max_zoom, BOARD_FIT_PADDING)
+    }
+
+    fn fit_with_padding(
+        &mut self,
+        tiles: &[TileBounds],
+        width: f32,
+        height: f32,
+        max_zoom: f32,
+        padding: f32,
+    ) -> bool {
         let Some(first) = tiles.first() else {
             return false;
         };
@@ -206,8 +217,8 @@ impl ViewBoxControls {
             right: bounds.right.max(tile.right),
             bottom: bounds.bottom.max(tile.bottom),
         });
-        let scale = ((bounds.right - bounds.left + 2.0 * BOARD_FIT_PADDING) / width)
-            .max((bounds.bottom - bounds.top + 2.0 * BOARD_FIT_PADDING) / height)
+        let scale = ((bounds.right - bounds.left + 2.0 * padding) / width)
+            .max((bounds.bottom - bounds.top + 2.0 * padding) / height)
             .max(1.0 / max_zoom);
         self.x = 0.0;
         self.y = 0.0;
@@ -252,10 +263,14 @@ pub fn Board(
     interaction: HivegroundInteraction,
     history_board: Memo<HiveBoard>,
     #[prop(optional, into)] fit_on: Option<Signal<u64>>,
+    #[prop(optional, into)] fit_options: Option<Signal<(f32, f32)>>,
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateStore>();
     let analysis = use_context::<AnalysisContext>();
     let annotations = use_context::<AnnotationsSignal>();
+    let on_red_hex = use_context::<crate::providers::tutorial::TutorialContext>()
+        .map(|tutorial| Callback::new(move |position| tutorial.try_forbidden(position)));
+
     // Hex where the current draw gesture started (set on the draw-button press).
     let annotation_start = RwSignal::new(None::<Position>);
     // Left-press client point, so a click (no drag) while drawing can clear all.
@@ -368,7 +383,28 @@ pub fn Board(
                 g_ref,
                 board,
                 viewbox_signal.get_untracked(),
-                |viewbox, tiles, width, height| viewbox.fit(tiles, width, height, FIT_MAX_ZOOM),
+                |viewbox, tiles, width, height| {
+                    let (max_zoom, padding) = fit_options
+                        .map_or((FIT_MAX_ZOOM, BOARD_FIT_PADDING), |options| {
+                            options.get_untracked()
+                        });
+                    let mut fitted_tiles = tiles.to_vec();
+                    if fit_on.is_some() {
+                        if let Some(annotations) = annotations {
+                            for highlight in annotations.current().get_untracked().highlights {
+                                let (x, y) = SvgPos::center_for_level(highlight.position, 0, straight);
+                                // Tutorial destinations can sit outside the occupied hive.
+                                fitted_tiles.push(TileBounds {
+                                    left: x - 32.0,
+                                    right: x + 32.0,
+                                    top: y - 34.0,
+                                    bottom: y + 34.0,
+                                });
+                            }
+                        }
+                    }
+                    viewbox.fit_with_padding(&fitted_tiles, width, height, max_zoom, padding)
+                },
             )
         });
         if let Some(next) = fitted {
@@ -825,7 +861,7 @@ pub fn Board(
                     }}
                     {annotations
                         .map(|annotations| {
-                            view! { <AnnotationsLayer annotations history_board /> }
+                            view! { <AnnotationsLayer annotations history_board on_red_hex /> }
                         })}
                 </g>
             </svg>
@@ -1230,6 +1266,34 @@ mod tests {
     use super::{board_history_style, TileBounds, ViewBoxControls, ViewportSelection};
     use crate::providers::game_state::BoardView;
     use hive_lib::{Color, GameResult, GameStatus};
+
+    #[test]
+    fn tutorial_fit_padding_keeps_the_position_centered_and_visible() {
+        let tiles = [
+            TileBounds { left: -180.0, right: -120.0, top: -80.0, bottom: -20.0 },
+            TileBounds { left: 120.0, right: 180.0, top: 20.0, bottom: 80.0 },
+        ];
+        for (width, height) in [(390.0, 300.0), (700.0, 800.0)] {
+            let mut normal = ViewBoxControls::new();
+            let mut mobile = ViewBoxControls::new();
+            let mut desktop = ViewBoxControls::new();
+            assert!(normal.fit(&tiles, width, height, 2.0));
+            assert!(mobile.fit_with_padding(&tiles, width, height, 1.6, 42.0));
+            assert!(desktop.fit_with_padding(&tiles, width, height, 2.3, 12.0));
+            assert!(desktop.width < normal.width);
+            assert!(mobile.width > normal.width);
+            for viewbox in [desktop, mobile] {
+                assert!((viewbox.x_transform - viewbox.width / 2.0).abs() < 0.001);
+                assert!((viewbox.y_transform - viewbox.height / 2.0).abs() < 0.001);
+                for tile in tiles {
+                    assert!(tile.left + viewbox.x_transform > 0.0);
+                    assert!(tile.right + viewbox.x_transform < viewbox.width);
+                    assert!(tile.top + viewbox.y_transform > 0.0);
+                    assert!(tile.bottom + viewbox.y_transform < viewbox.height);
+                }
+            }
+        }
+    }
 
     #[test]
     fn history_recovery_preserves_a_partially_visible_tile_and_zoom() {

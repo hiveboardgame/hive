@@ -12,7 +12,7 @@ mod tactics;
 #[cfg(test)]
 mod tests;
 
-pub use curriculum::{chapter_of, find_lesson, lesson_count, lessons, neighbours, CHAPTERS};
+pub use curriculum::{group_of, LessonGroup, LESSON_GROUPS, chapter_of, find_lesson, lesson_count, lessons, neighbours, CHAPTERS};
 pub use lesson::{Chapter, Lesson, Setup};
 pub use session::{Outcome, Session, SessionError, Target};
 pub use sources::source_game;

@@ -53,6 +53,18 @@ pub fn Tutorial() -> impl IntoView {
             .map(|lesson| lesson.id)
     });
     let lesson_id = Signal::derive(move || chosen.get().unwrap_or_default());
+    let fit_options = Signal::derive(move || {
+        if lesson_id.get() == "bugs.queen" {
+            if vertical() {
+                (1.6, 42.0)
+            } else {
+                (2.3, 12.0)
+            }
+        } else {
+            (2.0, 24.0)
+        }
+    });
+
     // Loading during setup lets the server render the lesson exactly as the browser will.
     if let Some(lesson) = chosen.get_untracked().and_then(find_lesson) {
         tutorial.load(lesson);
@@ -70,6 +82,7 @@ pub fn Tutorial() -> impl IntoView {
     let clocked =
         move || find_lesson(lesson_id.get()).is_some_and(|lesson| lesson.clock().is_some());
 
+    let blank_tiles = move || find_lesson(lesson_id.get()).is_some_and(|lesson| lesson.uses_blank_tiles());
     let has_board = move || {
         tutorial.session.with(Option::is_some)
             && find_lesson(lesson_id.get()).is_some_and(|lesson| lesson.has_board())
@@ -86,7 +99,7 @@ pub fn Tutorial() -> impl IntoView {
         find_lesson(lesson_id.get()).and_then(|lesson| match lesson.setup {
             Setup::Pending => Some("The board for this lesson is still being built."),
             Setup::TextOnly => Some("No board needed for this one: just read along."),
-            Setup::Position(_) | Setup::Clocked { .. } => None,
+            Setup::Position(_) | Setup::BlankPosition(_) | Setup::AfterLesson { .. } | Setup::SwapPieces { .. } | Setup::Clocked { .. } => None,
         })
     };
     let board_placeholder = move || {
@@ -108,7 +121,7 @@ pub fn Tutorial() -> impl IntoView {
         >
             <div class=move || {
                 if vertical() {
-                    "ui-board-page-surface flex flex-col overflow-hidden h-[calc(100svh-2.5rem)] standalone:min-h-[var(--app-height)]"
+                    "ui-board-page-surface grid overflow-hidden min-h-0 h-[calc(100svh-2.5rem)] grid-rows-[auto_minmax(0,1fr)_minmax(10rem,32%)] standalone:h-[var(--app-height)]"
                 } else {
                     "ui-board-page-surface grid overflow-hidden min-h-[100dvh] max-h-[100dvh] grid-cols-10 grid-rows-6 pr-1 standalone:min-h-[var(--app-height)] standalone:max-h-[var(--app-height)]"
                 }
@@ -121,11 +134,16 @@ pub fn Tutorial() -> impl IntoView {
                                 <LessonPanel lesson_id />
                                 <ChapterList progress current=lesson_id />
                             </div>
-                            <div class="grid relative grid-cols-8 col-span-6 col-start-3 grid-rows-6 row-span-6 row-start-1 min-w-0 min-h-0 xl:col-span-5 xl:col-start-4">
+                            <div class=move || if blank_tiles() {
+                                "grid relative grid-cols-8 col-span-8 col-start-3 grid-rows-6 row-span-6 row-start-1 min-w-0 min-h-0 xl:col-span-7 xl:col-start-4"
+                            } else {
+                                "grid relative grid-cols-8 col-span-6 col-start-3 grid-rows-6 row-span-6 row-start-1 min-w-0 min-h-0 xl:col-span-5 xl:col-start-4"
+                            }>
                                 <Show when=has_board fallback=board_placeholder>
-                                    <Board interaction history_board fit_on=tutorial.generation />
+                                    <Board interaction history_board fit_on=tutorial.generation fit_options />
                                 </Show>
                             </div>
+                            <Show when=move || !blank_tiles()>
                             <Show
                                 when=clocked
                                 fallback=move || {
@@ -149,6 +167,7 @@ pub fn Tutorial() -> impl IntoView {
                             >
                                 <TutorialSideboard learner opponent interaction history_board />
                             </Show>
+                            </Show>
                         }
                     }
                 >
@@ -159,11 +178,11 @@ pub fn Tutorial() -> impl IntoView {
                         key=|id| *id
                         children=move |id| {
                             view! {
-                                <LessonPanel lesson_id=Signal::derive(move || id) compact=true />
+                                <LessonPanel lesson_id=Signal::derive(move || id) compact=true header_only=true />
                             }
                         }
                     />
-                    <div class="flex relative flex-col pt-11 min-h-0 grow">
+                    <div class="flex relative flex-col pt-11 min-h-0 overflow-hidden">
                         <For
                             each=move || {
                                 chosen.get().into_iter().collect::<Vec<_>>()
@@ -180,6 +199,7 @@ pub fn Tutorial() -> impl IntoView {
                                 <TutorialGameControls />
                             </div>
                         </Show>
+                        <Show when=move || !blank_tiles()>
                         <div class="flex justify-between ml-1 h-12 max-h-12 shrink-0 ui-board-reserve">
                             <Reserve
                                 color=opponent
@@ -194,12 +214,14 @@ pub fn Tutorial() -> impl IntoView {
                                 </div>
                             </Show>
                         </div>
+                        </Show>
                         <div class="flex relative min-h-0 grow">
                             <Show when=has_board fallback=board_placeholder>
-                                <Board interaction history_board fit_on=tutorial.generation />
+                                <Board interaction history_board fit_on=tutorial.generation fit_options />
                             </Show>
                         </div>
-                        <div class="flex justify-between ml-1 h-20 max-h-20 shrink-0 ui-board-reserve">
+                        <Show when=move || !blank_tiles()>
+                        <div class="flex justify-between ml-1 h-16 max-h-16 shrink-0 ui-board-reserve">
                             <Reserve
                                 color=learner
                                 alignment=Alignment::SingleRow
@@ -213,7 +235,17 @@ pub fn Tutorial() -> impl IntoView {
                                 </div>
                             </Show>
                         </div>
+                        </Show>
                     </div>
+                    <For
+                        each=move || { chosen.get().into_iter().collect::<Vec<_>>() }
+                        key=|id| *id
+                        children=move |id| {
+                            view! {
+                                <LessonPanel lesson_id=Signal::derive(move || id) compact=true body_only=true />
+                            }
+                        }
+                    />
                 </Show>
             </div>
         </Show>

@@ -22,6 +22,7 @@ pub enum Feedback {
     Refuted(&'static str),
     KeepGoing,
     WellDone,
+    YourTurn,
     LessonComplete,
     ContinueFirst,
     Note(&'static str),
@@ -34,6 +35,7 @@ pub struct TutorialContext {
     pub feedback: RwSignal<Option<Feedback>>,
     pub generation: RwSignal<u64>,
     pub progress: TutorialProgress,
+    completed_positions: RwSignal<std::collections::HashMap<&'static str, hive_lib::State>>,
     game_state: GameStateStore,
 }
 
@@ -45,13 +47,20 @@ impl TutorialContext {
             feedback: RwSignal::new(None),
             generation: RwSignal::new(0),
             progress,
+            completed_positions: RwSignal::new(std::collections::HashMap::new()),
             game_state,
         }
     }
 
     pub fn load(&self, lesson: &'static Lesson) {
         self.feedback.set(None);
-        match Session::new(lesson) {
+        let starting = match lesson.setup {
+            crate::tutorial::Setup::AfterLesson { lesson: source, .. } => {
+                self.completed_positions.with_untracked(|positions| positions.get(source).cloned())
+            }
+            _ => None,
+        };
+        match Session::with_starting_state(lesson, starting) {
             Ok(session) => {
                 self.load_error.set(None);
                 self.game_state.reset_with_state(session.state().clone());
@@ -81,6 +90,28 @@ impl TutorialContext {
         let (Some(piece), Some(position)) = (active, target) else {
             return;
         };
+        self.play_move(piece, position);
+    }
+
+    pub fn try_forbidden(&self, position: hive_lib::Position) {
+        let allowed = self.session.with_untracked(|session| {
+            session.as_ref().is_some_and(|session| {
+                session.accepts_moves() && session.forbidden().contains(&position)
+            })
+        });
+        if !allowed {
+            return;
+        }
+        let active = self.game_state
+            .move_info()
+            .with_untracked(|move_info| move_info.active.map(|(piece, _)| piece));
+        if let Some(piece) = active {
+            self.game_state.clear_selection();
+            self.play_move(piece, position);
+        }
+    }
+
+    fn play_move(&self, piece: hive_lib::Piece, position: hive_lib::Position) {
         if self
             .session
             .with_untracked(|session| session.as_ref().is_some_and(Session::awaits_continue))
@@ -88,6 +119,12 @@ impl TutorialContext {
             self.feedback.set(Some(Feedback::ContinueFirst));
             return;
         }
+        let your_turn = self.session.with_untracked(|session| {
+            session
+                .as_ref()
+                .and_then(Session::current_step)
+                .is_some_and(|step| step.your_turn)
+        });
         let hint = self.session.with_untracked(|session| {
             session
                 .as_ref()
@@ -111,7 +148,12 @@ impl TutorialContext {
             Outcome::Wrong => Some(Feedback::Hint(hint)),
             Outcome::Refuted => Some(Feedback::Refuted(hint)),
             Outcome::Visited => Some(Feedback::KeepGoing),
-            Outcome::StepDone => Some(Feedback::WellDone),
+            Outcome::Progress => Some(Feedback::YourTurn),
+            Outcome::StepDone => Some(if your_turn {
+                Feedback::YourTurn
+            } else {
+                Feedback::WellDone
+            }),
             Outcome::LessonDone => Some(Feedback::LessonComplete),
         });
         if outcome == Outcome::LessonDone {
@@ -125,8 +167,14 @@ impl TutorialContext {
                 session.retry();
             }
         });
+        self.game_state.clear_selection();
         self.sync_board();
         self.feedback.set(None);
+        if self.session.with_untracked(|session| {
+            session.as_ref().is_some_and(|session| session.lesson().clock().is_some())
+        }) {
+            self.generation.update(|generation| *generation += 1);
+        }
     }
 
     pub fn advance(&self) {
@@ -173,6 +221,12 @@ impl TutorialContext {
                             position,
                             color: AnnotationColor::Green,
                         })
+                        .chain(
+                            session.forbidden().into_iter().map(|position| Highlight {
+                                position,
+                                color: AnnotationColor::Red,
+                            }),
+                        )
                         .collect(),
                     markers: session
                         .grid()
@@ -186,6 +240,11 @@ impl TutorialContext {
                             position: mark.position,
                             shape: MarkerShape::Ring,
                             color: AnnotationColor::Orange,
+                        }))
+                        .chain(session.placement_crosses().into_iter().map(|position| Marker {
+                            position,
+                            shape: MarkerShape::Cross,
+                            color: AnnotationColor::Red,
                         }))
                         .collect(),
                     arrows: session
@@ -220,6 +279,11 @@ impl TutorialContext {
             .with_untracked(|session| session.as_ref().map(|session| session.lesson().id))
         {
             self.progress.complete(id);
+            if let Some(state) = self.session.with_untracked(|session| {
+                session.as_ref().map(|session| session.state().clone())
+            }) {
+                self.completed_positions.update(|positions| { positions.insert(id, state); });
+            }
         }
     }
 }

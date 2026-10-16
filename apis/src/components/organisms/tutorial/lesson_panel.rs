@@ -2,11 +2,11 @@ use crate::{
     providers::tutorial::{Feedback, TutorialContext},
     tutorial::{
         chapter_of,
+        group_of,
         find_lesson,
         lesson_count,
         lessons,
         neighbours,
-        source_game,
         Lesson,
         Session,
     },
@@ -45,23 +45,24 @@ fn prompt_parts(mut text: &'static str) -> Vec<PromptPart> {
     parts
 }
 
+fn piece_icon(piece: Piece) -> impl IntoView {
+    let src = format!("/assets/tiles/flat/{}.svg", piece.bug().name());
+    let alt = format!("{} {} piece", piece.color().name(), piece.bug().name());
+    view! {
+        <img
+            src=src
+            alt=alt
+            class="inline-block mx-1 object-contain size-5 align-text-bottom"
+        />
+    }
+}
+
 fn piece_content(text: &'static str) -> impl IntoView {
     prompt_parts(text)
         .into_iter()
         .map(|part| match part {
-            PromptPart::Text(text) => text.into_any(),
-            PromptPart::Piece(piece) => {
-                let src = format!("/assets/tiles/flat/{}.svg", piece.bug().name());
-                let alt = format!("{} {} piece", piece.color().name(), piece.bug().name());
-                view! {
-                    <img
-                        src=src
-                        alt=alt
-                        class="inline-block mx-1 object-contain size-5 align-text-bottom"
-                    />
-                }
-                .into_any()
-            }
+            PromptPart::Text(text) => view! { <span>{text}</span> }.into_any(),
+            PromptPart::Piece(piece) => piece_icon(piece).into_any(),
         })
         .collect_view()
 }
@@ -72,7 +73,7 @@ fn prompt_line(text: &'static str) -> impl IntoView {
         .map(|(index, text)| {
             let content = piece_content(text);
             if index % 2 == 0 {
-                view! { {content} }.into_any()
+                view! { <span>{content}</span> }.into_any()
             } else {
                 view! { <strong>{content}</strong> }.into_any()
             }
@@ -99,12 +100,15 @@ fn tutorial_prompt(prompt: &'static str) -> impl IntoView {
 pub fn LessonPanel(
     #[prop(into)] lesson_id: Signal<&'static str>,
     #[prop(optional)] compact: bool,
+    #[prop(optional)] header_only: bool,
+    #[prop(optional)] body_only: bool,
 ) -> impl IntoView {
     let tutorial = expect_context::<TutorialContext>();
     let lesson = move || find_lesson(lesson_id.get());
     let mobile_layout = move || compact;
     let chapter_title = move || chapter_of(lesson_id.get()).map_or("", |chapter| chapter.title);
     let title = move || lesson().map_or("", |lesson| lesson.title);
+    let group_title = move || group_of(lesson_id.get()).map(|group| group.title);
     let position = move || {
         let id = lesson_id.get();
         let index = lessons().position(|lesson| lesson.id == id).unwrap_or(0);
@@ -164,6 +168,10 @@ pub fn LessonPanel(
                 "text-green-700 dark:text-green-400",
                 "Good! It's back where it started, so try the next one.".to_string(),
             )),
+            Feedback::YourTurn => Some((
+                "text-gray-700 dark:text-gray-200",
+                "Your turn.".to_string(),
+            )),
             Feedback::WellDone => Some((
                 "text-green-700 dark:text-green-400",
                 "Well done!".to_string(),
@@ -195,7 +203,6 @@ pub fn LessonPanel(
     };
     let previous = move || neighbours(lesson_id.get()).0.map(|lesson| lesson.id);
     let next = move || neighbours(lesson_id.get()).1.map(|lesson| lesson.id);
-    let game_link = move || source_game(lesson_id.get());
     let restart = move |_| {
         if let Some(lesson) = lesson() {
             tutorial.load(lesson);
@@ -216,11 +223,12 @@ pub fn LessonPanel(
     view! {
         <div class=move || {
             if mobile_layout() {
-                "flex overflow-hidden flex-col gap-2 p-3 min-h-0 max-h-[50%] text-sm leading-5 text-gray-700 shrink-0 dark:text-gray-200 ui-panel"
+                "flex overflow-hidden flex-col gap-2 p-3 min-h-0 h-full text-sm leading-5 text-gray-700 dark:text-gray-200 ui-panel"
             } else {
                 "flex flex-col gap-3 p-3 text-sm leading-6 text-gray-700 xl:gap-4 xl:p-5 xl:text-base xl:leading-7 dark:text-gray-200 ui-panel"
             }
         }>
+            <Show when=move || !body_only>
             <div class:shrink-0=mobile_layout>
                 <div class=move || {
                     if mobile_layout() {
@@ -231,6 +239,9 @@ pub fn LessonPanel(
                 }>
                     <div class="text-xs font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">
                         {chapter_title} " · " {position}
+                        <ShowLet some=group_title let:group>
+                            " · " {group}
+                        </ShowLet>
                     </div>
                     <A
                         href="/tutorial"
@@ -249,6 +260,8 @@ pub fn LessonPanel(
                     {title}
                 </h1>
             </div>
+            </Show>
+            <Show when=move || !header_only>
             <div
                 node_ref=instruction_content
                 role=move || compact.then_some("region")
@@ -285,9 +298,22 @@ pub fn LessonPanel(
                         {feedback.1}
                     </div>
                 </ShowLet>
+                    <Show when=move || {
+                        tutorial
+                            .session
+                            .with(|session| session.as_ref().is_some_and(Session::needs_retry))
+                    }>
+                        <button
+                            type="button"
+                            class="self-start ui-button ui-button-primary ui-button-sm"
+                            on:click=move |_| tutorial.try_again()
+                        >
+                            "Try again"
+                        </button>
+                    </Show>
                 <Show when=move || finished() && !completion_tip().is_empty()>
                     <div class="font-medium text-gray-700 dark:text-gray-200">
-                        {completion_tip}
+                        {move || tutorial_prompt(completion_tip())}
                     </div>
                 </Show>
                 <ShowLet some=written_moves let:moves>
@@ -311,25 +337,12 @@ pub fn LessonPanel(
             </div>
             <div class=move || {
                 if mobile_layout() {
-                    "flex flex-wrap gap-x-3 gap-y-1 justify-between items-center pt-2 border-t border-black/10 shrink-0 dark:border-white/10"
+                    "flex flex-col gap-2 pt-2 border-t border-black/10 shrink-0 dark:border-white/10"
                 } else {
                     "contents"
                 }
             }>
                 <div class="flex flex-wrap gap-2">
-                    <Show when=move || {
-                        tutorial
-                            .session
-                            .with(|session| session.as_ref().is_some_and(Session::is_refuted))
-                    }>
-                        <button
-                            type="button"
-                            class="ui-button ui-button-primary ui-button-sm"
-                            on:click=move |_| tutorial.try_again()
-                        >
-                            "Try again"
-                        </button>
-                    </Show>
                     <Show when=move || waits_for_continue() && !text_only()>
                         <button
                             type="button"
@@ -360,7 +373,7 @@ pub fn LessonPanel(
                 </div>
                 <div class=move || {
                     if mobile_layout() {
-                        "flex gap-3 items-center ml-auto"
+                        "flex gap-3 justify-between items-center w-full"
                     } else {
                         "flex justify-between"
                     }
@@ -387,31 +400,15 @@ pub fn LessonPanel(
                     </ShowLet>
                 </div>
             </div>
-            <Show when=move || !compact>
-                {move || {
-                    game_link()
-                        .map(|href| {
-                            view! {
-                                <a
-                                    href=href
-                                    target="_blank"
-                                    rel="noopener"
-                                    class="text-xs text-gray-500 dark:text-gray-400 hover:underline no-link-style"
-                                >
-                                    "From a real game ↗"
-                                </a>
-                            }
-                        })
-                }}
+
             </Show>
         </div>
     }
 }
 
-/// Description drawer shared by mobile lessons, below the fixed instruction panel.
+/// Reading drawer shared by mobile lessons, over the fixed board area.
 #[component]
 pub fn MobileLessonAbout(#[prop(into)] lesson_id: Signal<&'static str>) -> impl IntoView {
-    let game_link = move || source_game(lesson_id.get());
     let intro = move || {
         find_lesson(lesson_id.get())
             .map(|lesson| lesson.intro)
@@ -425,7 +422,7 @@ pub fn MobileLessonAbout(#[prop(into)] lesson_id: Signal<&'static str>) -> impl 
     view! {
         <details class="group absolute inset-x-0 top-0 z-30 overflow-y-auto max-h-full overscroll-contain text-sm leading-5 text-gray-700 bg-even-light shadow-md dark:bg-surface-panel dark:text-gray-200">
             <summary class="sticky top-0 justify-between h-11 bg-even-light dark:bg-surface-panel ui-disclosure-summary">
-                <span>"About this lesson"</span>
+                <span>"Read the lesson"</span>
                 <svg
                     class="transition-transform size-5 shrink-0 group-open:rotate-180"
                     viewBox="0 0 20 20"
@@ -441,20 +438,7 @@ pub fn MobileLessonAbout(#[prop(into)] lesson_id: Signal<&'static str>) -> impl 
             </summary>
             <div class="flex flex-col gap-2 px-3 pt-1 pb-3">
                 {intro}
-                {move || {
-                    game_link().map(|href| {
-                        view! {
-                            <a
-                                href=href
-                                target="_blank"
-                                rel="noopener"
-                                class="text-xs text-gray-500 dark:text-gray-400 hover:underline no-link-style"
-                            >
-                                "From a real game ↗"
-                            </a>
-                        }
-                    })
-                }}
+
             </div>
         </details>
     }
@@ -467,7 +451,8 @@ fn linked_text(text: &'static str) -> impl IntoView {
         match word.trim_end().strip_prefix("https://") {
             Some(shown) => {
                 if !plain.is_empty() {
-                    parts.push(std::mem::take(&mut plain).into_any());
+                    let text = std::mem::take(&mut plain);
+                    parts.push(view! { <span>{text}</span> }.into_any());
                 }
                 parts.push(
                     view! {
@@ -485,7 +470,7 @@ fn linked_text(text: &'static str) -> impl IntoView {
         }
     }
     if !plain.is_empty() {
-        parts.push(plain.into_any());
+        parts.push(view! { <span>{plain}</span> }.into_any());
     }
     parts
 }
@@ -495,9 +480,17 @@ fn paragraph(text: &'static str) -> impl IntoView {
         .split("**")
         .enumerate()
         .map(|(index, text)| {
-            let content = linked_text(text);
+            let content = prompt_parts(text)
+                .into_iter()
+                .map(|part| match part {
+                    PromptPart::Text(text) => {
+                        view! { <span>{linked_text(text)}</span> }.into_any()
+                    }
+                    PromptPart::Piece(piece) => piece_icon(piece).into_any(),
+                })
+                .collect_view();
             if index % 2 == 0 {
-                view! { {content} }.into_any()
+                view! { <span>{content}</span> }.into_any()
             } else {
                 view! { <strong>{content}</strong> }.into_any()
             }

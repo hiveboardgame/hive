@@ -45,3 +45,22 @@ pub fn neighbours(id: &str) -> (Option<&'static Lesson>, Option<&'static Lesson>
         .and_then(|index| all.get(index).copied());
     (previous, all.get(index + 1).copied())
 }
+
+/// Related lessons keep individual progress and numbering under a shared topic.
+pub struct LessonGroup {
+    pub id: &'static str,
+    pub title: &'static str,
+    pub lessons: &'static [&'static str],
+}
+
+pub const LESSON_GROUPS: &[LessonGroup] = &[
+    LessonGroup {
+        id: "bugs.ants",
+        title: "The Ant",
+        lessons: &["bugs.ant_first_moves", "bugs.ant", "bugs.ant_attack", "bugs.ant_pin"],
+    },
+];
+
+pub fn group_of(id: &str) -> Option<&'static LessonGroup> {
+    LESSON_GROUPS.iter().find(|group| group.lessons.contains(&id))
+}

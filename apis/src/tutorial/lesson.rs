@@ -20,6 +20,16 @@ pub struct Lesson {
 
 pub enum Setup {
     Position(&'static str),
+    BlankPosition(&'static str),
+    AfterLesson {
+        lesson: &'static str,
+        fallback: &'static str,
+    },
+    SwapPieces {
+        position: &'static str,
+        first: &'static str,
+        second: &'static str,
+    },
     Clocked {
         moves: &'static str,
         base_minutes: u64,
@@ -42,16 +52,24 @@ pub struct Step {
     pub then: Reply,
     pub grid: bool,
     pub history: bool,
+    pub hint_after: Option<u8>,
+    pub your_turn: bool,
+    pub forbidden: &'static [&'static str],
+    pub hint_highlights: &'static [&'static str],
+    pub placement_crosses: Option<&'static str>,
+    pub immobile_marks: bool,
 }
 
 pub enum Reply {
     LearnerAgain,
+    NextPlayer(hive_lib::Color),
     Opponent {
         piece: &'static str,
         to: &'static str,
     },
     OpponentPlacement {
         piece: &'static str,
+        near: Option<&'static str>,
     },
 }
 
@@ -70,6 +88,12 @@ impl Step {
             then: Reply::LearnerAgain,
             grid: false,
             history: false,
+            hint_after: None,
+            your_turn: false,
+            forbidden: &[],
+            hint_highlights: &[],
+            placement_crosses: None,
+            immobile_marks: false,
         }
     }
 
@@ -87,6 +111,12 @@ impl Step {
             then: Reply::LearnerAgain,
             grid: false,
             history: false,
+            hint_after: None,
+            your_turn: false,
+            forbidden: &[],
+            hint_highlights: &[],
+            placement_crosses: None,
+            immobile_marks: false,
         }
     }
 
@@ -138,8 +168,59 @@ impl Step {
         self
     }
 
+    pub const fn hint_after(mut self, attempts: u8) -> Self {
+        self.hint_after = Some(attempts);
+        self
+    }
+
+    pub const fn forbidden(mut self, hexes: &'static [&'static str]) -> Self {
+        self.forbidden = hexes;
+        self
+    }
+
+    pub const fn highlight_hint_after(
+        mut self,
+        attempts: u8,
+        hexes: &'static [&'static str],
+    ) -> Self {
+        self.hint_after = Some(attempts);
+        self.hint_highlights = hexes;
+        self
+    }
+
+    pub const fn next_player(mut self, color: hive_lib::Color) -> Self {
+        self.then = Reply::NextPlayer(color);
+        self.your_turn = true;
+        self
+    }
+
+    pub const fn placement_crosses(mut self, around: &'static str) -> Self {
+        self.placement_crosses = Some(around);
+        self
+    }
+
+    pub const fn marked_when_immobile(mut self, pieces: &'static [&'static str]) -> Self {
+        self.marks = pieces;
+        self.number_marks = false;
+        self.immobile_marks = true;
+        self
+    }
+
+    pub const fn your_turn(mut self) -> Self {
+        self.your_turn = true;
+        self
+    }
+
+    pub const fn reply_placement_near(mut self, piece: &'static str, near: &'static str) -> Self {
+        self.then = Reply::OpponentPlacement {
+            piece,
+            near: Some(near),
+        };
+        self
+    }
+
     pub const fn reply_placement(mut self, piece: &'static str) -> Self {
-        self.then = Reply::OpponentPlacement { piece };
+        self.then = Reply::OpponentPlacement { piece, near: None };
         self
     }
 }
@@ -154,7 +235,11 @@ impl Lesson {
     }
 
     pub fn has_board(&self) -> bool {
-        matches!(self.setup, Setup::Position(_) | Setup::Clocked { .. })
+        matches!(self.setup, Setup::Position(_) | Setup::BlankPosition(_) | Setup::AfterLesson { .. } | Setup::SwapPieces { .. } | Setup::Clocked { .. })
+    }
+
+    pub fn uses_blank_tiles(&self) -> bool {
+        matches!(self.setup, Setup::BlankPosition(_))
     }
 
     pub fn clock(&self) -> Option<(u64, u64)> {

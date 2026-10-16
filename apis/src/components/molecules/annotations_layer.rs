@@ -2,7 +2,7 @@ use crate::{
     common::SvgPos,
     providers::{
         analysis::AnalysisContext,
-        annotations::{AnnotationTool, AnnotationsSignal, MarkerShape},
+        annotations::{AnnotationColor, AnnotationTool, AnnotationsSignal, MarkerShape},
         game_state::{GameStateStore, GameStateStoreFields},
         Config,
     },
@@ -15,11 +15,13 @@ const SHAPE_OPACITY: &str = "0.8";
 
 /// Draws the current position's annotations as inline SVG inside the board's
 /// transform `<g>`. `pointer-events: none` so it never eats the board's handlers
-/// (arrows are hit-tested by the board instead).
+/// (arrows are hit-tested by the board instead). Tutorial red hexes can opt into
+/// clicks so forbidden-move attempts give feedback without moving a piece.
 #[component]
 pub fn AnnotationsLayer(
     annotations: AnnotationsSignal,
     history_board: Memo<Board>,
+    #[prop(optional_no_strip)] on_red_hex: Option<Callback<Position>>,
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateStore>();
     let config = expect_context::<Config>().0;
@@ -53,6 +55,8 @@ pub fn AnnotationsLayer(
             let path = rounded_hex_path(cx, cy, HIGHLIGHT_SIZE);
             let fill = highlight.color.fill();
             let stroke = highlight.color.stroke(prefers_dark);
+            let interactive = highlight.color == AnnotationColor::Red && on_red_hex.is_some();
+            let position = highlight.position;
             views.push(
                 view! {
                     <path
@@ -63,6 +67,15 @@ pub fn AnnotationsLayer(
                         stroke-width="2"
                         stroke-opacity="0.95"
                         stroke-linejoin="round"
+                        pointer-events=if interactive { "all" } else { "none" }
+                        on:click=move |event| {
+                            if interactive {
+                                event.stop_propagation();
+                                if let Some(callback) = on_red_hex {
+                                    callback.run(position);
+                                }
+                            }
+                        }
                     />
                 }
                 .into_any(),

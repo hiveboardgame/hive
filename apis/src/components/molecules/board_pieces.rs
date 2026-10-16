@@ -16,7 +16,15 @@ pub fn BoardPieces(
     let game_state = expect_context::<GameStateStore>();
     let move_info = game_state.move_info();
     let state = game_state.state();
-    let paint = Memo::new(move |_| tile_opts.with(HivegroundPaint::new));
+    let tutorial = use_context::<crate::providers::tutorial::TutorialContext>();
+    let paint = Memo::new(move |_| {
+        let blank = tutorial.is_some_and(|tutorial| {
+            tutorial.session.with(|session| {
+                session.as_ref().is_some_and(|session| session.lesson().uses_blank_tiles())
+            })
+        });
+        tile_opts.with(HivegroundPaint::new).with_blank_non_queens(blank)
+    });
     let model = Memo::new(move |_| {
         state.with(|state| {
             move_info.with(|move_info| build_board_render_model(&state.board, move_info))

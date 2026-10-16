@@ -151,6 +151,11 @@ impl HivegroundActionHandler {
     }
 
     fn select_board_piece(&self, piece: Piece, position: Position) {
+        if self.tutorial.is_some_and(|tutorial| {
+            tutorial.session.with_untracked(|session| {
+                !session.as_ref().is_some_and(|session| session.can_select(piece))
+            })
+        }) { return; }
         let game_state = self.game_state;
         if game_state.is_move_allowed(self.free_play()) {
             game_state.show_moves(piece, position);
@@ -158,6 +163,11 @@ impl HivegroundActionHandler {
     }
 
     fn select_reserve_piece(&self, piece: Piece, position: Position) {
+        if self.tutorial.is_some_and(|tutorial| {
+            tutorial.session.with_untracked(|session| {
+                session.as_ref().is_some_and(|session| session.lesson().uses_blank_tiles())
+            })
+        }) { return; }
         let game_state = self.game_state;
         if game_state.is_move_allowed(self.free_play()) {
             game_state.show_spawns(piece, position);

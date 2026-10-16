@@ -7,6 +7,18 @@ pub enum Goal {
         piece: &'static str,
         to: &'static str,
     },
+    Travel {
+        piece: &'static str,
+        to: &'static str,
+    },
+    MovePiece {
+        piece: &'static str,
+        touching: Option<&'static str>,
+    },
+    MoveExcept {
+        piece: &'static str,
+        except: &'static str,
+    },
     Visit {
         piece: &'static str,
         hexes: &'static [&'static str],

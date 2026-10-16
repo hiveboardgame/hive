@@ -4,7 +4,7 @@ use crate::{
         molecules::panel::Panel,
     },
     providers::tutorial::TutorialProgress,
-    tutorial::{Chapter, CHAPTERS},
+    tutorial::{group_of, find_lesson, Chapter, Lesson, CHAPTERS},
 };
 use leptos::prelude::*;
 use leptos_router::components::A;
@@ -123,11 +123,48 @@ fn LessonLinks(
     progress: TutorialProgress,
     current: Signal<&'static str>,
 ) -> impl IntoView {
-    chapter
-        .lessons
-        .iter()
+    let mut seen_groups = std::collections::HashSet::new();
+    chapter.lessons.iter().filter_map(|lesson| {
+        if let Some(group) = group_of(lesson.id) {
+            if !seen_groups.insert(group.id) { return None; }
+            let children: Vec<_> = group.lessons.iter()
+                .filter_map(|id| find_lesson(id)).collect();
+            Some(view! {
+                <details
+                    class="group py-1"
+                    open=move || group.lessons.contains(&current.get())
+                >
+                    <summary class="flex gap-2 justify-between items-center py-1 text-sm font-bold cursor-pointer">
+                        <span class="flex gap-1 items-center">
+                            <span class="inline-block transition-transform group-open:rotate-90" aria-hidden="true">"›"</span>
+                            {group.title}
+                        </span>
+                        <span class="text-xs text-gray-500">
+                            {move || format!("{}/{}", group.lessons.iter()
+                                .filter(|id| progress.is_complete(id)).count(), group.lessons.len())}
+                        </span>
+                    </summary>
+                    <div class="pl-3 ml-1 border-l border-black/10 dark:border-white/10">
+                        <LessonRows lessons=children progress current />
+                    </div>
+                </details>
+            }.into_any())
+        } else {
+            Some(view! { <LessonRows lessons=vec![lesson] progress current /> }.into_any())
+        }
+    }).collect_view()
+}
+
+#[component]
+fn LessonRows(
+    lessons: Vec<&'static Lesson>,
+    progress: TutorialProgress,
+    current: Signal<&'static str>,
+) -> impl IntoView {
+    lessons.into_iter()
         .map(|lesson| {
             let id = lesson.id;
+            let number = crate::tutorial::lessons().position(|lesson| lesson.id == id).unwrap_or(0) + 1;
             let row_class = move || {
                 if current.get() == id {
                     "flex gap-2 items-center py-1 px-2 -mx-2 text-sm xl:text-base font-bold rounded-md bg-orange-dawn/10"
@@ -149,7 +186,7 @@ fn LessonLinks(
                         href=format!("/tutorial?lesson={id}")
                         attr:class="text-gray-800 dark:text-gray-100 no-link-style hover:underline"
                     >
-                        {lesson.title}
+                        {format!("{number}. {}", lesson.title)}
                     </A>
                 </div>
             }

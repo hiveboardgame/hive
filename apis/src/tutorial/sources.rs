@@ -4,8 +4,6 @@ const SOURCES: &[(&str, &str, usize)] = &[
     ("basics.queen_rule", "uQTf52SQHnk6", 6),
     ("basics.one_hive", "6XLwzobZAJP-", 10),
     ("tactics.gates_and_doors", "T4RQlKs1xeWq", 14),
-    ("bugs.freedom_to_move", "e6NffjbJIjsN", 16),
-    ("bugs.queen", "GO5IALkZn-Gi", 4),
     ("bugs.ant", "V-lEsxKH1A18", 8),
     ("bugs.spider", "VxWyE32npXeu", 10),
     ("bugs.spider_dead_end", "48scd9p83TA4", 26),

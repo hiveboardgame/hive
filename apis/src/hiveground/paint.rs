@@ -3,18 +3,25 @@ use crate::{
     common::{resolve_piece_paint, OverlayPaint, PiecePaint, ShadowHref},
     providers::config::TileOptions,
 };
-use hive_lib::Piece;
+use hive_lib::{Bug, Piece};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct HivegroundPaint {
     tile_options: TileOptions,
+    blank_non_queens: bool,
 }
 
 impl HivegroundPaint {
     pub fn new(tile_options: &TileOptions) -> Self {
         Self {
             tile_options: tile_options.clone(),
+            blank_non_queens: false,
         }
+    }
+
+    pub fn with_blank_non_queens(mut self, blank: bool) -> Self {
+        self.blank_non_queens = blank;
+        self
     }
 
     pub fn piece(&self, piece: Piece, shadow: PieceShadow) -> PiecePaint {
@@ -22,7 +29,15 @@ impl HivegroundPaint {
             PieceShadow::Design => ShadowHref::for_design(&self.tile_options.design),
             PieceShadow::None => ShadowHref::None,
         };
-        resolve_piece_paint(piece, &self.tile_options, shadow_href)
+        let mut paint = resolve_piece_paint(piece, &self.tile_options, shadow_href);
+        if self.blank_non_queens && piece.bug() != Bug::Queen {
+            paint.bug_href = crate::common::BugHref(
+                "/assets/tiles/tutorial/blank.svg#blank".to_string()
+            );
+            paint.dots_href = None;
+            paint.rotation = None;
+        }
+        paint
     }
 
     pub fn active(&self) -> OverlayPaint {
