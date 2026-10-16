@@ -11,6 +11,7 @@ use crate::{
     hooks::arena_clock::use_ticking_now,
     providers::{
         ApiRequestsProvider,
+        ArenaState,
         ArenaStateStoreFields,
         AuthContext,
         AuthIdentity,
@@ -31,7 +32,18 @@ use crate::{
 use leptos::prelude::*;
 use leptos_router::hooks::use_location;
 use reactive_stores::Store;
-use shared_types::{tournament::Format, Clock, TournamentStatus};
+use shared_types::{Clock, TournamentStatus};
+
+#[derive(Clone, Copy, PartialEq)]
+enum ParticipantAction {
+    LoginRequired,
+    Joined,
+    Join,
+    Arena(Store<ArenaState>),
+    Playing,
+    EntryClosed,
+    Hidden,
+}
 
 #[component]
 pub fn TournamentParticipantAction(
@@ -42,16 +54,22 @@ pub fn TournamentParticipantAction(
     let auth = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
     let now = use_ticking_now();
-    let tournament_id = StoredValue::new(common.lifecycle().get_untracked().tournament_id);
+    let tournament_id = StoredValue::new(
+        common
+            .lifecycle()
+            .with_untracked(|lifecycle| lifecycle.tournament_id.clone()),
+    );
     let pathname = use_location().pathname;
     let route_active = move || {
         let expected = tournament_id.get_value();
         tournament_path_matches(&pathname.get(), &expected)
-            && common.lifecycle().get().tournament_id == expected
+            && common
+                .lifecycle()
+                .with(|lifecycle| lifecycle.tournament_id == expected)
     };
     let user_id = Signal::derive(move || auth.identity.get().and_then(AuthIdentity::user_id));
     let relationship = Signal::derive(move || {
-        let memberships = common.memberships().get();
+        let memberships = common.memberships().read();
         let id = user_id.get();
         ViewerRelationship {
             joined: id.is_some_and(|id| memberships.players.contains_key(&id)),
@@ -60,11 +78,12 @@ pub fn TournamentParticipantAction(
                 .is_some_and(|id| memberships.organizers.iter().any(|user| user.uid == id)),
         }
     });
-    let entry_open = Signal::derive(move || {
-        let lifecycle = common.lifecycle().get();
+    let entry_open = Memo::new(move |_| {
+        let lifecycle = common.lifecycle().read();
         lifecycle.status == TournamentStatus::NotStarted
             && !lifecycle
                 .start_setup
+                .as_ref()
                 .is_some_and(|setup| setup.active_at(now.get()))
             && lifecycle
                 .starts_at
@@ -72,28 +91,44 @@ pub fn TournamentParticipantAction(
     });
     let admission_auth = auth.clone();
     let admission = Signal::derive(move || {
-        let lifecycle = common.lifecycle().get();
+        let lifecycle = common.lifecycle().read();
         let clock = match format {
-            TournamentFormatState::Arena(state) => {
-                Some(Clock::Realtime(state.configuration().get().game_clock))
+            TournamentFormatState::Arena(state) => Some(Clock::Realtime(
+                state
+                    .configuration()
+                    .with(|configuration| configuration.game_clock),
+            )),
+            TournamentFormatState::RoundRobin(state) => Some(
+                state
+                    .configuration()
+                    .with(|configuration| configuration.clock),
+            ),
+            TournamentFormatState::Swiss(state) => Some(
+                state
+                    .configuration()
+                    .with(|configuration| configuration.clock),
+            ),
+            TournamentFormatState::Elimination(state) => {
+                state.configuration().with(|configuration| {
+                    configuration
+                        .default_plan
+                        .phases
+                        .first()
+                        .map(|phase| phase.clock)
+                })
             }
-            TournamentFormatState::RoundRobin(state) => Some(state.configuration().get().clock),
-            TournamentFormatState::Swiss(state) => Some(state.configuration().get().clock),
-            TournamentFormatState::Elimination(state) => state
-                .configuration()
-                .get()
-                .default_plan
-                .phases
-                .first()
-                .map(|phase| phase.clock),
         };
         TournamentAdmission {
             entry_open: entry_open.get(),
-            full: format.format() != Format::Arena
+            full: !matches!(format, TournamentFormatState::Arena(_))
                 && lifecycle
                     .seats
                     .and_then(|seats| usize::try_from(seats).ok())
-                    .is_some_and(|capacity| common.memberships().get().players.len() >= capacity),
+                    .is_some_and(|capacity| {
+                        common
+                            .memberships()
+                            .with(|memberships| memberships.players.len() >= capacity)
+                    }),
             restrictions: AdmissionRestrictions {
                 invite_only: lifecycle.invite_only,
                 band_lower: lifecycle.band_lower,
@@ -111,39 +146,61 @@ pub fn TournamentParticipantAction(
         }
     });
 
+    // Read branch conditions only here: unchanged actions must preserve dialog owners.
+    let action_state =
+        Memo::new(
+            move |_| match common.lifecycle().with(|lifecycle| lifecycle.status) {
+                TournamentStatus::NotStarted if entry_open.get() => {
+                    if matches!(admission.get(), TournamentAccessState::LoginRequired) {
+                        ParticipantAction::LoginRequired
+                    } else if relationship.get().joined {
+                        ParticipantAction::Joined
+                    } else {
+                        ParticipantAction::Join
+                    }
+                }
+                TournamentStatus::NotStarted => ParticipantAction::EntryClosed,
+                TournamentStatus::InProgress => match format {
+                    TournamentFormatState::Arena(arena) => ParticipantAction::Arena(arena),
+                    _ if relationship.get().joined => ParticipantAction::Playing,
+                    _ => ParticipantAction::Hidden,
+                },
+                TournamentStatus::Finished => ParticipantAction::Hidden,
+            },
+        );
+
     view! {
         <Show when=route_active>
             {move || {
-                let status = common.lifecycle().get().status;
-                match (status, format) {
-                    (TournamentStatus::NotStarted, _) if entry_open.get() => {
-                        if matches!(admission.get(), TournamentAccessState::LoginRequired) {
-                            return view! {
-                                <LoginButton class="ui-button ui-button-primary ui-button-sm no-link-style" />
-                            }
-                                .into_any();
+                match action_state.get() {
+                    ParticipantAction::LoginRequired => {
+                        view! {
+                            <LoginButton class="ui-button ui-button-primary ui-button-sm no-link-style" />
                         }
-                        if relationship.get().joined {
-                            return view! {
-                                <div class="flex flex-wrap gap-2 items-center">
+                            .into_any()
+                    }
+                    ParticipantAction::Joined => {
+                        view! {
+                            <div class="flex flex-wrap gap-2 items-center">
+                                // TODO: i18n once copy is approved.
+                                <span class="text-sm font-medium">
+                                    "Joined · waiting to start"
+                                </span>
+                                <button
+                                    type="button"
+                                    class="ui-button ui-button-danger ui-button-sm"
+                                    on:click=move |_| {
+                                        send.run(TournamentAction::Leave(tournament_id.get_value()))
+                                    }
+                                >
                                     // TODO: i18n once copy is approved.
-                                    <span class="text-sm font-medium">
-                                        "Joined · waiting to start"
-                                    </span>
-                                    <button
-                                        type="button"
-                                        class="ui-button ui-button-danger ui-button-sm"
-                                        on:click=move |_| {
-                                            send.run(TournamentAction::Leave(tournament_id.get_value()))
-                                        }
-                                    >
-                                        // TODO: i18n once copy is approved.
-                                        "Leave"
-                                    </button>
-                                </div>
-                            }
-                                .into_any();
+                                    "Leave"
+                                </button>
+                            </div>
                         }
+                            .into_any()
+                    }
+                    ParticipantAction::Join => {
                         view! {
                             <div class="flex flex-col gap-1 items-start">
                                 <div class="flex flex-wrap gap-2 items-center">
@@ -201,10 +258,10 @@ pub fn TournamentParticipantAction(
                         }
                             .into_any()
                     }
-                    (TournamentStatus::InProgress, TournamentFormatState::Arena(arena)) => {
+                    ParticipantAction::Arena(arena) => {
                         view! { <ArenaAction common arena /> }.into_any()
                     }
-                    (TournamentStatus::InProgress, _) if relationship.get().joined => {
+                    ParticipantAction::Playing => {
                         view! {
                             <div class="flex flex-wrap gap-y-2 gap-x-4 items-center">
                                 {move || {
@@ -230,7 +287,9 @@ pub fn TournamentParticipantAction(
                                             if user_id
                                                 .get()
                                                 .is_some_and(|id| {
-                                                    common.memberships().get().withdrawn.contains(&id)
+                                                    common
+                                                        .memberships()
+                                                        .with(|memberships| memberships.withdrawn.contains(&id))
                                                 })
                                             {
                                                 "Withdrawn"
@@ -262,7 +321,7 @@ pub fn TournamentParticipantAction(
                         }
                             .into_any()
                     }
-                    (TournamentStatus::NotStarted, _) => {
+                    ParticipantAction::EntryClosed => {
                         view! {
                             // TODO: i18n once copy is approved.
                             <span class="text-sm text-gray-600 dark:text-gray-300">
@@ -271,7 +330,7 @@ pub fn TournamentParticipantAction(
                         }
                             .into_any()
                     }
-                    (TournamentStatus::InProgress | TournamentStatus::Finished, _) => ().into_any(),
+                    ParticipantAction::Hidden => ().into_any(),
                 }
             }}
         </Show>
