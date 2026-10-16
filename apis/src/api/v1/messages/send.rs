@@ -24,14 +24,12 @@ fn get_opponent_id(game: &Game, bot: &User) -> uuid::Uuid {
 
 pub(crate) async fn send_messages_batch(hub: &Arc<WsHub>, messages: Vec<InternalServerMessage>) {
     for message in messages {
-        if let Err(error) = hub.dispatch_message(message).await {
-            log::error!("encode committed bot effect: {error}");
-        }
+        hub.dispatch_message(message).await;
     }
 }
 
 fn create_game_action_response(
-    game_response: GameResponse,
+    game_response: Arc<GameResponse>,
     action: GameReaction,
     bot: &User,
 ) -> GameActionResponse {
@@ -63,7 +61,7 @@ pub async fn send_challenge_messages(
     }
 
     // Add game creation message
-    let game_response = GameResponse::from_model(game, &mut conn).await?;
+    let game_response = Arc::new(GameResponse::from_model(game, &mut conn).await?);
     let user_id = get_opponent_id(game, bot);
     let action_response = create_game_action_response(
         game_response,

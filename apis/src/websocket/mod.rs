@@ -9,6 +9,8 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     mod messages;
     mod start_conn;
     mod telemetry;
+    #[cfg(test)]
+    mod test_db;
     mod tournament_game_start;
     mod ws_connection;
     mod ws_hub;

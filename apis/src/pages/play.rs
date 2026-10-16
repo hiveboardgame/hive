@@ -285,7 +285,7 @@ pub fn Play() -> impl IntoView {
             if let Some(gar) = gar {
                 let game_id = game_id.get_untracked();
                 if gar.game_id == game_id {
-                    let response = gar.game.clone();
+                    let response = (*gar.game).clone();
                     match gar.game_action.clone() {
                         GameReaction::Turn(turn) => {
                             sounds.play_sound(SoundType::Turn);
