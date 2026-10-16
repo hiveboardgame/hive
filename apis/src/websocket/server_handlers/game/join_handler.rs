@@ -81,7 +81,7 @@ impl JoinHandler {
                     message: ServerMessage::Game(Box::new(GameUpdate::Reaction(
                         GameActionResponse {
                             game_id: game_id.clone(),
-                            game: (*game_response).clone(),
+                            game: game_response.clone(),
                             game_action: GameReaction::Join,
                             user_id: self.user_id,
                             username: self.username.clone(),

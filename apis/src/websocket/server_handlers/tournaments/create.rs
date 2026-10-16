@@ -87,7 +87,7 @@ mod tests {
     use super::creation_messages;
     use crate::{
         common::{ServerMessage, ServerResult, TournamentUpdate},
-        websocket::messages::{MessageDestination, SocketTx},
+        websocket::messages::{MessageDestination, SocketFormat, SocketTx},
     };
     use chrono::DateTime;
     use codee::{binary::MsgpackSerdeCodec, Decoder, Encoder};
@@ -101,6 +101,7 @@ mod tests {
         let (tx, _rx) = mpsc::channel(2);
         let socket = SocketTx {
             socket_id: Uuid::from_u128(1),
+            format: SocketFormat::Msgpack,
             tx,
         };
         for format in [

@@ -117,7 +117,8 @@ pub fn handle_response(m: ServerResult) {
                         chat.handle_failed_chat_send(key, client_id, error.into());
                     }
                 }
-                ExternalServerError::Request { reason } => {
+                ExternalServerError::Request { reason }
+                | ExternalServerError::Game { reason, .. } => {
                     if let Some(alerts) = use_context::<AlertsContext>() {
                         alerts.last_alert.set(Some(AlertType::Error(reason)));
                     }

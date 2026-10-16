@@ -17,7 +17,7 @@ use shared_types::{
     GameId,
     TournamentId,
 };
-use std::{fmt, time::Duration};
+use std::{fmt, sync::Arc, time::Duration};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -41,6 +41,10 @@ pub enum ExternalServerError {
         error: SubscriptionError,
     },
     Request {
+        reason: String,
+    },
+    Game {
+        game_id: GameId,
         reason: String,
     },
 }
@@ -96,7 +100,9 @@ impl SubscriptionError {
 impl fmt::Display for ExternalServerError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let reason = match self {
-            Self::Unauthorized { reason } | Self::Request { reason } => reason,
+            Self::Unauthorized { reason }
+            | Self::Request { reason }
+            | Self::Game { reason, .. } => reason,
             Self::ChatSend { error, .. } => error.reason(),
             Self::ChatSubscribe { error, .. } => error.reason(),
         };
@@ -106,6 +112,10 @@ impl fmt::Display for ExternalServerError {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ServerMessage {
+    /// Sent when an `Auth` frame succeeds, before the snapshot that follows it.
+    /// A bot has no other way to tell a completed authentication apart from the
+    /// anonymous connect snapshot, which races it on the same socket.
+    Authenticated(UserResponse),
     Challenge(ChallengeUpdate),
     Chat(ChatMessageContainer),
     ChatRead {
@@ -131,6 +141,7 @@ pub enum ServerMessage {
     Tournament(TournamentUpdate),
     UserSettings(UserSettingsUpdate),
     UserStatus(UserUpdate),
+    UserProfile(UserResponse),
 }
 
 /// Authoritative best-effort lobby state sent on connect and Resync.
@@ -204,14 +215,18 @@ pub enum GameUpdate {
     /// draw offered). Client merges into the local `own` map.
     Urgent(Vec<GameResponse>),
     OwnGameRemoved(GameId),
-    Tv(GameResponse),
+    Tv(Arc<GameResponse>),
     Heartbeat(HeartbeatResponse),
+    Fetched(Arc<GameResponse>),
+    Ongoing(Vec<GameResponse>),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameActionResponse {
     pub game_action: GameReaction,
-    pub game: GameResponse,
+    /// Shared, not owned: one response fans out to both players and every spectator, and
+    /// `get_or_build_response` already hands it over behind an `Arc`.
+    pub game: Arc<GameResponse>,
     pub game_id: GameId,
     pub user_id: Uuid,
     pub username: String,

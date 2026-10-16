@@ -5,7 +5,6 @@ use actix_web::{
     HttpResponse,
 };
 use anyhow::Result;
-use chrono::Utc;
 use db_lib::{
     get_conn,
     models::{Game, User},
@@ -89,19 +88,9 @@ pub async fn api_get_pending_games(Auth(bot): Auth, pool: Data<DbPool>) -> HttpR
 
 async fn get_games(bot: User, selector: GameSelector, pool: Data<DbPool>) -> Result<Vec<Game>> {
     let mut conn = get_conn(&pool).await?;
-    let games = match selector {
-        GameSelector::Specific(id) => {
-            return Ok(vec![Game::find_by_game_id(&id, &mut conn).await?]);
-        }
+    Ok(match selector {
+        GameSelector::Specific(id) => vec![Game::find_by_game_id(&id, &mut conn).await?],
         GameSelector::Ongoing => bot.get_ongoing_games(&mut conn).await?,
         GameSelector::Pending => bot.get_games_with_notifications(&mut conn).await?,
-    };
-    let now = Utc::now();
-    Ok(games
-        .into_iter()
-        .filter(|game| {
-            game.timeout_at.is_none_or(|deadline| deadline > now)
-                && game.arena_move_due_at.is_none_or(|deadline| deadline > now)
-        })
-        .collect())
+    })
 }

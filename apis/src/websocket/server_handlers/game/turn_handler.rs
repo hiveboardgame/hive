@@ -10,13 +10,21 @@ use db_lib::{
     models::Game,
     DbPool,
 };
-use hive_lib::Turn;
+use hive_lib::{GameError, Piece, Position, State, Turn};
 use shared_types::{GameId, TimeMode};
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 use uuid::Uuid;
 
+/// Bots send notation and the server resolves it against the replayed board, exactly as
+/// `POST /api/v1/bot/games/play` does. The browser sends a resolved `Turn` because it runs
+/// the engine itself; nothing else can.
+pub enum TurnInput {
+    Structured(Turn),
+    Notation(String),
+}
+
 pub struct TurnHandler {
-    turn: Turn,
+    input: TurnInput,
     pool: DbPool,
     user_id: Uuid,
     username: String,
@@ -26,7 +34,7 @@ pub struct TurnHandler {
 
 impl TurnHandler {
     pub fn new(
-        turn: Turn,
+        input: TurnInput,
         game: &Game,
         username: &str,
         user_id: Uuid,
@@ -38,25 +46,51 @@ impl TurnHandler {
             user_id,
             username: username.to_owned(),
             pool: pool.clone(),
-            turn,
+            input,
             data,
         }
     }
 
+    fn resolve(&self) -> Result<Turn> {
+        let notation = match &self.input {
+            TurnInput::Structured(turn) => return Ok(turn.clone()),
+            TurnInput::Notation(notation) => notation,
+        };
+        let state = State::new_from_str(&self.game.history, &self.game.game_type)?;
+        if state.turn == 0 {
+            return Ok(Turn::Move(
+                Piece::from_str(notation)?,
+                Position::initial_spawn_position(),
+            ));
+        }
+        let (piece, position) =
+            notation
+                .split_once(' ')
+                .ok_or_else(|| GameError::ParsingError {
+                    found: notation.clone(),
+                    typ: String::from("move, expected 'piece position'"),
+                })?;
+        Ok(Turn::Move(
+            Piece::from_str(piece)?,
+            Position::from_string(position, &state.board)?,
+        ))
+    }
+
     pub async fn handle(&self) -> Result<HandlerOutput> {
+        let turn = self.resolve()?;
         let mut conn = get_conn(&self.pool).await?;
         let outcome = game_command::execute(
             self.game.id,
             Command::Move {
                 user_id: self.user_id,
-                turn: self.turn.clone(),
+                turn: turn.clone(),
                 compensation: self.compensation(),
             },
             &mut conn,
         )
         .await?;
         let context = GameCommandContext::websocket(
-            GameReaction::Turn(self.turn.clone()),
+            GameReaction::Turn(turn),
             self.user_id,
             self.username.clone(),
         );

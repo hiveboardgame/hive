@@ -63,3 +63,6 @@ AGENTS.md
 
 # database dumps
 *.dump
+
+__pycache__/
+*.pyc

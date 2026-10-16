@@ -57,7 +57,7 @@ impl TimeoutHandler {
                 destination: MessageDestination::Direct(self.received_from.clone()),
                 message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
                     game_id: GameId(projected.game.nanoid.clone()),
-                    game: (*game).clone(),
+                    game: game.clone(),
                     game_action: reaction,
                     user_id: projected.game.current_player_id,
                     username: String::new(),
