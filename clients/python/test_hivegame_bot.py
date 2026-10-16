@@ -140,7 +140,7 @@ async def check_auth_survives_traffic_arriving_before_the_ack():
     bot = bot_connecting_through([ONLINE, ok({"Ping": {"nonce": 7, "value": 1.0}}), AUTHENTICATED])
 
     assert await bot.connect() == {"username": "bot", "uid": "u-1"}
-    assert frames(bot) == [{"Auth": "tok"}, {"Pong": 7}], frames(bot)
+    assert frames(bot) == [{"Auth": "tok"}], frames(bot)
 
     first = await bot.messages().__anext__()
     assert first == {"UserStatus": {"status": "Online", "username": "bot", "user": None}}, first
@@ -167,7 +167,7 @@ async def check_a_refused_token_raises():
     raise AssertionError("a refused token must raise")
 
 
-async def check_pings_are_answered_and_not_yielded():
+async def check_pings_are_skipped_and_not_answered():
     incoming = [
         json.dumps({"Ok": {"Ping": {"nonce": 7, "value": 1.0}}}),
         json.dumps({"Ok": {"Game": {"Reaction": {"kind": "move"}}}}),
@@ -177,7 +177,7 @@ async def check_pings_are_answered_and_not_yielded():
     first = await messages.__anext__()
 
     assert first == {"Game": {"Reaction": {"kind": "move"}}}, first
-    assert frames(bot) == [{"Pong": 7}], frames(bot)
+    assert frames(bot) == [], frames(bot)
 
 
 async def check_a_refused_token_closes_the_socket():
@@ -259,7 +259,7 @@ async def main():
     check_a_refused_login_keeps_the_servers_reason()
     await check_requests()
     await check_auth_frame_and_envelope_unwrapping()
-    await check_pings_are_answered_and_not_yielded()
+    await check_pings_are_skipped_and_not_answered()
     await check_a_refusal_is_yielded_not_raised()
     await check_auth_survives_traffic_arriving_before_the_ack()
     await check_an_anonymous_snapshot_is_not_authentication()

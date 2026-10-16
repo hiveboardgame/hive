@@ -898,7 +898,14 @@ impl Game {
                 return Ok((white_time, black_time));
             }
         }
-        let comp = (comp * 1_000_000_000.0) as i64;
+        // Compensation refunds time the move spent in transit, so it can never exceed the time
+        // the move took; otherwise a fast move would gain clock time.
+        let elapsed = self
+            .last_interaction
+            .and_then(|last| observed_at.signed_duration_since(last).num_nanoseconds())
+            .unwrap_or(0)
+            .max(0);
+        let comp = ((comp * 1_000_000_000.0) as i64).min(elapsed);
         // Each side carries its own increment, because a berserked player
         // forfeits theirs while the opponent keeps hers.
         let white_increment = self.time_increment_duration(Color::White, clock).as_nanos() as i64;

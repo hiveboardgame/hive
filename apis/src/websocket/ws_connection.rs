@@ -1,7 +1,8 @@
 use super::{
+    lag_tracking::Probes,
     messages::{InternalServerMessage, MessageDestination, Outbound, SocketTx},
     server_handlers::request_handler::{RequestHandler, RequestHandlerError},
-    telemetry::{DisconnectReason, WsTelemetry},
+    telemetry::DisconnectReason,
     ws_hub::WsHub,
     WebsocketData,
 };
@@ -34,6 +35,11 @@ use std::{
 use uuid::Uuid;
 
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
+const PROBE_INTERVAL: Duration = Duration::from_secs(1);
+const PROBE_PATIENCE: Duration = Duration::from_millis(100);
+// Jittered so a client's own periodic requests cannot line up with every probe and get all of
+// its samples thrown out.
+const PROBE_JITTER: f64 = 0.25;
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// RAII cleanup so the WS subsystem stays consistent even if the reader loop
@@ -43,7 +49,7 @@ const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 /// for the lifetime of the process.
 struct DisconnectGuard {
     hub: Arc<WsHub>,
-    telemetry: Arc<WsTelemetry>,
+    data: Arc<WebsocketData>,
     socket_id: Uuid,
     identity: Arc<Mutex<SimpleUser>>,
     reason: Cell<DisconnectReason>,
@@ -57,7 +63,8 @@ impl DisconnectGuard {
 
 impl Drop for DisconnectGuard {
     fn drop(&mut self) {
-        self.telemetry.record_disconnect(self.reason.get());
+        self.data.telemetry.record_disconnect(self.reason.get());
+        self.data.socket_lags.disconnect(self.socket_id);
         // Read after any `Auth` swap, so cleanup unbinds the user the socket ended as.
         self.hub
             .on_disconnect(self.socket_id, current_identity(&self.identity));
@@ -88,6 +95,7 @@ pub async fn reader_task(
     socket: SocketTx,
     deps: Deps,
     user: SimpleUser,
+    tcp_rtt: Option<Duration>,
 ) {
     let Deps {
         hub,
@@ -101,11 +109,12 @@ pub async fn reader_task(
         socket.format,
         user.clone(),
     );
+    data.socket_lags.connect(socket.socket_id, tcp_rtt);
     let identity = Arc::new(Mutex::new(user));
 
     let guard = DisconnectGuard {
         hub: Arc::clone(&hub),
-        telemetry: data.telemetry.clone(),
+        data: Arc::clone(&data),
         socket_id: socket.socket_id,
         identity: Arc::clone(&identity),
         reason: Cell::new(DisconnectReason::Close),
@@ -113,6 +122,8 @@ pub async fn reader_task(
 
     let mut last_hb = Instant::now();
     let mut hb_interval = tokio::time::interval(HEARTBEAT_INTERVAL);
+    let mut probes = Probes::default();
+    let mut next_probe = tokio::time::Instant::now() + probe_delay();
 
     loop {
         tokio::select! {
@@ -121,26 +132,36 @@ pub async fn reader_task(
                     guard.set_reason(DisconnectReason::Timeout);
                     break;
                 }
-                let ping = tokio::time::timeout(HEARTBEAT_INTERVAL, session.ping(b"hi")).await;
-                if matches!(ping, Err(_) | Ok(Err(_))) {
+                if !send_probe(&mut session, &socket, &mut probes, HEARTBEAT_INTERVAL).await {
                     guard.set_reason(DisconnectReason::PingFail);
                     break;
                 }
             }
+            _ = tokio::time::sleep_until(next_probe) => {
+                send_probe(&mut session, &socket, &mut probes, PROBE_PATIENCE).await;
+                next_probe = tokio::time::Instant::now() + probe_delay();
+            }
             item = msg_stream.next() => match item {
                 Some(Ok(AggregatedMessage::Ping(bytes))) => {
                     last_hb = Instant::now();
-                    if session.pong(&bytes).await.is_err() {
+                    let answered = session.pong(&bytes).await;
+                    probes.reader_stalled(last_hb.elapsed());
+                    if answered.is_err() {
                         guard.set_reason(DisconnectReason::PingFail);
                         break;
                     }
                 }
-                Some(Ok(AggregatedMessage::Pong(_))) => {
-                    last_hb = Instant::now();
+                Some(Ok(AggregatedMessage::Pong(bytes))) => {
+                    let now = Instant::now();
+                    last_hb = now;
+                    if let Some(rtt) = probes.round_trip(&bytes, now) {
+                        data.socket_lags.record_round_trip(socket.socket_id, rtt);
+                    }
                 }
                 Some(Ok(AggregatedMessage::Binary(bytes))) => {
                     last_hb = Instant::now();
                     handle_binary(&bytes, &hub, &socket, &data, &pool, &jwt_secret, &identity).await;
+                    probes.reader_stalled(last_hb.elapsed());
                 }
                 Some(Ok(AggregatedMessage::Close(_))) => break,
                 None => {
@@ -151,6 +172,7 @@ pub async fn reader_task(
                     last_hb = Instant::now();
                     handle_text(&text, &hub, &socket, &data, &pool, &jwt_secret, &identity)
                         .await;
+                    probes.reader_stalled(last_hb.elapsed());
                 }
                 Some(Err(_)) => {
                     guard.set_reason(DisconnectReason::StreamErr);
@@ -162,6 +184,33 @@ pub async fn reader_task(
 
     drop(guard);
     let _ = session.close(None).await;
+}
+
+fn probe_delay() -> Duration {
+    PROBE_INTERVAL.mul_f64(rand::random_range(1.0 - PROBE_JITTER..1.0 + PROBE_JITTER))
+}
+
+// The round trip starts once the ping is queued, so time spent waiting for room in our own send
+// queue is not counted as the client's lag. A ping queued behind a backlog of our frames would
+// still wait for them on the wire, so it only proves the client is alive.
+async fn send_probe(
+    session: &mut Session,
+    socket: &SocketTx,
+    probes: &mut Probes,
+    patience: Duration,
+) -> bool {
+    let nonce = rand::random::<u64>();
+    let backlogged = socket.tx.capacity() < socket.tx.max_capacity();
+    let started = Instant::now();
+    let queued = tokio::time::timeout(patience, session.ping(&nonce.to_be_bytes())).await;
+    probes.reader_stalled(started.elapsed());
+    if !matches!(queued, Ok(Ok(()))) {
+        return false;
+    }
+    if !backlogged {
+        probes.sent(nonce, Instant::now());
+    }
+    true
 }
 
 async fn handle_binary(
@@ -929,5 +978,179 @@ mod tests {
             "handle_request is a {size} byte future, budget is {DISPATCH_FUTURE_BUDGET}; \
              box the branch futures that grew it"
         );
+    }
+
+    // A real socket, so the probe goes out through actix-ws and the pong comes back as a frame:
+    // unit tests of `Probes` and `SocketLags` cannot see the reader loop's wiring.
+    #[actix_web::test]
+    async fn protocol_pongs_measure_their_socket_until_it_closes() {
+        use super::{reader_task, Deps};
+        use crate::{
+            api::v1::auth::jwt_secret::JwtSecret,
+            websocket::{
+                messages::{SocketFormat, SocketTx},
+                ws_hub::WsHub,
+                WebsocketData,
+            },
+        };
+        use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
+        use shared_types::SimpleUser;
+        use std::{
+            io::{Read, Write},
+            net::TcpStream,
+            sync::Arc,
+        };
+
+        const NETWORK_DELAY: Duration = Duration::from_millis(100);
+        const TCP_RTT: Duration = Duration::from_millis(40);
+
+        let pool = db_lib::get_pool("postgresql://test:test@127.0.0.1:9/test")
+            .await
+            .expect("bb8 pool builds without connecting");
+        let data = Arc::new(WebsocketData::default());
+        let hub = WsHub::new(data.clone(), pool.clone());
+        let socket_id = Uuid::new_v4();
+
+        let server = {
+            let (hub, data) = (hub.clone(), data.clone());
+            HttpServer::new(move || {
+                let (hub, data, pool) = (hub.clone(), data.clone(), pool.clone());
+                App::new().route(
+                    "/ws/",
+                    web::get().to(move |req: HttpRequest, body: web::Payload| {
+                        let (hub, data, pool) = (hub.clone(), data.clone(), pool.clone());
+                        async move {
+                            let (response, session, stream) = actix_ws::handle(&req, body)?;
+                            let (tx, outbound) = tokio::sync::mpsc::channel(8);
+                            actix_web::rt::spawn(async move {
+                                let _outbound = outbound;
+                                reader_task(
+                                    session,
+                                    stream.aggregate_continuations(),
+                                    SocketTx {
+                                        socket_id,
+                                        format: SocketFormat::Json,
+                                        tx,
+                                    },
+                                    Deps {
+                                        hub,
+                                        data,
+                                        pool,
+                                        jwt_secret: Arc::new(JwtSecret::new(
+                                            "test-secret".to_string(),
+                                        )),
+                                    },
+                                    SimpleUser {
+                                        user_id: Uuid::new_v4(),
+                                        username: "anonymous".to_string(),
+                                        admin: false,
+                                        authed: false,
+                                    },
+                                    Some(TCP_RTT),
+                                )
+                                .await;
+                            });
+                            Ok::<HttpResponse, actix_web::Error>(response)
+                        }
+                    }),
+                )
+            })
+            .workers(1)
+            .bind(("127.0.0.1", 0))
+            .expect("binds a free port")
+        };
+        let addr = server.addrs()[0];
+        actix_web::rt::spawn(server.run());
+
+        let client = tokio::task::spawn_blocking(move || {
+            let mut stream = TcpStream::connect(addr).expect("connects");
+            stream
+                .set_read_timeout(Some(Duration::from_secs(5)))
+                .expect("sets a read timeout");
+            write!(
+                stream,
+                "GET /ws/ HTTP/1.1\r\nHost: {addr}\r\nUpgrade: websocket\r\n\
+                 Connection: Upgrade\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\
+                 Sec-WebSocket-Version: 13\r\n\r\n"
+            )
+            .expect("sends the upgrade");
+            let mut head = Vec::new();
+            let mut byte = [0u8; 1];
+            while !head.ends_with(b"\r\n\r\n") {
+                stream.read_exact(&mut byte).expect("reads the upgrade");
+                head.push(byte[0]);
+            }
+            assert!(
+                head.starts_with(b"HTTP/1.1 101"),
+                "{:?}",
+                String::from_utf8_lossy(&head)
+            );
+
+            let mut ping = [0u8; 10];
+            stream.read_exact(&mut ping).expect("reads the first probe");
+            assert_eq!(&ping[..2], &[0x89, 8], "an unmasked 8-byte ping frame");
+            std::thread::sleep(NETWORK_DELAY);
+            let masked = |opcode: u8, payload: &[u8]| {
+                let mut frame = vec![0x80 | opcode, 0x80 | payload.len() as u8, 0, 0, 0, 0];
+                frame.extend_from_slice(payload);
+                frame
+            };
+            stream
+                .write_all(&masked(0xA, &ping[2..]))
+                .expect("answers the probe");
+            stream
+                .write_all(&masked(0xA, &ping[2..]))
+                .expect("answers it twice");
+            stream
+                .write_all(&masked(0xA, b"forged!!"))
+                .expect("answers no probe");
+            // The reader handles frames in order, so the answer to our own ping proves the
+            // pongs before it were handled.
+            stream
+                .write_all(&masked(0x9, b"sync"))
+                .expect("pings the server");
+            loop {
+                let mut header = [0u8; 2];
+                stream
+                    .read_exact(&mut header)
+                    .expect("reads a frame header");
+                let mut payload = vec![0u8; usize::from(header[1] & 0x7F)];
+                stream
+                    .read_exact(&mut payload)
+                    .expect("reads a frame payload");
+                if header[0] == 0x8A && payload == b"sync" {
+                    break;
+                }
+            }
+            stream
+        })
+        .await
+        .expect("the client thread finishes");
+
+        let measured = data.socket_lags.lag(socket_id);
+        let delay = NETWORK_DELAY.as_secs_f64() * 1000.0;
+        let estimate = measured.estimate_ms.expect("the pong was measured");
+        assert!(
+            (delay..1000.0).contains(&estimate),
+            "{estimate} ms for a {delay} ms delay"
+        );
+        assert_eq!(
+            data.socket_lags.sample_count(socket_id),
+            1,
+            "the duplicate and the forged pong are not samples"
+        );
+        assert_eq!(measured.cap_ms, 90.0);
+        assert_eq!(measured.compensable_ms(), estimate.min(90.0));
+
+        drop(client);
+        let mut forgotten = false;
+        for _ in 0..100 {
+            if data.socket_lags.lag(socket_id).cap_ms == 1000.0 {
+                forgotten = true;
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+        assert!(forgotten, "a closed socket leaves no lag state behind");
     }
 }

@@ -3,7 +3,7 @@ mod common;
 use chrono::Utc;
 use db_lib::{
     db_error::DbError,
-    game_command::{execute, Command, Outcome},
+    game_command::{execute, Command, Outcome, MAX_MOVE_COMPENSATION_SECS},
     get_conn,
     models::{Game, NewGame, NewUser, User},
     DbConn,
@@ -189,6 +189,144 @@ async fn takebacks_to_opening_turns_keep_the_clock_running() {
             GameStatus::Finished(GameResult::Winner(Color::Black)).to_string()
         );
     }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn move_compensation_outside_zero_to_the_ceiling_is_rejected() {
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.expect("get connection");
+    let white = create_user("comp_ceiling_white", &mut conn).await;
+    let black = create_user("comp_ceiling_black", &mut conn).await;
+    let game = create_moves_game(
+        white.id,
+        black.id,
+        TimeMode::RealTime,
+        Some(180),
+        Some(2),
+        GameSpeed::Blitz,
+        &mut conn,
+    )
+    .await;
+    let opening = || {
+        Turn::Move(
+            "wA1".parse().expect("parse opening piece"),
+            Position::initial_spawn_position(),
+        )
+    };
+
+    for compensation in [
+        MAX_MOVE_COMPENSATION_SECS + 0.001,
+        -0.001,
+        f64::NAN,
+        f64::INFINITY,
+    ] {
+        let error = execute(
+            game.id,
+            Command::Move {
+                user_id: white.id,
+                turn: opening(),
+                compensation,
+            },
+            &mut conn,
+        )
+        .await
+        .expect_err("compensation outside the accepted range is refused");
+        assert!(
+            matches!(error, DbError::InvalidInput { .. }),
+            "{compensation}: {error:?}"
+        );
+    }
+    let untouched = Game::find_by_uuid(&game.id, &mut conn)
+        .await
+        .expect("reload game after rejected moves");
+    assert_eq!(untouched.turn, 0);
+
+    let accepted = execute(
+        game.id,
+        Command::Move {
+            user_id: white.id,
+            turn: opening(),
+            compensation: MAX_MOVE_COMPENSATION_SECS,
+        },
+        &mut conn,
+    )
+    .await
+    .expect("compensation at the ceiling is accepted");
+    let Outcome::Applied { game: moved, .. } = accepted else {
+        panic!("a move updates the game")
+    };
+    assert_eq!(moved.turn, 1);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn compensation_never_refunds_more_than_the_move_took() {
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.expect("get connection");
+    let white = create_user("comp_refund_white", &mut conn).await;
+    let black = create_user("comp_refund_black", &mut conn).await;
+    let game = create_moves_game(
+        white.id,
+        black.id,
+        TimeMode::RealTime,
+        Some(180),
+        Some(2),
+        GameSpeed::Blitz,
+        &mut conn,
+    )
+    .await;
+
+    let mut started = None;
+    for (user_id, piece, position) in [
+        (white.id, "wA1", Position::initial_spawn_position()),
+        (
+            black.id,
+            "bA1",
+            Position::initial_spawn_position().to(Direction::E),
+        ),
+    ] {
+        let outcome = execute(
+            game.id,
+            Command::Move {
+                user_id,
+                turn: Turn::Move(piece.parse().expect("parse opening piece"), position),
+                compensation: 0.0,
+            },
+            &mut conn,
+        )
+        .await
+        .expect("play opening move");
+        let Outcome::Applied { game, .. } = outcome else {
+            panic!("an opening move updates the game")
+        };
+        started = Some(game);
+    }
+    let started = started.expect("the clock is running");
+    let white_before = started.white_time_left.expect("white has a clock");
+
+    let outcome = execute(
+        game.id,
+        Command::Move {
+            user_id: white.id,
+            turn: Turn::Move(
+                "wG1".parse().expect("parse piece"),
+                Position::initial_spawn_position().to(Direction::W),
+            ),
+            compensation: MAX_MOVE_COMPENSATION_SECS,
+        },
+        &mut conn,
+    )
+    .await
+    .expect("play an instant move");
+    let Outcome::Applied { game: moved, .. } = outcome else {
+        panic!("a move updates the game")
+    };
+
+    let increment = 2 * 1_000_000_000;
+    assert_eq!(
+        moved.white_time_left,
+        Some(white_before + increment),
+        "an instant move keeps exactly its increment, not the compensation on top"
+    );
 }
 
 fn assert_running_opening_clock(game: &Game, expected_turn: i32) {

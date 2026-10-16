@@ -31,7 +31,6 @@ pub enum ClientRequest {
     Challenge(ChallengeAction),
     Game { game_id: GameId, action: GameAction },
     NotificationSeen { game_id: GameId },
-    Pong(u64),
     Resync,
     Schedule(ScheduleAction),
     Tournament(TournamentAction),
@@ -195,7 +194,6 @@ mod tests {
             }),
             r#"{"Game":{"game_id":"abc","action":"Berserk"}}"#
         );
-        assert_eq!(json(&ClientRequest::Pong(123)), r#"{"Pong":123}"#);
 
         let result = |result: &ServerResult| serde_json::to_string(result).expect("encodes");
         assert_eq!(

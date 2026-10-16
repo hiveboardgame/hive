@@ -19,6 +19,8 @@ use shared_types::{
 use std::str::FromStr;
 use uuid::Uuid;
 
+pub const MAX_MOVE_COMPENSATION_SECS: f64 = 1.0;
+
 pub(crate) async fn execute(
     game_id: Uuid,
     command: Command,
@@ -331,11 +333,13 @@ async fn apply_command(
             turn,
             compensation,
         } => {
-            if !compensation.is_finite() || !(0.0..=700.0).contains(&compensation) {
+            if !compensation.is_finite()
+                || !(0.0..=MAX_MOVE_COMPENSATION_SECS).contains(&compensation)
+            {
                 return Err(DbError::InvalidInput {
                     info: String::from("Move compensation is outside its accepted range"),
-                    error: String::from(
-                        "compensation must be finite and between 0 and 700 seconds",
+                    error: format!(
+                        "compensation must be finite and between 0 and {MAX_MOVE_COMPENSATION_SECS} seconds"
                     ),
                 });
             }

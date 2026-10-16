@@ -257,22 +257,24 @@ What a bot will receive:
 | `{"Join": "<uuid>"}` | someone joined a game you joined |
 | `{"Chat": {...}}` | a chat message in a conversation you are in or subscribed to |
 | `{"Tournament": {...}}`, `{"Schedule": {...}}` | updates for tournaments and schedules you take part in or watch |
-| `{"Ping": {"nonce": 123, "value": 42.0}}` | answer with `{"Pong": 123}` (see below) |
+| `{"Ping": {"nonce": 0, "value": 42.0}}` | your measured round trip; nothing to answer (see below) |
 | `{"Error": "..."}` | an ordinary refusal (see [Results and errors](#results-and-errors)) |
 
 Ignore any message you do not recognize. New ones are added without notice.
 
 ## Session behaviour
 
-**Heartbeats.** The server sends a WebSocket ping every 5 seconds and drops the connection if it
-has heard nothing for 10. Most WebSocket libraries answer pings for you; check that yours does.
+**Heartbeats and lag compensation.** The server sends a WebSocket ping about every second and
+drops the connection if it has heard nothing for 10 seconds. Most WebSocket libraries answer
+pings for you, echoing the payload as the protocol requires; check that yours does, and keep the
+event loop that answers them free of long work. The median of recent round trips is your measured
+lag, because your clock pays for the position reaching you and for your move coming back: on
+each move in a real-time game your clock is credited with up to that much, within a small
+per-game quota, never more than one second and never more than the move took.
 
-**Lag compensation.** Separately, the server sends `{"Ping": {"nonce": n, "value": ms}}` every
-second. Answer each one with `{"Pong": n}`. The server times the round trip and credits
-your real-time clock with the measured network lag on each move, up to a small per-game quota.
-`value` is your current measured lag in milliseconds. If you do not answer, you get no
-compensation. Answer promptly: compensation is capped per game, and how lag is measured may
-change.
+**`Ping` messages.** Separately, the server sends `{"Ping": {"nonce": 0, "value": ms}}` every
+second. `value` is your measured round trip in milliseconds, the most a move would be credited
+with before the per-game quota. `nonce` carries no meaning and there is nothing to answer.
 
 **Token expiry does not apply once you are connected.** The JWT lasts 100 minutes, and the
 server checks that when you send `Auth`, so an expired token is refused. It does not re-check an

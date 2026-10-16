@@ -8,6 +8,8 @@ use uuid::Uuid;
 
 mod execute;
 
+pub use execute::MAX_MOVE_COMPENSATION_SECS;
+
 #[derive(Clone, Debug)]
 pub enum Command {
     Move {

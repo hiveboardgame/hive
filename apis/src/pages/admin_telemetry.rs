@@ -183,6 +183,12 @@ fn AllPanels(rows: Vec<TelemetryRow>) -> impl IntoView {
             <Panel title="Caches" body_class="overflow-x-auto">
                 <ChartCaches data=data />
             </Panel>
+            <Panel title="Move lag, round trip ms (per interval)" body_class="overflow-x-auto">
+                <ChartMoveLag data=data />
+            </Panel>
+            <Panel title="Lag compensation checks (per interval)" body_class="overflow-x-auto">
+                <ChartLagChecks data=data />
+            </Panel>
         </div>
     }
 }
@@ -334,6 +340,26 @@ fn ChartCaches(data: ReadSignal<Vec<TelemetryRow>>) -> impl IntoView {
         .line(tline!("last_tv", last_tv_broadcast))
         .line(tline!("lags trackers", lags_trackers))
         .line(tline!("game_start dates", game_start_games_date));
+    base_chart(series, data)
+}
+
+#[component]
+fn ChartMoveLag(data: ReadSignal<Vec<TelemetryRow>>) -> impl IntoView {
+    let series = Series::new(ts)
+        .line(tline!("protocol p50", protocol_lag_p50_ms))
+        .line(tline!("protocol p90", protocol_lag_p90_ms))
+        .line(tline!("tcp p50", tcp_rtt_p50_ms))
+        .line(tline!("tcp p90", tcp_rtt_p90_ms));
+    base_chart(series, data)
+}
+
+#[component]
+fn ChartLagChecks(data: ReadSignal<Vec<TelemetryRow>>) -> impl IntoView {
+    let series = Series::new(ts)
+        .line(tline!("moves", lag_moves))
+        .line(tline!("capped (tcp or 1 s)", lag_cap_hits))
+        .line(tline!("no protocol estimate", protocol_lag_missing))
+        .line(tline!("tcp rtt connects", tcp_rtt_connects));
     base_chart(series, data)
 }
 

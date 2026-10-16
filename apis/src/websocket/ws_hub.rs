@@ -56,7 +56,6 @@ use db_lib::{
 use diesel::{ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl};
 use hive_lib::GameStatus;
 use log::error;
-use rand::RngExt;
 use shared_types::{
     tournament::Format,
     ConversationKey,
@@ -710,7 +709,6 @@ impl WsHub {
                 let removed = self.sessions.remove_if(&user_id, |_, s| s.is_empty());
                 if removed.is_some() {
                     self.data.telemetry.dec_active_user();
-                    self.data.pings.remove(user_id);
                     true
                 } else {
                     // A concurrent on_connect inserted a new socket between our
@@ -1328,16 +1326,29 @@ impl WsHub {
     // ─── periodic jobs ────────────────────────────────────────────────────────
 
     pub fn ping_all(&self) {
-        let mut rng = rand::rng();
-        let user_ids: Vec<Uuid> = self.sessions.iter().map(|e| *e.key()).collect();
-        for user_id in user_ids {
-            let nonce = rng.random::<u64>();
-            self.data.pings.set_nonce(user_id, nonce);
+        let sockets: Vec<(Uuid, Uuid)> = self
+            .sessions
+            .iter()
+            .flat_map(|user| {
+                let user_id = *user.key();
+                user.value()
+                    .iter()
+                    .map(|socket| (user_id, *socket.key()))
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+        for (user_id, socket_id) in sockets {
+            // `nonce` stays because tabs from older releases still decode it.
             let message = ServerResult::Ok(Box::new(ServerMessage::Ping {
-                nonce,
-                value: self.data.pings.value(user_id),
+                nonce: 0,
+                value: self.data.socket_lags.lag(socket_id).compensable_ms(),
             }));
-            self.send_to_user(&user_id, DestKind::User, &mut Outbound::typed(&message));
+            self.send_to_socket(
+                &user_id,
+                &socket_id,
+                DestKind::User,
+                &mut Outbound::typed(&message),
+            );
         }
     }
 

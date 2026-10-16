@@ -181,13 +181,12 @@ class HiveBot:
         return envelope["Ok"]
 
     async def _next(self) -> dict[str, Any]:
-        """The next server message, with latency pings answered on the way through."""
+        """The next server message, skipping latency pings: the WebSocket library answers the
+        protocol pings the server measures lag from."""
         while True:
             message = await self._receive()
-            ping = message.get("Ping")
-            if ping is None:
+            if "Ping" not in message:
                 return message
-            await self.send({"Pong": ping["nonce"]})
 
     async def messages(self) -> AsyncIterator[dict[str, Any]]:
         """Yield server messages forever, starting with anything that arrived during `connect`."""
