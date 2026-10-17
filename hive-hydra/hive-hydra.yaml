@@ -1,6 +1,5 @@
 # Server configuration
 max_concurrent_processes: 5  # Maximum number of concurrent AI processes
-queue_capacity: 1000        # Size of the turn processing queue
 #base_url: "https://hivegame.com"  # Base URL for the Hive Game API
 base_url: "http://localhost:3000"  # Base URL for the Hive Game API
 
