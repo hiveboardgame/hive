@@ -13,6 +13,7 @@ use actix_web::{
     HttpResponse,
 };
 use anyhow::{anyhow, Result};
+use chrono::Utc;
 use db_lib::{
     db_error::DbError,
     game_command::{self, Command},
@@ -82,6 +83,7 @@ async fn play_move(
     hub: Data<Arc<WsHub>>,
     output: &mut HandlerOutput,
 ) -> Result<(Game, Turn)> {
+    let arrived_at = Utc::now();
     let cloned_pool = pool.clone();
     let mut conn = get_conn(&cloned_pool).await?;
     let game = Game::find_by_game_id(&play.game_id, &mut conn)
@@ -109,6 +111,7 @@ async fn play_move(
                 user_id: bot.id,
                 turn: played_turn.clone(),
                 compensation: 0.0,
+                arrived_at: Some(arrived_at),
             },
             &mut conn,
         )

@@ -3,7 +3,7 @@ use super::{
     join_handler::JoinHandler,
     start::StartHandler,
     timeout_handler::TimeoutHandler,
-    turn_handler::{TurnHandler, TurnInput},
+    turn_handler::{Mover, TurnHandler, TurnInput},
 };
 use crate::{
     common::GameAction,
@@ -15,6 +15,7 @@ use crate::{
     },
 };
 use anyhow::Result;
+use chrono::{DateTime, Utc};
 use db_lib::{get_conn, models::Game, DbPool};
 use shared_types::GameId;
 use std::sync::Arc;
@@ -28,6 +29,7 @@ pub struct GameActionHandler {
     data: Arc<WebsocketData>,
     hub: Arc<WsHub>,
     username: String,
+    received_at: DateTime<Utc>,
 }
 
 impl GameActionHandler {
@@ -40,6 +42,7 @@ impl GameActionHandler {
         hub: Arc<WsHub>,
         pool: &DbPool,
     ) -> Result<Self> {
+        let received_at = Utc::now();
         let (username, user_id) = user_details;
         let mut connection = get_conn(pool).await?;
 
@@ -54,6 +57,7 @@ impl GameActionHandler {
             username: username.to_owned(),
             game_action,
             user_id,
+            received_at,
         })
     }
 
@@ -62,8 +66,11 @@ impl GameActionHandler {
             input,
             &self.game,
             &self.username,
-            self.user_id,
-            self.received_from.socket_id,
+            Mover {
+                user_id: self.user_id,
+                socket_id: self.received_from.socket_id,
+                arrived_at: self.received_at,
+            },
             self.data.clone(),
             &self.pool,
         )
@@ -83,6 +90,7 @@ impl GameActionHandler {
                     &self.game,
                     self.received_from.clone(),
                     self.data.clone(),
+                    self.hub.clone(),
                     &self.pool,
                 )
                 .handle()

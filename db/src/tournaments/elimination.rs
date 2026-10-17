@@ -1668,6 +1668,7 @@ mod tests {
                                 user_id,
                                 turn: Turn::Move(piece.parse().unwrap(), position),
                                 compensation: 0.0,
+                                arrived_at: None,
                             },
                             &mut conn,
                         )

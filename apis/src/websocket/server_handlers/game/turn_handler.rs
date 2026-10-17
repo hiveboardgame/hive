@@ -8,6 +8,7 @@ use crate::{
     },
 };
 use anyhow::Result;
+use chrono::{DateTime, Utc};
 use db_lib::{
     game_command::{self, Command, Outcome},
     get_conn,
@@ -27,11 +28,16 @@ pub enum TurnInput {
     Notation(String),
 }
 
+pub struct Mover {
+    pub user_id: Uuid,
+    pub socket_id: Uuid,
+    pub arrived_at: DateTime<Utc>,
+}
+
 pub struct TurnHandler {
     input: TurnInput,
     pool: DbPool,
-    user_id: Uuid,
-    socket_id: Uuid,
+    mover: Mover,
     username: String,
     game: Game,
     data: Arc<WebsocketData>,
@@ -42,15 +48,13 @@ impl TurnHandler {
         input: TurnInput,
         game: &Game,
         username: &str,
-        user_id: Uuid,
-        socket_id: Uuid,
+        mover: Mover,
         data: Arc<WebsocketData>,
         pool: &DbPool,
     ) -> Self {
         Self {
             game: game.to_owned(),
-            user_id,
-            socket_id,
+            mover,
             username: username.to_owned(),
             pool: pool.clone(),
             input,
@@ -90,9 +94,10 @@ impl TurnHandler {
         let outcome = game_command::execute(
             self.game.id,
             Command::Move {
-                user_id: self.user_id,
+                user_id: self.mover.user_id,
                 turn: turn.clone(),
                 compensation: compensation.as_ref().map_or(0.0, MoveCompensation::seconds),
+                arrived_at: Some(self.mover.arrived_at),
             },
             &mut conn,
         )
@@ -102,7 +107,7 @@ impl TurnHandler {
         }
         let context = GameCommandContext::websocket(
             GameReaction::Turn(turn),
-            self.user_id,
+            self.mover.user_id,
             self.username.clone(),
         );
         let mut committed =
@@ -125,8 +130,8 @@ impl TurnHandler {
         )?;
         Some(MoveCompensation::measure(
             &self.data,
-            self.user_id,
-            self.socket_id,
+            self.mover.user_id,
+            self.mover.socket_id,
             GameId(self.game.nanoid.clone()),
             clock,
         ))

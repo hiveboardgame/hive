@@ -1,6 +1,6 @@
 mod common;
 
-use chrono::Utc;
+use chrono::{DateTime, Duration as ChronoDuration, SubsecRound, Utc};
 use db_lib::{
     db_error::DbError,
     game_command::{execute, Command, Outcome, MAX_MOVE_COMPENSATION_SECS},
@@ -8,7 +8,18 @@ use db_lib::{
     models::{Game, NewGame, NewUser, User},
     DbConn,
 };
-use hive_lib::{Color, Direction, GameControl, GameResult, GameStatus, GameType, Position, Turn};
+use hive_lib::{
+    Color,
+    Direction,
+    GameControl,
+    GameResult,
+    GameStatus,
+    GameType,
+    Piece,
+    Position,
+    State,
+    Turn,
+};
 use shared_types::{Conclusion, GameSpeed, GameStart, TimeMode, TournamentGameResult};
 use uuid::Uuid;
 
@@ -59,6 +70,7 @@ async fn takebacks_to_opening_turns_keep_the_clock_running() {
                     user_id,
                     turn: Turn::Move(piece.parse().expect("parse opening piece"), position),
                     compensation: 0.0,
+                    arrived_at: None,
                 },
                 &mut conn,
             )
@@ -226,6 +238,7 @@ async fn move_compensation_outside_zero_to_the_ceiling_is_rejected() {
                 user_id: white.id,
                 turn: opening(),
                 compensation,
+                arrived_at: None,
             },
             &mut conn,
         )
@@ -247,6 +260,7 @@ async fn move_compensation_outside_zero_to_the_ceiling_is_rejected() {
             user_id: white.id,
             turn: opening(),
             compensation: MAX_MOVE_COMPENSATION_SECS,
+            arrived_at: None,
         },
         &mut conn,
     )
@@ -290,6 +304,7 @@ async fn compensation_never_refunds_more_than_the_move_took() {
                 user_id,
                 turn: Turn::Move(piece.parse().expect("parse opening piece"), position),
                 compensation: 0.0,
+                arrived_at: None,
             },
             &mut conn,
         )
@@ -312,6 +327,7 @@ async fn compensation_never_refunds_more_than_the_move_took() {
                 Position::initial_spawn_position().to(Direction::W),
             ),
             compensation: MAX_MOVE_COMPENSATION_SECS,
+            arrived_at: None,
         },
         &mut conn,
     )
@@ -408,4 +424,262 @@ async fn create_moves_game(
     )
     .await
     .expect("insert game")
+}
+
+const SECOND: i64 = 1_000_000_000;
+
+// A one-minute game in progress, white to move, whose clock last switched at `last_move`.
+async fn minute_game_switched_at(
+    label: &str,
+    time_mode: TimeMode,
+    last_move: DateTime<Utc>,
+    conn: &mut DbConn<'_>,
+) -> (Game, User) {
+    let white = create_user(&format!("{label}_white"), conn).await;
+    let black = create_user(&format!("{label}_black"), conn).await;
+    let mut new_game = common::fixtures::new_game(white.id, black.id, GameSpeed::Bullet, false);
+    new_game.time_mode = time_mode.to_string();
+    (new_game.time_base, new_game.time_increment) = match time_mode {
+        TimeMode::Correspondence => (None, Some(60)),
+        _ => (Some(60), Some(0)),
+    };
+    new_game.white_time_left = Some(60 * SECOND);
+    new_game.black_time_left = Some(60 * SECOND);
+    new_game.last_interaction = Some(last_move);
+    new_game.timeout_at = Some(last_move + ChronoDuration::seconds(60));
+    (
+        Game::create(new_game, conn).await.expect("insert game"),
+        white,
+    )
+}
+
+fn whites_move(game: &Game) -> Turn {
+    let state = State::new_from_str(&game.history, &game.game_type).expect("replay history");
+    Turn::Move(
+        "wA1".parse::<Piece>().expect("parse piece"),
+        Position::from_string("wQ/", &state.board).expect("a hex beside white only"),
+    )
+}
+
+async fn move_arriving(
+    game: &Game,
+    white: &User,
+    arrived_at: DateTime<Utc>,
+    compensation: f64,
+    conn: &mut DbConn<'_>,
+) -> Outcome {
+    execute(
+        game.id,
+        Command::Move {
+            user_id: white.id,
+            turn: whites_move(game),
+            compensation,
+            arrived_at: Some(arrived_at),
+        },
+        conn,
+    )
+    .await
+    .expect("the move is processed")
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_move_arriving_after_the_deadline_is_saved_by_its_compensation() {
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.expect("get connection");
+    let last_move = Utc::now().trunc_subsecs(3) - ChronoDuration::milliseconds(60_300);
+    let (game, white) =
+        minute_game_switched_at("late_saved", TimeMode::RealTime, last_move, &mut conn).await;
+
+    let outcome = move_arriving(
+        &game,
+        &white,
+        last_move + ChronoDuration::milliseconds(60_300),
+        0.5,
+        &mut conn,
+    )
+    .await;
+
+    let Outcome::Applied { game: moved, .. } = outcome else {
+        panic!("the compensated move beats the flag: {outcome:?}")
+    };
+    assert!(!moved.finished);
+    assert_eq!(moved.white_time_left, Some(SECOND / 5));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_move_later_than_its_compensation_covers_flags() {
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.expect("get connection");
+    let last_move = Utc::now().trunc_subsecs(3) - ChronoDuration::milliseconds(60_300);
+    let (game, white) =
+        minute_game_switched_at("late_flagged", TimeMode::RealTime, last_move, &mut conn).await;
+
+    let outcome = move_arriving(
+        &game,
+        &white,
+        last_move + ChronoDuration::milliseconds(60_300),
+        0.2,
+        &mut conn,
+    )
+    .await;
+
+    let Outcome::TimedOut { game: flagged, .. } = outcome else {
+        panic!("0.2 s cannot cover a move 0.3 s late: {outcome:?}")
+    };
+    assert_eq!(flagged.conclusion, Conclusion::Timeout.to_string());
+    assert_eq!(flagged.white_time_left, Some(0));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_real_time_flag_waits_until_no_move_in_flight_could_be_saved() {
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.expect("get connection");
+    let now = Utc::now();
+
+    let (within_grace, _) = minute_game_switched_at(
+        "grace_within",
+        TimeMode::RealTime,
+        now - ChronoDuration::milliseconds(60_500),
+        &mut conn,
+    )
+    .await;
+    let outcome = execute(within_grace.id, Command::SettleDeadline, &mut conn)
+        .await
+        .expect("settle");
+    let Outcome::Applied { game, .. } = outcome else {
+        panic!("settling never removes a game")
+    };
+    assert!(
+        !game.finished,
+        "half a second past the deadline is inside the grace"
+    );
+
+    let (past_grace, _) = minute_game_switched_at(
+        "grace_past",
+        TimeMode::RealTime,
+        now - ChronoDuration::milliseconds(61_500),
+        &mut conn,
+    )
+    .await;
+    let outcome = execute(past_grace.id, Command::SettleDeadline, &mut conn)
+        .await
+        .expect("settle");
+    let Outcome::Applied { game, .. } = outcome else {
+        panic!("settling never removes a game")
+    };
+    assert!(game.finished);
+    assert_eq!(game.conclusion, Conclusion::Timeout.to_string());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_correspondence_deadline_has_no_grace() {
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.expect("get connection");
+    let (game, _) = minute_game_switched_at(
+        "corr_deadline",
+        TimeMode::Correspondence,
+        Utc::now() - ChronoDuration::milliseconds(60_500),
+        &mut conn,
+    )
+    .await;
+
+    let outcome = execute(game.id, Command::SettleDeadline, &mut conn)
+        .await
+        .expect("settle");
+
+    let Outcome::Applied { game, .. } = outcome else {
+        panic!("settling never removes a game")
+    };
+    assert!(game.finished);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn time_between_a_moves_arrival_and_its_commit_is_charged_to_nobody() {
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.expect("get connection");
+    let last_move = Utc::now().trunc_subsecs(3) - ChronoDuration::seconds(10);
+    let (game, white) =
+        minute_game_switched_at("server_delay", TimeMode::RealTime, last_move, &mut conn).await;
+    let arrived_at = last_move + ChronoDuration::seconds(5);
+
+    let outcome = move_arriving(&game, &white, arrived_at, 0.0, &mut conn).await;
+
+    let Outcome::Applied { game: moved, .. } = outcome else {
+        panic!("a timely move is applied: {outcome:?}")
+    };
+    assert_eq!(
+        moved.white_time_left,
+        Some(55 * SECOND),
+        "white pays only until the move arrived"
+    );
+    let black_clock_started = moved.last_interaction.expect("the clock runs");
+    assert!(
+        black_clock_started >= arrived_at + ChronoDuration::seconds(4),
+        "black's clock starts at the commit, not at white's arrival"
+    );
+    assert_eq!(
+        moved.timeout_at,
+        Some(black_clock_started + ChronoDuration::seconds(60))
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn only_the_player_on_move_can_end_their_own_grace() {
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.expect("get connection");
+    let last_move = Utc::now().trunc_subsecs(3) - ChronoDuration::milliseconds(60_300);
+    let (game, white) =
+        minute_game_switched_at("grace_owner", TimeMode::RealTime, last_move, &mut conn).await;
+
+    let error = execute(
+        game.id,
+        Command::Move {
+            user_id: game.black_id,
+            turn: whites_move(&game),
+            compensation: 0.0,
+            arrived_at: None,
+        },
+        &mut conn,
+    )
+    .await
+    .expect_err("black is not on move");
+    assert!(matches!(error, DbError::InvalidAction { .. }), "{error:?}");
+
+    let outcome = move_arriving(
+        &game,
+        &white,
+        last_move + ChronoDuration::milliseconds(60_300),
+        0.5,
+        &mut conn,
+    )
+    .await;
+    assert!(
+        matches!(outcome, Outcome::Applied { .. }),
+        "black's move must not flag white while white's move can still be saved: {outcome:?}"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_flagged_player_gets_no_grace_for_anything_but_a_move() {
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.expect("get connection");
+    let last_move = Utc::now() - ChronoDuration::milliseconds(60_300);
+    let (game, white) =
+        minute_game_switched_at("grace_control", TimeMode::RealTime, last_move, &mut conn).await;
+
+    let outcome = execute(
+        game.id,
+        Command::Control {
+            user_id: white.id,
+            control: GameControl::DrawOffer(Color::White),
+        },
+        &mut conn,
+    )
+    .await
+    .expect("the control is processed");
+
+    let Outcome::TimedOut { game: flagged, .. } = outcome else {
+        panic!("white is past the deadline and offers no move to be saved by: {outcome:?}")
+    };
+    assert_eq!(flagged.conclusion, Conclusion::Timeout.to_string());
 }

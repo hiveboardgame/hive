@@ -1,5 +1,6 @@
 use crate::{
     db_error::DbError,
+    game_command::real_time_flag_grace,
     helpers::GameQueryBuilder,
     models::{Challenge, GameFinishContext, GameHash, GameUser, Rating},
     schema::{
@@ -501,9 +502,31 @@ impl Game {
         }
     }
 
+    pub fn flag_grace(&self) -> ChronoDuration {
+        if self.time_mode == TimeMode::RealTime.to_string() {
+            real_time_flag_grace()
+        } else {
+            ChronoDuration::zero()
+        }
+    }
+
+    pub fn flag_due_at(&self) -> Option<DateTime<Utc>> {
+        self.timeout_at.map(|deadline| deadline + self.flag_grace())
+    }
+
     pub(crate) async fn settle_deadline(
         &self,
         checked_at: DateTime<Utc>,
+        conn: &mut DbConn<'_>,
+    ) -> Result<DeadlineSettlement, DbError> {
+        self.settle_deadline_allowing(checked_at, ChronoDuration::zero(), conn)
+            .await
+    }
+
+    pub(crate) async fn settle_deadline_allowing(
+        &self,
+        checked_at: DateTime<Utc>,
+        flag_grace: ChronoDuration,
         conn: &mut DbConn<'_>,
     ) -> Result<DeadlineSettlement, DbError> {
         if self.finished || TimeMode::from_str(&self.time_mode)? == TimeMode::Untimed {
@@ -522,7 +545,10 @@ impl Game {
                 terminal_at: deadline,
             });
         }
-        if let Some(deadline) = self.timeout_at.filter(|deadline| checked_at >= *deadline) {
+        if let Some(deadline) = self
+            .timeout_at
+            .filter(|deadline| checked_at - flag_grace >= *deadline)
+        {
             let timed_out_color = if self.turn % 2 == 0 {
                 Color::White
             } else {
@@ -890,39 +916,38 @@ impl Game {
         shutout: bool,
         comp: f64,
         clock: RealtimeClock,
-        observed_at: DateTime<Utc>,
+        arrived_at: DateTime<Utc>,
     ) -> Result<(Option<i64>, Option<i64>), DbError> {
-        let (mut white_time, mut black_time) = self.calculate_time_left_at(observed_at)?;
-        if let (Some(w), Some(b)) = (white_time, black_time) {
-            if w == 0 || b == 0 {
-                return Ok((white_time, black_time));
-            }
-        }
-        // Compensation refunds time the move spent in transit, so it can never exceed the time
-        // the move took; otherwise a fast move would gain clock time.
+        let mover = if self.turn % 2 == 0 {
+            Color::White
+        } else {
+            Color::Black
+        };
         let elapsed = self
             .last_interaction
-            .and_then(|last| observed_at.signed_duration_since(last).num_nanoseconds())
+            .and_then(|last| arrived_at.signed_duration_since(last).num_nanoseconds())
             .unwrap_or(0)
             .max(0);
-        let comp = ((comp * 1_000_000_000.0) as i64).min(elapsed);
+        // Compensation refunds time the move spent in transit: it comes off the move's own time
+        // before the flag is decided, and never exceeds it, or a fast move would gain time.
+        let charged = elapsed - ((comp * 1_000_000_000.0) as i64).min(elapsed);
+        let remaining = self.time_left_duration(mover)?.as_nanos() as i64 - charged;
+        let (mut white_time, mut black_time) = (self.white_time_left, self.black_time_left);
+        let (mover_time, opponent_time) = match mover {
+            Color::White => (&mut white_time, &mut black_time),
+            Color::Black => (&mut black_time, &mut white_time),
+        };
+        if remaining <= 0 {
+            *mover_time = Some(0);
+            return Ok((white_time, black_time));
+        }
         // Each side carries its own increment, because a berserked player
         // forfeits theirs while the opponent keeps hers.
-        let white_increment = self.time_increment_duration(Color::White, clock).as_nanos() as i64;
-        let black_increment = self.time_increment_duration(Color::Black, clock).as_nanos() as i64;
-        if self.turn % 2 == 0 {
-            white_time = white_time.map(|time| time + white_increment + comp);
-        } else {
-            black_time = black_time.map(|time| time + black_increment + comp);
-        };
+        let increment = |color| self.time_increment_duration(color, clock).as_nanos() as i64;
+        *mover_time = Some(remaining + increment(mover));
         if shutout {
-            if self.turn % 2 == 0 {
-                black_time = black_time.map(|time| time + black_increment);
-            } else {
-                white_time = white_time.map(|time| time + white_increment);
-            };
-        };
-
+            *opponent_time = opponent_time.map(|time| time + increment(mover.opposite_color()));
+        }
         Ok((white_time, black_time))
     }
 
@@ -1050,6 +1075,7 @@ impl Game {
         &self,
         state: &State,
         compensation: f64,
+        arrived_at: DateTime<Utc>,
         effective_at: DateTime<Utc>,
         conn: &mut DbConn<'_>,
     ) -> Result<Game, DbError> {
@@ -1060,7 +1086,7 @@ impl Game {
             time_info.black_time_left = self.black_time_left;
             time_info
         } else {
-            self.get_time_info_at(state, compensation, effective_at)?
+            self.get_time_info_at(state, compensation, arrived_at)?
         };
         let new_history = state
             .history

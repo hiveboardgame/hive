@@ -152,6 +152,9 @@ pub struct WsHub {
     /// open. Authentication is cached on each socket, so central auth checks
     /// consult this process-local set before accepting user actions.
     revoked_users: DashSet<Uuid>,
+    /// Games with a re-check scheduled for the end of their flag grace, so a burst of
+    /// `CheckTime` requests schedules one.
+    pub(in crate::websocket) flag_rechecks: DashSet<Uuid>,
 }
 
 #[derive(Default)]
@@ -461,6 +464,7 @@ impl WsHub {
             lobby_snapshot_leases: Arc::new(DashMap::new()),
             chat_limits: ChatRateLimits::default(),
             revoked_users: DashSet::new(),
+            flag_rechecks: DashSet::new(),
         })
     }
 
@@ -1398,9 +1402,7 @@ impl WsHub {
                 && (observed
                     .arena_move_due_at
                     .is_some_and(|deadline| observed_at >= deadline)
-                    || observed
-                        .timeout_at
-                        .is_some_and(|deadline| observed_at >= deadline));
+                    || observed.flag_due_at().is_some_and(|due| observed_at >= due));
             let game = if deadline_due {
                 match settle_deadline(observed.id, self.data.as_ref(), &mut conn).await {
                     Ok(projected) => {

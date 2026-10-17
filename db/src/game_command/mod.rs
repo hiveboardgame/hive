@@ -3,12 +3,13 @@ use crate::{
     models::{Game, ScheduleOffer},
     DbConn,
 };
+use chrono::{DateTime, Utc};
 use hive_lib::{GameControl, Turn};
 use uuid::Uuid;
 
 mod execute;
 
-pub use execute::MAX_MOVE_COMPENSATION_SECS;
+pub use execute::{real_time_flag_grace, MAX_MOVE_COMPENSATION_SECS};
 
 #[derive(Clone, Debug)]
 pub enum Command {
@@ -16,6 +17,7 @@ pub enum Command {
         user_id: Uuid,
         turn: Turn,
         compensation: f64,
+        arrived_at: Option<DateTime<Utc>>,
     },
     Control {
         user_id: Uuid,

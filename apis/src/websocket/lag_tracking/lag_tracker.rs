@@ -35,11 +35,16 @@ impl LagTracker {
         centis as f64 / 100.0
     }
 
-    pub fn on_move(&mut self, lag: f64) -> f64 {
-        let comp = lag.min(self.quota);
+    pub fn compensation_for(&self, lag: f64) -> f64 {
+        lag.min(self.quota).max(0.0)
+    }
+
+    // `comp` may have been granted against an earlier view of the quota that another accepted move
+    // has spent from since, so the quota bottoms out at zero instead of going negative.
+    pub fn settle(&mut self, lag: f64, comp: f64) {
         let uncomped = lag - comp;
         let ce_diff = self.comp_estimate.unwrap_or(0.01) - comp;
-        let new_quota = (self.quota + self.quota_gain - comp).min(self.quota_max);
+        let new_quota = (self.quota + self.quota_gain - comp).clamp(0.0, self.quota_max);
 
         if uncomped != 0.0 || self.uncomp_stats.samples != 0 {
             self.uncomp_stats.record(uncomped);
@@ -50,7 +55,6 @@ impl LagTracker {
         self.comp_est_overs += ce_diff.max(0.0);
         self.quota = new_quota;
         self.record_lag(lag);
-        comp
     }
 
     fn record_lag(&mut self, lag: f64) {
@@ -117,6 +121,12 @@ impl LagTracker {
 mod tests {
     use super::LagTracker;
 
+    fn on_move(tracker: &mut LagTracker, lag: f64) -> f64 {
+        let comp = tracker.compensation_for(lag);
+        tracker.settle(lag, comp);
+        comp
+    }
+
     fn assert_close(actual: f64, expected: f64) {
         assert!(
             (actual - expected).abs() < 1e-9,
@@ -145,11 +155,11 @@ mod tests {
     fn compensation_is_bounded_by_the_quota_and_refills_by_the_gain() {
         let mut tracker = LagTracker::new(60, 0);
 
-        assert_close(tracker.on_move(0.1), 0.1);
+        assert_close(on_move(&mut tracker, 0.1), 0.1);
         assert_close(tracker.quota, 1.17 + 0.39 - 0.1);
-        assert_close(tracker.on_move(5.0), 1.46);
+        assert_close(on_move(&mut tracker, 5.0), 1.46);
         assert_close(tracker.quota, 0.39);
-        assert_close(tracker.on_move(5.0), 0.39);
+        assert_close(on_move(&mut tracker, 5.0), 0.39);
         assert_close(tracker.quota, 0.39);
     }
 
@@ -157,7 +167,7 @@ mod tests {
     fn the_quota_never_grows_past_its_maximum() {
         let mut tracker = LagTracker::new(180, 2);
         for _ in 0..20 {
-            tracker.on_move(0.0);
+            on_move(&mut tracker, 0.0);
         }
 
         assert_close(tracker.quota, tracker.quota_max);
@@ -166,11 +176,11 @@ mod tests {
     #[test]
     fn the_compensation_estimate_stays_between_zero_and_the_quota() {
         let mut tracker = LagTracker::new(60, 0);
-        tracker.on_move(0.0);
+        on_move(&mut tracker, 0.0);
         assert_eq!(tracker.comp_estimate, Some(0.0));
 
         for _ in 0..10 {
-            tracker.on_move(5.0);
+            on_move(&mut tracker, 5.0);
         }
         let estimate = tracker.comp_estimate.expect("recorded");
         assert!(estimate > 0.0 && estimate <= tracker.quota, "{estimate}");

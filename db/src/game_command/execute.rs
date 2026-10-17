@@ -5,7 +5,7 @@ use crate::{
     tournaments::settle_arena_game,
     DbConn,
 };
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration as ChronoDuration, Utc};
 use diesel_async::AsyncConnection;
 use hive_lib::{Color, GameControl, GameResult, GameStatus, State, Turn};
 use shared_types::{
@@ -20,6 +20,60 @@ use std::str::FromStr;
 use uuid::Uuid;
 
 pub const MAX_MOVE_COMPENSATION_SECS: f64 = 1.0;
+
+// A real-time flag waits until no move still in flight could be compensated back under the
+// deadline.
+pub fn real_time_flag_grace() -> ChronoDuration {
+    ChronoDuration::milliseconds((MAX_MOVE_COMPENSATION_SECS * 1000.0) as i64)
+}
+
+fn accepted_compensation(compensation: f64) -> Result<(), DbError> {
+    if compensation.is_finite() && (0.0..=MAX_MOVE_COMPENSATION_SECS).contains(&compensation) {
+        return Ok(());
+    }
+    Err(DbError::InvalidInput {
+        info: String::from("Move compensation is outside its accepted range"),
+        error: format!(
+            "compensation must be finite and between 0 and {MAX_MOVE_COMPENSATION_SECS} seconds"
+        ),
+    })
+}
+
+// The player on move waits out only what their own move earned: a move its compensation, any
+// other command nothing. Everyone else, and the deadline sweep, must allow for a move of theirs
+// still in flight.
+fn flag_grace_for(command: &Command, game: &Game) -> ChronoDuration {
+    let on_move = if game.turn % 2 == 0 {
+        game.white_id
+    } else {
+        game.black_id
+    };
+    match command {
+        Command::Move {
+            user_id,
+            compensation,
+            ..
+        } if *user_id == on_move => {
+            ChronoDuration::nanoseconds((compensation * 1_000_000_000.0) as i64)
+                .min(game.flag_grace())
+        }
+        Command::Control { user_id, .. }
+        | Command::StartReady { user_id }
+        | Command::ReadyIntent { user_id }
+        | Command::Berserk { user_id }
+            if *user_id == on_move =>
+        {
+            ChronoDuration::zero()
+        }
+        _ => game.flag_grace(),
+    }
+}
+
+// The mover is charged up to the move's arrival; the opponent's clock starts at the commit, so
+// time the server spends in between is charged to nobody.
+fn move_arrival(arrived_at: Option<DateTime<Utc>>, effective_at: DateTime<Utc>) -> DateTime<Utc> {
+    arrived_at.map_or(effective_at, |arrived| arrived.min(effective_at))
+}
 
 pub(crate) async fn execute(
     game_id: Uuid,
@@ -55,7 +109,20 @@ where
         let game = Game::find_by_uuid_for_update(&game_id, tc).await?;
         let binding = GameBinding::for_game(&game)?;
         let effective_at = effective_at();
-        let settlement = game.settle_deadline(effective_at, tc).await?;
+        let checked_at = match &command {
+            Command::Move {
+                compensation,
+                arrived_at,
+                ..
+            } => {
+                accepted_compensation(*compensation)?;
+                move_arrival(*arrived_at, effective_at)
+            }
+            _ => effective_at,
+        };
+        let settlement = game
+            .settle_deadline_allowing(checked_at, flag_grace_for(&command, &game), tc)
+            .await?;
         let (checked, newly_terminal, terminal_at) = match settlement {
             DeadlineSettlement::Active(game) => (game, false, None),
             DeadlineSettlement::Terminal {
@@ -332,17 +399,8 @@ async fn apply_command(
             user_id,
             turn,
             compensation,
+            arrived_at,
         } => {
-            if !compensation.is_finite()
-                || !(0.0..=MAX_MOVE_COMPENSATION_SECS).contains(&compensation)
-            {
-                return Err(DbError::InvalidInput {
-                    info: String::from("Move compensation is outside its accepted range"),
-                    error: format!(
-                        "compensation must be finite and between 0 and {MAX_MOVE_COMPENSATION_SECS} seconds"
-                    ),
-                });
-            }
             let ordinary_opening = matches!(binding, GameBinding::Ordinary)
                 && game.game_start == GameStart::Moves.to_string()
                 && game.game_status == GameStatus::NotStarted.to_string();
@@ -372,8 +430,14 @@ async fn apply_command(
                     info: String::from("Invalid game move"),
                     error: error.to_string(),
                 })?;
-            game.update_gamestate(&state, compensation, effective_at, conn)
-                .await?
+            game.update_gamestate(
+                &state,
+                compensation,
+                move_arrival(arrived_at, effective_at),
+                effective_at,
+                conn,
+            )
+            .await?
         }
         Command::Control { user_id, control } => {
             validate_control(&game, binding, user_id, control)?;

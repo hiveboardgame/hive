@@ -192,6 +192,33 @@ mod tests {
     }
 
     #[test]
+    fn the_estimate_follows_a_lasting_change_once_it_fills_half_the_window() {
+        let lags = SocketLags::default();
+        let socket_id = socket_with(&lags, None, &[40; WINDOW]);
+        let half = WINDOW / 2;
+
+        for _ in 0..half {
+            lags.record_round_trip(socket_id, Duration::from_millis(300));
+        }
+        assert_eq!(
+            lags.lag(socket_id).estimate_ms,
+            Some(40.0),
+            "half the window is not enough"
+        );
+        lags.record_round_trip(socket_id, Duration::from_millis(300));
+        assert_eq!(lags.lag(socket_id).estimate_ms, Some(300.0));
+
+        for _ in 0..=half {
+            lags.record_round_trip(socket_id, Duration::from_millis(40));
+        }
+        assert_eq!(
+            lags.lag(socket_id).estimate_ms,
+            Some(40.0),
+            "and back when it recovers"
+        );
+    }
+
+    #[test]
     fn old_samples_stop_counting() {
         let lags = SocketLags::default();
         let socket_id = socket_with(&lags, None, &[40]);
