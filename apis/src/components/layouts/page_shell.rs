@@ -1,4 +1,4 @@
-use crate::common::with_class;
+use crate::{common::with_class, components::layouts::base_layout::SiteFooter};
 use leptos::prelude::*;
 
 #[derive(Clone, Copy)]
@@ -34,5 +34,6 @@ pub fn PageShell(
     #[prop(default = PageShellVariant::Content)] variant: PageShellVariant,
     #[prop(optional, into)] class: Option<String>,
 ) -> impl IntoView {
+    expect_context::<SiteFooter>().show_on_current_page();
     view! { <div class=with_class(variant.class(), class.unwrap_or_default())>{children()}</div> }
 }

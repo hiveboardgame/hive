@@ -7,7 +7,7 @@ use crate::{
             tournament_ready_popup::TournamentReadyPopup,
             web_push_nudge::WebPushNudge,
         },
-        organisms::header::Header,
+        organisms::{footer::Footer, header::Header},
     },
     hooks::{
         install_nudge::use_install_nudge_active,
@@ -53,6 +53,24 @@ pub struct ControlsSignal {
 pub struct OrientationSignal {
     pub orientation_vertical: Signal<bool>,
     pub height_lock: RwSignal<Option<f64>>,
+}
+
+// A count, not a flag: during navigation the next page may register before the previous one cleans up.
+#[derive(Clone, Copy)]
+pub struct SiteFooter(RwSignal<usize>);
+
+impl SiteFooter {
+    pub fn show_on_current_page(self) {
+        let SiteFooter(pages) = self;
+        pages.update(|count| *count += 1);
+        on_cleanup(move || {
+            pages.try_update(|count| *count = count.saturating_sub(1));
+        });
+    }
+
+    fn is_shown(self) -> bool {
+        self.0.with(|count| *count > 0)
+    }
 }
 
 #[component]
@@ -117,8 +135,11 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
 
     provide_context(hide_controls);
 
-    let is_hidden = RwSignal::new("hidden");
-    Effect::new(move |_| is_hidden.set(""));
+    let site_footer = SiteFooter(RwSignal::new(0));
+    provide_context(site_footer);
+
+    let display = RwSignal::new("hidden");
+    Effect::new(move |_| display.set("flex"));
 
     let focused = use_window_focus();
     let _ = Effect::watch(
@@ -220,11 +241,11 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         } />
 
         <Body />
-        <main class=move || {
+        <div class=move || {
             format!(
-                "w-full min-h-screen standalone:min-h-[var(--app-height)] text-xs sm:text-sm touch-manipulation {} {}",
+                "flex-col w-full min-h-screen standalone:min-h-[var(--app-height)] text-xs sm:text-sm touch-manipulation {} {}",
                 "ui-app-background",
-                is_hidden(),
+                display(),
             )
         }>
             <Header update_available />
@@ -240,8 +261,10 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
                     </div>
                 </div>
             </Show>
-            {children()}
-
-        </main>
+            <main>{children()}</main>
+            <Show when=move || site_footer.is_shown()>
+                <Footer />
+            </Show>
+        </div>
     }
 }

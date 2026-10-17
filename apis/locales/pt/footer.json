@@ -1,0 +1,34 @@
+{
+    "appeal": {
+        "title": "Hive grátis para todos, para sempre",
+        "body": "O hivegame.com não tem anúncios e é de código aberto. É feito por voluntários e financiado inteiramente por jogadores como você.",
+        "button": "Apoie-nos"
+    },
+    "thanks": "Obrigado por apoiar o hivegame.com! 👑",
+    "community": {
+        "title": "Comunidade",
+        "hivegame_discord": "Discord do Hivegame",
+        "world_hive_discord": "World Hive Community",
+        "resources": "Recursos",
+        "faq": "FAQ"
+    },
+    "open_source": {
+        "title": "Código aberto",
+        "source_code": "Código-fonte",
+        "contribute": "Contribuir",
+        "report_bug": "Reportar um bug",
+        "license": "Licença AGPL-3.0"
+    },
+    "support": {
+        "title": "Apoiar",
+        "donate": "Doar",
+        "kofi": "Ko-fi",
+        "patreon": "Patreon",
+        "buy_game": "Comprar o jogo"
+    },
+    "legal": {
+        "privacy": "Privacidade",
+        "terms": "Termos",
+        "trademark": "Hive® é uma marca registrada da Gen42 Games. As ilustrações oficiais de Hive pertencem à Gen42 Games e não estão abrangidas pela nossa licença de código aberto."
+    }
+}

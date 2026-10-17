@@ -1,0 +1,34 @@
+{
+    "appeal": {
+        "title": "Hive gratuït per a tothom, per sempre",
+        "body": "hivegame.com no té anuncis i és de codi obert. El fan voluntaris i es finança íntegrament gràcies a jugadors com tu.",
+        "button": "Dona'ns suport"
+    },
+    "thanks": "Gràcies per donar suport a hivegame.com! 👑",
+    "community": {
+        "title": "Comunitat",
+        "hivegame_discord": "Discord de Hivegame",
+        "world_hive_discord": "World Hive Community",
+        "resources": "Recursos",
+        "faq": "Preguntes freqüents"
+    },
+    "open_source": {
+        "title": "Codi obert",
+        "source_code": "Codi font",
+        "contribute": "Contribueix",
+        "report_bug": "Informa d'un error",
+        "license": "Llicència AGPL-3.0"
+    },
+    "support": {
+        "title": "Suport",
+        "donate": "Donar",
+        "kofi": "Ko-fi",
+        "patreon": "Patreon",
+        "buy_game": "Comprar el joc"
+    },
+    "legal": {
+        "privacy": "Privadesa",
+        "terms": "Condicions",
+        "trademark": "Hive® és una marca registrada de Gen42 Games. Les il·lustracions oficials de Hive pertanyen a Gen42 Games i no estan cobertes per la nostra llicència de codi obert."
+    }
+}

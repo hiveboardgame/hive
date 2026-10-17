@@ -16,6 +16,7 @@ mod move_info;
 mod overlay_paint;
 mod piece_paint;
 mod piece_type;
+mod project_links;
 mod rating_change_info;
 mod route_path;
 mod schedule_action;
@@ -85,6 +86,17 @@ pub use move_info::MoveInfo;
 pub use overlay_paint::OverlayPaint;
 pub use piece_paint::{resolve_piece_paint, BugHref, DotsHref, PiecePaint, ShadowHref, TileHref};
 pub use piece_type::PieceType;
+pub use project_links::{
+    CONTRIBUTING_URL,
+    GEN42_URL,
+    GITHUB_ISSUES_URL,
+    GITHUB_URL,
+    HIVEGAME_DISCORD_URL,
+    KOFI_URL,
+    LICENSE_URL,
+    PATREON_URL,
+    WORLD_HIVE_DISCORD_URL,
+};
 pub use rating_change_info::RatingChangeInfo;
 pub(crate) use route_path::tournament_path_matches;
 pub use schedule_action::{parse_schedule_slot_fragment, schedule_slot_fragment, ScheduleAction};
