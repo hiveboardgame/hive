@@ -21,6 +21,7 @@ PROXY_PORT="${HIVE_PROXY_PORT:-$(default_proxy_port)}"
 CADDYFILE="$WT_ROOT/Caddyfile"
 CADDY_DIR="$WT_ROOT/caddy"
 CADDY_ADMIN="http://localhost:2019"
+GITHUB_REPO=hiveboardgame/hive
 ENV_FILE=".worktree.env"
 PORT_BASE=3100
 PORT_STEP=10

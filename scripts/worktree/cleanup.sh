@@ -8,14 +8,19 @@ usage() {
 usage: hive-cleanup [<name>...]
 Lists worktrees, managed databases, proxy routes and optional Claude project leftovers,
 lets you pick which to remove, and asks before removing. Names given as arguments are
-preselected. Branches are never deleted; $MAIN_DB, $MAIN_TEST_DB and $TEMPLATE_DB never appear.
+preselected. Without arguments, clean worktrees whose commits are already in origin/main,
+or whose branch head is part of a pull request merged into main on $GITHUB_REPO
+(needs gh), are preselected. Branches are never deleted; $MAIN_DB, $MAIN_TEST_DB and
+$TEMPLATE_DB never appear.
 USAGE
 }
 
 declare -A HAS_DIR HAS_ENV HAS_DB HAS_TEST_DB HAS_ROUTE HAS_CLAUDE PORT DIRTY
 declare -A DIR_BYTES DB_BYTES TEST_DB_BYTES
-declare -A ORPHAN_DB
+declare -A ORPHAN_DB MERGED
 NAMES=()
+SUGGESTED=()
+MERGE_NOTES=()
 
 note_name() {
     local n
@@ -112,6 +117,57 @@ measure_sizes() {
     done
 }
 
+check_merged() {
+    local name dir branch prs number pr_head matched differs cherry gh_ok=1
+    git -C "$(main_checkout)" fetch --quiet origin main 2> /dev/null ||
+        warn "could not fetch origin/main; comparing against the last fetched copy"
+    if ! command -v gh > /dev/null; then
+        warn "gh is not installed; merged pull requests are not checked"
+        gh_ok=0
+    fi
+    for name in "${NAMES[@]}"; do
+        dir=$(wt_dir "$name")
+        if [ -z "${HAS_DIR[$name]:-}" ] || ! worktree_registered "$dir"; then continue; fi
+        branch=$(git -C "$dir" branch --show-current 2> /dev/null) || continue
+        [ -n "$branch" ] || continue
+        matched=""
+        differs=""
+        if [ "$gh_ok" = 1 ]; then
+            if prs=$(gh pr list --repo "$GITHUB_REPO" --head "$branch" --base main --state merged \
+                --json number,headRefOid --jq '.[] | "\(.number) \(.headRefOid)"' 2> /dev/null); then
+                while read -r number pr_head; do
+                    [ -n "$number" ] || continue
+                    if git -C "$dir" merge-base --is-ancestor HEAD "$pr_head" 2> /dev/null; then
+                        matched=$number
+                        break
+                    fi
+                    differs=${differs:-$number}
+                done <<< "$prs"
+            else
+                warn "gh could not list pull requests (offline or not logged in?); merged pull requests are not checked"
+                gh_ok=0
+            fi
+        fi
+        cherry=$(git -C "$dir" cherry origin/main HEAD 2> /dev/null) || cherry=""
+        if [ -n "$matched" ]; then
+            MERGED[$name]="PR #$matched"
+        elif [ -n "$cherry" ] && ! grep -q '^+' <<< "$cherry"; then
+            MERGED[$name]="into main"
+        elif [ -n "$differs" ]; then
+            MERGED[$name]="PR #$differs, differs"
+            MERGE_NOTES+=("$name: PR #$differs is merged, but could not confirm it contains this worktree's commits; check before removing")
+            continue
+        else
+            continue
+        fi
+        if [ "${DIRTY[$name]:-0}" -gt 0 ]; then
+            MERGE_NOTES+=("$name is merged but has ${DIRTY[$name]} uncommitted change(s); not preselected")
+        else
+            SUGGESTED+=("$name")
+        fi
+    done
+}
+
 format_bytes() {
     local bytes=$1 unit scale=1
     for unit in B KiB MiB GiB TiB PiB; do
@@ -124,7 +180,7 @@ format_bytes() {
 }
 
 describe() {
-    local name=$1 wt db tdb files total port route claude
+    local name=$1 wt merged db tdb files total port route claude
     if [ -n "${ORPHAN_DB[$name]:-}" ]; then
         wt="database only (legacy)"
     elif [ -n "${HAS_DIR[$name]:-}" ]; then
@@ -138,6 +194,7 @@ describe() {
     else
         wt="-"
     fi
+    merged=${MERGED[$name]:--}
     files=$([ -n "${HAS_DIR[$name]:-}" ] && format_bytes "${DIR_BYTES[$name]}" || echo "-")
     db=$([ -n "${HAS_DB[$name]:-${ORPHAN_DB[$name]:-}}" ] && format_bytes "${DB_BYTES[$name]}" || echo "-")
     tdb=$([ -n "${HAS_TEST_DB[$name]:-}" ] && format_bytes "${TEST_DB_BYTES[$name]}" || echo "-")
@@ -149,7 +206,7 @@ describe() {
     fi
     route=$([ -n "${HAS_ROUTE[$name]:-}" ] && echo yes || echo "-")
     claude=$([ -n "${HAS_CLAUDE[$name]:-}" ] && echo yes || echo "-")
-    printf '%-18s %-26s %-10s %-10s %-10s %-10s %-16s %-6s %s\n' "$name" "$wt" "$files" "$db" "$tdb" "$total" "$port" "$route" "$claude"
+    printf '%-18s %-26s %-17s %-10s %-10s %-10s %-10s %-16s %-6s %s\n' "$name" "$wt" "$merged" "$files" "$db" "$tdb" "$total" "$port" "$route" "$claude"
 }
 
 choose() {
@@ -251,7 +308,7 @@ main() {
         log "nothing to clean up"
         exit 0
     fi
-    local n preselected="" selection picks=() name found total_files=0 total_dbs=0 total
+    local n preselected="" selection picks=() name found total_files=0 total_dbs=0 total note
     for n in "$@"; do
         found=0
         for name in "${NAMES[@]}"; do
@@ -264,11 +321,25 @@ main() {
         [ "$found" = 1 ] || die "no cleanup candidate named '$n'"
     done
 
+    log "checking which branches are merged..."
+    check_merged
+    if [ $# -eq 0 ] && [ ${#SUGGESTED[@]} -gt 0 ]; then
+        preselected=$(
+            IFS=,
+            echo "${SUGGESTED[*]}"
+        )
+    fi
     log "measuring worktree files and databases..."
     measure_sizes
-    printf '%-18s %-26s %-10s %-10s %-10s %-10s %-16s %-6s %s\n' NAME WORKTREE FILES DB TEST-DB TOTAL PORT ROUTE CLAUDE >&2
+    printf '%-18s %-26s %-17s %-10s %-10s %-10s %-10s %-16s %-6s %s\n' NAME WORKTREE MERGED FILES DB TEST-DB TOTAL PORT ROUTE CLAUDE >&2
     for name in "${NAMES[@]}"; do describe "$name" >&2; done
     echo >&2
+    for note in "${MERGE_NOTES[@]}"; do warn "$note"; done
+    if [ ${#SUGGESTED[@]} -gt 0 ]; then
+        note="merged with no uncommitted changes: ${SUGGESTED[*]}"
+        [ $# -gt 0 ] || note+=" (preselected)"
+        log "$note"
+    fi
     selection=$(choose "$preselected") || {
         case $? in
             130)
