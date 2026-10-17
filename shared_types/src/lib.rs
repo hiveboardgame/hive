@@ -75,7 +75,7 @@ pub use opening_explorer::{ExplorerFilters, ExplorerMove, MIN_PLIES};
 pub use pretty_string::PrettyString;
 pub use ready_user::ReadyUser;
 pub use reserved_username::RESERVED_USERNAMES;
-pub use schedule::ScheduleOfferStatus;
+pub use schedule::{ScheduleOfferStatus, LIVE_ARENA_LOOKAHEAD, SCHEDULED_GAME_GRACE};
 pub use simple_user::SimpleUser;
 pub use takeback_conf::Takeback;
 pub use telemetry::{PushMetrics, TelemetryRange, TelemetryRow, TELEMETRY_COLUMN_COUNT};

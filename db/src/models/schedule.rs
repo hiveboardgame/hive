@@ -8,7 +8,7 @@ use chrono::{DateTime, Utc};
 use diesel::{prelude::*, SelectableHelper};
 use diesel_async::{AsyncConnection, RunQueryDsl};
 use hive_lib::GameStatus;
-use shared_types::{Clock, GameStart, ScheduleOfferStatus};
+use shared_types::{Clock, GameStart, ScheduleOfferStatus, SCHEDULED_GAME_GRACE};
 use std::fmt::Display;
 use uuid::Uuid;
 
@@ -438,9 +438,9 @@ impl ScheduleOffer {
     }
 
     pub async fn get_upcoming_agreed_games(
+        now: DateTime<Utc>,
         conn: &mut DbConn<'_>,
     ) -> Result<Vec<(Uuid, DateTime<Utc>)>, DbError> {
-        let now = Utc::now();
         Ok(tournament_slots::table
             .inner_join(
                 games::table.on(tournament_slots::tournament_id
@@ -448,7 +448,7 @@ impl ScheduleOffer {
                     .and(tournament_slots::id.eq(games::tournament_slot_id.assume_not_null()))),
             )
             .filter(tournament_slots::resolution.is_null())
-            .filter(tournament_slots::scheduled_at.ge(now))
+            .filter(tournament_slots::scheduled_at.gt(now - SCHEDULED_GAME_GRACE))
             .filter(games::finished.eq(false))
             .filter(games::turn.eq(0))
             .filter(games::game_status.eq(GameStatus::NotStarted.to_string()))

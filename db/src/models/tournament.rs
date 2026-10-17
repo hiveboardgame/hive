@@ -17,7 +17,7 @@ use crate::{
     tournaments::validate_creation_configuration,
     DbConn,
 };
-use chrono::{prelude::*, Duration};
+use chrono::prelude::*;
 use diesel::{
     deserialize::{FromSql, Result as DeserializeResult},
     dsl::sql,
@@ -49,6 +49,7 @@ use shared_types::{
     TournamentId,
     TournamentStartSetup,
     TournamentStatus,
+    LIVE_ARENA_LOOKAHEAD,
 };
 use std::error::Error as StdError;
 use uuid::Uuid;
@@ -942,7 +943,7 @@ impl Tournament {
             .filter(
                 tournaments::started_at
                     .is_not_null()
-                    .or(tournaments::starts_at.between(now, now + Duration::minutes(15))),
+                    .or(tournaments::starts_at.between(now, now + LIVE_ARENA_LOOKAHEAD)),
             )
             .order((
                 tournaments::started_at.desc().nulls_last(),

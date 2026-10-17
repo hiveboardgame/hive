@@ -8,7 +8,7 @@ use crate::{
     },
     hiveground::HivegroundInteraction,
     hooks::history_nav::scroll_move_into_view,
-    providers::game_state::GameStateStore,
+    providers::game_state::{GameStateStore, GameStateStoreFields},
 };
 use hive_lib::{Board, Color};
 use leptos::{html, prelude::*};
@@ -20,6 +20,14 @@ pub fn HistoryControls(
     #[prop(optional)] parent: MaybeProp<NodeRef<html::Div>>,
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateStore>();
+    let reserves_empty = move || {
+        let game_type = game_state.state().with(|state| state.game_type);
+        history_board.with(|board| {
+            [Color::White, Color::Black]
+                .into_iter()
+                .all(|color| board.reserve(color, game_type).is_empty())
+        })
+    };
     let focus = Callback::new(move |()| {
         scroll_move_into_view();
     });
@@ -48,19 +56,25 @@ pub fn HistoryControls(
                     active_tw_classes="ui-segmented-active"
                 />
             </div>
-            <div class="flex p-2">
-                <Reserve
-                    alignment=Alignment::DoubleRow
-                    color=Color::White
-                    interaction
-                    history_board
-                />
-                <Reserve
-                    alignment=Alignment::DoubleRow
-                    color=Color::Black
-                    interaction
-                    history_board
-                />
+            <div class="grid grid-cols-2 p-2" class:hidden=reserves_empty>
+                <div class="col-start-1 row-start-1">
+                    <Reserve
+                        collapse_empty=true
+                        alignment=Alignment::DoubleRow
+                        color=Color::White
+                        interaction
+                        history_board
+                    />
+                </div>
+                <div class="col-start-2 row-start-1">
+                    <Reserve
+                        collapse_empty=true
+                        alignment=Alignment::DoubleRow
+                        color=Color::Black
+                        interaction
+                        history_board
+                    />
+                </div>
             </div>
         </div>
     }

@@ -8,6 +8,7 @@ use crate::{
 use chrono::{DateTime, Duration, Local, Utc};
 use leptos::prelude::*;
 use leptos_icons::*;
+use shared_types::SCHEDULED_GAME_GRACE;
 
 #[component]
 pub fn UpcomingGameRow(
@@ -18,6 +19,7 @@ pub fn UpcomingGameRow(
     let auth_context = expect_context::<AuthContext>();
     let (start_time, game) = game_data;
     let time_control = game.time_control();
+    let game_href = StoredValue::new(format!("/game/{}", game.game_id));
     let local_time = RwSignal::new(None::<DateTime<Local>>);
     let formatted_time = Signal::derive(move || {
         local_time
@@ -54,6 +56,12 @@ pub fn UpcomingGameRow(
         })
     };
 
+    let expired = move || {
+        local_time
+            .get()
+            .is_some_and(|start| current_time.get() >= start + SCHEDULED_GAME_GRACE)
+    };
+
     let user_is_player = move || {
         auth_context.user.with(|user| {
             user.as_ref().is_some_and(|u| {
@@ -63,67 +71,69 @@ pub fn UpcomingGameRow(
     };
 
     view! {
-        <div class="flex flex-col p-4 w-full ui-card-row">
-            <div class="flex mb-3 w-full text-center">
-                <a
-                    class=with_class(
-                        "ui-text-link",
-                        "overflow-hidden w-full text-lg no-link-style break-words hyphens-auto",
-                    )
-                    href=format!("/tournament/{}", tournament_id)
-                    title=tournament_name.get_value()
-                >
-                    {tournament_name.get_value()}
-                </a>
-            </div>
-
-            <div class="flex flex-col gap-3 items-center">
-                <div class="flex gap-2 items-center">
-                    <ProfileLink
-                        username=white_username.get_value()
-                        patreon=game.white_player.patreon
-                        bot=game.white_player.bot
-                        deleted=white_deleted
-                        extend_tw_classes="font-semibold"
-                    />
-                    <span class="text-sm opacity-75">
-                        {t!(i18n, tournaments.view.common.versus)}
-                    </span>
-                    <ProfileLink
-                        username=black_username.get_value()
-                        patreon=game.black_player.patreon
-                        bot=game.black_player.bot
-                        deleted=black_deleted
-                        extend_tw_classes="font-semibold"
-                    />
+        <Show when=move || !expired()>
+            <div class="flex flex-col p-4 w-full ui-card-row">
+                <div class="flex mb-3 w-full text-center">
+                    <a
+                        class=with_class(
+                            "ui-text-link",
+                            "overflow-hidden w-full text-lg no-link-style break-words hyphens-auto",
+                        )
+                        href=format!("/tournament/{}", tournament_id)
+                        title=tournament_name.get_value()
+                    >
+                        {tournament_name.get_value()}
+                    </a>
                 </div>
 
-                <TimeRow time_control extend_tw_classes="text-sm" />
+                <div class="flex flex-col gap-3 items-center">
+                    <div class="flex gap-2 items-center">
+                        <ProfileLink
+                            username=white_username.get_value()
+                            patreon=game.white_player.patreon
+                            bot=game.white_player.bot
+                            deleted=white_deleted
+                            extend_tw_classes="font-semibold"
+                        />
+                        <span class="text-sm opacity-75">
+                            {t!(i18n, tournaments.view.common.versus)}
+                        </span>
+                        <ProfileLink
+                            username=black_username.get_value()
+                            patreon=game.black_player.patreon
+                            bot=game.black_player.bot
+                            deleted=black_deleted
+                            extend_tw_classes="font-semibold"
+                        />
+                    </div>
 
-                <Show when=show_button>
-                    <a
-                        class="py-1 px-3 text-sm font-medium ui-button ui-button-primary ui-button-md no-link-style min-w-[5rem]"
-                        href=format!("/game/{}", game.game_id)
-                    >
-                        {move || {
-                            if user_is_player() {
-                                view! { {t!(i18n, tournaments.calendar.join_game)} }.into_any()
-                            } else {
-                                view! {
-                                    <Icon
-                                        icon=icondata_ai::AiEyeOutlined
-                                        attr:class="mr-1 size-4"
-                                    />
-                                    {t!(i18n, tournaments.calendar.watch)}
+                    <TimeRow time_control extend_tw_classes="text-sm" />
+
+                    <Show when=show_button>
+                        <a
+                            class="py-1 px-3 text-sm font-medium ui-button ui-button-primary ui-button-md no-link-style min-w-[5rem]"
+                            href=game_href.get_value()
+                        >
+                            {move || {
+                                if user_is_player() {
+                                    view! { {t!(i18n, tournaments.calendar.join_game)} }.into_any()
+                                } else {
+                                    view! {
+                                        <Icon
+                                            icon=icondata_ai::AiEyeOutlined
+                                            attr:class="mr-1 size-4"
+                                        />
+                                        {t!(i18n, tournaments.calendar.watch)}
+                                    }
+                                        .into_any()
                                 }
-                                    .into_any()
-                            }
-                        }}
-                    </a>
-                </Show>
+                            }}
+                        </a>
+                    </Show>
 
-                <div class="text-sm opacity-75">{formatted_time}</div>
+                    <div class="text-sm opacity-75">{formatted_time}</div>
+                </div>
             </div>
-        </div>
+        </Show>
     }
 }

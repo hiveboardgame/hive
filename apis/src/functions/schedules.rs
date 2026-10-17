@@ -88,7 +88,7 @@ pub async fn get_upcoming_tournament_games(
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
 
-    let upcoming_games = ScheduleOffer::get_upcoming_agreed_games(&mut conn)
+    let upcoming_games = ScheduleOffer::get_upcoming_agreed_games(Utc::now(), &mut conn)
         .await
         .map_err(ServerFnError::new)?;
 
