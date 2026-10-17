@@ -4,15 +4,9 @@ use crate::{
     functions::schedules::get_upcoming_tournament_games,
     i18n::*,
 };
-use chrono::{DateTime, Duration, Local};
+use chrono::{DateTime, Local};
 use leptos::prelude::*;
-use leptos_use::{
-    use_interval_fn_with_options,
-    utils::Pausable,
-    watch_with_options,
-    UseIntervalFnOptions,
-    WatchOptions,
-};
+use leptos_use::use_interval_fn;
 
 #[component]
 pub fn Calendar() -> impl IntoView {
@@ -21,38 +15,8 @@ pub fn Calendar() -> impl IntoView {
     let last_updated = RwSignal::new(None::<DateTime<Local>>);
     let current_time = RwSignal::new(Local::now());
 
-    let should_run_timer = Signal::derive(move || {
-        upcoming_games.with(|games| {
-            games
-                .as_ref()
-                .and_then(|result| result.as_ref().ok())
-                .and_then(|games| games.first())
-                .is_some_and(|(start_time, _)| {
-                    let local_start = start_time.with_timezone(&Local);
-                    let time_until_start = local_start.signed_duration_since(current_time.get());
-                    time_until_start <= Duration::minutes(60)
-                        && time_until_start > Duration::minutes(-10)
-                })
-        })
-    });
-
-    let Pausable { pause, resume, .. } = use_interval_fn_with_options(
-        move || current_time.set(Local::now()),
-        60_000, // 1 minute intervals
-        UseIntervalFnOptions::default().immediate(false),
-    );
-
-    let _ = watch_with_options(
-        should_run_timer,
-        move |should_run, _, _| {
-            if *should_run {
-                resume();
-            } else {
-                pause();
-            }
-        },
-        WatchOptions::default().immediate(true),
-    );
+    // Later games must become actionable even when the first entry is overdue.
+    use_interval_fn(move || current_time.set(Local::now()), 60_000);
 
     Effect::new(move |_| {
         if upcoming_games.with(|r| r.is_some()) {

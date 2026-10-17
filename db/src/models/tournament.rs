@@ -942,7 +942,7 @@ impl Tournament {
             .filter(
                 tournaments::started_at
                     .is_not_null()
-                    .or(tournaments::starts_at.between(now, now + Duration::minutes(15))),
+                    .or(tournaments::starts_at.between(now, now + Duration::hours(1))),
             )
             .order((
                 tournaments::started_at.desc().nulls_last(),

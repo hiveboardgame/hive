@@ -61,93 +61,36 @@ pub fn GamePreview(
                 "relative m-2 flex w-60 max-w-full shrink-0 flex-col items-center overflow-hidden align-top lg:mt-0 lg:mr-4 lg:mb-4 lg:ml-0 lg:inline-flex 2xl:m-2"
             },
         )>
-            {if drawer {
-                view! {
-                    <div class="grid gap-1 py-1.5 px-2 w-full text-sm">
-                        {[Color::White, Color::Black]
-                            .into_iter()
-                            .map(|side| {
-                                let player = if side == Color::White {
-                                    white_player
-                                } else {
-                                    black_player
-                                };
-                                view! {
-                                    <div class="grid gap-1.5 items-center h-5 grid-cols-[1rem_minmax(0,1fr)_auto]">
-                                        <ColorHex color=Signal::derive(move || side) />
-                                        <span
-                                            class="font-medium truncate"
-                                            title=move || username(player)
-                                        >
-                                            {move || username(player)}
-                                        </span>
-                                        <span class="flex gap-1 items-center text-xs shrink-0">
-                                            {if finished {
-                                                view! { <RatingAndChange ratings side /> }.into_any()
-                                            } else {
-                                                view! {
-                                                    <span class="italic text-gray-500">
-                                                        {move || rating(player)}
-                                                    </span>
-                                                }
-                                                    .into_any()
-                                            }}
-                                        </span>
-                                    </div>
-                                }
-                            })
-                            .collect_view()}
-                    </div>
-                }
-                    .into_any()
-            } else {
-                view! {
-                    <div class="grid gap-1 items-center py-1.5 px-2 w-full text-sm grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
-                        <div class="flex gap-1 justify-end items-center min-w-0">
-                            <span class="font-medium truncate">
-                                {move || username(white_player)}
-                            </span>
-                            <Show
-                                when=move || finished
-                                fallback=move || {
-                                    view! {
-                                        <span class="text-xs italic text-gray-500 dark:text-gray-400 shrink-0">
-                                            {move || rating(white_player)}
-                                        </span>
-                                    }
-                                }
-                            >
-                                <span class="flex gap-1 items-center text-xs shrink-0">
-                                    <RatingAndChange ratings side=Color::White />
+            <div class="grid gap-1 py-1.5 px-2 w-full text-sm">
+                {[Color::White, Color::Black]
+                    .into_iter()
+                    .map(|side| {
+                        let player = if side == Color::White { white_player } else { black_player };
+                        view! {
+                            <div class="grid gap-1.5 items-center h-5 grid-cols-[1rem_minmax(0,1fr)_auto]">
+                                <ColorHex color=Signal::derive(move || side) />
+                                <span class="font-medium truncate" title=move || username(player)>
+                                    {move || username(player)}
                                 </span>
-                            </Show>
-                        </div>
-                        <span class="text-xs text-gray-500 dark:text-gray-400">
-                            {t!(i18n, tournaments.view.common.versus)}
-                        </span>
-                        <div class="flex gap-1 items-center min-w-0">
-                            <span class="font-medium truncate">
-                                {move || username(black_player)}
-                            </span>
-                            <Show
-                                when=move || finished
-                                fallback=move || {
-                                    view! {
-                                        <span class="text-xs italic text-gray-500 dark:text-gray-400 shrink-0">
-                                            {move || rating(black_player)}
-                                        </span>
-                                    }
-                                }
-                            >
                                 <span class="flex gap-1 items-center text-xs shrink-0">
-                                    <RatingAndChange ratings side=Color::Black />
+                                    {if finished {
+                                        view! { <RatingAndChange ratings side /> }.into_any()
+                                    } else {
+                                        view! {
+                                            <span class="italic text-gray-500">
+                                                {move || rating(player)}
+                                            </span>
+                                        }
+                                            .into_any()
+                                    }}
                                 </span>
-                            </Show>
-                        </div>
-                    </div>
-                }
-                    .into_any()
-            }} <Show when=move || finished || drawer>
+                            </div>
+                        }
+                    })
+                    .collect_view()}
+            </div>
+
+            <Show when=move || finished || drawer>
                 <p
                     class=if drawer {
                         "px-2 mb-1 h-10 text-sm leading-5 text-center line-clamp-2"
@@ -166,9 +109,11 @@ pub fn GamePreview(
                             .unwrap_or_default()
                     }}
                 </p>
-            </Show> <div class="overflow-hidden w-full aspect-square shrink-0">
+            </Show>
+            <div class="overflow-hidden w-full aspect-square shrink-0">
                 <ThumbnailPieces board=StoredValue::new(board) />
-            </div> <Show when=move || show_time || tournament_date.is_some()>
+            </div>
+            <Show when=move || show_time || tournament_date.is_some()>
                 <div class="flex flex-wrap gap-x-2 justify-center items-center py-1.5 px-2 w-full text-xs text-center">
                     <Show when=move || show_time>
                         <span class="uppercase">

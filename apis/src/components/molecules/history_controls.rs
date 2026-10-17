@@ -48,19 +48,25 @@ pub fn HistoryControls(
                     active_tw_classes="ui-segmented-active"
                 />
             </div>
-            <div class="flex p-2">
-                <Reserve
-                    alignment=Alignment::DoubleRow
-                    color=Color::White
-                    interaction
-                    history_board
-                />
-                <Reserve
-                    alignment=Alignment::DoubleRow
-                    color=Color::Black
-                    interaction
-                    history_board
-                />
+            <div class="grid grid-cols-2 p-2 [&:not(:has(svg))]:hidden">
+                <div class="col-start-1 row-start-1">
+                    <Reserve
+                        collapse_empty=true
+                        alignment=Alignment::DoubleRow
+                        color=Color::White
+                        interaction
+                        history_board
+                    />
+                </div>
+                <div class="col-start-2 row-start-1">
+                    <Reserve
+                        collapse_empty=true
+                        alignment=Alignment::DoubleRow
+                        color=Color::Black
+                        interaction
+                        history_board
+                    />
+                </div>
             </div>
         </div>
     }
