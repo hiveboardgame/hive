@@ -7,15 +7,29 @@ usage() {
     cat << USAGE
 usage: hive-cleanup [<name>...]
 Lists worktrees, managed databases, proxy routes and optional Claude project leftovers,
-lets you pick which to remove, and asks before removing. Names given as arguments are
-preselected. Branches are never deleted; $MAIN_DB, $MAIN_TEST_DB and $TEMPLATE_DB never appear.
+lets you pick which to remove, and asks before removing. hive-* databases that no
+checkout has claimed show up as db:<name> with no owner and are never preselected;
+they may belong to another clone. Names given as arguments are
+preselected. Without arguments, it fetches main and preselects clean worktrees whose
+changes are already in origin/main or in a pull request merged into main on
+$GITHUB_REPO (needs gh). Branches are never deleted; $MAIN_DB, $MAIN_TEST_DB and
+$TEMPLATE_DB never appear.
 USAGE
 }
 
 declare -A HAS_DIR HAS_ENV HAS_DB HAS_TEST_DB HAS_ROUTE HAS_CLAUDE PORT DIRTY
 declare -A DIR_BYTES DB_BYTES TEST_DB_BYTES
-declare -A ORPHAN_DB
+declare -A ORPHAN_DB UNOWNED_DB MERGED
 NAMES=()
+SUGGESTED=()
+MERGE_NOTES=()
+MERGE_CHECKED=0
+CONTENT_CHECK=1
+ORIGIN_MAIN=""
+ORIGIN_MAIN_TREE=""
+ORIGIN_MAIN_LINE=""
+REPO_OBJECTS=""
+MERGE_OBJECTS=""
 
 note_name() {
     local n
@@ -75,6 +89,14 @@ inventory() {
         note_name "$name"
         if [ "$role" = dev ]; then HAS_DB[$name]=1; else HAS_TEST_DB[$name]=1; fi
     done <<< "$databases"
+    databases=$(unowned_dbs)
+    while IFS= read -r db; do
+        if [ -z "$db" ] || is_protected_db "$db" || [ -n "${known_dbs[$db]:-}" ]; then continue; fi
+        name="db:$db"
+        note_name "$name"
+        ORPHAN_DB[$name]=$db
+        UNOWNED_DB[$name]=1
+    done <<< "$databases"
     for name in $(caddy_routes); do
         note_name "$name"
         HAS_ROUTE[$name]=1
@@ -112,6 +134,150 @@ measure_sizes() {
     done
 }
 
+with_timeout() {
+    if command -v timeout > /dev/null; then
+        timeout --foreground "$NETWORK_TIMEOUT_SECS" "$@"
+    else
+        "$@"
+    fi
+}
+
+merge_tree() {
+    GIT_OBJECT_DIRECTORY=$MERGE_OBJECTS GIT_ALTERNATE_OBJECT_DIRECTORIES=$REPO_OBJECTS \
+        git -C "$1" merge-tree --write-tree "$2" "$3" 2> /dev/null
+}
+
+already_in_main() {
+    local dir=$1 head=$2 tree
+    [ -n "$ORIGIN_MAIN" ] || return 1
+    if git -C "$dir" merge-base --is-ancestor "$head" "$ORIGIN_MAIN"; then
+        [ -n "$ORIGIN_MAIN_LINE" ] && ! grep -qxF "$head" <<< "$ORIGIN_MAIN_LINE"
+        return
+    fi
+    [ "$CONTENT_CHECK" = 1 ] || return 1
+    tree=$(merge_tree "$dir" "$ORIGIN_MAIN" "$head") || return 1
+    [ "${tree%%$'\n'*}" = "$ORIGIN_MAIN_TREE" ]
+}
+
+pr_contains_head() {
+    local dir=$1 head=$2 pr_head=$3 status
+    if git -C "$dir" cat-file -e "$pr_head^{commit}" 2> /dev/null; then
+        git -C "$dir" merge-base --is-ancestor "$head" "$pr_head"
+        return
+    fi
+    status=$(with_timeout gh api "repos/$GITHUB_REPO/compare/$pr_head...$head?per_page=1" \
+        --jq .status < /dev/null 2> /dev/null) || return 1
+    [ "$status" = behind ] || [ "$status" = identical ]
+}
+
+merged_prs_query() {
+    local i declarations="" fields=""
+    for ((i = 0; i < $1; i++)); do
+        declarations+=", \$b$i: String!"
+        fields+=" b$i: pullRequests(headRefName: \$b$i, baseRefName: \"main\", states: MERGED, first: 20,"
+        fields+=" orderBy: {field: CREATED_AT, direction: DESC}) { nodes { number headRefOid isCrossRepository } }"
+    done
+    echo "query(\$owner: String!, \$repo: String!$declarations) { repository(owner: \$owner, name: \$repo) {$fields } }"
+}
+
+load_origin_main() {
+    local main=$1
+    log "fetching main from origin..."
+    with_timeout git -C "$main" fetch --quiet origin +refs/heads/main:refs/remotes/origin/main 2> /dev/null ||
+        warn "could not fetch main from origin; comparing against the last fetched copy"
+    ORIGIN_MAIN=$(git -C "$main" rev-parse --verify --quiet 'refs/remotes/origin/main^{commit}') || {
+        warn "origin/main does not exist; only GitHub is checked"
+        return 0
+    }
+    ORIGIN_MAIN_TREE=$(git -C "$main" rev-parse "$ORIGIN_MAIN^{tree}")
+    ORIGIN_MAIN_LINE=$(git -C "$main" rev-list --first-parent "$ORIGIN_MAIN")
+    REPO_OBJECTS="$(git -C "$main" rev-parse --path-format=absolute --git-common-dir)/objects"
+    MERGE_OBJECTS=$(mktemp -d)
+    trap 'rm -rf "$MERGE_OBJECTS"' EXIT
+    if ! merge_tree "$main" "$ORIGIN_MAIN" "$ORIGIN_MAIN" > /dev/null; then
+        warn "this git cannot run merge-tree --write-tree (needs Git 2.38 or later); squash merges are only found through GitHub"
+        CONTENT_CHECK=0
+    fi
+}
+
+load_merged_prs() {
+    local -n names_ref=$1 args_ref=$2 lines_ref=$3
+    local prs alias number pr_head cross
+    [ ${#names_ref[@]} -gt 0 ] || return 0
+    if ! command -v gh > /dev/null; then
+        warn "gh is not installed; merged pull requests are not checked"
+        return 0
+    fi
+    log "asking GitHub about merged pull requests..."
+    if ! prs=$(with_timeout gh api graphql -f query="$(merged_prs_query "${#names_ref[@]}")" \
+        -f owner="${GITHUB_REPO%/*}" -f repo="${GITHUB_REPO#*/}" "${args_ref[@]}" \
+        --jq '.data.repository | to_entries[] | {alias: .key} + .value.nodes[] | "\(.alias) \(.number) \(.headRefOid) \(.isCrossRepository)"' \
+        < /dev/null 2> /dev/null); then
+        warn "could not reach GitHub with gh (offline or not logged in?); merged pull requests are not checked"
+        return 0
+    fi
+    while read -r alias number pr_head cross; do
+        [ -n "$alias" ] || continue
+        lines_ref[${names_ref[${alias#b}]}]+="$number $pr_head $cross"$'\n'
+    done <<< "$prs"
+}
+
+check_merged() {
+    local main name dir head branch number pr_head cross matched differs
+    local -a query_names=() query_args=()
+    local -A heads=() pr_lines=()
+    MERGE_CHECKED=1
+    main=$(main_checkout)
+    load_origin_main "$main"
+    for name in "${NAMES[@]}"; do
+        dir=$(wt_dir "$name")
+        if [ -z "${HAS_DIR[$name]:-}" ] || ! worktree_registered "$dir"; then continue; fi
+        head=$(git -C "$dir" rev-parse --verify --quiet HEAD) || continue
+        heads[$name]=$head
+        branch=$(git -C "$dir" branch --show-current 2> /dev/null) || branch=""
+        if [ -n "$branch" ]; then
+            query_args+=(-f "b${#query_names[@]}=$branch")
+            query_names+=("$name")
+        fi
+    done
+    load_merged_prs query_names query_args pr_lines
+    for name in "${NAMES[@]}"; do
+        head=${heads[$name]:-}
+        [ -n "$head" ] || continue
+        dir=$(wt_dir "$name")
+        matched=""
+        differs=""
+        while read -r number pr_head cross; do
+            [ -n "$number" ] || continue
+            if pr_contains_head "$dir" "$head" "$pr_head"; then
+                matched=$number
+                break
+            fi
+            [ "$cross" = true ] || differs=${differs:-$number}
+        done <<< "${pr_lines[$name]:-}"
+        if [ -z "$matched" ] && [ -n "$differs" ] && [ -n "$ORIGIN_MAIN" ] &&
+            git -C "$dir" merge-base --is-ancestor "$head" "$ORIGIN_MAIN"; then
+            matched=$differs
+        fi
+        if [ -n "$matched" ]; then
+            MERGED[$name]="PR #$matched"
+        elif already_in_main "$dir" "$head"; then
+            MERGED[$name]="into main"
+        elif [ -n "$differs" ]; then
+            MERGED[$name]="PR #$differs, differs"
+            MERGE_NOTES+=("$name: PR #$differs is merged, but could not confirm it contains this worktree's commits; check before removing")
+            continue
+        else
+            continue
+        fi
+        if [ "${DIRTY[$name]:-0}" -gt 0 ]; then
+            MERGE_NOTES+=("$name is merged but has ${DIRTY[$name]} uncommitted change(s); not preselected")
+        else
+            SUGGESTED+=("$name")
+        fi
+    done
+}
+
 format_bytes() {
     local bytes=$1 unit scale=1
     for unit in B KiB MiB GiB TiB PiB; do
@@ -124,9 +290,10 @@ format_bytes() {
 }
 
 describe() {
-    local name=$1 wt db tdb files total port route claude
+    local name=$1 wt merged db tdb files total port route claude
     if [ -n "${ORPHAN_DB[$name]:-}" ]; then
         wt="database only (legacy)"
+        [ -z "${UNOWNED_DB[$name]:-}" ] || wt="database only (no owner)"
     elif [ -n "${HAS_DIR[$name]:-}" ]; then
         if worktree_registered "$(wt_dir "$name")"; then
             wt="worktree"
@@ -138,6 +305,7 @@ describe() {
     else
         wt="-"
     fi
+    merged=${MERGED[$name]:--}
     files=$([ -n "${HAS_DIR[$name]:-}" ] && format_bytes "${DIR_BYTES[$name]}" || echo "-")
     db=$([ -n "${HAS_DB[$name]:-${ORPHAN_DB[$name]:-}}" ] && format_bytes "${DB_BYTES[$name]}" || echo "-")
     tdb=$([ -n "${HAS_TEST_DB[$name]:-}" ] && format_bytes "${TEST_DB_BYTES[$name]}" || echo "-")
@@ -149,7 +317,14 @@ describe() {
     fi
     route=$([ -n "${HAS_ROUTE[$name]:-}" ] && echo yes || echo "-")
     claude=$([ -n "${HAS_CLAUDE[$name]:-}" ] && echo yes || echo "-")
-    printf '%-18s %-26s %-10s %-10s %-10s %-10s %-16s %-6s %s\n' "$name" "$wt" "$files" "$db" "$tdb" "$total" "$port" "$route" "$claude"
+    table_row "$name" "$wt" "$merged" "$files" "$db" "$tdb" "$total" "$port" "$route" "$claude"
+}
+
+table_row() {
+    printf '%-18s %-26s ' "$1" "$2"
+    [ "$MERGE_CHECKED" = 0 ] || printf '%-17s ' "$3"
+    shift 3
+    printf '%-10s %-10s %-10s %-10s %-16s %-6s %s\n' "$@"
 }
 
 choose() {
@@ -251,7 +426,7 @@ main() {
         log "nothing to clean up"
         exit 0
     fi
-    local n preselected="" selection picks=() name found total_files=0 total_dbs=0 total
+    local n preselected="" selection picks=() name found total_files=0 total_dbs=0 total note
     for n in "$@"; do
         found=0
         for name in "${NAMES[@]}"; do
@@ -264,11 +439,24 @@ main() {
         [ "$found" = 1 ] || die "no cleanup candidate named '$n'"
     done
 
+    if [ $# -eq 0 ]; then
+        check_merged
+        if [ ${#SUGGESTED[@]} -gt 0 ]; then
+            preselected=$(
+                IFS=,
+                echo "${SUGGESTED[*]}"
+            )
+        fi
+    fi
     log "measuring worktree files and databases..."
     measure_sizes
-    printf '%-18s %-26s %-10s %-10s %-10s %-10s %-16s %-6s %s\n' NAME WORKTREE FILES DB TEST-DB TOTAL PORT ROUTE CLAUDE >&2
+    table_row NAME WORKTREE MERGED FILES DB TEST-DB TOTAL PORT ROUTE CLAUDE >&2
     for name in "${NAMES[@]}"; do describe "$name" >&2; done
     echo >&2
+    for note in "${MERGE_NOTES[@]}"; do warn "$note"; done
+    if [ ${#SUGGESTED[@]} -gt 0 ]; then
+        log "merged with no uncommitted changes, preselected: ${SUGGESTED[*]}"
+    fi
     selection=$(choose "$preselected") || {
         case $? in
             130)

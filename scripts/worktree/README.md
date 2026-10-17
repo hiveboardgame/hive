@@ -17,8 +17,9 @@ Run these from your main checkout:
 | `hive-cleanup` | Select environments to remove. |
 
 Use the instance name printed by setup. `hive` means the main checkout on its current
-branch. Worktrees live in `../hive-worktrees/<name>` by default. Each command has
-`--help` for additional options.
+branch. Worktrees live in `../hive-worktrees/<name>` by default. Inside a worktree or
+the main checkout, `hive-run` can leave out the name, as in `hive-run watch`. Each
+command has `--help` for additional options.
 
 Before running Cargo, Diesel, or SQL, enter `hive-run <name> shell`. Changing directory
 alone does not load the environment. Exit that shell before selecting another instance.
@@ -33,7 +34,8 @@ Ctrl-C stops the app or watcher. The shared Caddy proxy stays running; stop it w
 Install the project's Rust toolchain and build dependencies, including cargo-leptos,
 the `wasm32-unknown-unknown` target, wasm-bindgen-cli, Sass, Tailwind CSS, pkg-config,
 OpenSSL, and libpq development libraries. The scripts also need Bash 4+, Git,
-PostgreSQL clients, Caddy, curl, lsof, and standard Unix utilities.
+PostgreSQL clients, Caddy, curl, lsof, and standard Unix utilities. `hive-cleanup` uses
+the GitHub CLI (`gh`, logged in) when available to spot merged pull requests.
 
 ```sh
 ./scripts/worktree/install.sh
@@ -95,3 +97,22 @@ To stop sharing, stop the watcher, then run it again without `--share`.
 Cleanup removes selected worktrees, their databases, and proxy routes. It shows
 estimated sizes and asks before deleting, stopping a running app, or discarding
 uncommitted changes. Branches, main databases, and seed templates are kept.
+
+Databases from older setups carry no owner, and once their worktree is gone nothing ties
+them to it. Cleanup lists any such `hive-*` database as `db:<name>` with no owner. It
+never preselects them, since another clone of the repository may use them.
+
+Without names, cleanup fetches `main` and preselects clean worktrees whose work is
+merged. A worktree counts as merged when:
+
+- it has commits of its own and merging them into `origin/main` would change no files
+  (needs Git 2.38 or later),
+- its `HEAD` is already in `origin/main` and either arrived through a merge commit or
+  belongs to a branch with a merged pull request, or
+- GitHub has a pull request merged into `main` whose head contains its `HEAD`.
+
+A `HEAD` on main's own history without a merged pull request looks like a fresh
+worktree, so branches pushed straight onto main are never picked. Squash merges whose
+lines main has changed since are only found through GitHub, which uses `gh`; without
+it, or when offline, the other checks still run. Naming instances on the command line
+skips these checks.

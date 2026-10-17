@@ -21,6 +21,7 @@ PROXY_PORT="${HIVE_PROXY_PORT:-$(default_proxy_port)}"
 CADDYFILE="$WT_ROOT/Caddyfile"
 CADDY_DIR="$WT_ROOT/caddy"
 CADDY_ADMIN="http://localhost:2019"
+GITHUB_REPO=hiveboardgame/hive
 ENV_FILE=".worktree.env"
 PORT_BASE=3100
 PORT_STEP=10
@@ -36,6 +37,7 @@ PROTECTED_DBS=(postgres "$MAIN_DB" "$MAIN_TEST_DB" "$TEMPLATE_DB")
 CLAUDE_PROJECTS="$HOME/.claude/projects"
 LOCAL_FILES=(AGENTS.md CLAUDE.md .agents docs hivegame-games.csv.gz .claude/settings.local.json)
 HEALTH_TIMEOUT_SECS=900
+NETWORK_TIMEOUT_SECS=20
 SHARE_IPS=()
 SHARE_LABELS=()
 
@@ -318,6 +320,17 @@ FROM (
     FROM pg_database
 ) AS databases
 WHERE marker = :'owner' OR starts_with(marker, :'owner' || ':')
+ORDER BY datname;
+SQL
+}
+
+unowned_dbs() {
+    psql_admin -At << 'SQL'
+SELECT datname
+FROM pg_database
+WHERE starts_with(datname, 'hive-')
+    AND shobj_description(oid, 'pg_database') IS NULL
+    AND pg_get_userbyid(datdba) = current_user
 ORDER BY datname;
 SQL
 }
