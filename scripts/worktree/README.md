@@ -33,7 +33,8 @@ Ctrl-C stops the app or watcher. The shared Caddy proxy stays running; stop it w
 Install the project's Rust toolchain and build dependencies, including cargo-leptos,
 the `wasm32-unknown-unknown` target, wasm-bindgen-cli, Sass, Tailwind CSS, pkg-config,
 OpenSSL, and libpq development libraries. The scripts also need Bash 4+, Git,
-PostgreSQL clients, Caddy, curl, lsof, and standard Unix utilities.
+PostgreSQL clients, Caddy, curl, lsof, and standard Unix utilities. `hive-cleanup` uses
+the GitHub CLI (`gh`, logged in) when available to spot merged pull requests.
 
 ```sh
 ./scripts/worktree/install.sh
@@ -95,3 +96,9 @@ To stop sharing, stop the watcher, then run it again without `--share`.
 Cleanup removes selected worktrees, their databases, and proxy routes. It shows
 estimated sizes and asks before deleting, stopping a running app, or discarding
 uncommitted changes. Branches, main databases, and seed templates are kept.
+
+Clean worktrees whose work is merged are preselected: either every commit is already
+in `origin/main`, or GitHub has a pull request merged into `main` whose head contains
+the worktree's `HEAD` (squash merges need this check). The GitHub check uses `gh`;
+without it, or when offline, only the `origin/main` check runs. Naming instances on the
+command line replaces the automatic picks.
