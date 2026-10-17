@@ -414,7 +414,7 @@ async fn homepage_selection_includes_window_boundaries_and_all_ongoing_arenas() 
             Some(now - Duration::days(1)),
         ),
         ("Upcoming now", now, None),
-        ("Upcoming limit", now + Duration::minutes(15), None),
+        ("Upcoming limit", now + Duration::hours(1), None),
     ] {
         let tournament = insert_tournament(
             name,
@@ -443,7 +443,7 @@ async fn homepage_selection_includes_window_boundaries_and_all_ongoing_arenas() 
     for (name, starts_at, started_at, finished_at, format) in [
         (
             "Too early",
-            now + Duration::minutes(15) + Duration::seconds(1),
+            now + Duration::hours(1) + Duration::seconds(1),
             None,
             None,
             Format::Arena,

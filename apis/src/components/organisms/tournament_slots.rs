@@ -63,6 +63,7 @@ use shared_types::{
     SlotAdminAction,
     TournamentGameResult,
     TournamentId,
+    SCHEDULED_GAME_GRACE,
 };
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -1336,7 +1337,7 @@ fn organizer_row_state(
         && !proposal_pending
         && slot
             .scheduled_at
-            .is_some_and(|time| time + Duration::minutes(30) <= now);
+            .is_some_and(|time| time + SCHEDULED_GAME_GRACE <= now);
     let expired_pending_without_agreement =
         schedules_ready && scheduling_relevant && expired_pending && slot.scheduled_at.is_none();
     let needs_time_due_soon = schedules_ready
@@ -1356,7 +1357,7 @@ fn organizer_row_state(
                 true,
                 1,
                 slot.scheduled_at
-                    .map(|time| time + Duration::minutes(30))
+                    .map(|time| time + SCHEDULED_GAME_GRACE)
                     .unwrap_or(DateTime::<Utc>::MAX_UTC),
             )
         } else if expired_pending_without_agreement {
@@ -1513,7 +1514,7 @@ fn organizer_row_state(
         OrganizerLifecycle::Unstarted if scheduled_at.is_some() => {
             let scheduled_at = scheduled_at.unwrap_or(DateTime::<Utc>::MAX_UTC);
             let starting = scheduled_at <= now + Duration::minutes(15)
-                && scheduled_at + Duration::minutes(30) > now;
+                && scheduled_at + SCHEDULED_GAME_GRACE > now;
             (
                 if starting { 4 } else { 6 },
                 scheduled_at,

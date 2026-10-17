@@ -611,13 +611,74 @@ async fn calendar_includes_agreed_games_beyond_a_week_in_time_order() {
             .await
             .expect("agree the game time");
     }
-    let upcoming = ScheduleOffer::get_upcoming_agreed_games(&mut conn)
+    let upcoming = ScheduleOffer::get_upcoming_agreed_games(Utc::now(), &mut conn)
         .await
         .expect("load calendar");
     assert_eq!(
         upcoming.iter().map(|(_, time)| *time).collect::<Vec<_>>(),
         vec![sooner_time, later_time]
     );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn homepage_expires_unstarted_agreed_games_at_thirty_minutes_overdue() {
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.expect("get connection");
+    let fixture = started_schedule_fixture("calendar_grace", &mut conn).await;
+    let scheduled_at = future_instant(60);
+    let offer = ScheduleOffer::propose(
+        fixture.white_id,
+        fixture.tournament_id,
+        fixture.slot_id,
+        vec![scheduled_at],
+        &mut conn,
+    )
+    .await
+    .expect("propose game")
+    .pop()
+    .unwrap();
+    ScheduleOffer::accept(offer.id, fixture.black_id, scheduled_at, &mut conn)
+        .await
+        .expect("agree game time");
+    let game_id = games::table
+        .filter(games::tournament_slot_id.eq(fixture.slot_id))
+        .select(games::id)
+        .first::<Uuid>(&mut conn)
+        .await
+        .expect("load scheduled game");
+
+    for elapsed in [
+        Duration::zero(),
+        Duration::minutes(29),
+        Duration::minutes(30) - Duration::seconds(1),
+    ] {
+        assert_eq!(
+            ScheduleOffer::get_upcoming_agreed_games(scheduled_at + elapsed, &mut conn)
+                .await
+                .expect("load games within grace window"),
+            vec![(game_id, scheduled_at)]
+        );
+    }
+    assert!(ScheduleOffer::get_upcoming_agreed_games(
+        scheduled_at + Duration::minutes(30),
+        &mut conn,
+    )
+    .await
+    .expect("load games after grace window")
+    .is_empty());
+
+    diesel::update(games::table.find(game_id))
+        .set(games::turn.eq(1))
+        .execute(&mut conn)
+        .await
+        .expect("advance scheduled game");
+    assert!(ScheduleOffer::get_upcoming_agreed_games(
+        scheduled_at + Duration::minutes(10),
+        &mut conn,
+    )
+    .await
+    .expect("load games after play begins")
+    .is_empty());
 }
 
 #[tokio::test(flavor = "multi_thread")]

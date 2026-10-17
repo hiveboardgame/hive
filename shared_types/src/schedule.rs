@@ -1,4 +1,8 @@
+use chrono::TimeDelta;
 use serde::{Deserialize, Serialize};
+
+pub const SCHEDULED_GAME_GRACE: TimeDelta = TimeDelta::minutes(30);
+pub const LIVE_ARENA_LOOKAHEAD: TimeDelta = TimeDelta::hours(1);
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]

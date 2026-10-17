@@ -18,6 +18,7 @@ use leptos_use::{use_document_visibility, use_interval_fn};
 use shared_types::{
     clock::Clock,
     tournament::{Format, FormatConfig},
+    LIVE_ARENA_LOOKAHEAD,
 };
 use uuid::Uuid;
 
@@ -79,7 +80,7 @@ pub fn LiveArenas() -> impl IntoView {
                     ..
                 } => {
                     let now = Utc::now();
-                    *start >= now && *start <= now + Duration::minutes(15)
+                    *start >= now && *start <= now + LIVE_ARENA_LOOKAHEAD
                 }
                 TournamentUpdate::Joined(id)
                 | TournamentUpdate::Left {
