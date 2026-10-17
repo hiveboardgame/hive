@@ -203,9 +203,9 @@ pub fn ChallengeRow(
                 <div class=CHALLENGE_LEADING_RAIL_CLASS>
                     <span class=move || {
                         if group_count > 1 {
-                            "inline-flex h-5 items-center justify-center text-[10px] font-bold leading-none text-gray-900 dark:text-gray-100 sm:min-w-7 sm:justify-start sm:text-xs"
+                            "inline-flex h-5 w-[3ch] shrink-0 items-center justify-center tabular-nums text-[10px] font-bold leading-none text-gray-900 dark:text-gray-100 sm:min-w-7 sm:justify-start sm:text-xs"
                         } else {
-                            "hidden h-5 items-center justify-center text-[10px] font-bold leading-none text-gray-900 dark:text-gray-100 sm:invisible sm:inline-flex sm:min-w-7 sm:justify-start sm:text-xs"
+                            "invisible inline-flex h-5 w-[3ch] shrink-0 items-center justify-center tabular-nums text-[10px] font-bold leading-none text-gray-900 dark:text-gray-100 sm:min-w-7 sm:justify-start sm:text-xs"
                         }
                     }>{format!("x{}", group_count.max(1))}</span>
                     <div class=CHALLENGE_MOBILE_ACTIONS_CLASS>{action_buttons()}</div>

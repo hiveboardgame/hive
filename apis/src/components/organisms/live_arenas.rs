@@ -79,7 +79,7 @@ pub fn LiveArenas() -> impl IntoView {
                     ..
                 } => {
                     let now = Utc::now();
-                    *start >= now && *start <= now + Duration::minutes(15)
+                    *start >= now && *start <= now + Duration::hours(1)
                 }
                 TournamentUpdate::Joined(id)
                 | TournamentUpdate::Left {

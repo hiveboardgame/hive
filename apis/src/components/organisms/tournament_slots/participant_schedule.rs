@@ -10,12 +10,13 @@ use crate::{
     common::{
         format_local_datetime as format_schedule_time,
         tournament_game_number,
+        tournament_player_name,
         tournament_slot_fragment,
         tournament_slot_opponent,
         unfinished_tournament_game_label,
     },
     components::{
-        atoms::message_button::MessageButton,
+        atoms::{color_hex::ColorHex, message_button::MessageButton},
         molecules::user_identity::UserIdentity,
         organisms::my_schedules::ScheduleEditorDialog,
     },
@@ -31,6 +32,7 @@ use crate::{
     responses::{ScheduleResponse, UserResponse},
 };
 use chrono::{DateTime, Duration, Local, Utc};
+use hive_lib::Color;
 use leptos::{html::Dialog, prelude::*};
 use leptos_i18n::I18nContext;
 use leptos_router::{
@@ -750,6 +752,8 @@ fn ParticipantSlotRow(slot_id: Uuid) -> impl IntoView {
             let slot = slot.get()?;
             let identity = slot_card_label(i18n, context.tournament, &slot)
                 .unwrap_or_else(|| short_game_label(context.tournament, &slot));
+            let memberships = context.tournament.common.memberships().get();
+            let players = slot.participants.map(|id| tournament_player_name(&memberships, id));
             let (summary, editor_label) = summary.get()?;
             let game_href = slot.game.as_ref().map(|game| format!("/game/{}", game.game_id.0));
             let ScheduleSummary { state, label, detail, predecessor_game_href, .. } = summary;
@@ -765,6 +769,20 @@ fn ParticipantSlotRow(slot_id: Uuid) -> impl IntoView {
                         class="grid gap-2 items-center py-3 px-3 border-t first:border-t-0 scroll-mt-4 border-black/10 target:ring-2 target:ring-pillbug-teal sm:grid-cols-[minmax(0,1fr)_auto] dark:border-white/10 dark:odd:bg-surface-row-odd dark:even:bg-surface-row-even odd:bg-even-light even:bg-odd-light"
                     >
                         <div class="min-w-0">
+                            <div class="flex flex-wrap gap-y-1 gap-x-4 mb-1 text-sm font-medium">
+                                {players
+                                    .into_iter()
+                                    .zip([Color::White, Color::Black])
+                                    .map(|(name, color)| {
+                                        view! {
+                                            <span class="flex gap-1.5 items-center min-w-0">
+                                                <ColorHex color=Signal::derive(move || color) />
+                                                <span class="wrap-anywhere">{name}</span>
+                                            </span>
+                                        }
+                                    })
+                                    .collect_view()}
+                            </div>
                             <p class="text-xs font-semibold text-gray-500 dark:text-gray-400">
                                 {identity}
                             </p>
