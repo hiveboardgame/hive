@@ -71,7 +71,6 @@ pub use overlay_paint::OverlayPaint;
 pub use piece_paint::{resolve_piece_paint, BugHref, DotsHref, PiecePaint, ShadowHref, TileHref};
 pub use piece_type::PieceType;
 pub use project_links::{
-    CONTACT_EMAIL,
     CONTRIBUTING_URL,
     GEN42_URL,
     GITHUB_ISSUES_URL,

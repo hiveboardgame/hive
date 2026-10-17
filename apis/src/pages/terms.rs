@@ -1,5 +1,5 @@
 use crate::{
-    common::{CONTACT_EMAIL, GEN42_URL, HIVEGAME_DISCORD_URL, LICENSE_URL},
+    common::{GEN42_URL, HIVEGAME_DISCORD_URL, LICENSE_URL},
     components::{
         layouts::{page_header::PageHeader, page_shell::PageShell},
         molecules::panel::Panel,
@@ -111,9 +111,14 @@ pub fn Terms() -> impl IntoView {
                     "We may update these terms. The date at the top of this page shows the current version. If you keep using the site after a change, the updated terms apply."
                 </p>
                 <p>
-                    "Questions? Contact us at "
-                    <a class="ui-text-link" href=format!("mailto:{CONTACT_EMAIL}")>
-                        {CONTACT_EMAIL}
+                    "Questions? Message leex or iongler on our "
+                    <a
+                        class="ui-text-link"
+                        href=HIVEGAME_DISCORD_URL
+                        rel="external"
+                        target="_blank"
+                    >
+                        "Discord server"
                     </a> "."
                 </p>
             </Panel>

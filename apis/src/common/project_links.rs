@@ -8,4 +8,3 @@ pub const WORLD_HIVE_DISCORD_URL: &str = "https://discord.gg/djdQZPFa7E";
 pub const KOFI_URL: &str = "https://ko-fi.com/hivedevs";
 pub const PATREON_URL: &str = "https://www.patreon.com/HiveDevs";
 pub const GEN42_URL: &str = "https://www.gen42.com/";
-pub const CONTACT_EMAIL: &str = "[CONTACT EMAIL]";

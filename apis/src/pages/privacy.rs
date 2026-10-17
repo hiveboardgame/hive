@@ -1,5 +1,5 @@
 use crate::{
-    common::{CONTACT_EMAIL, HIVEGAME_DISCORD_URL},
+    common::HIVEGAME_DISCORD_URL,
     components::{
         layouts::{page_header::PageHeader, page_shell::PageShell},
         molecules::panel::Panel,
@@ -7,9 +7,6 @@ use crate::{
 };
 use leptos::prelude::*;
 
-const OPERATOR: &str = "[OPERATOR NAMES AND POSTAL ADDRESS]";
-const HOSTING_PROVIDER: &str = "[HOSTING PROVIDER AND SERVER LOCATION]";
-const SERVER_LOG_RETENTION: &str = "[N DAYS]";
 const LAST_UPDATED: &str = "16 October 2026";
 const SECTION_CLASS: &str = "space-y-3 text-sm leading-6 text-gray-700 dark:text-gray-300";
 const LIST_CLASS: &str = "space-y-2 pl-5 list-disc";
@@ -25,14 +22,10 @@ pub fn Privacy() -> impl IntoView {
 
             <Panel title="Who is responsible" body_class=SECTION_CLASS>
                 <p>
-                    "hivegame.com is operated by " {OPERATOR}
-                    ". We are the controller of your personal data under the EU General Data Protection Regulation (GDPR)."
+                    "hivegame.com is run by its volunteer maintainers, leex and iongler. They are responsible for your personal data under the EU General Data Protection Regulation (GDPR)."
                 </p>
                 <p>
-                    "You can reach us at "
-                    <a class="ui-text-link" href=format!("mailto:{CONTACT_EMAIL}")>
-                        {CONTACT_EMAIL}
-                    </a> " or on our "
+                    "To contact us, message leex or iongler on our "
                     <a
                         class="ui-text-link"
                         href=HIVEGAME_DISCORD_URL
@@ -64,9 +57,7 @@ pub fn Privacy() -> impl IntoView {
                     </li>
                     <li>
                         <strong>"Connection data. "</strong>
-                        "To deliver the site and run live games, our servers process your IP address, browser information and connection timing, for example to measure latency so a slow connection doesn't cost you clock time. Server logs are kept for "
-                        {SERVER_LOG_RETENTION}
-                        "."
+                        "To deliver the site and run live games, our servers process your IP address, browser information and connection timing, for example to measure latency so a slow connection doesn't cost you clock time. We don't keep request logs. Our application only logs errors, which can include internal account or game IDs but no IP addresses."
                     </li>
                     <li>
                         <strong>"Browser notifications (optional). "</strong>
@@ -91,7 +82,7 @@ pub fn Privacy() -> impl IntoView {
                     </li>
                     <li>
                         <strong>"Our legitimate interest"</strong>
-                        " in running a secure, fair and abuse-free service (Art. 6(1)(f) GDPR): connection data, server logs, abuse-prevention records, moderation and keeping game records public."
+                        " in running a secure, fair and abuse-free service (Art. 6(1)(f) GDPR): connection data, error logs, abuse-prevention records, moderation and keeping game records public."
                     </li>
                     <li>
                         <strong>"Your consent"</strong>
@@ -141,7 +132,9 @@ pub fn Privacy() -> impl IntoView {
                     "We don't sell or rent your data and we don't share it with advertisers. These service providers process data on our behalf:"
                 </p>
                 <ul class=LIST_CLASS>
-                    <li>{HOSTING_PROVIDER} " hosts our servers and database."</li>
+                    <li>
+                        "Hetzner Online GmbH provides the bare-metal servers we run on, in data centres in Germany. We run the operating system, the application and the database ourselves."
+                    </li>
                     <li>"Lettermint delivers our account emails."</li>
                     <li>
                         "Your browser's push service delivers notifications, if you turn them on."
@@ -168,7 +161,7 @@ pub fn Privacy() -> impl IntoView {
                     <li>
                         "Browser notification subscriptions: until you turn notifications off. Subscriptions that go unused for 90 days are deleted."
                     </li>
-                    <li>"Server logs: " {SERVER_LOG_RETENTION} "."</li>
+                    <li>"Application error logs: only as long as we need them to fix problems."</li>
                 </ul>
             </Panel>
 
@@ -186,9 +179,14 @@ pub fn Privacy() -> impl IntoView {
                     "Under the GDPR you have the right to access your data, to have it corrected or deleted, to restrict or object to its processing, and to receive it in a portable format. Where we rely on your consent, you can withdraw it at any time."
                 </p>
                 <p>
-                    "To exercise any of these rights, contact us at "
-                    <a class="ui-text-link" href=format!("mailto:{CONTACT_EMAIL}")>
-                        {CONTACT_EMAIL}
+                    "To exercise any of these rights, message leex or iongler on our "
+                    <a
+                        class="ui-text-link"
+                        href=HIVEGAME_DISCORD_URL
+                        rel="external"
+                        target="_blank"
+                    >
+                        "Discord server"
                     </a>
                     ". You also have the right to lodge a complaint with a data protection supervisory authority."
                 </p>
