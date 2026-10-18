@@ -11,7 +11,7 @@ pub use preview::{board_to_png, board_to_svg, PreviewOpts};
 #[cfg(feature = "ssr")]
 mod preview {
     use crate::{
-        common::{resolve_piece_paint, ShadowHref, SvgPos, TileDesign},
+        common::{namespace_svg, resolve_piece_paint, ShadowHref, SvgPos, TileDesign},
         hiveground::{build_static_render_model, PieceShadow, RenderLayerKind},
         providers::config::TileOptions,
     };
@@ -52,11 +52,11 @@ mod preview {
     /// resvg will not fetch external tile assets, so inline namespaced defs.
     static DEFS: LazyLock<String> = LazyLock::new(|| {
         let mut defs = String::from("<defs>");
-        defs.push_str(&namespace_ids(
+        defs.push_str(&namespace_svg(
             include_str!("../../assets/tiles/3d/3d.svg"),
             "t3_",
         ));
-        defs.push_str(&namespace_ids(
+        defs.push_str(&namespace_svg(
             include_str!("../../assets/tiles/common/all.svg"),
             "tc_",
         ));
@@ -176,6 +176,9 @@ mod preview {
 
     /// resvg needs local fragments for inlined asset symbols.
     fn local_ref(href: &str) -> String {
+        if let Some(fragment) = href.strip_prefix("#hive_3d_") {
+            return format!("#t3_{fragment}");
+        }
         let frag = href.rsplit('#').next().unwrap_or_default();
         let prefix = if href.contains("/3d/3d.svg") {
             "t3_"
@@ -185,41 +188,6 @@ mod preview {
             "" // unused shadow refs can remain unresolved.
         };
         format!("#{prefix}{frag}")
-    }
-
-    /// Namespacing lets multiple SVG files share common ids like `a`.
-    fn namespace_ids(svg: &str, prefix: &str) -> String {
-        let start = svg.find('>').map(|i| i + 1).unwrap_or(0);
-        let end = svg.rfind("</svg>").unwrap_or(svg.len());
-        let mut content = svg[start..end].to_string();
-        for id in collect_ids(&content) {
-            // Delimited replacements keep `a` from corrupting ids like `a1`.
-            content = content
-                .replace(&format!("id=\"{id}\""), &format!("id=\"{prefix}{id}\""))
-                .replace(
-                    &format!("href=\"#{id}\""),
-                    &format!("href=\"#{prefix}{id}\""),
-                )
-                .replace(&format!("url(#{id})"), &format!("url(#{prefix}{id})"));
-        }
-        content
-    }
-
-    fn collect_ids(s: &str) -> Vec<String> {
-        let mut ids = Vec::new();
-        let mut rest = s;
-        while let Some(i) = rest.find("id=\"") {
-            let after = &rest[i + 4..];
-            if let Some(j) = after.find('"') {
-                ids.push(after[..j].to_string());
-                rest = &after[j + 1..];
-            } else {
-                break;
-            }
-        }
-        ids.sort();
-        ids.dedup();
-        ids
     }
 
     #[cfg(test)]
@@ -234,6 +202,15 @@ mod preview {
             let state = State::new_from_history(&history).expect("valid state");
             let png = board_to_png(&state.board, &PreviewOpts::default()).expect("render png");
             assert!(png.len() > 8 && &png[1..4] == b"PNG", "valid PNG header");
+            let pixels = resvg::tiny_skia::Pixmap::decode_png(&png).expect("decode preview");
+            let background = &pixels.data()[..4];
+            assert!(
+                pixels
+                    .data()
+                    .chunks_exact(4)
+                    .any(|pixel| pixel != background),
+                "a real game must render pieces, not only the background"
+            );
         }
     }
 }

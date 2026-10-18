@@ -30,6 +30,7 @@ pub mod simple_link;
 pub mod simple_switch;
 pub mod status_indicator;
 pub mod target;
+pub mod tile_definitions;
 pub mod title;
 pub mod toggle_controls;
 pub mod unread_badge;

@@ -22,6 +22,7 @@ mod schedule_action;
 mod server_result;
 mod standings_criterion;
 mod standings_score;
+mod svg_assets;
 mod svg_pos;
 mod time_signals;
 mod tournament_action;
@@ -145,3 +146,10 @@ pub(crate) use tournament_display::{
 pub use tournament_display::{parse_tournament_slot_fragment, tournament_slot_fragment};
 
 pub use tournament_pairing_label::{TournamentPairingLabel, TournamentStageLabel};
+
+pub use svg_assets::{
+    inline_tile_sprite,
+    namespace_svg,
+    THREE_D_SHADOW_PATH,
+    THREE_D_SHADOW_PREFIX,
+};
