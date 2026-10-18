@@ -1,4 +1,5 @@
 use crate::{
+    common::download_blob,
     components::molecules::modal::Modal,
     i18n::*,
     providers::{
@@ -9,9 +10,9 @@ use crate::{
 use leptos::{html, html::Dialog, logging, prelude::*, task::spawn_local_scoped_with_cancellation};
 use leptos_i18n::I18nContext;
 use std::{path::Path, sync::Arc};
-use wasm_bindgen::{JsCast, JsValue};
+use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{js_sys::Array, Blob, Url};
+use web_sys::{js_sys::Array, Blob};
 
 const BUTTON_CLASS: &str = "ui-button ui-button-primary ui-button-sm h-9 flex-1 px-3 text-xs";
 
@@ -78,20 +79,11 @@ pub fn DownloadTree() -> impl IntoView {
             return;
         };
 
-        let (blob, filename) = blob_and_filename(tree_json);
-        let url = Url::create_object_url_with_blob(&blob).unwrap();
-        let a = web_sys::window()
-            .unwrap()
-            .document()
-            .unwrap()
-            .create_element("a")
-            .unwrap()
-            .dyn_into::<web_sys::HtmlElement>()
-            .expect("This element is not an HtmlElement");
-        a.set_attribute("href", &url).unwrap();
-        a.set_attribute("download", &filename).unwrap();
-        a.click();
-        let _ = Url::revoke_object_url(&url);
+        if let Err(error) = blob_and_filename(tree_json)
+            .and_then(|(blob, filename)| download_blob(&blob, &filename))
+        {
+            logging::error!("Couldn't download analysis: {error:?}");
+        }
     };
 
     view! {
@@ -101,15 +93,15 @@ pub fn DownloadTree() -> impl IntoView {
     }
 }
 
-fn blob_and_filename(tree: String) -> (Blob, String) {
-    let file = Array::from(&JsValue::from(tree));
+fn blob_and_filename(tree: String) -> Result<(Blob, String), JsValue> {
+    let file = Array::of1(&JsValue::from(tree));
     let date = chrono::offset::Local::now()
         .format("%d-%b-%Y_%H:%M:%S")
         .to_string();
-    (
-        Blob::new_with_u8_array_sequence(&file).unwrap(),
+    Ok((
+        Blob::new_with_u8_array_sequence(&file)?,
         format!("analysis_{date}.json"),
-    )
+    ))
 }
 
 #[component]

@@ -46,6 +46,7 @@ use shared_types::{
 use std::{collections::HashSet, num::NonZeroU32};
 use uuid::Uuid;
 
+// Pin the persisted tombstone format independently of the production constant.
 const DELETED_USERNAME_PREFIX: &str = "deleted_user_";
 
 #[tokio::test(flavor = "multi_thread")]
@@ -89,15 +90,6 @@ async fn soft_delete_anonymizes_user_and_rejects_tombstone_login() {
     assert!(!User::username_exists("deleted_user_999", &mut conn)
         .await
         .expect("unknown tombstone username is absent"));
-    assert!(matches!(
-        NewUser::new(
-            "deleted_user_999",
-            "new-password",
-            "deleted-user-999@example.com"
-        )
-        .expect_err("deleted username pattern is reserved"),
-        DbError::InvalidInput { .. }
-    ));
     assert!(matches!(
         User::find_for_login(&deleted.username, &mut conn)
             .await

@@ -31,7 +31,9 @@
             "description": "Please choose a family-friendly username. Any accounts with inappropriate usernames will be closed!",
             "error": {
                 "taken": "Username is taken",
-                "invalid": "Invalid character in username"
+                "invalid": "Invalid character in username",
+                "reserved": "This username is reserved.",
+                "length": "Username must be between {{min}} and {{max}} characters."
             }
         },
         "email": {
@@ -40,8 +42,7 @@
             },
             "description": "We need your email address to send you a confirmation email when you create an account."
         },
-        "password_requirements": "At least 8 characters",
-        "password_error": "Password too short or does not match",
+        "password_requirements": "Use {{min}}–{{max}} characters.",
         "be_nice_checkbox": "I agree to be nice to other players and to report abuse on Discord",
         "legal_notice": "By creating an account, you agree to our <terms_link>Terms of Service</terms_link>. Our <privacy_link>Privacy Policy</privacy_link> explains how we handle your data.",
         "signup_button": "Sign up",

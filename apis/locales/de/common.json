@@ -126,7 +126,6 @@
     "account": {
         "manage_password_changes_and_account_deletion": "Passwort ändern und Konto löschen.",
         "change_password": "Passwort ändern",
-        "password_must_be_at_least_8_characters_and_match": "Das Passwort muss mindestens 8 Zeichen lang sein und mit der Bestätigung übereinstimmen",
         "password_update_failed": "Passwort konnte nicht geändert werden. Prüfe dein aktuelles Passwort und versuche es erneut.",
         "title": "Konto"
     },
@@ -255,12 +254,14 @@
         "create_an_account_to_play_and_join_tournaments": "Erstelle ein Konto, um zu spielen und an Turnieren teilzunehmen.",
         "checking_your_reset_link": "Link wird geprüft…",
         "reset_your_password": "Passwort zurücksetzen",
-        "passwords_must_match_and_be_at_least_8_characters": "Die Passwörter müssen übereinstimmen und mindestens 8 Zeichen lang sein.",
         "reset_password": "Zurücksetzen",
         "couldn_t_reset_your_password_the_link_may_have": "Passwort konnte nicht zurückgesetzt werden. Der Link ist möglicherweise abgelaufen – fordere einen neuen an.",
         "this_link_has_expired": "Dieser Link ist abgelaufen",
         "this_password_reset_link_is_invalid_or_has_expired": "Dieser Link ist ungültig oder abgelaufen. Fordere einen neuen an, dann senden wir ihn dir per E-Mail.",
-        "request_a_new_link": "Neuen Link anfordern"
+        "request_a_new_link": "Neuen Link anfordern",
+        "password_too_short": "Verwende mindestens {{min}} Zeichen.",
+        "password_too_long": "Verwende höchstens {{max}} Zeichen.",
+        "passwords_do_not_match": "Die Passwörter stimmen nicht überein."
     },
     "learn": {
         "puzzles": {

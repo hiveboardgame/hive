@@ -9,25 +9,13 @@ pub fn SimpleSwitch(
     #[prop(optional)] disabled: Signal<bool>,
     #[prop(optional)] optional_action: Option<Callback<()>>,
 ) -> impl IntoView {
-    let on_checked_change = move |_| {
+    let action = Callback::new(move |()| {
         checked.update(|b| *b = !*b);
         if let Some(optional) = optional_action {
-            optional.run(())
-        };
-    };
-    view! {
-        <label class="inline-flex relative items-center cursor-pointer">
-            <input
-                on:change=on_checked_change
-                prop:disabled=disabled
-                type="checkbox"
-                value=""
-                class="sr-only peer"
-                prop:checked=checked
-            />
-            <div class=SWITCH_TRACK_CLASS></div>
-        </label>
-    }
+            optional.run(());
+        }
+    });
+    view! { <SimpleSwitchWithCallback checked=checked.into() disabled action /> }
 }
 
 #[component]

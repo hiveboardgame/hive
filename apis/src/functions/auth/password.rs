@@ -1,24 +1,3 @@
-const MIN_PASSWORD_LENGTH: usize = 8;
-const MAX_PASSWORD_LENGTH: usize = 128;
-
-pub fn validate_password(password: &str, password_confirmation: &str) -> Result<(), String> {
-    if password != password_confirmation {
-        return Err("Passwords don't match.".to_string());
-    }
-    let password_length = password.len();
-    if password_length < MIN_PASSWORD_LENGTH {
-        return Err(format!(
-            "Password is too short, it must be at least {MIN_PASSWORD_LENGTH}"
-        ));
-    }
-    if password_length > MAX_PASSWORD_LENGTH {
-        return Err(format!(
-            "Password is too long it must not exceed {MAX_PASSWORD_LENGTH}"
-        ));
-    }
-    Ok(())
-}
-
 #[cfg(feature = "ssr")]
 pub fn hash_password(password: &str) -> Result<String, leptos::prelude::ServerFnError> {
     use argon2::{

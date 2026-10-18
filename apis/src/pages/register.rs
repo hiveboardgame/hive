@@ -1,5 +1,11 @@
 use crate::{
-    common::{auth_page_url, use_return_path},
+    common::{
+        auth_page_url,
+        password_error_message,
+        password_requirements_message,
+        use_return_path,
+        validate_password,
+    },
     components::{
         layouts::page_shell::{PageShell, PageShellVariant},
         molecules::page_card::PageCard,
@@ -11,10 +17,9 @@ use crate::{
     security::csrf::ActionForm,
 };
 use leptos::{html, leptos_dom::helpers::debounce, prelude::*};
+use shared_types::{validate_username, UsernameError, MAX_USERNAME_LENGTH, MIN_USERNAME_LENGTH};
 use std::time::Duration;
 use web_sys::Event;
-
-const VALID_USERNAME_CHARS: &str = "-_";
 
 #[component]
 pub fn Register() -> impl IntoView {
@@ -22,7 +27,10 @@ pub fn Register() -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     let username_taken = Action::new(|user: &String| {
         let user = user.clone();
-        async move { username_taken(user).await }
+        async move {
+            let taken = username_taken(user.clone()).await;
+            (user, taken)
+        }
     });
     let pathname = use_return_path();
     let my_input = NodeRef::<html::Input>::new();
@@ -34,46 +42,78 @@ pub fn Register() -> impl IntoView {
     let email = RwSignal::new(String::new());
     let pw = RwSignal::new(String::new());
     let pw_confirm = RwSignal::new(String::new());
-    let has_invalid_char = RwSignal::new(false);
     let is_invalid_email = RwSignal::new(false);
-    let pw_invalid = move || {
-        let pw = pw();
-        !(7 < pw.len() && pw == pw_confirm())
+    let username_blurred = RwSignal::new(false);
+    let email_blurred = RwSignal::new(false);
+    let username_validation = Memo::new(move |_| username.with(|name| validate_username(name)));
+    let password_validation = Memo::new(move |_| validate_password(&pw(), &pw_confirm()));
+    let pw_invalid = move || password_validation.get().is_err();
+    let password_blurred = RwSignal::new(false);
+    let password_error = move || {
+        password_validation
+            .get()
+            .err()
+            .filter(|error| error.is_ready_to_display(password_blurred(), &pw_confirm()))
     };
 
-    let validate_username = move |evt: Event| {
-        let potential_username = event_target_value(&evt);
-        if !potential_username.is_empty() {
-            debounce(Duration::from_millis(300), move |evt: Event| {
-                let potential_username = event_target_value(&evt);
-                if !potential_username.chars().all(valid_username_char) {
-                    has_invalid_char.set(true);
-                } else {
-                    has_invalid_char.set(false);
-                    username.update(|v| v.clone_from(&potential_username));
-                    if potential_username.len() > 1 {
-                        username_taken.dispatch(potential_username);
-                    }
-                }
-            })(evt);
-        } else {
-            username.set(String::new());
-            has_invalid_char.set(false);
+    let mut check_username = debounce(Duration::from_millis(300), move |name: String| {
+        if username_validation.get_untracked().is_ok() {
+            username_taken.dispatch(name);
         }
+    });
+    let on_username_input = move |evt: Event| {
+        let name = event_target_value(&evt);
+        username.set(name.clone());
+        check_username(name);
     };
     let username_exists = move || {
-        let username = username();
-        shared_types::RESERVED_USERNAMES.contains(&username.to_lowercase().as_str())
-            || username_taken.value().get().is_some_and(|v| {
-                if let Ok(value) = v {
-                    username.len() > 1 && value
-                } else {
-                    false
-                }
+        username_taken.value().with(|value| {
+            value.as_ref().is_some_and(|(checked_name, result)| {
+                username.with(|name| name == checked_name) && matches!(result, Ok(true))
             })
+        })
     };
-    let conditionally_disable =
-        move || !agree() || username_exists() || pw_invalid() || is_invalid_email();
+    let username_check_finished = move || {
+        username_taken.value().with(|value| {
+            value
+                .as_ref()
+                .is_some_and(|(checked_name, _)| username.with(|name| name == checked_name))
+        })
+    };
+    let username_error = move || {
+        if !username_blurred() || username.with(String::is_empty) {
+            return None;
+        }
+        match username_validation.get() {
+            Err(UsernameError::InvalidCharacters) => {
+                Some(t_string!(i18n, user_config.create_account.username.error.invalid).to_string())
+            }
+            Err(UsernameError::TooShort | UsernameError::TooLong) => Some(
+                t_string!(
+                    i18n,
+                    user_config.create_account.username.error.length,
+                    min = MIN_USERNAME_LENGTH,
+                    max = MAX_USERNAME_LENGTH
+                )
+                .to_string(),
+            ),
+            Err(UsernameError::Reserved | UsernameError::DeletedPrefix) => Some(
+                t_string!(i18n, user_config.create_account.username.error.reserved).to_string(),
+            ),
+            Ok(()) if username_exists() => {
+                Some(t_string!(i18n, user_config.create_account.username.error.taken).to_string())
+            }
+            Ok(()) => None,
+        }
+    };
+    let conditionally_disable = move || {
+        !agree()
+            || username_validation.get().is_err()
+            || username_exists()
+            || !username_check_finished()
+            || pw_invalid()
+            || is_invalid_email()
+    };
     let register = ServerAction::<Register>::new();
     let register_value = register.value();
     let email_ref = NodeRef::<html::Input>::new();
@@ -104,7 +144,8 @@ pub fn Register() -> impl IntoView {
                     <label class="flex flex-col gap-1.5">
                         <span class="ui-field-label">{t!(i18n, common.username)}</span>
                         <input
-                            on:input=validate_username
+                            on:input=on_username_input
+                            on:blur=move |_| username_blurred.set(true)
                             node_ref=my_input
                             class="ui-field-input"
                             name="username"
@@ -112,19 +153,15 @@ pub fn Register() -> impl IntoView {
                             prop:value=username
                             autocomplete="username"
                             placeholder=move || { t_string!(i18n, common.username) }
-                            minlength="2"
-                            maxlength="20"
+                            minlength=MIN_USERNAME_LENGTH.to_string()
+                            maxlength=MAX_USERNAME_LENGTH.to_string()
                         />
-                        <Show when=username_exists>
-                            <small class="ui-field-error">
-                                {t!(i18n, user_config.create_account.username.error.taken)}
-                            </small>
-                        </Show>
-                        <Show when=has_invalid_char>
-                            <small class="ui-field-error">
-                                {t!(i18n, user_config.create_account.username.error.invalid)}
-                            </small>
-                        </Show>
+                        {move || {
+                            username_error()
+                                .map(|message| {
+                                    view! { <small class="ui-field-error">{message}</small> }
+                                })
+                        }}
                         <small class="ui-field-helper">
                             {t!(i18n, user_config.create_account.username.description)}
                         </small>
@@ -133,17 +170,15 @@ pub fn Register() -> impl IntoView {
                         <span class="ui-field-label">{t!(i18n, common.email)}</span>
                         <input
                             node_ref=email_ref
-                            on:input=debounce(
-                                Duration::from_millis(350),
-                                move |evt| {
-                                    if email_ref.get().is_some_and(|e| !e.check_validity()) {
-                                        is_invalid_email.set(true);
-                                    } else {
-                                        is_invalid_email.set(false);
-                                    }
-                                    email.update(|v| v.clone_from(&event_target_value(&evt)));
-                                },
-                            )
+                            on:blur=move |_| email_blurred.set(true)
+                            on:input=move |evt| {
+                                if email_ref.get().is_some_and(|e| !e.check_validity()) {
+                                    is_invalid_email.set(true);
+                                } else {
+                                    is_invalid_email.set(false);
+                                }
+                                email.update(|v| v.clone_from(&event_target_value(&evt)));
+                            }
                             class="ui-field-input"
                             name="email"
                             type="email"
@@ -155,7 +190,7 @@ pub fn Register() -> impl IntoView {
                                 t_string!(i18n, user_config.create_account.email.description)
                             }
                         />
-                        <Show when=is_invalid_email>
+                        <Show when=move || email_blurred() && is_invalid_email()>
                             <small class="ui-field-error">
                                 {t!(i18n, user_config.create_account.email.error.invalid)}
                             </small>
@@ -167,40 +202,36 @@ pub fn Register() -> impl IntoView {
                     <label class="flex flex-col gap-1.5">
                         <span class="ui-field-label">{t!(i18n, common.password)}</span>
                         <input
-                            on:input=debounce(Duration::from_millis(350), update_from_input(pw))
+                            on:input=update_from_input(pw)
+                            on:blur=move |_| password_blurred.set(true)
                             class="ui-field-input"
                             name="password"
                             type="password"
                             prop:value=pw
                             autocomplete="new-password"
                             placeholder=move || t_string!(i18n, common.password)
-                            minlength="8"
-                            maxlength="128"
                         />
                         <small class="ui-field-helper">
-                            {t!(i18n, user_config.create_account.password_requirements)}
+                            {move || password_requirements_message(i18n)}
                         </small>
                     </label>
                     <label class="flex flex-col gap-1.5">
                         <span class="ui-field-label">{t!(i18n, common.confirm_password)}</span>
                         <input
-                            on:input=debounce(
-                                Duration::from_millis(350),
-                                update_from_input(pw_confirm),
-                            )
+                            on:input=update_from_input(pw_confirm)
                             class="ui-field-input"
                             name="password_confirmation"
                             type="password"
                             prop:value=pw_confirm
                             autocomplete="new-password"
                             placeholder=move || t_string!(i18n, common.password)
-                            minlength="8"
-                            maxlength="128"
                         />
                     </label>
-                    <Show when=move || pw_invalid() && (!pw().is_empty())>
+                    <Show when=move || password_error().is_some() && !pw().is_empty()>
                         <small class="ui-field-error">
-                            {t!(i18n, user_config.create_account.password_error)}
+                            {move || {
+                                password_error().map(|error| password_error_message(i18n, error))
+                            }}
                         </small>
                     </Show>
                     <input type="hidden" name="pathname" value=pathname />
@@ -252,8 +283,4 @@ pub fn Register() -> impl IntoView {
             </p>
         </PageShell>
     }
-}
-
-fn valid_username_char(c: char) -> bool {
-    c.is_ascii_alphanumeric() || VALID_USERNAME_CHARS.contains(c)
 }

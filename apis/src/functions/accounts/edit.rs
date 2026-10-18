@@ -10,11 +10,11 @@ pub async fn edit_account(
     pathname: String,
 ) -> Result<AccountResponse, ServerFnError> {
     use crate::{
-        common::safe_return_path,
+        common::{safe_return_path, validate_password},
         functions::{
             auth::{
                 identity::uuid,
-                password::{hash_password, validate_password, verify_password},
+                password::{hash_password, verify_password},
             },
             db::pool,
         },

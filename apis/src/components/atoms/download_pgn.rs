@@ -1,12 +1,14 @@
 use hive_lib::{Color, GameResult, GameStatus};
-use leptos::prelude::*;
+use leptos::{logging, prelude::*};
 use leptos_icons::*;
-use wasm_bindgen::{JsCast, JsValue};
-use web_sys::{js_sys::Array, Blob, Url};
+use shared_types::DELETED_USER_DISPLAY_NAME;
+use wasm_bindgen::JsValue;
+use web_sys::{js_sys::Array, Blob};
 
 use crate::{
+    common::download_blob,
     providers::game_state::{GameStateStore, GameStateStoreFields},
-    responses::GameResponse,
+    responses::{GameResponse, UserResponse},
 };
 
 #[component]
@@ -28,22 +30,10 @@ pub fn DownloadPgn(
         } else {
             game_response.with_untracked(|game| game.as_ref().map(blob_and_filename))
         };
-        if let Some((blob, filename)) = file {
-            // Create an object URL for the blob
-            let url = Url::create_object_url_with_blob(&blob).unwrap();
-            // Create a download link
-            let a = web_sys::window()
-                .unwrap()
-                .document()
-                .unwrap()
-                .create_element("a")
-                .unwrap()
-                .dyn_into::<web_sys::HtmlElement>()
-                .expect("This element is not an HtmlElement");
-            a.set_attribute("href", &url).unwrap();
-            a.set_attribute("download", &filename).unwrap();
-            a.click();
-            let _ = Url::revoke_object_url(&url);
+        if let Some(file) = file {
+            if let Err(error) = file.and_then(|(blob, filename)| download_blob(&blob, &filename)) {
+                logging::error!("Couldn't download PGN: {error:?}");
+            }
         }
     };
 
@@ -56,7 +46,18 @@ pub fn DownloadPgn(
     }
 }
 
-fn blob_and_filename(game: &GameResponse) -> (Blob, String) {
+// PGN identities stay stable across UI languages.
+fn pgn_username(user: &UserResponse) -> &str {
+    if user.deleted {
+        DELETED_USER_DISPLAY_NAME
+    } else {
+        &user.username
+    }
+}
+
+fn blob_and_filename(game: &GameResponse) -> Result<(Blob, String), JsValue> {
+    let white = pgn_username(&game.white_player);
+    let black = pgn_username(&game.black_player);
     let date = game.created_at.format("%d-%b-%Y_%H:%M:%S").to_string();
     let game_result = match &game.game_status {
         GameStatus::Finished(result) => match result {
@@ -75,7 +76,7 @@ fn blob_and_filename(game: &GameResponse) -> (Blob, String) {
          [White \"{}\"]\n\
          [Black \"{}\"]\n\
          [Result \"{}\"]\n\n",
-        game.game_type, date, game.white_player.username, game.black_player.username, game_result
+        game.game_type, date, white, black, game_result
     );
     file.push(header);
     let mut history = game
@@ -90,11 +91,13 @@ fn blob_and_filename(game: &GameResponse) -> (Blob, String) {
     }
     let file = file.into_iter().map(JsValue::from).collect::<Array>();
     let date = game.created_at.format("%+").to_string();
-    (
-        Blob::new_with_u8_array_sequence(&file).unwrap(),
+    Ok((
+        Blob::new_with_u8_array_sequence(&file)?,
         format!(
             "{}_{}_vs_{}.pgn",
-            date, game.white_player.username, game.black_player.username
+            date,
+            white.replace(' ', "_"),
+            black.replace(' ', "_")
         ),
-    )
+    ))
 }

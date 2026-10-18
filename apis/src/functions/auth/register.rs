@@ -14,11 +14,8 @@ pub async fn register(
     pathname: String,
 ) -> Result<AccountResponse, ServerFnError> {
     use crate::{
-        common::safe_return_path,
-        functions::{
-            auth::password::{hash_password, validate_password},
-            db::pool,
-        },
+        common::{safe_return_path, validate_password},
+        functions::{auth::password::hash_password, db::pool},
     };
     use actix_identity::Identity;
     use actix_web::HttpMessage;
@@ -29,12 +26,11 @@ pub async fn register(
     use diesel_async::AsyncConnection;
 
     validate_password(&password, &password_confirmation).map_err(ServerFnError::new)?;
+    let mut new_user = NewUser::new(&username, "", &email.to_lowercase())?;
+    new_user.password = hash_password(&password)?;
 
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
-    let password = hash_password(&password)?;
-    let email = email.to_lowercase();
-    let new_user = NewUser::new(&username, &password, &email)?;
 
     let (user, account) = conn
         .transaction::<_, ServerFnError, _>(async move |tc| {

@@ -1,6 +1,7 @@
 use crate::models::PersistedConfigError;
 use diesel::result::{DatabaseErrorKind, Error as DieselError};
 use serde::{Deserialize, Serialize};
+use shared_types::UsernameError;
 use thiserror::Error;
 
 #[derive(Error, Debug, Serialize, Deserialize)]
@@ -25,6 +26,8 @@ pub enum DbError {
     ChatClientIdConflict,
     #[error("Invalid input")]
     InvalidInput { info: String, error: String },
+    #[error("Invalid username: {0}")]
+    InvalidUsername(#[from] UsernameError),
     #[error("Invalid action: {info}")]
     InvalidAction { info: String },
     #[error("Not found: {reason}")]

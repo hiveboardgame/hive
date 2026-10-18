@@ -1,5 +1,4 @@
 use crate::{
-    components::molecules::time_row::format_compact_duration,
     i18n::*,
     providers::{RoundRobinStateStoreFields, SwissStateStoreFields, TournamentFormatState},
     responses::TournamentMemberships,
@@ -10,7 +9,6 @@ use leptos::prelude::*;
 use shared_types::{
     tournament::{swiss::System as SwissSystem, ReleasePolicy, SlotKey},
     tournament_view::SlotResponse,
-    RealtimeClock,
 };
 use uuid::Uuid;
 
@@ -145,14 +143,4 @@ pub(crate) fn result_marker_color(marker: &str) -> &'static str {
         "L" => "text-ladybug-red",
         _ => "text-gray-500 dark:text-gray-400",
     }
-}
-
-pub(crate) fn compact_realtime_clock(clock: RealtimeClock) -> String {
-    let seconds = clock.base_seconds.get();
-    let base = if seconds.is_multiple_of(60) {
-        (seconds / 60).to_string()
-    } else {
-        format_compact_duration(seconds)
-    };
-    format!("{base}+{}", clock.increment_seconds)
 }

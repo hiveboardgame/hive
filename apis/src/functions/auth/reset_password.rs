@@ -8,11 +8,9 @@ pub async fn reset_password(
     new_password_confirmation: String,
 ) -> Result<(), ServerFnError> {
     use crate::{
+        common::validate_password,
         email::hash_token,
-        functions::{
-            auth::password::{hash_password, validate_password},
-            db::pool,
-        },
+        functions::{auth::password::hash_password, db::pool},
     };
     use db_lib::{
         db_error::DbError,

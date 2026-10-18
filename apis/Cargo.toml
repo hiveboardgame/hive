@@ -65,6 +65,7 @@ resvg = { workspace = true, optional = true }
 rustls = { workspace = true, optional = true }
 web-push = { workspace = true, optional = true }
 web-time = { workspace = true }
+percent-encoding = { workspace = true }
 url = { workspace = true }
 reactive_stores = { workspace = true }
 # rc: websocket messages carry Arc<GameResponse>, so one fanout shares one allocation.

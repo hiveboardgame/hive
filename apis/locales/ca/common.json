@@ -126,7 +126,6 @@
     "account": {
         "manage_password_changes_and_account_deletion": "Gestiona els canvis de contrasenya i l'eliminació del compte.",
         "change_password": "Canvia la contrasenya",
-        "password_must_be_at_least_8_characters_and_match": "La contrasenya ha de tenir almenys 8 caràcters i coincidir amb la confirmació",
         "password_update_failed": "Error en actualitzar la contrasenya. Comprova la contrasenya actual i torna-ho a provar.",
         "title": "Compte"
     },
@@ -255,12 +254,14 @@
         "create_an_account_to_play_and_join_tournaments": "Crea un compte per jugar i participar en tornejos.",
         "checking_your_reset_link": "Comprovant l'enllaç de restabliment…",
         "reset_your_password": "Restableix la contrasenya",
-        "passwords_must_match_and_be_at_least_8_characters": "Les contrasenyes han de coincidir i tenir almenys 8 caràcters.",
         "reset_password": "Restableix la contrasenya",
         "couldn_t_reset_your_password_the_link_may_have": "No s'ha pogut restablir la contrasenya. L'enllaç pot haver caducat; demana'n un de nou.",
         "this_link_has_expired": "Aquest enllaç ha caducat",
         "this_password_reset_link_is_invalid_or_has_expired": "Aquest enllaç per restablir la contrasenya no és vàlid o ha caducat. Demana'n un de nou i te l'enviarem per correu.",
-        "request_a_new_link": "Demana un enllaç nou"
+        "request_a_new_link": "Demana un enllaç nou",
+        "password_too_short": "Fes servir almenys {{min}} caràcters.",
+        "password_too_long": "Fes servir com a màxim {{max}} caràcters.",
+        "passwords_do_not_match": "Les contrasenyes no coincideixen."
     },
     "learn": {
         "puzzles": {

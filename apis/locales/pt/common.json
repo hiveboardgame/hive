@@ -126,7 +126,6 @@
     "account": {
         "manage_password_changes_and_account_deletion": "Gere as alterações de palavra-passe e a eliminação da conta.",
         "change_password": "Alterar palavra-passe",
-        "password_must_be_at_least_8_characters_and_match": "A palavra-passe deve ter pelo menos 8 caracteres e coincidir com a confirmação",
         "password_update_failed": "Erro ao atualizar a palavra-passe. Verifica a palavra-passe atual e tenta novamente.",
         "title": "Conta"
     },
@@ -255,12 +254,14 @@
         "create_an_account_to_play_and_join_tournaments": "Cria uma conta para jogar e participar em torneios.",
         "checking_your_reset_link": "A verificar a ligação de reposição…",
         "reset_your_password": "Repõe a tua palavra-passe",
-        "passwords_must_match_and_be_at_least_8_characters": "As palavras-passe devem coincidir e ter pelo menos 8 caracteres.",
         "reset_password": "Repor palavra-passe",
         "couldn_t_reset_your_password_the_link_may_have": "Não foi possível repor a tua palavra-passe. A ligação pode ter expirado; pede uma nova.",
         "this_link_has_expired": "Esta ligação expirou",
         "this_password_reset_link_is_invalid_or_has_expired": "Esta ligação para repor a palavra-passe é inválida ou expirou. Pede uma nova e enviaremos outra por email.",
-        "request_a_new_link": "Pedir nova ligação"
+        "request_a_new_link": "Pedir nova ligação",
+        "password_too_short": "Usa pelo menos {{min}} caracteres.",
+        "password_too_long": "Usa no máximo {{max}} caracteres.",
+        "passwords_do_not_match": "As palavras-passe não coincidem."
     },
     "learn": {
         "puzzles": {

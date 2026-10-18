@@ -1,7 +1,12 @@
 use super::tournament_explanations::stage_plan_label;
 use crate::{
-    common::{compact_realtime_clock, tournament_path_matches},
-    components::molecules::{modal::Modal, time_row::format_compact_duration},
+    common::{
+        format_compact_duration,
+        format_tournament_clock,
+        tournament_path_matches,
+        TournamentClockStyle,
+    },
+    components::molecules::modal::Modal,
     i18n::*,
     providers::{
         ArenaStateStoreFields,
@@ -19,7 +24,6 @@ use leptos::{html::Dialog, prelude::*};
 use leptos_router::hooks::use_location;
 use reactive_stores::Store;
 use shared_types::{
-    clock::CorrespondenceClock,
     tournament::{
         elimination::{ClinchPolicy, SeriesPlan, SetLimit, Topology},
         swiss::{RoundConfiguration, System as SwissSystem},
@@ -41,34 +45,6 @@ fn configuration(format: TournamentFormatState) -> FormatConfig {
         TournamentFormatState::Elimination(state) => {
             FormatConfig::Elimination(state.configuration().get())
         }
-    }
-}
-
-fn duration_text(seconds: u32) -> String {
-    if seconds >= 86400 && seconds.is_multiple_of(86400) {
-        let days = seconds / 86400;
-        t_string!(use_i18n(), tournaments.ui.day_count, count = days).to_string()
-    } else {
-        format_compact_duration(seconds)
-    }
-}
-
-fn clock_text(clock: Clock) -> String {
-    let i18n = use_i18n();
-    match clock {
-        Clock::Realtime(clock) => compact_realtime_clock(clock),
-        Clock::Correspondence(CorrespondenceClock::DaysPerMove { seconds_per_move }) => t_string!(
-            i18n,
-            game.time_mode.correspondence.duration_move,
-            duration = duration_text(seconds_per_move.get())
-        )
-        .to_string(),
-        Clock::Correspondence(CorrespondenceClock::TotalTimeEach { seconds_each }) => t_string!(
-            i18n,
-            tournaments.ui.time_per_player,
-            value1 = duration_text(seconds_each.get())
-        )
-        .to_string(),
     }
 }
 
@@ -181,7 +157,7 @@ fn series_summary(plan: &SeriesPlan) -> Vec<String> {
                 games = games,
                 sets = sets,
                 ending = ending,
-                value1 = clock_text(phase.clock)
+                value1 = format_tournament_clock(i18n, phase.clock, TournamentClockStyle::Detailed)
             )
             .to_string()
         })
@@ -213,7 +189,11 @@ pub fn TournamentEntrySummary(
                     t_string!(
                         i18n,
                         tournaments.ui.time_control,
-                        value1 = clock_text(config.clock)
+                        value1 = format_tournament_clock(
+                            i18n,
+                            config.clock,
+                            TournamentClockStyle::Detailed
+                        )
                     )
                     .to_string(),
                 );
@@ -318,7 +298,11 @@ pub fn TournamentEntrySummary(
                     t_string!(
                         i18n,
                         tournaments.ui.time_control,
-                        value1 = clock_text(config.clock)
+                        value1 = format_tournament_clock(
+                            i18n,
+                            config.clock,
+                            TournamentClockStyle::Detailed
+                        )
                     )
                     .to_string(),
                 );
@@ -383,7 +367,11 @@ pub fn TournamentEntrySummary(
                     i18n,
                     tournaments.ui.duration_time_control,
                     value1 = format_compact_duration(config.duration_seconds.get()),
-                    value2 = clock_text(Clock::Realtime(config.game_clock))
+                    value2 = format_tournament_clock(
+                        i18n,
+                        Clock::Realtime(config.game_clock),
+                        TournamentClockStyle::Detailed
+                    )
                 )
                 .to_string(),
                 t_string!(

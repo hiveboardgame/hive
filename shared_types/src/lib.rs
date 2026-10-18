@@ -15,7 +15,6 @@ mod notification_channel;
 mod opening_explorer;
 mod pretty_string;
 mod ready_user;
-mod reserved_username;
 mod schedule;
 mod simple_user;
 mod takeback_conf;
@@ -29,6 +28,7 @@ mod tournament_slot;
 mod tournament_snapshot;
 mod tournament_start_setup;
 pub mod tournament_view;
+mod username;
 pub use certainty::{Certainty, RANKABLE_DEVIATION};
 pub use challenge::{ChallengeDetails, ChallengeError, ChallengeVisibility};
 pub use chat_capabilities::GameChatCapabilities;
@@ -74,7 +74,6 @@ pub use notification_channel::{CHANNEL_DISCORD, CHANNEL_EMAIL, CHANNEL_PUSH};
 pub use opening_explorer::{ExplorerFilters, ExplorerMove, MIN_PLIES};
 pub use pretty_string::PrettyString;
 pub use ready_user::ReadyUser;
-pub use reserved_username::RESERVED_USERNAMES;
 pub use schedule::{ScheduleOfferStatus, LIVE_ARENA_LOOKAHEAD, SCHEDULED_GAME_GRACE};
 pub use simple_user::SimpleUser;
 pub use takeback_conf::Takeback;
@@ -83,6 +82,14 @@ pub use time_mode::{CorrespondenceMode, TimeMode};
 pub use tournament_details::{TournamentDetails, TournamentStatus};
 pub use tournament_progress::{SlotAdminAction, SwissProgress, SwissRoundSummary};
 pub use tournament_start_setup::TournamentStartSetup;
+pub use username::{
+    validate_username,
+    UsernameError,
+    DELETED_USERNAME_PREFIX,
+    DELETED_USER_DISPLAY_NAME,
+    MAX_USERNAME_LENGTH,
+    MIN_USERNAME_LENGTH,
+};
 pub mod tournament {
     pub use crate::{
         clock::{Clock, ClockPartsError, CorrespondenceClock, RealtimeClock},

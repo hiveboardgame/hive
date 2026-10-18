@@ -1,4 +1,5 @@
 use crate::{
+    common::{password_error_message, password_requirements_message, validate_password},
     components::{
         layouts::page_shell::{PageShell, PageShellVariant},
         molecules::page_card::PageCard,
@@ -8,9 +9,8 @@ use crate::{
     i18n::{t, t_string, use_i18n},
     security::csrf::ActionForm,
 };
-use leptos::{either::Either, leptos_dom::helpers::debounce, prelude::*};
+use leptos::{either::Either, prelude::*};
 use leptos_router::hooks::use_query_map;
-use std::time::Duration;
 
 #[component]
 pub fn ResetPassword() -> impl IntoView {
@@ -26,9 +26,15 @@ pub fn ResetPassword() -> impl IntoView {
     let action = ServerAction::<ResetPassword>::new();
     let new_password = RwSignal::new(String::new());
     let confirm_password = RwSignal::new(String::new());
-    let password_invalid = move || {
-        let new_pw = new_password();
-        !(7 < new_pw.len() && new_pw == confirm_password())
+    let password_validation =
+        Memo::new(move |_| validate_password(&new_password(), &confirm_password()));
+    let password_invalid = move || password_validation.get().is_err();
+    let password_blurred = RwSignal::new(false);
+    let password_error = move || {
+        password_validation
+            .get()
+            .err()
+            .filter(|error| error.is_ready_to_display(password_blurred(), &confirm_password()))
     };
     let display_error = move || action.value().get().is_some_and(|result| result.is_err());
     view! {
@@ -61,46 +67,41 @@ pub fn ResetPassword() -> impl IntoView {
                                                         {t!(i18n, common.new_password)}
                                                     </span>
                                                     <input
-                                                        on:input=debounce(
-                                                            Duration::from_millis(250),
-                                                            update_from_input(new_password),
-                                                        )
+                                                        on:input=update_from_input(new_password)
+                                                        on:blur=move |_| password_blurred.set(true)
                                                         class="ui-field-input"
                                                         name="new_password"
                                                         type="password"
                                                         prop:value=new_password
                                                         autocomplete="new-password"
                                                         placeholder=move || t_string!(i18n, common.new_password)
-                                                        minlength="8"
-                                                        maxlength="128"
                                                     />
+                                                    <small class="ui-field-helper">
+                                                        {move || password_requirements_message(i18n)}
+                                                    </small>
                                                 </label>
                                                 <label class="flex flex-col gap-1.5">
                                                     <span class="ui-field-label">
                                                         {t!(i18n, common.confirm_password)}
                                                     </span>
                                                     <input
-                                                        on:input=debounce(
-                                                            Duration::from_millis(250),
-                                                            update_from_input(confirm_password),
-                                                        )
+                                                        on:input=update_from_input(confirm_password)
                                                         class="ui-field-input"
                                                         name="new_password_confirmation"
                                                         type="password"
                                                         prop:value=confirm_password
                                                         autocomplete="new-password"
                                                         placeholder=move || t_string!(i18n, common.confirm_password)
-                                                        minlength="8"
-                                                        maxlength="128"
                                                     />
                                                 </label>
                                                 <Show when=move || {
-                                                    password_invalid() && !new_password().is_empty()
+                                                    password_error().is_some() && !new_password().is_empty()
                                                 }>
                                                     <small class="ui-field-error">
-                                                        {t!(
-                                                            i18n, common.auth.passwords_must_match_and_be_at_least_8_characters
-                                                        )}
+                                                        {move || {
+                                                            password_error()
+                                                                .map(|error| password_error_message(i18n, error))
+                                                        }}
                                                     </small>
                                                 </Show>
                                                 <button

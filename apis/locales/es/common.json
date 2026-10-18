@@ -126,7 +126,6 @@
     "account": {
         "manage_password_changes_and_account_deletion": "Gestiona los cambios de contraseña y la eliminación de la cuenta.",
         "change_password": "Cambiar contraseña",
-        "password_must_be_at_least_8_characters_and_match": "La contraseña debe tener al menos 8 caracteres y coincidir con la confirmación",
         "password_update_failed": "Error al actualizar la contraseña. Comprueba tu contraseña actual e inténtalo de nuevo.",
         "title": "Cuenta"
     },
@@ -255,12 +254,14 @@
         "create_an_account_to_play_and_join_tournaments": "Crea una cuenta para jugar y participar en torneos.",
         "checking_your_reset_link": "Comprobando el enlace de restablecimiento…",
         "reset_your_password": "Restablece tu contraseña",
-        "passwords_must_match_and_be_at_least_8_characters": "Las contraseñas deben coincidir y tener al menos 8 caracteres.",
         "reset_password": "Restablecer contraseña",
         "couldn_t_reset_your_password_the_link_may_have": "No se pudo restablecer tu contraseña. El enlace puede haber caducado; solicita uno nuevo.",
         "this_link_has_expired": "Este enlace ha caducado",
         "this_password_reset_link_is_invalid_or_has_expired": "Este enlace para restablecer la contraseña no es válido o ha caducado. Solicita uno nuevo y te lo enviaremos por correo.",
-        "request_a_new_link": "Solicitar un nuevo enlace"
+        "request_a_new_link": "Solicitar un nuevo enlace",
+        "password_too_short": "Usa al menos {{min}} caracteres.",
+        "password_too_long": "Usa como máximo {{max}} caracteres.",
+        "passwords_do_not_match": "Las contraseñas no coinciden."
     },
     "learn": {
         "puzzles": {

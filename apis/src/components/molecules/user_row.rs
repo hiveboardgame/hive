@@ -1,5 +1,5 @@
 use crate::{
-    common::{with_class, UserAction},
+    common::{display_username, with_class, UserAction},
     components::{
         atoms::{
             direct_challenge_button::DirectChallengeButton,
@@ -95,7 +95,8 @@ pub fn UserRow(
                 <div class="flex items-center min-w-0">
                     <StatusIndicator username=username.get_value() deleted=user_deleted />
                     <span class="text-xs font-bold truncate max-w-[120px]">
-                        {user.username.clone()} <Show when=move || user_bot>
+                        {move || display_username(i18n, user_deleted, &username.get_value())}
+                        <Show when=move || user_bot>
                             <span class="ml-1 text-[80%]">
                                 {move || t_string!(i18n, common.bot)}
                             </span>

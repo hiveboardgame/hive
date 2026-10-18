@@ -126,7 +126,6 @@
     "account": {
         "manage_password_changes_and_account_deletion": "Gérez le mot de passe et la suppression du compte.",
         "change_password": "Changer le mot de passe",
-        "password_must_be_at_least_8_characters_and_match": "Le mot de passe doit contenir au moins 8 caractères et correspondre à la confirmation",
         "password_update_failed": "Impossible de modifier le mot de passe. Vérifiez votre mot de passe actuel et réessayez.",
         "title": "Compte"
     },
@@ -255,12 +254,14 @@
         "create_an_account_to_play_and_join_tournaments": "Créez un compte pour jouer et participer aux tournois.",
         "checking_your_reset_link": "Vérification du lien…",
         "reset_your_password": "Réinitialisez votre mot de passe",
-        "passwords_must_match_and_be_at_least_8_characters": "Les mots de passe doivent être identiques et contenir au moins 8 caractères.",
         "reset_password": "Réinitialiser",
         "couldn_t_reset_your_password_the_link_may_have": "Impossible de réinitialiser le mot de passe. Le lien a peut-être expiré : demandez-en un nouveau.",
         "this_link_has_expired": "Ce lien a expiré",
         "this_password_reset_link_is_invalid_or_has_expired": "Ce lien est invalide ou a expiré. Demandez-en un nouveau pour le recevoir par e-mail.",
-        "request_a_new_link": "Demander un nouveau lien"
+        "request_a_new_link": "Demander un nouveau lien",
+        "password_too_short": "Utilisez au moins {{min}} caractères.",
+        "password_too_long": "Utilisez au maximum {{max}} caractères.",
+        "passwords_do_not_match": "Les mots de passe ne correspondent pas."
     },
     "learn": {
         "puzzles": {

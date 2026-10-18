@@ -21,7 +21,9 @@
         "username": {
             "error": {
                 "taken": "Nom d'usuari ja utilitzat",
-                "invalid": "Caracter invàlid al nom d'usuari"
+                "invalid": "Caracter invàlid al nom d'usuari",
+                "reserved": "Aquest nom d'usuari està reservat.",
+                "length": "El nom d'usuari ha de tenir entre {{min}} i {{max}} caràcters."
             },
             "description": "Si us plau, tria un nom d'usuari adequat per tothom. Tancarem tots els comptes amb noms d'usuari inapropiats!"
         },
@@ -36,8 +38,7 @@
         "be_nice_checkbox": "Estic d'acord en ser educat amb els altres jugadors i denuciar abusos a Discord",
         "legal_notice": "En crear un compte, acceptes les nostres <terms_link>Condicions del servei</terms_link>. La nostra <privacy_link>Política de privadesa</privacy_link> explica com tractem les teves dades.",
         "registration_error": "El registre ha fallat",
-        "password_requirements": "Almenys 8 caracters",
-        "password_error": "La contrassenya és massa curta o no coincideix"
+        "password_requirements": "Fes servir entre {{min}} i {{max}} caràcters."
     },
     "login": {
         "login_button": "Inicia sessió",

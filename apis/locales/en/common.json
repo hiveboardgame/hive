@@ -124,7 +124,6 @@
     "account": {
         "manage_password_changes_and_account_deletion": "Manage password changes and account deletion.",
         "change_password": "Change Password",
-        "password_must_be_at_least_8_characters_and_match": "Password must be at least 8 characters and match confirmation",
         "password_update_failed": "Error updating password. Please check your current password and try again.",
         "title": "Account"
     },
@@ -253,12 +252,14 @@
         "create_an_account_to_play_and_join_tournaments": "Create an account to play and join tournaments.",
         "checking_your_reset_link": "Checking your reset link…",
         "reset_your_password": "Reset your password",
-        "passwords_must_match_and_be_at_least_8_characters": "Passwords must match and be at least 8 characters.",
         "reset_password": "Reset password",
         "couldn_t_reset_your_password_the_link_may_have": "Couldn't reset your password. The link may have expired — request a new one.",
         "this_link_has_expired": "This link has expired",
         "this_password_reset_link_is_invalid_or_has_expired": "This password reset link is invalid or has expired. Request a new one and we'll email you a fresh link.",
-        "request_a_new_link": "Request a new link"
+        "request_a_new_link": "Request a new link",
+        "password_too_short": "Use at least {{min}} characters.",
+        "password_too_long": "Use no more than {{max}} characters.",
+        "passwords_do_not_match": "Passwords do not match."
     },
     "learn": {
         "puzzles": {

@@ -126,7 +126,6 @@
     "account": {
         "manage_password_changes_and_account_deletion": "Изменение пароля и удаление учётной записи.",
         "change_password": "Изменить пароль",
-        "password_must_be_at_least_8_characters_and_match": "Пароль должен содержать не менее 8 символов и совпадать с подтверждением",
         "password_update_failed": "Не удалось изменить пароль. Проверьте текущий пароль и повторите попытку.",
         "title": "Учётная запись"
     },
@@ -255,12 +254,14 @@
         "create_an_account_to_play_and_join_tournaments": "Создайте учётную запись, чтобы играть и участвовать в турнирах.",
         "checking_your_reset_link": "Проверка ссылки для сброса…",
         "reset_your_password": "Сбросить пароль",
-        "passwords_must_match_and_be_at_least_8_characters": "Пароли должны совпадать и содержать не менее 8 символов.",
         "reset_password": "Сбросить пароль",
         "couldn_t_reset_your_password_the_link_may_have": "Не удалось сбросить пароль. Возможно, срок действия ссылки истёк — запросите новую.",
         "this_link_has_expired": "Срок действия ссылки истёк",
         "this_password_reset_link_is_invalid_or_has_expired": "Ссылка для сброса пароля недействительна или устарела. Запросите новую, и мы отправим её по почте.",
-        "request_a_new_link": "Запросить новую ссылку"
+        "request_a_new_link": "Запросить новую ссылку",
+        "password_too_short": "Используйте не менее {{min}} символов.",
+        "password_too_long": "Используйте не более {{max}} символов.",
+        "passwords_do_not_match": "Пароли не совпадают."
     },
     "learn": {
         "puzzles": {

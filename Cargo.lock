@@ -497,6 +497,7 @@ dependencies = [
  "lru",
  "markdown",
  "nanoid",
+ "percent-encoding",
  "rand 0.10.2",
  "reactive_stores",
  "reqwest",
