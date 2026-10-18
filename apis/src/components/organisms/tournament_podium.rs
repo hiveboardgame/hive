@@ -1,12 +1,13 @@
 use crate::{
     common::{
+        arena_player_rating,
         display_standing_rows,
         primary_score_presentation,
         standings_count,
         standings_value_text,
         StandingsCount,
     },
-    components::organisms::tournament_inspector::TournamentSelection,
+    components::{atoms::rating::Rating, organisms::tournament_inspector::TournamentSelection},
     i18n::*,
     providers::{
         ArenaStateStoreFields,
@@ -32,29 +33,14 @@ use shared_types::{
     },
     GameSpeed,
 };
-use std::{collections::BTreeMap, fmt};
+use std::collections::BTreeMap;
 use uuid::Uuid;
-
-#[derive(Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
-enum PlayerRating {
-    Arena(i32),
-    Standard(u64),
-}
-
-impl fmt::Display for PlayerRating {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Arena(rating) => rating.fmt(formatter),
-            Self::Standard(rating) => rating.fmt(formatter),
-        }
-    }
-}
 
 #[derive(Clone)]
 struct PodiumPlayer {
     id: Uuid,
     name: String,
-    rating: Option<PlayerRating>,
+    rating: Option<u64>,
     seed: Option<usize>,
     score: Option<String>,
     performance: Option<i32>,
@@ -139,20 +125,13 @@ fn standing_podium(
             PodiumPlayer {
                 id: user.uid,
                 name: user.username.clone(),
-                rating: player_arena_stats
-                    .as_ref()
-                    .and_then(|stats| stats.arena_rating)
-                    .map(PlayerRating::Arena)
-                    .or_else(|| {
-                        arena
-                            .is_none()
-                            .then(|| {
-                                speed.as_ref().map(|speed| {
-                                    PlayerRating::Standard(user.rating_for_speed(speed))
-                                })
-                            })
-                            .flatten()
-                    }),
+                rating: match player_arena_stats.as_ref() {
+                    Some(stats) => arena_player_rating(stats),
+                    None if arena.is_none() => {
+                        speed.as_ref().map(|speed| user.rating_for_speed(speed))
+                    }
+                    None => None,
+                },
                 seed: memberships
                     .pairing_numbers
                     .get(&row.user_id)
@@ -198,7 +177,7 @@ fn elimination_player(
     Some(PodiumPlayer {
         id: user.uid,
         name: user.username.clone(),
-        rating: speed.map(|speed| PlayerRating::Standard(user.rating_for_speed(speed))),
+        rating: speed.map(|speed| user.rating_for_speed(speed)),
         seed: memberships
             .pairing_numbers
             .get(&player)
@@ -424,7 +403,7 @@ pub fn TournamentPodium(
                                                                 .map(|rating| {
                                                                     view! {
                                                                         <span class="text-xs italic text-gray-500 dark:text-gray-400 shrink-0">
-                                                                            {rating.to_string()}
+                                                                            <Rating value=rating />
                                                                         </span>
                                                                     }
                                                                 })}

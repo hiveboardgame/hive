@@ -192,7 +192,7 @@ async fn handle_text(
 ) {
     data.telemetry.record_message_received(text.len());
 
-    // Only bots send text frames, and they are writing the JSON by hand: tell them what is
+    // JSON clients can write their frames by hand: tell them what is
     // wrong instead of leaving them waiting for a reply that will never come.
     let request = match serde_json::from_str(text) {
         Ok(request) => request,
@@ -523,6 +523,7 @@ async fn handle_auth(
         username: user.username.clone(),
         admin: user.admin,
         authed: true,
+        bot: user.bot,
     };
 
     // Built before the identity swap: a failure here must leave the socket anonymous,
@@ -841,10 +842,12 @@ mod tests {
                     username: "anonymous".to_string(),
                     admin: false,
                     authed: false,
+                    bot: false,
                 }));
 
                 super::handle_auth(&token, &hub, &socket, &pool, &jwt_secret, &identity).await;
                 assert!(super::current_identity(&identity).authed);
+                assert!(super::current_identity(&identity).bot);
                 super::handle_auth(&token, &hub, &socket, &pool, &jwt_secret, &identity).await;
 
                 let mut frames = Vec::new();
@@ -906,6 +909,7 @@ mod tests {
             username: "anonymous".to_string(),
             admin: false,
             authed: false,
+            bot: false,
         };
         let identity = Arc::new(Mutex::new(anonymous.clone()));
         let jwt_secret = Arc::new(JwtSecret::new("test-secret".to_string()));
@@ -956,6 +960,7 @@ mod tests {
             username: "anonymous".to_string(),
             admin: false,
             authed: false,
+            bot: false,
         }));
         let jwt_secret = Arc::new(JwtSecret::new("test-secret".to_string()));
         let request = ClientRequest::Game {

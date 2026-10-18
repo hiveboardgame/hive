@@ -1,28 +1,77 @@
-use crate::responses::RatingResponse;
 use icondata_core;
 use leptos::prelude::*;
 use leptos_icons::*;
-use shared_types::{Certainty, GameSpeed};
+use shared_types::{rounded_rating, Certainty, GameSpeed};
+
+#[derive(Clone, Default)]
+pub struct RatingValue {
+    number: Option<i64>,
+}
+
+impl From<f64> for RatingValue {
+    fn from(rating: f64) -> Self {
+        Self {
+            number: rounded_rating(rating).map(i64::from),
+        }
+    }
+}
+
+impl From<u64> for RatingValue {
+    fn from(rating: u64) -> Self {
+        Self {
+            number: i64::try_from(rating).ok(),
+        }
+    }
+}
+
+impl From<i32> for RatingValue {
+    fn from(rating: i32) -> Self {
+        Self {
+            number: Some(i64::from(rating)),
+        }
+    }
+}
+
+impl From<u32> for RatingValue {
+    fn from(rating: u32) -> Self {
+        Self {
+            number: Some(i64::from(rating)),
+        }
+    }
+}
+
+impl<T: Into<RatingValue>> From<Option<T>> for RatingValue {
+    fn from(rating: Option<T>) -> Self {
+        rating.map(Into::into).unwrap_or_default()
+    }
+}
 
 #[component]
-pub fn Rating(rating: RatingResponse) -> impl IntoView {
-    let certainty_str = match rating.certainty {
-        Certainty::Clueless => "?",
-        Certainty::Provisional => "~",
-        Certainty::Rankable => "",
+pub fn Rating(
+    #[prop(into)] value: RatingValue,
+    #[prop(optional_no_strip, into)] certainty: Option<Certainty>,
+) -> impl IntoView {
+    let certainty_str = match certainty {
+        Some(Certainty::Clueless) => "?",
+        Some(Certainty::Provisional) => "~",
+        Some(Certainty::Rankable) | None => "",
     };
     view! {
-        {rating.rating}
+        {value.number.map(|rating| rating.to_string()).unwrap_or_else(|| String::from("—"))}
         {certainty_str}
     }
 }
 
 #[component]
-pub fn RatingWithIcon(rating: StoredValue<RatingResponse>) -> impl IntoView {
+pub fn RatingWithIcon(
+    #[prop(into)] value: RatingValue,
+    speed: GameSpeed,
+    #[prop(optional_no_strip, into)] certainty: Option<Certainty>,
+) -> impl IntoView {
     view! {
         <div class="flex flex-row gap-1 items-center">
-            <Icon icon=icon_for_speed(rating.with_value(|r| r.speed)) attr:class="size-4" />
-            <Rating rating=rating.get_value() />
+            <Icon icon=icon_for_speed(speed) attr:class="size-4" />
+            <Rating value certainty />
         </div>
     }
 }

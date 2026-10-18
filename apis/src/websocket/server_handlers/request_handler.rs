@@ -486,6 +486,7 @@ mod tests {
                 username: "anonymous".to_string(),
                 authed: false,
                 admin: false,
+                bot: false,
             },
         )
         .await;
@@ -519,6 +520,7 @@ mod tests {
                 username: "anonymous".to_string(),
                 authed: false,
                 admin: false,
+                bot: false,
             },
         )
         .await;
@@ -543,6 +545,7 @@ mod tests {
                 username: "anonymous".to_string(),
                 authed: false,
                 admin: false,
+                bot: false,
             },
         )
         .await;
@@ -580,6 +583,7 @@ mod tests {
             username: "anonymous".to_string(),
             authed: false,
             admin: false,
+            bot: false,
         }
     }
 
@@ -589,6 +593,7 @@ mod tests {
             username: "bot".to_string(),
             authed: true,
             admin: false,
+            bot: true,
         }
     }
 

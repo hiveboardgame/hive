@@ -137,6 +137,7 @@
         "optimal": "Optimal",
         "duration_hours": "{{hours}} h",
         "duration_hours_minutes": "{{hours}} h {{minutes}} min",
+        "duration_minutes": "{{minutes}} min",
         "rounds_range": "{{minimum}}–{{maximum}} rondes",
         "one_round": "1 ronde",
         "rounds_count": "{{count}} rondes",
@@ -185,7 +186,7 @@
             "berserk_bonus": "{{points}} points de tournoi supplémentaires",
             "berserk_help": "Berserk supprime votre incrément et, si possible, divise votre temps initial par deux. Une victoire rapporte {{bonus}} si la partie dure au moins {{moves}} coups individuels. Activez-le avant votre premier coup.",
             "berserk_disabled": "Berserk est désactivé pour cette Arène.",
-            "arena_pairing": "Les premiers appariements utilisent les classements. Après chaque partie, vous affrontez un adversaire proche de votre rang dans le tournoi.",
+            "arena_pairing": "Les premiers appariements se basent sur les classements, les suivants sur votre rang dans le tournoi. Gardez la page de l'arène ouverte ou revenez-y pour trouver votre prochain adversaire.",
             "arena_end": "Le classement est figé lorsque le compte à rebours atteint zéro. Terminez toute partie encore en cours ; son résultat ne modifiera pas le classement."
         },
         "rules_summary": {
@@ -573,7 +574,7 @@
         "new_pairings_each_round_based_on_standings": "Nouveaux appariements à chaque ronde, selon le classement.",
         "win_a_set_to_win_the_match_tied_sets_are_replayed": "Gagnez une série pour remporter le match. Les séries nulles sont rejouées.",
         "a_second_final_is_played_if_the_lower_bracket_winner_wins_the_first": "Une seconde finale est jouée si le vainqueur du tableau inférieur remporte la première.",
-        "you_ll_keep_getting_new_opponents_while_the_arena_is_running": "Vous recevrez de nouveaux adversaires tant que l'arène est en cours.",
+        "you_ll_keep_getting_new_opponents_while_the_arena_is_running": "Gardez la page de l'arène ouverte ou revenez après chaque partie pour trouver votre prochain adversaire.",
         "arena_leave_after_start_help": "Une fois le tournoi commencé, vous ne pouvez plus le quitter. Mettez en pause pour arrêter les nouveaux appariements ; votre partie en cours continue.",
         "each_match": "Chaque match",
         "if_still_tied": "Si l'égalité persiste",

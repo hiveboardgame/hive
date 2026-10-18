@@ -11,7 +11,13 @@ pub fn HoverRating(user: UserResponse, anchor_ref: NodeRef<html::A>) -> impl Int
         .iter()
         .map(|speed| {
             if let Some(rating) = user.ratings.get(speed) {
-                Either::Left(view! { <RatingWithIcon rating=StoredValue::new(rating.clone()) /> })
+                Either::Left(view! {
+                    <RatingWithIcon
+                        value=rating.rating
+                        speed=rating.speed
+                        certainty=rating.certainty.clone()
+                    />
+                })
             } else {
                 Either::Right("")
             }

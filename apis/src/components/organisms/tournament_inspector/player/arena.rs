@@ -1,5 +1,5 @@
 use super::*;
-use crate::i18n::*;
+use crate::{components::atoms::rating::Rating, i18n::*};
 use shared_types::tournament_view::ArenaPlayerStatsResponse;
 
 use reactive_stores::ArcField;
@@ -147,7 +147,7 @@ fn ArenaPlayerHistoryRow(
                                     .map(|rating| {
                                         view! {
                                             <span class="text-xs italic text-gray-500 dark:text-gray-400 shrink-0">
-                                                "· " {rating}
+                                                "· " <Rating value=rating />
                                             </span>
                                         }
                                     })}
@@ -230,11 +230,6 @@ pub(super) fn ArenaPlayerDetailsBody(
                             <dl class="grid gap-y-1 gap-x-4 px-1 text-sm grid-cols-[minmax(0,1fr)_auto]">
                                 {performance
                                     .map(|(performance, performance_games)| {
-                                        let value = if performance_games < 3 {
-                                            format!("{performance}?")
-                                        } else {
-                                            performance.to_string()
-                                        };
                                         view! {
                                             <dt class="text-gray-600 dark:text-gray-300">
                                                 {move || {
@@ -242,7 +237,8 @@ pub(super) fn ArenaPlayerDetailsBody(
                                                 }}
                                             </dt>
                                             <dd class="font-semibold tabular-nums text-right">
-                                                {value}
+                                                <Rating value=performance />
+                                                {(performance_games < 3).then_some("?")}
                                             </dd>
                                         }
                                     })}
@@ -278,7 +274,7 @@ pub(super) fn ArenaPlayerDetailsBody(
                                                 {t!(i18n, tournaments.view.arena.average_opponent)}
                                             </dt>
                                             <dd class="font-semibold tabular-nums text-right">
-                                                {rating}
+                                                <Rating value=rating />
                                             </dd>
                                         }
                                     })}

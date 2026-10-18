@@ -8,11 +8,6 @@ use serde::{Deserialize, Serialize};
 use shared_types::{ConversationKey, GameId, TournamentId};
 use uuid::Uuid;
 
-// Bump when browser/server message shapes become incompatible, so stale tabs
-// are rejected before authentication and lobby snapshot work. Keep the upgrade
-// probe in scripts/smoke.sh in sync.
-pub(crate) const WEBSOCKET_PROTOCOL_VERSION: u16 = 1;
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ChatSendRequest {
     pub key: ConversationKey,

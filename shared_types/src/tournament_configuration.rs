@@ -1,4 +1,5 @@
 use crate::{Clock, RealtimeClock, TimeMode};
+use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashSet,
@@ -70,8 +71,9 @@ pub const MIN_SWISS_ROUNDS: u32 = 3;
 pub const MIN_SWISS_EXTRA_ROUNDS: i32 = -2;
 pub const MAX_SWISS_EXTRA_ROUNDS: i32 = 3;
 
-pub const ARENA_MIN_DURATION_SECONDS: u32 = 60 * 60;
+pub const ARENA_MIN_DURATION_SECONDS: u32 = 30 * 60;
 pub const ARENA_MAX_DURATION_SECONDS: u32 = 5 * 60 * 60;
+pub const ARENA_PAIRING_CUTOFF_SECONDS: i64 = 60;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -521,7 +523,29 @@ pub struct ArenaConfig {
     pub game_clock: RealtimeClock,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ArenaBoundaries {
+    pub starts_at: DateTime<Utc>,
+    pub pairing_closes_at: DateTime<Utc>,
+    pub ends_at: DateTime<Utc>,
+}
+
+impl ArenaBoundaries {
+    pub fn new(starts_at: DateTime<Utc>, duration_seconds: u32) -> Self {
+        let ends_at = starts_at + Duration::seconds(i64::from(duration_seconds));
+        Self {
+            starts_at,
+            pairing_closes_at: ends_at - Duration::seconds(ARENA_PAIRING_CUTOFF_SECONDS),
+            ends_at,
+        }
+    }
+}
+
 impl ArenaConfig {
+    pub fn boundaries(&self, starts_at: DateTime<Utc>) -> ArenaBoundaries {
+        ArenaBoundaries::new(starts_at, self.duration_seconds.get())
+    }
+
     pub fn new(duration_seconds: NonZeroU32, game_clock: RealtimeClock) -> Self {
         Self {
             rules: Self::creation_rules(game_clock),
@@ -621,7 +645,7 @@ pub enum ConfigError {
         maximum: u32,
         found: u32,
     },
-    #[error("Arena duration must be between one and five hours inclusive")]
+    #[error("Arena duration must be between 30 minutes and five hours inclusive")]
     InvalidArenaDuration,
     #[error("Arena rules are invalid: {reason}")]
     InvalidArenaRules { reason: String },

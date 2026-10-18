@@ -81,10 +81,19 @@ async fn fixture(conn: &mut DbConn<'_>) -> (Tournament, User, Vec<Uuid>) {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn setup_is_exclusive_even_against_an_admin_and_freezes_rating_seeds() {
+async fn setup_is_exclusive_and_preserves_rounded_seeds_through_confirmation() {
     let db = test_db().await;
     let mut conn = get_conn(&db.pool).await.unwrap();
     let (tournament, owner, players) = fixture(&mut conn).await;
+    let mut ordered_players = players.clone();
+    ordered_players.sort_unstable();
+    for (player, rating) in ordered_players.iter().zip([1800.4, 1800.6, 1800.49]) {
+        diesel::update(ratings::table.filter(ratings::user_uid.eq(player)))
+            .set(ratings::rating.eq(rating))
+            .execute(&mut conn)
+            .await
+            .unwrap();
+    }
     let admin = create_user("setup_admin", &mut conn).await;
     diesel::update(users::table.find(admin.id))
         .set(users::admin.eq(true))
@@ -96,6 +105,10 @@ async fn setup_is_exclusive_even_against_an_admin_and_freezes_rating_seeds() {
             .await
             .unwrap();
     let setup = prepared.start_setup().unwrap();
+    assert_eq!(
+        setup.seeded_players,
+        vec![ordered_players[1], ordered_players[0], ordered_players[2]]
+    );
     assert_eq!(setup.expires_at() - setup.opened_at, Duration::minutes(15));
     assert_eq!(prepared.status(), TournamentStatus::NotStarted);
     assert_eq!(

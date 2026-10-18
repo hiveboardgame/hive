@@ -9,7 +9,7 @@ use leptos::prelude::*;
 use leptos_i18n::I18nContext;
 use leptos_meta::Meta;
 use leptos_router::hooks::use_location;
-use shared_types::GameId;
+use shared_types::{rounded_rating, GameId};
 
 /// Real positions keep generic link previews specific without another image
 /// pipeline.
@@ -144,7 +144,9 @@ fn game_meta(game: GameResponse) -> impl IntoView {
 
 fn rating(rating: Option<f64>) -> String {
     match rating {
-        Some(rating) => format!(" ({})", rating.round() as i64),
+        Some(rating) => rounded_rating(rating)
+            .map(|rating| format!(" ({rating})"))
+            .unwrap_or_default(),
         None => String::new(),
     }
 }

@@ -43,7 +43,10 @@
     },
     "arena": {
         "berserk": "Berserk",
-        "berserk_title": "Give up your increment and, when eligible, halve your base time for extra Arena points."
+        "berserk_title": "Give up your increment and, when eligible, halve your base time for extra Arena points.",
+        "back_to_arena": "Back to arena",
+        "return_for_pairing": "Return to find your next opponent.",
+        "pairing_paused": "Pairing paused. Resume in the arena when you're ready."
     },
     "realtime_assignments": {
         "title": "Realtime games ready",

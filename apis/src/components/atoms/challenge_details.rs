@@ -11,6 +11,7 @@ use crate::{
         atoms::{
             color_choice_hex::ColorChoiceHex,
             profile_link::ProfileLink,
+            rating::Rating,
             status_indicator::StatusIndicator,
         },
         molecules::time_row::TimeRow,
@@ -134,7 +135,9 @@ pub fn ChallengeDetails(
                                             extend_tw_classes="truncate max-w-[9rem]"
                                             wrapper_tw_classes="min-w-0 shrink"
                                         />
-                                        <span class=CHALLENGE_RATING_CLASS>{rating}</span>
+                                        <span class=CHALLENGE_RATING_CLASS>
+                                            <Rating value=rating />
+                                        </span>
                                     </div>
                                 }
                             })

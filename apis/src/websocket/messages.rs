@@ -388,6 +388,7 @@ mod outbound_tests {
 
 #[derive(Clone, Debug)]
 pub struct SocketHandle {
+    pub bot: bool,
     pub tx: mpsc::Sender<Bytes>,
     pub format: SocketFormat,
 }

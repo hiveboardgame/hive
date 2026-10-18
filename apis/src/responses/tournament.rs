@@ -4,7 +4,15 @@ use chrono::{DateTime, Utc};
 use hive_lib::Color;
 use serde::{Deserialize, Serialize};
 use shared_types::{
-    tournament::{standings::Snapshot, BotAdmission, Config, Format, FormatConfig},
+    rounded_rating,
+    tournament::{
+        arena::PairingIntent,
+        standings::Snapshot,
+        BotAdmission,
+        Config,
+        Format,
+        FormatConfig,
+    },
     tournament_view::{
         ArenaGameResponse,
         ArenaPlayerStatsResponse,
@@ -26,6 +34,13 @@ use std::{
 use uuid::Uuid;
 
 pub const TOURNAMENT_BROWSE_PAGE_SIZE: usize = 20;
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ArenaPairingStatus {
+    pub intent: PairingIntent,
+    pub active_game: Option<GameId>,
+    pub pairing_seconds_left: i64,
+}
 
 #[derive(Clone, Copy, Serialize, Deserialize, Debug, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -272,7 +287,7 @@ impl TournamentAdmission {
             BotAdmission::BotsOnly if !bot => return Access::BotsOnly,
             _ => (),
         }
-        let rating = rating.round();
+        let rating = rounded_rating(rating).map_or(rating, f64::from);
         if let Some(lower) = self
             .restrictions
             .band_lower
@@ -475,7 +490,6 @@ impl TournamentCardResponse {
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 use anyhow::{Error, Result};
-use chrono::Duration;
 use shared_types::GameSpeed;
 use db_lib::models::User;
 #[cfg(feature = "ssr")]
@@ -924,7 +938,7 @@ impl TournamentCardResponse {
                         entry_open: joining_relevant,
                         arena_ends_at: match &configuration.format {
                             FormatConfig::Arena(arena) => tournament.starts_at.map(|starts_at| {
-                                starts_at + Duration::seconds(i64::from(arena.duration_seconds.get()))
+                                arena.boundaries(starts_at).ends_at
                             }),
                             _ => None,
                         },

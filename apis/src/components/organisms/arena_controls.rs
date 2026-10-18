@@ -2,6 +2,7 @@ use super::tournament_entry::TournamentJoinButton;
 use crate::{
     common::{tournament_admission_viewer, TournamentAction},
     components::atoms::login_button::LoginButton,
+    functions::tournaments::PauseArena,
     hooks::arena_clock::use_ticking_now,
     i18n::*,
     providers::{
@@ -16,7 +17,7 @@ use crate::{
     },
     responses::{AdmissionRestrictions, TournamentAdmission, ViewerRelationship},
 };
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 use leptos::prelude::*;
 use reactive_stores::{ArcField, Store};
 use shared_types::{
@@ -51,19 +52,20 @@ pub fn ArenaAction(common: Store<TournamentCommon>, arena: Store<ArenaState>) ->
     let auth_context = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
     let now = use_ticking_now();
+    let pause = ServerAction::<PauseArena>::new();
 
     let user_id =
         Signal::derive(move || auth_context.identity.get().and_then(AuthIdentity::user_id));
     let arena_times = Signal::derive(move || {
         let lifecycle = common.lifecycle().get();
-        lifecycle
-            .starts_at
-            .zip(Some(arena.configuration().get().duration_seconds.get()))
-            .map(|(starts_at, duration)| {
-                let ends_at = starts_at + Duration::seconds(duration as i64);
-                let pairing_closes_at = ends_at - Duration::seconds(60);
-                (starts_at, pairing_closes_at, ends_at)
-            })
+        lifecycle.starts_at.map(|starts_at| {
+            let boundaries = arena.configuration().get().boundaries(starts_at);
+            (
+                boundaries.starts_at,
+                boundaries.pairing_closes_at,
+                boundaries.ends_at,
+            )
+        })
     });
     let is_running_arena = Signal::derive(move || {
         let lifecycle = common.lifecycle().get();
@@ -275,10 +277,21 @@ pub fn ArenaAction(common: Store<TournamentCommon>, arena: Store<ArenaState>) ->
                                 )
                                     .to_string()
                             }
-                            on:click=send(TournamentAction::ArenaPause(tournament_id.get_value()))
+                            disabled=move || pause.pending().get()
+                            on:click=move |_| {
+                                pause
+                                    .dispatch(PauseArena {
+                                        tournament_id: tournament_id.get_value(),
+                                    });
+                            }
                         >
                             {t!(i18n, tournaments.arena.pause)}
                         </button>
+                    </Show>
+                    <Show when=move || pause.value().get().is_some_and(|result| result.is_err())>
+                        <p class="w-full text-xs text-red-700 dark:text-red-300" role="alert">
+                            {t!(i18n, messages.errors.request_unavailable)}
+                        </p>
                     </Show>
                     <Show when=can_resume>
                         <button
@@ -300,6 +313,7 @@ pub fn ArenaAction(common: Store<TournamentCommon>, arena: Store<ArenaState>) ->
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::Duration;
 
     #[test]
     fn delayed_worker_join_uses_scheduled_origin_and_excludes_exact_cutoff() {

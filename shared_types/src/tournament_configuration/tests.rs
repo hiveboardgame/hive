@@ -32,6 +32,21 @@ fn realtime() -> Clock {
     })
 }
 
+#[test]
+fn arena_creation_accepts_thirty_minutes() {
+    let configuration = Config {
+        bot_admission: BotAdmission::HumansOnly,
+        format: FormatConfig::Arena(ArenaConfig::new(
+            NonZeroU32::new(30 * 60).unwrap(),
+            RealtimeClock {
+                base_seconds: NonZeroU32::new(180).unwrap(),
+                increment_seconds: 3,
+            },
+        )),
+    };
+    assert_eq!(configuration.validate_for_creation(), Ok(()));
+}
+
 fn elimination(plan: EliminationSeriesPlan) -> Config {
     Config {
         bot_admission: BotAdmission::HumansAndBots,
@@ -447,6 +462,34 @@ fn round_robin_score_configuration_round_trips_and_rejects_incompatible_tiebreak
         assert_eq!(
             validate_round_robin(&round_robin),
             Err(ConfigError::RoundRobinMatchScoringRequiresEvenRepeats)
+        );
+    }
+}
+
+#[test]
+fn arena_pairing_closes_one_minute_before_the_scheduled_end() {
+    let starts_at = DateTime::from_timestamp(1_700_000_000, 0).unwrap();
+    for seconds in [
+        ARENA_MIN_DURATION_SECONDS,
+        3_600,
+        ARENA_MAX_DURATION_SECONDS,
+    ] {
+        let configuration = ArenaConfig::new(
+            NonZeroU32::new(seconds).unwrap(),
+            RealtimeClock {
+                base_seconds: NonZeroU32::new(180).unwrap(),
+                increment_seconds: 3,
+            },
+        );
+        let boundaries = configuration.boundaries(starts_at);
+        assert_eq!(boundaries.starts_at, starts_at);
+        assert_eq!(
+            boundaries.ends_at - starts_at,
+            Duration::seconds(i64::from(seconds))
+        );
+        assert_eq!(
+            boundaries.ends_at - boundaries.pairing_closes_at,
+            Duration::minutes(1)
         );
     }
 }

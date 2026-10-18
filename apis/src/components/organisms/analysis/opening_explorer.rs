@@ -6,7 +6,10 @@ use crate::{
         game_speed_label,
         PieceType,
     },
-    components::atoms::{bug_tile::BugTile, rating::icon_for_speed},
+    components::atoms::{
+        bug_tile::BugTile,
+        rating::{icon_for_speed, Rating},
+    },
     functions::opening_explorer::opening_explorer,
     i18n::*,
     providers::{
@@ -380,20 +383,10 @@ fn render_response(
 fn top_game_row(g: crate::responses::GameResponse) -> impl IntoView {
     let i18n = use_i18n();
     let href = format!("/game/{}", g.game_id.0);
-    let rating = |r: Option<f64>| {
-        r.map(|r| format!(" ({})", r.round() as i64))
-            .unwrap_or_default()
-    };
-    let white = format!(
-        "{}{}",
-        display_username(i18n, g.white_player.deleted, &g.white_player.username),
-        rating(g.white_rating)
-    );
-    let black = format!(
-        "{}{}",
-        display_username(i18n, g.black_player.deleted, &g.black_player.username),
-        rating(g.black_rating)
-    );
+    let white_name = display_username(i18n, g.white_player.deleted, &g.white_player.username);
+    let black_name = display_username(i18n, g.black_player.deleted, &g.black_player.username);
+    let white_rating = g.white_rating;
+    let black_rating = g.black_rating;
     let game_status = g.game_status.clone();
     let result = move || match &game_status {
         GameStatus::Finished(res) => game_result_label(i18n, res),
@@ -418,7 +411,25 @@ fn top_game_row(g: crate::responses::GameResponse) -> impl IntoView {
             class="block py-1 px-2 rounded transition-colors no-link-style dark:hover:bg-pillbug-teal/15 hover:bg-blue-light/70"
         >
             <div class="grid gap-y-0.5 gap-x-2 items-center grid-cols-[minmax(0,1fr)_5rem]">
-                <span class="min-w-0 truncate">{white} " – " {black}</span>
+                <span class="min-w-0 truncate">
+                    {white_name}
+                    {white_rating
+                        .map(|rating| {
+                            view! {
+                                " ("
+                                <Rating value=rating />
+                                ")"
+                            }
+                        })} " – " {black_name}
+                    {black_rating
+                        .map(|rating| {
+                            view! {
+                                " ("
+                                <Rating value=rating />
+                                ")"
+                            }
+                        })}
+                </span>
                 <span class="flex gap-1 justify-end items-center self-center font-mono shrink-0">
                     {conclusion_icon
                         .map(|icon| view! { <Icon icon attr:class="size-4 shrink-0" /> })}

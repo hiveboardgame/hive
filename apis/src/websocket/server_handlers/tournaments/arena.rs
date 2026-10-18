@@ -125,14 +125,15 @@ impl ArenaHandler {
         conn: &mut DbConn<'_>,
     ) -> Result<HandlerOutput> {
         let presence_hub = Arc::clone(&self.hub);
+        let response_id = TournamentId(tournament.nanoid.clone());
+        let presence_id = response_id.clone();
         let outcome = arena::join_with_presence(
             tournament.id,
             self.user_id,
-            move |candidates| presence_hub.authenticated_presence_for(candidates),
+            move |candidates| presence_hub.arena_presence_for(&presence_id, candidates),
             conn,
         )
         .await?;
-        let response_id = TournamentId(tournament.nanoid.clone());
         let mut output = HandlerOutput::empty();
         append_arena_incremental_effects(
             tournament.id,
@@ -158,9 +159,12 @@ impl ArenaHandler {
         intent: PairingIntent,
         conn: &mut DbConn<'_>,
     ) -> Result<HandlerOutput> {
-        arena::set_pairing_intent(tournament_id, self.user_id, intent, conn).await?;
+        let changed = arena::set_pairing_intent(tournament_id, self.user_id, intent, conn).await?;
         let mut output = HandlerOutput::empty();
-        append_arena_player_stats_patches(tournament_id, &[self.user_id], &mut output, conn).await;
+        if changed {
+            append_arena_player_stats_patches(tournament_id, &[self.user_id], &mut output, conn)
+                .await;
+        }
         Ok(output)
     }
 }

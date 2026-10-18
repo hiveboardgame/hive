@@ -14,6 +14,7 @@ mod notification_category;
 mod notification_channel;
 mod opening_explorer;
 mod pretty_string;
+mod rating;
 mod ready_user;
 mod schedule;
 mod simple_user;
@@ -73,6 +74,7 @@ pub use notification_category::NotificationCategory;
 pub use notification_channel::{CHANNEL_DISCORD, CHANNEL_EMAIL, CHANNEL_PUSH};
 pub use opening_explorer::{ExplorerFilters, ExplorerMove, MIN_PLIES};
 pub use pretty_string::PrettyString;
+pub use rating::{rounded_rating, rounded_rating_change};
 pub use ready_user::ReadyUser;
 pub use schedule::{ScheduleOfferStatus, LIVE_ARENA_LOOKAHEAD, SCHEDULED_GAME_GRACE};
 pub use simple_user::SimpleUser;
@@ -134,10 +136,12 @@ pub mod tournament {
 
     pub mod arena {
         pub use crate::tournament_configuration::{
+            ArenaBoundaries as Boundaries,
             ArenaConfig as Config,
             PairingIntent,
             ARENA_MAX_DURATION_SECONDS as MAX_DURATION_SECONDS,
             ARENA_MIN_DURATION_SECONDS as MIN_DURATION_SECONDS,
+            ARENA_PAIRING_CUTOFF_SECONDS as PAIRING_CUTOFF_SECONDS,
         };
     }
 

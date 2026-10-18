@@ -43,7 +43,10 @@
     },
     "arena": {
         "berserk": "Berserk",
-        "berserk_title": "Verzichte auf den Zeitbonus und, wenn zulässig, auf die Hälfte der Grundzeit für zusätzliche Arena-Punkte."
+        "berserk_title": "Verzichte auf den Zeitbonus und, wenn zulässig, auf die Hälfte der Grundzeit für zusätzliche Arena-Punkte.",
+        "back_to_arena": "Zur Arena",
+        "return_for_pairing": "Zur Arena für den nächsten Gegner.",
+        "pairing_paused": "Paarung pausiert. Fortsetzen in der Arena, wenn du bereit bist."
     },
     "realtime_assignments": {
         "title": "Echtzeitpartien sind bereit",

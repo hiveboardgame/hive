@@ -1,4 +1,4 @@
-use crate::common::{ClientRequest, ServerResult, TvInterest, WEBSOCKET_PROTOCOL_VERSION};
+use crate::common::{ClientRequest, ServerResult, TvInterest};
 use leptos::prelude::*;
 use leptos_use::use_window;
 use std::sync::Arc;
@@ -817,7 +817,7 @@ fn fix_wss(url: &str) -> String {
 }
 
 pub fn provide_websocket(url: &str) {
-    let url = fix_wss(&format!("{url}?v={WEBSOCKET_PROTOCOL_VERSION}"));
+    let url = fix_wss(url);
     let ready_state = RwSignal::new(ConnectionReadyState::Closed);
     let message = RwSignal::new(None::<ServerResult>);
     let wake_resync_epoch = RwSignal::new(0_u64);

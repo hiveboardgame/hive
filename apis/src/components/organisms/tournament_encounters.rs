@@ -13,7 +13,7 @@ use crate::{
         use_fitted_pagination,
     },
     components::{
-        atoms::color_hex::ColorHex,
+        atoms::{color_hex::ColorHex, rating::Rating},
         molecules::{
             game_previews::GamePreview,
             pagination_controls::PaginationControls,
@@ -307,7 +307,7 @@ fn TournamentGamePlaceholder(
                                         {name.clone()}
                                     </span>
                                     <span class="text-xs text-gray-500">
-                                        {rating.map(|rating| rating.to_string())}
+                                        {rating.map(|rating| view! { <Rating value=rating /> })}
                                     </span>
                                 </div>
                             }
@@ -1826,28 +1826,31 @@ fn SwissRoundLedgerItem(
                             })
                     };
                     let detail = |side: usize| {
-                        let rating = swiss_encounter_rating(
-                                &configuration,
-                                &memberships,
-                                &encounter,
-                                participants[side],
-                            )
-                            .map_or_else(|| String::from("—"), |rating| rating.to_string());
-                        let score = swiss_primary_score_text(
+                        swiss_primary_score_text(
                             &configuration,
                             encounter.pre_round_primary_scores[side],
-                        );
-                        t_string!(i18n, tournaments.ui.pts, value1 = rating, value2 = score.clone())
-                            .to_string()
+                        )
                     };
                     let left = EncounterParticipant {
                         name: left_name.clone(),
                         detail: Some(detail(0)),
+                        rating: swiss_encounter_rating(
+                            &configuration,
+                            &memberships,
+                            &encounter,
+                            participants[0],
+                        ),
                         color: color(participants[0]),
                     };
                     let right = EncounterParticipant {
                         name: right_name.clone(),
                         detail: Some(detail(1)),
+                        rating: swiss_encounter_rating(
+                            &configuration,
+                            &memberships,
+                            &encounter,
+                            participants[1],
+                        ),
                         color: color(participants[1]),
                     };
                     let result = swiss_encounter_result(
@@ -1949,16 +1952,8 @@ fn SwissRoundLedgerItem(
             let participant = EncounterParticipant {
                 name,
                 color: None,
-                detail: Some(
-                    t_string!(
-                        i18n,
-                        tournaments.ui.pts,
-                        value1 =
-                            rating.map_or_else(|| String::from("—"), |rating| rating.to_string()),
-                        value2 = score
-                    )
-                    .to_string(),
-                ),
+                rating,
+                detail: Some(score),
             };
             view! {
                 <article

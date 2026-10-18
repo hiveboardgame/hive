@@ -348,7 +348,7 @@ pub async fn set_pairing_intent(
     user_id: Uuid,
     intent: PairingIntent,
     conn: &mut DbConn<'_>,
-) -> Result<(), DbError> {
+) -> Result<bool, DbError> {
     conn.transaction::<_, DbError, _>(async move |tc| {
         User::ensure_active_ids(&[user_id], tc).await?;
         let membership = TournamentUser::find_for_update(tournament_id, user_id, tc)
@@ -358,7 +358,16 @@ pub async fn set_pairing_intent(
             })?;
         let observed_at = Utc::now();
         let tournament = Tournament::find(tournament_id, tc).await?;
+        arena_configuration(&tournament)?;
+        // A post-game Pause may arrive after the Arena has finished.
+        if intent == PairingIntent::Paused && tournament.status() == TournamentStatus::Finished {
+            return Ok(false);
+        }
         let config = ensure_live_arena(&tournament)?;
+        // A post-game pause can repeat the automatic pause after a no-start.
+        if intent == PairingIntent::Paused && membership.pairing_intent()? == Some(intent) {
+            return Ok(false);
+        }
         let pairing_closes_at = load_arena_boundaries(&tournament, config)?.pairing_closes_at;
         let active = tournament.has_active_game_for(user_id, tc).await?;
         let (expected, waiting_since) = match intent {
@@ -385,9 +394,12 @@ pub async fn set_pairing_intent(
             tc,
         )
         .await?;
-        let rechecked = Tournament::find(tournament_id, tc).await?;
-        ensure_live_arena(&rechecked)?;
-        Ok(())
+        // Only Resume must roll back if finalization committed during the update.
+        if intent == PairingIntent::Enabled {
+            let rechecked = Tournament::find(tournament_id, tc).await?;
+            ensure_live_arena(&rechecked)?;
+        }
+        Ok(true)
     })
     .await
 }

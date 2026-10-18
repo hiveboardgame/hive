@@ -16,13 +16,13 @@ use crate::{
     },
     responses::TournamentAbstractResponse,
 };
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 use leptos::prelude::*;
 use leptos_icons::*;
 use leptos_use::{use_document_visibility, use_interval_fn};
 use shared_types::{
     clock::Clock,
-    tournament::{Format, FormatConfig},
+    tournament::{arena::Boundaries as ArenaBoundaries, Format, FormatConfig},
     LIVE_ARENA_LOOKAHEAD,
 };
 use uuid::Uuid;
@@ -144,7 +144,7 @@ pub fn LiveArenas() -> impl IntoView {
                                 let (starts_at, duration) = arena
                                     .scheduled_starts_at()
                                     .zip(arena.arena_duration_seconds())?;
-                                let ends_at = starts_at + Duration::seconds(duration as i64);
+                                let ends_at = ArenaBoundaries::new(starts_at, duration).ends_at;
                                 Some((arena, ends_at))
                             })
                             .collect::<Vec<_>>();

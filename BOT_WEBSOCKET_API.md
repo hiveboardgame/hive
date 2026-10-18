@@ -235,6 +235,10 @@ equivalent:
 | mark a game's notification seen | `{"NotificationSeen": {"game_id": "<nanoid>"}}` |
 | show yourself as away | `"Away"` |
 
+An enabled Arena entrant with a bot account remains available for pairing while an
+authenticated socket is connected. This depends on the account type, not the wire format.
+Human accounts must keep the Arena page open. `TournamentWatch` is not required for bot pairing.
+
 A conversation is one of:
 
 ```json

@@ -137,6 +137,7 @@
         "optimal": "Optim",
         "duration_hours": "{{hours}} h",
         "duration_hours_minutes": "{{hours}} h {{minutes}} min",
+        "duration_minutes": "{{minutes}} min",
         "rounds_range": "{{minimum}}–{{maximum}} runde",
         "one_round": "1 rundă",
         "rounds_count": "{{count}} runde",
@@ -185,7 +186,7 @@
             "berserk_bonus": "{{points}} puncte de turneu suplimentare",
             "berserk_help": "Berserk elimină incrementul și, când este posibil, înjumătățește timpul inițial. O victorie aduce {{bonus}} dacă partida durează cel puțin {{moves}} mutări individuale. Alege-l înainte de prima mutare.",
             "berserk_disabled": "Berserk este dezactivat pentru această Arenă.",
-            "arena_pairing": "Împerecherile inițiale folosesc ratingurile. După fiecare partidă, ești împerecheat cu un adversar apropiat de poziția ta în turneu.",
+            "arena_pairing": "Împerecherile inițiale se bazează pe ratinguri, iar cele ulterioare pe poziția ta în turneu. Ține pagina arenei deschisă sau revino pentru următorul adversar.",
             "arena_end": "Clasamentul se fixează când numărătoarea ajunge la zero. Încheie partidele aflate încă în desfășurare; rezultatul lor nu va afecta clasamentul."
         },
         "rules_summary": {
@@ -573,7 +574,7 @@
         "new_pairings_each_round_based_on_standings": "Împerecheri noi în fiecare rundă, după clasament.",
         "win_a_set_to_win_the_match_tied_sets_are_replayed": "Câștigă un set pentru a câștiga meciul. Seturile egale se rejoacă.",
         "a_second_final_is_played_if_the_lower_bracket_winner_wins_the_first": "Se joacă o a doua finală dacă învingătorul tabloului inferior câștigă prima finală.",
-        "you_ll_keep_getting_new_opponents_while_the_arena_is_running": "Vei primi adversari noi cât timp arena este în desfășurare.",
+        "you_ll_keep_getting_new_opponents_while_the_arena_is_running": "Ține pagina arenei deschisă sau revino după fiecare partidă pentru a primi următorul adversar.",
         "arena_leave_after_start_help": "După pornire, nu mai poți ieși. Pune pauză pentru a opri împerecherile noi; partida curentă continuă.",
         "each_match": "Fiecare meci",
         "if_still_tied": "Dacă egalitatea persistă",

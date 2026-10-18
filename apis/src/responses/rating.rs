@@ -19,11 +19,12 @@ use db_lib::{
     models::Rating,
 };
 use std::str::FromStr;
+use shared_types::rounded_rating;
 impl RatingResponse {
     pub fn from_rating(rating: &Rating) -> Self {
         Self {
             speed: GameSpeed::from_str(&rating.speed).expect("Rating to have a valid GameSpeed"),
-            rating: rating.rating.floor() as u64,
+            rating: rounded_rating(rating.rating).map(u64::from).unwrap_or_default(),
             played: rating.played,
             win: rating.won,
             loss: rating.lost,

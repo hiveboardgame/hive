@@ -137,6 +137,7 @@
         "optimal": "Ottimale",
         "duration_hours": "{{hours}} h",
         "duration_hours_minutes": "{{hours}} h {{minutes}} min",
+        "duration_minutes": "{{minutes}} min",
         "rounds_range": "{{minimum}}–{{maximum}} turni",
         "one_round": "1 turno",
         "rounds_count": "{{count}} turni",
@@ -185,7 +186,7 @@
             "berserk_bonus": "{{points}} punti torneo extra",
             "berserk_help": "Berserk elimina l'incremento e, quando consentito, dimezza il tempo iniziale. Una vittoria assegna {{bonus}} se la partita dura almeno {{moves}} mosse individuali. Sceglilo prima della tua prima mossa.",
             "berserk_disabled": "Berserk è disattivato per questa Arena.",
-            "arena_pairing": "Gli abbinamenti iniziali usano le valutazioni. Dopo ogni partita, sei abbinato a un avversario vicino alla tua posizione nel torneo.",
+            "arena_pairing": "Gli abbinamenti iniziali si basano sulle valutazioni, quelli successivi sulla tua posizione nel torneo. Tieni aperta la pagina dell'arena o torna per trovare il tuo prossimo avversario.",
             "arena_end": "La classifica si blocca quando il conto alla rovescia arriva a zero. Finisci le partite ancora in corso; il risultato non cambierà la classifica."
         },
         "rules_summary": {
@@ -573,7 +574,7 @@
         "new_pairings_each_round_based_on_standings": "Nuovi abbinamenti ogni turno, in base alla classifica.",
         "win_a_set_to_win_the_match_tied_sets_are_replayed": "Vinci un set per vincere l'incontro. I set pari vengono rigiocati.",
         "a_second_final_is_played_if_the_lower_bracket_winner_wins_the_first": "Si gioca una seconda finale se il vincitore del tabellone secondario vince la prima.",
-        "you_ll_keep_getting_new_opponents_while_the_arena_is_running": "Continuerai a ricevere nuovi avversari mentre l'arena è in corso.",
+        "you_ll_keep_getting_new_opponents_while_the_arena_is_running": "Tieni aperta la pagina dell'arena o torna dopo ogni partita per trovare il tuo prossimo avversario.",
         "arena_leave_after_start_help": "Dopo l'inizio non puoi uscire. Metti in pausa per fermare nuovi abbinamenti; la partita in corso continua.",
         "each_match": "Ogni incontro",
         "if_still_tied": "Se ancora pari",

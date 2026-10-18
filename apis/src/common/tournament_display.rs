@@ -8,12 +8,18 @@ use hive_lib::GameStatus;
 use leptos::prelude::*;
 use shared_types::{
     tournament::{swiss::System as SwissSystem, ReleasePolicy, SlotKey},
-    tournament_view::SlotResponse,
+    tournament_view::{ArenaPlayerStatsResponse, SlotResponse},
 };
 use uuid::Uuid;
 
 #[cfg(test)]
 mod tests;
+
+pub(crate) fn arena_player_rating(stats: &ArenaPlayerStatsResponse) -> Option<u64> {
+    stats
+        .arena_rating
+        .and_then(|rating| u64::try_from(rating).ok())
+}
 
 pub fn tournament_slot_fragment(slot_id: Uuid) -> String {
     format!("tournament-slot-{slot_id}")

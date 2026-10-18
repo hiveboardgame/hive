@@ -250,7 +250,11 @@ enum StackExpansionResetKey {
 }
 
 #[component]
-pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>) -> impl IntoView {
+pub fn Board(
+    interaction: HivegroundInteraction,
+    history_board: Memo<HiveBoard>,
+    #[prop(optional)] children: Option<Children>,
+) -> impl IntoView {
     let game_state = expect_context::<GameStateStore>();
     let analysis = use_context::<AnalysisContext>();
     let annotations = use_context::<AnnotationsSignal>();
@@ -794,6 +798,7 @@ pub fn Board(interaction: HivegroundInteraction, history_board: Memo<HiveBoard>)
                         })}
                 </g>
             </svg>
+            {children.map(|children| children())}
             {annotations.map(|annotations| view! { <AnnotationToolbar annotations /> })}
             <DragGhost interaction tile_opts board_scale />
         </div>

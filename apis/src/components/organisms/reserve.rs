@@ -2,6 +2,7 @@ use crate::{
     components::molecules::{
         analysis_and_download::AnalysisAndDownload,
         annotation_toolbar::AnnotationToggle,
+        arena_berserk_button::ArenaBerserkButton,
         control_buttons::ControlButtons,
         hiveground_stacks::HivegroundStacks,
     },
@@ -152,7 +153,10 @@ pub fn ReserveContent(
         <Reserve color=top_color alignment=Alignment::DoubleRow interaction history_board />
         <div class="flex justify-center items-start">
             <Show when=show_buttons>
-                <ControlButtons />
+                <div class="flex items-start w-full">
+                    <ArenaBerserkButton />
+                    <ControlButtons />
+                </div>
             </Show>
             <AnalysisAndDownload />
             <AnnotationToggle />

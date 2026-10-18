@@ -7,7 +7,7 @@ use crate::{
         RatingChangeInfo,
     },
     components::{
-        atoms::color_hex::ColorHex,
+        atoms::{color_hex::ColorHex, rating::Rating},
         molecules::{
             rating_and_change::RatingAndChange,
             thumbnail_pieces::ThumbnailPieces,
@@ -76,7 +76,7 @@ pub fn GamePreview(
                                     } else {
                                         view! {
                                             <span class="italic text-gray-500 dark:text-gray-400">
-                                                {move || rating(player)}
+                                                {move || view! { <Rating value=rating(player) /> }}
                                             </span>
                                         }
                                             .into_any()

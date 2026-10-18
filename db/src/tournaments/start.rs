@@ -711,7 +711,7 @@ async fn freeze_fixed_field(
                 ),
             })?;
         let rating =
-            rating::floored(rating).ok_or_else(|| DbError::InvalidPersistedTournament {
+            rating::rounded(rating).ok_or_else(|| DbError::InvalidPersistedTournament {
                 reason: format!(
                     "tournament entrant {} has an invalid seeding rating",
                     membership.user_id

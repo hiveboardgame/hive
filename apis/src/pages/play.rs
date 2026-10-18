@@ -5,6 +5,7 @@ use crate::{
         molecules::{
             analysis_and_download::AnalysisAndDownload,
             annotation_toolbar::AnnotationToggle,
+            arena_berserk_button::ArenaBerserkButton,
             arena_opening_deadline::ArenaOpeningDeadline,
             control_buttons::ControlButtons,
             game_info::GameInfo,
@@ -479,7 +480,9 @@ fn BoardOrUnstarted(
                 }
             }
         >
-            <Board interaction history_board />
+            <Board interaction history_board>
+                <ArenaOpeningDeadline class="absolute bottom-2 left-1/2 z-20 w-max rounded-md -translate-x-1/2 max-w-[90%]" />
+            </Board>
         </Show>
     }
 }
@@ -598,15 +601,11 @@ fn VerticalLayout(
                 interaction
                 history_board
             />
-            <ArenaOpeningDeadline
-                side=Signal::derive(move || player_color.get())
-                viewer_only=true
-                class="shrink-0"
-            />
             <div class="flex flex-col shrink ui-board-reserve">
                 <div class="grid grid-cols-[minmax(0,1fr)_4rem] bg-inherit ui-board-separator-top">
-                    <div class="flex col-start-1 row-start-1 gap-1 min-w-0">
+                    <div class="flex col-start-1 row-start-1 gap-1 items-center min-w-0 min-h-6">
                         <UserWithRating side=player_color vertical />
+                        <ArenaBerserkButton compact=true />
                     </div>
                     <div class=bottom_reserve_row_class>
                         <Reserve

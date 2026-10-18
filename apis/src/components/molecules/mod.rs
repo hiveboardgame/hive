@@ -2,6 +2,8 @@ pub mod alert;
 pub mod analysis_and_download;
 pub mod annotation_toolbar;
 pub mod annotations_layer;
+pub mod arena_berserk_button;
+pub mod arena_game_follow_up;
 pub mod arena_opening_deadline;
 pub mod banner;
 pub mod board_pieces;

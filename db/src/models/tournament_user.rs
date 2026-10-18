@@ -105,6 +105,18 @@ impl TournamentUser {
             .await?)
     }
 
+    pub async fn find(
+        tournament_id: Uuid,
+        user_id: Uuid,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Self, DbError> {
+        Ok(tournament_user_table
+            .find((tournament_id, user_id))
+            .select(Self::as_select())
+            .first(conn)
+            .await?)
+    }
+
     pub(crate) async fn find_for_update(
         tournament_id: Uuid,
         user_id: Uuid,

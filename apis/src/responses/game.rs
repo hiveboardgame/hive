@@ -20,7 +20,7 @@ use shared_types::{
 use std::{cmp::Ordering, collections::HashMap, time::Duration};
 use uuid::Uuid;
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct GameTournamentSummary {
     pub tournament_id: TournamentId,
     pub name: String,
@@ -219,6 +219,7 @@ impl From<&Tournament> for GameTournamentSummary {
                 &tournament.configuration().format,
                 FormatConfig::Arena(configuration) if configuration.rules.scoring.berserk.is_some()
             ),
+
         }
     }
 }

@@ -43,7 +43,10 @@
     },
     "arena": {
         "berserk": "Berserk",
-        "berserk_title": "Abdique do incremento e, quando aplicável, de metade do tempo base para obter pontos extra de Arena."
+        "berserk_title": "Abdique do incremento e, quando aplicável, de metade do tempo base para obter pontos extra de Arena.",
+        "back_to_arena": "Voltar à arena",
+        "return_for_pairing": "Volte para encontrar o próximo adversário.",
+        "pairing_paused": "Emparelhamentos em pausa. Retome na arena quando quiser."
     },
     "realtime_assignments": {
         "title": "Partidas em tempo real prontas",

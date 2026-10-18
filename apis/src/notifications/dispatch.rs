@@ -15,7 +15,14 @@ use db_lib::{
 use diesel::{ExpressionMethods, QueryDsl};
 use diesel_async::RunQueryDsl;
 use hive_lib::{Color, GameResult, GameStatus};
-use shared_types::{Conclusion, GameSpeed, NotificationCategory, TimeMode, TournamentGameResult};
+use shared_types::{
+    rounded_rating_change,
+    Conclusion,
+    GameSpeed,
+    NotificationCategory,
+    TimeMode,
+    TournamentGameResult,
+};
 use std::{
     collections::HashMap,
     str::FromStr,
@@ -133,7 +140,6 @@ pub async fn notify_game_ended_excluding(
             .unwrap_or_default()
     };
     let (white_name, black_name) = (name(game.white_id), name(game.black_id));
-    let round = |c: Option<f64>| c.map(|v| v.round() as i32);
     if exclude != Some(game.white_id) {
         notify(Event::GameEnded {
             recipient: game.white_id,
@@ -141,7 +147,7 @@ pub async fn notify_game_ended_excluding(
             game_nanoid: game.nanoid.clone(),
             outcome: white_outcome,
             reason,
-            rating_change: round(game.white_rating_change),
+            rating_change: game.white_rating_change.map(rounded_rating_change),
         });
     }
     if exclude != Some(game.black_id) {
@@ -151,7 +157,7 @@ pub async fn notify_game_ended_excluding(
             game_nanoid: game.nanoid.clone(),
             outcome: black_outcome,
             reason,
-            rating_change: round(game.black_rating_change),
+            rating_change: game.black_rating_change.map(rounded_rating_change),
         });
     }
     Ok(())
