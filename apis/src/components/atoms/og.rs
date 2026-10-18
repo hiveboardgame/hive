@@ -1,5 +1,5 @@
 use crate::{
-    common::{format_game_rating, game_speed_label},
+    common::{display_username, format_game_rating, format_time_control, game_speed_label},
     functions::games::get::get_game_from_nanoid,
     i18n::*,
     responses::GameResponse,
@@ -110,24 +110,28 @@ fn pick_iconic_game() -> (&'static str, Option<usize>) {
 fn game_meta(game: GameResponse) -> impl IntoView {
     let i18n = use_i18n();
     let nanoid = game.game_id.0.clone();
-    let white = format!(
-        "{}{}",
-        game.white_player.username,
-        rating(game.white_rating)
+    let (white_deleted, white_username, white_rating) = (
+        game.white_player.deleted,
+        game.white_player.username.clone(),
+        rating(game.white_rating),
     );
-    let black = format!(
-        "{}{}",
-        game.black_player.username,
-        rating(game.black_rating)
+    let (black_deleted, black_username, black_rating) = (
+        game.black_player.deleted,
+        game.black_player.username.clone(),
+        rating(game.black_rating),
     );
     let title = Signal::derive(move || {
-        t_string!(
-            i18n,
-            common.versus_players,
-            white = white.clone(),
-            black = black.clone()
-        )
-        .to_string()
+        let white = format!(
+            "{}{}",
+            display_username(i18n, white_deleted, &white_username),
+            white_rating
+        );
+        let black = format!(
+            "{}{}",
+            display_username(i18n, black_deleted, &black_username),
+            black_rating
+        );
+        t_string!(i18n, common.versus_players, white = white, black = black).to_string()
     });
     let description = Signal::derive(move || game_description(i18n, &game));
     meta_tags(
@@ -147,8 +151,8 @@ fn rating(rating: Option<f64>) -> String {
 
 fn game_description(i18n: I18nContext<Locale, I18nKeys>, game: &GameResponse) -> String {
     let mut parts = Vec::new();
-    if let (Some(base), Some(increment)) = (game.time_base, game.time_increment) {
-        parts.push(format!("{}+{}", base / 60, increment));
+    if let Some(clock) = game.time_control() {
+        parts.push(format_time_control(i18n, Some(clock)));
     }
     parts.push(game_speed_label(i18n, game.speed).to_string());
     parts.push(format_game_rating(i18n, game.rated));

@@ -1,5 +1,5 @@
 use crate::{
-    common::{format_game_rating, format_game_result, game_tournament_link},
+    common::{display_username, format_game_rating, format_game_result, game_tournament_link},
     components::molecules::{time_row::TimeRow, user_with_rating::UserWithRating},
     i18n::*,
     providers::game_state::{GameStateStore, GameStateStoreFields},
@@ -63,8 +63,16 @@ pub fn GameDetailsPanel() -> impl IntoView {
                     t_string!(
                         i18n,
                         common.versus_players,
-                        white = game.white_player.username.clone(),
-                        black = game.black_player.username.clone()
+                        white = display_username(
+                            i18n,
+                            game.white_player.deleted,
+                            &game.white_player.username
+                        ),
+                        black = display_username(
+                            i18n,
+                            game.black_player.deleted,
+                            &game.black_player.username
+                        )
                     )
                     .to_string()
                 })

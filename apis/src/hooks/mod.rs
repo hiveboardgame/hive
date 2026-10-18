@@ -1,3 +1,4 @@
+pub(crate) mod analysis_href;
 pub mod arena_clock;
 pub mod clipboard_copy;
 pub mod history_nav;

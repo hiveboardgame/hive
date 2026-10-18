@@ -23,7 +23,9 @@
         "username": {
             "error": {
                 "taken": "Nombre de usuario ocupado",
-                "invalid": "Carácter no válido en el nombre de usuario"
+                "invalid": "Carácter no válido en el nombre de usuario",
+                "reserved": "Este nombre de usuario está reservado.",
+                "length": "El nombre de usuario debe tener entre {{min}} y {{max}} caracteres."
             },
             "description": "Por favor, elige un nombre de usuario apropiado para la familia. ¡Las cuentas con nombres de usuario inapropiados se cerrarán!"
         },
@@ -38,8 +40,7 @@
         "legal_notice": "Al crear una cuenta, aceptas nuestros <terms_link>Términos del servicio</terms_link>. Nuestra <privacy_link>Política de privacidad</privacy_link> explica cómo tratamos tus datos.",
         "registration_error": "Registro fallido",
         "existing_account_prompt": "¿Ya tienes una cuenta? <login_link>Iniciar sesión</login_link>",
-        "password_requirements": "Al menos 8 caracteres",
-        "password_error": "La contraseña es demasiado corta o no coincide"
+        "password_requirements": "Usa entre {{min}} y {{max}} caracteres."
     },
     "piece_style": "Estilo de la pieza",
     "login": {

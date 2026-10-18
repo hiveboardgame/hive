@@ -1,5 +1,5 @@
 use crate::{
-    common::{format_clock_time_remaining, format_game_result, TvInterest},
+    common::{display_username, format_clock_time_remaining, format_game_result, TvInterest},
     components::{
         molecules::thumbnail_pieces::ThumbnailPieces,
         organisms::tournament_inspector::{player_standing, TournamentSelection},
@@ -81,11 +81,7 @@ fn ArenaTvPlayerRow(
                 let player_id = player.uid;
                 let rank = player_standing(&common.standings().get(), player.uid)
                     .map(|(rank, _)| rank);
-                let name = if player.deleted {
-                    t_string!(i18n, common.deleted_user).to_string()
-                } else {
-                    player.username.clone()
-                };
+                let name = display_username(i18n, player.deleted, &player.username);
                 let recorded_rating = match color {
                     Color::White => identity_game.white_rating,
                     Color::Black => identity_game.black_rating,
@@ -190,16 +186,16 @@ fn ArenaTournamentTvGame(
                 class="block overflow-hidden w-full rounded-lg border border-gray-300 shadow-sm dark:border-gray-700 aspect-square bg-even-light dark:bg-surface-row-even"
                 href=href
                 aria-label=move || {
-                    let white = if board_label_game.white_player.deleted {
-                        t_string!(i18n, common.deleted_user).to_string()
-                    } else {
-                        board_label_game.white_player.username.clone()
-                    };
-                    let black = if board_label_game.black_player.deleted {
-                        t_string!(i18n, common.deleted_user).to_string()
-                    } else {
-                        board_label_game.black_player.username.clone()
-                    };
+                    let white = display_username(
+                        i18n,
+                        board_label_game.white_player.deleted,
+                        &board_label_game.white_player.username,
+                    );
+                    let black = display_username(
+                        i18n,
+                        board_label_game.black_player.deleted,
+                        &board_label_game.black_player.username,
+                    );
                     format!("{white} {} {black}", t_string!(i18n, tournaments.view.common.versus))
                 }
             >

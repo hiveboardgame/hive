@@ -66,22 +66,19 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use shared_types::{
     tournament::{arena::PairingIntent, Format},
+    validate_username,
     Conclusion,
     GameId,
     GameSpeed,
     LeaderboardKind,
     Takeback,
     TournamentId,
+    DELETED_USERNAME_PREFIX,
     RANKABLE_DEVIATION,
-    RESERVED_USERNAMES,
 };
 use std::collections::HashSet;
 use uuid::Uuid;
 
-const MAX_USERNAME_LENGTH: usize = 20;
-const MIN_USERNAME_LENGTH: usize = 2;
-const VALID_USERNAME_CHARS: &str = "-_";
-const DELETED_USERNAME_PREFIX: &str = "deleted_user_";
 const USERNAME_SEARCH_LIMIT: i64 = 25;
 
 fn escape_like_pattern(pattern: &str) -> String {
@@ -95,59 +92,12 @@ lazy_static! {
     static ref EMAIL_RE: Regex = Regex::new(r"^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$").unwrap();
 }
 
-fn valid_username_char(c: char) -> bool {
-    c.is_ascii_alphanumeric() || VALID_USERNAME_CHARS.contains(c)
-}
-
-fn is_reserved_deleted_username(username: &str) -> bool {
-    username
-        .to_ascii_lowercase()
-        .starts_with(DELETED_USERNAME_PREFIX)
-}
-
 fn validate_email(email: &str) -> Result<(), DbError> {
     if !EMAIL_RE.is_match(email) {
         let reason = format!("invalid e-mail address: {email:?}");
         return Err(DbError::InvalidInput {
             info: String::from("E-mail address is invalid"),
             error: reason,
-        });
-    }
-    Ok(())
-}
-
-fn validate_username(username: &str) -> Result<(), DbError> {
-    if !username.chars().all(valid_username_char) {
-        let reason = format!("invalid username characters: {username:?}");
-        return Err(DbError::InvalidInput {
-            info: String::from("Username has invalid characters"),
-            error: reason,
-        });
-    }
-    if username.len() > MAX_USERNAME_LENGTH {
-        let reason = format!("username must be <= {MAX_USERNAME_LENGTH} chars");
-        return Err(DbError::InvalidInput {
-            info: String::from("Username is too long."),
-            error: reason,
-        });
-    }
-    if username.len() < MIN_USERNAME_LENGTH {
-        let reason = format!("username must be >= {MAX_USERNAME_LENGTH} chars");
-        return Err(DbError::InvalidInput {
-            info: String::from("Username is too short."),
-            error: reason,
-        });
-    }
-    if RESERVED_USERNAMES.contains(&username.to_lowercase().as_str()) {
-        return Err(DbError::InvalidInput {
-            info: String::from("Pick another username."),
-            error: "Username is not allowed.".to_string(),
-        });
-    }
-    if is_reserved_deleted_username(username) {
-        return Err(DbError::InvalidInput {
-            info: String::from("Pick another username."),
-            error: format!("Username cannot start with {DELETED_USERNAME_PREFIX}."),
         });
     }
     Ok(())
@@ -1121,5 +1071,20 @@ impl User {
         top.push((viewer, viewer_rating, higher_rated + 1));
 
         Ok(top)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::NewUser;
+    use crate::db_error::DbError;
+    use shared_types::UsernameError;
+
+    #[test]
+    fn new_user_rejects_the_tombstone_namespace() {
+        assert!(matches!(
+            NewUser::new("deleted_user_999", "hash", "valid@example.test"),
+            Err(DbError::InvalidUsername(UsernameError::DeletedPrefix))
+        ));
     }
 }

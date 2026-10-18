@@ -23,7 +23,9 @@
             "description": "Per favore scegli un username decoroso. Profili con username non appropriati verranno chiusi!",
             "error": {
                 "taken": "Username giá esistente",
-                "invalid": "Carattere invalido"
+                "invalid": "Carattere invalido",
+                "reserved": "Questo nome utente è riservato.",
+                "length": "Il nome utente deve contenere da {{min}} a {{max}} caratteri."
             }
         },
         "email": {
@@ -35,8 +37,7 @@
         "be_nice_checkbox": "Accetto di comportarmi bene con altri giocatori e riportare offese su Discord",
         "legal_notice": "Creando un profilo, accetti i nostri <terms_link>Termini di servizio</terms_link>. La nostra <privacy_link>Informativa sulla privacy</privacy_link> spiega come trattiamo i tuoi dati.",
         "signup_button": "Registrati",
-        "password_requirements": "Almeno 8 caratteri",
-        "password_error": "Password troppo breve o non corrispondente",
+        "password_requirements": "Usa da {{min}} a {{max}} caratteri.",
         "registration_error": "Registrazione non riuscita",
         "existing_account_prompt": "Hai giá un profilo? <login_link>Entra</login_link>"
     },

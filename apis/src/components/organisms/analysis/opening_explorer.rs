@@ -1,5 +1,11 @@
 use crate::{
-    common::{game_result_label, game_speed_label, PieceType},
+    common::{
+        display_username,
+        format_time_control,
+        game_result_label,
+        game_speed_label,
+        PieceType,
+    },
     components::atoms::{bug_tile::BugTile, rating::icon_for_speed},
     functions::opening_explorer::opening_explorer,
     i18n::*,
@@ -20,7 +26,6 @@ use shared_types::{
     GameProgress,
     GameSpeed,
     GamesQueryOptions,
-    TimeMode,
 };
 use std::{collections::HashMap, str::FromStr};
 
@@ -379,8 +384,16 @@ fn top_game_row(g: crate::responses::GameResponse) -> impl IntoView {
         r.map(|r| format!(" ({})", r.round() as i64))
             .unwrap_or_default()
     };
-    let white = format!("{}{}", g.white_player.username, rating(g.white_rating));
-    let black = format!("{}{}", g.black_player.username, rating(g.black_rating));
+    let white = format!(
+        "{}{}",
+        display_username(i18n, g.white_player.deleted, &g.white_player.username),
+        rating(g.white_rating)
+    );
+    let black = format!(
+        "{}{}",
+        display_username(i18n, g.black_player.deleted, &g.black_player.username),
+        rating(g.black_rating)
+    );
     let game_status = g.game_status.clone();
     let result = move || match &game_status {
         GameStatus::Finished(res) => game_result_label(i18n, res),
@@ -395,33 +408,8 @@ fn top_game_row(g: crate::responses::GameResponse) -> impl IntoView {
         _ => (None, false),
     };
     let speed_icon = icon_for_speed(g.speed);
-    let time_text = move || match g.time_mode {
-        TimeMode::Untimed => "∞".to_string(),
-        TimeMode::RealTime => format!(
-            "{} + {}",
-            g.time_base.unwrap_or(0) / 60,
-            g.time_increment.unwrap_or(0),
-        ),
-        TimeMode::Correspondence => {
-            if let Some(base) = g.time_base {
-                t_string!(
-                    i18n,
-                    game.time_mode.correspondence.days_side,
-                    count = base / 86400
-                )
-                .to_string()
-            } else if let Some(inc) = g.time_increment {
-                t_string!(
-                    i18n,
-                    game.time_mode.correspondence.days_move,
-                    count = inc / 86400
-                )
-                .to_string()
-            } else {
-                String::new()
-            }
-        }
-    };
+    let time_control = g.time_control();
+    let time_text = move || format_time_control(i18n, time_control);
     view! {
         <a
             href=href
@@ -431,16 +419,16 @@ fn top_game_row(g: crate::responses::GameResponse) -> impl IntoView {
         >
             <div class="grid gap-y-0.5 gap-x-2 items-center grid-cols-[minmax(0,1fr)_5rem]">
                 <span class="min-w-0 truncate">{white} " – " {black}</span>
-                <span class="flex row-span-2 gap-1 justify-end items-center self-center font-mono shrink-0">
+                <span class="flex gap-1 justify-end items-center self-center font-mono shrink-0">
                     {conclusion_icon
                         .map(|icon| view! { <Icon icon attr:class="size-4 shrink-0" /> })}
                     {is_rep.then_some("↺")} {result}
                 </span>
-                <span class="flex gap-1 items-center min-w-0 text-xs leading-tight text-gray-500 dark:text-gray-400">
+                <span class="flex flex-wrap col-span-2 gap-1 items-center min-w-0 text-xs leading-tight text-gray-500 dark:text-gray-400">
                     <Icon icon=speed_icon attr:class="size-4 shrink-0" />
                     <span class="whitespace-nowrap">{time_text}</span>
                     <span class="shrink-0">" · "</span>
-                    <span class="truncate">{g.created_at.format("%Y-%m-%d").to_string()}</span>
+                    <span class="shrink-0">{g.created_at.format("%Y-%m-%d").to_string()}</span>
                 </span>
             </div>
         </a>

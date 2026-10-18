@@ -1,6 +1,11 @@
 use crate::{
-    common::{ServerMessage, ServerResult, TournamentUpdate},
-    components::molecules::tournament_row::format_tournament_clock,
+    common::{
+        format_tournament_clock,
+        ServerMessage,
+        ServerResult,
+        TournamentClockStyle,
+        TournamentUpdate,
+    },
     functions::tournaments::get_live_arenas,
     hooks::arena_clock::{format_time_left, use_ticking_now},
     i18n::*,
@@ -225,7 +230,11 @@ fn ArenaCard(
         _ => None,
     };
     let time_control = arena_configuration.map_or_else(String::new, |configuration| {
-        format_tournament_clock(Clock::Realtime(configuration.game_clock))
+        format_tournament_clock(
+            i18n,
+            Clock::Realtime(configuration.game_clock),
+            TournamentClockStyle::Compact,
+        )
     });
     let upcoming = Signal::derive(move || starts_at.is_some_and(|start| now.get() < start));
     let time_left = Signal::derive(move || {

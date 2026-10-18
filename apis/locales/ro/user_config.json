@@ -24,7 +24,9 @@
             "description": "Te rugăm să alegi un nume de utilizator potrivit pentru toată familia. Orice conturi cu nume de utilizator nepotrivite vor fi închise!",
             "error": {
                 "taken": "Nume de utilizator luat",
-                "invalid": "Caracter invalid în numele de utilizator"
+                "invalid": "Caracter invalid în numele de utilizator",
+                "reserved": "Acest nume de utilizator este rezervat.",
+                "length": "Numele de utilizator trebuie să aibă între {{min}} și {{max}} caractere."
             }
         },
         "email": {
@@ -33,8 +35,7 @@
             },
             "description": "Avem nevoie de adresa ta de email pentru a-ți trimite un email de confirmare atunci când creezi un cont."
         },
-        "password_requirements": "Cel puțin 8 caractere",
-        "password_error": "Parolă prea scurtă sau nu se potrivește",
+        "password_requirements": "Folosește între {{min}} și {{max}} de caractere.",
         "be_nice_checkbox": "Sunt de acord să fiu amabil cu ceilalți jucători și să raportez abuzurile pe Discord",
         "legal_notice": "Prin crearea unui cont, ești de acord cu <terms_link>Termenii serviciului</terms_link>. <privacy_link>Politica de confidențialitate</privacy_link> explică modul în care îți prelucrăm datele.",
         "signup_button": "Înscrie-te",

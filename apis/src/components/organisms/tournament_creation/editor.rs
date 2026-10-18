@@ -9,11 +9,8 @@ use super::model::{
     EDITOR_MAX_PHASES,
 };
 use crate::{
-    common::compact_realtime_clock,
-    components::{
-        atoms::simple_switch::SimpleSwitch,
-        molecules::{panel::Panel, time_row::format_compact_duration},
-    },
+    common::{format_tournament_clock, TournamentClockStyle},
+    components::{atoms::simple_switch::SimpleSwitch, molecules::panel::Panel},
     i18n::*,
 };
 use leptos::{html, prelude::*};
@@ -480,25 +477,7 @@ fn phase_summary(phase: &EliminationPhaseDraft, is_last: bool) -> String {
         )
         .to_string()
     } else {
-        match phase.clock {
-            Clock::Realtime(clock) => compact_realtime_clock(clock),
-            Clock::Correspondence(CorrespondenceClock::TotalTimeEach { seconds_each }) => {
-                t_string!(
-                    i18n,
-                    tournaments.creation.elimination.summary.time_each,
-                    time = format_compact_duration(seconds_each.get())
-                )
-                .to_string()
-            }
-            Clock::Correspondence(CorrespondenceClock::DaysPerMove { seconds_per_move }) => {
-                t_string!(
-                    i18n,
-                    game.time_mode.correspondence.duration_move,
-                    duration = format_compact_duration(seconds_per_move.get())
-                )
-                .to_string()
-            }
-        }
+        format_tournament_clock(i18n, phase.clock, TournamentClockStyle::PhaseSummary)
     };
     let alternating = phase
         .color_order

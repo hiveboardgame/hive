@@ -13,6 +13,7 @@ use shared_types::{
     GameId,
     TournamentChannel,
     TournamentId,
+    DELETED_USER_DISPLAY_NAME,
 };
 use uuid::Uuid;
 
@@ -432,8 +433,8 @@ pub async fn get_game_channels_for_user(
         )
         SELECT
             game.nanoid,
-            CASE WHEN white.deleted THEN 'Deleted user' ELSE white.username END AS white_name,
-            CASE WHEN black.deleted THEN 'Deleted user' ELSE black.username END AS black_name,
+            CASE WHEN white.deleted THEN $3 ELSE white.username END AS white_name,
+            CASE WHEN black.deleted THEN $3 ELSE black.username END AS black_name,
             game.finished,
             selected.last_message_id
         FROM selected
@@ -445,6 +446,7 @@ pub async fn get_game_channels_for_user(
     )
     .bind::<SqlUuid, _>(user_id)
     .bind::<BigInt, _>(HUB_SECTION_LIMIT)
+    .bind::<Text, _>(DELETED_USER_DISPLAY_NAME)
     .load(conn)
     .await
     .map_err(DbError::from)?;

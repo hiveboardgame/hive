@@ -25,7 +25,9 @@
             "description": "Bitte wähle einen familienfreundlichen Benutzernamen. Konten mit unangemessenen Benutzernamen werden geschlossen!",
             "error": {
                 "taken": "Benutzername ist vergeben",
-                "invalid": "Ungültiges Zeichen im Benutzernamen"
+                "invalid": "Ungültiges Zeichen im Benutzernamen",
+                "reserved": "Dieser Benutzername ist reserviert.",
+                "length": "Der Benutzername muss zwischen {{min}} und {{max}} Zeichen lang sein."
             }
         },
         "email": {
@@ -34,8 +36,7 @@
             },
             "description": "Wir benötigen deine E-Mail-Adresse, um dir eine Bestätigungs-E-Mail zu senden, wenn du ein Konto erstellst."
         },
-        "password_requirements": "Mindestens 8 Zeichen",
-        "password_error": "Passwort zu kurz oder stimmt nicht überein",
+        "password_requirements": "Verwende {{min}}–{{max}} Zeichen.",
         "be_nice_checkbox": "Ich stimme zu, freundlich zu anderen Spieler*innen zu sein und Missbrauch auf Discord zu melden",
         "legal_notice": "Mit der Erstellung eines Kontos stimmst du unseren <terms_link>Nutzungsbedingungen</terms_link> zu. In unserer <privacy_link>Datenschutzerklärung</privacy_link> erfährst du, wie wir mit deinen Daten umgehen.",
         "signup_button": "Anmelden",

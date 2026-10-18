@@ -25,7 +25,9 @@
             "description": "Veuillez sélectionner un nom d'utilisateur adapté aux familles. Les comptes dont le nom d'utilisateur est inapproprié seront fermés !",
             "error": {
                 "invalid": "Caractère invalide dans le nom d'utilisateur",
-                "taken": "Le nom d'utilisateur est déjà pris"
+                "taken": "Le nom d'utilisateur est déjà pris",
+                "reserved": "Ce nom d'utilisateur est réservé.",
+                "length": "Le nom d'utilisateur doit contenir entre {{min}} et {{max}} caractères."
             }
         },
         "email": {
@@ -35,8 +37,7 @@
             "description": "Nous avons besoin de votre adresse e-mail pour vous envoyer un e-mail de confirmation lorsque vous créez un compte."
         },
         "signup_button": "Inscription",
-        "password_requirements": "Au moins 8 caractères",
-        "password_error": "Le mot de passe est trop court ou ne correspond pas",
+        "password_requirements": "Utilisez entre {{min}} et {{max}} caractères.",
         "be_nice_checkbox": "J'accepte d'être bienveillant envers les autres joueurs et de signaler les abus sur Discord",
         "legal_notice": "En créant un compte, vous acceptez nos <terms_link>conditions d'utilisation</terms_link>. Notre <privacy_link>politique de confidentialité</privacy_link> explique comment nous traitons vos données.",
         "registration_error": "Échec de l'inscription",

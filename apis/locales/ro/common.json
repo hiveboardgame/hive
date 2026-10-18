@@ -126,7 +126,6 @@
     "account": {
         "manage_password_changes_and_account_deletion": "Gestionează schimbarea parolei și ștergerea contului.",
         "change_password": "Schimbă parola",
-        "password_must_be_at_least_8_characters_and_match": "Parola trebuie să aibă minimum 8 caractere și să coincidă cu confirmarea",
         "password_update_failed": "Nu s-a putut schimba parola. Verifică parola actuală și încearcă din nou.",
         "title": "Cont"
     },
@@ -255,12 +254,14 @@
         "create_an_account_to_play_and_join_tournaments": "Creează un cont ca să joci și să participi la turnee.",
         "checking_your_reset_link": "Se verifică linkul de resetare…",
         "reset_your_password": "Resetează parola",
-        "passwords_must_match_and_be_at_least_8_characters": "Parolele trebuie să coincidă și să aibă minimum 8 caractere.",
         "reset_password": "Resetează parola",
         "couldn_t_reset_your_password_the_link_may_have": "Nu s-a putut reseta parola. Linkul poate fi expirat — solicită unul nou.",
         "this_link_has_expired": "Acest link a expirat",
         "this_password_reset_link_is_invalid_or_has_expired": "Acest link de resetare a parolei este invalid sau a expirat. Solicită unul nou și ți-l vom trimite prin e-mail.",
-        "request_a_new_link": "Solicită un link nou"
+        "request_a_new_link": "Solicită un link nou",
+        "password_too_short": "Folosește cel puțin {{min}} caractere.",
+        "password_too_long": "Folosește cel mult {{max}} de caractere.",
+        "passwords_do_not_match": "Parolele nu coincid."
     },
     "learn": {
         "puzzles": {

@@ -6,6 +6,7 @@ use crate::{
     responses::UserResponse,
 };
 use leptos::{html, leptos_dom::helpers::debounce, prelude::*};
+use shared_types::MAX_USERNAME_LENGTH;
 use std::{
     collections::{BTreeMap, HashSet},
     time::Duration,
@@ -15,7 +16,7 @@ use wasm_bindgen::JsCast;
 const MIN_SEARCH_LENGTH: usize = 2;
 const MAX_SUGGESTIONS: usize = 10;
 
-/// Usernames are ASCII (`db`'s `valid_username_char`), so the ASCII fold is exact.
+/// Usernames are ASCII (`shared_types::validate_username`), so the ASCII fold is exact.
 fn sorted_by_username(users: BTreeMap<String, UserResponse>) -> Vec<(String, UserResponse)> {
     let mut users: Vec<_> = users.into_iter().collect();
     users.sort_by_cached_key(|(username, _)| username.to_ascii_lowercase());
@@ -191,7 +192,7 @@ pub fn UserSearch(
                     }
                     placeholder=input_placeholder
                     prop:value=display_value
-                    maxlength="20"
+                    maxlength=MAX_USERNAME_LENGTH.to_string()
                 />
                 // The clear (×) button only exists for the select-style usage
                 // (archive player filters). Reserving its slot keeps the two

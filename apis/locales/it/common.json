@@ -126,7 +126,6 @@
     "account": {
         "manage_password_changes_and_account_deletion": "Gestisci password ed eliminazione dell'account.",
         "change_password": "Cambia password",
-        "password_must_be_at_least_8_characters_and_match": "La password deve contenere almeno 8 caratteri e coincidere con la conferma",
         "password_update_failed": "Impossibile aggiornare la password. Controlla la password attuale e riprova.",
         "title": "Account"
     },
@@ -255,12 +254,14 @@
         "create_an_account_to_play_and_join_tournaments": "Crea un account per giocare e partecipare ai tornei.",
         "checking_your_reset_link": "Verifica del link…",
         "reset_your_password": "Reimposta la password",
-        "passwords_must_match_and_be_at_least_8_characters": "Le password devono coincidere e contenere almeno 8 caratteri.",
         "reset_password": "Reimposta",
         "couldn_t_reset_your_password_the_link_may_have": "Impossibile reimpostare la password. Il link potrebbe essere scaduto: richiedine uno nuovo.",
         "this_link_has_expired": "Questo link è scaduto",
         "this_password_reset_link_is_invalid_or_has_expired": "Questo link non è valido o è scaduto. Richiedine uno nuovo e te lo invieremo via email.",
-        "request_a_new_link": "Richiedi un nuovo link"
+        "request_a_new_link": "Richiedi un nuovo link",
+        "password_too_short": "Usa almeno {{min}} caratteri.",
+        "password_too_long": "Usa al massimo {{max}} caratteri.",
+        "passwords_do_not_match": "Le password non coincidono."
     },
     "learn": {
         "puzzles": {

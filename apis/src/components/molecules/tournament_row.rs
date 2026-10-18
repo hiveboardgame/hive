@@ -1,6 +1,10 @@
 use crate::{
-    common::{compact_realtime_clock, tournament_format_label, TournamentAction},
-    components::molecules::time_row::format_compact_duration,
+    common::{
+        format_tournament_clock,
+        tournament_format_label,
+        TournamentAction,
+        TournamentClockStyle,
+    },
     hooks::{arena_clock::format_time_left, tap_feedback::use_tap_feedback},
     i18n::*,
     providers::{ApiRequestsProvider, AuthContext, AuthIdentity},
@@ -14,41 +18,7 @@ use crate::{
 };
 use chrono::{DateTime, Datelike, Duration, Local, Utc};
 use leptos::prelude::*;
-use shared_types::{tournament::BotAdmission, Clock, CorrespondenceClock, TournamentId};
-pub fn format_tournament_clock(clock: Clock) -> String {
-    let i18n = use_i18n();
-    match clock {
-        Clock::Realtime(clock) => compact_realtime_clock(clock),
-        Clock::Correspondence(clock) => {
-            let (seconds, per_move) = match clock {
-                CorrespondenceClock::TotalTimeEach { seconds_each } => (seconds_each.get(), false),
-                CorrespondenceClock::DaysPerMove { seconds_per_move } => {
-                    (seconds_per_move.get(), true)
-                }
-            };
-            let duration = if seconds.is_multiple_of(86400) {
-                let days = seconds / 86400;
-                if days == 1 {
-                    t_string!(i18n, tournaments.row.one_day).to_string()
-                } else {
-                    t_string!(
-                        i18n,
-                        home.custom_game.mode.correspondence.time,
-                        count = days
-                    )
-                    .to_string()
-                }
-            } else {
-                format_compact_duration(seconds)
-            };
-            if per_move {
-                t_string!(i18n, tournaments.row.duration_per_move, duration = duration).to_string()
-            } else {
-                t_string!(i18n, tournaments.row.duration_per_side, duration = duration).to_string()
-            }
-        }
-    }
-}
+use shared_types::{tournament::BotAdmission, TournamentId};
 fn short_date(date: DateTime<Utc>, now: DateTime<Utc>) -> String {
     let i18n = use_i18n();
     let date = date.with_timezone(&Local);
@@ -320,7 +290,16 @@ pub fn TournamentRow(
                             .get()
                             .summary
                             .primary_clock
-                            .map(|clock| format!(" · {}", format_tournament_clock(clock)))
+                            .map(|clock| {
+                                format!(
+                                    " · {}",
+                                    format_tournament_clock(
+                                        i18n,
+                                        clock,
+                                        TournamentClockStyle::Compact,
+                                    ),
+                                )
+                            })
                     }}
                 </div>
             </div>

@@ -5,6 +5,7 @@ mod chat_link;
 mod client_message;
 mod config_options;
 mod date_time;
+mod download;
 mod fitted_pagination;
 mod focus;
 mod game_action;
@@ -14,6 +15,7 @@ mod locale;
 mod markdown;
 mod move_info;
 mod overlay_paint;
+mod password;
 mod piece_paint;
 mod piece_type;
 mod project_links;
@@ -25,6 +27,7 @@ mod standings_criterion;
 mod standings_score;
 mod svg_assets;
 mod svg_pos;
+mod time_control;
 mod time_signals;
 mod tournament_action;
 mod tournament_admission;
@@ -60,6 +63,7 @@ pub use config_options::{CurrentConfirm, MoveConfirm, TileDesign, TileDots, Tile
 #[cfg(feature = "ssr")]
 pub(crate) use date_time::format_utc_datetime;
 pub(crate) use date_time::{format_local_datetime, format_tournament_datetime};
+pub(crate) use download::download_blob;
 pub(crate) use fitted_pagination::use_fitted_pagination;
 pub(crate) use focus::focus_after_render;
 pub use game_action::GameAction;
@@ -85,6 +89,11 @@ pub(crate) use locale::request_locale;
 pub use markdown::markdown_to_html;
 pub use move_info::MoveInfo;
 pub use overlay_paint::OverlayPaint;
+pub(crate) use password::{
+    password_error_message,
+    password_requirements_message,
+    validate_password,
+};
 pub use piece_paint::{resolve_piece_paint, BugHref, DotsHref, PiecePaint, ShadowHref, TileHref};
 pub use piece_type::PieceType;
 pub use project_links::{
@@ -99,7 +108,7 @@ pub use project_links::{
     WORLD_HIVE_DISCORD_URL,
 };
 pub use rating_change_info::RatingChangeInfo;
-pub(crate) use route_path::tournament_path_matches;
+pub(crate) use route_path::{analysis_url, tournament_path_matches};
 pub use schedule_action::{parse_schedule_slot_fragment, schedule_slot_fragment, ScheduleAction};
 pub use server_result::{
     ChallengeUpdate,
@@ -131,6 +140,12 @@ pub use standings_score::{
     StandingsCount,
 };
 pub use svg_pos::{position_from_svg, SvgPos};
+pub(crate) use time_control::{
+    format_compact_duration,
+    format_time_control,
+    format_tournament_clock,
+    TournamentClockStyle,
+};
 pub use time_signals::{TimeParams, TimeParamsStoreFields};
 pub use tournament_action::{
     TournamentAction,
@@ -145,8 +160,8 @@ pub use ui_error::{localized_error_message, localized_error_message_for_locale, 
 pub use ui_utils::{render_text_prop, with_class};
 pub use user_action::UserAction;
 
+pub use tournament_display::{parse_tournament_slot_fragment, tournament_slot_fragment};
 pub(crate) use tournament_display::{
-    compact_realtime_clock,
     result_marker_color,
     rounded_percentage,
     tournament_completion_order,
@@ -155,7 +170,6 @@ pub(crate) use tournament_display::{
     tournament_slot_opponent,
     unfinished_tournament_game_label,
 };
-pub use tournament_display::{parse_tournament_slot_fragment, tournament_slot_fragment};
 
 pub use tournament_pairing_label::{TournamentPairingLabel, TournamentStageLabel};
 

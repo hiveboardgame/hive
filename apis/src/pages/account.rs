@@ -1,5 +1,10 @@
 use crate::{
-    common::use_return_path,
+    common::{
+        password_error_message,
+        password_requirements_message,
+        use_return_path,
+        validate_password,
+    },
     components::{
         layouts::page_shell::{PageShell, PageShellVariant},
         molecules::panel::Panel,
@@ -11,8 +16,7 @@ use crate::{
     pwa,
     security::csrf::ActionForm,
 };
-use leptos::{leptos_dom::helpers::debounce, prelude::*, task::spawn_local};
-use std::time::Duration;
+use leptos::{prelude::*, task::spawn_local};
 
 #[component]
 pub fn Account() -> impl IntoView {
@@ -26,13 +30,18 @@ pub fn Account() -> impl IntoView {
     let confirm_password = RwSignal::new(String::new());
     let delete_password = RwSignal::new(String::new());
 
-    let password_invalid = move || {
-        let new_pw = new_password();
-        let confirm_pw = confirm_password();
-        !(new_pw.len() > 7 && new_pw == confirm_pw)
+    let password_validation =
+        Memo::new(move |_| validate_password(&new_password(), &confirm_password()));
+    let password_invalid = move || password_validation.get().is_err();
+    let password_blurred = RwSignal::new(false);
+    let password_error = move || {
+        password_validation
+            .get()
+            .err()
+            .filter(|error| error.is_ready_to_display(password_blurred(), &confirm_password()))
     };
 
-    let form_invalid = move || current_password.with(|c| c.len() < 8) || password_invalid();
+    let form_invalid = move || current_password.with(String::is_empty) || password_invalid();
 
     let display_account_error = move || {
         account_action
@@ -44,7 +53,7 @@ pub fn Account() -> impl IntoView {
             .value()
             .with(|a| a.as_ref().is_some_and(|v| v.is_err()))
     };
-    let delete_form_invalid = move || delete_password.with(|p| p.len() < 8);
+    let delete_form_invalid = move || delete_password.with(String::is_empty);
     Effect::watch(
         account_action.version(),
         move |_, _, _| {
@@ -87,10 +96,7 @@ pub fn Account() -> impl IntoView {
                     <label class="flex flex-col gap-1.5" for="old_password">
                         <span class="ui-field-label">{t!(i18n, common.current_password)}</span>
                         <input
-                            on:input=debounce(
-                                Duration::from_millis(350),
-                                update_from_input(current_password),
-                            )
+                            on:input=update_from_input(current_password)
                             class="ui-field-input"
                             id="old_password"
                             name="password"
@@ -103,10 +109,8 @@ pub fn Account() -> impl IntoView {
                     <label class="flex flex-col gap-1.5" for="new_password">
                         <span class="ui-field-label">{t!(i18n, common.new_password)}</span>
                         <input
-                            on:input=debounce(
-                                Duration::from_millis(350),
-                                update_from_input(new_password),
-                            )
+                            on:input=update_from_input(new_password)
+                            on:blur=move |_| password_blurred.set(true)
                             class="ui-field-input"
                             name="new_password"
                             id="new_password"
@@ -114,17 +118,15 @@ pub fn Account() -> impl IntoView {
                             prop:value=new_password
                             autocomplete="new-password"
                             placeholder=move || t_string!(i18n, common.new_password)
-                            minlength="8"
-                            maxlength="128"
                         />
+                        <small class="ui-field-helper">
+                            {move || password_requirements_message(i18n)}
+                        </small>
                     </label>
                     <label class="flex flex-col gap-1.5" for="confirm_password">
                         <span class="ui-field-label">{t!(i18n, common.confirm_password)}</span>
                         <input
-                            on:input=debounce(
-                                Duration::from_millis(350),
-                                update_from_input(confirm_password),
-                            )
+                            on:input=update_from_input(confirm_password)
                             class="ui-field-input"
                             id="confirm_password"
                             name="new_password_confirmation"
@@ -136,15 +138,13 @@ pub fn Account() -> impl IntoView {
                                     i18n, user_config.edit_account.confirm_password_placeholder
                                 )
                             }
-                            minlength="8"
-                            maxlength="128"
                         />
                     </label>
-                    <Show when=move || password_invalid() && !new_password().is_empty()>
+                    <Show when=move || password_error().is_some() && !new_password().is_empty()>
                         <small class="ui-field-error">
-                            {t!(
-                                i18n, common.account.password_must_be_at_least_8_characters_and_match
-                            )}
+                            {move || {
+                                password_error().map(|error| password_error_message(i18n, error))
+                            }}
                         </small>
                     </Show>
                     <input type="hidden" name="pathname" value=pathname />
@@ -173,10 +173,7 @@ pub fn Account() -> impl IntoView {
                     <label class="flex flex-col gap-1.5" for="delete_password">
                         <span class="ui-field-label">{t!(i18n, common.current_password)}</span>
                         <input
-                            on:input=debounce(
-                                Duration::from_millis(350),
-                                update_from_input(delete_password),
-                            )
+                            on:input=update_from_input(delete_password)
                             class="ui-field-input"
                             id="delete_password"
                             name="password"

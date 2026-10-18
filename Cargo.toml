@@ -81,6 +81,7 @@ rustls = { version = "0.23" }
 # which is one more native dep for the nix shell to satisfy.
 web-push = { version = "0.11", default-features = false, features = ["hyper-client"] }
 web-time = "1.1"
+percent-encoding = "2"
 url = "2"
 serde = { version = "1" }
 serde_json = { version = "1" }
@@ -111,6 +112,7 @@ web-sys = { version = "0.3.103", features = [
     "Clipboard",
     "CloseEvent",
     "Event",
+    "HtmlAnchorElement",
     "HtmlDocument",
     "MessageEvent",
     "Navigator",

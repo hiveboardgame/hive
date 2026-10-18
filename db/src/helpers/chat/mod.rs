@@ -7,7 +7,7 @@ mod target;
 use crate::{db_error::DbError, schema::users, DbConn};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
-use shared_types::MESSAGES_HUB_SECTION_LIMIT;
+use shared_types::{DELETED_USER_DISPLAY_NAME, MESSAGES_HUB_SECTION_LIMIT};
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
@@ -58,7 +58,7 @@ pub(super) async fn user_display_map(
                     (
                         id,
                         if deleted {
-                            "Deleted user".to_string()
+                            DELETED_USER_DISPLAY_NAME.to_string()
                         } else {
                             username
                         },
