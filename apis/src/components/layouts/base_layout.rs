@@ -1,6 +1,6 @@
 use crate::{
     components::{
-        atoms::{og::OG, title::Title},
+        atoms::{og::OG, tile_definitions::TileDefinitions, title::Title},
         molecules::{
             alert::Alert,
             install_nudge::InstallNudge,
@@ -220,6 +220,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         } />
 
         <Body />
+        <TileDefinitions />
         <main class=move || {
             format!(
                 "w-full min-h-screen standalone:min-h-[var(--app-height)] text-xs sm:text-sm touch-manipulation {} {}",

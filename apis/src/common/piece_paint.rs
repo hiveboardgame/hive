@@ -1,4 +1,7 @@
-use super::config_options::{TileDesign, TileDots, TileRotation};
+use super::{
+    config_options::{TileDesign, TileDots, TileRotation},
+    inline_tile_sprite,
+};
 use crate::providers::config::TileOptions;
 use hive_lib::{Bug, Color, Piece};
 
@@ -37,7 +40,7 @@ impl ShadowHref {
         match self {
             Self::None => "#no_ds",
             Self::CommonDropShadow => "/assets/tiles/common/all.svg?v=3#drop_shadow",
-            Self::ThreeDShadow => "/assets/tiles/3d/shadow.svg#dshadow",
+            Self::ThreeDShadow => "#hive_shadow_dshadow",
         }
     }
 }
@@ -147,21 +150,26 @@ fn piece_dots_href(piece: Piece, dots: &TileDots) -> Option<DotsHref> {
 fn piece_bug_href(piece: Piece, design: &TileDesign) -> String {
     let bug = piece.bug();
     let color = piece.color();
-    let asset_path = tile_asset_path(design);
+    let (asset_path, prefix) = inline_tile_sprite(design)
+        .map(|(_, prefix)| ("", prefix))
+        .unwrap_or((tile_asset_path(design), ""));
     match design {
         TileDesign::Official
         | TileDesign::Flat
         | TileDesign::HighContrast
         | TileDesign::Community => format!("{asset_path}#{}", bug.name()),
         TileDesign::ThreeD | TileDesign::Pride | TileDesign::Carbon3D | TileDesign::Carbon => {
-            format!("{asset_path}#{}{}", color.name(), bug.name())
+            format!("{asset_path}#{prefix}{}{}", color.name(), bug.name())
         }
     }
 }
 
 fn piece_tile_href(piece: Piece, design: &TileDesign) -> String {
     let color = piece.color();
-    format!("{}#{}", tile_asset_path(design), color.name())
+    match inline_tile_sprite(design) {
+        Some((_, prefix)) => format!("#{prefix}{}", color.name()),
+        None => format!("{}#{}", tile_asset_path(design), color.name()),
+    }
 }
 
 fn piece_rotation_degrees(piece: Piece, rotation: &TileRotation) -> Option<usize> {
@@ -207,15 +215,15 @@ mod tests {
         );
         assert_eq!(
             piece_tile_href(black_beetle, &TileDesign::ThreeD),
-            "/assets/tiles/3d/3d.svg#black"
+            "#hive_3d_black"
         );
         assert_eq!(
             piece_bug_href(black_beetle, &TileDesign::ThreeD),
-            "/assets/tiles/3d/3d.svg#blackBeetle"
+            "#hive_3d_blackBeetle"
         );
         assert_eq!(
             piece_bug_href(black_beetle, &TileDesign::Carbon3D),
-            "/assets/tiles/carbon-3d/carbon-3d.svg#blackBeetle"
+            "#hive_carbon_3d_blackBeetle"
         );
         assert_eq!(
             piece_bug_href(white_ant, &TileDesign::Pride),
