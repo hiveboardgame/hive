@@ -1,6 +1,7 @@
 use super::*;
 use crate::{
     common::{half_point_text, tournament_game_number, unfinished_tournament_game_label},
+    components::atoms::rating::Rating,
     i18n::*,
 };
 use tournamint::PointSystem;
@@ -101,7 +102,7 @@ fn CompactResultRow(
                     .map(|rating| {
                         view! {
                             <span class="text-xs italic text-gray-500 dark:text-gray-400 shrink-0">
-                                "· " {rating}
+                                "· " <Rating value=rating />
                             </span>
                         }
                     })}
@@ -197,7 +198,7 @@ fn ExpandableHistoryGroup(
                             .map(|rating| {
                                 view! {
                                     <span class="text-xs italic text-gray-500 dark:text-gray-400 shrink-0">
-                                        "· " {rating}
+                                        "· " <Rating value=rating />
                                     </span>
                                 }
                             })}

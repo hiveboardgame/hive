@@ -57,7 +57,6 @@ pub use challenge_viewer::{
     ChallengeViewerRole,
 };
 pub use chat_link::{chat_link_href, external_link_destination, validated_link_url};
-pub(crate) use client_message::WEBSOCKET_PROTOCOL_VERSION;
 pub use client_message::{ChatSendRequest, ClientRequest, SubscriptionAttempt, TvInterest};
 pub use config_options::{CurrentConfirm, MoveConfirm, TileDesign, TileDots, TileRotation};
 #[cfg(feature = "ssr")]
@@ -160,8 +159,8 @@ pub use ui_error::{localized_error_message, localized_error_message_for_locale, 
 pub use ui_utils::{render_text_prop, with_class};
 pub use user_action::UserAction;
 
-pub use tournament_display::{parse_tournament_slot_fragment, tournament_slot_fragment};
 pub(crate) use tournament_display::{
+    arena_player_rating,
     result_marker_color,
     rounded_percentage,
     tournament_completion_order,
@@ -170,6 +169,7 @@ pub(crate) use tournament_display::{
     tournament_slot_opponent,
     unfinished_tournament_game_label,
 };
+pub use tournament_display::{parse_tournament_slot_fragment, tournament_slot_fragment};
 
 pub use tournament_pairing_label::{TournamentPairingLabel, TournamentStageLabel};
 

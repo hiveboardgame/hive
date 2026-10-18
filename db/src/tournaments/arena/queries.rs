@@ -12,6 +12,7 @@ use diesel::{
     sql_types::{Text, Timestamptz},
 };
 use diesel_async::RunQueryDsl;
+use shared_types::tournament::arena::PAIRING_CUTOFF_SECONDS;
 use uuid::Uuid;
 
 const ARENA_END_SQL: &str = "tournaments.starts_at + make_interval(secs => ((tournaments.configuration #>> '{format,configuration,duration_seconds}')::integer))";
@@ -23,14 +24,16 @@ fn live_pairing_query(as_of: DateTime<Utc>) -> tournaments::BoxedQuery<'static, 
         .filter(tournaments::starts_at.le(as_of))
         .filter(tournaments::started_at.is_not_null())
         .filter(tournaments::finished_at.is_null())
-        .filter(sql::<Timestamptz>(ARENA_END_SQL).gt(as_of + Duration::seconds(60)))
+        .filter(
+            sql::<Timestamptz>(ARENA_END_SQL).gt(as_of + Duration::seconds(PAIRING_CUTOFF_SECONDS)),
+        )
 }
 
 pub async fn scheduled_start_candidates(
     as_of: DateTime<Utc>,
     limit: i64,
     conn: &mut DbConn<'_>,
-) -> Result<Vec<Uuid>, DbError> {
+) -> Result<Vec<(Uuid, String)>, DbError> {
     if limit <= 0 {
         return Ok(Vec::new());
     }
@@ -41,7 +44,7 @@ pub async fn scheduled_start_candidates(
         .filter(tournaments::finished_at.is_null())
         .order((tournaments::starts_at.asc(), tournaments::id.asc()))
         .limit(limit)
-        .select(tournaments::id)
+        .select((tournaments::id, tournaments::nanoid))
         .load(conn)
         .await?)
 }
@@ -51,7 +54,7 @@ pub async fn pairing_candidates(
     as_of: DateTime<Utc>,
     limit: i64,
     conn: &mut DbConn<'_>,
-) -> Result<Vec<Uuid>, DbError> {
+) -> Result<Vec<(Uuid, String)>, DbError> {
     if limit <= 0 {
         return Ok(Vec::new());
     }
@@ -62,7 +65,7 @@ pub async fn pairing_candidates(
     let mut candidates = query
         .order(tournaments::id.asc())
         .limit(limit)
-        .select(tournaments::id)
+        .select((tournaments::id, tournaments::nanoid))
         .load(conn)
         .await?;
     if let Some(after) = after_id {
@@ -75,8 +78,8 @@ pub async fn pairing_candidates(
                     .filter(tournaments::id.le(after))
                     .order(tournaments::id.asc())
                     .limit(remaining)
-                    .select(tournaments::id)
-                    .load::<Uuid>(conn)
+                    .select((tournaments::id, tournaments::nanoid))
+                    .load::<(Uuid, String)>(conn)
                     .await?,
             );
         }

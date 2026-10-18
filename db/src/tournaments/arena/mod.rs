@@ -82,6 +82,12 @@ mod tests {
             tournaments_users,
         },
         test_support::{
+            arena::{
+                elapse_rematch_wait,
+                finish_by_resignation_with,
+                start_arena_fixture,
+                start_arena_fixture_with_rules,
+            },
             db::test_db,
             tournament::{
                 create_rr_tournament_with_configuration,
@@ -501,6 +507,9 @@ mod tests {
                 Some(PairingIntent::Paused)
             );
             assert_eq!(absent_membership.arena_waiting_since, None);
+            arena::set_pairing_intent(tournament.id, absent, PairingIntent::Paused, &mut conn)
+                .await
+                .expect("the post-game Pause action can repeat an automatic no-start pause");
             let opponent_membership = memberships
                 .iter()
                 .find(|membership| membership.user_id == opponent)
@@ -593,7 +602,8 @@ mod tests {
         assert!(!arena::pairing_candidates(None, Utc::now(), 100, &mut conn)
             .await
             .expect("load Arena pairing candidates")
-            .contains(&tournament.id));
+            .iter()
+            .any(|(id, _)| *id == tournament.id));
         assert!(arena::cutoff_candidates(Utc::now(), 100, &mut conn)
             .await
             .expect("load Arena cutoff candidates")
@@ -2330,117 +2340,6 @@ mod tests {
         }
     }
 
-    async fn start_arena_fixture(
-        prefix: &str,
-        player_count: usize,
-        conn: &mut DbConn<'_>,
-    ) -> (Tournament, Vec<Uuid>, Vec<Game>) {
-        start_arena_fixture_with_rules(
-            prefix,
-            player_count,
-            ArenaConfig::new(
-                NonZeroU32::new(3600).unwrap(),
-                RealtimeClock {
-                    base_seconds: NonZeroU32::new(180).unwrap(),
-                    increment_seconds: 1,
-                },
-            )
-            .rules,
-            conn,
-        )
-        .await
-    }
-
-    async fn start_arena_fixture_with_rules(
-        prefix: &str,
-        player_count: usize,
-        rules: NativeArenaConfig,
-        conn: &mut DbConn<'_>,
-    ) -> (Tournament, Vec<Uuid>, Vec<Game>) {
-        let organizer = create_user(&format!("{prefix}_org"), conn).await;
-        let mut players = Vec::with_capacity(player_count);
-        for index in 0..player_count {
-            players.push(create_user(&format!("{prefix}_{index}"), conn).await.id);
-        }
-        let mut configuration = Config {
-            bot_admission: BotAdmission::HumansAndBots,
-            format: FormatConfig::Arena(ArenaConfig::new(
-                NonZeroU32::new(3_600).unwrap(),
-                RealtimeClock {
-                    base_seconds: NonZeroU32::new(180).unwrap(),
-                    increment_seconds: 1,
-                },
-            )),
-        };
-        let tournament = create_rr_tournament_with_configuration(
-            organizer.id,
-            prefix,
-            TournamentStatus::NotStarted,
-            Some(Utc::now() + Duration::hours(1)),
-            configuration.clone(),
-            conn,
-        )
-        .await;
-        // Stored rules may predate the creation preset; exercise reload behavior
-        // without permitting clients to create arbitrary policies.
-        let FormatConfig::Arena(arena_config) = &mut configuration.format else {
-            unreachable!()
-        };
-        arena_config.rules = rules;
-        update(tournaments::table.find(tournament.id))
-            .set((
-                tournaments::configuration.eq(serde_json::to_value(&configuration).unwrap()),
-                tournaments::starts_at.eq(Some(Utc::now() - Duration::seconds(1))),
-            ))
-            .execute(conn)
-            .await
-            .expect("make Arena tournament due");
-        insert_unfrozen_memberships(tournament.id, &players, fixed_instant(), conn).await;
-        let present = players.clone();
-        let started = arena::start_scheduled_with_presence(
-            tournament.id,
-            move |_| present.iter().copied().collect(),
-            conn,
-        )
-        .await
-        .expect("start Arena fixture");
-        (started.tournament, players, started.new_games)
-    }
-
-    async fn elapse_rematch_wait(tournament_id: Uuid, conn: &mut DbConn<'_>) {
-        update(
-            tournaments_users::table
-                .filter(tournaments_users::tournament_id.eq(tournament_id))
-                .filter(tournaments_users::arena_waiting_since.is_not_null()),
-        )
-        .set(tournaments_users::arena_waiting_since.eq(Some(Utc::now() - Duration::seconds(50))))
-        .execute(conn)
-        .await
-        .unwrap();
-    }
-
-    async fn finish_by_resignation(
-        game: &Game,
-        finished_at: DateTime<Utc>,
-        conn: &mut DbConn<'_>,
-    ) -> Game {
-        let outcome = execute_at(
-            game.id,
-            Command::Control {
-                user_id: game.white_id,
-                control: GameControl::Resign(Color::White),
-            },
-            finished_at,
-            conn,
-        )
-        .await
-        .expect("finish Arena Game by resignation");
-        let Outcome::Applied { game, .. } = outcome else {
-            panic!("Arena resignation updates the Game")
-        };
-        game
-    }
-
     async fn freeze_arena_at(
         tournament_id: Uuid,
         cutoff: DateTime<Utc>,
@@ -2458,5 +2357,16 @@ mod tests {
             .await
             .expect("load frozen Arena outcome")
             .expect("Arena finalization persisted its outcome")
+    }
+
+    async fn finish_by_resignation(
+        game: &Game,
+        finished_at: DateTime<Utc>,
+        conn: &mut DbConn<'_>,
+    ) -> Game {
+        finish_by_resignation_with(game, conn, async |id, command, conn| {
+            execute_at(id, command, finished_at, conn).await
+        })
+        .await
     }
 }

@@ -11,7 +11,7 @@ use leptos_i18n::I18nContext;
 use leptos_icons::*;
 use shared_types::{
     tournament::{
-        arena::Config as ArenaConfig,
+        arena::{Config as ArenaConfig, MAX_DURATION_SECONDS, MIN_DURATION_SECONDS},
         BotAdmission,
         Clock,
         Config,
@@ -74,6 +74,32 @@ pub(super) fn ArenaCreationForm() -> impl IntoView {
     let common = CommonDraft::new(false, false);
     let draft = ArenaDraft::new();
     let clock = Signal::derive(move || Clock::Realtime(draft.clock.get()));
+    let duration_label = Memo::new(move |_| {
+        let minutes = draft.duration_minutes.get();
+        if minutes < 60 {
+            t_string!(
+                i18n,
+                tournaments.creation.duration_minutes,
+                minutes = minutes
+            )
+            .to_string()
+        } else if minutes % 60 == 0 {
+            t_string!(
+                i18n,
+                tournaments.creation.duration_hours,
+                hours = minutes / 60
+            )
+            .to_string()
+        } else {
+            t_string!(
+                i18n,
+                tournaments.creation.duration_hours_minutes,
+                hours = minutes / 60,
+                minutes = minutes % 60
+            )
+            .to_string()
+        }
+    });
     view! {
         <CreationShell
             draft=common
@@ -90,29 +116,16 @@ pub(super) fn ArenaCreationForm() -> impl IntoView {
                         <span class="ui-field-label">
                             {t!(i18n, tournaments.creation.arena_length_minutes)}
                         </span>
-                        <span class="font-bold text-gray-900 dark:text-gray-100">
+                        <span class="w-32 font-bold tabular-nums text-right text-gray-900 whitespace-nowrap dark:text-gray-100 shrink-0">
 
-                            {move || {
-                                let minutes = draft.duration_minutes.get();
-                                if minutes % 60 == 0 {
-                                    t_string!(
-                                        i18n, tournaments.creation.duration_hours, hours = minutes / 60
-                                    )
-                                        .to_string()
-                                } else {
-                                    t_string!(
-                                        i18n, tournaments.creation.duration_hours_minutes, hours = minutes / 60, minutes = minutes % 60
-                                    )
-                                        .to_string()
-                                }
-                            }}
+                            {move || duration_label.get()}
                         </span>
                     </div>
                     <InputSlider
                         signal_to_update=draft.duration_minutes
                         name="Arena Duration"
-                        min=60
-                        max=300
+                        min=(MIN_DURATION_SECONDS / 60) as i32
+                        max=(MAX_DURATION_SECONDS / 60) as i32
                         step=15
                     />
                 </div>

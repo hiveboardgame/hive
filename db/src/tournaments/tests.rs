@@ -1058,7 +1058,7 @@ async fn scheduled_start_candidates_are_ordered_bounded_and_handle_undersubscrip
         arena_api::scheduled_start_candidates(as_of, 1, &mut conn)
             .await
             .expect("load Arena candidate"),
-        vec![arena.id],
+        vec![(arena.id, arena.nanoid.clone())],
     );
     let online = move |_: &[Uuid]| players.into_iter().collect::<HashSet<_>>();
     let arena_started = arena_api::start_scheduled_with_presence(arena.id, online, &mut conn)

@@ -1,3 +1,4 @@
+use crate::components::atoms::rating::Rating;
 mod direct_encounter;
 
 use self::direct_encounter::{direct_encounter_values, DirectEncounterCell, DirectEncounterValue};
@@ -71,7 +72,7 @@ struct DetailedStandingsRow {
     placement: Option<u32>,
     username: String,
     withdrawn: bool,
-    rating: String,
+    rating: Option<u64>,
     total: String,
     values: Vec<(String, Option<DirectEncounterValue>)>,
 }
@@ -243,8 +244,7 @@ pub fn TournamentDetailedStandings(tournament: TournamentState) -> impl IntoView
                 let rating = speed
                     .as_ref()
                     .and_then(|speed| user.ratings.get(speed))
-                    .map(|rating| rating.rating.to_string())
-                    .unwrap_or_else(|| String::from("—"));
+                    .map(|rating| rating.rating);
                 Some(DetailedStandingsRow {
                     placement: standing.rank,
                     username: user.username.clone(),
@@ -307,7 +307,9 @@ pub fn TournamentDetailedStandings(tournament: TournamentState) -> impl IntoView
                                     <span class="font-semibold text-left truncate">{username}</span>
                                 </div>
                             </td>
-                            <td class=CELL>{rating}</td>
+                            <td class=CELL>
+                                <Rating value=rating />
+                            </td>
                             <td class=CELL>
                                 <strong>{total}</strong>
                             </td>

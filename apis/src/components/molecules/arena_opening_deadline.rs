@@ -4,6 +4,7 @@ use crate::{
     providers::{
         game_state::{GameStateStore, GameStateStoreFields},
         AuthContext,
+        Config,
         SoundType,
         Sounds,
     },
@@ -25,20 +26,25 @@ fn seconds_until(deadline: DateTime<Utc>, now: DateTime<Utc>) -> i64 {
     deadline.signed_duration_since(now).num_seconds().max(0)
 }
 
-fn deadline_is_urgent(deadline: DateTime<Utc>, now: DateTime<Utc>, viewer_is_due: bool) -> bool {
-    viewer_is_due && deadline.signed_duration_since(now).num_milliseconds() < 8_000
+fn deadline_is_urgent(deadline: DateTime<Utc>, now: DateTime<Utc>) -> bool {
+    deadline.signed_duration_since(now).num_milliseconds() < 8_000
 }
 
 #[component]
-pub fn ArenaOpeningDeadline(
-    side: Signal<Color>,
-    #[prop(optional)] viewer_only: bool,
-    #[prop(optional)] class: &'static str,
-) -> impl IntoView {
+pub fn ArenaOpeningDeadline(#[prop(optional)] class: &'static str) -> impl IntoView {
     let i18n = use_i18n();
     let game_state = expect_context::<GameStateStore>();
     let auth_context = expect_context::<AuthContext>();
     let sounds = expect_context::<Sounds>();
+    let config = expect_context::<Config>().0;
+    let background_style = move || {
+        let background = config.with(|config| {
+            config
+                .tile
+                .get_effective_background_color(config.prefers_dark)
+        });
+        format!("background-color: {background}")
+    };
     let user_color = game_state.user_color_as_signal(auth_context.identity);
     let game_response = game_state.game_response();
     let now = use_ticking_now();
@@ -52,38 +58,26 @@ pub fn ArenaOpeningDeadline(
             (response.game_start == GameStart::Arena
                 && !response.finished
                 && response.turn < 2
-                && due_side == side.get()
-                && (!viewer_only || viewer_is_due))
-                .then(|| {
-                    (
-                        response.game_id.clone(),
-                        response.turn,
-                        due_at,
-                        viewer_is_due,
-                    )
-                })
+                && viewer_is_due)
+                .then(|| (response.game_id.clone(), response.turn, due_at))
         })
     });
     let seconds_left = Signal::derive(move || {
         active_deadline
             .get()
-            .map(|(_, _, due_at, _)| seconds_until(due_at, now.get()))
+            .map(|(_, _, due_at)| seconds_until(due_at, now.get()))
             .unwrap_or_default()
     });
     let urgent = Signal::derive(move || {
         active_deadline
             .get()
-            .is_some_and(|(_, _, due_at, viewer_is_due)| {
-                deadline_is_urgent(due_at, now.get(), viewer_is_due)
-            })
+            .is_some_and(|(_, _, due_at)| deadline_is_urgent(due_at, now.get()))
     });
     let warning_key = Memo::new(move |_| {
         if !urgent.get() {
             return None;
         }
-        active_deadline
-            .get()
-            .map(|(game_id, turn, due_at, _)| (game_id, turn, due_at))
+        active_deadline.get()
     });
     let warned = StoredValue::new(None::<(GameId, usize, DateTime<Utc>)>);
 
@@ -115,10 +109,11 @@ pub fn ArenaOpeningDeadline(
             <div
                 class=move || {
                     format!(
-                        "pointer-events-none flex h-7 items-center justify-center px-2 text-center text-sm font-medium text-white tabular-nums shadow-sm transition-colors {class} {}",
-                        if urgent.get() { "bg-ladybug-red" } else { "bg-grasshopper-green" },
+                        "pointer-events-none flex justify-center items-center px-2 py-1 text-center text-sm font-semibold tabular-nums transition-colors {class} {}",
+                        if urgent.get() { "text-ladybug-red" } else { "text-grasshopper-green" },
                     )
                 }
+                style=background_style
                 aria-label=move || deadline_text.get()
             >
                 {move || deadline_text.get()}

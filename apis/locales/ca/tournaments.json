@@ -137,6 +137,7 @@
         "optimal": "Òptim",
         "duration_hours": "{{hours}} h",
         "duration_hours_minutes": "{{hours}} h {{minutes}} min",
+        "duration_minutes": "{{minutes}} min",
         "rounds_range": "{{minimum}}–{{maximum}} rondes",
         "one_round": "1 ronda",
         "rounds_count": "{{count}} rondes",
@@ -185,7 +186,7 @@
             "berserk_bonus": "{{points}} punts extra de torneig",
             "berserk_help": "El Berserk elimina l'increment i, quan correspon, redueix el temps inicial a la meitat. Una victòria dona {{bonus}} si la partida dura almenys {{moves}} moviments individuals. Tria'l abans del primer moviment.",
             "berserk_disabled": "El Berserk està desactivat en aquesta Arena.",
-            "arena_pairing": "Els primers aparellaments usen les puntuacions. Després de cada partida, t'aparellen amb un rival pròxim al teu lloc al torneig.",
+            "arena_pairing": "Els primers aparellaments es basen en les puntuacions; els següents, en la teva posició al torneig. Mantén oberta la pàgina de l'arena o torna-hi per trobar el teu següent rival.",
             "arena_end": "La classificació es congela quan el compte enrere arriba a zero. Acaba la partida en curs; el resultat no afectarà la classificació."
         },
         "rules_summary": {
@@ -573,7 +574,7 @@
         "new_pairings_each_round_based_on_standings": "Aparellaments nous cada ronda, segons la classificació.",
         "win_a_set_to_win_the_match_tied_sets_are_replayed": "Guanya un set per guanyar l'enfrontament. Els sets empatats es repeteixen.",
         "a_second_final_is_played_if_the_lower_bracket_winner_wins_the_first": "Es juga una segona final si el guanyador del quadre inferior guanya la primera.",
-        "you_ll_keep_getting_new_opponents_while_the_arena_is_running": "Continuaràs rebent rivals nous mentre l'arena estigui en curs.",
+        "you_ll_keep_getting_new_opponents_while_the_arena_is_running": "Mantén oberta la pàgina de l'arena o torna-hi després de cada partida per trobar el teu següent rival.",
         "arena_leave_after_start_help": "Un cop comença, no pots sortir-ne. Posa't en pausa per aturar els aparellaments nous; la partida actual continua.",
         "each_match": "Cada enfrontament",
         "if_still_tied": "Si encara hi ha empat",

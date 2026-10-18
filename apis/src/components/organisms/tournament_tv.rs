@@ -1,6 +1,7 @@
 use crate::{
     common::{display_username, format_clock_time_remaining, format_game_result, TvInterest},
     components::{
+        atoms::rating::Rating,
         molecules::thumbnail_pieces::ThumbnailPieces,
         organisms::tournament_inspector::{player_standing, TournamentSelection},
     },
@@ -22,7 +23,13 @@ use hive_lib::{Color, GameStatus};
 use leptos::prelude::*;
 use leptos_i18n::I18nContext;
 use reactive_stores::{ArcField, Store};
-use shared_types::{tournament_view::ArenaGameResponse, GameId, TimeMode, TournamentStatus};
+use shared_types::{
+    rounded_rating,
+    tournament_view::ArenaGameResponse,
+    GameId,
+    TimeMode,
+    TournamentStatus,
+};
 use std::{collections::HashMap, sync::Arc};
 
 fn arena_featured_game_id(
@@ -85,10 +92,10 @@ fn ArenaTvPlayerRow(
                 let recorded_rating = match color {
                     Color::White => identity_game.white_rating,
                     Color::Black => identity_game.black_rating,
-                }
-                    .filter(|rating| rating.is_finite())
-                    .map(|rating| rating.round().max(0.0) as u64);
+                };
                 let rating = recorded_rating
+                    .and_then(rounded_rating)
+                    .map(u64::from)
                     .unwrap_or_else(|| player.rating_for_speed(&identity_game.speed));
                 view! {
                     <span class="font-semibold tabular-nums text-gray-500 dark:text-gray-400 shrink-0">
@@ -104,7 +111,7 @@ fn ArenaTvPlayerRow(
                         {name}
                     </button>
                     <span class="text-sm italic text-gray-500 dark:text-gray-400 shrink-0">
-                        {rating}
+                        <Rating value=rating />
                     </span>
                 }
             }}
@@ -306,14 +313,17 @@ pub fn TournamentTv(
     );
 
     view! {
-        // Keep the TV fetch out of the parent tournament boundary's SSR resolution loop.
-        <Suspense fallback=|| ()>
+        <Transition fallback=|| ()>
             {move || {
+                #[cfg(feature = "ssr")] fallback_game.with(|_| ());
                 featured_game
                     .get()
-                    .map(|game| view! { <ArenaTournamentTvGame common game selection /> })
+                    .map(|game| {
+                        // SSR must wait for the fetch; hydration renders through the compared memo.
+                        view! { <ArenaTournamentTvGame common game selection /> }
+                    })
             }}
-        </Suspense>
+        </Transition>
     }
 }
 
@@ -326,10 +336,16 @@ mod tests {
         use super::*;
         use crate::{
             components::organisms::tournament_overview_rail::TournamentOverviewRail,
-            providers::{TournamentFormatState, TournamentState},
+            providers::{provide_config, TournamentFormatState, TournamentState},
             responses::{TournamentLifecycleDetails, TournamentMemberships, TournamentStandings},
         };
         use actix_web::{rt::System, test as actix_test, web::Data, App};
+        use db_lib::{
+            get_conn,
+            models::{Challenge, Game, NewChallenge, NewGame, NewUser, User},
+            DbPool,
+        };
+        use hive_lib::{ColorChoice, GameType};
         use leptos_actix::{generate_route_list, LeptosRoutes};
         use leptos_router::{
             components::{Route, Router, Routes},
@@ -338,6 +354,8 @@ mod tests {
         use shared_types::{
             tournament::{arena::Config as ArenaConfig, BotAdmission},
             tournament_view::CompactTournamentGameResponse,
+            ChallengeDetails,
+            ChallengeVisibility,
             GameSpeed,
             GameStart,
             RealtimeClock,
@@ -354,7 +372,10 @@ mod tests {
         }
 
         #[component]
-        fn AsyncArena() -> impl IntoView {
+        fn AsyncArena(
+            #[prop(default = GameId(String::from("featured")))] game_id: GameId,
+        ) -> impl IntoView {
+            provide_config();
             let timestamp = DateTime::from_timestamp(0, 0).unwrap();
             let common = Store::new(TournamentCommon {
                 lifecycle: TournamentLifecycleDetails {
@@ -377,7 +398,6 @@ mod tests {
                 standings: TournamentStandings::default(),
                 bot_admission: BotAdmission::HumansAndBots,
             });
-            let game_id = GameId(String::from("featured"));
             let arena = Store::new(ArenaState {
                 configuration: ArenaConfig::new(
                     NonZeroU32::new(3600).unwrap(),
@@ -437,22 +457,27 @@ mod tests {
             }
         }
 
-        #[tokio::test(flavor = "multi_thread")]
-        async fn featured_game_fetch_does_not_prevent_arena_ssr_completion() {
-            let db = test_database::test_db().await;
-            let pool = db.pool.clone();
+        async fn render_arena(pool: DbPool, game_id: GameId) -> String {
             tokio::task::spawn_blocking(move || {
                 System::new().block_on(async move {
-                    let app_fn = || {
+                    let app_fn = move || {
+                        let game_id = game_id.clone();
                         view! {
-                            <Router>
-                                <Routes fallback=|| ()>
-                                    <Route path=path!("/") view=AsyncArena />
-                                </Routes>
-                            </Router>
+                            <I18nContextProvider>
+                                <Router>
+                                    <Routes fallback=|| ()>
+                                        <Route
+                                            path=path!("/")
+                                            view=move || {
+                                                view! { <AsyncArena game_id=game_id.clone() /> }
+                                            }
+                                        />
+                                    </Routes>
+                                </Router>
+                            </I18nContextProvider>
                         }
                     };
-                    let routes = generate_route_list(app_fn);
+                    let routes = generate_route_list(app_fn.clone());
                     let app = actix_test::init_service(
                         App::new()
                             .app_data(Data::new(pool))
@@ -465,14 +490,75 @@ mod tests {
                     )
                     .await;
                     assert!(response.status().is_success());
-                    // The missing Game exercises a real asynchronous fetch that must not stall the page.
-                    tokio::time::timeout(Duration::from_secs(2), actix_test::read_body(response))
-                        .await
-                        .expect("the Arena SSR response must finish after the featured-game fetch");
+                    let body = tokio::time::timeout(
+                        Duration::from_secs(2),
+                        actix_test::read_body(response),
+                    )
+                    .await
+                    .expect("the Arena SSR response must finish after the featured-game fetch");
+                    String::from_utf8(body.to_vec()).unwrap()
                 })
             })
             .await
-            .expect("the SSR test worker must finish");
+            .expect("the SSR test worker must finish")
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn featured_game_fetch_does_not_prevent_arena_ssr_completion() {
+            let db = test_database::test_db().await;
+            // A missing Game still exercises an asynchronous fetch that must not stall SSR.
+            render_arena(db.pool.clone(), GameId(String::from("featured"))).await;
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn resolved_featured_game_is_in_ssr_html_before_hydration() {
+            let db = test_database::test_db().await;
+            let mut conn = get_conn(&db.pool).await.unwrap();
+            let white = User::create(
+                NewUser::new("ssr_white", "password", "ssr_white@example.test").unwrap(),
+                &mut conn,
+            )
+            .await
+            .unwrap();
+            let black = User::create(
+                NewUser::new("ssr_black", "password", "ssr_black@example.test").unwrap(),
+                &mut conn,
+            )
+            .await
+            .unwrap();
+            let challenge = NewChallenge::new(
+                white.id,
+                None,
+                &ChallengeDetails {
+                    rated: false,
+                    game_type: GameType::Base,
+                    visibility: ChallengeVisibility::Public,
+                    opponent: None,
+                    color_choice: ColorChoice::Random,
+                    time_mode: TimeMode::RealTime,
+                    time_base: Some(300),
+                    time_increment: Some(0),
+                    band_lower: None,
+                    band_upper: None,
+                },
+                &mut conn,
+            )
+            .await
+            .unwrap();
+            let challenge = Challenge::create(&challenge, &mut conn).await.unwrap();
+            let mut game = NewGame::new(white.id, black.id, &challenge).unwrap();
+            game.history = String::from("wA1 ;");
+            game.turn = 1;
+            game.current_player_id = black.id;
+            game.game_status = GameStatus::InProgress.to_string();
+            let game = Game::create(game, &mut conn).await.unwrap();
+            drop(conn);
+
+            let html = render_arena(db.pool.clone(), GameId(game.nanoid.clone())).await;
+            assert!(
+                html.contains(&format!("data-featured-game-id=\"{}\"", game.nanoid)),
+                "SSR must render the resolved featured game rather than serialize its data beside an empty placeholder"
+            );
         }
     }
 

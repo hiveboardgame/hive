@@ -1,9 +1,11 @@
 use crate::{
     common::{
+        arena_player_rating,
         rounded_percentage,
         tournament_player_name as player_name,
         tournament_slot_opponent as slot_opponent,
     },
+    components::atoms::rating::Rating,
     responses::tournament::rating_clock,
 };
 use shared_types::tournament_view::{
@@ -169,7 +171,9 @@ fn PlayerStatisticsTable(
                         <dt class="py-0.5 text-gray-600 dark:text-gray-300">
                             {t!(i18n, common.performance)}
                         </dt>
-                        <dd class="py-0.5 font-semibold tabular-nums text-right">{performance}</dd>
+                        <dd class="py-0.5 font-semibold tabular-nums text-right">
+                            <Rating value=performance />
+                        </dd>
                     }
                 })}
             <dt class="py-0.5 text-gray-600 dark:text-gray-300">
@@ -200,7 +204,7 @@ fn PlayerStatisticsTable(
                             {t!(i18n, tournaments.view.arena.average_opponent)}
                         </dt>
                         <dd class="py-0.5 font-semibold tabular-nums text-right">
-                            {average_opponent}
+                            <Rating value=average_opponent />
                         </dd>
                     }
                 })}
@@ -398,6 +402,7 @@ struct PlayerHeaderDetails {
     profile_href: String,
     badge: Option<String>,
     metadata: String,
+    rating: Option<u64>,
 }
 
 fn player_header_details(
@@ -405,6 +410,7 @@ fn player_header_details(
     configuration: &FormatConfig,
     elimination_result: Option<EliminationPlayerResultResponse>,
     player: Uuid,
+    arena: Option<Store<ArenaState>>,
 ) -> PlayerHeaderDetails {
     let i18n = use_i18n();
     let memberships = common.memberships().get();
@@ -419,18 +425,25 @@ fn player_header_details(
             .as_ref()
             .map_or_else(|| name.clone(), |(rank, _)| format!("#{rank} {name}"))
     };
-    let rating = rating_clock(configuration)
-        .map(GameSpeed::from)
-        .and_then(|speed| {
-            memberships
-                .players
-                .get(&player)
-                .map(|player| player.rating_for_speed(&speed))
+    let rating = arena
+        .and_then(|arena| {
+            arena
+                .player_stats()
+                .at_key(player)
+                .try_with(arena_player_rating)
+                .flatten()
+        })
+        .or_else(|| {
+            rating_clock(configuration)
+                .map(GameSpeed::from)
+                .and_then(|speed| {
+                    memberships
+                        .players
+                        .get(&player)
+                        .map(|player| player.rating_for_speed(&speed))
+                })
         });
     let mut metadata = Vec::new();
-    if let Some(rating) = rating {
-        metadata.push(rating.to_string());
-    }
     match configuration {
         FormatConfig::Elimination(_) => {
             if let Some(seed) = memberships
@@ -477,6 +490,7 @@ fn player_header_details(
         profile_href: format!("/@/{name}"),
         badge: elimination_result.and_then(|result| result_label(i18n.get_locale(), result)),
         metadata: metadata.join(" · "),
+        rating,
     }
 }
 
@@ -492,21 +506,21 @@ pub(super) fn TournamentPlayerDetails(
         TournamentFormatState::Arena(arena) => (
             Memo::new(move |_| {
                 let configuration = FormatConfig::Arena(arena.configuration().get());
-                player_header_details(common, &configuration, None, player)
+                player_header_details(common, &configuration, None, player, Some(arena))
             }),
             view! { <ArenaPlayerDetailsBody common arena player selection /> }.into_any(),
         ),
         TournamentFormatState::RoundRobin(round_robin) => (
             Memo::new(move |_| {
                 let configuration = FormatConfig::RoundRobin(round_robin.configuration().get());
-                player_header_details(common, &configuration, None, player)
+                player_header_details(common, &configuration, None, player, None)
             }),
             view! { <RoundRobinPlayerDetailsBody common round_robin player /> }.into_any(),
         ),
         TournamentFormatState::Swiss(swiss) => (
             Memo::new(move |_| {
                 let configuration = FormatConfig::Swiss(swiss.configuration().get());
-                player_header_details(common, &configuration, None, player)
+                player_header_details(common, &configuration, None, player, None)
             }),
             view! { <SwissPlayerDetailsBody common swiss player /> }.into_any(),
         ),
@@ -519,7 +533,7 @@ pub(super) fn TournamentPlayerDetails(
                     .iter()
                     .find(|result| result.player == player)
                     .copied();
-                player_header_details(common, &configuration, result, player)
+                player_header_details(common, &configuration, result, player, None)
             }),
             view! { <EliminationPlayerDetailsBody common elimination player /> }.into_any(),
         ),
@@ -550,11 +564,15 @@ pub(super) fn TournamentPlayerDetails(
                                         }
                                     })}
                             </div>
-                            {(!details.metadata.is_empty())
+                            {(details.rating.is_some() || !details.metadata.is_empty())
                                 .then(|| {
                                     view! {
                                         <p class="text-xs tabular-nums text-gray-600 dark:text-gray-300">
-                                            {details.metadata}
+                                            {details
+                                                .rating
+                                                .map(|rating| view! { <Rating value=rating /> })}
+                                            {(details.rating.is_some() && !details.metadata.is_empty())
+                                                .then_some(" · ")} {details.metadata}
                                         </p>
                                     }
                                 })}

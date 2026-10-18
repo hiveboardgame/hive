@@ -137,6 +137,7 @@
         "optimal": "Optimális",
         "duration_hours": "{{hours}} ó",
         "duration_hours_minutes": "{{hours}} ó {{minutes}} p",
+        "duration_minutes": "{{minutes}} perc",
         "rounds_range": "{{minimum}}–{{maximum}} forduló",
         "one_round": "1 forduló",
         "rounds_count": "{{count}} forduló",
@@ -185,7 +186,7 @@
             "berserk_bonus": "{{points}} további versenypont",
             "berserk_help": "A Berserk megszünteti az időbónuszt, és jogosultság esetén felezi a kezdőidőt. A győzelemért {{bonus}} jár, ha a játszma legalább {{moves}} egyedi lépésig tart. Az első lépésed előtt válaszd.",
             "berserk_disabled": "Ebben az arénában a Berserk le van tiltva.",
-            "arena_pairing": "Az első párosítás Élő alapján készül. Ezután minden játszma után a versenyhelyezésedhez közeli ellenfelet kapsz.",
+            "arena_pairing": "Az első párosítás Élő alapján készül, a későbbiek a versenyhelyezésed alapján. Tartsd nyitva az aréna oldalát, vagy térj vissza oda a következő ellenfeledért.",
             "arena_end": "A visszaszámlálás végén az állás rögzül. Fejezd be a folyamatban lévő játszmákat; eredményük már nem módosítja az állást."
         },
         "rules_summary": {
@@ -573,7 +574,7 @@
         "new_pairings_each_round_based_on_standings": "Minden fordulóban új párosítás az állás alapján.",
         "win_a_set_to_win_the_match_tied_sets_are_replayed": "Nyerj szettet a mérkőzés megnyeréséhez. A döntetlen szetteket újrajátsszátok.",
         "a_second_final_is_played_if_the_lower_bracket_winner_wins_the_first": "Második döntőt játszotok, ha az alsó ág győztese nyeri az elsőt.",
-        "you_ll_keep_getting_new_opponents_while_the_arena_is_running": "Amíg az aréna tart, folyamatosan új ellenfeleket kapsz.",
+        "you_ll_keep_getting_new_opponents_while_the_arena_is_running": "Tartsd nyitva az aréna oldalát, vagy térj vissza minden játszma után, hogy új ellenfelet kapj.",
         "arena_leave_after_start_help": "Indulás után nem léphetsz ki. Szünettel leállíthatod az új párosításokat; a jelenlegi játszma folytatódik.",
         "each_match": "Minden mérkőzés",
         "if_still_tied": "Ha még döntetlen",

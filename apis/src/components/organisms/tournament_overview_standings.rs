@@ -1,5 +1,6 @@
 use crate::{
     common::{
+        arena_player_rating,
         display_standing_rows,
         primary_score_presentation,
         result_marker_color,
@@ -9,7 +10,7 @@ use crate::{
         ScorePresentation,
     },
     components::{
-        atoms::status_indicator::StatusIndicator,
+        atoms::{rating::Rating, status_indicator::StatusIndicator},
         molecules::tournament_standings_controls::TournamentStandingsControls,
         organisms::{
             elimination_result::overview_result_label,
@@ -62,7 +63,6 @@ use shared_types::{
 use std::{
     cmp::Reverse,
     collections::{HashMap, HashSet},
-    fmt,
 };
 use tournamint::MatchScore;
 use uuid::Uuid;
@@ -148,21 +148,6 @@ struct ArenaGameView {
 struct ArenaScoreView {
     text: String,
     emphasis: ScoreEmphasis,
-}
-
-#[derive(Clone, Copy)]
-enum ArenaRating {
-    Tournament(i32),
-    Account(u64),
-}
-
-impl fmt::Display for ArenaRating {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Tournament(rating) => rating.fmt(formatter),
-            Self::Account(rating) => rating.fmt(formatter),
-        }
-    }
 }
 
 fn arena_result(game: &ArenaGameResponse, side: usize) -> ArenaResult {
@@ -650,7 +635,7 @@ fn maximum_result_count(format: TournamentFormatState, status: TournamentStatus)
 #[component]
 fn StandingPlayerIdentity(
     name: String,
-    rating: Signal<Option<String>>,
+    rating: Signal<Option<u64>>,
     withdrawn: bool,
     fixed_desktop_width: bool,
     inline_desktop_rating: bool,
@@ -683,19 +668,22 @@ fn StandingPlayerIdentity(
                     .then(|| {
                         view! {
                             <span class="hidden ml-1 text-xs italic text-gray-500 whitespace-nowrap sm:inline dark:text-gray-400 shrink-0">
-                                {move || desktop_rating.get()}
+                                {move || {
+                                    desktop_rating
+                                        .get()
+                                        .map(|rating| view! { <Rating value=rating /> })
+                                }}
                             </span>
                         }
                     })}
             </div>
             {move || {
-                mobile_rating
-                    .get()
-                    .or_else(|| show_missing_rating.then(|| String::from("—")))
-                    .map(|rating| {
+                let rating = mobile_rating.get();
+                (rating.is_some() || show_missing_rating)
+                    .then(|| {
                         view! {
                             <span class="text-xs italic tabular-nums text-gray-500 sm:hidden dark:text-gray-400 truncate">
-                                {rating}
+                                <Rating value=rating />
                             </span>
                         }
                     })
@@ -738,10 +726,9 @@ fn ArenaStandingRow(
         rating_stats
             .as_ref()
             .and_then(|stats| stats.try_get())
-            .and_then(|stats| stats.arena_rating)
-            .map(ArenaRating::Tournament)
-            .or_else(|| account_rating.map(ArenaRating::Account))
-            .map(|rating| rating.to_string())
+            .as_ref()
+            .and_then(arena_player_rating)
+            .or(account_rating)
     });
     view! {
         <div
@@ -890,7 +877,7 @@ fn StandardStandingRow(
     let seed = row.rank;
     let name = row.name;
     let account_rating = row.rating;
-    let rating = Signal::derive(move || account_rating.map(|rating| rating.to_string()));
+    let rating = Signal::derive(move || account_rating);
     let faded = row.faded;
     let withdrawn = row.withdrawn;
     let class = move || {
@@ -951,9 +938,7 @@ fn StandardStandingRow(
                 .then(|| {
                     view! {
                         <div class="hidden flex-none py-2 px-2 text-xs italic tabular-nums text-right text-gray-500 whitespace-nowrap sm:block sm:px-3 dark:text-gray-400 min-w-[4ch]">
-                            {account_rating
-                                .map(|rating| rating.to_string())
-                                .unwrap_or_else(|| String::from("—"))}
+                            <Rating value=account_rating />
                         </div>
                     }
                 })}

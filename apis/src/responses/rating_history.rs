@@ -13,7 +13,7 @@ use db_lib::{
     models::{Game},
     DbConn,
 };
-use shared_types::GameSpeed;
+use shared_types::{rounded_rating, GameSpeed};
 use uuid::Uuid;
 use anyhow::Result;
 impl RatingHistoryResponse {
@@ -27,7 +27,7 @@ impl RatingHistoryResponse {
             games
                 .into_iter()
                 .map(|game| RatingHistoryResponse {
-                    rating: game.rating.floor() as u64,
+                    rating: rounded_rating(game.rating).map(u64::from).unwrap_or_default(),
                     updated_at: game.updated_at,
                 })
                 .collect::<Vec<_>>(),

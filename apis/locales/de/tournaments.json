@@ -137,6 +137,7 @@
         "optimal": "Optimal",
         "duration_hours": "{{hours}} Std.",
         "duration_hours_minutes": "{{hours}} Std. {{minutes}} Min.",
+        "duration_minutes": "{{minutes}} Min.",
         "rounds_range": "{{minimum}}–{{maximum}} Runden",
         "one_round": "1 Runde",
         "rounds_count": "{{count}} Runden",
@@ -185,7 +186,7 @@
             "berserk_bonus": "{{points}} zusätzliche Turnierpunkte",
             "berserk_help": "Berserk entfernt deinen Zeitbonus und halbiert gegebenenfalls deine Anfangszeit. Ein Sieg bringt {{bonus}}, wenn die Partie mindestens {{moves}} einzelne Züge dauert. Vor deinem ersten Zug wählen.",
             "berserk_disabled": "Berserk ist in dieser Arena deaktiviert.",
-            "arena_pairing": "Die ersten Paarungen nutzen die Wertung. Nach jeder Partie spielst du gegen einen Gegner mit ähnlichem Turnierrang.",
+            "arena_pairing": "Die ersten Paarungen richten sich nach der Wertung, spätere nach deinem Turnierrang. Lass die Arena-Seite geöffnet oder kehre dorthin zurück, um deinen nächsten Gegner zu finden.",
             "arena_end": "Bei null friert die Tabelle ein. Beende laufende Partien; ihre Ergebnisse ändern die Tabelle nicht mehr."
         },
         "rules_summary": {
@@ -573,7 +574,7 @@
         "new_pairings_each_round_based_on_standings": "Jede Runde neue Paarungen nach Tabellenstand.",
         "win_a_set_to_win_the_match_tied_sets_are_replayed": "Gewinne einen Satz, um das Match zu gewinnen. Unentschiedene Sätze werden wiederholt.",
         "a_second_final_is_played_if_the_lower_bracket_winner_wins_the_first": "Ein zweites Finale folgt, wenn der Sieger der unteren Hälfte das erste gewinnt.",
-        "you_ll_keep_getting_new_opponents_while_the_arena_is_running": "Solange die Arena läuft, bekommst du immer neue Gegner.",
+        "you_ll_keep_getting_new_opponents_while_the_arena_is_running": "Lass die Arena-Seite geöffnet oder kehre nach jeder Partie dorthin zurück, um deinen nächsten Gegner zu finden.",
         "arena_leave_after_start_help": "Nach dem Start kannst du nicht mehr austreten. Pausiere für keine neuen Paarungen; die laufende Partie geht weiter.",
         "each_match": "Jedes Match",
         "if_still_tied": "Bei weiterem Gleichstand",

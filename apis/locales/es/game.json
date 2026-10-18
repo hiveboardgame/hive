@@ -43,7 +43,10 @@
     },
     "arena": {
         "berserk": "Berserk",
-        "berserk_title": "Renuncia al incremento y, cuando corresponda, a la mitad del tiempo base para obtener puntos extra de arena."
+        "berserk_title": "Renuncia al incremento y, cuando corresponda, a la mitad del tiempo base para obtener puntos extra de arena.",
+        "back_to_arena": "Volver a la arena",
+        "return_for_pairing": "Vuelve para encontrar tu próximo rival.",
+        "pairing_paused": "Emparejamientos en pausa. Reanuda en la arena cuando quieras."
     },
     "realtime_assignments": {
         "title": "Partidas en tiempo real listas",

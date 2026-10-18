@@ -32,6 +32,7 @@ use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use shared_types::{
+    rounded_rating,
     tournament::{
         swiss::RoundConfiguration as SwissRoundConfiguration,
         BotAdmission,
@@ -425,7 +426,7 @@ impl Tournament {
     }
 
     pub(crate) fn ensure_rating_in_band(&self, rating: f64) -> Result<(), DbError> {
-        let rating = rating.round();
+        let rating = rounded_rating(rating).map_or(rating, f64::from);
         let below = self
             .band_lower
             .is_some_and(|lower| rating < f64::from(lower));

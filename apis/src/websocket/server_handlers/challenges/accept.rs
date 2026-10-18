@@ -15,7 +15,7 @@ use db_lib::{
     DbPool,
 };
 use diesel_async::AsyncConnection;
-use shared_types::{ChallengeId, GameSpeed};
+use shared_types::{rounded_rating, ChallengeId, GameSpeed};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -54,11 +54,14 @@ impl AcceptHandler {
         let speed = challenge
             .time_control()?
             .map_or(GameSpeed::Untimed, GameSpeed::from);
-        let rating = Rating::for_uuid(&self.user_id, &speed, &mut conn)
-            .await?
-            .rating;
+        let rating = rounded_rating(
+            Rating::for_uuid(&self.user_id, &speed, &mut conn)
+                .await?
+                .rating,
+        )
+        .unwrap_or_default();
         if let Some(band_upper) = challenge.band_upper {
-            if rating > band_upper as f64 {
+            if i64::from(rating) > i64::from(band_upper) {
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::User(self.user_id),
                     message: ServerMessage::Error(
@@ -73,7 +76,7 @@ impl AcceptHandler {
             }
         }
         if let Some(band_lower) = challenge.band_lower {
-            if rating < band_lower as f64 {
+            if i64::from(rating) < i64::from(band_lower) {
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::User(self.user_id),
                     message: ServerMessage::Error(

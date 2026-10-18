@@ -212,11 +212,12 @@ async fn start_scheduled_arenas(pool: &DbPool, hub: &Arc<WsHub>) -> Result<()> {
     let mut conn = get_conn(pool).await?;
     let candidates =
         arena::scheduled_start_candidates(Utc::now(), START_BATCH_SIZE, &mut conn).await?;
-    for tournament_id in candidates {
+    for (tournament_id, nanoid) in candidates {
         let presence_hub = Arc::clone(hub);
+        let response_id = TournamentId(nanoid);
         match arena::start_scheduled_with_presence(
             tournament_id,
-            move |candidates| presence_hub.authenticated_presence_for(candidates),
+            move |candidates| presence_hub.arena_presence_for(&response_id, candidates),
             &mut conn,
         )
         .await
@@ -338,14 +339,15 @@ async fn sweep_arena_once(
     let candidates =
         arena::pairing_candidates(*after_id, Utc::now(), ARENA_PAIRING_BATCH_SIZE, &mut conn)
             .await?;
-    if let Some(last) = candidates.last() {
-        *after_id = Some(*last);
+    if let Some((last_id, _)) = candidates.last() {
+        *after_id = Some(*last_id);
     }
-    for tournament_id in candidates {
+    for (tournament_id, nanoid) in candidates {
         let presence_hub = Arc::clone(hub);
+        let response_id = TournamentId(nanoid);
         match arena::pair_waiting_with_presence(
             tournament_id,
-            move |candidates| presence_hub.authenticated_presence_for(candidates),
+            move |candidates| presence_hub.arena_presence_for(&response_id, candidates),
             &mut conn,
         )
         .await

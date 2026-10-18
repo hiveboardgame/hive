@@ -56,7 +56,7 @@ pub fn UserWithRating(
         player.with(|p| {
             p.as_ref().and_then(|player| {
                 speed().map(|speed| {
-                    Either::Left(view! { <Rating rating=player.ratings.get(&speed).expect("Valid rating from speed").clone() /> })
+                    Either::Left({ let rating = player.ratings.get(&speed).expect("Valid rating from speed"); view! { <Rating value=rating.rating certainty=rating.certainty.clone() /> } })
                 })
             }).unwrap_or_else(|| Either::Right(view! { "" }))
         })

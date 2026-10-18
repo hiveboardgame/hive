@@ -1,10 +1,6 @@
 use crate::{
     common::{CurrentConfirm, MoveConfirm},
-    components::molecules::{
-        arena_opening_deadline::ArenaOpeningDeadline,
-        live_timer::LiveTimer,
-        user_with_rating::UserWithRating,
-    },
+    components::molecules::{live_timer::LiveTimer, user_with_rating::UserWithRating},
     providers::{game_state::GameStateStore, timer::TimerSignal, ApiRequestsProvider, AuthContext},
 };
 use hive_lib::Color;
@@ -52,11 +48,10 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
             "",
         ),
     };
-    // Keep the deadline in the layout while clipping only the timer card.
     let panel_class = if vertical {
         "contents"
     } else {
-        "grid h-16 shrink-0 grid-cols-2 ui-board-side-panel short:h-auto short:min-h-10 short:flex-1 short:grid-rows-2 lg:short:min-h-14"
+        "grid h-16 w-full shrink-0 grid-cols-2 ui-board-side-panel short:h-auto short:min-h-10 short:flex-1 short:grid-rows-2 lg:short:min-h-14"
     };
     let timer = expect_context::<TimerSignal>().signal;
     let active_side = Memo::new(move |_| {
@@ -114,15 +109,11 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
             outer_container_style.to_string()
         } else {
             let alignment = match placement {
-                Placement::Top => "flex-col self-end",
-                Placement::Bottom => "flex-col-reverse self-start",
+                Placement::Top => "self-end",
+                Placement::Bottom => "self-start",
             };
             format!("{outer_container_style} {alignment}")
         }
-    };
-    let opening_deadline_class = match placement {
-        Placement::Top => "shrink-0 rounded-b",
-        Placement::Bottom => "shrink-0 rounded-t",
     };
 
     view! {
@@ -156,9 +147,6 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
                     </div>
                 </Show>
             </div>
-            <Show when=move || !vertical>
-                <ArenaOpeningDeadline side class=opening_deadline_class />
-            </Show>
         </div>
     }
 }

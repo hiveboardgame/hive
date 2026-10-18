@@ -43,7 +43,10 @@
     },
     "arena": {
         "berserk": "Berserk",
-        "berserk_title": "Mondj le a bónuszidőről, és amikor alkalmazható, az alapidő feléről extra arénapontokért."
+        "berserk_title": "Mondj le a bónuszidőről, és amikor alkalmazható, az alapidő feléről extra arénapontokért.",
+        "back_to_arena": "Vissza az arénába",
+        "return_for_pairing": "Lépj vissza a következő ellenfélhez.",
+        "pairing_paused": "Párosítás szünetel. Folytasd az arénában, ha kész vagy."
     },
     "realtime_assignments": {
         "title": "Valós idejű játszmák készen állnak",

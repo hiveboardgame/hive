@@ -40,7 +40,10 @@
     },
     "arena": {
         "berserk": "Berserk",
-        "berserk_title": "Renoncez à l'incrément et, si possible, à la moitié du temps de base pour gagner des points d'arène supplémentaires."
+        "berserk_title": "Renoncez à l'incrément et, si possible, à la moitié du temps de base pour gagner des points d'arène supplémentaires.",
+        "back_to_arena": "Retour à l’arène",
+        "return_for_pairing": "Revenez pour trouver le prochain adversaire.",
+        "pairing_paused": "Appariements en pause. Reprenez dans l’arène quand vous voulez."
     },
     "realtime_assignments": {
         "title": "Parties en temps réel prêtes",

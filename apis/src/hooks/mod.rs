@@ -10,3 +10,4 @@ pub mod sync_user_locale;
 pub mod tap_feedback;
 pub mod web_push_nav_listener;
 pub mod web_push_reconcile;
+pub mod websocket_refresh;

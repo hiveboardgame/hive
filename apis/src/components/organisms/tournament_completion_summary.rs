@@ -1,5 +1,6 @@
 use crate::{
     common::rounded_percentage,
+    components::atoms::rating::Rating,
     i18n::*,
     providers::{
         ArenaStateStoreFields,
@@ -200,7 +201,7 @@ fn percentage(numerator: u32, denominator: u32) -> String {
 }
 
 #[component]
-fn CompletionRow(#[prop(into)] label: TextProp, value: String) -> impl IntoView {
+fn CompletionRow<V: IntoView>(#[prop(into)] label: TextProp, value: V) -> impl IntoView {
     view! {
         <div class="contents">
             <dt class="text-gray-600 dark:text-gray-300">{move || label.get()}</dt>
@@ -237,7 +238,7 @@ pub fn TournamentCompletionSummary(tournament: TournamentState) -> impl IntoView
                                             t_string!(i18n, tournaments.ui.average_participant_rating)
                                                 .to_string()
                                         }
-                                        value=rating.to_string()
+                                        value=view! { <Rating value=rating /> }
                                     />
                                 }
                             })}

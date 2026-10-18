@@ -43,7 +43,10 @@
     },
     "arena": {
         "berserk": "Berserk",
-        "berserk_title": "Renunță la increment și, când se aplică, la jumătate din timpul de bază pentru puncte Arena suplimentare."
+        "berserk_title": "Renunță la increment și, când se aplică, la jumătate din timpul de bază pentru puncte Arena suplimentare.",
+        "back_to_arena": "Înapoi la arenă",
+        "return_for_pairing": "Revino pentru următorul adversar.",
+        "pairing_paused": "Pauză la împerecheri. Reia din arenă când ești gata."
     },
     "realtime_assignments": {
         "title": "Partide în timp real pregătite",

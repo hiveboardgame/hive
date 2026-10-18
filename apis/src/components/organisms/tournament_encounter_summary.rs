@@ -1,4 +1,7 @@
-use crate::{components::atoms::color_hex::ColorHex, i18n::*};
+use crate::{
+    components::atoms::{color_hex::ColorHex, rating::Rating},
+    i18n::*,
+};
 use hive_lib::Color;
 use leptos::prelude::*;
 
@@ -6,11 +9,13 @@ use leptos::prelude::*;
 pub struct EncounterParticipant {
     pub(crate) name: String,
     pub(crate) detail: Option<String>,
+    pub(crate) rating: Option<u64>,
     pub(crate) color: Option<Color>,
 }
 
 #[component]
 fn EncounterParticipantLine(participant: EncounterParticipant) -> impl IntoView {
+    let i18n = use_i18n();
     view! {
         <div class="grid gap-2 items-center min-w-0 grid-cols-[1rem_minmax(0,1fr)]">
             <span class="inline-flex justify-center">
@@ -27,7 +32,9 @@ fn EncounterParticipantLine(participant: EncounterParticipant) -> impl IntoView 
                     .map(|detail| {
                         view! {
                             <span class="text-xs tabular-nums text-gray-500 shrink-0">
-                                {detail}
+                                {t!(
+                                    i18n, tournaments.ui.pts, value1 = move || view! { <Rating value=participant.rating /> }, value2 = detail
+                                )}
                             </span>
                         }
                     })}

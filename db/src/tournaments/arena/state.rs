@@ -6,13 +6,13 @@ use crate::{
     tournaments::rating,
     DbConn,
 };
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use hive_lib::{Color, GameResult, GameStatus};
 use shared_types::{
     tournament::{
-        arena::{Config as ArenaConfig, PairingIntent},
+        arena::{Boundaries as ArenaBoundaries, Config as ArenaConfig, PairingIntent},
         FormatConfig,
     },
     TournamentStatus,
@@ -604,13 +604,6 @@ pub(super) fn arena_config(state: &ArenaDbState) -> &ArenaConfig {
     &state.configuration
 }
 
-#[derive(Clone, Copy)]
-pub(super) struct ArenaBoundaries {
-    pub(super) starts_at: DateTime<Utc>,
-    pub(super) pairing_closes_at: DateTime<Utc>,
-    pub(super) ends_at: DateTime<Utc>,
-}
-
 pub(super) fn load_arena_boundaries(
     tournament: &Tournament,
     config: &ArenaConfig,
@@ -618,18 +611,9 @@ pub(super) fn load_arena_boundaries(
     let starts = tournament
         .starts_at
         .ok_or_else(|| invalid_persisted("Arena tournament is missing its scheduled start"))?;
-    Ok(arena_boundaries(starts, config))
+    Ok(config.boundaries(starts))
 }
 
-fn arena_boundaries(starts: DateTime<Utc>, config: &ArenaConfig) -> ArenaBoundaries {
-    let ends = starts + Duration::seconds(i64::from(config.duration_seconds.get()));
-    let closes = ends - Duration::seconds(60);
-    ArenaBoundaries {
-        starts_at: starts,
-        pairing_closes_at: closes,
-        ends_at: ends,
-    }
-}
 pub(super) fn waiting_millis(
     observed_at: DateTime<Utc>,
     waiting_since: DateTime<Utc>,

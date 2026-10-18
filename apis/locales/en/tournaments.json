@@ -197,6 +197,7 @@
         "optimal": "Optimal",
         "duration_hours": "{{hours}} h",
         "duration_hours_minutes": "{{hours}} h {{minutes}} min",
+        "duration_minutes": "{{minutes}} min",
         "rounds_range": "{{minimum}}–{{maximum}} rounds",
         "one_round": "1 round",
         "rounds_count": "{{count}} rounds",
@@ -245,7 +246,7 @@
             "berserk_bonus": "{{points}} extra tournament points",
             "berserk_help": "Berserk removes your increment and, when eligible, halves your starting time. A win earns {{bonus}} if the game lasts at least {{moves}} individual moves. Choose it before your first move.",
             "berserk_disabled": "Berserk is disabled for this Arena.",
-            "arena_pairing": "Initial pairings use ratings. After each game, you are paired with an opponent near your tournament rank.",
+            "arena_pairing": "Initial pairings use ratings. Later pairings use your tournament rank. Keep the Arena page open or return there for your next opponent.",
             "arena_end": "Standings freeze when the countdown reaches zero. Finish any game still in progress; its result will not affect the standings."
         },
         "rules_summary": {
@@ -412,7 +413,7 @@
         "new_pairings_each_round_based_on_standings": "New pairings each round, based on standings.",
         "win_a_set_to_win_the_match_tied_sets_are_replayed": "Win a set to win the match. Tied sets are replayed.",
         "a_second_final_is_played_if_the_lower_bracket_winner_wins_the_first": "A second final is played if the lower-bracket winner wins the first.",
-        "you_ll_keep_getting_new_opponents_while_the_arena_is_running": "You'll keep getting new opponents while the arena is running.",
+        "you_ll_keep_getting_new_opponents_while_the_arena_is_running": "Keep the Arena page open or return after each game to get your next opponent.",
         "arena_leave_after_start_help": "Once it starts, you can't leave. Pause to stop new pairings; your current game continues.",
         "each_match": "Each match",
         "if_still_tied": "If still tied",

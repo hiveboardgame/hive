@@ -41,7 +41,10 @@
     },
     "arena": {
         "berserk": "Berserk",
-        "berserk_title": "Renuncia a l'increment i, quan sigui aplicable, a la meitat del temps base per obtenir punts extra d'arena."
+        "berserk_title": "Renuncia a l'increment i, quan sigui aplicable, a la meitat del temps base per obtenir punts extra d'arena.",
+        "back_to_arena": "Torna a l’arena",
+        "return_for_pairing": "Torna per trobar el següent rival.",
+        "pairing_paused": "Emparellaments en pausa. Reprèn a l’arena quan vulguis."
     },
     "realtime_assignments": {
         "title": "Partides en temps real preparades",

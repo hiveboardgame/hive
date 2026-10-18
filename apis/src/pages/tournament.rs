@@ -48,7 +48,10 @@ use crate::{
         schedules::get_tournament_schedules,
         tournaments::{get_complete, UpdateDescription},
     },
-    hooks::arena_clock::{use_ticking_now, TournamentTickingClock},
+    hooks::{
+        arena_clock::{use_ticking_now, TournamentTickingClock},
+        websocket_refresh::use_websocket_refresh,
+    },
     i18n::*,
     providers::{
         schedules::{ScheduleLoadKey, SchedulesContext},
@@ -75,7 +78,7 @@ use crate::{
     },
     security::csrf::ActionForm,
 };
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 use leptos::{
     ev::pagehide,
     html::{Aside, Details, Dialog, Div, Summary, Textarea},
@@ -92,7 +95,13 @@ use leptos_router::{
 use leptos_use::{use_element_size, use_event_listener, use_media_query, use_window};
 use reactive_stores::{ArcField, Store};
 use shared_types::{
-    tournament::{BotAdmission, Format, FormatConfig, MIN_SWISS_START_SEATS},
+    tournament::{
+        arena::Boundaries as ArenaBoundaries,
+        BotAdmission,
+        Format,
+        FormatConfig,
+        MIN_SWISS_START_SEATS,
+    },
     ConversationKey,
     GameSpeed,
     SwissProgress,
@@ -263,45 +272,21 @@ fn use_tournament_live_updates(tournament: TournamentState) -> RwSignal<u64> {
     });
 
     let has_watched_open_connection = StoredValue::new(false);
-    let ready_state_websocket = websocket.clone();
     let ready_websocket = websocket.clone();
-    Effect::watch(
-        move || ready_state_websocket.ready_state.get(),
-        move |ready_state, previous, _| {
-            let connection_opened = *ready_state == ConnectionReadyState::Open
-                && previous.is_none_or(|previous| *previous != ConnectionReadyState::Open);
-            if !connection_opened {
-                return;
-            }
-
+    use_websocket_refresh(
+        move || {
             ready_websocket.send(&ClientRequest::TournamentWatch(tournament_id.get_value()));
             if has_watched_open_connection.get_value() {
                 reconnect_generation.update(|generation| {
                     *generation = generation.wrapping_add(1);
                 });
+                refresh.dispatch(());
             } else {
+                // The route Resource already supplied the initial snapshot.
                 has_watched_open_connection.set_value(true);
             }
-            refresh.dispatch(());
         },
         true,
-    );
-
-    let wake_state_websocket = websocket.clone();
-    let wake_websocket = websocket.clone();
-    Effect::watch(
-        move || wake_state_websocket.wake_resync_epoch.get(),
-        move |wake_epoch, previous, _| {
-            let woke = previous.is_some_and(|previous| previous != wake_epoch);
-            if woke && wake_websocket.ready_state.get_untracked() == ConnectionReadyState::Open {
-                wake_websocket.send(&ClientRequest::TournamentWatch(tournament_id.get_value()));
-                reconnect_generation.update(|generation| {
-                    *generation = generation.wrapping_add(1);
-                });
-                refresh.dispatch(());
-            }
-        },
-        false,
     );
 
     let cleanup_websocket = websocket;
@@ -1894,7 +1879,7 @@ fn tournament_arena_countdown(
         return None;
     }
     let starts_at = tournament.starts_at?;
-    let ends_at = starts_at + Duration::seconds(i64::from(arena_duration_seconds?));
+    let ends_at = ArenaBoundaries::new(starts_at, arena_duration_seconds?).ends_at;
     if now < starts_at || now >= ends_at {
         return None;
     }

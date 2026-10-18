@@ -103,8 +103,16 @@ pub fn UserRow(
                         </Show>
                     </span>
                 </div>
-                <Show when=move || { rating.with_value(|r| r.is_some()) }>
-                    <Rating rating=rating.get_value().expect("Rating is some") />
+                <Show when=move || {
+                    rating.with_value(|r| r.is_some())
+                }>
+                    {rating
+                        .with_value(|rating| {
+                            let rating = rating.as_ref().expect("Rating is some");
+                            view! {
+                                <Rating value=rating.rating certainty=rating.certainty.clone() />
+                            }
+                        })}
                 </Show>
             </button>
         })
@@ -113,8 +121,19 @@ pub fn UserRow(
             <div class=row_class>
                 <div class="flex flex-1 justify-between mr-2 min-w-0">
                     <UserIdentity user=user link_class="truncate max-w-[120px]" />
-                    <Show when=move || { rating.with_value(|r| r.is_some()) }>
-                        <Rating rating=rating.get_value().expect("Rating is some") />
+                    <Show when=move || {
+                        rating.with_value(|r| r.is_some())
+                    }>
+                        {rating
+                            .with_value(|rating| {
+                                let rating = rating.as_ref().expect("Rating is some");
+                                view! {
+                                    <Rating
+                                        value=rating.rating
+                                        certainty=rating.certainty.clone()
+                                    />
+                                }
+                            })}
                     </Show>
                 </div>
                 <div class="flex gap-1 items-center shrink-0 [&_.ui-button]:mx-0">

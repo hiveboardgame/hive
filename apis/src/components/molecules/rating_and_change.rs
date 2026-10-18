@@ -1,9 +1,11 @@
 use crate::{
     common::RatingChangeInfo,
+    components::atoms::rating::Rating,
     providers::game_state::{GameStateStore, GameStateStoreFields},
 };
 use hive_lib::Color;
 use leptos::prelude::*;
+use shared_types::rounded_rating_change;
 
 #[component]
 pub fn RatingAndChange(
@@ -21,7 +23,9 @@ pub fn RatingAndChange(
     let precise = format!("{rating_change:+.2}");
 
     view! {
-        <p class=extend_tw_classes>{rating}</p>
+        <p class=extend_tw_classes>
+            <Rating value=rating />
+        </p>
         <p class=format!("{style} cursor-help") title=precise>
             {sign}
             {magnitude}
@@ -57,12 +61,13 @@ pub fn RatingAndChangeDynamic(
 }
 
 fn rating_change_appearance(change: f64) -> (&'static str, &'static str, i64) {
-    let (sign, style) = if change < 0.0 {
+    let change = rounded_rating_change(change);
+    let (sign, style) = if change < 0 {
         ("-", "text-ladybug-red")
-    } else if change > 0.0 {
+    } else if change > 0 {
         ("+", "text-grasshopper-green")
     } else {
         ("+", "text-pillbug-teal")
     };
-    (sign, style, change.abs().round() as i64)
+    (sign, style, i64::from(change).abs())
 }

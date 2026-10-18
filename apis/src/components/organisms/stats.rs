@@ -69,7 +69,10 @@ pub fn Stats(user: UserResponse) -> impl IntoView {
                                 />
 
                                 <div class="text-xs font-bold sm:text-sm lg:text-lg text-pillbug-teal">
-                                    <Rating rating=rating.clone() />
+                                    <Rating
+                                        value=rating.rating
+                                        certainty=rating.certainty.clone()
+                                    />
                                 </div>
                             </div>
 
@@ -117,7 +120,10 @@ pub fn Stats(user: UserResponse) -> impl IntoView {
                                                 ACCENT_METRIC_TEXT_CLASS,
                                                 "text-xl font-bold",
                                             )>
-                                                <Rating rating=rating.clone() />
+                                                <Rating
+                                                    value=rating.rating
+                                                    certainty=rating.certainty.clone()
+                                                />
                                             </div>
                                         </div>
                                         <div class="p-3 text-center rounded-lg border border-pillbug-teal/20 bg-pillbug-teal/10 dark:border-pillbug-teal/30 dark:bg-pillbug-teal/10">

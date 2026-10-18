@@ -403,7 +403,6 @@ impl TournamentWatchIndex {
         }
     }
 
-    #[cfg(test)]
     fn contains(&self, user_id: Uuid, socket_id: Uuid, tournament_id: &TournamentId) -> bool {
         self.sockets_tournament.get(&(user_id, socket_id)) == Some(tournament_id)
     }
@@ -543,22 +542,30 @@ impl WsHub {
         self.revoked_users.contains(&user_id)
     }
 
-    /// Samples account-wide authenticated presence for a bounded candidate set.
-    ///
-    /// Callers supply UUIDs loaded from active account-backed tournament
-    /// membership. Anonymous sockets use unrelated ephemeral UUIDs, while an
-    /// account revoked after connecting is excluded explicitly here. One live
-    /// socket is sufficient; callers do not need to inspect per-socket game or
-    /// chat subscriptions.
-    pub(crate) fn authenticated_presence_for(&self, candidates: &[Uuid]) -> HashSet<Uuid> {
+    /// Returning to the Arena makes an enabled entrant available for pairing.
+    /// A game or chat subscription alone must not requeue a finished player.
+    /// Authenticated bot accounts remain available while connected in either wire format.
+    pub(crate) fn arena_presence_for(
+        &self,
+        tournament_id: &TournamentId,
+        candidates: &[Uuid],
+    ) -> HashSet<Uuid> {
+        let membership = self.membership.read().unwrap_or_else(|p| p.into_inner());
         candidates
             .iter()
             .copied()
             .filter(|user_id| {
-                self.sessions
-                    .get(user_id)
-                    .is_some_and(|sockets| !sockets.is_empty())
-                    && !self.is_user_revoked(*user_id)
+                !self.is_user_revoked(*user_id)
+                    && self.sessions.get(user_id).is_some_and(|sockets| {
+                        sockets.iter().any(|socket| {
+                            socket.bot
+                                || membership.tournament_watches.contains(
+                                    *user_id,
+                                    *socket.key(),
+                                    tournament_id,
+                                )
+                        })
+                    })
             })
             .collect()
     }
@@ -574,8 +581,8 @@ impl WsHub {
         format: SocketFormat,
         user: SimpleUser,
     ) {
-        // A JSON socket is a bot, still anonymous at connect: a snapshot now would describe
-        // nobody. Bots ask for their games once authenticated, or `Resync` for the lobby.
+        // JSON clients request their own games or Resync after authentication.
+        // The browser expects an initial lobby snapshot when its socket connects.
         let send_snapshot = format == SocketFormat::Msgpack;
         self.connect(socket_id, tx, format, user, send_snapshot);
     }
@@ -616,7 +623,14 @@ impl WsHub {
             let was_empty = {
                 let user_entry = self.sessions.entry(user_id).or_default();
                 let empty = user_entry.is_empty();
-                user_entry.insert(socket_id, SocketHandle { tx, format });
+                user_entry.insert(
+                    socket_id,
+                    SocketHandle {
+                        tx,
+                        format,
+                        bot: user.authed && user.bot,
+                    },
+                );
                 empty
             };
             m.fanout
@@ -1122,6 +1136,9 @@ impl WsHub {
         recipients: &HashSet<Uuid>,
     ) -> HashSet<(Uuid, TournamentId)> {
         use diesel_async::RunQueryDsl;
+        if recipients.is_empty() {
+            return HashSet::new();
+        }
         let watched: Vec<_> = {
             let membership = self
                 .membership
@@ -1177,27 +1194,38 @@ impl WsHub {
             .collect()
     }
 
-    async fn notify_released_tournament_games(&self, messages: &[InternalServerMessage]) {
-        let arena_recipients = messages
-            .iter()
-            .filter_map(|message| {
-                let (MessageDestination::User(recipient), ServerMessage::Game(update)) =
-                    (&message.destination, &message.message)
-                else {
-                    return None;
-                };
-                let GameUpdate::Reaction(response) = update.as_ref() else {
-                    return None;
-                };
-                (matches!(response.game_action, GameReaction::New { .. })
-                    && response
-                        .game
-                        .tournament
-                        .as_ref()
-                        .is_some_and(|tournament| tournament.format == Format::Arena))
-                .then_some(*recipient)
+    fn user_watching_tournament(&self, user_id: Uuid, tournament_id: &TournamentId) -> bool {
+        let membership = self.membership.read().unwrap_or_else(|p| p.into_inner());
+        self.sessions.get(&user_id).is_some_and(|sockets| {
+            sockets.iter().any(|socket| {
+                membership
+                    .tournament_watches
+                    .contains(user_id, *socket.key(), tournament_id)
             })
-            .collect::<HashSet<_>>();
+        })
+    }
+
+    async fn notify_released_tournament_games(&self, messages: &[InternalServerMessage]) {
+        let arena_recipients = {
+            messages
+                .iter()
+                .filter_map(|message| {
+                    let (MessageDestination::User(recipient), ServerMessage::Game(update)) =
+                        (&message.destination, &message.message)
+                    else {
+                        return None;
+                    };
+                    let GameUpdate::Reaction(response) = update.as_ref() else {
+                        return None;
+                    };
+                    let tournament = response.game.tournament.as_ref()?;
+                    (matches!(response.game_action, GameReaction::New { .. })
+                        && tournament.format == Format::Arena
+                        && !self.user_watching_tournament(*recipient, &tournament.tournament_id))
+                    .then_some(*recipient)
+                })
+                .collect::<HashSet<_>>()
+        };
         let at_game = self.watched_game_tournaments(&arena_recipients).await;
 
         let mut groups = HashMap::<
@@ -1220,15 +1248,8 @@ impl WsHub {
                 continue;
             };
             if tournament.format == Format::Arena {
-                let membership = self
-                    .membership
-                    .read()
-                    .unwrap_or_else(|poisoned| poisoned.into_inner());
-                let at_arena = membership
-                    .tournament_watches
-                    .sockets_watching(&tournament.tournament_id)
-                    .iter()
-                    .any(|(user_id, _)| user_id == recipient);
+                // The player can return to the Arena during the game-presence lookup.
+                let at_arena = self.user_watching_tournament(*recipient, &tournament.tournament_id);
                 if at_arena || at_game.contains(&(*recipient, tournament.tournament_id.clone())) {
                     continue;
                 }
@@ -2072,10 +2093,14 @@ impl WsHub {
         let (tx, rx) = mpsc::channel(SOCKET_BUFFER_CAPACITY);
         let lobby = Self::lobby();
         let mut m = self.membership.write().unwrap_or_else(|p| p.into_inner());
-        self.sessions
-            .entry(user_id)
-            .or_default()
-            .insert(socket_id, SocketHandle { tx, format });
+        self.sessions.entry(user_id).or_default().insert(
+            socket_id,
+            SocketHandle {
+                tx,
+                format,
+                bot: false,
+            },
+        );
         m.fanout
             .games_sockets
             .entry(lobby.clone())
@@ -2350,6 +2375,7 @@ mod tests {
                 username: "reader".to_string(),
                 authed: false,
                 admin: false,
+                bot: false,
             },
         );
         let membership = hub.membership.read().unwrap();
@@ -2377,6 +2403,7 @@ mod tests {
                 username: "reader".to_string(),
                 authed: false,
                 admin: false,
+                bot: false,
             },
         );
         assert!(!hub.last_tv_snapshot.contains_key(&socket));
@@ -2427,7 +2454,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn authenticated_presence_is_candidate_scoped_multisocket_and_revocation_aware() {
+    async fn arena_pairing_requires_a_live_socket_on_the_matching_tournament_page() {
         let hub = make_hub().await;
         let first = Uuid::new_v4();
         let second = Uuid::new_v4();
@@ -2436,18 +2463,40 @@ mod tests {
         let first_socket = Uuid::new_v4();
         let second_socket = Uuid::new_v4();
         let only_second_socket = Uuid::new_v4();
+        let outside_socket = Uuid::new_v4();
+        let arena = TournamentId("arena".to_string());
+        let other_arena = TournamentId("other-arena".to_string());
 
         let _first_rx = hub.register_socket(first, first_socket);
         let _second_rx = hub.register_socket(first, second_socket);
         let _only_second_rx = hub.register_socket(second, only_second_socket);
-        let _outside_rx = hub.register_socket(outside_candidates, Uuid::new_v4());
-
+        let _outside_rx = hub.register_socket(outside_candidates, outside_socket);
         let candidates = [first, second, offline, first];
+        assert!(hub.arena_presence_for(&arena, &candidates).is_empty());
+
+        hub.watch_tournament(first, first_socket, &arena);
+        hub.watch_tournament(first, second_socket, &arena);
+        hub.watch_tournament(second, only_second_socket, &other_arena);
+        hub.watch_tournament(outside_candidates, outside_socket, &arena);
+        hub.watch_tournament(offline, Uuid::new_v4(), &arena);
         assert_eq!(
-            hub.authenticated_presence_for(&candidates),
-            HashSet::from([first, second]),
+            hub.arena_presence_for(&arena, &candidates),
+            HashSet::from([first])
         );
 
+        // Leaving one tab does not remove the other tab's readiness.
+        hub.unwatch_tournament(first, first_socket, &arena);
+        assert!(hub.arena_presence_for(&arena, &candidates).contains(&first));
+        hub.unwatch_tournament(first, second_socket, &arena);
+        hub.join_game_fanout(first, first_socket, &GameId("finished".to_string()));
+        assert!(hub.arena_presence_for(&arena, &candidates).is_empty());
+
+        hub.watch_tournament(first, first_socket, &arena);
+        hub.watch_tournament(second, only_second_socket, &arena);
+        assert_eq!(
+            hub.arena_presence_for(&arena, &candidates),
+            HashSet::from([first, second])
+        );
         hub.on_disconnect(
             first_socket,
             SimpleUser {
@@ -2455,26 +2504,76 @@ mod tests {
                 username: "first".to_string(),
                 authed: true,
                 admin: false,
+                bot: false,
             },
         );
-        assert!(hub.authenticated_presence_for(&candidates).contains(&first));
-
-        hub.revoke_user(second);
         assert_eq!(
-            hub.authenticated_presence_for(&candidates),
-            HashSet::from([first]),
+            hub.arena_presence_for(&arena, &candidates),
+            HashSet::from([second])
         );
+        hub.revoke_user(second);
+        assert!(hub.arena_presence_for(&arena, &candidates).is_empty());
+    }
 
-        hub.on_disconnect(
-            second_socket,
-            SimpleUser {
-                user_id: first,
-                username: "first".to_string(),
+    #[actix_rt::test]
+    async fn arena_presence_uses_account_type_in_either_wire_format() {
+        for format in [SocketFormat::Json, SocketFormat::Msgpack] {
+            let hub = make_hub().await;
+            let bot = Uuid::new_v4();
+            let human = Uuid::new_v4();
+            let bot_socket = Uuid::new_v4();
+            let human_socket = Uuid::new_v4();
+            let (bot_tx, _bot_rx) = mpsc::channel(SOCKET_BUFFER_CAPACITY);
+            let (human_tx, _human_rx) = mpsc::channel(SOCKET_BUFFER_CAPACITY);
+            let bot_user = SimpleUser {
+                user_id: bot,
+                username: "bot".to_string(),
                 authed: true,
                 admin: false,
-            },
-        );
-        assert!(hub.authenticated_presence_for(&candidates).is_empty());
+                bot: true,
+            };
+            let human_user = SimpleUser {
+                user_id: human,
+                username: "human".to_string(),
+                authed: true,
+                admin: false,
+                bot: false,
+            };
+            Arc::clone(&hub).on_connect(bot_socket, bot_tx, format, bot_user.clone());
+            Arc::clone(&hub).on_connect(human_socket, human_tx.clone(), format, human_user.clone());
+            let arena = TournamentId("account-presence".to_string());
+            assert_eq!(
+                hub.arena_presence_for(&arena, &[bot, human]),
+                HashSet::from([bot])
+            );
+            hub.watch_tournament(human, human_socket, &arena);
+            assert_eq!(
+                hub.arena_presence_for(&arena, &[bot, human]),
+                HashSet::from([bot, human])
+            );
+            hub.unwatch_tournament(human, human_socket, &arena);
+            Arc::clone(&hub).on_authenticate(
+                &SocketTx {
+                    socket_id: human_socket,
+                    format,
+                    tx: human_tx,
+                },
+                human_user,
+                bot_user.clone(),
+            );
+            assert_eq!(
+                hub.arena_presence_for(&arena, &[bot, human]),
+                HashSet::from([bot])
+            );
+            hub.on_disconnect(bot_socket, bot_user.clone());
+            assert_eq!(
+                hub.arena_presence_for(&arena, &[bot, human]),
+                HashSet::from([bot])
+            );
+            hub.revoke_user(bot);
+            assert!(hub.arena_presence_for(&arena, &[bot, human]).is_empty());
+            hub.on_disconnect(human_socket, bot_user);
+        }
     }
 
     #[tokio::test]
@@ -2970,6 +3069,7 @@ mod tests {
                 username: "spectator".to_string(),
                 authed: false,
                 admin: false,
+                bot: false,
             },
         );
 
@@ -3304,6 +3404,7 @@ mod tests {
                 username: "anon".to_string(),
                 authed: false,
                 admin: false,
+                bot: false,
             },
         );
 
@@ -3391,6 +3492,7 @@ mod tests {
                 username: "anon".to_string(),
                 authed: false,
                 admin: false,
+                bot: false,
             },
         );
 
@@ -3565,6 +3667,7 @@ mod tests {
                             username: user_id.to_string(),
                             admin: false,
                             authed: false,
+                            bot: false,
                         },
                     );
 
