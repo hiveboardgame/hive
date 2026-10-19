@@ -149,5 +149,27 @@
         "hours_minutes": "{{hours}}h{{minutes}}",
         "arena_hours_minutes": "{{hours}}h {{minutes}}min"
     },
-    "aborted_by": "{{actor}} ha annullato la partita"
+    "aborted_by": "{{actor}} ha annullato la partita",
+    "history_navigation": {
+        "first": "Prima mossa",
+        "previous": "Mossa precedente",
+        "next": "Mossa successiva",
+        "last": "Ultima mossa"
+    },
+    "board": {
+        "pieces": {
+            "ant": "Formica",
+            "beetle": "Scarabeo",
+            "grasshopper": "Cavalletta",
+            "ladybug": "Coccinella",
+            "mosquito": "Zanzara",
+            "pillbug": "Porcellino di terra",
+            "queen": "Regina",
+            "spider": "Ragno"
+        },
+        "on_board": "{{piece}}{{order}} ({{color}}) sulla plancia",
+        "in_reserve": "{{piece}}{{order}} ({{color}}) nella riserva",
+        "move_preview": "Anteprima della mossa di {{piece}}{{order}} ({{color}})",
+        "move_to_position": "Muovi alla posizione {{q}}, {{r}} della plancia"
+    }
 }

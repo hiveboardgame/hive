@@ -110,8 +110,8 @@ fn queens_are_accounted_for(board: &Board) -> Result<(), HopError> {
 
     for position in board.all_taken_positions() {
         let stack = board.board.get(position);
-        for level in 1..stack.size as usize {
-            let color = stack.pieces[level].color();
+        for piece in stack.pieces.iter().take(stack.size as usize).skip(1) {
+            let color = piece.color();
             if !queen_played(color) {
                 return Err(HopError::QueenRequiredToMove { color });
             }

@@ -1,27 +1,62 @@
 use crate::{
     common::{PiecePaint, PieceType, SvgPos},
     hiveground::HivegroundInteraction,
+    i18n::*,
 };
-use hive_lib::{Piece, Position};
+use hive_lib::{Bug, Color, Piece, Position};
 use leptos::prelude::*;
+use leptos_i18n::I18nContext;
 
-fn accessible_piece_label(piece: Piece, piece_type: PieceType) -> String {
+fn accessible_piece_label(
+    i18n: I18nContext<Locale, I18nKeys>,
+    piece: Piece,
+    piece_type: PieceType,
+) -> String {
     let order = if piece.order() == 0 {
         String::new()
     } else {
         format!(" {}", piece.order())
     };
-    let location = match piece_type {
-        PieceType::Board | PieceType::Covered | PieceType::History => "on board",
-        PieceType::Reserve | PieceType::Inactive => "in reserve",
-        PieceType::Move | PieceType::Premove | PieceType::Spawn => "move preview",
+    let color = match piece.color() {
+        Color::White => t_string!(i18n, common.white),
+        Color::Black => t_string!(i18n, common.black),
     };
-
-    format!(
-        "{:?} {}{order} {location}",
-        piece.color(),
-        piece.bug().name(),
-    )
+    let bug = match piece.bug() {
+        Bug::Ant => t_string!(i18n, game.board.pieces.ant),
+        Bug::Beetle => t_string!(i18n, game.board.pieces.beetle),
+        Bug::Grasshopper => t_string!(i18n, game.board.pieces.grasshopper),
+        Bug::Ladybug => t_string!(i18n, game.board.pieces.ladybug),
+        Bug::Mosquito => t_string!(i18n, game.board.pieces.mosquito),
+        Bug::Pillbug => t_string!(i18n, game.board.pieces.pillbug),
+        Bug::Queen => t_string!(i18n, game.board.pieces.queen),
+        Bug::Spider => t_string!(i18n, game.board.pieces.spider),
+    };
+    match piece_type {
+        PieceType::Board | PieceType::Covered | PieceType::History => t_string!(
+            i18n,
+            game.board.on_board,
+            color = color,
+            piece = bug,
+            order = order
+        )
+        .to_string(),
+        PieceType::Reserve | PieceType::Inactive => t_string!(
+            i18n,
+            game.board.in_reserve,
+            color = color,
+            piece = bug,
+            order = order
+        )
+        .to_string(),
+        PieceType::Move | PieceType::Premove | PieceType::Spawn => t_string!(
+            i18n,
+            game.board.move_preview,
+            color = color,
+            piece = bug,
+            order = order
+        )
+        .to_string(),
+    }
 }
 
 #[component]
@@ -92,7 +127,8 @@ pub fn Piece(
     paint: Memo<PiecePaint>,
     interaction: HivegroundInteraction,
 ) -> impl IntoView {
-    let aria_label = accessible_piece_label(piece, piece_type);
+    let i18n = use_i18n();
+    let aria_label = move || accessible_piece_label(i18n, piece, piece_type);
     view! {
         <g
             role="button"

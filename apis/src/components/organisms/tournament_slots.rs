@@ -2884,7 +2884,7 @@ pub fn TournamentOrganizerLayout(
             <div class="flex overflow-hidden flex-col rounded-lg border shadow-sm h-[calc(100dvh-19rem)] min-h-[28rem] border-black/10 bg-even-light/95 tournament-two:grid tournament-two:h-[calc(100dvh-16.5rem)] tournament-two:min-h-[32rem] tournament-two:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)] tournament-two:grid-rows-[minmax(0,1fr)] tournament-three:grid-cols-[13rem_minmax(20rem,1fr)_minmax(18rem,24rem)] dark:border-white/10 dark:bg-surface-panel">
                 <OrganizerViews />
                 <OrganizerMatchList />
-                <main class=move || {
+                <div class=move || {
                     let at_root = current_manage_route(&context) == Some(ManageRoute::Index);
                     format!(
                         "flex-1 min-w-0 min-h-0 overflow-y-auto flex-col bg-even-light/95 tournament-two:!flex dark:bg-surface-panel {}",
@@ -2892,7 +2892,7 @@ pub fn TournamentOrganizerLayout(
                     )
                 }>
                     <Outlet />
-                </main>
+                </div>
             </div>
         </div>
         <AdjudicationDialog />

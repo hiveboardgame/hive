@@ -1,68 +1,185 @@
-name: Test run
+name: Browser tests
 
 on:
-  workflow_dispatch:
-  # Temporary branch-validation trigger; remove after validation in Actions.
   push:
-    branches:
-      - testware_finally
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      full_matrix:
+        description: Run all journeys in every supported browser/layout
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
+concurrency:
+  group: browser-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  deploy_and_test:
-    name: Test run
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    env:
-      TEST_MODE_DOCKER: "true"
+  changes:
+    name: Detect browser changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      run_browser: ${{ steps.filter.outputs.run_browser }}
     steps:
-      - name: Check out the revision under test
-        uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
-          ref: ${{ github.sha }}
-      - name: Set up Node.js and cache npm dependencies
-        uses: actions/setup-node@v7.0.0
+          fetch-depth: 0
+      - name: Check whether the changes affect browser tests
+        id: filter
+        shell: python
+        run: |
+          import json
+          import os
+          import subprocess
+
+          def affects_browser(path):
+              parts = path.split("/")
+              if parts[-1] in ("Cargo.toml", "Cargo.lock", "rust-toolchain", "rust-toolchain.toml") or ".cargo" in parts:
+                  return True
+              if path.startswith(("scripts/", "hive-hydra/", "docs/")):
+                  return False
+              if path in ("apis/README.md", "apis/end2end/README.md") or (len(parts) == 1 and path.endswith(".md")):
+                  return False
+              if path.startswith(("apis/", "db/", "engine/", "shared_types/")):
+                  return True
+              if parts[-1] == "README.md":
+                  return False
+              return True
+
+          # Uncertain comparisons and manual runs always exercise the browser suite.
+          run_browser = True
+          if os.environ["GITHUB_EVENT_NAME"] != "workflow_dispatch":
+              with open(os.environ["GITHUB_EVENT_PATH"]) as source:
+                  event = json.load(source)
+              try:
+                  if os.environ["GITHUB_EVENT_NAME"] == "pull_request":
+                      base = event["pull_request"]["base"]["sha"]
+                      head = event["pull_request"]["head"]["sha"]
+                      base = subprocess.check_output(["git", "merge-base", base, head], text=True).strip()
+                  else:
+                      base, head = event["before"], event["after"]
+                  # Treat renames as deletion plus addition so neither path is hidden.
+                  changed = subprocess.check_output(["git", "diff", "--no-renames", "--name-only", "-z", base, head, "--"])
+                  paths = changed.decode("utf-8", errors="surrogateescape").split("\0")[:-1]
+                  run_browser = any(affects_browser(path) for path in paths)
+              except (KeyError, subprocess.CalledProcessError):
+                  print("Could not determine the changed paths; running browser tests.")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              print(f"run_browser={str(run_browser).lower()}", file=output)
+          print("Browser tests required." if run_browser else "Only unrelated code or documentation changed; browser tests are unnecessary.")
+
+  browser_tests:
+    name: Browser suite
+    needs: changes
+    if: needs.changes.outputs.run_browser == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      CARGO_LEPTOS_VERSION: "0.3.7"
+      CARGO_TARGET_DIR: ${{ github.workspace }}/.cargo/target
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_PROFILE_TEST_DEBUG: "0"
+      PLAYWRIGHT_SITE_ROOT: target/e2e-site
+      TEST_DATABASE_URL: postgres://hive-e2e:hive-e2e@127.0.0.1/hive-e2e-test-control
+      PLAYWRIGHT_FULL_MATRIX: ${{ inputs.full_matrix && '1' || '0' }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.0.0
         with:
           node-version: '24.21.0'
           cache: npm
           cache-dependency-path: apis/end2end/package-lock.json
-      - name: Build Docker images and create the Hive test containers
-        run: docker compose create --build
-      - name: Start the Hive test stack and wait for healthy services
-        shell: bash
+      - name: Install native build dependencies and PostgreSQL
         run: |
-          docker compose up --detach
-          docker compose logs --follow --no-color --no-log-prefix app &
-          log_stream_pid=$!
-          trap 'kill "$log_stream_pid" 2>/dev/null || true' EXIT
-          docker compose up --wait --wait-timeout 1200
-      - name: Install npm dependencies and Playwright browsers
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libssl-dev libpq-dev postgresql llvm
+          sudo systemctl start postgresql
+          sudo -u postgres psql -v ON_ERROR_STOP=1 -c "CREATE ROLE \"hive-e2e\" LOGIN SUPERUSER PASSWORD 'hive-e2e'"
+          sudo -u postgres createdb --owner=hive-e2e hive-e2e-test-control
+      - name: Install the pinned Rust toolchain
+        run: rustup toolchain install
+      - name: Restore cargo-leptos
+        id: cargo-leptos-cache
+        uses: actions/cache/restore@v6.1.0
+        with:
+          path: ~/.cargo/bin/cargo-leptos
+          key: cargo-leptos-v1-ubuntu-24.04-${{ runner.arch }}-${{ env.CARGO_LEPTOS_VERSION }}-${{ hashFiles('rust-toolchain.toml') }}
+      - name: Cache Rust dependencies and frontend tools
+        uses: Swatinem/rust-cache@v2.9.2
+        with:
+          workspaces: ". -> .cargo/target"
+          cache-bin: false
+          cache-directories: ~/.cache/cargo-leptos
+          # Include the workflow because it sets per-build flags and profiles.
+          key: ubuntu-24.04-${{ hashFiles('.github/workflows/e2e.yml') }}
+          # A browser failure does not invalidate compiled dependencies.
+          cache-on-failure: true
+      - name: Install cargo-leptos on a cache miss
+        if: steps.cargo-leptos-cache.outputs.cache-hit != 'true'
+        run: cargo install cargo-leptos --locked --version "$CARGO_LEPTOS_VERSION"
+      - name: Save cargo-leptos
+        if: steps.cargo-leptos-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6.1.0
+        with:
+          path: ~/.cargo/bin/cargo-leptos
+          key: ${{ steps.cargo-leptos-cache.outputs.cache-primary-key }}
+      - name: Install locked browser dependencies
         working-directory: apis/end2end
         run: |
           npm ci
-          npx playwright install --with-deps
-      - name: Run gameplay and tournament UI tests across browsers
-        id: playwright_tests
+          npx playwright install --with-deps chromium firefox webkit
+          npm run typecheck
+      - name: Build the SSR app, hydration assets, and fixture tool
+        run: |
+          env -u LEPTOS_WATCH LEPTOS_SITE_ROOT=target/e2e-site cargo leptos build --server-only
+          env -u LEPTOS_WATCH LEPTOS_SITE_ROOT=target/e2e-site \
+            CARGO_PROFILE_WASM_RELEASE_DEBUG_ASSERTIONS=true \
+            CARGO_PROFILE_WASM_RELEASE_STRIP=symbols \
+            RUSTFLAGS='-Z threads=8 --cfg erase_components' \
+            cargo leptos build --release --frontend-only
+          cargo build -p db --features test-fixtures --bin hive-e2e
+          cargo test -p db --features test-fixtures --bin hive-e2e
+          llvm-strip --strip-all "$CARGO_TARGET_DIR/debug/apis" "$CARGO_TARGET_DIR/debug/hive-e2e"
+      - name: Run browser tests with a disposable database
         working-directory: apis/end2end
-        env:
-          PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
-          PLAYWRIGHT_DATABASE_URL: postgres://hive-dev@127.0.0.1:5433/hive-local
-        run: npx playwright test tests/authenticated
-      - name: Save the Playwright HTML report, traces, and server logs as a downloadable artifact
-        id: e2e_artifacts
+        run: |
+          npm run test:runner
+          npm test
+      - name: Upload reports, traces, screenshots, and application logs
         if: ${{ !cancelled() }}
-        uses: ./.github/hive-test-stack-diagnostics
-      - name: Show pass/fail results and the report download link in the GitHub Actions summary
-        if: ${{ !cancelled() && steps.playwright_tests.outcome != 'skipped' }}
-        working-directory: apis/end2end
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: browser-results
+          path: |
+            apis/end2end/test-results/
+          retention-days: 7
+          if-no-files-found: warn
+
+  # Preserve the existing required check even when the expensive suite is unnecessary.
+  browser:
+    needs: [changes, browser_tests]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check the browser test result
         env:
-          PLAYWRIGHT_REPORT_URL: ${{ steps.e2e_artifacts.outputs.artifact-url }}
-        run: node reporters/publish-summary.mjs
-      - name: Remove the Hive test containers and volumes
-        if: always()
-        run: docker compose down --volumes --remove-orphans
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          RUN_BROWSER: ${{ needs.changes.outputs.run_browser }}
+          BROWSER_RESULT: ${{ needs.browser_tests.result }}
+        run: |
+          if [[ "$CHANGES_RESULT" == success && "$RUN_BROWSER" == false && "$BROWSER_RESULT" == skipped ]]; then
+            echo "Browser tests were unnecessary for these changes."
+          elif [[ "$CHANGES_RESULT" == success && "$RUN_BROWSER" == true && "$BROWSER_RESULT" == success ]]; then
+            echo "Browser tests passed."
+          else
+            echo "Browser checks failed or did not complete."
+            exit 1
+          fi

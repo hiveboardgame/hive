@@ -4,6 +4,7 @@ use crate::{
         organisms::side_board::move_query_signal,
     },
     hooks::history_nav::{can_navigate_play_history, navigate_play_history, sync_play_move_query},
+    i18n::*,
     providers::game_state::{GameStateStore, GameStateStoreFields},
 };
 use leptos::prelude::*;
@@ -16,6 +17,7 @@ pub fn HistoryButton(
     action: PlayHistoryNavigation,
     #[prop(optional)] post_action: Option<Callback<()>>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let game_state = expect_context::<GameStateStore>();
     let (_move, set_move) = move_query_signal();
     let board_view = game_state.board_view();
@@ -38,11 +40,11 @@ pub fn HistoryButton(
         PlayHistoryNavigation::Next => icondata_ai::AiStepForwardFilled,
         PlayHistoryNavigation::Previous => icondata_ai::AiStepBackwardFilled,
     };
-    let label = match action {
-        PlayHistoryNavigation::First => "First move",
-        PlayHistoryNavigation::Last => "Last move",
-        PlayHistoryNavigation::Next => "Next move",
-        PlayHistoryNavigation::Previous => "Previous move",
+    let label = move || match action {
+        PlayHistoryNavigation::First => t_string!(i18n, game.history_navigation.first),
+        PlayHistoryNavigation::Last => t_string!(i18n, game.history_navigation.last),
+        PlayHistoryNavigation::Next => t_string!(i18n, game.history_navigation.next),
+        PlayHistoryNavigation::Previous => t_string!(i18n, game.history_navigation.previous),
     };
 
     view! {

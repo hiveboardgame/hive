@@ -3,7 +3,9 @@ members = ["apis", "engine", "db", "shared_types", "hive-hydra", "scripts"]
 resolver = "2"
 
 [workspace.lints.clippy]
-all = "warn"
+all = { level = "warn", priority = -1 }
+# Diesel's QueryableByName derive generates explicit field initializers.
+redundant_field_names = "allow"
 
 # need to be applied only to wasm build
 [profile.release]

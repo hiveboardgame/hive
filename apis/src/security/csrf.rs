@@ -81,7 +81,7 @@ pub use server::{
 mod server {
     use super::{TOKEN_COOKIE, TOKEN_KEY};
     use crate::{
-        common::{request_locale, UiError},
+        common::{request_locale, UiError, SECURE_COOKIES},
         security::origin::validate_request_origin,
     };
     use actix_session::{Session, SessionExt};
@@ -244,7 +244,7 @@ mod server {
                 .add_cookie(
                     &Cookie::build(TOKEN_COOKIE, token)
                         .path("/")
-                        .secure(!cfg!(debug_assertions))
+                        .secure(SECURE_COOKIES)
                         .http_only(false)
                         .same_site(SameSite::Lax)
                         .finish(),

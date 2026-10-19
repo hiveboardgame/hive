@@ -1,24 +1,20 @@
 {
   "name": "end2end",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Focused Hive browser interaction and integration checks",
   "scripts": {
-    "test": "playwright test",
-    "test:reporter": "playwright test --config=reporters/playwright.config.ts",
-    "test:unit": "playwright test --config=unit/playwright.config.ts",
-    "test:pool": "playwright test --config=integration/playwright.config.ts",
-    "test:recovery": "playwright test --config=integration/recovery.config.ts",
-    "typecheck": "tsc --noEmit"
+    "test": "node run.mjs",
+    "test:attached": "playwright test",
+    "test:list": "playwright test --list",
+    "typecheck": "tsc --noEmit",
+    "test:runner": "node --test run.test.mjs"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "license": "AGPL-3.0-only",
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "@types/node": "^26.5.0",
-    "@types/pg": "^8.23.1",
     "pg": "^8.23.0",
     "typescript": "^7.0.2"
-  }
+  },
+  "private": true
 }

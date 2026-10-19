@@ -137,7 +137,6 @@
               pkg-config
               cacert
               cargo-make
-              cargo
               trunk
               dart-sass
               leptosfmt
@@ -145,21 +144,15 @@
               flyctl
               cargo-leptos
               binaryen
+              llvmPackages.bintools
               tailwindcss_4
               openssl
               # Only for clients/python: the bot client and its one dependency.
               (python3.withPackages (ps: [ ps.websockets ]))
               # nokamute # The AI used by hive-hydra - temporarily disabled due to darwin SDK issue
-              (rust-bin.selectLatestNightlyWith (
-                toolchain:
-                toolchain.default.override {
-                  extensions = [
-                    "rust-src"
-                    "rust-analyzer"
-                  ];
-                  targets = [ "wasm32-unknown-unknown" ];
-                }
-              ))
+              ((rust-bin.fromRustupToolchainFile ./rust-toolchain.toml).override (toolchain: {
+                extensions = toolchain.extensions ++ [ "rust-src" "rust-analyzer" ];
+              }))
             ]
             ++ aliases
             ++ worktreeCommands;
