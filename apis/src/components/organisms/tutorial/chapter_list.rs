@@ -134,7 +134,7 @@ fn LessonLinks(
                     class="group py-1"
                     open=move || group.lessons.contains(&current.get())
                 >
-                    <summary class="flex gap-2 justify-between items-center py-1 text-sm font-bold cursor-pointer">
+                    <summary class="flex gap-2 justify-between items-center py-1 text-sm font-normal text-gray-800 cursor-pointer xl:text-base dark:text-gray-100">
                         <span class="flex gap-1 items-center">
                             <span class="inline-block transition-transform group-open:rotate-90" aria-hidden="true">"›"</span>
                             {group.title}

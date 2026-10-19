@@ -9,6 +9,7 @@ use hive_lib::{Bug, Piece};
 pub struct HivegroundPaint {
     tile_options: TileOptions,
     blank_movers: Option<Vec<Piece>>,
+    show_queens: bool,
 }
 
 impl HivegroundPaint {
@@ -16,6 +17,7 @@ impl HivegroundPaint {
         Self {
             tile_options: tile_options.clone(),
             blank_movers: None,
+            show_queens: true,
         }
     }
 
@@ -26,6 +28,14 @@ impl HivegroundPaint {
         self
     }
 
+    pub fn with_visible_pieces(mut self, visible: Option<&[&str]>) -> Self {
+        if let Some(visible) = visible {
+            self.blank_movers = Some(visible.iter().filter_map(|piece| piece.parse().ok()).collect());
+            self.show_queens = false;
+        }
+        self
+    }
+
     pub fn piece(&self, piece: Piece, shadow: PieceShadow) -> PiecePaint {
         let shadow_href = match shadow {
             PieceShadow::Design => ShadowHref::for_design(&self.tile_options.design),
@@ -33,7 +43,7 @@ impl HivegroundPaint {
         };
         let mut paint = resolve_piece_paint(piece, &self.tile_options, shadow_href);
         if self.blank_movers.as_ref().is_some_and(|movers| !movers.contains(&piece))
-            && piece.bug() != Bug::Queen
+            && !(self.show_queens && piece.bug() == Bug::Queen)
         {
             paint.bug_href = crate::common::BugHref(
                 "/assets/tiles/tutorial/blank.svg#blank".to_string()

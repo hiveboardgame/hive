@@ -26,6 +26,7 @@ pub fn AnnotationsLayer(
     let game_state = expect_context::<GameStateStore>();
     let config = expect_context::<Config>().0;
     let in_analysis = use_context::<AnalysisContext>().is_some();
+    let tutorial = use_context::<crate::providers::tutorial::TutorialContext>();
     let board_view = game_state.board_view();
     let state = game_state.state();
     let last_turn = game_state.is_last_turn_as_signal();
@@ -124,6 +125,12 @@ pub fn AnnotationsLayer(
             );
         }
 
+        let small_arrows = tutorial.is_some_and(|tutorial| {
+            tutorial.session.with(|session| {
+                session.as_ref().and_then(|session| session.current_step())
+                    .is_some_and(|step| step.small_arrows)
+            })
+        });
         for arrow in &set.arrows {
             let (ax, ay) = center(arrow.from);
             let (bx, by) = center(arrow.to);
@@ -135,6 +142,7 @@ pub fn AnnotationsLayer(
                 arrow.color.stroke(prefers_dark),
                 SHAPE_OPACITY,
                 false,
+                small_arrows,
             ) {
                 views.push(view);
             }
@@ -147,7 +155,7 @@ pub fn AnnotationsLayer(
             if from != to {
                 let (ax, ay) = center(from);
                 let (bx, by) = center(to);
-                if let Some(view) = arrow_view(ax, ay, bx, by, stroke, "0.5", true) {
+                if let Some(view) = arrow_view(ax, ay, bx, by, stroke, "0.5", true, false) {
                     views.push(view);
                 }
             } else {
@@ -355,6 +363,7 @@ fn arrow_view(
     stroke: &'static str,
     opacity: &'static str,
     dashed: bool,
+    compact: bool,
 ) -> Option<AnyView> {
     let dx = bx - ax;
     let dy = by - ay;
@@ -363,8 +372,8 @@ fn arrow_view(
         return None;
     }
     let (ux, uy) = (dx / len, dy / len);
-    let head_len = 22.0;
-    let head_w = 16.0;
+    let head_len = if compact { 10.0 } else { 22.0 };
+    let head_w = if compact { 7.0 } else { 16.0 };
     let tip = (bx, by);
     let base = (tip.0 - ux * head_len, tip.1 - uy * head_len);
     // Perpendicular unit vector for the head's base corners.
@@ -386,7 +395,7 @@ fn arrow_view(
                     x2=base.0
                     y2=base.1
                     stroke=stroke
-                    stroke-width="7"
+                    stroke-width=if compact { "2.5" } else { "7" }
                     stroke-linecap="round"
                     stroke-dasharray=dash
                 />

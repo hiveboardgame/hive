@@ -44,6 +44,7 @@ pub struct Session {
     wrong: bool,
     failed_attempts: Vec<u8>,
     exploration_moves: Vec<u8>,
+    last_black_arrow: Option<(Position, Position)>,
 }
 
 impl Session {
@@ -120,6 +121,7 @@ impl Session {
             wrong: false,
             failed_attempts: vec![0; lesson.steps.len()],
             exploration_moves: vec![0; lesson.steps.len()],
+            last_black_arrow: None,
         })
     }
 
@@ -137,6 +139,26 @@ impl Session {
 
     pub fn step_index(&self) -> usize {
         self.step
+    }
+
+    pub fn black_reply_arrow(&self) -> Option<(Position, Position)> {
+        self.last_black_arrow
+    }
+
+    fn remember_black_move(&mut self, before: &State) {
+        let Some((piece, to)) = self.state.board.last_moved else { return; };
+        if piece.color() != Color::Black { return; }
+        let from = before.board.position_of_piece(piece).unwrap_or_else(|| {
+            let occupied: Vec<_> = before.board.all_taken_positions().collect();
+            let count = occupied.len().max(1) as f32;
+            let cq = occupied.iter().map(|p| p.q as f32).sum::<f32>() / count;
+            let cr = occupied.iter().map(|p| p.r as f32).sum::<f32>() / count;
+            let distance = |p: Position| (p.q as f32 - cq).powi(2) + (p.r as f32 - cr).powi(2);
+            to.positions_around().filter(|p| !self.state.board.occupied(*p))
+                .min_by(|a, b| distance(*a).total_cmp(&distance(*b)))
+                .unwrap_or(to)
+        });
+        self.last_black_arrow = (from != to).then_some((from, to));
     }
 
     pub fn current_step(&self) -> Option<&'static Step> {
@@ -167,7 +189,9 @@ impl Session {
     }
 
     pub fn is_finished(&self) -> bool {
-        self.step >= self.lesson.steps.len() || self.at_closing_read()
+        self.step >= self.lesson.steps.len()
+            || self.at_closing_read()
+            || self.current_step().is_some_and(|step| step.complete_on_load)
     }
 
     /// A read step after the last move only comments on it, so making that move already finishes the lesson.
@@ -204,7 +228,9 @@ impl Session {
 
     /// Blank tiles have no active abilities: only the visible piece's own movement is available.
     pub fn destinations(&self, piece: Piece) -> Vec<Position> {
-        Self::destinations_in(&self.state, self.learner, piece, self.lesson.uses_blank_tiles())
+        let normal_only = self.lesson.uses_blank_tiles()
+            || self.current_step().is_some_and(|step| step.normal_moves_only);
+        Self::destinations_in(&self.state, self.learner, piece, normal_only)
     }
 
     fn destinations_in(state: &State, color: Color, piece: Piece, blank: bool) -> Vec<Position> {
@@ -289,13 +315,44 @@ impl Session {
 
     /// Reserve room for later hints when loading a lesson, without revealing them or refitting after moves.
     pub fn fit_targets(&self) -> Vec<Position> {
-        self.lesson.steps.iter()
+        let mut targets: Vec<_> = self.lesson.steps.iter()
             .flat_map(|step| step.highlights.iter()
                 .chain(step.hint_highlights.iter())
                 .chain(step.forbidden.iter())
-                .chain(step.red_arrows.iter().map(|(_, to)| to)))
+                .chain(step.red_arrows.iter().map(|(_, to)| to))
+                .chain(step.arrows.iter().map(|(_, to)| to)))
             .filter_map(|notation| hex(&self.initial.board, notation))
-            .collect()
+            .collect();
+        for step in self.lesson.steps {
+            if let Some(piece) = step.legal_arrows.and_then(|spec| spec.parse::<Piece>().ok()) {
+                targets.extend(Self::destinations_in(
+                    &self.initial, self.initial.turn_color, piece,
+                    self.lesson.uses_blank_tiles() || step.normal_moves_only,
+                ));
+            }
+        }
+        // Reserve room for known replies before play starts. This keeps a new Black
+        // piece and its arrow in view without fitting the board again after each move.
+        let mut preview = self.clone();
+        preview.retry();
+        for _ in 0..self.lesson.steps.len() {
+            let Some(Goal::Move { piece, to }) = preview.current_step().map(|step| &step.goal) else {
+                break;
+            };
+            let (Ok(piece), Some(target)) = (
+                piece.parse::<Piece>(), hex(&preview.state.board, to),
+            ) else { break; };
+            match preview.play(piece, target) {
+                Outcome::StepDone | Outcome::LessonDone => {
+                    if let Some((from, to)) = preview.black_reply_arrow() {
+                        targets.extend([from, to]);
+                    }
+                }
+                _ => break,
+            }
+            if preview.is_finished() { break; }
+        }
+        targets
     }
 
     pub fn forbidden(&self) -> Vec<Position> {
@@ -310,16 +367,22 @@ impl Session {
     pub fn arrows(&self) -> Vec<(Position, Position)> {
         if self.needs_retry() { return Vec::new(); }
         self.current_step().map_or_else(Vec::new, |step| {
-            let mut arrows: Vec<_> = step
-                .arrows
-                .iter()
-                .filter_map(|(from, to)| {
+            let hint = self.hint_visible(step);
+            let mut arrows: Vec<_> = if hint && step.legal_arrows.is_some() {
+                Vec::new()
+            } else {
+                step.arrows.iter().filter_map(|(from, to)| {
                     Some((hex(self.annotation_board(), from)?, hex(self.annotation_board(), to)?))
-                })
-                .collect();
-            if step.hint_highlights.is_empty()
-                && self.hint_visible(step)
-            {
+                }).collect()
+            };
+            if !hint {
+                if let Some(piece) = step.legal_arrows.and_then(|spec| spec.parse::<Piece>().ok()) {
+                    if let Some(from) = self.state.board.position_of_piece(piece) {
+                        arrows.extend(self.destinations(piece).into_iter().map(|to| (from, to)));
+                    }
+                }
+            }
+            if step.hint_highlights.is_empty() && hint {
                 arrows.extend(self.move_hints(&step.goal));
             }
             arrows
@@ -329,6 +392,7 @@ impl Session {
     pub fn red_arrows(&self) -> Vec<(Position, Position)> {
         if self.needs_retry() { return Vec::new(); }
         self.current_step().map_or_else(Vec::new, |step| {
+            if step.legal_arrows.is_some() && self.hint_visible(step) { return Vec::new(); }
             step.red_arrows.iter().filter_map(|(piece, to)| {
                 let mover: Piece = piece.parse().ok()?;
                 let from = self.state.board.position_of_piece(mover)?;
@@ -513,11 +577,14 @@ impl Session {
         if !self.accepts_moves() || !self.can_select(piece) {
             return Outcome::Illegal;
         }
-        if self.lesson.uses_blank_tiles() && !self.destinations(piece).contains(&position) {
+        if (self.lesson.uses_blank_tiles() || step.normal_moves_only)
+            && self.state.board.position_of_piece(piece).is_some()
+            && !self.destinations(piece).contains(&position)
+        {
             return if self.forbidden().contains(&position) { self.wrong() } else { Outcome::Illegal };
         }
         // Repeated exploration is allowed in exercises without opponent turns.
-        if matches!(step.goal, Goal::Explore { .. }) {
+        if matches!(step.goal, Goal::Explore { .. } | Goal::Travel { .. }) {
             self.state.hashes_count.clear();
         }
         let before = self.state.clone();
@@ -529,6 +596,7 @@ impl Session {
                 Outcome::Illegal
             };
         }
+        self.remember_black_move(&before);
         match &step.goal {
             Goal::Continue => {
                 self.state = before;
@@ -622,6 +690,16 @@ impl Session {
                     self.wrong()
                 }
             }
+            Goal::PlaceIn(hexes) => {
+                if piece.is_color(self.learner)
+                    && before.board.position_of_piece(piece).is_none()
+                    && hexes.iter().any(|to| hex(&before.board, to) == Some(position))
+                {
+                    self.complete_step(step)
+                } else {
+                    self.wrong()
+                }
+            }
             Goal::PlaceAny => {
                 if piece.is_color(self.learner) && before.board.position_of_piece(piece).is_none() {
                     self.complete_step(step)
@@ -653,6 +731,7 @@ impl Session {
         self.step = 0;
         self.learner = self.initial.turn_color;
         self.exploration_moves.fill(0);
+        self.last_black_arrow = None;
         self.visited.clear();
         self.refuted = false;
         self.wrong = false;
@@ -660,11 +739,25 @@ impl Session {
 
     fn wrong(&mut self) -> Outcome {
         self.failed_attempts[self.step] = self.failures().saturating_add(1);
+        if let Some((condition, piece, to)) = self.current_step().and_then(|step| step.conditional_refutation) {
+            if condition.holds(&self.state) {
+                let before = self.state.clone();
+                let mut punished = before.clone();
+                if punished.play_turn_from_history(piece, to).is_ok() {
+                    self.state = punished;
+                    self.remember_black_move(&before);
+                    self.refuted = true;
+                    return Outcome::Refuted;
+                }
+            }
+        }
         let refutations = self.current_step().map_or(&[][..], |step| step.refutations);
         for (piece, to) in refutations {
             let mut punished = self.state.clone();
             if punished.play_turn_from_history(piece, to).is_ok() {
+                let before = self.state.clone();
                 self.state = punished;
+                self.remember_black_move(&before);
                 self.refuted = true;
                 return Outcome::Refuted;
             }
@@ -675,7 +768,9 @@ impl Session {
             for target in Self::destinations_in(&self.state, self.state.turn_color, piece, true) {
                 let mut response = self.state.clone();
                 if response.play_turn_from_position(piece, target).is_ok() {
+                    let before = self.state.clone();
                     self.state = response;
+                    self.remember_black_move(&before);
                     self.refuted = true;
                     return Outcome::Refuted;
                 }
@@ -701,11 +796,14 @@ impl Session {
                 if self.state.turn_color == self.learner {
                     self.state.pass_out_of_turn();
                 }
+                let before = self.state.clone();
                 if let Err(error) = self.state.play_turn_from_history(piece, to) {
                     log::warn!(
                         "tutorial {}: scripted reply {piece} {to} failed: {error}",
                         self.lesson.id
                     );
+                } else {
+                    self.remember_black_move(&before);
                 }
             }
             Reply::OpponentPlacement { piece, near } => {
@@ -727,6 +825,7 @@ impl Session {
                             });
                         match target {
                             Some(target) => {
+                                let before = self.state.clone();
                                 if let Err(error) =
                                     self.state.play_turn_from_position(piece, target)
                                 {
@@ -734,6 +833,8 @@ impl Session {
                                         "tutorial {}: scripted placement {piece} failed: {error}",
                                         self.lesson.id
                                     );
+                                } else {
+                                    self.remember_black_move(&before);
                                 }
                             }
                             None => log::warn!(

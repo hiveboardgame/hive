@@ -17,6 +17,7 @@ pub enum AnnotationColor {
     Red,
     Green,
     Orange,
+    Grey,
 }
 
 impl AnnotationColor {
@@ -27,6 +28,7 @@ impl AnnotationColor {
             AnnotationColor::Red => "#d61a35",
             AnnotationColor::Green => "#3f9b3a",
             AnnotationColor::Orange => "#f68c11",
+            AnnotationColor::Grey => "#858b93",
         }
     }
 
@@ -43,6 +45,7 @@ impl AnnotationColor {
                 }
             }
             AnnotationColor::Black => "#23262d",
+            AnnotationColor::Grey => if prefers_dark { "#b6bbc2" } else { "#737880" },
             AnnotationColor::Red => "#d61a35",
             AnnotationColor::Green => {
                 if prefers_dark {

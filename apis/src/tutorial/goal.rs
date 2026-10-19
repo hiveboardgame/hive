@@ -4,6 +4,7 @@ pub enum Goal {
     Continue,
     MoveAny,
     PlaceAny,
+    PlaceIn(&'static [&'static str]),
     Explore {
         pieces: &'static [&'static str],
         condition: Condition,

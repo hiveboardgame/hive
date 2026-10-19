@@ -107,6 +107,7 @@ fn color_hint(color: AnnotationColor) -> &'static str {
         AnnotationColor::Red => "Red (Ctrl+Alt)",
         AnnotationColor::Green => "Green (Meta)",
         AnnotationColor::Orange => "Orange",
+        AnnotationColor::Grey => "Grey",
     }
 }
 

@@ -23,7 +23,14 @@ pub fn BoardPieces(
                 session.as_ref().and_then(|session| session.lesson().blank_movers())
             })
         });
-        tile_opts.with(HivegroundPaint::new).with_blank_movers(movers)
+        let visible = tutorial.and_then(|tutorial| {
+            tutorial.session.with(|session| {
+                session.as_ref().and_then(|session| session.lesson().blank_visible())
+            })
+        });
+        tile_opts.with(HivegroundPaint::new)
+            .with_blank_movers(movers)
+            .with_visible_pieces(visible)
     });
     let model = Memo::new(move |_| {
         state.with(|state| {

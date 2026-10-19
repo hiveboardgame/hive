@@ -65,6 +65,16 @@ pub const LESSON_GROUPS: &[LessonGroup] = &[
         lessons: &["bugs.spider", "bugs.spider_dead_end", "bugs.spider_door", "bugs.spider_power"],
     },
     LessonGroup {
+        id: "bugs.beetles",
+        title: "The Beetle",
+        lessons: &["bugs.beetle", "bugs.beetle_spawn", "bugs.beetle_gate"],
+    },
+    LessonGroup {
+        id: "bugs.grasshoppers",
+        title: "The Grasshopper",
+        lessons: &["bugs.grasshopper", "bugs.grasshopper_place", "bugs.grasshopper_paths"],
+    },
+    LessonGroup {
         id: "bugs.ants",
         title: "The Ant",
         lessons: &["bugs.ant_first_moves", "bugs.ant", "bugs.ant_attack"],

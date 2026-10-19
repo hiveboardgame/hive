@@ -78,6 +78,15 @@ pub fn Tutorial() -> impl IntoView {
         },
         false,
     );
+    Effect::watch(
+        move || chosen.get(),
+        move |id, _, _| {
+            if let Some(id) = id {
+                tutorial.complete_observation(id);
+            }
+        },
+        true,
+    );
     use_tutorial_clock(tutorial, timer);
     let clocked =
         move || find_lesson(lesson_id.get()).is_some_and(|lesson| lesson.clock().is_some());
@@ -184,7 +193,7 @@ pub fn Tutorial() -> impl IntoView {
                     />
                     <div class=move || {
                         if find_lesson(lesson_id.get()).is_some_and(|lesson| !lesson.intro.is_empty()) {
-                            "flex relative flex-col pt-11 min-h-0 overflow-hidden"
+                            "flex relative flex-col pb-11 min-h-0 overflow-hidden"
                         } else {
                             "flex relative flex-col min-h-0 overflow-hidden"
                         }

@@ -64,13 +64,31 @@ impl TutorialContext {
             Ok(session) => {
                 self.load_error.set(None);
                 self.game_state.reset_with_state(session.state().clone());
+                let finished = session.is_finished();
                 self.session.set(Some(session));
+                if finished {
+                    self.feedback.set(Some(Feedback::LessonComplete));
+                }
                 self.generation.update(|generation| *generation += 1);
             }
             Err(error) => {
                 self.session.set(None);
                 self.load_error.set(Some(error.to_string()));
             }
+        }
+    }
+
+    /// Called on the client after loading a read-only observation lesson.
+    pub fn complete_observation(&self, id: &str) {
+        let complete = self.session.with_untracked(|session| {
+            session.as_ref().is_some_and(|session| {
+                session.lesson().id == id
+                    && session.is_finished()
+                    && session.current_step().is_some_and(|step| step.complete_on_load)
+            })
+        });
+        if complete {
+            self.complete_lesson();
         }
     }
 
@@ -264,6 +282,11 @@ impl TutorialContext {
                             from,
                             to,
                             color: AnnotationColor::Red,
+                        }))
+                        .chain(session.black_reply_arrow().into_iter().map(|(from, to)| Arrow {
+                            from,
+                            to,
+                            color: AnnotationColor::Grey,
                         }))
                         .collect(),
                     labels,

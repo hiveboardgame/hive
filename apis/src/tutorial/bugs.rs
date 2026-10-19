@@ -19,9 +19,12 @@ pub const CHAPTER: Chapter = Chapter {
         SPIDER_DEAD_END,
         SPIDER_DOOR,
         SPIDER_POWER,
-        GRASSHOPPER,
         BEETLE,
+        BEETLE_SPAWN,
         BEETLE_GATE,
+        GRASSHOPPER,
+        GRASSHOPPER_PLACE,
+        GRASSHOPPER_PATHS,
         MOSQUITO,
         LADYBUG,
         PILLBUG,
@@ -168,6 +171,7 @@ const ANT: Lesson = Lesson {
         position: "A+PA+b!+lL+Q+A+p+q5-a,w",
         movable: &["wQ", "wA1"],
         swap: Some(("wA1", "wA3")),
+        visible: None,
     },
     steps: &[
         Step::play(
@@ -253,9 +257,15 @@ const SPIDER_DEAD_END: Lesson = Lesson {
     intro: &[
         "A Spider cannot revisit a space during the same move. If its only way to continue would take it back where it came from, it cannot complete its three steps.",
     ],
-    brief: "Placeholder: choose a simple position where the Spider is not pinned, but backtracking would be needed to complete three steps.",
-    setup: Setup::Pending,
-    steps: &[Step::read("This position is being prepared. A Spider cannot backtrack during its move.", &[])],
+    brief: "Supplied HOP G+Aq-m+a4-(pL+QM-A+a!1-(Sl1+a)3-P),w. wS1 is not pinned but has no legal three-step crawl. This is an observation lesson: no move or extra Continue click is required.",
+    setup: Setup::Position("G+Aq-m+a4-(pL+QM-A+a!1-(Sl1+a)3-P),w"),
+    steps: &[
+        Step::read(
+            "The highlighted Spider [[wS1]] is not pinned, but it cannot complete 3 steps without backtracking. A Spider cannot return to a space it already visited during the same move. There is nothing to move here: continue to the next lesson.",
+            &["wS1"],
+        )
+        .observation(),
+    ],
     outro: "",
 };
 
@@ -263,30 +273,48 @@ const SPIDER_DOOR: Lesson = Lesson {
     id: "bugs.spider_door",
     title: "The Door",
     intro: &[
-        "An open Door can give a Spider different ways to complete its three-step crawl.",
+        "An open Door gives a Spider different routes around the hive. Every legal move still follows exactly 3 steps without backtracking.",
     ],
-    brief: "Placeholder: choose a simple Door position that gives the Spider multiple legal three-step routes.",
-    setup: Setup::Pending,
-    steps: &[Step::read("This position is being prepared. We will explore the routes an open Door gives a Spider.", &[])],
+    brief: "Supplied HOP A+P+QM+Llb+a3+S4-m6+p+qA6-g!,w. Only wS1 can move; all pieces except wQ, bQ and wS1 are blank. The shortest route to bA1\\ uses two moves, via wA2\\. Small arrows follow the Spider's current legal options.",
+    setup: Setup::BlankExercise {
+        position: "A+P+QM+Llb+a3+S4-m6+p+qA6-g!,w",
+        movable: &["wS1"],
+        swap: None,
+        visible: None,
+    },
+    steps: &[
+        Step::play(
+            "You play as White. Use the Door to move your Spider [[wS1]] into the green hex beside the Black Queen [[bQ]]. Keep moving until you reach it: each Spider move must crawl exactly 3 spaces. The arrows show your current options.",
+            Travel { piece: "wS1", to: "bA1\\" },
+            "Use the Door to work toward the green hex. Each Spider move must crawl exactly 3 spaces.",
+        )
+        .marked(&["wS1"])
+        .highlighted(&["bA1\\"])
+        .with_legal_arrows("wS1")
+        .with_small_arrows(&[])
+        .your_turn(),
+        Step::read(
+            "Well done! Your Spider [[wS1]] used the Door to reach the space beside the Black Queen [[bQ]].",
+            &[],
+        ),
+    ],
     outro: "",
 };
 
 const SPIDER_POWER: Lesson = Lesson {
     id: "bugs.spider_power",
     title: "Spider power",
-    intro: &[
-        "Two Spiders [[wS1]] [[wS2]] can work together to surround the Black Queen [[bQ]]. Each Spider must crawl exactly three spaces on every move.",
-        "Only the White Spiders can move in this exercise. The Queens and blank tiles stay fixed, and Black does not reply.",
-    ],
+    intro: &[],
     brief: "Supplied HOP Ap-A1+a1-(q-ga2-(lG+PS!2-(Q+S1-M+a-L))),w. Keep only wQ, bQ, wS1 and wS2 visible. White repeatedly moves either Spider by normal three-step crawls until bQ is surrounded and both Spiders touch her. A five-move solution exists.",
     setup: Setup::BlankExercise {
         position: "Ap-A1+a1-(q-ga2-(lG+PS!2-(Q+S1-M+a-L))),w",
         movable: &["wS1", "wS2"],
         swap: None,
+        visible: None,
     },
     steps: &[
         Step::play(
-            "You play as White. Use both Spiders [[wS1]] [[wS2]] to surround the Black Queen [[bQ]]. You can keep moving either Spider until you win. Blank tiles and Queens stay fixed.",
+            "You play as White. Use both Spiders [[wS1]] [[wS2]] to surround the Black Queen [[bQ]]. You can keep moving either Spider until you win.",
             Explore {
                 pieces: &["wS1", "wS2"],
                 condition: All(&[
@@ -309,16 +337,16 @@ const SPIDER_POWER: Lesson = Lesson {
 
 const GRASSHOPPER: Lesson = Lesson {
     id: "bugs.grasshopper",
-    title: "Grasshopper",
+    title: "Jump!",
     intro: &[
         "The Grasshopper jumps in a straight line over one or more pieces and lands in the first empty hex behind them. It can't jump over an empty hex.",
-        "Because it jumps instead of sliding, gates mean nothing to it. It can drop into holes no walking piece can reach.",
+        "Because it jumps instead of sliding, the Grasshopper is not affected by gates or by stacks!",
     ],
-    brief: "From a 2000+ game (corpus game 26, after 11 moves each), White to move. wG1 jumps into a walled-in hole (-bQ); Black's scripted reply bG1 bP\\; then wG1 jumps out again to -bA2. Highlight and arrow for each jump.",
-    setup: Setup::Position("A+ap+ql+L+B-a5=B2+b4-M+G6-(Qs1-a),w"),
+    brief: "Adapted from a 2000+ game (corpus game 26, after 11 moves each), with bP replaced by bM. White to move. wG1 jumps into a walled-in hole (-bQ); Black's scripted reply bG1 bM\\; then wG1 jumps out again to -bA2. Highlight and arrow for each jump.",
+    setup: Setup::Position("A+am+ql+L+B-a5=B2+b4-M+G6-(Qs1-a),w"),
     steps: &[
         Step::play(
-            "Jump your Grasshopper into the highlighted hole.",
+            "You play as White. Jump your Grasshopper [[wG1]] into the highlighted hole.",
             Move {
                 piece: "wG1",
                 to: "-bQ",
@@ -326,10 +354,12 @@ const GRASSHOPPER: Lesson = Lesson {
             "The Grasshopper moves in straight lines only, over pieces, never over gaps.",
         )
         .highlighted(&["-bQ"])
-        .with_arrows(&[("wG1", "-bQ")])
-        .reply("bG1", "bP\\"),
+        .with_legal_arrows("wG1")
+        .normal_moves_only()
+        .with_red_arrows(&[("wG1", "bA3\\"), ("wG1", "bA3-")])
+        .reply("bG1", "bM\\"),
         Step::play(
-            "No walking piece could have got in there. Now jump out again, to the highlighted hex.",
+            "No walking piece could have got in there. Now jump your Grasshopper [[wG1]] out again, to the highlighted hex.",
             Move {
                 piece: "wG1",
                 to: "-bA2",
@@ -342,41 +372,176 @@ const GRASSHOPPER: Lesson = Lesson {
     outro: "A Grasshopper is a sniper: it can fill a hex from far away that walking pieces can't get to at all.",
 };
 
-const BEETLE: Lesson = Lesson {
-    id: "bugs.beetle",
-    title: "Beetle",
+const GRASSHOPPER_PLACE: Lesson = Lesson {
+    id: "bugs.grasshopper_place",
+    title: "Place, jump and win",
     intro: &[
-        "The Beetle moves one hex at a time, like the Queen, but it can also climb on top of the hive and walk along it.",
-        "A piece with a Beetle on top can't move. And the stack counts as the colour of whatever is on top, which changes where new pieces may be placed.",
+        "Plan your Grasshopper's jumping path before placing it. A tempting placement can leave it pinned before it gets a chance to jump.",
     ],
-    brief: "From a 2000+ game (corpus game 22, after five moves each), White to move. wB1 climbs onto bG1; the stack then opens a new white placement next to it.",
-    setup: Setup::Position("ABM1+(L+l+qp1-Q)2-g,w"),
+    brief: "Supplied HOP A+almPQ+AaGg!4=B4=b1-a-L2+(gpSS2=M2=b1-s2+(BG-A1+g1-q))6-s,w. Swap wG1 and wG2 identities without changing geometry. Place wG3 /wA3 beside wG1 and wA3, Black plays bL bA1\\, then wG3 \\bQ wins. The trap wG3 wS1/ is refuted by bS1 wG3/; other incorrect attempts get bL bA1\\ when legal.",
+    setup: Setup::SwapPieces {
+        position: "A+almPQ+AaGg!4=B4=b1-a-L2+(gpSS2=M2=b1-s2+(BG-A1+g1-q))6-s,w",
+        first: "wG1",
+        second: "wG2",
+    },
     steps: &[
         Step::play(
-            "Climb on top of the black Grasshopper.",
-            Reach(OnTop("wB1", "bG1")),
-            "Your Beetle moves one hex, and that hex may be on top of another piece.",
+            "You play as White. Place your last Grasshopper [[wG3]] so it can jump into the last empty space around the Black Queen [[bQ]] on your next turn. Be careful: Black can pin it if you choose the wrong placement.",
+            PlaceIn(&["/wA3"]),
+            "Find the right placement for the last Grasshopper to attack the Black Queen!",
         )
-        .reply("bA1", "\\bP"),
-        Step::read(
-            "The black Grasshopper underneath is stuck for as long as your Beetle stays. And the stack is now white, as far as placing goes. To see what is under a stack, right-click it, or press and hold it on a touch screen. Try it now.",
-            &["wB1"],
-        ),
+        .punished_when(
+            &All(&[Placed("wG3"), Touching("wG3", "wS1"), Touching("wG3", "wS2")]),
+            "bS1",
+            "wG3/",
+        )
+        .punished_by(&[("bL", "bA1\\")])
+        .reply_on_mistake("bL")
+        .highlight_hint_after(2, &["/wA3"])
+        .your_turn()
+        .reply("bL", "bA1\\"),
         Step::play(
-            "Place a Grasshopper right next to the stack, where the black Grasshopper used to block you.",
-            Reach(Touching("wG", "bG1")),
-            "Choose a hex touching your Beetle and no other black piece.",
+            "Black replied. Your Grasshopper [[wG3]] has a clear jumping path: jump into the green hex to surround the Black Queen [[bQ]] and win.",
+            Move { piece: "wG3", to: "\\bQ" },
+            "Jump your last Grasshopper into the final empty space beside the Black Queen.",
+        )
+        .marked(&["wG3"])
+        .highlighted(&["\\bQ"])
+        .normal_moves_only()
+        .hint_after(2),
+        Step::read(
+            "Well done! You chose a safe placement, then jumped in to surround the Black Queen [[bQ]].",
+            &[],
+        )
+        .announce_winner(),
+    ],
+    outro: "",
+};
+
+const GRASSHOPPER_PATHS: Lesson = Lesson {
+    id: "bugs.grasshopper_paths",
+    title: "Jumping paths",
+    intro: &[
+        "A Grasshopper needs an unbroken line of pieces to jump over. Use the hive to build a route for both Grasshoppers toward the Black Queen.",
+    ],
+    brief: "Supplied HOP A+s+GG1-(aGPQAs3-(g-g+laS2-LAga-S3+Mb!4-(qB2=b1-(p1=B1=m)))),w. Swap wG1 and wG3 identities, retaining the layout. Only wG2 and wG3 move; all tiles except those Grasshoppers and both Queens are blank and fixed. A six-move route fills the two remaining bQ neighbours.",
+    setup: Setup::BlankExercise {
+        position: "A+s+GG1-(aGPQAs3-(g-g+laS2-LAga-S3+Mb!4-(qB2=b1-(p1=B1=m)))),w",
+        movable: &["wG2", "wG3"],
+        swap: Some(("wG1", "wG3")),
+        visible: None,
+    },
+    steps: &[
+        Step::play(
+            "You play as White. Keep jumping with your two Grasshoppers [[wG2]] [[wG3]] until they fill the last two spaces around the Black Queen [[bQ]]. Only your Grasshoppers can move; the blank tiles stay fixed.",
+            Explore {
+                pieces: &["wG2", "wG3"],
+                condition: All(&[
+                    Surrounded("bQ"),
+                    Touching("wG2", "bQ"),
+                    Touching("wG3", "bQ"),
+                ]),
+            },
+            "Keep using the jumping paths to bring both Grasshoppers beside the Black Queen.",
+        )
+        .highlighted(&["\\bA2", "bB2\\"])
+        .your_turn(),
+        Step::read(
+            "Well done! Both Grasshoppers [[wG2]] [[wG3]] filled the last spaces around the Black Queen [[bQ]]. White wins!",
+            &[],
+        )
+        .announce_winner(),
+    ],
+    outro: "",
+};
+
+const BEETLE: Lesson = Lesson {
+    id: "bugs.beetle",
+    title: "Climbing",
+    intro: &[
+        "The Beetle [[wB1]] moves one hex per turn. It can crawl on the ground or climb onto another piece, then move across the top of the hive.",
+        "There is no height limit for a stack. Only the piece on top can move; every piece covered underneath is immobile until it is uncovered.",
+        "A Beetle on the ground cannot squeeze through a narrow Gate. Climbing gives it a way around.",
+    ],
+    brief: "Supplied HOP AM-Q+G-pm1-PBl!+q5+a,w. wB1 climbs onto bL; Black places bB1 bQ\\ between bQ and bM; wB1 covers bQ; bB1 covers wB1. Show all legal Beetle moves and the illegal Queen gap first, replacing these with a single correct hint after two errors.",
+    setup: Setup::Position("AM-Q+G-pm1-PBl!+q5+a,w"),
+    steps: &[
+        Step::play(
+            "You play as White. Climb onto the Black Ladybug [[bL]] with your Beetle [[wB1]]. Green arrows show legal moves; the red arrow points through a Gate your Beetle cannot enter from the ground because of the Freedom to Move Rule.",
+            Move { piece: "wB1", to: "bL" },
+            "Climb your Beetle onto the Black Ladybug.",
+        )
+        .marked(&["wB1"])
+        .with_legal_arrows("wB1")
+        .normal_moves_only()
+        .with_red_arrows(&[("wB1", "-bP")])
+        .hint_after(2)
+        .your_turn()
+        .reply("bB1", "bQ\\"),
+        Step::play(
+            "Black replied by placing a Beetle [[bB1]]. You can look under a stack by right-clicking it on desktop, or by holding it and then sliding your finger elsewhere on mobile. Now move your Beetle [[wB1]] onto the Black Queen [[bQ]].",
+            Move { piece: "wB1", to: "bQ" },
+            "Move your Beetle onto the Black Queen.",
+        )
+        .marked(&["wB1"])
+        .with_legal_arrows("wB1")
+        .normal_moves_only()
+        .hint_after(2)
+        .reply("bB1", "wB1"),
+        Step::read(
+            "Well done! Black replied by climbing onto your Beetle [[wB1]]. The Black Queen [[bQ]] and your Beetle are both covered and cannot move. Only the Black Beetle [[bB1]] on top can move.",
+            &["bB1"],
+        )
+        .without_mark_numbers(),
+    ],
+    outro: "",
+};
+
+const BEETLE_SPAWN: Lesson = Lesson {
+    id: "bugs.beetle_spawn",
+    title: "Spawn points",
+    intro: &[
+        "For placing new pieces, a stack takes the colour of its top piece. A White Beetle [[wB1]] on top of a Black piece makes that hex count as White.",
+        "By covering an opponent's piece, your Beetle can create new spawn points: places where pieces from your reserve can enter the game.",
+    ],
+    brief: "Supplied HOP G+pqg!1=B1-Q3+a,w. Move wB1 from wG1 onto bP, changing that stack to White. Black places bA2 legally, then White places a reserve piece on one of the two newly opened hexes shared by wG1 and wB1.",
+    setup: Setup::Position("G+pqg!1=B1-Q3+a,w"),
+    steps: &[
+        Step::play(
+            "You play as White. Move your Beetle [[wB1]] one space forward onto the Black Pillbug [[bP]] to create new spawn points.",
+            Move { piece: "wB1", to: "bP" },
+            "Move your Beetle onto the Black Pillbug.",
+        )
+        .marked(&["wB1"])
+        .hint_after(2)
+        .reply_placement("bA2"),
+        Step::play(
+            "Black replied by placing a piece. Your Beetle [[wB1]] makes the covered Pillbug's hex count as White, opening new places to enter the game. Pick any piece from your reserve and place it on one of the two green hexes shared by your Grasshopper [[wG1]] and Beetle.",
+            PlaceIn(&["\\wG1", "wB1\\"]),
+            "Pick any piece from your reserve, then choose one of the two green spawn points.",
+        )
+        .marked(&["wB1"])
+        .highlighted(&["\\wG1", "wB1\\"])
+        .without_mark_numbers(),
+        Step::read(
+            "Well done! Your Beetle [[wB1]] changed the colour of the stack and created new spawn points for your pieces.",
+            &[],
         ),
     ],
-    outro: "Beetles are slow, but climbing makes them some of the strongest pieces in the late game. Covering the enemy Queen is often how games are won.",
+    outro: "",
 };
 
 const BEETLE_GATE: Lesson = Lesson {
     id: "bugs.beetle_gate",
     title: "Beetle gates",
     intro: &["Gates exist on top of the hive too. A Beetle can't squeeze between two stacks that are higher than both where it starts and where it lands."],
-    brief: "hivegame.com/game/OiLpk05USK1S (229b05d2, 1963 vs 1990), after move 40. wB1 sits on bQ, whose last empty kill spot is -bB1, but bB1 (on wG1) and bB2 (on wM) gate the way down. Puzzle: climb onto either black Beetle; Black answers bA1 -wA3 as in the game; then wB1 drops into -bB1 and wins. Both routes verified.",
-    setup: Setup::Position("A+GA+L+G+plPQ+A+a2=b6=M6=b9=m1-a2+(q1=B)4-Ga9-g,w"),
+    brief: "hivegame.com/game/OiLpk05USK1S (229b05d2, 1963 vs 1990), after move 40. wB1 sits on bQ, whose last empty kill spot is -bB1, but bB1 (on wG1) and bB2 (on wM) gate the way down. Puzzle: climb onto either black Beetle; blank pieces remain fixed; then wB1 drops into -bB1 and wins. Both routes verified.",
+    setup: Setup::BlankExercise {
+        position: "A+GA+L+G+plPQ+A+a2=b6=M6=b9=m1-a2+(q1=B)4-Ga9-g,w",
+        movable: &["wB1"],
+        swap: None,
+        visible: Some(&["wB1", "wB2", "bB1", "bB2"]),
+    },
     steps: &[
         Step::play(
             "Your Beetle on the black Queen can't step down into the highlighted hex: the two black Beetles beside the way down form a gate. Find a way around it.",
@@ -387,8 +552,10 @@ const BEETLE_GATE: Lesson = Lesson {
             "Climb your Beetle onto one of the two ringed black Beetles first.",
         )
         .marked(&["bB1", "bB2"])
+        .without_mark_numbers()
+        .with_red_arrows(&[("wB1", "-bB1")])
         .highlighted(&["-bB1"])
-        .reply("bA1", "-wA3"),
+        .your_turn(),
         Step::play(
             "From up there nothing blocks the way down. Win the game.",
             Move {
@@ -399,7 +566,7 @@ const BEETLE_GATE: Lesson = Lesson {
         )
         .highlighted(&["-bB1"]),
     ],
-    outro: "The same gate on top of the hive can stop a Pillbug from lifting a piece over itself, and a Ladybug from walking across the top.",
+    outro: "",
 };
 
 const MOSQUITO: Lesson = Lesson {

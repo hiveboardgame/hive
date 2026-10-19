@@ -167,7 +167,7 @@ pub fn LessonPanel(
             )),
             Feedback::Refuted(hint) => Some((
                 "text-red-600 dark:text-red-400",
-                format!("Black struck back. {hint}"),
+                format!("Not quite. {hint}"),
             )),
             Feedback::KeepGoing => Some((
                 "text-green-700 dark:text-green-400",
@@ -414,9 +414,12 @@ pub fn LessonPanel(
     }
 }
 
-/// Reading drawer shared by mobile lessons, over the fixed board area.
+/// Mobile reading drawer anchored below the diagram, opening upward over it.
 #[component]
 pub fn MobileLessonAbout(#[prop(into)] lesson_id: Signal<&'static str>) -> impl IntoView {
+    let expanded = RwSignal::new(false);
+    let panel_id = format!("tutorial-lesson-text-{}", lesson_id.get_untracked());
+    let content_id = panel_id.clone();
     let intro = move || {
         find_lesson(lesson_id.get())
             .map(|lesson| lesson.intro)
@@ -428,11 +431,28 @@ pub fn MobileLessonAbout(#[prop(into)] lesson_id: Signal<&'static str>) -> impl 
     };
 
     view! {
-        <details class="group absolute inset-x-0 top-0 z-30 overflow-y-auto max-h-full overscroll-contain text-sm leading-5 text-gray-700 bg-even-light shadow-md dark:bg-surface-panel dark:text-gray-200">
-            <summary class="sticky top-0 justify-between h-11 bg-even-light dark:bg-surface-panel ui-disclosure-summary">
-                <span>"Read the lesson"</span>
+        <div class="flex absolute inset-x-0 bottom-0 z-30 flex-col max-h-full text-sm leading-5 text-gray-700 bg-even-light shadow-md dark:bg-surface-panel dark:text-gray-200">
+            <Show when=move || expanded.get()>
+                <div
+                    id=content_id.clone()
+                    role="region"
+                    aria-label="Lesson text"
+                    class="flex overflow-y-auto flex-col gap-2 px-3 pt-3 pb-1 min-h-0 overscroll-contain"
+                >
+                    {intro}
+                </div>
+            </Show>
+            <button
+                type="button"
+                aria-controls=panel_id
+                aria-expanded=move || expanded.get()
+                class="flex justify-between items-center px-3 h-11 w-full text-left bg-even-light shrink-0 dark:bg-surface-panel"
+                on:click=move |_| expanded.update(|open| *open = !*open)
+            >
+                <span>"Read more"</span>
                 <svg
-                    class="transition-transform size-5 shrink-0 group-open:rotate-180"
+                    class="transition-transform size-5 shrink-0"
+                    class:rotate-180=move || !expanded.get()
                     viewBox="0 0 20 20"
                     fill="currentColor"
                     aria-hidden="true"
@@ -443,12 +463,8 @@ pub fn MobileLessonAbout(#[prop(into)] lesson_id: Signal<&'static str>) -> impl 
                         clip-rule="evenodd"
                     />
                 </svg>
-            </summary>
-            <div class="flex flex-col gap-2 px-3 pt-1 pb-3">
-                {intro}
-
-            </div>
-        </details>
+            </button>
+        </div>
     }
 }
 

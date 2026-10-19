@@ -25,6 +25,7 @@ pub enum Setup {
         position: &'static str,
         movable: &'static [&'static str],
         swap: Option<(&'static str, &'static str)>,
+        visible: Option<&'static [&'static str]>,
     },
     AfterLesson {
         lesson: &'static str,
@@ -50,6 +51,7 @@ pub struct Step {
     pub marks: &'static [&'static str],
     pub number_marks: bool,
     pub refutations: &'static [(&'static str, &'static str)],
+    pub conditional_refutation: Option<(&'static super::goal::Condition, &'static str, &'static str)>,
     pub highlights: &'static [&'static str],
     pub arrows: &'static [(&'static str, &'static str)],
     pub hint: &'static str,
@@ -69,6 +71,10 @@ pub struct Step {
     pub red_arrows: &'static [(&'static str, &'static str)],
     pub hint_moves: Option<(&'static str, u8)>,
     pub wrong_reply: Option<&'static str>,
+    pub complete_on_load: bool,
+    pub small_arrows: bool,
+    pub legal_arrows: Option<&'static str>,
+    pub normal_moves_only: bool,
 }
 
 pub enum Reply {
@@ -92,6 +98,7 @@ impl Step {
             marks,
             number_marks: true,
             refutations: &[],
+            conditional_refutation: None,
             highlights: &[],
             arrows: &[],
             hint: "",
@@ -111,6 +118,10 @@ impl Step {
             red_arrows: &[],
             hint_moves: None,
             wrong_reply: None,
+            complete_on_load: false,
+            small_arrows: false,
+            legal_arrows: None,
+            normal_moves_only: false,
         }
     }
 
@@ -121,6 +132,7 @@ impl Step {
             marks: &[],
             number_marks: true,
             refutations: &[],
+            conditional_refutation: None,
             highlights: &[],
             arrows: &[],
             hint,
@@ -140,6 +152,10 @@ impl Step {
             red_arrows: &[],
             hint_moves: None,
             wrong_reply: None,
+            complete_on_load: false,
+            small_arrows: false,
+            legal_arrows: None,
+            normal_moves_only: false,
         }
     }
 
@@ -168,6 +184,16 @@ impl Step {
         refutations: &'static [(&'static str, &'static str)],
     ) -> Self {
         self.refutations = refutations;
+        self
+    }
+
+    pub const fn punished_when(
+        mut self,
+        condition: &'static super::goal::Condition,
+        piece: &'static str,
+        to: &'static str,
+    ) -> Self {
+        self.conditional_refutation = Some((condition, piece, to));
         self
     }
 
@@ -259,6 +285,28 @@ impl Step {
         self
     }
 
+    pub const fn observation(mut self) -> Self {
+        self.complete_on_load = true;
+        self
+    }
+
+    pub const fn with_small_arrows(mut self, arrows: &'static [(&'static str, &'static str)]) -> Self {
+        self.arrows = arrows;
+        self.small_arrows = true;
+        self
+    }
+
+    /// Show the named piece's current legal destinations; a move hint replaces these arrows.
+    pub const fn with_legal_arrows(mut self, piece: &'static str) -> Self {
+        self.legal_arrows = Some(piece);
+        self
+    }
+
+    pub const fn normal_moves_only(mut self) -> Self {
+        self.normal_moves_only = true;
+        self
+    }
+
     pub const fn your_turn(mut self) -> Self {
         self.your_turn = true;
         self
@@ -299,6 +347,13 @@ impl Lesson {
         match self.setup {
             Setup::BlankPosition(_) => Some(&["wQ"]),
             Setup::BlankExercise { movable, .. } => Some(movable),
+            _ => None,
+        }
+    }
+
+    pub fn blank_visible(&self) -> Option<&'static [&'static str]> {
+        match self.setup {
+            Setup::BlankExercise { visible, .. } => visible,
             _ => None,
         }
     }

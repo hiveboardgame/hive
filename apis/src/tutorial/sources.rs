@@ -5,7 +5,6 @@ const SOURCES: &[(&str, &str, usize)] = &[
     ("basics.one_hive", "6XLwzobZAJP-", 10),
     ("tactics.gates_and_doors", "T4RQlKs1xeWq", 14),
     ("bugs.grasshopper", "l2ZK3IAf9VqB", 22),
-    ("bugs.beetle", "yoRTI-jLU3G1", 10),
     ("bugs.beetle_gate", "OiLpk05USK1S", 40),
     ("bugs.mosquito", "LrCAafNSTE4c", 8),
     ("bugs.ladybug", "BWt62rQLnjGv", 14),
