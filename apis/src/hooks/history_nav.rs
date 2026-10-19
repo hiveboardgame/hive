@@ -218,7 +218,7 @@ fn use_history_arrow_keyboard_navigation<Action: Copy + 'static>(
     });
 }
 
-fn should_ignore_history_key_event(evt: &KeyboardEvent) -> bool {
+pub(crate) fn should_ignore_history_key_event(evt: &KeyboardEvent) -> bool {
     evt.alt_key()
         || evt.ctrl_key()
         || evt.meta_key()
@@ -226,14 +226,14 @@ fn should_ignore_history_key_event(evt: &KeyboardEvent) -> bool {
         || key_event_target_uses_arrows(evt)
 }
 
-fn key_event_target_uses_arrows(evt: &KeyboardEvent) -> bool {
-    let Some(target) = evt.target() else {
-        return false;
-    };
-    let Some(element) = target.dyn_ref::<Element>() else {
-        return false;
-    };
+fn key_event_target(evt: &KeyboardEvent) -> Option<Element> {
+    evt.target()?.dyn_into::<Element>().ok()
+}
 
+pub(crate) fn key_event_in_text_field(evt: &KeyboardEvent) -> bool {
+    let Some(element) = key_event_target(evt) else {
+        return false;
+    };
     matches!(
         element.tag_name().to_uppercase().as_str(),
         "INPUT" | "TEXTAREA" | "SELECT"
@@ -245,6 +245,13 @@ fn key_event_target_uses_arrows(evt: &KeyboardEvent) -> bool {
         || element
             .get_attribute("contenteditable")
             .is_some_and(|value| value != "false")
+}
+
+fn key_event_target_uses_arrows(evt: &KeyboardEvent) -> bool {
+    key_event_in_text_field(evt)
+        // A widget with its own arrow-key steps, such as the eval graph.
+        || key_event_target(evt)
+            .is_some_and(|element| element.closest("[data-own-arrows]").ok().flatten().is_some())
 }
 
 #[cfg(test)]

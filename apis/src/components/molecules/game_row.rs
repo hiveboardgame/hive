@@ -13,6 +13,7 @@ use crate::{
         },
     },
     i18n::*,
+    providers::game_eval::EvaluatedGames,
     responses::GameResponse,
 };
 use chrono::Utc;
@@ -35,7 +36,9 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
     let created_at = game.created_at;
     let game_start = game.game_start.clone();
     let game_id = game.game_id.clone();
+    let game_href = format!("/game/{game_id}");
     let game_stored = StoredValue::new(game.clone());
+    let evaluated = use_context::<EvaluatedGames>();
     let game_status = StoredValue::new(game.game_status);
     let turn = game.turn;
     let white_player = game.white_player;
@@ -150,8 +153,27 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
                     <p class="flex gap-1 truncate">{rated_string} <TimeRow time_control /></p>
                     <p class="text-sm opacity-75">{ago}</p>
                 </div>
-                <div class="z-30">
-                    <DownloadPgn game=game_stored />
+                <div class="flex z-30 gap-1 items-center">
+                    // The slot is there before the lookup answers, so the card never shifts
+                    // when its badge arrives.
+                    {move || {
+                        let evaluated = evaluated.filter(|evaluated| evaluated.shown.get())?;
+                        let has_eval = evaluated.ids.with(|ids| ids.contains(&game_id));
+                        Some(
+                            view! {
+                                <a
+                                    href=format!("/analysis/{}?tab=evals", game_id)
+                                    class="py-0.5 px-1.5 text-xs font-bold rounded no-link-style ui-button-primary"
+                                    class:invisible=!has_eval
+                                    aria-hidden=(!has_eval).then_some("true")
+                                    tabindex=if has_eval { "0" } else { "-1" }
+                                    title="This game has a computer eval"
+                                >
+                                    "Eval"
+                                </a>
+                            },
+                        )
+                    }} <DownloadPgn game=game_stored />
                 </div>
             </div>
 
@@ -228,11 +250,7 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
                     </p>
                 </div>
             </div>
-            <a
-                class="absolute inset-0 z-10"
-                href=format!("/game/{}", game_id)
-                aria-label="View game details"
-            ></a>
+            <a class="absolute inset-0 z-10" href=game_href aria-label="View game details"></a>
         </article>
     }
 }

@@ -16,6 +16,13 @@ server {
         proxy_read_timeout 3600s;
         proxy_send_timeout 3600s;
     }
+
+    # A long game's eval result is over nginx's 1 MB default; the site takes up to 4 MB.
+    location /api/v1/evals/ {
+        proxy_pass http://hive_active;
+        proxy_set_header Host $host;
+        client_max_body_size 4m;
+    }
 }
 
 server {
@@ -61,6 +68,19 @@ server {
 
     location = /health/ready {
         deny all;
+    }
+
+    # Eval workers reach the site on 127.0.0.1:3999, which this block does not cover. To let a
+    # worker elsewhere (a laptop, a rented GPU) help, add `allow <its IP>;` above the deny.
+    location /api/v1/evals/ {
+        deny all;
+        proxy_pass http://hive_active;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header Forwarded "";
+        proxy_set_header X-Forwarded-Proto $scheme;
+        client_max_body_size 4m;
     }
 
     location /pkg/ {

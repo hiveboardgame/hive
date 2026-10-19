@@ -1,6 +1,6 @@
 use crate::{
     components::{
-        atoms::history_nav_button::HistoryNavButton,
+        atoms::{grade_mark::GradeMark, history_nav_button::HistoryNavButton},
         molecules::{annotation_toolbar::AnnotationToggle, modal::Modal},
     },
     hooks::history_nav::{
@@ -11,6 +11,7 @@ use crate::{
     i18n::{t, use_i18n},
     providers::{
         analysis::{AnalysisContext, MoveDelta, VisibleRow},
+        game_eval::GameEvalContext,
         game_state::{GameStateStore, GameStateStoreFields},
     },
 };
@@ -176,16 +177,26 @@ pub(super) fn HistoryRow(row: VisibleRow, value: Option<MoveDelta>) -> impl Into
     let hop_rooted = analysis.store.is_hop_rooted_untracked();
     let turn_prefix = if hop_rooted { "+" } else { "" };
     let root_label = if hop_rooted { "HOP" } else { "0." };
+    // A row on the game's own line at position p shows the eval of move p - 1, the move that
+    // led here; rows in variations have no eval.
+    let evals = use_context::<GameEvalContext>();
+    let game_move = analysis
+        .store
+        .game_ply_untracked(node_id)
+        .and_then(|ply| ply.checked_sub(1));
+    let grade = move || {
+        game_move
+            .zip(evals)
+            .and_then(|(ply, evals)| evals.grade(ply))
+    };
+    let is_move = value.is_some();
     let label = move || {
         value
             .as_ref()
             .map(|value| {
                 format!(
-                    "{turn_prefix}{}. {} {}{}",
-                    value.turn,
-                    value.piece,
-                    value.position,
-                    rep()
+                    "{turn_prefix}{}. {} {}",
+                    value.turn, value.piece, value.position,
                 )
             })
             .unwrap_or_else(|| String::from(root_label))
@@ -238,6 +249,16 @@ pub(super) fn HistoryRow(row: VisibleRow, value: Option<MoveDelta>) -> impl Into
                 on:click=onclick
             >
                 {label}
+                {move || {
+                    grade()
+                        .map(|grade| {
+                            view! {
+                                " "
+                                <GradeMark grade />
+                            }
+                        })
+                }}
+                {move || is_move.then(rep)}
             </div>
         </div>
     }

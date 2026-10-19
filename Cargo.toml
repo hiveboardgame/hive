@@ -1,5 +1,5 @@
 [workspace]
-members = ["apis", "engine", "db", "shared_types", "hive-hydra", "scripts"]
+members = ["apis", "engine", "db", "shared_types", "hive-hydra", "scripts", "hive-evaluator"]
 resolver = "2"
 
 [workspace.lints.clippy]

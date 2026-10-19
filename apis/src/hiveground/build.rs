@@ -148,9 +148,22 @@ fn occupied_board_stacks(board: &Board) -> impl Iterator<Item = (Position, &BugS
 }
 
 pub fn build_board_render_model(board: &Board, move_info: &MoveInfo) -> HivegroundRenderModel {
+    build_board_render_model_with(board, move_info, true)
+}
+
+/// `last_move: false` drops the last-move highlight, for when other marks explain the board.
+pub fn build_board_render_model_with(
+    board: &Board,
+    move_info: &MoveInfo,
+    last_move: bool,
+) -> HivegroundRenderModel {
+    let mut overlays = board_overlay_set(board, move_info);
+    if !last_move {
+        overlays.last_move = None;
+    }
     let config = HivegroundConfig {
         stacks: board_display_stacks(board),
-        overlays: board_overlay_set(board, move_info),
+        overlays,
     };
     build_hiveground_render_model(&config)
 }

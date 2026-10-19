@@ -2,6 +2,7 @@ use crate::{
     components::molecules::{empty_state::EmptyState, game_row::GameRow},
     hooks::clipboard_copy::use_clipboard_copy,
     i18n::*,
+    providers::game_eval::provide_evaluated_games,
     responses::GameResponse,
 };
 use leptos::{html, prelude::*};
@@ -31,6 +32,9 @@ pub fn ArchiveGameList(
 ) -> impl IntoView {
     let i18n = use_i18n();
     let queries = use_query_map();
+    provide_evaluated_games(Signal::derive(move || {
+        games.with(|games| games.iter().map(|game| game.game_id.clone()).collect())
+    }));
 
     // Full, shareable archive URL (with scheme) for the copy button below.
     let permalink_url = move || {
