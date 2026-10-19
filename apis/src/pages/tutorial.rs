@@ -99,7 +99,7 @@ pub fn Tutorial() -> impl IntoView {
         find_lesson(lesson_id.get()).and_then(|lesson| match lesson.setup {
             Setup::Pending => Some("The board for this lesson is still being built."),
             Setup::TextOnly => Some("No board needed for this one: just read along."),
-            Setup::Position(_) | Setup::BlankPosition(_) | Setup::AfterLesson { .. } | Setup::SwapPieces { .. } | Setup::Clocked { .. } => None,
+            Setup::Position(_) | Setup::BlankPosition(_) | Setup::BlankExercise { .. } | Setup::AfterLesson { .. } | Setup::SwapPieces { .. } | Setup::Clocked { .. } => None,
         })
     };
     let board_placeholder = move || {
@@ -182,7 +182,13 @@ pub fn Tutorial() -> impl IntoView {
                             }
                         }
                     />
-                    <div class="flex relative flex-col pt-11 min-h-0 overflow-hidden">
+                    <div class=move || {
+                        if find_lesson(lesson_id.get()).is_some_and(|lesson| !lesson.intro.is_empty()) {
+                            "flex relative flex-col pt-11 min-h-0 overflow-hidden"
+                        } else {
+                            "flex relative flex-col min-h-0 overflow-hidden"
+                        }
+                    }>
                         <For
                             each=move || {
                                 chosen.get().into_iter().collect::<Vec<_>>()
@@ -190,7 +196,9 @@ pub fn Tutorial() -> impl IntoView {
                             key=|id| *id
                             children=move |id| {
                                 view! {
-                                    <MobileLessonAbout lesson_id=Signal::derive(move || id) />
+                                    <Show when=move || find_lesson(id).is_some_and(|lesson| !lesson.intro.is_empty())>
+                                        <MobileLessonAbout lesson_id=Signal::derive(move || id) />
+                                    </Show>
                                 }
                             }
                         />

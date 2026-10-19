@@ -268,7 +268,8 @@ pub fn Board(
     let game_state = expect_context::<GameStateStore>();
     let analysis = use_context::<AnalysisContext>();
     let annotations = use_context::<AnnotationsSignal>();
-    let on_red_hex = use_context::<crate::providers::tutorial::TutorialContext>()
+    let tutorial = use_context::<crate::providers::tutorial::TutorialContext>();
+    let on_red_hex = tutorial
         .map(|tutorial| Callback::new(move |position| tutorial.try_forbidden(position)));
 
     // Hex where the current draw gesture started (set on the draw-button press).
@@ -390,6 +391,20 @@ pub fn Board(
                         });
                     let mut fitted_tiles = tiles.to_vec();
                     if fit_on.is_some() {
+                        if let Some(tutorial) = tutorial {
+                            let targets = tutorial.session.with_untracked(|session| {
+                                session.as_ref().map(|session| session.fit_targets()).unwrap_or_default()
+                            });
+                            for position in targets {
+                                let (x, y) = SvgPos::center_for_level(position, 0, straight);
+                                fitted_tiles.push(TileBounds {
+                                    left: x - 32.0,
+                                    right: x + 32.0,
+                                    top: y - 34.0,
+                                    bottom: y + 34.0,
+                                });
+                            }
+                        }
                         if let Some(annotations) = annotations {
                             for highlight in annotations.current().get_untracked().highlights {
                                 let (x, y) = SvgPos::center_for_level(highlight.position, 0, straight);

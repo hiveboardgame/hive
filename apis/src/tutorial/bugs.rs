@@ -15,9 +15,10 @@ pub const CHAPTER: Chapter = Chapter {
         ANT_FIRST_MOVES,
         ANT,
         ANT_ATTACK,
-        ANT_PIN,
         SPIDER,
         SPIDER_DEAD_END,
+        SPIDER_DOOR,
+        SPIDER_POWER,
         GRASSHOPPER,
         BEETLE,
         BEETLE_GATE,
@@ -123,14 +124,14 @@ const DONT_BREAK_THE_HIVE: Lesson = Lesson {
     setup: Setup::BlankPosition("A+B-aa1-(lqA1-L+A-a2+M)3+m!3-Q,w"),
     steps: &[
         Step::play(
-            "You play as White. Move your Queen [[wQ]] around the hive into the green hex to surround the Black Queen [[bQ]].",
+            "Blank tiles cannot move. You can keep moving until the lesson is completed. You play as White. Move your Queen [[wQ]] around the hive to reach the green hex and surround the Black Queen [[bQ]].",
             Travel { piece: "wQ", to: "bQ/" },
             "Keep your Queen touching the hive and aim for the green hex.",
         )
         .highlighted(&["bQ/"])
         .forbidden(&["wM/"])
         .hint_after(2),
-        Step::read("Well done!", &[]).forbidden(&["wM/"]),
+        Step::read("Well done!", &[]).forbidden(&["wM/"]).announce_winner(),
     ],
     outro: "",
 };
@@ -139,8 +140,7 @@ const ANT_FIRST_MOVES: Lesson = Lesson {
     id: "bugs.ant_first_moves",
     title: "Ant (first moves)",
     intro: &[
-        "The Ant [[wA1]] can crawl around the edge of the hive in a single turn.",
-        "Move your Ant [[wA1]] next to the Black Queen [[bQ]] to begin an attack.",
+        "The Ant [[wA1]] can crawl around the edge of the hive, as many spaces as you want in a single turn.",
     ],
     brief: "Supplied HOP ALl-qp!1+Q,w. Move the existing wA1 to any legal hex adjacent to bQ.",
     setup: Setup::Position("ALl-qp!1+Q,w"),
@@ -158,33 +158,32 @@ const ANT_FIRST_MOVES: Lesson = Lesson {
 
 const ANT: Lesson = Lesson {
     id: "bugs.ant",
-    title: "Ant",
+    title: "Gate",
     intro: &[
-        "The Ant [[wA1]] crawls around the edge of the hive, moving as many steps as you like.",
-        "According to the Freedom to Move Rule, the Ant [[wA1]] cannot slide through narrow entrances (red hex).",
-        "Each player starts the game with 3 Ants [[wA1]] in reserve.",
+        "A Gate can stop a crawling piece from sliding into an empty hex.",
+        "Here, your Queen [[wQ]] forms one side of the Gate. Move her away, then slide your Ant [[wA1]] into the last space around the Black Queen [[bQ]]. Blank tiles stay fixed.",
     ],
-    brief: "From a 2000+ game (corpus game 4, after four moves each), White to move. The hole -bP between the Queens is gated and red. wA1 must move to either bQ- or bQ/, the only reachable hexes adjacent to bQ. Show those two green destinations only after two incorrect attempts.",
-    setup: Setup::Position("A+P+QL-lb5-q-p,w"),
+    brief: "Supplied HOP with wA1 and wA3 swapped without changing the layout. Only wQ and wA1 can move; other non-Queen tiles are blank. wQ moves to -wL to open the Gate, then wA1 reaches wL\\ and wins. No Black reply.",
+    setup: Setup::BlankExercise {
+        position: "A+PA+b!+lL+Q+A+p+q5-a,w",
+        movable: &["wQ", "wA1"],
+        swap: Some(("wA1", "wA3")),
+    },
     steps: &[
         Step::play(
-            "You play as White. Play any move with your Ant [[wA1]] to attack the opponent's Queen [[bQ]].",
-            MovePiece {
-                piece: "wA1",
-                touching: Some("bQ"),
+            "You play as White. Surround the Black Queen [[bQ]] using your Ant [[wA1]], removing the Gate first. You may move your Ant around to explore.",
+            Explore {
+                pieces: &["wQ", "wA1"],
+                condition: All(&[Surrounded("bQ"), Touching("wA1", "bQ")]),
             },
-            "Move your Ant next to the Black Queen.",
+            "Open the Gate with your Queen, then move your Ant into the hole.",
         )
-        .forbidden(&["-bP"])
-        .highlight_hint_after(2, &["bQ-", "bQ/"]),
-        Step::read(
-            "Well done! Feel free to restart the lesson and try to move the Ant [[wA1]] differently.",
-            &[],
-        )
-        .forbidden(&["-bP"])
-        .with_completion_tip(
-            "Tip: The Ant [[wA1]] can reach almost any space immediately. It's the most flexible piece you have!",
-        ),
+        .with_red_arrows(&[("wA1", "wL\\")])
+        .hint_after_moves("wA1", 2)
+        .hint_after(2)
+        .your_turn(),
+        Step::read("Well done! Your Ant [[wA1]] passed through the open Gate and surrounded the Black Queen [[bQ]].", &[])
+            .announce_winner(),
     ],
     outro: "",
 };
@@ -192,59 +191,120 @@ const ANT: Lesson = Lesson {
 const ANT_ATTACK: Lesson = Lesson {
     id: "bugs.ant_attack",
     title: "Ant (attack!)",
-    intro: &["This lesson is being prepared."],
-    brief: "Placeholder for a future Ant attack lesson; position and instructions to follow.",
-    setup: Setup::Pending,
-    steps: &[Step::read("This lesson is being prepared.", &[])],
-    outro: "",
-};
-
-const ANT_PIN: Lesson = Lesson {
-    id: "bugs.ant_pin",
-    title: "Ant (pin!)",
-    intro: &["This lesson is being prepared."],
-    brief: "Placeholder for a future Ant pin lesson; position and instructions to follow.",
-    setup: Setup::Pending,
-    steps: &[Step::read("This lesson is being prepared.", &[])],
+    intro: &[],
+    brief: "Supplied HOP ALlm-q!1+Q,w. Move the existing wA1 next to bQ and pin bQ so she has no legal move on Black's following turn. Exactly /bQ, bQ\\ and bQ- succeed. A failed pin is followed by a legal bQ move when one is available.",
+    setup: Setup::Position("ALlm-q!1+Q,w"),
+    steps: &[
+        Step::play(
+            "Let's use our Ant [[wA1]] to start an attack. Move your Ant [[wA1]] near the opponent's Queen [[bQ]] and make sure she can't move.",
+            MoveSatisfying {
+                piece: "wA1",
+                condition: All(&[
+                    Touching("wA1", "bQ"),
+                    Pinned("bQ"),
+                    Stuck("bQ"),
+                ]),
+            },
+            "Move your Ant next to the Black Queen so she cannot move without breaking the hive.",
+        )
+        .highlight_hint_after(2, &["/bQ", "bQ\\", "bQ-"])
+        .reply_on_mistake("bQ"),
+        Step::read(
+            "Well done! The Black Queen [[bQ]] cannot escape now, and we say she is **pinned** (she cannot move without breaking the hive!).",
+            &[],
+        )
+        .outlined_red(&["bQ"])
+        .with_completion_tip("Tip: An attack often starts by pinning the opponent's Queen!"),
+    ],
     outro: "",
 };
 
 const SPIDER: Lesson = Lesson {
     id: "bugs.spider",
     title: "Spider",
-    intro: &["The Spider slides exactly three hexes around the hive: not two, not four. It can't step back onto a hex it just left during the same move."],
-    brief: "From a 2000+ game (corpus game 9, after five moves each), White to move. Green hex for wS1: -wQ, exactly three slides away.",
-    setup: Setup::Position("QA+L+S1+M2-m3-(l+a1-q),w"),
+    intro: &[
+        "The Spider [[wS1]] crawls exactly three spaces around the edge of the hive in one move. It cannot stop early or take extra steps.",
+        "It cannot revisit a space during the same move, and it must keep sliding in contact with the hive.",
+    ],
+    brief: "Supplied HOP A+q-l+L+S1-B3-p!4-Qa+a,w. Any legal wS1 crawl completes the lesson. Exactly two destinations, \\wA1 and \\bA2, become green after two wrong attempts.",
+    setup: Setup::Position("A+q-l+L+S1-B3-p!4-Qa+a,w"),
     steps: &[
-        Step::read(
-            "Click your Spider to see where it can go. Every hex it offers is exactly three steps along the edge of the hive: the hexes in between are out of bounds.",
-            &[],
-        ),
         Step::play(
-            "Move your Spider to the green hex: exactly three steps.",
-            Visit {
-                piece: "wS1",
-                hexes: &["-wQ"],
-            },
-            "Count three hexes along the edge of the hive, without turning back.",
+            "You play as White. Click your Spider [[wS1]] to see where it can go. It must move exactly 3 spaces around the hive, no more, no less.",
+            MovePiece { piece: "wS1", touching: None },
+            "Move your Spider. It must crawl exactly 3 spaces around the hive.",
+        )
+        .marked(&["wS1"])
+        .highlight_hint_after(2, &["\\wA1", "\\bA2"]),
+        Step::read(
+            "Well done! Feel free to restart the lesson to try a different move.",
+            &[],
+        )
+        .with_completion_tip(
+            "Tip: Place your Spider so it threatens to pin two opponent pieces at the same time!",
         ),
     ],
-    outro: "Spiders are limited, but that precision is useful. A Spider is perfect for slipping into one specific hex next to the enemy Queen.",
+    outro: "",
 };
 
 const SPIDER_DEAD_END: Lesson = Lesson {
     id: "bugs.spider_dead_end",
-    title: "A Spider with nowhere to go",
+    title: "Spiders cannot backtrack",
     intro: &[
-        "A Spider needs a complete path of three slides. If every route runs into a dead end before the third step, it can't move at all, even though nothing pins it.",
+        "A Spider cannot revisit a space during the same move. If its only way to continue would take it back where it came from, it cannot complete its three steps.",
     ],
-    brief: "From a 2000+ game (corpus game 33, after 13 moves each), White to move. wS1 is not pinned and has two open neighbours (-bA2, -bL), but no route ever reaches a third step, so it has no legal move.",
-    setup: Setup::Position("A+al+bp3-(L+Q2=b)4+(qA+BmA1=M1+S+a),w"),
-    steps: &[Step::read(
-        "Click your Spider. It isn't pinned, and it has open hexes next to it, but every route runs into a dead end before the third step. So it has no moves at all.",
-        &["-bA2", "-bL"],
-    )],
-    outro: "Trapping a Spider like this costs nothing extra: the pieces doing it are just standing there. Keep it in mind when you choose where to put yours.",
+    brief: "Placeholder: choose a simple position where the Spider is not pinned, but backtracking would be needed to complete three steps.",
+    setup: Setup::Pending,
+    steps: &[Step::read("This position is being prepared. A Spider cannot backtrack during its move.", &[])],
+    outro: "",
+};
+
+const SPIDER_DOOR: Lesson = Lesson {
+    id: "bugs.spider_door",
+    title: "The Door",
+    intro: &[
+        "An open Door can give a Spider different ways to complete its three-step crawl.",
+    ],
+    brief: "Placeholder: choose a simple Door position that gives the Spider multiple legal three-step routes.",
+    setup: Setup::Pending,
+    steps: &[Step::read("This position is being prepared. We will explore the routes an open Door gives a Spider.", &[])],
+    outro: "",
+};
+
+const SPIDER_POWER: Lesson = Lesson {
+    id: "bugs.spider_power",
+    title: "Spider power",
+    intro: &[
+        "Two Spiders [[wS1]] [[wS2]] can work together to surround the Black Queen [[bQ]]. Each Spider must crawl exactly three spaces on every move.",
+        "Only the White Spiders can move in this exercise. The Queens and blank tiles stay fixed, and Black does not reply.",
+    ],
+    brief: "Supplied HOP Ap-A1+a1-(q-ga2-(lG+PS!2-(Q+S1-M+a-L))),w. Keep only wQ, bQ, wS1 and wS2 visible. White repeatedly moves either Spider by normal three-step crawls until bQ is surrounded and both Spiders touch her. A five-move solution exists.",
+    setup: Setup::BlankExercise {
+        position: "Ap-A1+a1-(q-ga2-(lG+PS!2-(Q+S1-M+a-L))),w",
+        movable: &["wS1", "wS2"],
+        swap: None,
+    },
+    steps: &[
+        Step::play(
+            "You play as White. Use both Spiders [[wS1]] [[wS2]] to surround the Black Queen [[bQ]]. You can keep moving either Spider until you win. Blank tiles and Queens stay fixed.",
+            Explore {
+                pieces: &["wS1", "wS2"],
+                condition: All(&[
+                    Surrounded("bQ"),
+                    Touching("wS1", "bQ"),
+                    Touching("wS2", "bQ"),
+                ]),
+            },
+            "Move one of your Spiders around the hive toward the Black Queen.",
+        )
+        .your_turn(),
+        Step::read(
+            "Well done! Both Spiders [[wS1]] [[wS2]] helped surround the Black Queen [[bQ]].",
+            &[],
+        )
+        .announce_winner(),
+    ],
+    outro: "",
 };
 
 const GRASSHOPPER: Lesson = Lesson {

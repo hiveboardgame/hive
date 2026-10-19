@@ -55,9 +55,19 @@ pub struct LessonGroup {
 
 pub const LESSON_GROUPS: &[LessonGroup] = &[
     LessonGroup {
+        id: "bugs.queens",
+        title: "The Queen Bee",
+        lessons: &["bugs.queen", "bugs.freedom_to_move", "bugs.dont_break_the_hive"],
+    },
+    LessonGroup {
+        id: "bugs.spiders",
+        title: "The Spider",
+        lessons: &["bugs.spider", "bugs.spider_dead_end", "bugs.spider_door", "bugs.spider_power"],
+    },
+    LessonGroup {
         id: "bugs.ants",
         title: "The Ant",
-        lessons: &["bugs.ant_first_moves", "bugs.ant", "bugs.ant_attack", "bugs.ant_pin"],
+        lessons: &["bugs.ant_first_moves", "bugs.ant", "bugs.ant_attack"],
     },
 ];
 

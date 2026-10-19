@@ -159,6 +159,15 @@ impl HivegroundActionHandler {
         let game_state = self.game_state;
         if game_state.is_move_allowed(self.free_play()) {
             game_state.show_moves(piece, position);
+            if let Some(tutorial) = self.tutorial {
+                let targets = tutorial.session.with_untracked(|session| {
+                    session.as_ref().filter(|session| session.lesson().uses_blank_tiles())
+                        .map(|session| session.destinations(piece))
+                });
+                if let Some(targets) = targets {
+                    game_state.move_info().update(|move_info| move_info.target_positions = targets);
+                }
+            }
         }
     }
 

@@ -241,6 +241,11 @@ impl TutorialContext {
                             shape: MarkerShape::Ring,
                             color: AnnotationColor::Orange,
                         }))
+                        .chain(session.red_marks().into_iter().map(|mark| Marker {
+                            position: mark.position,
+                            shape: MarkerShape::Ring,
+                            color: AnnotationColor::Red,
+                        }))
                         .chain(session.placement_crosses().into_iter().map(|position| Marker {
                             position,
                             shape: MarkerShape::Cross,
@@ -255,6 +260,11 @@ impl TutorialContext {
                             to,
                             color: AnnotationColor::Green,
                         })
+                        .chain(session.red_arrows().into_iter().map(|(from, to)| Arrow {
+                            from,
+                            to,
+                            color: AnnotationColor::Red,
+                        }))
                         .collect(),
                     labels,
                 }

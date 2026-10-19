@@ -21,6 +21,11 @@ pub struct Lesson {
 pub enum Setup {
     Position(&'static str),
     BlankPosition(&'static str),
+    BlankExercise {
+        position: &'static str,
+        movable: &'static [&'static str],
+        swap: Option<(&'static str, &'static str)>,
+    },
     AfterLesson {
         lesson: &'static str,
         fallback: &'static str,
@@ -58,6 +63,12 @@ pub struct Step {
     pub hint_highlights: &'static [&'static str],
     pub placement_crosses: Option<&'static str>,
     pub immobile_marks: bool,
+    pub red_marks: &'static [&'static str],
+    pub win_prompt: Option<(hive_lib::Color, &'static str)>,
+    pub announce_winner: bool,
+    pub red_arrows: &'static [(&'static str, &'static str)],
+    pub hint_moves: Option<(&'static str, u8)>,
+    pub wrong_reply: Option<&'static str>,
 }
 
 pub enum Reply {
@@ -94,6 +105,12 @@ impl Step {
             hint_highlights: &[],
             placement_crosses: None,
             immobile_marks: false,
+            red_marks: &[],
+            win_prompt: None,
+            announce_winner: false,
+            red_arrows: &[],
+            hint_moves: None,
+            wrong_reply: None,
         }
     }
 
@@ -117,6 +134,12 @@ impl Step {
             hint_highlights: &[],
             placement_crosses: None,
             immobile_marks: false,
+            red_marks: &[],
+            win_prompt: None,
+            announce_winner: false,
+            red_arrows: &[],
+            hint_moves: None,
+            wrong_reply: None,
         }
     }
 
@@ -206,6 +229,36 @@ impl Step {
         self
     }
 
+    pub const fn outlined_red(mut self, pieces: &'static [&'static str]) -> Self {
+        self.red_marks = pieces;
+        self
+    }
+
+    pub const fn with_win_prompt(mut self, color: hive_lib::Color, prompt: &'static str) -> Self {
+        self.win_prompt = Some((color, prompt));
+        self
+    }
+
+    pub const fn announce_winner(mut self) -> Self {
+        self.announce_winner = true;
+        self
+    }
+
+    pub const fn with_red_arrows(mut self, arrows: &'static [(&'static str, &'static str)]) -> Self {
+        self.red_arrows = arrows;
+        self
+    }
+
+    pub const fn hint_after_moves(mut self, piece: &'static str, moves: u8) -> Self {
+        self.hint_moves = Some((piece, moves));
+        self
+    }
+
+    pub const fn reply_on_mistake(mut self, piece: &'static str) -> Self {
+        self.wrong_reply = Some(piece);
+        self
+    }
+
     pub const fn your_turn(mut self) -> Self {
         self.your_turn = true;
         self
@@ -235,11 +288,19 @@ impl Lesson {
     }
 
     pub fn has_board(&self) -> bool {
-        matches!(self.setup, Setup::Position(_) | Setup::BlankPosition(_) | Setup::AfterLesson { .. } | Setup::SwapPieces { .. } | Setup::Clocked { .. })
+        matches!(self.setup, Setup::Position(_) | Setup::BlankPosition(_) | Setup::BlankExercise { .. } | Setup::AfterLesson { .. } | Setup::SwapPieces { .. } | Setup::Clocked { .. })
     }
 
     pub fn uses_blank_tiles(&self) -> bool {
-        matches!(self.setup, Setup::BlankPosition(_))
+        matches!(self.setup, Setup::BlankPosition(_) | Setup::BlankExercise { .. })
+    }
+
+    pub fn blank_movers(&self) -> Option<&'static [&'static str]> {
+        match self.setup {
+            Setup::BlankPosition(_) => Some(&["wQ"]),
+            Setup::BlankExercise { movable, .. } => Some(movable),
+            _ => None,
+        }
     }
 
     pub fn clock(&self) -> Option<(u64, u64)> {

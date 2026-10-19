@@ -8,19 +8,21 @@ use hive_lib::{Bug, Piece};
 #[derive(Clone, Debug, PartialEq)]
 pub struct HivegroundPaint {
     tile_options: TileOptions,
-    blank_non_queens: bool,
+    blank_movers: Option<Vec<Piece>>,
 }
 
 impl HivegroundPaint {
     pub fn new(tile_options: &TileOptions) -> Self {
         Self {
             tile_options: tile_options.clone(),
-            blank_non_queens: false,
+            blank_movers: None,
         }
     }
 
-    pub fn with_blank_non_queens(mut self, blank: bool) -> Self {
-        self.blank_non_queens = blank;
+    pub fn with_blank_movers(mut self, movers: Option<&[&str]>) -> Self {
+        self.blank_movers = movers.map(|movers| {
+            movers.iter().filter_map(|piece| piece.parse().ok()).collect()
+        });
         self
     }
 
@@ -30,7 +32,9 @@ impl HivegroundPaint {
             PieceShadow::None => ShadowHref::None,
         };
         let mut paint = resolve_piece_paint(piece, &self.tile_options, shadow_href);
-        if self.blank_non_queens && piece.bug() != Bug::Queen {
+        if self.blank_movers.as_ref().is_some_and(|movers| !movers.contains(&piece))
+            && piece.bug() != Bug::Queen
+        {
             paint.bug_href = crate::common::BugHref(
                 "/assets/tiles/tutorial/blank.svg#blank".to_string()
             );

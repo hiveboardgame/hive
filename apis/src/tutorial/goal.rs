@@ -3,9 +3,18 @@ use hive_lib::{Board, Bug, Color, Direction, Piece, Position, State};
 pub enum Goal {
     Continue,
     MoveAny,
+    PlaceAny,
+    Explore {
+        pieces: &'static [&'static str],
+        condition: Condition,
+    },
     Move {
         piece: &'static str,
         to: &'static str,
+    },
+    MoveSatisfying {
+        piece: &'static str,
+        condition: Condition,
     },
     Travel {
         piece: &'static str,
@@ -30,6 +39,7 @@ pub enum Goal {
 /// piece of that bug, so lessons survive a HOP renumbering their pieces.
 pub enum Condition {
     AnyPlaced(Color),
+    CanMoveTo { piece: &'static str, to: &'static str },
     Placed(&'static str),
     Touching(&'static str, &'static str),
     OnTop(&'static str, &'static str),
@@ -55,6 +65,15 @@ impl Condition {
     pub fn holds(&self, state: &State) -> bool {
         let board = &state.board;
         match self {
+            Condition::CanMoveTo { piece, to } => {
+                hex(board, to).is_some_and(|target| {
+                    spec_pieces(piece).is_some_and(|pieces| pieces.into_iter().any(|piece| {
+                        board.moves(piece.color()).iter().any(|((mover, _), targets)| {
+                            *mover == piece && targets.contains(&target)
+                        })
+                    }))
+                })
+            }
             Condition::AnyPlaced(color) => board.played_by(*color) > 0,
             Condition::Placed(spec) => placed(board, spec).next().is_some(),
             Condition::Touching(a, b) => placed(board, a)

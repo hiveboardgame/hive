@@ -21,7 +21,7 @@ const WELCOME: Lesson = Lesson {
     setup: Setup::Position(",w"),
     steps: &[
         Step::play(
-            "You play as White. Place any piece from your reserve, except the Queen Bee [[wQ]].\nClick on the piece you choose in the reserve, then click on the highlighted hex.",
+            "This is how a game starts. You play as White. Place any piece from your reserve, except the Queen Bee [[wQ]].\nClick on the piece you choose in the reserve, then click on the highlighted hex.",
             Reach(All(&[AnyPlaced(Color::White), Not(&Placed("wQ"))])),
             "Click a piece in your reserve, then the highlighted hex. The Queen may not open the game.",
         )
@@ -48,18 +48,18 @@ const PLACING: Lesson = Lesson {
         "From now on, **every new piece you place must touch at least one of your own pieces and none of your opponent's pieces**.",
         "Here both players opened with their Ladybug, a popular start. Ants are a good piece to place next since they are very flexible",
     ],
-    brief: "After both players open with Ladybug, White places wA1; Black replied by placing bQ on any legal hex.",
+    brief: "After both players open with Ladybug, White places any piece legally; Black replied by placing bQ on any legal hex.",
     setup: Setup::Position("L+l!,w"),
     steps: &[
         Step::play(
-            "Play as White: pick an ant ([[wA1]]) from your reserve and place it. The board will show the hexes available for placement.",
-            Reach(Placed("wA1")),
-            "Choose an Ant from your reserve, then a highlighted hex.",
+            "Play as White: pick any piece you like from the reserve and place it. New pieces entering the game cannot touch opponent pieces. The board will show the hexes available for placement.",
+            PlaceAny,
+            "Choose a piece from your reserve, then a highlighted hex.",
         )
         .reply_placement("bQ")
         .placement_crosses("bL"),
         Step::read(
-            "Well done! None of the hexes touching a black piece were available to your Ant. Remember this rule only applies to placing. Once a piece is in play, it may move also to hexes touching the opponent pieces.\n\nBlack replied to your move by placing their Queen Bee.",
+            "Well done! None of the hexes touching a black piece were available to your piece. Remember this rule only applies to placing. Once a piece is in play, it may move also to hexes touching the opponent pieces.\n\nBlack replied to your move by placing their Queen Bee.",
             &[],
         )
         .placement_crosses("bL"),
@@ -78,7 +78,7 @@ const QUEEN_RULE: Lesson = Lesson {
     setup: Setup::Position("AL+lm1-M3+q,w"),
     steps: &[
         Step::play(
-            "It's your 4th turn and your Queen Bee is still in your reserve. Put her in play.",
+            "The Queen Bee [[wQ]] has to be placed by your 4th turn. Put her in play now!",
             Reach(Placed("wQ")),
             "On your fourth turn, only your Queen may be placed.",
         )
@@ -129,9 +129,9 @@ const ONE_HIVE: Lesson = Lesson {
     setup: Setup::Position("AGl+qp+a1+P+Q1-M4+m,w"),
     steps: &[
         Step::play(
-            "The highlighted pieces cannot move without breaking the hive. Your Queen Bee, Ant and Mosquito can move.
+            "The highlighted pieces cannot move without breaking the hive. You play as White. Your Queen Bee, Ant and Mosquito can move.
 
-Click your pieces to inspect their moves, then move one. After that, you will play as Black.",
+Click your pieces to inspect their moves, then move one of them. Don't worry if you don't know how pieces move yet, you'll learn soon!",
             MoveAny,
             "Move a piece that's already on the board instead of placing a new one.",
         )
@@ -145,7 +145,8 @@ Click your pieces to inspect their moves, then move one. After that, you will pl
         )
         .marked_when_immobile(&["bL", "bQ"])
         .next_player(Color::White),
-        Step::read("Well done! You have kept the hive connected while moving both colours.", &[]),
+        Step::read("Well done! You have kept the hive connected while moving both colours.", &[])
+            .with_win_prompt(Color::Black, "Good job, Black won!"),
     ],
     outro: "A piece that holds the hive together is pinned. Pinning enemy pieces is one of the most important ideas in Hive, and it comes straight out of this rule: every move must preserve one connected hive.",
 };
@@ -167,7 +168,7 @@ const SURROUND: Lesson = Lesson {
         )
         .highlighted(&["-bL"]),
         Step::read(
-            "That's the whole goal of Hive: surround your opponent's Queen Bee first.\n\nIt doesn't matter what colour the pieces surrounding the Queen Bee are. Here, the black Ladybug is actually hurting Black!",
+            "That's the whole goal of Hive: surround your opponent's Queen Bee first.\n\nIt doesn't matter what colour the pieces surrounding the Queen Bee are. Here, the black Ladybug [[bL]] is actually hurting Black!",
             &[],
         )
         .with_completion_tip(
@@ -192,7 +193,7 @@ const DRAW: Lesson = Lesson {
     },
     steps: &[
         Step::play(
-            "You play as White. Move your Grasshopper [[wG1]] to surround both Queen Bees.",
+            "You play as White. Move your Grasshopper [[wG1]] to surround both Queen Bees at the same time.",
             Move {
                 piece: "wG1",
                 to: "wQ-",

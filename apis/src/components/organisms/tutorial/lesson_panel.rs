@@ -46,16 +46,22 @@ fn prompt_parts(mut text: &'static str) -> Vec<PromptPart> {
 }
 
 fn piece_icon(piece: Piece) -> impl IntoView {
-    let src = format!("/assets/tiles/flat/{}.svg", piece.bug().name());
-    let alt = format!("{} {} piece", piece.color().name(), piece.bug().name());
+    let label = format!("{} {} piece", piece.color().name(), piece.bug().name());
+    let tile = format!("/assets/tiles/official/official.svg#{}", piece.color().name());
+    let bug = format!("/assets/tiles/official/official.svg#{}", piece.bug().name());
     view! {
-        <img
-            src=src
-            alt=alt
-            class="inline-block mx-1 object-contain size-5 align-text-bottom"
-        />
+        <svg
+            role="img"
+            aria-label=label
+            viewBox="0 0 90 100"
+            class="inline-block mx-1 size-5 align-text-bottom"
+        >
+            <use_ href=tile />
+            <use_ href=bug />
+        </svg>
     }
 }
+
 
 fn piece_content(text: &'static str) -> impl IntoView {
     prompt_parts(text)
@@ -132,8 +138,7 @@ pub fn LessonPanel(
         tutorial.session.with(|session| {
             session
                 .as_ref()
-                .and_then(Session::current_step)
-                .map(|step| step.prompt)
+                .and_then(Session::prompt)
         })
     };
     let instruction_content = NodeRef::<html::Div>::new();
@@ -178,7 +183,10 @@ pub fn LessonPanel(
             )),
             Feedback::LessonComplete => Some((
                 "text-lg font-bold text-green-700 xl:text-xl dark:text-green-400",
-                "Lesson complete!".to_string(),
+                tutorial.session.with(|session| {
+                    session.as_ref().and_then(Session::completion_result)
+                        .map_or_else(|| "Lesson complete!".to_string(), |result| format!("Lesson complete! {result}"))
+                }),
             )),
             Feedback::ContinueFirst => Some((
                 "text-gray-600 dark:text-gray-300",
@@ -298,19 +306,6 @@ pub fn LessonPanel(
                         {feedback.1}
                     </div>
                 </ShowLet>
-                    <Show when=move || {
-                        tutorial
-                            .session
-                            .with(|session| session.as_ref().is_some_and(Session::needs_retry))
-                    }>
-                        <button
-                            type="button"
-                            class="self-start ui-button ui-button-primary ui-button-sm"
-                            on:click=move |_| tutorial.try_again()
-                        >
-                            "Try again"
-                        </button>
-                    </Show>
                 <Show when=move || finished() && !completion_tip().is_empty()>
                     <div class="font-medium text-gray-700 dark:text-gray-200">
                         {move || tutorial_prompt(completion_tip())}
@@ -359,6 +354,19 @@ pub fn LessonPanel(
                             on:click=restart
                         >
                             "Restart lesson"
+                        </button>
+                    </Show>
+                    <Show when=move || {
+                        tutorial
+                            .session
+                            .with(|session| session.as_ref().is_some_and(Session::needs_retry))
+                    }>
+                        <button
+                            type="button"
+                            class="ui-button ui-button-primary ui-button-sm"
+                            on:click=move |_| tutorial.try_again()
+                        >
+                            "Try again"
                         </button>
                     </Show>
                     <Show when=text_only>

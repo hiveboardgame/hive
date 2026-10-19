@@ -18,12 +18,12 @@ pub fn BoardPieces(
     let state = game_state.state();
     let tutorial = use_context::<crate::providers::tutorial::TutorialContext>();
     let paint = Memo::new(move |_| {
-        let blank = tutorial.is_some_and(|tutorial| {
+        let movers = tutorial.and_then(|tutorial| {
             tutorial.session.with(|session| {
-                session.as_ref().is_some_and(|session| session.lesson().uses_blank_tiles())
+                session.as_ref().and_then(|session| session.lesson().blank_movers())
             })
         });
-        tile_opts.with(HivegroundPaint::new).with_blank_non_queens(blank)
+        tile_opts.with(HivegroundPaint::new).with_blank_movers(movers)
     });
     let model = Memo::new(move |_| {
         state.with(|state| {
