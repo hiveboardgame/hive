@@ -219,6 +219,15 @@ pub fn Register() -> impl IntoView {
                             {t!(i18n, user_config.create_account.be_nice_checkbox)}
                         </label>
                     </div>
+                    <p class="text-xs text-gray-600 dark:text-gray-400">
+                        {t!(
+                            i18n, user_config.create_account.legal_notice,
+                            < terms_link > =
+                            <a class="ui-text-link" href="/terms" target="_blank" />,
+                            < privacy_link > =
+                            <a class="ui-text-link" href="/privacy" target="_blank" />
+                        )}
+                    </p>
                     <button
                         type="submit"
                         disabled=conditionally_disable

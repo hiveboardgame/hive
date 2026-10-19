@@ -1,5 +1,5 @@
 use crate::{
-    common::with_class,
+    common::{with_class, GEN42_URL},
     components::{
         atoms::{login_button::LoginButton, next_game_button::NextGameButton},
         molecules::chat_and_controls::ChatAndControls,
@@ -52,12 +52,7 @@ pub fn Header(update_available: Signal<bool>) -> impl IntoView {
                     <CommunityDropdown />
                     <LearnDropdown />
                     <TournamentDropdown />
-                    <a
-                        class=HEADER_NAV_ITEM_CLASS
-                        href="https://www.gen42.com/"
-                        rel="external"
-                        target="_blank"
-                    >
+                    <a class=HEADER_NAV_ITEM_CLASS href=GEN42_URL rel="external" target="_blank">
                         {t!(i18n, header.buy_game)}
                     </a>
                     <a

@@ -7,11 +7,12 @@ use crate::{
             tournament_ready_popup::TournamentReadyPopup,
             web_push_nudge::WebPushNudge,
         },
-        organisms::header::Header,
+        organisms::{footer::Footer, header::Header},
     },
     hooks::{
         install_nudge::use_install_nudge_active,
         reload_on_new_release::use_reload_on_new_release,
+        site_footer::SiteFooter,
         sync_user_locale::use_sync_user_locale,
         web_push_nav_listener::use_web_push_nav_listener,
         web_push_reconcile::use_web_push_reconcile,
@@ -117,8 +118,10 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
 
     provide_context(hide_controls);
 
-    let is_hidden = RwSignal::new("hidden");
-    Effect::new(move |_| is_hidden.set(""));
+    let site_footer = SiteFooter::provide();
+
+    let display = RwSignal::new("hidden");
+    Effect::new(move |_| display.set("flex"));
 
     let focused = use_window_focus();
     let _ = Effect::watch(
@@ -221,11 +224,11 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
 
         <Body />
         <TileDefinitions />
-        <main class=move || {
+        <div class=move || {
             format!(
-                "w-full min-h-screen standalone:min-h-[var(--app-height)] text-xs sm:text-sm touch-manipulation {} {}",
+                "flex-col w-full min-h-screen standalone:min-h-[var(--app-height)] text-xs sm:text-sm touch-manipulation {} {}",
                 "ui-app-background",
-                is_hidden(),
+                display(),
             )
         }>
             <Header update_available />
@@ -241,8 +244,12 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
                     </div>
                 </div>
             </Show>
-            {children()}
-
-        </main>
+            <main class=move || {
+                if site_footer.is_shown() { "flex flex-1 flex-col" } else { "" }
+            }>{children()}</main>
+            <Show when=move || site_footer.is_shown()>
+                <Footer />
+            </Show>
+        </div>
     }
 }

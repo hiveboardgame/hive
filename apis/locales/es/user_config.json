@@ -35,6 +35,7 @@
         },
         "signup_button": "Registrarse",
         "be_nice_checkbox": "Acepto ser amable con los demás jugadores y denunciar los abusos en Discord",
+        "legal_notice": "Al crear una cuenta, aceptas nuestros <terms_link>Términos del servicio</terms_link>. Nuestra <privacy_link>Política de privacidad</privacy_link> explica cómo tratamos tus datos.",
         "registration_error": "Registro fallido",
         "existing_account_prompt": "¿Ya tienes una cuenta? <login_link>Iniciar sesión</login_link>",
         "password_requirements": "Al menos 8 caracteres",

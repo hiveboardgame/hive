@@ -43,6 +43,7 @@
         "password_requirements": "At least 8 characters",
         "password_error": "Password too short or does not match",
         "be_nice_checkbox": "I agree to be nice to other players and to report abuse on Discord",
+        "legal_notice": "By creating an account, you agree to our <terms_link>Terms of Service</terms_link>. Our <privacy_link>Privacy Policy</privacy_link> explains how we handle your data.",
         "signup_button": "Sign up",
         "registration_error": "Registration failed",
         "existing_account_prompt": "Already have an account? <login_link>Sign in</login_link>"

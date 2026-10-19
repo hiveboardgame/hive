@@ -38,6 +38,7 @@
         "password_requirements": "Au moins 8 caractères",
         "password_error": "Le mot de passe est trop court ou ne correspond pas",
         "be_nice_checkbox": "J'accepte d'être bienveillant envers les autres joueurs et de signaler les abus sur Discord",
+        "legal_notice": "En créant un compte, vous acceptez nos <terms_link>conditions d'utilisation</terms_link>. Notre <privacy_link>politique de confidentialité</privacy_link> explique comment nous traitons vos données.",
         "registration_error": "Échec de l'inscription",
         "existing_account_prompt": "Vous avez déjà un compte ? <login_link>Connexion</login_link>"
     },

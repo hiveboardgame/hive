@@ -147,7 +147,7 @@ pub fn Tournament() -> impl IntoView {
     });
 
     view! {
-        <PageShell variant=PageShellVariant::Tournament>
+        <PageShell variant=PageShellVariant::Tournament footer=false>
             <div class="flex flex-col gap-3 ui-wide-canvas">
                 <For
                     each=move || tournament_id.get().into_iter()

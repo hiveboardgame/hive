@@ -150,7 +150,7 @@ pub fn Tournaments(children: Children) -> impl IntoView {
     };
 
     view! {
-        <PageShell variant=PageShellVariant::Content>
+        <PageShell variant=PageShellVariant::Content footer=false>
             <div class="flex flex-col gap-3 w-full min-w-0 sm:gap-4">
                 <div class="flex flex-wrap gap-3 justify-between items-start">
                     <PageHeader

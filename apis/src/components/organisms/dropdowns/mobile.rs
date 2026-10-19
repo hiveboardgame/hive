@@ -1,4 +1,4 @@
-use crate::{components::molecules::hamburger::Hamburger, i18n::*};
+use crate::{common::GEN42_URL, components::molecules::hamburger::Hamburger, i18n::*};
 use leptos::prelude::*;
 use leptos_icons::*;
 
@@ -78,7 +78,7 @@ pub fn MobileDropdown() -> impl IntoView {
                     <a
                         class="ui-dropdown-link"
                         on:click=onclick_close
-                        href="https://www.gen42.com/"
+                        href=GEN42_URL
                         target="_blank"
                         rel="external"
                     >
