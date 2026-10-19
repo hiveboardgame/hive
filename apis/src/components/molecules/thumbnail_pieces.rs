@@ -33,6 +33,7 @@ pub fn ThumbnailPieces(board: StoredValue<Board>) -> impl IntoView {
 
     view! {
         <svg
+            aria-hidden="true"
             viewBox=format!("0 0 {VIEWBOX_WIDTH} {VIEWBOX_HEIGHT}")
             class="block overflow-hidden size-full touch-none"
             xmlns="http://www.w3.org/2000/svg"

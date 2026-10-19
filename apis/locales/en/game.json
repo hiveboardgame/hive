@@ -153,5 +153,27 @@
         "hours_minutes": "{{hours}}h{{minutes}}",
         "arena_hours_minutes": "{{hours}}h {{minutes}}m"
     },
-    "aborted_by": "{{actor}} aborted the game"
+    "aborted_by": "{{actor}} aborted the game",
+    "history_navigation": {
+        "first": "First move",
+        "previous": "Previous move",
+        "next": "Next move",
+        "last": "Last move"
+    },
+    "board": {
+        "pieces": {
+            "ant": "Ant",
+            "beetle": "Beetle",
+            "grasshopper": "Grasshopper",
+            "ladybug": "Ladybug",
+            "mosquito": "Mosquito",
+            "pillbug": "Pillbug",
+            "queen": "Queen",
+            "spider": "Spider"
+        },
+        "on_board": "{{color}} {{piece}}{{order}} on board",
+        "in_reserve": "{{color}} {{piece}}{{order}} in reserve",
+        "move_preview": "{{color}} {{piece}}{{order}} move preview",
+        "move_to_position": "Move to board position {{q}}, {{r}}"
+    }
 }

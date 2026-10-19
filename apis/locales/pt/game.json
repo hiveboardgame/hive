@@ -149,5 +149,27 @@
         "hours_minutes": "{{hours}}h{{minutes}}",
         "arena_hours_minutes": "{{hours}}h {{minutes}}m"
     },
-    "aborted_by": "{{actor}} abortou a partida"
+    "aborted_by": "{{actor}} abortou a partida",
+    "history_navigation": {
+        "first": "Primeira jogada",
+        "previous": "Jogada anterior",
+        "next": "Jogada seguinte",
+        "last": "Última jogada"
+    },
+    "board": {
+        "pieces": {
+            "ant": "Formiga",
+            "beetle": "Besouro",
+            "grasshopper": "Gafanhoto",
+            "ladybug": "Joaninha",
+            "mosquito": "Mosquito",
+            "pillbug": "Tatuzinho",
+            "queen": "Rainha",
+            "spider": "Aranha"
+        },
+        "on_board": "{{piece}}{{order}} ({{color}}) no tabuleiro",
+        "in_reserve": "{{piece}}{{order}} ({{color}}) na reserva",
+        "move_preview": "Prévia do movimento de {{piece}}{{order}} ({{color}})",
+        "move_to_position": "Mover para a posição {{q}}, {{r}} do tabuleiro"
+    }
 }

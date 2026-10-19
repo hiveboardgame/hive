@@ -33,14 +33,14 @@ pub fn MessagesLayout() -> impl IntoView {
                     <MessagesSidebar current_path />
                 </div>
             </aside>
-            <main class=move || {
+            <div class=move || {
                 format!(
                     "flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden {} sm:!flex",
                     if at_root.get() { "hidden " } else { "" },
                 )
             }>
                 <Outlet />
-            </main>
+            </div>
         </div>
     }
 }

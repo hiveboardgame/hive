@@ -138,8 +138,8 @@ pub fn ChallengeRow(
             </Show>
             <Show when=move || action_flags.with(|flags| flags.cancel)>
                 <button
-                    title="Cancel Challenge"
-                    aria-label="Cancel Challenge"
+                    title=move || t_string!(i18n, game.cancel_challenge)
+                    aria-label=move || t_string!(i18n, game.cancel_challenge)
                     on:click=move |_| {
                         api.get().challenges_cancel(challenge_ids_to_cancel());
                     }
@@ -150,16 +150,17 @@ pub fn ChallengeRow(
             </Show>
             <Show when=move || action_flags.with(|flags| flags.accept)>
                 <button
-                    title="Accept Challenge"
-                    aria-label="Accept Challenge"
+                    aria-label=move || t_string!(i18n, game.accept_challenge)
                     on:click=move |_| {
                         api.get().challenge_accept(challenge_id.get_value());
                     }
                     disabled=accept_blocked
                     title=move || {
-                        accept_blocked
-                            .get()
-                            .then(|| t_string!(i18n, messages.errors.realtime_games_paused))
+                        if accept_blocked.get() {
+                            t_string!(i18n, messages.errors.realtime_games_paused)
+                        } else {
+                            t_string!(i18n, game.accept_challenge)
+                        }
                     }
                     class=accept_button_classes.get_value()
                 >
@@ -168,8 +169,8 @@ pub fn ChallengeRow(
             </Show>
             <Show when=move || action_flags.with(|flags| flags.decline)>
                 <button
-                    title="Decline Challenge"
-                    aria-label="Decline Challenge"
+                    title=move || t_string!(i18n, game.decline_challenge)
+                    aria-label=move || t_string!(i18n, game.decline_challenge)
                     on:click=move |_| {
                         api.get().challenges_cancel(challenge_ids_to_cancel());
                     }

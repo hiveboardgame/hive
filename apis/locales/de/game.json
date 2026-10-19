@@ -149,5 +149,27 @@
         "hours_minutes": "{{hours}}h{{minutes}}",
         "arena_hours_minutes": "{{hours}}h {{minutes}}m"
     },
-    "aborted_by": "{{actor}} hat die Partie abgebrochen"
+    "aborted_by": "{{actor}} hat die Partie abgebrochen",
+    "history_navigation": {
+        "first": "Erster Zug",
+        "previous": "Vorheriger Zug",
+        "next": "Nächster Zug",
+        "last": "Letzter Zug"
+    },
+    "board": {
+        "pieces": {
+            "ant": "Ameise",
+            "beetle": "Käfer",
+            "grasshopper": "Grashüpfer",
+            "ladybug": "Marienkäfer",
+            "mosquito": "Stechmücke",
+            "pillbug": "Assel",
+            "queen": "Bienenkönigin",
+            "spider": "Spinne"
+        },
+        "on_board": "{{piece}}{{order}} ({{color}}) auf dem Brett",
+        "in_reserve": "{{piece}}{{order}} ({{color}}) in der Reserve",
+        "move_preview": "Zugvorschau für {{piece}}{{order}} ({{color}})",
+        "move_to_position": "Zur Brettposition {{q}}, {{r}} ziehen"
+    }
 }

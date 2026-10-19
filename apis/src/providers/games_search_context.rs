@@ -1,4 +1,8 @@
-use crate::{functions::games::get::GetBatchFromOptions, responses::GameResponse};
+use crate::{
+    common::SECURE_COOKIES,
+    functions::games::get::GetBatchFromOptions,
+    responses::GameResponse,
+};
 use codee::{binary::MsgpackSerdeCodec, string::Base64};
 use cookie::SameSite;
 use hive_lib::Color;
@@ -201,7 +205,7 @@ pub fn games_filter_cookie() -> (
         GAMES_FILTER_COOKIE,
         UseCookieOptions::<FilterState, _, _>::default()
             .same_site(SameSite::Lax)
-            .secure(true)
+            .secure(SECURE_COOKIES)
             .max_age(CONF_MAX_AGE)
             .path("/"),
     );

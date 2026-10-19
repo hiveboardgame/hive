@@ -279,7 +279,7 @@ async fn main() -> std::io::Result<()> {
             })
             .wrap(Compress::default())
     })
-    .bind(&addr)?
+    .bind(addr)?
     .shutdown_timeout(2)
     .run()
     .await

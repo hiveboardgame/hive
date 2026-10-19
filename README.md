@@ -15,7 +15,7 @@ It also inclides [Hive-hydra](hive-hydra/README.md), an application to integrate
 - Install the toolchain, formatter, and WebAssembly target pinned by
   `rust-toolchain.toml` from the project root:
 ```sh
-rustup show
+rustup toolchain install
 ```
 If this checkout already has a directory override, remove it with
 `rustup override unset` so the pinned toolchain can take effect.
@@ -188,3 +188,8 @@ Affero General Public License 3 license found in the LICENSE.md file in the
 root directory of this project.
 The official graphics for Hive are owned by [Gen42](https://gen42.com/) and may
 not be used without prior written consent.
+
+### Browser tests
+
+The focused play/analysis browser suite uses disposable databases and native builds.
+See [apis/end2end/README.md](apis/end2end/README.md) for setup, coverage, and reports.

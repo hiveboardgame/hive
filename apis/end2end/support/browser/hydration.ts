@@ -1,13 +1,15 @@
 import { expect, type Page } from "@playwright/test";
 
 export async function expectHydrated(page: Page) {
-  // The SSR shell initially marks main as hidden and reveals it during
-  // hydration. The development WASM bundle is large, so allow the complete
-  // download and compilation before asserting the app.
-  const main = page.locator("main");
+  // The app reveals its main content during hydration. A document load can
+  // finish before WASM compilation, so keep that wait separate from interactions.
   await expect(
-    main,
-    "The hydrated page removes the hidden state from its main content",
-  ).not.toHaveClass(/(?:^|\s)hidden(?:\s|$)/, { timeout: 45 * 1000 });
-  await expect(main, "The hydrated page shows its main content").toBeVisible();
+    page.getByRole("main"),
+    "The hydrated page shows its main content",
+  ).toBeVisible({ timeout: 45_000 });
+}
+
+export async function reloadHydrated(page: Page) {
+  await page.reload();
+  await expectHydrated(page);
 }

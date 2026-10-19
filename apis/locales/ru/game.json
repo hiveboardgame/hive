@@ -149,5 +149,27 @@
         "hours_minutes": "{{hours}}ч{{minutes}}",
         "arena_hours_minutes": "{{hours}}ч {{minutes}}м"
     },
-    "aborted_by": "{{actor}} прерывает партию"
+    "aborted_by": "{{actor}} прерывает партию",
+    "history_navigation": {
+        "first": "Первый ход",
+        "previous": "Предыдущий ход",
+        "next": "Следующий ход",
+        "last": "Последний ход"
+    },
+    "board": {
+        "pieces": {
+            "ant": "Муравей",
+            "beetle": "Жук",
+            "grasshopper": "Кузнечик",
+            "ladybug": "Божья коровка",
+            "mosquito": "Комар",
+            "pillbug": "Мокрица",
+            "queen": "Королева",
+            "spider": "Паук"
+        },
+        "on_board": "{{piece}}{{order}} ({{color}}) на доске",
+        "in_reserve": "{{piece}}{{order}} ({{color}}) в резерве",
+        "move_preview": "Предпросмотр хода: {{piece}}{{order}} ({{color}})",
+        "move_to_position": "Переместить на позицию {{q}}, {{r}} на доске"
+    }
 }

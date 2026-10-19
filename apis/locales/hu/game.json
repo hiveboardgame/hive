@@ -149,5 +149,27 @@
         "hours_minutes": "{{hours}}ó{{minutes}}",
         "arena_hours_minutes": "{{hours}}ó {{minutes}}p"
     },
-    "aborted_by": "{{actor}} megszakította a játszmát"
+    "aborted_by": "{{actor}} megszakította a játszmát",
+    "history_navigation": {
+        "first": "Első lépés",
+        "previous": "Előző lépés",
+        "next": "Következő lépés",
+        "last": "Utolsó lépés"
+    },
+    "board": {
+        "pieces": {
+            "ant": "Hangya",
+            "beetle": "Bogár",
+            "grasshopper": "Szöcske",
+            "ladybug": "Katicabogár",
+            "mosquito": "Szúnyog",
+            "pillbug": "Ászka",
+            "queen": "Királynő",
+            "spider": "Pók"
+        },
+        "on_board": "{{piece}}{{order}} ({{color}}) a táblán",
+        "in_reserve": "{{piece}}{{order}} ({{color}}) a tartalékban",
+        "move_preview": "{{piece}}{{order}} ({{color}}) lépésének előnézete",
+        "move_to_position": "Lépés a tábla {{q}}, {{r}} pozíciójára"
+    }
 }

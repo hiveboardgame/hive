@@ -214,10 +214,10 @@ fn placement_model(
         .into_iter()
         .map(|node| {
             let descriptor = node.descriptor;
-            for index in 0..2 {
+            for (index, entrants) in node.possible_entrants.iter().enumerate() {
                 possible.insert(
                     (descriptor.id, index),
-                    node.possible_entrants[index]
+                    entrants
                         .iter()
                         .map(|player| seeded_players[player.index()])
                         .collect(),

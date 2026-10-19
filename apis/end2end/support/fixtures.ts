@@ -1,50 +1,60 @@
-import { test as base, expect, type TestInfo } from "@playwright/test";
-import { accountWaitTimeout, reserveAccounts } from "./accounts/pool";
-import { withUsers, type Players } from "./browser/session";
-import { signIn } from "./browser/authentication";
-import { attachFailureDiagnostics, logBrowserDiagnostics } from "./browser/diagnostics";
+import { test as base, expect, type BrowserContext } from "@playwright/test";
+import { TestData, type Account } from "./data";
 import type { Player } from "./browser/player";
+import { signIn } from "./browser/authentication";
+import { dismissOnboardingBanners } from "./browser/onboarding";
+import { attachFailureDiagnostics, logBrowserDiagnostics } from "./browser/diagnostics";
 
+export type { Account } from "./data";
 type Fixtures = {
-  user: Player;
-  players: Players;
+  data: TestData;
+  player: (account: Account, options?: { authenticate?: boolean; path?: string }) => Promise<Player>;
   isMobileLayout: boolean;
-  publicChallenge: boolean;
 };
 
-function signInWithDiagnostics(testInfo: TestInfo): typeof signIn {
-  return async (page, username, baseURL) => {
-    logBrowserDiagnostics(page, username);
-    try {
-      await signIn(page, username, baseURL);
-    } catch (error) {
-      await attachFailureDiagnostics([{ page, username }], testInfo);
-      throw error;
-    }
-  };
-}
-
-const timeout = accountWaitTimeout + 90_000;
 export const test = base.extend<Fixtures>({
-  publicChallenge: [false, { option: true }],
-  isMobileLayout: async ({}, use, testInfo) => {
-    // Firefox's narrow viewport project is mobile layout coverage, too.
-    await use(testInfo.project.name.endsWith("-mobile"));
+  data: async ({}, use) => { await use(new TestData()); },
+  isMobileLayout: async ({ viewport }, use) => { await use((viewport?.width ?? 1280) < 768); },
+  page: async ({ page }, use, testInfo) => {
+    await dismissOnboardingBanners(page);
+    logBrowserDiagnostics(page, "visitor");
+    try { await use(page); } finally {
+      if (testInfo.status !== testInfo.expectedStatus) {
+        await attachFailureDiagnostics([{ page, username: "visitor" }], testInfo);
+      }
+    }
   },
-  user: [async ({ browser, baseURL, isMobileLayout, publicChallenge }, use, testInfo) => {
-    await withUsers({ browser, baseURL, isMobileLayout, testInfo, count: 1, authenticate: signInWithDiagnostics(testInfo), reserve: count => reserveAccounts(count, { publicChallenge }) }, async ([user]) => {
-      try { await use(user); } finally {
-        if (testInfo.status !== testInfo.expectedStatus) await attachFailureDiagnostics([user], testInfo);
+  player: [async ({ browser, baseURL }, use, testInfo) => {
+    if (!baseURL) throw new Error("Configure a browser-test application URL.");
+    const players: Player[] = [];
+    const contexts: BrowserContext[] = [];
+    let primaryError: unknown;
+    try {
+      await use(async (account, options = {}) => {
+        const context = await browser.newContext();
+        contexts.push(context);
+        const page = await context.newPage();
+        const player = { ...account, page, context };
+        players.push(player);
+        await dismissOnboardingBanners(page);
+        logBrowserDiagnostics(page, account.username);
+        if (options.authenticate !== false) await signIn(page, account, options.path);
+        return player;
+      });
+    } catch (error) {
+      primaryError = error;
+      throw error;
+    } finally {
+      if (testInfo.status !== testInfo.expectedStatus) await attachFailureDiagnostics(players, testInfo);
+      const results = await Promise.allSettled(contexts.map(context => context.close()));
+      const failure = results.find(result => result.status === "rejected");
+      if (failure?.status === "rejected") {
+        if (primaryError || testInfo.status !== testInfo.expectedStatus) {
+          await testInfo.attach("Browser context cleanup failure", { body: String(failure.reason), contentType: "text/plain" });
+        } else { throw failure.reason; }
       }
-    });
-  }, { timeout }],
-  players: [async ({ browser, baseURL, isMobileLayout, publicChallenge }, use, testInfo) => {
-    await withUsers({ browser, baseURL, isMobileLayout, testInfo, count: 2, authenticate: signInWithDiagnostics(testInfo), reserve: count => reserveAccounts(count, { publicChallenge }) }, async ([userOne, userTwo]) => {
-      try { await use({ userOne, userTwo }); } finally {
-        if (testInfo.status !== testInfo.expectedStatus) await attachFailureDiagnostics([userOne, userTwo], testInfo);
-      }
-    });
-  }, { timeout }],
+    }
+  }, { timeout: 90_000 }],
 });
 
 export { expect };

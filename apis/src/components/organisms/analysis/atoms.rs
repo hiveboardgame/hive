@@ -132,6 +132,7 @@ fn DeleteBranchButton() -> impl IntoView {
 
 #[component]
 fn HistoryButton(action: HistoryNavigation) -> impl IntoView {
+    let i18n = use_i18n();
     let analysis = expect_context::<AnalysisContext>();
     let game_state = expect_context::<GameStateStore>();
     let icon = match action {
@@ -140,6 +141,11 @@ fn HistoryButton(action: HistoryNavigation) -> impl IntoView {
         HistoryNavigation::Previous => icondata_ai::AiStepBackwardFilled,
     };
 
+    let label = move || match action {
+        HistoryNavigation::First => t_string!(i18n, game.history_navigation.first),
+        HistoryNavigation::Previous => t_string!(i18n, game.history_navigation.previous),
+        HistoryNavigation::Next => t_string!(i18n, game.history_navigation.next),
+    };
     let is_disabled = move || !can_navigate_analysis_history(analysis.store, action);
     let hold_reserve_sync = analysis.hold_reserve_sync;
     let on_press = Callback::new(move |()| {
@@ -147,7 +153,13 @@ fn HistoryButton(action: HistoryNavigation) -> impl IntoView {
     });
 
     view! {
-        <HistoryNavButton disabled=is_disabled on_press=on_press on_pointerdown=hold_reserve_sync>
+        <HistoryNavButton
+            disabled=is_disabled
+            on_press=on_press
+            on_pointerdown=hold_reserve_sync
+            attr:aria-label=label
+            attr:title=label
+        >
             <Icon icon=icon />
         </HistoryNavButton>
     }

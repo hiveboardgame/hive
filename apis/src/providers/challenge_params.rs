@@ -1,4 +1,4 @@
-use crate::common::TimeParams;
+use crate::common::{TimeParams, SECURE_COOKIES};
 use codee::{binary::MsgpackSerdeCodec, string::Base64};
 use cookie::SameSite;
 use leptos::prelude::*;
@@ -48,7 +48,7 @@ pub fn challenge_params_cookie() -> (
         CHALENGE_PARAMS_COOKIE,
         UseCookieOptions::<ChallengeParams, _, _>::default()
             .same_site(SameSite::Lax)
-            .secure(true)
+            .secure(SECURE_COOKIES)
             .max_age(CONF_MAX_AGE)
             .default_value(Some(ChallengeParams::default()))
             .path("/"),

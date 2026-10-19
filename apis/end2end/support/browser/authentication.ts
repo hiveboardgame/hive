@@ -1,27 +1,20 @@
 import { expect, type Page } from "@playwright/test";
-import { dismissOnboardingBanners } from "./onboarding";
-import { stripSecureCookiesForWebKit } from "./session_cookies";
+import type { Account } from "../data";
 import { expectHydrated } from "./hydration";
 
-export async function signIn(page: Page, username: string, applicationURL: string) {
-  await dismissOnboardingBanners(page);
-  // WebKit refuses to store Secure cookies served over HTTP, even on localhost.
-  await stripSecureCookiesForWebKit(
-    page.context(),
-    applicationURL,
-  );
+export async function signIn(page: Page, account: Account, path = "/") {
   await page.goto("/login");
+  const form = page.locator("form").filter({ has: page.locator('input[name="email"]') });
+  const submission = await form.evaluate(element => {
+    const form = element as HTMLFormElement;
+    return { action: form.action, fields: Object.fromEntries(new FormData(form).entries()) as Record<string, string> };
+  });
+  const response = await page.request.post(submission.action, {
+    form: { ...submission.fields, email: account.email, password: account.password, pathname: "/" },
+    headers: { Origin: new URL(page.url()).origin },
+  });
+  expect(response.ok(), "The real login action accepts the fixture credentials").toBeTruthy();
+  await page.goto(path);
   await expectHydrated(page);
-  await page.getByLabel("Email").fill(`${username}@example.test`);
-  await page.getByLabel("Password").fill("password");
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page.getByRole("button", { name: username, exact: true })).toBeVisible();
-  // A login response can update the UI even if the browser rejects its cookie.
-  await page.goto("/");
-  await expectHydrated(page);
-  await expect(
-    page.getByRole("button", { name: username, exact: true }),
-    "The authenticated session survives navigation to home",
-  ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Create a game", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: account.username, exact: true })).toBeVisible();
 }

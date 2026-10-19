@@ -149,5 +149,27 @@
         "hours_minutes": "{{hours}}h{{minutes}}",
         "arena_hours_minutes": "{{hours}}h {{minutes}}m"
     },
-    "aborted_by": "{{actor}} ha avortat la partida"
+    "aborted_by": "{{actor}} ha avortat la partida",
+    "history_navigation": {
+        "first": "Primera jugada",
+        "previous": "Jugada anterior",
+        "next": "Jugada següent",
+        "last": "Última jugada"
+    },
+    "board": {
+        "pieces": {
+            "ant": "Formiga",
+            "beetle": "Escarabat",
+            "grasshopper": "Llagosta",
+            "ladybug": "Marieta",
+            "mosquito": "Mosquit",
+            "pillbug": "Porquet de Sant Antoni",
+            "queen": "Reina",
+            "spider": "Aranya"
+        },
+        "on_board": "{{piece}}{{order}} ({{color}}) al tauler",
+        "in_reserve": "{{piece}}{{order}} ({{color}}) a la reserva",
+        "move_preview": "Previsualització de {{piece}}{{order}} ({{color}})",
+        "move_to_position": "Mou a la posició del tauler {{q}}, {{r}}"
+    }
 }
