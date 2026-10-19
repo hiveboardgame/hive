@@ -34,6 +34,7 @@
             "description": "Szükségünk van az e-mail címedre, hogy megerősítő e-mailt küldhessünk, amikor fiókot hozol létre."
         },
         "be_nice_checkbox": "Elfogadom, hogy kedves leszek a többi játékoshoz, és jelentem a visszaéléseket Discordon",
+        "legal_notice": "A fiók létrehozásával elfogadod a <terms_link>Felhasználási feltételeket</terms_link>. Az <privacy_link>Adatvédelmi irányelvek</privacy_link> leírják, hogyan kezeljük az adataidat.",
         "existing_account_prompt": "Van már fiókod? <login_link>Bejelentkezés</login_link>",
         "signup_button": "Regisztráció",
         "registration_error": "Sikertelen regisztráció",

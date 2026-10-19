@@ -33,7 +33,7 @@ pub fn TournamentCreate(kind: TournamentCreationKind) -> impl IntoView {
 pub fn TournamentCreateChooser() -> impl IntoView {
     let i18n = use_i18n();
     view! {
-        <PageShell>
+        <PageShell footer=false>
             <div class="mx-auto space-y-6 w-full max-w-4xl">
                 <div class="flex flex-col gap-1 text-center">
                     <h1 class="ui-page-title">{t!(i18n, tournaments.creation.title)}</h1>

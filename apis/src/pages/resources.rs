@@ -1,4 +1,5 @@
 use crate::{
+    common::{GEN42_URL, WORLD_HIVE_DISCORD_URL},
     components::{
         layouts::{page_header::PageHeader, page_shell::PageShell},
         molecules::panel::Panel,
@@ -91,7 +92,7 @@ pub fn Resources() -> impl IntoView {
                             {t!(
                                 i18n, resources.social_media.links.item1,
                                     < discord_link > =
-                                    <a href="https://discord.gg/djdQZPFa7E" rel=rel target=target class=class/>
+                                    <a href=WORLD_HIVE_DISCORD_URL rel=rel target=target class=class/>
                             )}
                         </li>
                         <li>
@@ -183,7 +184,7 @@ pub fn Resources() -> impl IntoView {
                             {t!(
                                 i18n, resources.publisher.links.item1,
                                 < gen42_link > =
-                                <a href="https://www.gen42.com/" rel=rel target=target class=class/>
+                                <a href=GEN42_URL rel=rel target=target class=class/>
                             )}
                         </li>
                         <li>

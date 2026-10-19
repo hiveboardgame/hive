@@ -189,30 +189,55 @@ async fn rotation_preserves_revocation_and_cannot_overwrite_another_endpoint() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn delete_stale_skips_tombstones() {
+async fn delete_stale_keeps_tombstones_until_their_revocation_is_stale() {
     let db = common::db::test_db().await;
     let mut conn = get_conn(&db.pool).await.expect("get connection");
     let user = create_user("sweep_owner", &mut conn).await;
+    let long_ago = Utc::now() - Duration::days(100);
 
-    PushDevice::upsert(new_device(user.id, "endpoint-active"), true, &mut conn)
+    let active = register(user.id, "endpoint-active", &mut conn).await;
+    let unused = register(user.id, "endpoint-unused", &mut conn).await;
+    let recently_revoked = register(user.id, "endpoint-recently-revoked", &mut conn).await;
+    let revoked_long_ago = register(user.id, "endpoint-revoked-long-ago", &mut conn).await;
+    for device in [recently_revoked, revoked_long_ago] {
+        PushDevice::revoke_for_user(device, user.id, &mut conn)
+            .await
+            .expect("revoke device");
+    }
+    for device in [unused, recently_revoked] {
+        diesel::update(push_devices::table.find(device))
+            .set(push_devices::last_seen_at.eq(long_ago))
+            .execute(&mut conn)
+            .await
+            .expect("backdate last_seen_at");
+    }
+    diesel::update(push_devices::table.find(revoked_long_ago))
+        .set(push_devices::revoked_at.eq(Some(long_ago)))
+        .execute(&mut conn)
         .await
-        .expect("register active device");
-    let revoked = PushDevice::upsert(new_device(user.id, "endpoint-revoked"), true, &mut conn)
-        .await
-        .expect("register device to revoke");
-    PushDevice::revoke_for_user(revoked.id, user.id, &mut conn)
-        .await
-        .expect("revoke device");
+        .expect("backdate revoked_at");
 
-    let removed = PushDevice::delete_stale(Utc::now() + Duration::days(1), &mut conn)
+    let removed = PushDevice::delete_stale(Utc::now() - Duration::days(90), &mut conn)
         .await
         .expect("run stale sweep");
-    assert_eq!(removed, 1);
+    assert_eq!(removed, 2);
 
-    let rows = all_rows(user.id, &mut conn).await;
-    assert_eq!(rows.len(), 1);
-    assert_eq!(rows[0].id, revoked.id);
-    assert!(rows[0].revoked_at.is_some());
+    let mut remaining: Vec<Uuid> = all_rows(user.id, &mut conn)
+        .await
+        .into_iter()
+        .map(|device| device.id)
+        .collect();
+    remaining.sort();
+    let mut expected = vec![active, recently_revoked];
+    expected.sort();
+    assert_eq!(remaining, expected);
+}
+
+async fn register(user_id: Uuid, token: &str, conn: &mut DbConn<'_>) -> Uuid {
+    PushDevice::upsert(new_device(user_id, token), true, conn)
+        .await
+        .expect("register device")
+        .id
 }
 
 fn new_device(user_id: Uuid, token: &str) -> NewPushDevice {

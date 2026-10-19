@@ -15,6 +15,7 @@ pub mod display_timer;
 pub mod dropdowns;
 mod elimination_result;
 pub mod featured_video;
+pub mod footer;
 pub mod games_filter;
 pub mod header;
 pub mod history;

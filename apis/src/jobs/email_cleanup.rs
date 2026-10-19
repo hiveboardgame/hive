@@ -7,7 +7,7 @@ use db_lib::{
 };
 use std::time::Duration;
 
-const CLEANUP_INTERVAL_SECS: u64 = 60 * 60 * 24;
+const CLEANUP_INTERVAL_SECS: u64 = 60 * 60;
 
 pub fn run(pool: DbPool) {
     actix_rt::spawn(async move {

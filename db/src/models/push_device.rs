@@ -241,8 +241,9 @@ impl PushDevice {
         use crate::schema::push_devices::dsl::*;
         Ok(diesel::delete(
             push_devices
+                .filter(revoked_at.is_null())
                 .filter(last_seen_at.lt(threshold))
-                .filter(revoked_at.is_null()),
+                .or_filter(revoked_at.lt(threshold)),
         )
         .execute(conn)
         .await?)

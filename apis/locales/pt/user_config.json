@@ -33,6 +33,7 @@
             "description": "Precisamos do teu email para te enviar um email de confirmação quando criares a tua conta."
         },
         "be_nice_checkbox": "Eu aceito não perturbar outros jogadores e reportar abusos no Discord",
+        "legal_notice": "Ao criar uma conta, aceitas os nossos <terms_link>Termos de Serviço</terms_link>. A nossa <privacy_link>Política de Privacidade</privacy_link> explica como tratamos os teus dados.",
         "signup_button": "Registar",
         "registration_error": "Falhou o registo",
         "existing_account_prompt": "Já tens uma conta? <login_link>Faz login</login_link>"

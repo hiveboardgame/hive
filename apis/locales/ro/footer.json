@@ -1,0 +1,32 @@
+{
+    "appeal": {
+        "title": "Hive gratuit pentru toată lumea, pentru totdeauna",
+        "body": "hivegame.com nu are reclame și este open source. Este construit de voluntari și finanțat în întregime de jucători ca tine.",
+        "button": "Susține-ne"
+    },
+    "thanks": "Mulțumim că susții hivegame.com! 👑",
+    "community": {
+        "title": "Comunitate",
+        "hivegame_discord": "Discord Hivegame",
+        "world_hive_discord": "World Hive Community",
+        "resources": "Resurse",
+        "faq": "Întrebări frecvente"
+    },
+    "open_source": {
+        "title": "Open source",
+        "source_code": "Cod sursă",
+        "contribute": "Contribuie",
+        "report_bug": "Raportează o eroare",
+        "license": "Licență AGPL-3.0"
+    },
+    "support": {
+        "title": "Susține",
+        "donate": "Donează",
+        "buy_game": "Cumpără jocul"
+    },
+    "legal": {
+        "privacy": "Confidențialitate",
+        "terms": "Termeni",
+        "trademark": "Hive® este o marcă înregistrată a Gen42 Games. Ilustrațiile oficiale Hive aparțin Gen42 Games și nu sunt acoperite de licența noastră open source."
+    }
+}

@@ -574,7 +574,7 @@ pub(super) fn CreationShell(
         }
     });
     view! {
-        <PageShell>
+        <PageShell footer=false>
             <div class="mx-auto space-y-5 w-full max-w-3xl sm:space-y-6">
                 <div>
                     <h1 class="ui-page-title">{t!(i18n, tournaments.creation.title)}</h1>
