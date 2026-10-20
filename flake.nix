@@ -182,7 +182,7 @@
           '';
           LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath buildInputs;
         };
-        # For building StockBee and running hive-evaluator; torch is too large a download for
+        # For building and running hive-evaluator's engine; torch is too large a download for
         # everyone's shell.
         devShells.evaluator = mkShell {
           inputsFrom = [ self.devShells.${system}.default ];

@@ -324,13 +324,8 @@ pub struct RecentEval {
     pub conclusion: String,
     pub moves: i32,
     pub tournament: Option<String>,
-    /// None once the requester's account is gone, or for an automatic eval.
-    pub requested_by: Option<String>,
-    /// Started by the site itself on an idle queue.
-    pub automatic: bool,
     /// Inaccuracies, mistakes and blunders found, both sides together.
     pub marks: [usize; 3],
-    pub finished_at: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Default)]

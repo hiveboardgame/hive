@@ -25,18 +25,7 @@ use crate::{
 use chrono::{DateTime, Duration, Utc};
 use diesel::{
     result::{DatabaseErrorKind, Error as DieselError},
-    sql_types::{
-        Array,
-        BigInt,
-        Bool,
-        Double,
-        Integer,
-        Jsonb,
-        Nullable,
-        Text,
-        Timestamptz,
-        Uuid as SqlUuid,
-    },
+    sql_types::{Array, BigInt, Double, Integer, Jsonb, Nullable, Text, Uuid as SqlUuid},
     ExpressionMethods,
     Insertable,
     OptionalExtension,
@@ -102,12 +91,6 @@ struct RecentEvalRow {
     turn: i32,
     #[diesel(sql_type = Nullable<Text>)]
     tournament: Option<String>,
-    #[diesel(sql_type = Nullable<Text>)]
-    requester: Option<String>,
-    #[diesel(sql_type = Bool)]
-    automatic: bool,
-    #[diesel(sql_type = Timestamptz)]
-    finished_at: DateTime<Utc>,
     #[diesel(sql_type = Nullable<Jsonb>)]
     result: Option<serde_json::Value>,
 }
@@ -120,14 +103,11 @@ struct AutoCandidate {
     history: String,
 }
 
-/// Auto-evals only pick games where both players were at least this strong.
+/// Outside events, auto-evals only pick games where both players were at least this strong.
 const AUTO_MIN_RATING: f64 = 1800.0;
-/// Outside tournaments the front page only advertises games where both players were at least
-/// this strong. Tournament games always show: a world championship field is not all
-/// top-rated.
+/// Outside events the front page only advertises games where both players were at least this
+/// strong. Event games always show: a world championship field is not all top-rated.
 const FRONT_PAGE_MIN_RATING: f64 = 1800.0;
-/// How long a finished tournament's games keep their place at the top of the front page.
-const RECENT_TOURNAMENT_DAYS: i32 = 7;
 const MIN_MOVES: i32 = shared_types::EVAL_MIN_MOVES as i32;
 
 #[derive(QueryableByName)]
@@ -546,22 +526,28 @@ impl GameEval {
         Ok(())
     }
 
-    /// The most prominent game without an eval: tournament games first, then the stronger
-    /// weaker player, then the most recent.
+    /// The most prominent game between people without an eval: games of events (tournaments
+    /// and arenas) at any rating, the newest event first, then the stronger weaker player, then
+    /// the most recent. Bots top the ratings and would take every pick.
     async fn auto_candidate(conn: &mut DbConn<'_>) -> Result<Option<AutoCandidate>, DbError> {
         Ok(diesel::sql_query(
             r#"
             SELECT g.id, g.history
             FROM games g
+            JOIN users w ON w.id = g.white_id
+            JOIN users b ON b.id = g.black_id
+            LEFT JOIN tournaments t ON t.id = g.tournament_id
             WHERE g.finished
+                AND NOT w.bot
+                AND NOT b.bot
                 AND g.game_type = $1
                 AND g.tournament_queen_rule
                 AND g.turn >= $2
-                AND g.white_rating >= $3
-                AND g.black_rating >= $3
+                AND (t.id IS NOT NULL OR (g.white_rating >= $3 AND g.black_rating >= $3))
                 AND NOT EXISTS (SELECT 1 FROM game_evals e WHERE e.game_id = g.id)
-            ORDER BY (g.tournament_id IS NOT NULL) DESC,
-                LEAST(g.white_rating, g.black_rating) DESC,
+            ORDER BY (t.id IS NOT NULL) DESC,
+                COALESCE(t.started_at, t.created_at) DESC NULLS LAST,
+                LEAST(g.white_rating, g.black_rating) DESC NULLS LAST,
                 g.updated_at DESC
             LIMIT 1
             "#,
@@ -712,22 +698,23 @@ impl GameEval {
         Ok((requeued, failed))
     }
 
-    /// Finished evals of tournament or strong games for the front page, each group newest
-    /// first: games of running or just-finished tournaments, then user requests, then
-    /// automatic evals. A finished tournament only stays on top for a week, so the auto-evals,
-    /// which start with tournament games, never crowd out what people asked for.
+    /// Finished evals of event or strong games between people for the front page. Event games
+    /// lead, the newest event first and its strongest games first, the order auto-evals pick
+    /// them in, and keep the top until a newer event's games come; then user requests and then
+    /// automatic evals, each newest first.
     pub async fn recent(limit: i64, conn: &mut DbConn<'_>) -> Result<Vec<RecentEval>, DbError> {
         let rows: Vec<RecentEvalRow> = diesel::sql_query(
             r#"
             SELECT * FROM (
                 SELECT g.nanoid, w.username AS white, b.username AS black,
                        g.white_rating, g.black_rating, g.game_status, g.conclusion, g.turn,
-                       t.name AS tournament, r.username AS requester,
-                       e.requested_by_system AS automatic, e.finished_at, e.result,
+                       t.name AS tournament, e.finished_at, e.result,
+                       COALESCE(t.started_at, t.created_at) AS event_started,
                        CASE
-                           WHEN t.started_at IS NOT NULL
-                               AND (t.finished_at IS NULL
-                                   OR t.finished_at > now() - make_interval(days => $3)) THEN 0
+                           WHEN t.id IS NOT NULL THEN LEAST(g.white_rating, g.black_rating)
+                       END AS event_strength,
+                       CASE
+                           WHEN t.id IS NOT NULL THEN 0
                            WHEN NOT e.requested_by_system THEN 1
                            ELSE 2
                        END AS place
@@ -736,18 +723,20 @@ impl GameEval {
                 JOIN users w ON w.id = g.white_id
                 JOIN users b ON b.id = g.black_id
                 LEFT JOIN tournaments t ON t.id = g.tournament_id
-                LEFT JOIN users r ON r.id = e.requested_by AND NOT r.deleted
-                WHERE e.status = 'done' AND e.finished_at IS NOT NULL AND g.turn >= $4
+                WHERE e.status = 'done' AND e.finished_at IS NOT NULL AND g.turn >= $3
+                    AND NOT w.bot AND NOT b.bot
                     AND (t.id IS NOT NULL
                         OR (g.white_rating >= $2 AND g.black_rating >= $2))
             ) ranked
-            ORDER BY place, finished_at DESC
+            ORDER BY place,
+                event_started DESC NULLS LAST,
+                event_strength DESC NULLS LAST,
+                finished_at DESC
             LIMIT $1
             "#,
         )
         .bind::<BigInt, _>(limit)
         .bind::<Double, _>(FRONT_PAGE_MIN_RATING)
-        .bind::<Integer, _>(RECENT_TOURNAMENT_DAYS)
         .bind::<Integer, _>(MIN_MOVES)
         .load(conn)
         .await?;
@@ -763,9 +752,6 @@ impl GameEval {
                 conclusion: row.conclusion,
                 moves: row.turn,
                 tournament: row.tournament,
-                requested_by: row.requester,
-                automatic: row.automatic,
-                finished_at: row.finished_at,
                 marks: row
                     .result
                     .and_then(|value| serde_json::from_value::<EvalResult>(value).ok())

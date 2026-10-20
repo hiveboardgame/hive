@@ -75,7 +75,7 @@ pub fn AnalysisAndDownload() -> impl IntoView {
                             view! {
                                 <a
                                     href=href
-                                    class="gap-1 px-2 m-1 h-9 rounded-sm ui-button ui-button-primary no-link-style"
+                                    class="gap-1 px-2 m-1 h-8 rounded-sm ui-button ui-button-primary no-link-style"
                                     title="Computer eval: the engine's verdict on every move"
                                 >
                                     <Icon icon=icondata_tb::TbCpuOutline attr:class="size-5" />

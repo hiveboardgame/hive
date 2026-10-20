@@ -580,8 +580,10 @@ drone's crontab.
 ## Evals
 
 Engine evals of finished games (the Evals tab in analysis, "Recent evaluations" on the front
-page) come from `hive-evaluator`, which drives the StockBee engine; see
-`hive-evaluator/README.md`. StockBee never goes into this repo: it lives in `~/stockbee`.
+page) come from `hive-evaluator`; see `hive-evaluator/README.md`. The engine it drives is
+private: it never goes into git, a Docker build context or anything uploaded. On the box it
+lives outside the checkout, and a local copy in a checkout is ignored by git, Docker and
+repomix.
 
 Until the 2026 world championship is over, evals are for admins only: everyone else sees no
 Evals tab, no marks in History, no ghosts on the board and no front-page card, and the server
@@ -589,14 +591,10 @@ refuses them the eval data. The worker runs as normal behind that.
 
 ### Rolling out
 
-1. Copy StockBee to the box without build output (from a machine that has it):
-   `rsync -a --exclude build --exclude out --exclude venv stockbee/ drone@<box>:stockbee/`
-2. As drone: `scripts/setup-evaluator.sh`. It locks the directory to drone, makes the eval
-   server load the net as plain weights, builds the engine, creates the torch venv, and writes
-   `~/.config/hive-evaluator/env` with a new token and `EVAL_AUTO=false`.
-3. Once, as a user with sudo: `sudo scripts/setup-evaluator.sh --install-token` copies that
-   token into `/etc/hive/prod.env` without printing it.
-4. Keep the worker API off the internet, and let a long game's result through. In
+The eval scripts reach the box with the merge, so the eval code goes live first. Until the site
+has a token it does nothing: it answers every worker request with 503.
+
+1. Keep the worker API off the internet, and let a long game's result through. In
    `/etc/nginx/sites-available/default`, add to the `hivegame.com` server block, next to the
    `/health/ready` deny, and to the `127.0.0.1:3999` server (see
    `nginx/sites-enabled-default.example` for both):
@@ -622,21 +620,33 @@ refuses them the eval data. The worker runs as normal behind that.
    }
    ```
 
-   then `sudo nginx -t && sudo systemctl reload nginx`. The local worker reaches the site on
-   `127.0.0.1:3999`; without its block a result over nginx's 1 MB default (a game of some
-   five thousand moves) is refused. A worker elsewhere (a laptop, a rented GPU) can be let in
-   later with `allow <its IP>;` above the deny; until then its requests get 403.
-5. `scripts/preflight.sh`: it should show the evaluator token, env file and StockBee directory,
-   and "site keeps the eval worker API off the internet".
-6. Merge and `scripts/deploy.sh`, so the site has the eval code and reads the token.
-7. As drone, `scripts/setup-evaluator.sh` again: it sees the matching token and opens the
+   then `sudo nginx -t && sudo systemctl reload nginx`. This comes before the merge, which it
+   does not need: `smoke.sh` fails a public `/api/v1/evals/claim`, and without the deny the
+   new site answers it with 503. The local worker reaches the site on `127.0.0.1:3999`;
+   without its block a result over nginx's 1 MB default (a game of some five thousand moves)
+   is refused. A worker elsewhere (a laptop, a rented GPU) can be let in later with
+   `allow <its IP>;` above the deny; until then its requests get 403.
+2. Install the engine on the box, outside the checkout and readable by drone only, and
+   describe it in drone's `~/.config/hive-evaluator/engines.toml` (format in
+   `hive-evaluator/README.md`, Engines).
+3. Merge and `scripts/deploy.sh`. Admins get the Evals tab; a request waits in line, saying
+   the eval engine is not running.
+4. As drone: `scripts/setup-evaluator.sh`. It checks the engines file and writes
+   `~/.config/hive-evaluator/env` with a new token and `EVAL_AUTO=false`.
+5. Once, as a user with sudo: `sudo scripts/setup-evaluator.sh --install-token` copies that
+   token into `/etc/hive/prod.env` without printing it.
+6. `scripts/preflight.sh`: it should show the evaluator token, env file and engines file, and
+   "site keeps the eval worker API off the internet".
+7. `scripts/deploy.sh` again, so a fresh slot reads the token; it reuses the release step 3
+   built.
+8. As drone, `scripts/setup-evaluator.sh` again: it sees the matching token and opens the
    `evaluator` tmux window.
-8. `scripts/smoke.sh`: "hive-evaluator running" and "the eval worker API is not public", and
+9. `scripts/smoke.sh`: "hive-evaluator running" and "the eval worker API is not public", and
    `curl -s -o /dev/null -w '%{http_code}\n' -X POST https://hivegame.com/api/v1/evals/claim`
    answers 403.
-9. As an admin, open a finished MLP tournament game, Evals tab, request an eval, and watch it
-   go from queued to running to done. Logged out (or as a non-admin) the same page has no
-   Evals tab, and the front page no "Recent evaluations" card.
+10. As an admin, open a finished MLP tournament game, Evals tab, request an eval, and watch it
+    go from queued to running to done. Logged out (or as a non-admin) the same page has no
+    Evals tab, and the front page no "Recent evaluations" card.
 
 ### Opening evals to everyone
 
@@ -647,19 +657,21 @@ After the world championship:
    uses in the analysis sidebar and on the home page).
 2. Merge and deploy as usual; nothing changes for the worker.
 3. Optional: set `EVAL_AUTO=true` in `~/.config/hive-evaluator/env` and restart its window, so
-   the front page fills with evals of strong games while nobody is waiting.
+   the front page fills with evals of event games and strong games between people while
+   nobody is waiting.
 
 ### Running it
 
 The worker takes user requests first. With `EVAL_AUTO=true` in its env (restart its window:
-Ctrl-C, then `scripts/run-evaluator.sh`) it also evaluates strong games while nobody is
-waiting. It talks to `:3999`, is built at nice 15 and runs at nice 19 with three eval servers
-of two torch threads each, survives slot flips, and an eval it drops is requeued after five
-quiet minutes. Stopping it (Ctrl-C) switches evals off without losing any; the site then says
-no engine is running.
+Ctrl-C, then `scripts/run-evaluator.sh`) it also evaluates games while nobody is waiting:
+tournament and arena games at any rating, the newest event first, then games between two
+players rated 1800 or more, strongest first. Bot games are never picked. It talks to
+`:3999`, is built at nice 15 and runs at nice 19, survives slot flips, and an eval it drops is
+requeued after five quiet minutes. Stopping it (Ctrl-C) switches evals off without losing any;
+the site then says no engine is running.
 
-`scripts/preflight.sh` checks the token, the env file, the StockBee directory and the nginx
-block (WARN while evals are not set up). Re-running `scripts/tmux-session.sh` on a live session
+`scripts/preflight.sh` checks the token, the env file, the engines file and the nginx block
+(WARN while evals are not set up). Re-running `scripts/tmux-session.sh` on a live session
 adds windows that are missing, so it also brings back a closed `evaluator` window.
 
 ## Checking a deploy

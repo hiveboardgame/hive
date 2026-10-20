@@ -14,6 +14,7 @@ reqwest = { version = "0.13.1", features = ["rustls", "json"], default-features 
 serde = { workspace = true }
 serde_json = { workspace = true }
 sha2 = { workspace = true }
+toml = "0.9"
 shared_types = { path = "../shared_types" }
 tokio = { workspace = true, features = ["process", "io-util", "signal"] }
 tracing = "0.1"

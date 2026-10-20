@@ -1,28 +1,97 @@
 # hive-evaluator
 
-Takes finished games from hivegame.com's eval queue, searches every position with the
-StockBee engine and posts back which moves were inaccuracies (`?!`), mistakes (`?`) and
-blunders (`??`), each with the move the engine would have played.
+Takes finished games from hivegame.com's eval queue, searches every position with an engine
+and posts back which moves were inaccuracies (`?!`), mistakes (`?`) and blunders (`??`), each
+with the move the engine would have played.
 
 It pulls work over HTTP (`/api/v1/evals/…`), so it can run on the web server or on any
-other machine, including a rented GPU box.
+other machine, including a rented GPU box. Any engine that speaks the protocol below can do the
+searching; which one, and how it is started, is set in an engines file.
 
 ## How a game is searched
 
-Every position is searched from scratch at 64 simulations (the StockBee author's suggestion). Each move that looks like it
-lost two or more points of win chance has both of its positions searched again at 800.
-On 13 corpus games this graded like a plain 800-sim search at about 80% of the cost; a
-first pass below 50 sims missed about one real mistake in six. The measurements used a
-50-sim screen; 64 was not measured separately and costs slightly more. Change the levels with
-`--screen-sims`, `--threshold` and `--full-sims`.
+Every position is searched first with the engine's `screen` budget. Each move that looks like
+it lost `threshold` (default 2) or more points of win chance has both of its positions searched
+again with the `full` budget. On 13 corpus games, a 50-sim screen, a threshold of 2 and
+800-sim searches graded like a plain 800-sim search at about 80% of the cost; a screen below 50
+sims missed about one real mistake in six.
+
+The graph and the marks must agree: a move that swings by an inaccuracy's worth (5 points)
+or more is marked for it. A swing the move cannot be marked for, because the engine chose the
+move itself or because it seems to gain, means the screen misjudged a position, so both of the
+move's positions are searched again with the full budget too. A position the full search
+corrects is checked against the move before it as well, until nothing new turns up, and every
+position counts at its deepest search, so a move starts where the previous one left the game.
+
+In one local game the screen gave a winning side 1% and hid three Black blunders; with these
+rules they are marked, and no swing is left unmarked. It searched 37 of the game's 46
+positions in full instead of 26, about 90% of the cost of a full search of every position
+instead of 65%, so the measurements above (taken before these rules) overstate what the screen
+saves.
 
 A move that ends the game is scored by its result: won 100, drawn 50, lost 0. Whether the
-game ended is the site's call (`hive_lib`), not StockBee's: StockBee counts some positions
-as repeated that Hive's rules do not, such as one where a thrown piece is stunned. A move
-that leaves the opponent nothing but a pass is scored from the position after that pass.
+game ended is the site's call (`hive_lib`), not the engine's. A move that leaves the opponent
+nothing but a pass is scored from the position after that pass.
 
-On the prod box (i7-7700, no GPU) the default layout, three eval servers with two torch
-threads and one engine each, takes about a minute for a typical 41-move game.
+## Engines
+
+The engines file (default `~/.config/hive-evaluator/engines.toml`, or `--engines-file` /
+`EVAL_ENGINES_FILE`) names one or more engines. The worker runs one of them: the only one, the
+one named by `use`, or the one named by `--engine` / `EVAL_ENGINE`.
+
+```toml
+use = "deep"
+
+[engines.deep]
+command = "/opt/deep/bin/engine"          # started once per engine; paths are best absolute
+args = ["--server-port={port}"]           # {port}: the port of its helper, if it has one
+dir = "/opt/deep"                         # working directory (optional)
+env = { DEEP_THREADS = "1" }              # extra environment (optional)
+analyze = "analyze nodes {budget}"        # the analysis command; {budget} is filled in
+count = 1                                 # engines, or engines per helper (default 1)
+fingerprint = ["/opt/deep/weights.bin"]   # files that tell its versions apart (optional)
+screen = 100                              # budget for every position
+full = 1000                               # budget for the rechecks
+threshold = 2.0                           # optional
+
+# Optional: a process the engines talk to, such as a server holding a net.
+[engines.deep.helper]
+command = "/opt/deep/bin/server"
+args = ["--port", "{port}"]
+dir = "/opt/deep"
+env = {}
+ready = "listening"                       # text in a line of its output once it is up
+ready_timeout_secs = 900                  # optional
+count = 2                                 # helpers, on ports first_port, first_port + 1, …
+first_port = 40100
+
+[engines.quick]
+command = "/opt/quick/engine"
+analyze = "analyze depth {budget}"
+count = 4
+screen = 4
+full = 8
+```
+
+Each eval records the engine's `id`, a digest of the fingerprint files and the budgets, so
+evals from different engines or versions can be told apart.
+
+### Protocol
+
+The engine speaks [UHP](https://github.com/jonthysell/Mzinga/wiki/UniversalHiveProtocol) on
+stdin and stdout. Every reply ends with a line `ok`; a line starting with `err` is a refusal.
+
+- On start it prints its `id …` line, as for `info`.
+- `newgame <GameString>` sets up the position to search, e.g.
+  `newgame Base+MLP;InProgress;Black[2];wL;bL wL-;wQ /wL`.
+- `validmoves`: an answer of just `pass` means there is nothing to search.
+- The `analyze` command answers with a line
+  `cand <best move> | winprob <0–100> | pv <move>;<move>;…`: the move it would play, the side
+  to move's win chance, and the line it expects. `pv` is optional; other fields and lines are
+  ignored.
+
+The engine may spell a move differently from the game record; the evaluator recognises two
+spellings of one move itself.
 
 ## Running it
 
@@ -33,31 +102,16 @@ The site needs a shared secret for workers. Without it every worker request is r
 EVAL_WORKER_TOKEN=<long random string>
 ```
 
-The worker needs a built StockBee directory (`build/stockbee`, `build/libgraph_features.so`,
-`tools/`, the net) and a Python with `torch` and `numpy`:
-
-```sh
-cd stockbee
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j2 --target stockbee
-g++ -O2 -shared -fPIC -std=c++17 -fopenmp src/graph_features.cpp -o build/libgraph_features.so
-python3 -m venv venv && venv/bin/pip install numpy torch --index-url https://download.pytorch.org/whl/cpu
-```
-
-With nix, `nix develop .#evaluator` has cmake and a Python with torch and numpy instead; the
-default shell leaves them out, as torch is a large download.
-
-On prod, `scripts/run-evaluator.sh` does the rest (see `scripts/README.md`, Evals). By hand,
-at the lowest priority so the site always comes first:
+On prod, `scripts/setup-evaluator.sh` sets up the worker and `scripts/run-evaluator.sh` runs it
+(see `scripts/README.md`, Evals). By hand, at the lowest priority so the site always comes
+first:
 
 ```sh
 EVAL_WORKER_TOKEN=<same secret> \
-STOCKBEE_DIR=/path/to/stockbee STOCKBEE_PYTHON=/path/to/stockbee/venv/bin/python \
 nice -n 19 hive-evaluator --base-url http://localhost:3999 --worker prod-1
 ```
 
-`--worker` must be unique per running worker. The eval servers listen on 127.0.0.1 from
-port 41871 up, one port per server; move them with `--base-port`. `RUST_LOG=debug` also
-prints the eval servers' own logs.
+`--worker` must be unique per running worker. `RUST_LOG=debug` also prints the helpers' logs.
 
 ## When things go wrong
 
@@ -68,7 +122,7 @@ prints the eval servers' own logs.
   the worker.
 - If the site cannot be reached when a finished eval is sent back, during a deploy say, the
   worker keeps the eval alive and tries again for about four minutes.
-- If an engine or eval server dies, the worker hands the eval back, which queues it again
-  within the same three attempts, and restarts all of its processes.
+- If an engine or helper dies, the worker hands the eval back, which queues it again within
+  the same three attempts, and restarts all of its processes.
 - A failed eval shows as failed in the Evals tab, where any logged-in user can request it
   again.

@@ -1,17 +1,19 @@
 mod api;
+mod config;
 mod engine;
 mod evaluate;
+mod helper;
 mod rules;
 mod scheme;
-mod servers;
 
 use anyhow::{Context, Result};
 use api::{worth_retrying, Api, Ownership};
 use clap::Parser;
+use config::EngineConfig;
 use engine::Engine;
 use evaluate::{evaluate, Progress};
+use helper::Helper;
 use scheme::Scheme;
-use servers::{EvalServer, ServerSetup};
 use sha2::{Digest, Sha256};
 use shared_types::{EvalJob, EvalResult};
 use std::{
@@ -20,8 +22,8 @@ use std::{
     time::Duration,
 };
 
-/// Takes games from hivegame.com's eval queue, searches them with StockBee and posts back
-/// which moves were inaccuracies, mistakes and blunders.
+/// Takes games from hivegame.com's eval queue, searches them with the configured engine and
+/// posts back which moves were inaccuracies, mistakes and blunders.
 #[derive(Parser, Debug)]
 struct Args {
     #[arg(long, env = "HIVE_URL", default_value = "http://localhost:3000")]
@@ -31,37 +33,16 @@ struct Args {
     /// Name this worker reports under; must be unique among running workers.
     #[arg(long, env = "EVAL_WORKER_NAME")]
     worker: Option<String>,
-    /// Directory holding StockBee's tools/ and build/.
-    #[arg(long, env = "STOCKBEE_DIR", default_value = "stockbee")]
-    stockbee_dir: PathBuf,
-    #[arg(long, env = "STOCKBEE_NET", default_value = "stockbee.pt")]
-    net: PathBuf,
-    #[arg(long, env = "STOCKBEE_PYTHON", default_value = "python3")]
-    python: PathBuf,
-    /// cpu or cuda.
-    #[arg(long, default_value = "cpu")]
-    device: String,
-    /// Eval servers to run; each gets its own engines and torch threads. On the 4-core prod
-    /// box three servers with two threads each beat one server with six threads.
-    #[arg(long, default_value_t = 3)]
-    servers: u16,
-    #[arg(long, default_value_t = 1)]
-    engines_per_server: u16,
-    #[arg(long, default_value_t = 2)]
-    torch_threads: u32,
-    /// First local port for the eval servers; each further server takes the next one.
-    #[arg(long, default_value_t = 41871)]
-    base_port: u16,
+    /// The engines file [default: ~/.config/hive-evaluator/engines.toml].
+    #[arg(long, env = "EVAL_ENGINES_FILE")]
+    engines_file: Option<PathBuf>,
+    /// Which engine of the file to run, instead of the file's `use`.
+    #[arg(long, env = "EVAL_ENGINE")]
+    engine: Option<String>,
     /// Also take games the site picks itself when no user is waiting; `EVAL_AUTO=false` keeps
     /// the worker to user requests, e.g. for a gentle first start.
     #[arg(long, env = "EVAL_AUTO", default_value_t = true, action = clap::ArgAction::Set)]
     auto: bool,
-    #[arg(long, default_value_t = 64)]
-    screen_sims: u32,
-    #[arg(long, default_value_t = 2.0)]
-    threshold: f32,
-    #[arg(long, default_value_t = 800)]
-    full_sims: u32,
 }
 
 const IDLE_POLL: Duration = Duration::from_secs(5);
@@ -74,44 +55,67 @@ const DELIVER_RETRY_MOST: Duration = Duration::from_secs(60);
 const DELIVER_FOR: Duration = Duration::from_secs(240);
 
 struct Workers {
-    _servers: Vec<EvalServer>,
+    _helpers: Vec<Helper>,
     engines: Vec<Engine>,
 }
 
 impl Workers {
-    async fn start(args: &Args, setup: &ServerSetup) -> Result<Self> {
-        let mut servers = Vec::new();
+    async fn start(config: &EngineConfig) -> Result<Self> {
+        let mut helpers = Vec::new();
         let mut engines = Vec::new();
-        let binary = args.stockbee_dir.join("build").join("stockbee");
-        for i in 0..args.servers {
-            let server = EvalServer::start(setup, args.base_port + i).await?;
-            for _ in 0..args.engines_per_server {
-                engines.push(Engine::start(&binary, server.port).await?);
+        match &config.helper {
+            Some(helper) => {
+                for i in 0..helper.count {
+                    let helper = Helper::start(helper, helper.first_port + i).await?;
+                    for _ in 0..config.count {
+                        engines.push(Engine::start(config, Some(helper.port)).await?);
+                    }
+                    helpers.push(helper);
+                }
             }
-            servers.push(server);
+            None => {
+                for _ in 0..config.count {
+                    engines.push(Engine::start(config, None).await?);
+                }
+            }
         }
         tracing::info!(
-            servers = servers.len(),
+            helpers = helpers.len(),
             engines = engines.len(),
             "workers ready"
         );
         Ok(Workers {
-            _servers: servers,
+            _helpers: helpers,
             engines,
         })
     }
 }
 
-fn net_digest(path: &PathBuf) -> Result<String> {
-    let bytes = std::fs::read(path).with_context(|| format!("reading {}", path.display()))?;
-    let digest = Sha256::digest(&bytes);
-    Ok(digest.iter().take(6).map(|b| format!("{b:02x}")).collect())
+/// Short digest of the files that tell one version of the engine from another; None when the
+/// config names none.
+fn fingerprint(files: &[PathBuf]) -> Result<Option<String>> {
+    if files.is_empty() {
+        return Ok(None);
+    }
+    let mut hasher = Sha256::new();
+    for file in files {
+        hasher.update(std::fs::read(file).with_context(|| format!("reading {}", file.display()))?);
+    }
+    let digest = hasher.finalize();
+    Ok(Some(
+        digest.iter().take(6).map(|b| format!("{b:02x}")).collect(),
+    ))
+}
+
+fn default_engines_file() -> Result<PathBuf> {
+    let home = std::env::var_os("HOME").context("HOME is not set; pass --engines-file")?;
+    Ok(PathBuf::from(home).join(".config/hive-evaluator/engines.toml"))
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Dropping `run` on a signal drops the eval servers and engines, which kills them; a plain
-    // SIGTERM would otherwise leave the Python servers running and holding their ports.
+    // Dropping `run` on a signal drops the helpers and engines, which kills them; a plain
+    // SIGTERM would otherwise leave the helpers running and holding their ports.
     tokio::select! {
         result = run() => result,
         signal = shutdown_signal() => {
@@ -143,36 +147,27 @@ async fn run() -> Result<()> {
         .worker
         .clone()
         .unwrap_or_else(|| format!("evaluator-{}", std::process::id()));
-    // The server runs from inside the StockBee directory, so it needs an absolute path.
-    let net = std::fs::canonicalize(args.stockbee_dir.join(&args.net))
-        .with_context(|| format!("finding the net {}", args.net.display()))?;
-    let setup = ServerSetup {
-        python: args.python.clone(),
-        stockbee_dir: args.stockbee_dir.clone(),
-        net: net.clone(),
-        device: args.device.clone(),
-        torch_threads: args.torch_threads,
+    let engines_file = match &args.engines_file {
+        Some(file) => file.clone(),
+        None => default_engines_file()?,
     };
-    let scheme = Scheme {
-        screen: args.screen_sims,
-        threshold: args.threshold,
-        full: args.full_sims,
-    };
+    let (engine_name, config) = EngineConfig::load(&engines_file, args.engine.as_deref())?;
+    let scheme = config.scheme();
     let mut api = Api::new(&args.base_url, &args.token, &worker)?;
     api.auto = args.auto;
-    let digest = net_digest(&net)?;
+    let digest = fingerprint(&config.fingerprint)?;
 
-    let mut workers = Workers::start(&args, &setup).await?;
-    let engine_id = format!(
-        "{} net {digest} {}",
-        workers
-            .engines
-            .first()
-            .map(|e| e.id.as_str())
-            .unwrap_or("unknown"),
-        scheme.label()
-    );
-    tracing::info!(%worker, %engine_id, auto = args.auto, "waiting for evals");
+    let mut workers = Workers::start(&config).await?;
+    let engine_id = [
+        workers.engines.first().map(|e| e.id.clone()),
+        digest,
+        Some(scheme.label()),
+    ]
+    .into_iter()
+    .flatten()
+    .collect::<Vec<_>>()
+    .join(" ");
+    tracing::info!(%worker, engine = %engine_name, %engine_id, auto = args.auto, "waiting for evals");
 
     loop {
         let job = match api.claim().await {
@@ -189,16 +184,16 @@ async fn run() -> Result<()> {
         };
         let healthy = run_job(&api, job, &mut workers, &scheme, &engine_id).await;
         if !healthy {
-            tracing::warn!("restarting eval servers and engines");
+            tracing::warn!("restarting the helpers and engines");
             drop(std::mem::replace(
                 &mut workers,
                 Workers {
-                    _servers: Vec::new(),
+                    _helpers: Vec::new(),
                     engines: Vec::new(),
                 },
             ));
             workers = loop {
-                match Workers::start(&args, &setup).await {
+                match Workers::start(&config).await {
                     Ok(w) => break w,
                     Err(e) => {
                         tracing::error!("restart failed: {e:#}");

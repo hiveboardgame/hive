@@ -125,14 +125,13 @@ impl GameEvalContext {
     pub fn follow(self, game_id: Memo<Option<GameId>>) {
         let refresh = RwSignal::new(0u32);
         let visible = evals_visible();
-        let fetched = LocalResource::new(move || {
-            let game_id = game_id.get().filter(|_| visible.get());
+        // Read in the future, not before it: the first future is made before hydration installs
+        // the game and runs after, and a game id read when it was made would stay empty.
+        let fetched = LocalResource::new(move || async move {
             refresh.track();
-            async move {
-                match game_id {
-                    Some(game_id) => Some((game_id.clone(), get_game_eval(game_id).await)),
-                    None => None,
-                }
+            match game_id.get().filter(|_| visible.get()) {
+                Some(game_id) => Some((game_id.clone(), get_game_eval(game_id).await)),
+                None => None,
             }
         });
         let poll = StoredValue::new(None::<TimeoutHandle>);
@@ -276,13 +275,27 @@ impl Suggestion {
     }
 }
 
-/// The mover's Pillbug, or a Mosquito copying one, next to `from`: the only way a move can
-/// carry an opponent's piece.
-fn thrower(board: &Board, from: Position, mover: Color) -> Option<(Piece, Position)> {
+/// The mover's Pillbug, or a Mosquito copying one, that carries `piece` from `from` to `to`:
+/// an opponent's piece always, the mover's own only where it could not go by itself.
+fn thrower(
+    board: &Board,
+    piece: Piece,
+    from: Position,
+    to: Position,
+    mover: Color,
+) -> Option<(Piece, Position)> {
+    if piece.is_color(mover)
+        && !board.is_pinned(piece)
+        && Bug::normal_moves(from, board).contains(&to)
+    {
+        return None;
+    }
     [Bug::Pillbug, Bug::Mosquito].into_iter().find_map(|bug| {
-        let piece = Piece::new_from(bug, mover, 0);
-        let at = board.position_of_piece(piece)?;
-        at.is_neighbor(from).then_some((piece, at))
+        let ability = Piece::new_from(bug, mover, 0);
+        let at = board.position_of_piece(ability)?;
+        // A piece the opponent has just moved is stunned for a turn.
+        (board.last_moved != Some((ability, at)) && Bug::can_throw(at, from, to, board))
+            .then_some((ability, at))
     })
 }
 
@@ -296,10 +309,8 @@ fn draw(shown: &mut Suggestion, board: &Board, mover: Color, uhp: &str, color: A
     };
     if let Some(from) = board.position_of_piece(piece).filter(|from| *from != to) {
         shown.arrows.push(Arrow { from, to, color });
-        if !piece.is_color(mover) {
-            if let Some((_, at)) = thrower(board, from, mover) {
-                shown.throwers.push((at, color));
-            }
+        if let Some((_, at)) = thrower(board, piece, from, to, mover) {
+            shown.throwers.push((at, color));
         }
     }
     shown.ghosts.push(Ghost {
@@ -421,17 +432,18 @@ fn action(board: &Board, mover: Color, uhp: &str) -> Option<Action> {
             at: spot,
             cell,
         },
-        Some(from) if !piece.is_color(mover) => Action::Throw {
-            thrower: thrower(board, from, mover)
-                .map_or(Piece::new_from(Bug::Pillbug, mover, 0), |t| t.0),
-            piece,
-            to: spot,
-            cell,
-        },
-        Some(_) => Action::Move {
-            piece,
-            to: spot,
-            cell,
+        Some(from) => match thrower(board, piece, from, cell, mover) {
+            Some((thrower, _)) => Action::Throw {
+                thrower,
+                piece,
+                to: spot,
+                cell,
+            },
+            None => Action::Move {
+                piece,
+                to: spot,
+                cell,
+            },
         },
     })
 }
@@ -763,6 +775,43 @@ mod tests {
         let (b, shown) = shown(THROW, &graded("bA1 -wP", "wQ wP/"));
         let pillbug = b.position_of_piece("wP".parse().unwrap()).unwrap();
         assert_eq!(shown.throwers, vec![(pillbug, AnnotationColor::Red)]);
+    }
+
+    /// Black's Ant 1 touches White's Pillbug and White's Mosquito, which copies the Pillbug.
+    const MOSQUITO_THROW: &str =
+        r"wP ;bL wP-;wM -wP;bQ bL-;wQ /wP;bA1 \bQ;wA1 /wQ;bA1 \wP;wG1 /wA1;bG1 bQ-;";
+
+    #[test]
+    fn a_throw_only_the_mosquito_reaches_is_the_mosquitos() {
+        let (b, shown) = shown(MOSQUITO_THROW, &graded("bA1 -wM", "wS1 -wA1"));
+        let ant = "bA1".parse().unwrap();
+        let beside_mosquito = Position::from_string("-wM", &b).unwrap();
+        assert!(b
+            .moves_for_piece(Color::White, ant)
+            .contains(&beside_mosquito));
+        let mosquito = b.position_of_piece("wM".parse().unwrap()).unwrap();
+        assert_eq!(shown.throwers, vec![(mosquito, AnnotationColor::Red)]);
+        assert_eq!(
+            words(MOSQUITO_THROW, "bA1 -wM", "wS1 -wA1").played_short(),
+            "Mosquito (copying a Pillbug) moved Black's Ant 1 left of White's Mosquito"
+        );
+    }
+
+    #[test]
+    fn the_pillbug_carrying_the_movers_own_piece_is_a_throw() {
+        let history = r"wP ;bL wP-;wQ \wP;bQ bL-;";
+        let (b, shown) = shown(history, &graded(r"wQ wP\", "wQ wP/"));
+        let pillbug = b.position_of_piece("wP".parse().unwrap()).unwrap();
+        assert_eq!(shown.throwers, vec![(pillbug, AnnotationColor::Red)]);
+        let w = words(history, r"wQ wP\", "wQ wP/");
+        assert_eq!(
+            w.played_short(),
+            "Pillbug moved the Queen below right of White's Pillbug"
+        );
+        assert_eq!(
+            w.best_short(),
+            "move the Queen above right of White's Pillbug"
+        );
     }
 
     fn words(history: &str, played: &str, best: &str) -> Wording {

@@ -2629,6 +2629,7 @@ dependencies = [
  "sha2 0.11.0",
  "shared_types",
  "tokio",
+ "toml 0.9.11+spec-1.1.0",
  "tracing",
  "tracing-subscriber",
  "uuid",
@@ -6939,10 +6940,12 @@ version = "0.9.11+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f3afc9a848309fe1aaffaed6e1546a7a14de1f935dc9d89d32afd9a44bab7c46"
 dependencies = [
+ "indexmap 2.13.0",
  "serde_core",
  "serde_spanned 1.1.1",
  "toml_datetime 0.7.5+spec-1.1.0",
  "toml_parser",
+ "toml_writer",
  "winnow 0.7.14",
 ]
 

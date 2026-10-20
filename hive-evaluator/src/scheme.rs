@@ -1,4 +1,4 @@
-use shared_types::{MoveEval, MAX_EVAL_LINE};
+use shared_types::{Grade, MoveEval, MAX_EVAL_LINE};
 
 /// The engine's view of one position, from the side to move.
 #[derive(Debug, Clone, PartialEq)]
@@ -19,11 +19,9 @@ pub enum Searched {
     OnlyPass,
 }
 
-/// How the game is searched: everything at `screen` sims, then the moves that look like they
-/// lost at least `threshold` points are searched again at `full` sims. Measured on 13 corpus
-/// games, 50 > 2 > 800 grades like a plain 800-sim search at about 80% of its cost; a screen
-/// below 50 sims misses about one real mistake in six. The default screen is 64, StockBee's
-/// author's suggestion.
+/// How the game is searched: everything with the `screen` budget, then the moves that look like
+/// they lost at least `threshold` points, or swing by more than their mark shows, are searched
+/// again with the `full` budget (see `positions_to_recheck`).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Scheme {
     pub screen: u32,
@@ -63,19 +61,39 @@ fn kept(after: Option<&Searched>, ply: usize, at: usize) -> Option<f32> {
     })
 }
 
-/// Positions to search again at full sims, given the screen of every position (0..=moves).
-pub fn positions_to_recheck(moves: &[String], screen: &[Searched], threshold: f32) -> Vec<usize> {
+/// Positions still to search at full sims, given the screen of every position (0..=moves) and
+/// the full searches so far. A move gets both of its positions searched when it looks like it
+/// lost `threshold` points, or when the swing the graph shows for it would be graded but the
+/// move cannot be: the engine keeps its win chance with its own move and never gains any, so
+/// such a swing means one of the two positions was misjudged. A position the full search
+/// corrects can expose the move before it, so this is asked again until it finds nothing new.
+pub fn positions_to_recheck(
+    moves: &[String],
+    screen: &[Searched],
+    full: &[Option<Searched>],
+    threshold: f32,
+) -> Vec<usize> {
+    let known = |p: usize| {
+        full.get(p)
+            .and_then(Option::as_ref)
+            .or_else(|| screen.get(p))
+    };
+    let unchecked = |p: &usize| full.get(*p).is_none_or(Option::is_none);
     let mut positions = Vec::new();
     for (ply, played) in moves.iter().enumerate() {
-        let Some(Searched::Position(before)) = screen.get(ply) else {
+        let Some(Searched::Position(before)) = known(ply) else {
             continue;
         };
         let at = after_position(screen, ply);
-        let Some(kept) = kept(screen.get(at), ply, at) else {
+        let Some(kept) = kept(known(at), ply, at) else {
             continue;
         };
-        if &before.best != played && before.winprob - kept >= threshold {
-            positions.extend([ply, at]);
+        let change = before.winprob - kept;
+        let own = &before.best == played;
+        let lost = !own && change >= threshold;
+        let marked = Grade::from_loss(if own { 0.0 } else { change.max(0.0) });
+        if lost || Grade::from_loss(change.abs()) != marked {
+            positions.extend([ply, at].into_iter().filter(unchecked));
         }
     }
     positions.sort_unstable();
@@ -83,32 +101,32 @@ pub fn positions_to_recheck(moves: &[String], screen: &[Searched], threshold: f3
     positions
 }
 
-/// One MoveEval per move. A move is judged at full sims when both the position before and
-/// after it were searched at full sims, otherwise at screen sims, so before and after always
-/// come from searches of the same depth.
+/// One MoveEval per move. Every position counts at its deepest search, so a move's before is
+/// the previous move's after and the graph swings only where a move does. A move that could
+/// be graded had both positions rechecked, so grades always come from full sims; `sims` is
+/// the shallower of the two searches.
 pub fn assemble(
     moves: &[String],
     screen: &[Searched],
     full: &[Option<Searched>],
     scheme: &Scheme,
 ) -> Vec<Option<MoveEval>> {
+    let rechecked = |p: usize| full.get(p).and_then(Option::as_ref);
+    let known = |p: usize| rechecked(p).or_else(|| screen.get(p));
     moves
         .iter()
         .enumerate()
         .map(|(ply, played)| {
             let at = after_position(screen, ply);
-            let rechecked = (
-                full.get(ply).and_then(Option::as_ref),
-                full.get(at).and_then(Option::as_ref),
-            );
-            let (before, after, sims) = match rechecked {
-                (Some(before), Some(after)) => (before, Some(after), scheme.full),
-                _ => (screen.get(ply)?, screen.get(at), scheme.screen),
-            };
-            let Searched::Position(before) = before else {
+            let Searched::Position(before) = known(ply)? else {
                 return None;
             };
-            let after = kept(after, ply, at)?;
+            let after = kept(known(at), ply, at)?;
+            let sims = if rechecked(ply).is_some() && rechecked(at).is_some() {
+                scheme.full
+            } else {
+                scheme.screen
+            };
             let mut line: Vec<String> = before.line.iter().take(MAX_EVAL_LINE).cloned().collect();
             if line.first() != Some(&before.best) {
                 line = vec![before.best.clone()];
@@ -159,22 +177,76 @@ mod tests {
     fn a_move_that_loses_enough_is_rechecked_with_both_of_its_positions() {
         let mv = moves(&["wL", "bG1 wL/"]);
         // White keeps 100 - 45 = 55 of 65: a 10 point drop.
-        let screen = vec![pos(65.0, "wP"), pos(45.0, "bP wL/"), pos(50.0, "wM /wL")];
-        assert_eq!(positions_to_recheck(&mv, &screen, 2.0), vec![0, 1]);
+        let screen = vec![pos(65.0, "wP"), pos(45.0, "bP wL/"), pos(54.0, "wM /wL")];
+        assert_eq!(positions_to_recheck(&mv, &screen, &[], 2.0), vec![0, 1]);
     }
 
     #[test]
-    fn the_engines_own_choice_is_never_rechecked() {
+    fn a_swing_too_small_to_grade_is_not_rechecked_on_the_engines_own_choice() {
         let mv = moves(&["wL"]);
-        let screen = vec![pos(65.0, "wL"), pos(10.0, "bP wL/")];
-        assert!(positions_to_recheck(&mv, &screen, 2.0).is_empty());
+        // 65 before, 100 - 39 = 61 kept.
+        let screen = vec![pos(65.0, "wL"), pos(39.0, "bP wL/")];
+        assert!(positions_to_recheck(&mv, &screen, &[], 2.0).is_empty());
+    }
+
+    #[test]
+    fn a_swing_the_size_of_an_inaccuracy_that_no_mark_could_show_is_rechecked() {
+        let mv = moves(&["wL"]);
+        // The engine's own choice losing 5 (65 to 100 - 40), and a move gaining 5.
+        let own = vec![pos(65.0, "wL"), pos(40.0, "bP wL/")];
+        assert_eq!(positions_to_recheck(&mv, &own, &[], 2.0), vec![0, 1]);
+        let gain = vec![pos(65.0, "wP"), pos(30.0, "bP wL/")];
+        assert_eq!(positions_to_recheck(&mv, &gain, &[], 2.0), vec![0, 1]);
     }
 
     #[test]
     fn a_small_drop_is_not_rechecked() {
         let mv = moves(&["wL"]);
         let screen = vec![pos(65.0, "wP"), pos(36.0, "bP wL/")];
-        assert!(positions_to_recheck(&mv, &screen, 2.0).is_empty());
+        assert!(positions_to_recheck(&mv, &screen, &[], 2.0).is_empty());
+    }
+
+    /// Moves 28 to 32 of a local game, with a 64-sim screen and 800-sim searches.
+    /// The screen misjudged the positions after moves 28 and 30, so it saw White's
+    /// 31st move gain 27 and Black's 32nd, its own choice, lose 66, and graded neither.
+    #[test]
+    fn a_misjudged_position_is_followed_back_to_the_move_that_lost_the_game() {
+        let mv = moves(&[r"bA2 bA1\", r"wA1 wM\", r"bG2 bB1\", r"wL bQ\", r"bG2 \wQ"]);
+        let screen = vec![
+            pos(99.2, "bM -bB1"),
+            pos(0.2, "wA1 /bM"),
+            pos(96.2, r"bL bB1\"),
+            pos(1.3, "wA3 /bG2"),
+            pos(71.4, r"bG2 \wQ"),
+            pos(94.8, r"wA3 \bQ"),
+        ];
+        let at_800 = [
+            pos(99.95, "bM -bB1"),
+            pos(21.5, r"wA1 wM\"),
+            pos(83.3, "bG1 wA1-"),
+            pos(86.0, r"wL bQ\"),
+            pos(18.3, "bA2 wB2-"),
+            pos(97.0, "wA3 -wA2"),
+        ];
+        let mut full = unchecked(screen.len());
+        let mut passes = Vec::new();
+        loop {
+            let recheck = positions_to_recheck(&mv, &screen, &full, 2.0);
+            if recheck.is_empty() {
+                break;
+            }
+            for &p in &recheck {
+                full[p] = Some(at_800[p].clone());
+            }
+            passes.push(recheck);
+        }
+        assert_eq!(passes, vec![vec![3, 4, 5], vec![2], vec![1], vec![0]]);
+        let grades: Vec<_> = assemble(&mv, &screen, &full, &SCHEME)
+            .iter()
+            .map(|eval| eval.as_ref().unwrap().grade())
+            .collect();
+        let blunder = Some(shared_types::Grade::Blunder);
+        assert_eq!(grades, vec![blunder, None, blunder, None, blunder]);
     }
 
     #[test]
@@ -192,7 +264,7 @@ mod tests {
     fn a_move_that_loses_the_game_on_the_spot_is_a_blunder() {
         let mv = moves(&["wB1 wQ/"]);
         let screen = vec![pos(70.0, "wA1 bQ/"), over(100.0)];
-        assert_eq!(positions_to_recheck(&mv, &screen, 2.0), vec![0, 1]);
+        assert_eq!(positions_to_recheck(&mv, &screen, &[], 2.0), vec![0, 1]);
         let result = assemble(&mv, &screen, &unchecked(2), &SCHEME);
         let eval = result[0].as_ref().unwrap();
         assert_eq!(eval.after, 0.0);
@@ -215,12 +287,12 @@ mod tests {
             pos(75.0, "wA1 bQ-"),
             Searched::OnlyPass,
             pos(60.0, "wG1 -wL"),
-            pos(45.0, "x"),
+            pos(42.0, "x"),
         ];
         let result = assemble(&mv, &screen, &unchecked(4), &SCHEME);
         assert_eq!(result[0].as_ref().unwrap().after, 60.0);
         assert_eq!(result[1], None, "the pass itself is not judged");
-        assert_eq!(positions_to_recheck(&mv, &screen, 2.0), vec![0, 2]);
+        assert_eq!(positions_to_recheck(&mv, &screen, &[], 2.0), vec![0, 2]);
     }
 
     #[test]
@@ -242,7 +314,7 @@ mod tests {
         let mv = moves(&["wA1 bQ/"]);
         let screen = vec![pos(75.0, "wA1 bQ-"), Searched::OnlyPass];
         assert_eq!(assemble(&mv, &screen, &unchecked(2), &SCHEME), vec![None]);
-        assert!(positions_to_recheck(&mv, &screen, 2.0).is_empty());
+        assert!(positions_to_recheck(&mv, &screen, &[], 2.0).is_empty());
     }
 
     #[test]
@@ -254,9 +326,10 @@ mod tests {
 
         let first = result[0].as_ref().unwrap();
         assert_eq!((first.before, first.after, first.sims), (64.0, 52.0, 800));
-        // The second move's after-position only has a screen search, so it stays at 50 sims.
+        // The second move's after-position only has a screen search, so it counts as 50 sims,
+        // but it starts from where the first move's full search left the game.
         let second = result[1].as_ref().unwrap();
-        assert_eq!((second.before, second.after, second.sims), (45.0, 50.0, 50));
+        assert_eq!((second.before, second.after, second.sims), (48.0, 50.0, 50));
     }
 
     #[test]

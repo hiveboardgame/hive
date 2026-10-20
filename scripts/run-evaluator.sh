@@ -20,7 +20,7 @@ set +a
 export HIVE_URL="${HIVE_URL:-http://localhost:3999}"
 
 # The site and deploys come first: the build stays below deploy.sh's nice 10, and the worker,
-# with the engine and eval servers it starts, runs at the bottom.
+# with the engine processes it starts, runs at the bottom.
 nice -n 15 cargo build --release -p hive-evaluator
 exec nice -n 19 "${CARGO_TARGET_DIR:-.cargo/target}/release/hive-evaluator" \
     --worker "${EVAL_WORKER_NAME:-prod-1}"

@@ -14,7 +14,7 @@ use std::{
 };
 
 /// Share of the reported progress that the screen pass stands for. The screen searches every
-/// position at a sixteenth of the sims, but a full-sims recheck covers only part of them.
+/// position with a fraction of the budget, but a full recheck covers only part of them.
 const SCREEN_SHARE: f64 = 0.2;
 
 #[derive(Default)]
@@ -48,7 +48,7 @@ impl Progress {
     }
 }
 
-/// Searches `plies` at `sims`, spread over all engines; the final position is scored by
+/// Searches `plies` with `budget`, spread over all engines; the final position is scored by
 /// `ending` instead when the game ended on the board. The engines come back even when the pass
 /// fails, so the caller decides whether to restart them.
 async fn run_pass(
@@ -57,7 +57,7 @@ async fn run_pass(
     moves: &Arc<Vec<String>>,
     ending: Option<f32>,
     plies: Vec<usize>,
-    sims: u32,
+    budget: u32,
     progress: &Arc<Progress>,
 ) -> (Vec<Engine>, Result<HashMap<usize, Searched>>) {
     let plies = Arc::new(plies);
@@ -82,7 +82,7 @@ async fn run_pass(
                 };
                 let searched = match ending.filter(|_| ply == moves.len()) {
                     Some(winprob) => Ok(Searched::GameOver { winprob }),
-                    None => engine.search(&game_type, &moves, ply, sims).await,
+                    None => engine.search(&game_type, &moves, ply, budget).await,
                 };
                 match searched {
                     Ok(searched) => {
@@ -156,22 +156,35 @@ pub async fn evaluate(
         Err(e) => return (engines, Err(e)),
     };
 
-    let recheck = positions_to_recheck(&moves, &screen, scheme.threshold);
-    progress.start_pass(recheck.len(), true);
-    let (engines, full) = run_pass(
-        engines,
-        game_type,
-        &moves,
-        ending,
-        recheck,
-        scheme.full,
-        progress,
-    )
-    .await;
-    let full: Vec<Option<Searched>> = match full {
-        Ok(mut found) => (0..positions).map(|p| found.remove(&p)).collect(),
-        Err(e) => return (engines, Err(e)),
-    };
+    let mut engines = engines;
+    let mut full: Vec<Option<Searched>> = vec![None; positions];
+    progress.start_pass(0, true);
+    loop {
+        let recheck = positions_to_recheck(&moves, &screen, &full, scheme.threshold);
+        if recheck.is_empty() {
+            break;
+        }
+        progress.total.fetch_add(recheck.len(), Ordering::Relaxed);
+        let (back, found) = run_pass(
+            engines,
+            game_type,
+            &moves,
+            ending,
+            recheck,
+            scheme.full,
+            progress,
+        )
+        .await;
+        engines = back;
+        match found {
+            Ok(found) => {
+                for (p, searched) in found {
+                    full[p] = Some(searched);
+                }
+            }
+            Err(e) => return (engines, Err(e)),
+        }
+    }
 
     let result = assemble(&moves, &screen, &full, scheme);
     (engines, Ok(result))

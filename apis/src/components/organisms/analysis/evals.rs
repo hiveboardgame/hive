@@ -1,5 +1,12 @@
 use crate::{
-    components::atoms::grade_mark::{grade_fill_class, grade_name, grade_plural, GradeMark},
+    components::atoms::grade_mark::{
+        grade_fill_class,
+        grade_name,
+        grade_on_fill_class,
+        grade_plural,
+        grade_stroke_class,
+        GradeMark,
+    },
     functions::game_evals::{cancel_game_eval, request_game_eval},
     hooks::{
         history_nav::{key_event_in_text_field, should_ignore_history_key_event},
@@ -21,7 +28,7 @@ use leptos::{
 };
 use leptos_router::hooks::use_query_map;
 use leptos_use::{use_event_listener, use_window};
-use shared_types::{eval_unavailable_reason, EvalResult, GameEvalView, GameId, Grade};
+use shared_types::{eval_unavailable_reason, EvalResult, GameEvalView, GameId, Grade, MoveEval};
 use std::collections::HashMap;
 use wasm_bindgen::JsCast;
 use web_sys::KeyboardEvent;
@@ -78,7 +85,8 @@ pub fn Evals() -> impl IntoView {
         })
     });
     let logged_in = Memo::new(move |_| auth.user.with(Option::is_some));
-    let shown_game = move || game_state.game_id().get_untracked();
+    // An answer can come after leaving the page, when its store is gone.
+    let shown_game = move || game_state.game_id().try_get_untracked().flatten();
     // The board may have moved on to another game by the time the answer comes.
     let answer = move |asked: GameId, answer: Result<GameEvalView, ServerFnError>| {
         if shown_game().as_ref() == Some(&asked) {
@@ -446,14 +454,25 @@ fn nearest_mark(marks: &[usize], moves: usize, fraction: f64) -> Option<usize> {
         .min_by(|a, b| (*a as f64 - at).abs().total_cmp(&(*b as f64 - at).abs()))
 }
 
+/// The bar for a move that lost `loss` points runs from the curve after the move back to where
+/// the mover would have stood with the engine's move, so a 100-point blunder spans the graph.
+fn loss_bar(after_y: f32, loss: f32, white_moved: bool, height: f32) -> (f32, f32) {
+    let length = loss / 100.0 * height;
+    let best_y = if white_moved {
+        after_y - length
+    } else {
+        after_y + length
+    };
+    (after_y, best_y.clamp(0.0, height))
+}
+
 const GRAPH_WIDTH: f32 = 300.0;
 const GRAPH_HEIGHT: f32 = 64.0;
-const TICK_HALF: f32 = 9.0;
 
 #[component]
 fn WinGraph(
     curve: Vec<f32>,
-    marks: Vec<(usize, Grade)>,
+    marks: Vec<(usize, Grade, f32)>,
     selected: Memo<Option<usize>>,
     on_pick: Callback<usize>,
 ) -> impl IntoView {
@@ -466,8 +485,13 @@ fn WinGraph(
         .join(" ");
     let area = format!("M0,{GRAPH_HEIGHT} L{line} L{GRAPH_WIDTH},{GRAPH_HEIGHT} Z");
     let x_of = move |ply: usize| (ply + 1) as f32 / moves.max(1) as f32 * GRAPH_WIDTH;
-    let mark_plies = StoredValue::new(marks.iter().map(|(ply, _)| *ply).collect::<Vec<_>>());
-    let grades = StoredValue::new(marks.clone());
+    let mark_plies = StoredValue::new(marks.iter().map(|(ply, ..)| *ply).collect::<Vec<_>>());
+    let grades = StoredValue::new(
+        marks
+            .iter()
+            .map(|(ply, grade, _)| (*ply, *grade))
+            .collect::<Vec<_>>(),
+    );
     let curve = StoredValue::new(curve);
     // The position after this many moves, under the pointer.
     let hovered = RwSignal::new(None::<usize>);
@@ -533,23 +557,18 @@ fn WinGraph(
     };
     let ticks = marks
         .into_iter()
-        .map(|(ply, grade)| {
+        .map(|(ply, grade, loss)| {
             let x = x_of(ply);
-            let y = points.get(ply + 1).map_or(GRAPH_HEIGHT / 2.0, |(_, y)| *y);
-            let colour = match grade {
-                Grade::Inaccuracy => "#facc15",
-                Grade::Mistake => "#f97316",
-                Grade::Blunder => "#dc2626",
-            };
+            let after_y = points.get(ply + 1).map_or(GRAPH_HEIGHT / 2.0, |(_, y)| *y);
+            let (y1, y2) = loss_bar(after_y, loss, ply % 2 == 0, GRAPH_HEIGHT);
             view! {
                 <line
+                    class=grade_stroke_class(grade)
                     x1=x
                     x2=x
-                    y1=(y - TICK_HALF).max(0.0)
-                    y2=(y + TICK_HALF).min(GRAPH_HEIGHT)
-                    stroke=colour
+                    y1=y1
+                    y2=y2
                     stroke-width="3"
-                    stroke-linecap="round"
                     vector-effect="non-scaling-stroke"
                 />
             }
@@ -691,6 +710,17 @@ pub fn EvalBoardNote() -> impl IntoView {
     }
 }
 
+fn notation_headline(ply: usize, eval: &MoveEval, grade: Grade) -> String {
+    format!(
+        "{}. {} {} {}  ·  better {}",
+        ply + 1,
+        if ply % 2 == 0 { "White" } else { "Black" },
+        eval.played,
+        grade.glyph(),
+        eval.best,
+    )
+}
+
 #[component]
 fn SideHex(white: bool) -> impl IntoView {
     let name = if white { "White" } else { "Black" };
@@ -722,11 +752,11 @@ fn EvalDone(result: EvalResult) -> impl IntoView {
     let selected_ply = Memo::new(move |_| analysis.store.selected_game_ply());
     let filter = RwSignal::new(Filter::default());
     let Config(config, set_config) = expect_context::<Config>();
-    let notation = move || config.with(|c| c.eval_notation);
+    let notation = move || config.with(|c| !c.eval_words);
     let set_notation = move |on: bool| {
         set_config.update(|c| {
             if let Some(c) = c {
-                c.eval_notation = on;
+                c.eval_words = !on;
             }
         })
     };
@@ -763,7 +793,7 @@ fn EvalDone(result: EvalResult) -> impl IntoView {
             })
             .unwrap_or_else(|| ("White".to_string(), "Black".to_string()))
     });
-    let graded: Vec<(usize, shared_types::MoveEval, Grade)> = result
+    let graded: Vec<(usize, MoveEval, Grade)> = result
         .moves
         .iter()
         .enumerate()
@@ -911,21 +941,22 @@ fn EvalDone(result: EvalResult) -> impl IntoView {
         let note = match line_at.get() {
             Some((ply, at)) if at > 0 => {
                 let line = line_of(ply);
-                line.get(at - 1).map(|(words, _)| {
+                line.get(at - 1).map(|(words, mv)| {
                     format!(
-                        "Engine's line instead of move {}, {at} of {}: {words}",
+                        "Engine's line instead of move {}, {at} of {}: {}",
                         ply + 1,
                         line.len(),
+                        if notation() { mv } else { words },
                     )
                 })
             }
             _ => selected_ply.get().and_then(|ply| {
-                let grade = evals.move_eval(ply)?.grade()?;
-                Some(
-                    wording(ply)
-                        .map(|w| w.headline(ply + 1, grade))
-                        .unwrap_or_else(|| format!("Move {}: {}", ply + 1, grade.glyph())),
-                )
+                let eval = evals.move_eval(ply)?;
+                let grade = eval.grade()?;
+                Some(match wording(ply).filter(|_| !notation()) {
+                    Some(w) => w.headline(ply + 1, grade),
+                    None => notation_headline(ply, &eval, grade),
+                })
             }),
         };
         evals.note.set(note);
@@ -1076,7 +1107,7 @@ fn EvalDone(result: EvalResult) -> impl IntoView {
     let graph = view! {
         <WinGraph
             curve=curve
-            marks=graded.iter().map(|(ply, _, grade)| (*ply, *grade)).collect()
+            marks=graded.iter().map(|(ply, eval, grade)| (*ply, *grade, eval.loss())).collect()
             selected=selected_ply
             on_pick=Callback::new(move |ply| {
                 pick(ply);
@@ -1183,7 +1214,7 @@ fn EvalDone(result: EvalResult) -> impl IntoView {
         };
         let headline = wording(ply)
             .map(|w| w.headline(ply + 1, grade))
-            .unwrap_or_else(|| format!("Move {}: {} {}", ply + 1, eval.played, grade.glyph()));
+            .unwrap_or_else(|| notation_headline(ply, &eval, grade));
         let line_text = StoredValue::new(line_of(ply));
         let line_len = line_text.with_value(Vec::len);
         let show_step = move |steps: usize| show_line_step(ply, steps);
@@ -1192,14 +1223,7 @@ fn EvalDone(result: EvalResult) -> impl IntoView {
             <div class="flex flex-col gap-1.5">
                 <p class:hidden=notation>{headline}</p>
                 <p class="font-mono" class:hidden=move || !notation()>
-                    {format!(
-                        "{}. {} {} {}  ·  better {}",
-                        ply + 1,
-                        if ply % 2 == 0 { "White" } else { "Black" },
-                        eval.played,
-                        grade.glyph(),
-                        eval.best,
-                    )}
+                    {notation_headline(ply, &eval, grade)}
                 </p>
                 <Show
                     when=move || in_line().is_some()
@@ -1325,11 +1349,13 @@ fn EvalDone(result: EvalResult) -> impl IntoView {
             };
             let selected = move || selected_ply.get() == Some(ply);
             let white = ply % 2 == 0;
+            // Floored, so a figure never reaches the next grade's range: 9.7 is still ?!.
+            let loss = eval.loss().floor() as u32;
             view! {
                 <li data-eval-ply=ply class:hidden=move || !filter.with(|f| f.shows(ply, grade))>
                     <button
                         type="button"
-                        class="flex flex-col gap-0.5 py-1.5 px-2 w-full text-left rounded transition-colors dark:hover:bg-pillbug-teal/15 hover:bg-blue-light/70"
+                        class="flex gap-2 items-start py-1.5 px-2 w-full text-sm text-left rounded transition-colors dark:hover:bg-pillbug-teal/15 hover:bg-blue-light/70"
                         class=("bg-orange-twilight/40", selected)
                         aria-current=move || selected().then_some("true")
                         on:click=move |_| {
@@ -1337,10 +1363,10 @@ fn EvalDone(result: EvalResult) -> impl IntoView {
                             bring_board_into_view();
                         }
                     >
-                        <span class="flex flex-wrap gap-x-1.5 items-baseline text-sm">
-                            <span class="self-center">
-                                <SideHex white />
-                            </span>
+                        <span class="flex items-center h-5 shrink-0">
+                            <SideHex white />
+                        </span>
+                        <span class="flex flex-col flex-1 gap-0.5 min-w-0">
                             <span class="font-semibold">
                                 {format!("{}. ", ply + 1)}
                                 <span class:hidden=notation>{played_words}</span>
@@ -1348,21 +1374,34 @@ fn EvalDone(result: EvalResult) -> impl IntoView {
                                     {eval.played.clone()}
                                 </span> " " <GradeMark grade />
                             </span>
+                            <span>
+                                "Better: "
+                                <span
+                                    class="font-semibold text-green-700 dark:text-green-400"
+                                    class:hidden=notation
+                                >
+                                    {best_words}
+                                </span>
+                                <span
+                                    class="font-mono font-semibold text-green-700 dark:text-green-400"
+                                    class:hidden=move || !notation()
+                                >
+                                    {eval.best.clone()}
+                                </span>
+                            </span>
                         </span>
-                        <span class="text-sm">
-                            "Better: "
-                            <span
-                                class="font-semibold text-green-700 dark:text-green-400"
-                                class:hidden=notation
-                            >
-                                {best_words}
-                            </span>
-                            <span
-                                class="font-mono font-semibold text-green-700 dark:text-green-400"
-                                class:hidden=move || !notation()
-                            >
-                                {eval.best.clone()}
-                            </span>
+                        <span
+                            class=format!(
+                                "px-1 mt-0.5 text-xs font-semibold tabular-nums leading-4 rounded shrink-0 {} {}",
+                                grade_fill_class(grade),
+                                grade_on_fill_class(grade),
+                            )
+                            title=format!(
+                                "{} gave away {loss}% win chance with this move",
+                                if white { "White" } else { "Black" },
+                            )
+                        >
+                            {format!("−{loss}%")}
                         </span>
                     </button>
                 </li>
@@ -1473,6 +1512,22 @@ mod tests {
     fn the_curve_spans_the_box_with_white_ahead_at_the_top() {
         let points = curve_points(&[50.0, 100.0, 0.0], 300.0, 64.0);
         assert_eq!(points, vec![(0.0, 32.0), (150.0, 0.0), (300.0, 64.0)]);
+    }
+
+    #[test]
+    fn a_bar_is_as_long_as_the_loss_and_points_back_to_the_movers_side() {
+        assert_eq!(
+            loss_bar(64.0, 100.0, true, 64.0),
+            (64.0, 0.0),
+            "a 100-point blunder spans the graph"
+        );
+        assert_eq!(loss_bar(32.0, 25.0, true, 64.0), (32.0, 16.0));
+        assert_eq!(
+            loss_bar(32.0, 25.0, false, 64.0),
+            (32.0, 48.0),
+            "Black's loss pushes the curve up, so its bar reaches down"
+        );
+        assert_eq!(loss_bar(10.0, 50.0, true, 64.0), (10.0, 0.0));
     }
 
     #[test]

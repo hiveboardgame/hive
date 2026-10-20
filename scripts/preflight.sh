@@ -110,7 +110,7 @@ EVAL_ENV="$HOME/.config/hive-evaluator/env"
 if [ -r "$EVAL_ENV" ]; then
     pass "~/.config/hive-evaluator/env exists"
     # A subshell, so the evaluator's settings never leak into the checks after this one.
-    read -r SB_DIR SB_NET SB_PY < <(set -a; . "$EVAL_ENV"; echo "${STOCKBEE_DIR:-} ${STOCKBEE_NET:-stockbee.pt} ${STOCKBEE_PYTHON:-python3}")
+    ENGINES_FILE=$(set -a; . "$EVAL_ENV"; echo "${EVAL_ENGINES_FILE:-$HOME/.config/hive-evaluator/engines.toml}")
     # Prints nothing for a missing or empty token, so two of those never count as a match.
     token_hash() {
         local token
@@ -124,18 +124,7 @@ if [ -r "$EVAL_ENV" ]; then
     else
         warn "evaluator token is missing or differs from prod.env's EVAL_WORKER_TOKEN"
     fi
-    if [ -n "$SB_DIR" ]; then
-        check "StockBee engine built" test -x "$SB_DIR/build/stockbee"
-        check "StockBee featurizer built" test -r "$SB_DIR/build/libgraph_features.so"
-        check "StockBee net present" test -r "$SB_DIR/$SB_NET"
-        check "StockBee eval server present" test -r "$SB_DIR/tools/az_eval_server.py"
-        grep -q 'weights_only=False' "$SB_DIR/tools/az_eval_server.py" 2>/dev/null \
-            && fail "az_eval_server.py loads the net with weights_only=False: a swapped net could run code" \
-            || pass "the eval server loads the net as plain weights"
-        check "evaluator python has torch and numpy" "$SB_PY" -c 'import torch, numpy'
-    else
-        warn "evaluator env sets no STOCKBEE_DIR"
-    fi
+    check "evaluator engines file $ENGINES_FILE exists" test -r "$ENGINES_FILE"
 else
     warn "no ~/.config/hive-evaluator/env: engine evals are off (scripts/README.md, Evals)"
 fi

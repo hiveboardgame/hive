@@ -6,22 +6,10 @@ use crate::{
     },
     hooks::recent_evals::RecentEvalsFeed,
 };
-use chrono::{DateTime, Utc};
 use leptos::prelude::*;
 use shared_types::{Grade, RecentEval};
 
-fn ago(then: DateTime<Utc>, now: DateTime<Utc>) -> String {
-    let minutes = (now - then).num_minutes().max(0);
-    match minutes {
-        0 => "just now".to_string(),
-        1..=59 => format!("{minutes} min ago"),
-        60..=1439 => format!("{} h ago", minutes / 60),
-        _ => format!("{} d ago", minutes / 1440),
-    }
-}
-
-/// Finished engine evals and who asked for them, so people see the feature and see that the
-/// queue is shared.
+/// Finished engine evals, so people see the feature.
 #[component]
 pub fn RecentEvals(evals: RecentEvalsFeed) -> impl IntoView {
     view! {
@@ -40,7 +28,6 @@ pub fn RecentEvals(evals: RecentEvalsFeed) -> impl IntoView {
                             .flatten()
                             .map(|result| match result {
                                 Ok(evals) => {
-                                    let now = Utc::now();
                                     let in_line = evals.in_line;
                                     let rows = if evals.recent.is_empty() {
                                         view! {
@@ -51,7 +38,7 @@ pub fn RecentEvals(evals: RecentEvalsFeed) -> impl IntoView {
                                         evals
                                             .recent
                                             .into_iter()
-                                            .map(|eval| view! { <RecentEvalRow eval now /> })
+                                            .map(|eval| view! { <RecentEvalRow eval /> })
                                             .collect_view()
                                             .into_any()
                                     };
@@ -136,19 +123,13 @@ fn marks_text([inaccuracies, mistakes, blunders]: [usize; 3]) -> Option<String> 
 }
 
 #[component]
-fn RecentEvalRow(eval: RecentEval, now: DateTime<Utc>) -> impl IntoView {
-    let asked = match (eval.automatic, eval.requested_by) {
-        (true, _) => "evaluated automagically".to_string(),
-        (false, Some(name)) => format!("requested by {name}"),
-        (false, None) => "requested by a deleted account".to_string(),
-    };
+fn RecentEvalRow(eval: RecentEval) -> impl IntoView {
     let casual = eval.white_rating.is_none() && eval.black_rating.is_none();
     let details = format!(
-        "{}{} · {} moves · {}",
+        "{}{} · {} moves",
         if casual { "Casual · " } else { "" },
         result_text(&eval.game_status, &eval.conclusion),
         eval.moves,
-        ago(eval.finished_at, now),
     );
     let worst = [Grade::Blunder, Grade::Mistake, Grade::Inaccuracy]
         .into_iter()
@@ -185,7 +166,6 @@ fn RecentEvalRow(eval: RecentEval, now: DateTime<Utc>) -> impl IntoView {
                         }
                     })} {marks}
             </span>
-            <span class="text-xs italic opacity-60 truncate">{asked}</span>
         </a>
     }
 }
@@ -193,16 +173,6 @@ fn RecentEvalRow(eval: RecentEval, now: DateTime<Utc>) -> impl IntoView {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::Duration;
-
-    #[test]
-    fn ages_read_in_the_largest_whole_unit() {
-        let now = Utc::now();
-        assert_eq!(ago(now - Duration::seconds(30), now), "just now");
-        assert_eq!(ago(now - Duration::minutes(5), now), "5 min ago");
-        assert_eq!(ago(now - Duration::minutes(150), now), "2 h ago");
-        assert_eq!(ago(now - Duration::days(3), now), "3 d ago");
-    }
 
     #[test]
     fn results_read_as_a_sentence() {
@@ -236,11 +206,5 @@ mod tests {
     fn ratings_are_shown_whole_and_only_when_known() {
         assert_eq!(player("OrdepCubik", Some(2115.92)), "OrdepCubik (2115)");
         assert_eq!(player("guest", None), "guest");
-    }
-
-    #[test]
-    fn a_clock_running_behind_never_shows_a_future_time() {
-        let now = Utc::now();
-        assert_eq!(ago(now + Duration::minutes(2), now), "just now");
     }
 }
