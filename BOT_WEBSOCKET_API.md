@@ -105,9 +105,9 @@ A refused request comes back as an `Err`:
 | `{"Err": {"Unauthorized": {"reason": "..."}}}` | you are not allowed to do that, usually because the socket is not authenticated |
 
 The `reason` names what went wrong when you can act on it: an illegal move, a move when it is not
-your turn, a game that is over or does not exist, notation the server cannot parse, a challenge
-that breaks the rules below. When the failure is on our side the reason is
-`"Unable to complete request"`, and retrying later is the only fix.
+your turn, a `PlayAt` for a turn the game has moved past, a game that is over or does not exist,
+notation the server cannot parse, a challenge that breaks the rules below. When the failure is on
+our side the reason is `"Unable to complete request"`, and retrying later is the only fix.
 
 A few refusals arrive as an ordinary message instead, `{"Ok": {"Error": "..."}}`: authentication
 (above), accepting a challenge outside its rating band, and challenges `DeleteMany` could not
@@ -120,6 +120,7 @@ delete.
 | what | frame |
 |---|---|
 | play a move | `{"Game": {"game_id": "<nanoid>", "action": {"Play": "wA1 -bQ"}}}` |
+| play a move, only if the game is still at that turn | `{"Game": {"game_id": "<nanoid>", "action": {"PlayAt": {"turn": 12, "notation": "wA1 -bQ"}}}}` |
 | resign, offer/accept draw, takeback | `{"Game": {"game_id": "<nanoid>", "action": {"Control": {"Resign": "White"}}}}` |
 | subscribe to a game's updates | `{"Game": {"game_id": "<nanoid>", "action": "Join"}}` |
 | stop receiving them | `{"Game": {"game_id": "<nanoid>", "action": "Unwatch"}}` |
@@ -127,6 +128,13 @@ delete.
 Moves use UHP notation, the same string the `piece_pos` field takes in
 `POST /api/v1/bot/games/play`. The server resolves it against the board it replays. On the first
 move of a game, send just the piece (`"wA1"`).
+
+`PlayAt` is `Play` with a guard, and the better choice. Its `turn` is the `turn` field of the game
+you are answering, which counts the turns played so far. If the game has moved past that turn, the
+move is refused instead of being played on a position your engine never saw. That happens when a
+move goes out twice, say once on a connection that dropped and again after reconnecting, and the
+opponent replied in between. `Play` has no such guard: the server plays the move on whatever
+position the game is in by then, if it is legal there.
 
 The browser client sends a structured `Turn` action instead. Do not copy it. The browser runs a
 copy of the engine in WebAssembly, so it knows the board coordinates; a bot does not, and those

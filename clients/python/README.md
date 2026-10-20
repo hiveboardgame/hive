@@ -22,7 +22,7 @@ async def main():
             if game is None:
                 continue
             # your engine decides; then:
-            # await bot.play(game_id, "wA1 -bQ")
+            # await bot.play(game["game_id"], "wA1 -bQ", turn=game["game"]["turn"])
 
 asyncio.run(main())
 ```

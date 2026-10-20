@@ -116,6 +116,16 @@ mod tests {
             }),
             r#"{"Game":{"game_id":"abc","action":{"Play":"wA1 -bQ"}}}"#
         );
+        assert_eq!(
+            json(&ClientRequest::Game {
+                game_id: GameId("abc".to_string()),
+                action: crate::common::GameAction::PlayAt {
+                    turn: 12,
+                    notation: "wA1 -bQ".to_string(),
+                },
+            }),
+            r#"{"Game":{"game_id":"abc","action":{"PlayAt":{"turn":12,"notation":"wA1 -bQ"}}}}"#
+        );
     }
 
     /// The busiest frame a bot sends, and the one the Python client hard-codes.

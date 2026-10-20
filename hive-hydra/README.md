@@ -6,7 +6,9 @@
 
 Hive-hydra integrates any number of AIs with hivegame.com.
 
-It communicates with hivegame.com using the Bot REST API and runs and communicates with multiple AIs (nokamute, for example) via UHP (Universal Hive Protocol) on standard I/O.
+It keeps one WebSocket per bot open to hivegame.com (see [`BOT_WEBSOCKET_API.md`](../BOT_WEBSOCKET_API.md)), so the server pushes each opponent move and direct challenge as it happens. Fetching a bot's token is the only HTTP request. For every turn it runs an AI (nokamute, for example) and talks to it via UHP (Universal Hive Protocol) on standard I/O.
+
+The WebSocket address is derived from `base_url`: `http://host` becomes `ws://host/ws/?format=json`, `https://host` becomes `wss://host/ws/?format=json`.
 
 ## Configuration
 

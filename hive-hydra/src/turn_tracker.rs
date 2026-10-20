@@ -15,6 +15,7 @@ pub trait TurnTracking {
     async fn tracked(&self, hash: u64) -> bool;
     async fn processing(&self, hash: u64);
     async fn processed(&self, hash: u64);
+    async fn forget_processed(&self);
     async fn cleanup(&self);
 }
 
@@ -54,6 +55,10 @@ impl TurnTracking for TurnTracker {
             .lock()
             .await
             .insert(hash, Instant::now());
+    }
+
+    async fn forget_processed(&self) {
+        self.processed_turns.lock().await.clear();
     }
 
     async fn cleanup(&self) {

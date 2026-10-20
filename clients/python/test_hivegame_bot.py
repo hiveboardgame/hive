@@ -45,6 +45,7 @@ def frames(bot):
 async def check_requests():
     bot = bot_with()
     await bot.play("abc", "wA1 -bQ")
+    await bot.play("abc", "wA1 -bQ", turn=12)
     await bot.control("abc", "Resign", "White")
     await bot.join("abc")
     await bot.get_game("abc")
@@ -67,6 +68,7 @@ async def check_requests():
 
     assert frames(bot) == [
         {"Game": {"game_id": "abc", "action": {"Play": "wA1 -bQ"}}},
+        {"Game": {"game_id": "abc", "action": {"PlayAt": {"turn": 12, "notation": "wA1 -bQ"}}}},
         {"Game": {"game_id": "abc", "action": {"Control": {"Resign": "White"}}}},
         {"Game": {"game_id": "abc", "action": "Join"}},
         {"GetGame": "abc"},

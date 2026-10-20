@@ -1,6 +1,7 @@
-use std::{
-    io::Write,
-    process::{Child, Command, Stdio},
+use std::process::Stdio;
+use tokio::{
+    io::AsyncWriteExt,
+    process::{Child, Command},
 };
 use tracing::info;
 
@@ -131,28 +132,15 @@ pub async fn run_commands(
     game_string: &str,
     bestmove_args: &str,
 ) -> Result<String, AiError> {
-    let stdin = child.stdin.take().ok_or_else(|| {
+    let mut stdin = child.stdin.take().ok_or_else(|| {
         std::io::Error::new(std::io::ErrorKind::BrokenPipe, "Failed to open stdin")
     })?;
-
-    let mut stdin = stdin;
-
-    // Send newgame command
-    let newgame_command = format!("newgame {game_string}\n");
-
-    // debug!("Sending newgame command: {}", newgame_command);
-
-    stdin.write_all(newgame_command.as_bytes())?;
-
-    // Send bestmove command
-    let bestmove_command = format!("bestmove {bestmove_args}\n");
-    stdin.write_all(bestmove_command.as_bytes())?;
-
-    // We're done with stdin, drop it explicitly to signal EOF to the child process
+    let commands = format!("newgame {game_string}\nbestmove {bestmove_args}\n");
+    stdin.write_all(commands.as_bytes()).await?;
+    // The engine only exits once its stdin is closed.
     drop(stdin);
 
-    // Read output
-    let output = child.wait_with_output()?;
+    let output = child.wait_with_output().await?;
     let stdout = String::from_utf8(output.stdout)?;
 
     Ok(parse_ai_output(&stdout)?)

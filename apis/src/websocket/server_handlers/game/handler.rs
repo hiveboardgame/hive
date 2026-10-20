@@ -57,9 +57,10 @@ impl GameActionHandler {
         })
     }
 
-    async fn turn(&self, input: TurnInput) -> Result<HandlerOutput> {
+    async fn turn(&self, input: TurnInput, expected_turn: Option<usize>) -> Result<HandlerOutput> {
         TurnHandler::new(
             input,
+            expected_turn,
             &self.game,
             &self.username,
             self.user_id,
@@ -87,8 +88,11 @@ impl GameActionHandler {
                 .handle()
                 .await?
             }
-            GameAction::Turn(turn) => self.turn(TurnInput::Structured(turn)).await?,
-            GameAction::Play(notation) => self.turn(TurnInput::Notation(notation)).await?,
+            GameAction::Turn(turn) => self.turn(TurnInput::Structured(turn), None).await?,
+            GameAction::Play(notation) => self.turn(TurnInput::Notation(notation), None).await?,
+            GameAction::PlayAt { turn, notation } => {
+                self.turn(TurnInput::Notation(notation), Some(turn)).await?
+            }
             GameAction::Control(control) => {
                 GameControlHandler::new(
                     &control,

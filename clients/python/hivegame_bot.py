@@ -138,9 +138,15 @@ class HiveBot:
     async def _game(self, game_id: str, action: Any) -> None:
         await self.send({"Game": {"game_id": game_id, "action": action}})
 
-    async def play(self, game_id: str, notation: str) -> None:
-        """UHP notation, e.g. `wA1 -bQ`. The first move of a game is just the piece."""
-        await self._game(game_id, {"Play": notation})
+    async def play(self, game_id: str, notation: str, turn: int | None = None) -> None:
+        """UHP notation, e.g. `wA1 -bQ`. The first move of a game is just the piece.
+
+        Pass the `turn` of the game you are answering, and the server refuses the move once
+        the game has moved past it, instead of playing it on a position you never saw."""
+        if turn is None:
+            await self._game(game_id, {"Play": notation})
+        else:
+            await self._game(game_id, {"PlayAt": {"turn": turn, "notation": notation}})
 
     async def control(self, game_id: str, control: str, color: str) -> None:
         """`control` is Resign, DrawOffer, DrawAccept, DrawReject, TakebackRequest,
