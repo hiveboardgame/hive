@@ -2,6 +2,7 @@
 const CACHE_PREFIX = 'hivegame-cache-';
 const CACHE_NAME = __HIVE_CACHE_NAME__;
 const ASSETS_TO_CACHE = __HIVE_ASSETS__;
+const CACHE_FIRST = __HIVE_CACHE_FIRST__;
 
 const CORE_ICONS = [
   '/assets/android-chrome-192x192.png',
@@ -55,7 +56,9 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(CACHE_NAME);
-      const critical = ASSETS_TO_CACHE.filter((a) => a.startsWith('/pkg/')).concat(CORE_ICONS);
+      const critical = CACHE_FIRST
+        ? ASSETS_TO_CACHE.filter((a) => a.startsWith('/pkg/')).concat(CORE_ICONS)
+        : CORE_ICONS;
       await Promise.all(
         critical.map((url) =>
           cache.add(url).catch((error) => console.warn('precache miss:', url, error))
@@ -170,11 +173,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  const isHashedAsset =
+  const isAppAsset =
     url.origin === self.location.origin &&
     (url.pathname.startsWith('/pkg/') || url.pathname.startsWith('/assets/'));
 
-  if (!isHashedAsset) {
+  if (!isAppAsset) {
+    return;
+  }
+
+  if (!CACHE_FIRST) {
+    // Without hashed file names a rebuild keeps the same URLs, so a cached copy may be an older build.
+    event.respondWith(fetch(request, { cache: 'no-cache' }));
     return;
   }
 
