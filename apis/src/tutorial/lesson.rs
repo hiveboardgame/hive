@@ -75,9 +75,16 @@ pub struct Step {
     pub small_arrows: bool,
     pub legal_arrows: Option<&'static str>,
     pub normal_moves_only: bool,
+    pub random_wrong_reply: bool,
+    pub route_hint_after: Option<u8>,
+    pub retry_after_moves: Option<u8>,
 }
 
 pub enum Reply {
+    RandomPreservingWin {
+        piece: &'static str,
+        to: &'static str,
+    },
     LearnerAgain,
     NextPlayer(hive_lib::Color),
     Opponent {
@@ -122,6 +129,9 @@ impl Step {
             small_arrows: false,
             legal_arrows: None,
             normal_moves_only: false,
+            random_wrong_reply: false,
+            route_hint_after: None,
+            retry_after_moves: None,
         }
     }
 
@@ -156,6 +166,9 @@ impl Step {
             small_arrows: false,
             legal_arrows: None,
             normal_moves_only: false,
+            random_wrong_reply: false,
+            route_hint_after: None,
+            retry_after_moves: None,
         }
     }
 
@@ -277,6 +290,22 @@ impl Step {
 
     pub const fn hint_after_moves(mut self, piece: &'static str, moves: u8) -> Self {
         self.hint_moves = Some((piece, moves));
+        self
+    }
+
+    pub const fn random_reply_preserving_win(mut self, piece: &'static str, to: &'static str) -> Self {
+        self.then = Reply::RandomPreservingWin { piece, to };
+        self
+    }
+
+    pub const fn random_reply_on_mistake(mut self) -> Self {
+        self.random_wrong_reply = true;
+        self
+    }
+
+    pub const fn guided_exploration(mut self, hint_after: u8, retry_after: u8) -> Self {
+        self.route_hint_after = Some(hint_after);
+        self.retry_after_moves = Some(retry_after);
         self
     }
 

@@ -78,7 +78,7 @@ fn ready_lessons_fill_in_every_hex_and_reply() {
     for lesson in lessons().filter(|lesson| !lesson.is_pending()) {
         for step in lesson.steps {
             match &step.goal {
-                Goal::Move { to, .. } | Goal::Travel { to, .. } | Goal::MoveExcept { except: to, .. } => {
+                Goal::Move { to, .. } | Goal::Lift { to, .. } | Goal::Travel { to, .. } | Goal::MoveExcept { except: to, .. } => {
                     assert!(!to.is_empty(), "{}: Move without a target", lesson.id)
                 }
                 Goal::Visit { hexes, .. } => {
@@ -92,7 +92,7 @@ fn ready_lessons_fill_in_every_hex_and_reply() {
                 Goal::Continue | Goal::MoveAny | Goal::PlaceAny | Goal::PlaceIn(_) | Goal::Explore { .. } | Goal::MoveSatisfying { .. } | Goal::MovePiece { .. } | Goal::Reach(_) => {}
             }
             match step.then {
-                Reply::LearnerAgain | Reply::NextPlayer(_) => {}
+                Reply::LearnerAgain | Reply::NextPlayer(_) | Reply::RandomPreservingWin { .. } => {}
                 Reply::Opponent { piece, to } => {
                     assert!(
                         !piece.is_empty() && !to.is_empty(),
@@ -636,7 +636,7 @@ fn step_specs(step: &Step) -> Vec<&'static str> {
     specs.extend(step.legal_arrows);
     match &step.goal {
         Goal::Continue | Goal::MoveAny | Goal::PlaceAny | Goal::PlaceIn(_) => {}
-        Goal::Move { piece, .. } | Goal::Travel { piece, .. } | Goal::MoveExcept { piece, .. } | Goal::Visit { piece, .. } => specs.push(*piece),
+        Goal::Move { piece, .. } | Goal::Lift { piece, .. } | Goal::Travel { piece, .. } | Goal::MoveExcept { piece, .. } | Goal::Visit { piece, .. } => specs.push(*piece),
         Goal::MovePiece { piece, touching } => {
             specs.push(*piece);
             if let Some(other) = touching {
@@ -738,7 +738,7 @@ fn every_real_game_lesson_links_its_game() {
     for lesson in lessons().filter(|lesson| {
         lesson.has_board()
             && !lesson.id.starts_with("openings.")
-            && !matches!(lesson.id, "bugs.grasshopper_place" | "bugs.grasshopper_paths" | "bugs.beetle" | "bugs.beetle_spawn" | "bugs.spider_dead_end" | "bugs.spider_door" | "bugs.spider" | "bugs.spider_power" | "basics.move_pieces" | "bugs.ant" | "bugs.ant_attack" | "bugs.ant_first_moves" | "basics.draw" | "bugs.queen" | "bugs.freedom_to_move" | "bugs.dont_break_the_hive")
+            && !matches!(lesson.id, "bugs.pillbug" | "bugs.ladybug_gate" | "bugs.grasshopper_place" | "bugs.grasshopper_paths" | "bugs.beetle" | "bugs.beetle_spawn" | "bugs.spider_dead_end" | "bugs.spider_door" | "bugs.spider" | "bugs.spider_power" | "basics.move_pieces" | "bugs.ant" | "bugs.ant_attack" | "bugs.ant_first_moves" | "basics.draw" | "bugs.queen" | "bugs.freedom_to_move" | "bugs.dont_break_the_hive")
             && !matches!(lesson.setup, Setup::Position(",w"))
     }) {
         assert!(
@@ -869,7 +869,7 @@ fn queen_and_ant_groups_have_the_requested_order() {
     ]);
     assert_eq!(find_lesson("bugs.ant").unwrap().title, "Gate");
     assert!(find_lesson("bugs.ant_pin").is_none());
-    assert_eq!(lessons().count(), 56);
+    assert_eq!(lessons().count(), 62);
     let queen = super::group_of("bugs.queen").unwrap();
     assert_eq!(queen.title, "The Queen Bee");
     for id in ["bugs.queen", "bugs.freedom_to_move", "bugs.dont_break_the_hive"] {
@@ -1607,8 +1607,8 @@ fn grasshopper_placement_only_accepts_the_winning_hex_and_black_refutes_wrong_pl
                 assert!(session.state().board.is_pinned(hopper));
                 assert_eq!(session.black_reply_arrow().unwrap().1, hex(&session.state().board, "bS1").unwrap());
             } else {
-                assert_eq!(session.black_reply_arrow().unwrap().1, hex(&session.state().board, "bL").unwrap());
-                assert_eq!(hex(&session.state().board, "bL"), hex(&session.state().board, "bA1\\"));
+                assert_eq!(session.state().turn_color, Color::White);
+                assert!(session.state().board.last_moved.unwrap().0.is_color(Color::Black));
             }
             rejected += 1;
         }
@@ -1675,4 +1675,148 @@ fn initial_framing_includes_known_black_placements_and_their_incoming_arrows() {
         assert!(framing.contains(&from), "{id}: incoming arrow begins outside initial framing");
         assert!(framing.contains(&to), "{id}: Black's new piece is outside initial framing");
     }
+}
+
+
+#[test]
+fn piece_sections_put_ladybug_then_pillbug_then_mosquito_last() {
+    let ids: Vec<_> = lessons().skip(23).take(9).map(|lesson| lesson.id).collect();
+    assert_eq!(ids, [
+        "bugs.ladybug", "bugs.ladybug_gate", "bugs.pillbug",
+        "bugs.pillbug_save", "bugs.pillbug_enemy", "bugs.pillbug_walk",
+        "bugs.pillbug_gate", "bugs.pillbug_deactivate", "bugs.mosquito",
+    ]);
+    assert_eq!(super::group_of("bugs.ladybug_gate").unwrap().title, "The Ladybug");
+    assert_eq!(super::group_of("bugs.pillbug").unwrap().lessons.len(), 6);
+    for id in &ids[3..8] {
+        assert!(find_lesson(id).unwrap().is_pending());
+    }
+}
+
+#[test]
+fn grasshopper_random_reply_keeps_the_next_winning_jump_available() {
+    let initial = Session::new(find_lesson("bugs.grasshopper_place").unwrap()).unwrap();
+    assert_eq!(initial.red_marks()[0].position, hex(&initial.state().board, "bQ").unwrap());
+    let hopper: Piece = "wG3".parse().unwrap();
+    let start = hex(&initial.state().board, "/wA3").unwrap();
+    for _ in 0..32 {
+        let mut session = initial.clone();
+        assert_eq!(session.play(hopper, start), Outcome::StepDone);
+        assert!(session.black_reply_arrow().is_some());
+        assert_eq!(session.red_marks()[0].position, hex(&session.state().board, "bQ").unwrap());
+        let target = hex(&session.state().board, "\\bQ").unwrap();
+        assert_eq!(session.play(hopper, target), Outcome::LessonDone);
+        assert_eq!(session.completion_result(), Some("White wins!"));
+    }
+}
+
+#[test]
+fn jumping_path_hints_appear_after_ten_moves_and_retry_after_sixteen() {
+    let mut session = Session::new(find_lesson("bugs.grasshopper_paths").unwrap()).unwrap();
+    let hopper: Piece = "wG2".parse().unwrap();
+    let a = session.state().board.position_of_piece(hopper).unwrap();
+    let b = hex(&session.state().board, "bS1\\").unwrap();
+    for i in 1..=16 {
+        let target = if i % 2 == 1 { b } else { a };
+        assert_eq!(session.play(hopper, target), if i == 16 { Outcome::Wrong } else { Outcome::Progress });
+        if i < 10 { assert!(session.arrows().is_empty()); }
+        if i == 10 {
+            let arrows = session.arrows();
+            assert!(!arrows.is_empty(), "route hint search found no solution");
+            let mut solve = session.clone();
+            for (from, to) in arrows {
+                let piece = solve.state().board.top_piece(from).unwrap();
+                assert!(["wG2", "wG3"].contains(&piece.to_string().as_str()));
+                assert!(solve.destinations(piece).contains(&to));
+                let result = solve.play(piece, to);
+                assert!(matches!(result, Outcome::Progress | Outcome::LessonDone));
+            }
+            assert!(solve.is_finished());
+        }
+    }
+    assert!(session.needs_retry());
+    assert!(!session.is_finished());
+    assert_eq!(session.state().board.position_of_piece(hopper), Some(a));
+    session.retry();
+    assert!(!session.needs_retry());
+    assert!(session.arrows().is_empty());
+}
+
+#[test]
+fn ladybug_gate_has_exactly_two_move_pinning_routes_and_hides_other_pieces() {
+    let initial = Session::new(find_lesson("bugs.ladybug_gate").unwrap()).unwrap();
+    let ladybug: Piece = "wL".parse().unwrap();
+    let from = initial.state().board.position_of_piece(ladybug).unwrap();
+    let blocked = hex(&initial.state().board, "\\bS2").unwrap();
+    assert_eq!(initial.forbidden(), vec![blocked]);
+    assert!(!initial.destinations(ladybug).contains(&blocked));
+    assert_eq!(initial.red_arrows(), vec![(from, hex(&initial.state().board, "bG1").unwrap())]);
+    assert!(!initial.destinations(ladybug).contains(&hex(&initial.state().board, "bG1").unwrap()));
+    for at in initial.state().board.all_taken_positions() {
+        let piece = initial.state().board.top_piece(at).unwrap();
+        assert_eq!(initial.can_select(piece), piece == ladybug);
+    }
+    let mut good = 0;
+    for to in initial.destinations(ladybug) {
+        let mut session = initial.clone();
+        let result = session.play(ladybug, to);
+        assert!(!session.is_finished());
+        if result == Outcome::StepDone {
+            good += 1;
+            assert!(!Condition::Pinned("bQ").holds(session.state()));
+            let finish = hex(&session.state().board, "bQ-").unwrap();
+            assert_eq!(session.play(ladybug, finish), Outcome::LessonDone);
+            assert!(Condition::Pinned("bQ").holds(session.state()));
+            assert!(Condition::Stuck("bQ").holds(session.state()));
+        } else {
+            assert_eq!(result, Outcome::Wrong);
+            assert!(session.needs_retry());
+        }
+    }
+    assert_eq!(good, 2);
+    let visible = initial.lesson().blank_visible().unwrap();
+    assert!(visible.contains(&"bQ") && visible.contains(&"wL"));
+    assert!(!visible.contains(&"wQ"));
+}
+
+#[test]
+fn pillbug_exercise_requires_the_lift_and_shows_all_three_drop_arrows() {
+    let initial = Session::new(find_lesson("bugs.pillbug").unwrap()).unwrap();
+    let beetle: Piece = "wB1".parse().unwrap();
+    let from = initial.state().board.position_of_piece(beetle).unwrap();
+    let ability = hex(&initial.state().board, "wP").unwrap();
+    let target = hex(&initial.state().board, "wP\\").unwrap();
+    assert!(!hive_lib::Bug::normal_moves(from, &initial.state().board).contains(&target));
+    assert!(initial.destinations(beetle).contains(&target));
+    assert_eq!(initial.arrows().len(), 4);
+    assert!(initial.arrows().contains(&(from, ability)));
+    for (_, to) in initial.arrows().into_iter().filter(|(start,_)| *start == ability) {
+        assert!(hive_lib::Bug::can_throw(ability, from, to, &initial.state().board));
+    }
+    assert_eq!(initial.red_arrows(), vec![(from, target)]);
+    let mut session = initial.clone();
+    assert_eq!(session.play(beetle, target), Outcome::LessonDone);
+    assert!(Condition::Touching("wB1", "bQ").holds(session.state()));
+    for to in initial.destinations(beetle).into_iter().filter(|to| *to != target) {
+        let mut wrong = initial.clone();
+        assert_eq!(wrong.play(beetle, to), Outcome::Wrong);
+        assert!(wrong.needs_retry());
+        assert_eq!(wrong.state().board.position_of_piece(beetle), Some(to));
+    }
+}
+
+
+#[test]
+fn ladybug_example_has_two_occupied_steps_then_the_empty_pocket() {
+    let session = Session::new(find_lesson("bugs.ladybug").unwrap()).unwrap();
+    let arrows = session.arrows();
+    assert_eq!(arrows.len(), 3);
+    assert_eq!(session.marks()[0].position, arrows[0].0);
+    assert_eq!(arrows[0].1, arrows[1].0);
+    assert_eq!(arrows[1].1, arrows[2].0);
+    assert!(arrows.iter().all(|(from, to)| from.is_neighbor(*to)));
+    assert!(session.state().board.occupied(arrows[0].1));
+    assert!(session.state().board.occupied(arrows[1].1));
+    assert!(!session.state().board.occupied(arrows[2].1));
+    assert!(session.destinations("wL".parse().unwrap()).contains(&arrows[2].1));
 }

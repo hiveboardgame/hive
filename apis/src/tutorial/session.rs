@@ -45,6 +45,7 @@ pub struct Session {
     failed_attempts: Vec<u8>,
     exploration_moves: Vec<u8>,
     last_black_arrow: Option<(Position, Position)>,
+    route_arrows: Vec<(Position, Position)>,
 }
 
 impl Session {
@@ -122,6 +123,7 @@ impl Session {
             failed_attempts: vec![0; lesson.steps.len()],
             exploration_moves: vec![0; lesson.steps.len()],
             last_black_arrow: None,
+            route_arrows: Vec::new(),
         })
     }
 
@@ -385,6 +387,7 @@ impl Session {
             if step.hint_highlights.is_empty() && hint {
                 arrows.extend(self.move_hints(&step.goal));
             }
+            arrows.extend(self.route_arrows.iter().copied());
             arrows
         })
     }
@@ -397,7 +400,12 @@ impl Session {
                 let mover: Piece = piece.parse().ok()?;
                 let from = self.state.board.position_of_piece(mover)?;
                 let to = hex(&self.state.board, to)?;
-                (!self.destinations(mover).contains(&to)).then_some((from, to))
+                let targets = if matches!(step.goal, Goal::Lift { .. }) {
+                    hive_lib::Bug::normal_moves(from, &self.state.board)
+                } else {
+                    self.destinations(mover)
+                };
+                (!targets.contains(&to)).then_some((from, to))
             }).collect()
         })
     }
@@ -423,7 +431,7 @@ impl Session {
         }
         let board = &self.state.board;
         let (spec, target, excluded, touching) = match goal {
-            Goal::Move { piece, to } => (*piece, hex(board, to), None, None),
+            Goal::Move { piece, to } | Goal::Lift { piece, to, .. } => (*piece, hex(board, to), None, None),
             Goal::MoveExcept { piece, except } => (*piece, None, hex(board, except), None),
             Goal::MovePiece { piece, touching } => (
                 *piece,
@@ -456,31 +464,37 @@ impl Session {
     }
 
     fn explore_hint(&self, specs: &[&str], condition: &super::goal::Condition) -> Option<(Position, Position)> {
+        self.explore_route(specs, condition).first().copied()
+    }
+
+    /// Search only the movable pieces, with a fixed budget. Route hints are cached
+    /// after a move rather than searching on every reactive board render.
+    fn explore_route(&self, specs: &[&str], condition: &super::goal::Condition) -> Vec<(Position, Position)> {
         use std::collections::{HashSet, VecDeque};
         let pieces: Vec<Piece> = specs.iter().filter_map(|spec| spec.parse().ok()).collect();
         let key = |state: &State| pieces.iter()
             .map(|piece| state.board.position_of_piece(*piece)).collect::<Vec<_>>();
         let mut seen = HashSet::from([key(&self.state)]);
-        let mut queue = VecDeque::from([(self.state.clone(), None, 0)]);
-        while let Some((state, first, depth)) = queue.pop_front() {
-            if depth >= 6 { continue; }
+        let mut queue = VecDeque::from([(self.state.clone(), Vec::new())]);
+        while let Some((state, route)) = queue.pop_front() {
+            if route.len() >= 16 { continue; }
             for piece in &pieces {
                 let Some(from) = state.board.position_of_piece(*piece) else { continue; };
                 for to in Self::destinations_in(&state, self.learner, *piece, self.lesson.uses_blank_tiles()) {
                     let mut next = state.clone();
+                    next.hashes_count.clear();
                     if next.play_turn_from_position(*piece, to).is_err() { continue; }
-                    let first = first.unwrap_or((from, to));
-                    if condition.holds(&next) { return Some(first); }
+                    let mut path = route.clone();
+                    path.push((from, to));
+                    if condition.holds(&next) { return path; }
                     if matches!(next.game_status, GameStatus::Finished(_)) { continue; }
                     next.pass_out_of_turn();
-                    if seen.insert(key(&next)) {
-                        queue.push_back((next, Some(first), depth + 1));
-                    }
-                    if seen.len() > 2048 { return None; }
+                    if seen.insert(key(&next)) { queue.push_back((next, path)); }
+                    if seen.len() >= 2048 { return Vec::new(); }
                 }
             }
         }
-        None
+        Vec::new()
     }
 
     fn travel_hint(&self, spec: &str, notation: &str) -> Option<(Position, Position)> {
@@ -611,14 +625,32 @@ impl Session {
                 if condition.holds(&self.state) {
                     self.complete_step(step)
                 } else {
-                    if step.hint_moves.is_some_and(|(spec, _)| spec_matches(spec, piece)) {
+                    if step.route_hint_after.is_some()
+                        || step.hint_moves.is_some_and(|(spec, _)| spec_matches(spec, piece))
+                    {
                         self.exploration_moves[self.step] =
                             self.exploration_moves[self.step].saturating_add(1);
                     }
+                    if step.retry_after_moves.is_some_and(|limit| self.exploration_moves[self.step] >= limit) {
+                        return self.wrong();
+                    }
                     self.hand_back();
                     self.checkpoint = self.state.clone();
+                    if step.route_hint_after.is_some_and(|limit| self.exploration_moves[self.step] >= limit) {
+                        self.route_arrows = self.explore_route(pieces, condition);
+                    }
                     Outcome::Progress
                 }
+            }
+            Goal::Lift { piece: spec, by, to } => {
+                let lifted = spec_matches(spec, piece)
+                    && hex(&before.board, to) == Some(position)
+                    && hex(&before.board, by).is_some_and(|ability| {
+                        before.board.position_of_piece(piece).is_some_and(|from| {
+                            hive_lib::Bug::can_throw(ability, from, position, &before.board)
+                        })
+                    });
+                if lifted { self.complete_step(step) } else { self.wrong() }
             }
             Goal::MoveSatisfying { piece: spec, condition } => {
                 if spec_matches(spec, piece)
@@ -732,6 +764,7 @@ impl Session {
         self.learner = self.initial.turn_color;
         self.exploration_moves.fill(0);
         self.last_black_arrow = None;
+        self.route_arrows.clear();
         self.visited.clear();
         self.refuted = false;
         self.wrong = false;
@@ -750,6 +783,12 @@ impl Session {
                     return Outcome::Refuted;
                 }
             }
+        }
+        if self.current_step().is_some_and(|step| step.random_wrong_reply)
+            && self.random_opponent_reply(None)
+        {
+            self.refuted = true;
+            return Outcome::Refuted;
         }
         let refutations = self.current_step().map_or(&[][..], |step| step.refutations);
         for (piece, to) in refutations {
@@ -782,11 +821,18 @@ impl Session {
 
     fn complete_step(&mut self, step: &'static Step) -> Outcome {
         self.visited.clear();
+        self.route_arrows.clear();
         self.step += 1;
         if self.step >= self.lesson.steps.len() {
             return Outcome::LessonDone;
         }
         match step.then {
+            Reply::RandomPreservingWin { piece, to } => {
+                if !self.random_opponent_reply(Some((piece, to))) {
+                    log::warn!("tutorial {}: no safe random reply", self.lesson.id);
+                    self.hand_back();
+                }
+            }
             Reply::LearnerAgain => self.hand_back(),
             Reply::NextPlayer(color) => {
                 self.learner = color;
@@ -856,6 +902,46 @@ impl Session {
         } else {
             Outcome::StepDone
         }
+    }
+
+    /// Sample only legal Black turns. On a successful exercise move, keep the
+    /// intended next winning jump available; wrong attempts need no such filter.
+    fn random_opponent_reply(&mut self, winning: Option<(&str, &str)>) -> bool {
+        if matches!(self.state.game_status, GameStatus::Finished(_)) { return false; }
+        let color = self.state.turn_color;
+        let mut moves: Vec<_> = self.state.board.moves(color).into_iter()
+            .flat_map(|((piece, _), targets)| targets.into_iter().map(move |to| (piece, to)))
+            .collect();
+        let spawns: Vec<_> = self.state.board.spawnable_positions(color).collect();
+        for piece in self.state.reserve(color).values().filter_map(|names| names.first())
+            .filter_map(|name| name.parse::<Piece>().ok())
+        {
+            moves.extend(spawns.iter().map(|to| (piece, *to)));
+        }
+        moves.sort_by_key(|(piece, to)| (piece.to_string(), to.q, to.r));
+        moves.dedup();
+        let mut candidates = Vec::new();
+        for (piece, to) in moves {
+            let mut next = self.state.clone();
+            if next.play_turn_from_position(piece, to).is_err()
+                || matches!(next.game_status, GameStatus::Finished(_))
+            { continue; }
+            if let Some((piece, target)) = winning {
+                let (Ok(piece), Some(target)) = (piece.parse::<Piece>(), hex(&next.board, target)) else { continue; };
+                let mut finish = next.clone();
+                if finish.play_turn_from_position(piece, target).is_err()
+                    || finish.game_status != GameStatus::Finished(hive_lib::GameResult::Winner(self.learner))
+                { continue; }
+            }
+            candidates.push((piece, to));
+        }
+        if candidates.is_empty() { return false; }
+        let index = uuid::Uuid::new_v4().as_u128() as usize % candidates.len();
+        let (piece, to) = candidates[index];
+        let before = self.state.clone();
+        if self.state.play_turn_from_position(piece, to).is_err() { return false; }
+        self.remember_black_move(&before);
+        true
     }
 
     fn hand_back(&mut self) {

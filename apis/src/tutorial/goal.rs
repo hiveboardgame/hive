@@ -3,6 +3,11 @@ use hive_lib::{Board, Bug, Color, Direction, Piece, Position, State};
 pub enum Goal {
     Continue,
     MoveAny,
+    Lift {
+        piece: &'static str,
+        by: &'static str,
+        to: &'static str,
+    },
     PlaceAny,
     PlaceIn(&'static [&'static str]),
     Explore {

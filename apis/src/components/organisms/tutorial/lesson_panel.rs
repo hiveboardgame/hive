@@ -246,10 +246,14 @@ pub fn LessonPanel(
                     }
                 }>
                     <div class="text-xs font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">
-                        {chapter_title} " · " {position}
-                        <ShowLet some=group_title let:group>
-                            " · " {group}
-                        </ShowLet>
+                        {move || {
+                            let mut heading = format!("{} · {}", chapter_title(), position());
+                            if let Some(group) = group_title() {
+                                heading.push_str(" · ");
+                                heading.push_str(group);
+                            }
+                            heading
+                        }}
                     </div>
                     <A
                         href="/tutorial"

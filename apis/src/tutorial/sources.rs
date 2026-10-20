@@ -8,7 +8,6 @@ const SOURCES: &[(&str, &str, usize)] = &[
     ("bugs.beetle_gate", "OiLpk05USK1S", 40),
     ("bugs.mosquito", "LrCAafNSTE4c", 8),
     ("bugs.ladybug", "BWt62rQLnjGv", 14),
-    ("bugs.pillbug", "UPEe5FZNpX4x", 12),
     ("strategy.race", "EZCTc6hFPdJf", 30),
     ("strategy.pin", "B8vsmN1ARHEj", 6),
     ("strategy.gate", "t5VnqkqjUWGz", 14),
