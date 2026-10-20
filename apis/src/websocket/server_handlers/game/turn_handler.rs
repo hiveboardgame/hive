@@ -25,6 +25,7 @@ pub enum TurnInput {
 
 pub struct TurnHandler {
     input: TurnInput,
+    expected_turn: Option<usize>,
     pool: DbPool,
     user_id: Uuid,
     username: String,
@@ -35,6 +36,7 @@ pub struct TurnHandler {
 impl TurnHandler {
     pub fn new(
         input: TurnInput,
+        expected_turn: Option<usize>,
         game: &Game,
         username: &str,
         user_id: Uuid,
@@ -47,6 +49,7 @@ impl TurnHandler {
             username: username.to_owned(),
             pool: pool.clone(),
             input,
+            expected_turn,
             data,
         }
     }
@@ -85,6 +88,7 @@ impl TurnHandler {
                 user_id: self.user_id,
                 turn: turn.clone(),
                 compensation: self.compensation(),
+                expected_turn: self.expected_turn,
             },
             &mut conn,
         )

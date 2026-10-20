@@ -14,6 +14,7 @@ pub enum Command {
         user_id: Uuid,
         turn: Turn,
         compensation: f64,
+        expected_turn: Option<usize>,
     },
     Control {
         user_id: Uuid,

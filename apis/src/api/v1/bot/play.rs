@@ -109,6 +109,7 @@ async fn play_move(
                 user_id: bot.id,
                 turn: played_turn.clone(),
                 compensation: 0.0,
+                expected_turn: None,
             },
             &mut conn,
         )

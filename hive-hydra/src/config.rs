@@ -5,7 +5,6 @@ use std::{collections::HashMap, path::Path};
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
     pub max_concurrent_processes: usize,
-    pub queue_capacity: usize,
     pub base_url: String,
     pub bots: Vec<BotConfig>,
 }
@@ -24,7 +23,6 @@ impl Config {
         let settings = ConfigBuilder::builder()
             // 1. Default values
             .set_default("max_concurrent_processes", 5)?
-            .set_default("queue_capacity", 1000)?
             .set_default("base_url", "https://hivegame.com")?
             // 2. Config file
             .add_source(File::from(config_path.as_ref()))
@@ -33,6 +31,7 @@ impl Config {
 
         // Load the main configuration
         let mut config: Config = settings.try_deserialize()?;
+        config.base_url = config.base_url.trim_end_matches('/').to_string();
 
         // Process bot-specific environment variables
         let env_vars: HashMap<String, String> = std::env::vars().collect();
@@ -51,6 +50,20 @@ impl Config {
         }
 
         Ok(config)
+    }
+
+    pub fn websocket_url(&self) -> Result<String, ConfigError> {
+        let address = if let Some(host) = self.base_url.strip_prefix("https://") {
+            format!("wss://{host}")
+        } else if let Some(host) = self.base_url.strip_prefix("http://") {
+            format!("ws://{host}")
+        } else {
+            return Err(ConfigError::Message(format!(
+                "base_url must start with http:// or https://, got {}",
+                self.base_url
+            )));
+        };
+        Ok(format!("{address}/ws/?format=json"))
     }
 }
 
@@ -76,7 +89,6 @@ mod tests {
         // Create test config file
         let config_content = r#"
 max_concurrent_processes: 5
-queue_capacity: 1000
 base_url: "https://hivegame.com"
 bots:
   - name: testbot1
@@ -123,7 +135,6 @@ bots:
         // Create test config file with hyphen in bot name
         let config_content = r#"
 max_concurrent_processes: 5
-queue_capacity: 1000
 base_url: "https://hivegame.com"
 bots:
   - name: test-bot
@@ -150,5 +161,45 @@ bots:
         // Cleanup
         env::remove_var("HIVE_HYDRA_BOT_TEST_BOT_EMAIL");
         env::remove_var("HIVE_HYDRA_BOT_TEST_BOT_PASSWORD");
+    }
+
+    fn with_base_url(base_url: &str) -> Config {
+        Config {
+            max_concurrent_processes: 1,
+            base_url: base_url.to_string(),
+            bots: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn websocket_url_follows_the_base_url_scheme() {
+        assert_eq!(
+            with_base_url("https://hivegame.com")
+                .websocket_url()
+                .unwrap(),
+            "wss://hivegame.com/ws/?format=json"
+        );
+        assert_eq!(
+            with_base_url("http://localhost:3999")
+                .websocket_url()
+                .unwrap(),
+            "ws://localhost:3999/ws/?format=json"
+        );
+        assert!(with_base_url("localhost:3999").websocket_url().is_err());
+    }
+
+    #[test]
+    fn base_url_loses_its_trailing_slash() {
+        let config_content = r#"
+base_url: "http://localhost:3999/"
+bots: []
+"#;
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("config.yaml");
+        fs::write(&file_path, config_content).unwrap();
+
+        let config = Config::load_from(&file_path).unwrap();
+
+        assert_eq!(config.base_url, "http://localhost:3999");
     }
 }

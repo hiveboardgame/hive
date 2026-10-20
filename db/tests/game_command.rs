@@ -59,6 +59,7 @@ async fn takebacks_to_opening_turns_keep_the_clock_running() {
                     user_id,
                     turn: Turn::Move(piece.parse().expect("parse opening piece"), position),
                     compensation: 0.0,
+                    expected_turn: None,
                 },
                 &mut conn,
             )
@@ -189,6 +190,87 @@ async fn takebacks_to_opening_turns_keep_the_clock_running() {
             GameStatus::Finished(GameResult::Winner(Color::Black)).to_string()
         );
     }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_move_for_an_earlier_turn_is_refused_even_when_legal() {
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.expect("get connection");
+    let white = create_user("stale_turn_white", &mut conn).await;
+    let black = create_user("stale_turn_black", &mut conn).await;
+    let game = create_moves_game(
+        white.id,
+        black.id,
+        TimeMode::RealTime,
+        Some(60),
+        Some(0),
+        GameSpeed::Bullet,
+        &mut conn,
+    )
+    .await;
+    let spawn = Position::initial_spawn_position();
+
+    play(game.id, white.id, "wA1", spawn, Some(0), &mut conn)
+        .await
+        .expect("play the opening at its turn");
+    play(
+        game.id,
+        black.id,
+        "bA1",
+        spawn.to(Direction::E),
+        None,
+        &mut conn,
+    )
+    .await
+    .expect("reply without naming a turn");
+
+    let stale = play(
+        game.id,
+        white.id,
+        "wG1",
+        spawn.to(Direction::W),
+        Some(0),
+        &mut conn,
+    )
+    .await
+    .expect_err("a move for turn 0 cannot land on turn 2");
+    assert!(matches!(stale, DbError::InvalidAction { .. }), "{stale:?}");
+    let unchanged = Game::find_by_uuid(&game.id, &mut conn)
+        .await
+        .expect("reload game after the refused move");
+    assert_eq!(unchanged.turn, 2);
+
+    play(
+        game.id,
+        white.id,
+        "wG1",
+        spawn.to(Direction::W),
+        Some(2),
+        &mut conn,
+    )
+    .await
+    .expect("the same move at its own turn");
+}
+
+async fn play(
+    game_id: Uuid,
+    user_id: Uuid,
+    piece: &str,
+    position: Position,
+    expected_turn: Option<usize>,
+    conn: &mut DbConn<'_>,
+) -> Result<Outcome, DbError> {
+    execute(
+        game_id,
+        Command::Move {
+            user_id,
+            turn: Turn::Move(piece.parse().expect("parse piece"), position),
+            compensation: 0.0,
+            expected_turn,
+        },
+        conn,
+    )
+    .await
 }
 
 fn assert_running_opening_clock(game: &Game, expected_turn: i32) {

@@ -314,6 +314,7 @@ impl RequestHandler {
                 match game_action {
                     GameAction::Turn(_)
                     | GameAction::Play(_)
+                    | GameAction::PlayAt { .. }
                     | GameAction::Control(_)
                     | GameAction::Berserk
                     | GameAction::Start => self.ensure_auth()?,
@@ -622,21 +623,30 @@ mod tests {
         ));
     }
 
-    /// `Play` is `Turn` for clients that cannot run the engine, so it needs the same gate.
+    /// `Play` and `PlayAt` are `Turn` for clients that cannot run the engine, so they need the
+    /// same gate.
     #[tokio::test]
     async fn playing_by_notation_requires_authentication() {
-        let handler = test_handler(
-            ClientRequest::Game {
-                game_id: GameId("some-game".to_string()),
-                action: crate::common::GameAction::Play("wA1 -bQ".to_string()),
+        for action in [
+            crate::common::GameAction::Play("wA1 -bQ".to_string()),
+            crate::common::GameAction::PlayAt {
+                turn: 1,
+                notation: "wA1 -bQ".to_string(),
             },
-            anonymous(),
-        )
-        .await;
-        assert!(matches!(
-            handler.handle().await,
-            Err(RequestHandlerError::AuthError(AuthError::Unauthorized))
-        ));
+        ] {
+            let handler = test_handler(
+                ClientRequest::Game {
+                    game_id: GameId("some-game".to_string()),
+                    action,
+                },
+                anonymous(),
+            )
+            .await;
+            assert!(matches!(
+                handler.handle().await,
+                Err(RequestHandlerError::AuthError(AuthError::Unauthorized))
+            ));
+        }
     }
 
     /// Every websocket frame is dispatched through this one future. Debug builds neither

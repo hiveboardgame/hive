@@ -330,6 +330,7 @@ async fn apply_command(
             user_id,
             turn,
             compensation,
+            expected_turn,
         } => {
             if !compensation.is_finite() || !(0.0..=700.0).contains(&compensation) {
                 return Err(DbError::InvalidInput {
@@ -346,6 +347,16 @@ async fn apply_command(
                 return Err(DbError::InvalidAction {
                     info: String::from("This game cannot accept a move yet"),
                 });
+            }
+            if let Some(expected_turn) = expected_turn {
+                if usize::try_from(game.turn).ok() != Some(expected_turn) {
+                    return Err(DbError::InvalidAction {
+                        info: format!(
+                            "This move answers turn {expected_turn}, but the game is at turn {}",
+                            game.turn
+                        ),
+                    });
+                }
             }
             let mut state = game_state(&game)?;
             let expected_actor = match state.turn_color {
