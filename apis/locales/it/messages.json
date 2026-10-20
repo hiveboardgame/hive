@@ -98,6 +98,7 @@
         "discord_unverified": "Impossibile verificare il collegamento a Discord. Ricomincia dalle impostazioni delle notifiche.",
         "discord_failed": "Collegamento a Discord fallito. Ricomincia dalle impostazioni delle notifiche.",
         "rating_above_band": "{{rating}} supera il limite di punteggio di {{limit}}",
-        "rating_below_band": "{{rating}} è inferiore al limite di punteggio di {{limit}}"
+        "rating_below_band": "{{rating}} è inferiore al limite di punteggio di {{limit}}",
+        "realtime_games_paused": "Le nuove partite in tempo reale sono sospese per manutenzione."
     }
 }

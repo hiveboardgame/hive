@@ -4,6 +4,7 @@ use crate::{
     websocket::{
         messages::{InternalServerMessage, MessageDestination},
         server_handlers::game::new_game_messages,
+        RealtimeGate,
     },
 };
 use anyhow::Result;
@@ -33,7 +34,7 @@ impl AcceptHandler {
         }
     }
 
-    pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
+    pub async fn handle(&self, gate: &RealtimeGate) -> Result<Vec<InternalServerMessage>> {
         let mut conn = get_conn(&self.pool).await?;
         let mut messages = Vec::new();
         let challenge = match Challenge::find_by_challenge_id(&self.challenge_id, &mut conn).await {
@@ -49,6 +50,7 @@ impl AcceptHandler {
             Err(err) => return Err(err.into()),
         };
         challenge.validate_accepting_user(self.user_id)?;
+        gate.admit_challenge(&challenge)?;
         let speed = challenge
             .time_control()?
             .map_or(GameSpeed::Untimed, GameSpeed::from);

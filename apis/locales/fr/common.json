@@ -223,7 +223,19 @@
             "title": "Télémétrie"
         },
         "page_title": "Administration",
-        "administrators_only": "Cette page est réservée aux administrateurs."
+        "administrators_only": "Cette page est réservée aux administrateurs.",
+        "realtime_games": {
+            "title": "Parties en temps réel",
+            "allowed": "Les nouvelles parties en temps réel sont autorisées.",
+            "paused": "Les nouvelles parties en temps réel sont arrêtées.",
+            "in_progress": "Parties en temps réel encore en cours : {{games}}",
+            "starting": "Lancements de parties en temps réel encore en cours de traitement : {{starts}}",
+            "stop": "Arrêter les nouvelles parties en temps réel",
+            "resume": "Autoriser les nouvelles parties en temps réel",
+            "explanation": "L'arrêt refuse les nouveaux défis en temps réel, le lancement de parties et de tournois en temps réel et les appariements d'Arène. Les parties en cours continuent. Un redémarrage ou un déploiement réautorise les parties en temps réel.",
+            "started_while_paused": "Lancées après l'arrêt : {{games}}",
+            "started_while_paused_reason": "Les parties de tournoi entre deux bots commencent dès que leur ronde est publiée, sans attendre que quelqu'un soit prêt. Laissez-les se terminer avant de déployer."
+        }
     },
     "analysis": {
         "could_not_load_uhp_analysis_with_error": "Impossible de charger l'analyse UHP : {{error}}",

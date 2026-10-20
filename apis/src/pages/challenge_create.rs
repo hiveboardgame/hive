@@ -1,12 +1,22 @@
 use crate::{
     common::{ChallengeAction, TimeParamsStoreFields},
     components::{
-        atoms::{input_slider::InputSliderWithCallback, simple_switch::SimpleSwitchWithCallback},
+        atoms::{
+            input_slider::InputSliderWithCallback,
+            realtime_paused_notice::RealtimePausedNotice,
+            simple_switch::SimpleSwitchWithCallback,
+        },
         molecules::challenge_buttons_trio::ChallengeButtonsTrio,
         organisms::time_select::TimeSelect,
     },
     i18n::*,
-    providers::{ApiRequestsProvider, AuthContext, ChallengeParams, ChallengeParamsStoreFields},
+    providers::{
+        ApiRequestsProvider,
+        AuthContext,
+        ChallengeParams,
+        ChallengeParamsStoreFields,
+        RealtimeGames,
+    },
 };
 use hive_lib::GameType;
 use leptos::prelude::*;
@@ -19,7 +29,15 @@ pub fn ChallengeCreate(#[prop(optional, into)] opponent: Signal<Option<String>>)
     let params = expect_context::<Store<ChallengeParams>>();
     let api = expect_context::<ApiRequestsProvider>().0;
     let auth_context = expect_context::<AuthContext>();
+    let realtime_games = expect_context::<RealtimeGames>();
+    let realtime_selected =
+        Signal::derive(move || params.time_signals().time_mode().get() == TimeMode::RealTime);
+    let realtime_blocked =
+        Signal::derive(move || realtime_games.blocks(params.time_signals().time_mode().get()));
     let create_challenge = Callback::new(move |color_choice| {
+        if realtime_blocked.get_untracked() {
+            return;
+        }
         let api = api.get();
         let direct_opponent = opponent.get_untracked();
         let opponent_exists = direct_opponent.is_some();
@@ -198,7 +216,8 @@ pub fn ChallengeCreate(#[prop(optional, into)] opponent: Signal<Option<String>>)
                     </div>
                 </div>
             </Show>
-            <ChallengeButtonsTrio create_challenge />
+            <RealtimePausedNotice applies=realtime_selected />
+            <ChallengeButtonsTrio create_challenge disabled=realtime_blocked />
         </div>
     }
 }

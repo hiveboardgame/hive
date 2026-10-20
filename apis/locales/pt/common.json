@@ -223,7 +223,19 @@
             "title": "Telemetria"
         },
         "page_title": "Administração",
-        "administrators_only": "Esta página só está disponível para administradores."
+        "administrators_only": "Esta página só está disponível para administradores.",
+        "realtime_games": {
+            "title": "Partidas em tempo real",
+            "allowed": "Novas partidas em tempo real são permitidas.",
+            "paused": "Novas partidas em tempo real estão paradas.",
+            "in_progress": "Partidas em tempo real ainda em curso: {{games}}",
+            "starting": "Inícios de partidas em tempo real ainda em processamento: {{starts}}",
+            "stop": "Parar novas partidas em tempo real",
+            "resume": "Permitir novas partidas em tempo real",
+            "explanation": "Ao parar, são recusados os novos desafios em tempo real, o início de partidas e torneios em tempo real e os emparelhamentos da Arena. As partidas em curso continuam. Um reinício ou deploy volta a permitir partidas em tempo real.",
+            "started_while_paused": "Iniciadas depois da paragem: {{games}}",
+            "started_while_paused_reason": "As partidas de torneio entre dois bots começam assim que a sua ronda é publicada, sem esperar que alguém esteja pronto. Deixe-as terminar antes do deploy."
+        }
     },
     "analysis": {
         "could_not_load_uhp_analysis_with_error": "Não foi possível carregar a análise UHP: {{error}}",

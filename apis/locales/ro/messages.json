@@ -98,6 +98,7 @@
         "discord_unverified": "Conectarea la Discord nu a putut fi verificată. Reîncepe din setările notificărilor.",
         "discord_failed": "Conectarea la Discord a eșuat. Reîncepe din setările notificărilor.",
         "rating_above_band": "{{rating}} depășește limita de rating {{limit}}",
-        "rating_below_band": "{{rating}} este sub limita de rating {{limit}}"
+        "rating_below_band": "{{rating}} este sub limita de rating {{limit}}",
+        "realtime_games_paused": "Partidele noi în timp real sunt suspendate pentru mentenanță."
     }
 }

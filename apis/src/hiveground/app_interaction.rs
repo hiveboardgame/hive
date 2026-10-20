@@ -33,6 +33,8 @@ pub fn live_hiveground_interaction() -> HivegroundInteraction {
     let capabilities = Signal::derive(move || {
         if annotations.is_some_and(|a| a.mode.get()) {
             HivegroundCapabilities::none()
+        } else if game_state.realtime_start_blocked() {
+            HivegroundCapabilities::board_inspection()
         } else {
             live_capabilities(game_state, user_color.get(), config)
         }

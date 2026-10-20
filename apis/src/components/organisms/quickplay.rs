@@ -1,10 +1,19 @@
 use crate::{
     common::{game_speed_label, login_redirect_url, ChallengeAction},
-    components::{atoms::rating::icon_for_speed, molecules::modal::Modal},
+    components::{
+        atoms::{rating::icon_for_speed, realtime_paused_notice::RealtimePausedNotice},
+        molecules::modal::Modal,
+    },
     hooks::tap_feedback::use_tap_feedback,
     i18n::*,
     pages::{challenge_bot::ChallengeBot, challenge_create::ChallengeCreate},
-    providers::{challenge_params_cookie, ApiRequestsProvider, AuthContext, ChallengeParams},
+    providers::{
+        challenge_params_cookie,
+        ApiRequestsProvider,
+        AuthContext,
+        ChallengeParams,
+        RealtimeGames,
+    },
 };
 use hive_lib::{ColorChoice, GameType};
 use leptos::{ev, html::Dialog, prelude::*};
@@ -30,6 +39,7 @@ pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
     let i18n = use_i18n();
     let auth_context = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
+    let realtime_games = expect_context::<RealtimeGames>();
     let (display_text, icon_data, base, increment, speed) = match time_control {
         Bullet1p2 => ("1+2".to_owned(), icon_for_speed(Bullet), 1, 2, Bullet),
         Blitz3p3 => ("3+3".to_owned(), icon_for_speed(Blitz), 3, 3, Blitz),
@@ -55,8 +65,12 @@ pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
             class="quickplay-hex-button ui-button"
             data-speed=speed.to_string()
             title=hover_text
+            disabled=move || realtime_games.blocks(TimeMode::RealTime)
             on:pointerdown=move |event| mark_pressed.run(event)
             on:click=move |_| {
+                if realtime_games.blocks(TimeMode::RealTime) {
+                    return;
+                }
                 if auth_context.user.with(|a| a.is_some()) {
                     let api = api.get();
                     let details = ChallengeDetails {
@@ -109,6 +123,7 @@ pub fn QuickPlay() -> impl IntoView {
             <h2 class="text-lg font-bold text-center text-gray-900 dark:text-gray-100">
                 {t!(i18n, home.create_game)}
             </h2>
+            <RealtimePausedNotice />
             <div class="quickplay-hex-shell">
                 <div
                     class="quickplay-hex-grid"

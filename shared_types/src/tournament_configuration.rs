@@ -571,6 +571,15 @@ impl FormatConfig {
             Self::Arena(_) => Format::Arena,
         }
     }
+
+    pub fn time_mode(&self) -> Option<TimeMode> {
+        match self {
+            Self::RoundRobin(config) => Some(config.clock.mode()),
+            Self::Swiss(config) => Some(config.clock.mode()),
+            Self::Elimination(config) => config.time_mode(),
+            Self::Arena(_) => Some(TimeMode::RealTime),
+        }
+    }
 }
 
 const fn swiss_format(system: SwissSystem) -> Format {

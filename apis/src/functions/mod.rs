@@ -16,6 +16,7 @@ pub mod opening_explorer;
 pub mod push_metrics;
 #[cfg(feature = "ssr")]
 pub mod pwa;
+pub mod realtime_games;
 pub mod schedules;
 pub mod telemetry;
 pub mod tournaments;

@@ -1,10 +1,14 @@
 use super::{accept::AcceptHandler, create::CreateHandler, delete::DeleteHandler};
 use crate::{
     common::{ChallengeAction, ServerMessage},
-    websocket::messages::{InternalServerMessage, MessageDestination},
+    websocket::{
+        messages::{InternalServerMessage, MessageDestination},
+        WebsocketData,
+    },
 };
 use anyhow::Result;
 use db_lib::DbPool;
+use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct ChallengeHandler {
@@ -12,28 +16,37 @@ pub struct ChallengeHandler {
     pool: DbPool,
     user_id: Uuid,
     admin: bool,
+    data: Arc<WebsocketData>,
 }
 
 impl ChallengeHandler {
-    pub fn new(action: ChallengeAction, user_id: Uuid, admin: bool, pool: &DbPool) -> Self {
+    pub fn new(
+        action: ChallengeAction,
+        user_id: Uuid,
+        admin: bool,
+        data: Arc<WebsocketData>,
+        pool: &DbPool,
+    ) -> Self {
         Self {
             pool: pool.clone(),
             challenge_action: action,
             user_id,
             admin,
+            data,
         }
     }
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let messages = match self.challenge_action.clone() {
             ChallengeAction::Create(details) => {
+                self.data.realtime_gate.admit(details.time_mode)?;
                 CreateHandler::new(details, self.user_id, &self.pool)
                     .handle()
                     .await?
             }
             ChallengeAction::Accept(challenge_id) => {
                 AcceptHandler::new(challenge_id, self.user_id, &self.pool)
-                    .handle()
+                    .handle(&self.data.realtime_gate)
                     .await?
             }
             ChallengeAction::Delete(challenge_id) => {

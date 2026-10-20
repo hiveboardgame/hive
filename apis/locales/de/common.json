@@ -223,7 +223,19 @@
             "title": "Telemetrie"
         },
         "page_title": "Administration",
-        "administrators_only": "Diese Seite ist nur für Administratoren verfügbar."
+        "administrators_only": "Diese Seite ist nur für Administratoren verfügbar.",
+        "realtime_games": {
+            "title": "Echtzeitpartien",
+            "allowed": "Neue Echtzeitpartien sind erlaubt.",
+            "paused": "Neue Echtzeitpartien sind gestoppt.",
+            "in_progress": "Noch laufende Echtzeitpartien: {{games}}",
+            "starting": "Starts von Echtzeitpartien, die noch verarbeitet werden: {{starts}}",
+            "stop": "Neue Echtzeitpartien stoppen",
+            "resume": "Neue Echtzeitpartien erlauben",
+            "explanation": "Im gestoppten Zustand werden neue Echtzeit-Herausforderungen, der Start von Echtzeitpartien und -turnieren sowie Arena-Paarungen abgelehnt. Laufende Partien gehen weiter. Ein Neustart oder Deploy erlaubt Echtzeitpartien wieder.",
+            "started_while_paused": "Nach dem Stopp gestartet: {{games}}",
+            "started_while_paused_reason": "Turnierpartien zwischen zwei Bots starten, sobald ihre Runde freigegeben wird, ohne dass jemand bereit sein muss. Lass sie zu Ende laufen, bevor du deployst."
+        }
     },
     "analysis": {
         "could_not_load_uhp_analysis_with_error": "UHP-Analyse konnte nicht geladen werden: {{error}}",

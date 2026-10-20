@@ -1,10 +1,14 @@
 use crate::{
     common::{format_game_rating, format_game_result, game_tournament_link},
-    components::molecules::time_row::TimeRow,
+    components::{
+        atoms::realtime_paused_notice::RealtimePausedNotice,
+        molecules::time_row::TimeRow,
+    },
     i18n::*,
     providers::game_state::{GameStateStore, GameStateStoreFields},
 };
 use leptos::prelude::*;
+use shared_types::GameStart;
 
 #[component]
 pub fn GameInfo(
@@ -33,6 +37,13 @@ pub fn GameInfo(
         game_response.with(|game_response| game_response.as_ref().and_then(game_tournament_link))
     });
     let is_tournament = Memo::new(move |_| tournament_info().is_some());
+    let awaits_ready = Memo::new(move |_| {
+        game_response.with(|game_response| {
+            game_response
+                .as_ref()
+                .is_some_and(|game| game.game_start == GameStart::Ready)
+        })
+    });
     let tournament_name =
         Memo::new(move |_| tournament_info().map(|link| link.name).unwrap_or_default());
     let tournament_href =
@@ -134,6 +145,11 @@ pub fn GameInfo(
                     </Show>
                     <Show when=move || { compact && is_tournament() && result_text().is_some() }>
                         <div class=result_class>{result_text}</div>
+                    </Show>
+                    <Show when=move || { game_state.realtime_start_blocked() && !awaits_ready() }>
+                        <div class="col-span-2 mt-1">
+                            <RealtimePausedNotice />
+                        </div>
                     </Show>
                 </div>
             </div>

@@ -221,7 +221,19 @@
             "title": "Telemetry"
         },
         "page_title": "Admin",
-        "administrators_only": "This page is only available to administrators."
+        "administrators_only": "This page is only available to administrators.",
+        "realtime_games": {
+            "title": "Realtime games",
+            "allowed": "New realtime games are allowed.",
+            "paused": "New realtime games are stopped.",
+            "in_progress": "Realtime games still in progress: {{games}}",
+            "starting": "Realtime game starts still being processed: {{starts}}",
+            "stop": "Stop new realtime games",
+            "resume": "Allow new realtime games",
+            "explanation": "Stopping refuses new realtime challenges, the start of realtime games and tournaments, and Arena pairing. Games already running carry on. A restart or deploy allows realtime games again.",
+            "started_while_paused": "Started after the stop: {{games}}",
+            "started_while_paused_reason": "Tournament games between two bots start as soon as their round is released, without waiting for anyone to get ready. Let them finish before you deploy."
+        }
     },
     "analysis": {
         "could_not_load_uhp_analysis_with_error": "Could not load UHP analysis: {{error}}",

@@ -98,6 +98,7 @@
         "discord_unverified": "Não foi possível verificar a ligação ao Discord. Recomeça nas definições de notificações.",
         "discord_failed": "A ligação ao Discord falhou. Recomeça nas definições de notificações.",
         "rating_above_band": "{{rating}} excede o limite superior de classificação de {{limit}}",
-        "rating_below_band": "{{rating}} está abaixo do limite inferior de classificação de {{limit}}"
+        "rating_below_band": "{{rating}} está abaixo do limite inferior de classificação de {{limit}}",
+        "realtime_games_paused": "As novas partidas em tempo real estão em pausa para manutenção."
     }
 }

@@ -11,6 +11,7 @@ use crate::{
     websocket::{
         messages::{HandlerOutput, InternalServerMessage, MessageDestination},
         server_handlers::game::new_tournament_game_messages,
+        RealtimeGate,
     },
 };
 use anyhow::Result;
@@ -84,9 +85,13 @@ impl StartHandler {
         }
     }
 
-    pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
+    pub async fn handle(&self, gate: &RealtimeGate) -> Result<Vec<InternalServerMessage>> {
         let mut conn = get_conn(&self.pool).await?;
         let tournament = Tournament::find_by_tournament_id(&self.tournament_id, &mut conn).await?;
+        let _start = match (&self.action, tournament.configuration().format.time_mode()) {
+            (StartAction::Cancel(_), _) | (_, None) => None,
+            (_, Some(time_mode)) => gate.begin_start(time_mode)?,
+        };
         let outcome = match &self.action {
             StartAction::Begin(expected)
                 if matches!(

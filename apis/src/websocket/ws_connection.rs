@@ -445,7 +445,7 @@ fn should_log_request_error(err: &RequestHandlerError) -> bool {
             | RequestHandlerError::Forbidden
             | RequestHandlerError::RateLimited(_)
             | RequestHandlerError::ChatClientIdConflict
-    )
+    ) && !err.is_realtime_pause()
 }
 
 async fn send_direct(hub: &Arc<WsHub>, socket: &SocketTx, message: ServerMessage) {
@@ -545,7 +545,7 @@ async fn handle_auth(
 
 #[cfg(test)]
 mod tests {
-    use super::{external_server_error, for_format};
+    use super::{external_server_error, for_format, should_log_request_error};
     use crate::{
         common::{
             ChatSendError,
@@ -559,6 +559,7 @@ mod tests {
         websocket::{
             messages::{AuthError, SocketFormat},
             server_handlers::{chat::limits::ChatLimitError, request_handler::RequestHandlerError},
+            RealtimeGamesPaused,
         },
     };
     use db_lib::db_error::DbError;
@@ -649,6 +650,24 @@ mod tests {
             panic!("a game request fails with a game error");
         };
         assert_eq!(reason, UiError::RequestUnavailable.encode());
+    }
+
+    #[test]
+    fn a_paused_realtime_refusal_is_explained_and_not_logged() {
+        let request = ClientRequest::Challenge(crate::common::ChallengeAction::Accept(
+            shared_types::ChallengeId("realtime".to_string()),
+        ));
+        let paused = RequestHandlerError::InternalError(
+            anyhow::Error::new(RealtimeGamesPaused).context("accepting challenge"),
+        );
+
+        assert_eq!(
+            external_server_error(&request, &paused),
+            ExternalServerError::Request {
+                reason: UiError::RealtimeGamesPaused.encode(),
+            }
+        );
+        assert!(!should_log_request_error(&paused));
     }
 
     #[test]

@@ -98,6 +98,7 @@
         "discord_unverified": "No s'ha pogut verificar la vinculació amb Discord. Torna a començar des de la configuració de notificacions.",
         "discord_failed": "La vinculació amb Discord ha fallat. Torna a començar des de la configuració de notificacions.",
         "rating_above_band": "{{rating}} supera el límit superior de puntuació de {{limit}}",
-        "rating_below_band": "{{rating}} és inferior al límit mínim de puntuació de {{limit}}"
+        "rating_below_band": "{{rating}} és inferior al límit mínim de puntuació de {{limit}}",
+        "realtime_games_paused": "Les noves partides en temps real estan aturades per manteniment."
     }
 }

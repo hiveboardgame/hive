@@ -203,7 +203,15 @@ pub async fn scheduled_start_candidates(
     limit: i64,
     conn: &mut DbConn<'_>,
 ) -> Result<Vec<Uuid>, DbError> {
-    Tournament::due_scheduled_start_ids(&ADAPTED_FORMATS, as_of, limit, conn).await
+    Tournament::due_scheduled_start_ids(&ADAPTED_FORMATS, as_of, limit, true, conn).await
+}
+
+pub async fn scheduled_non_realtime_start_candidates(
+    as_of: DateTime<Utc>,
+    limit: i64,
+    conn: &mut DbConn<'_>,
+) -> Result<Vec<Uuid>, DbError> {
+    Tournament::due_scheduled_start_ids(&ADAPTED_FORMATS, as_of, limit, false, conn).await
 }
 
 pub async fn timeout_candidates(

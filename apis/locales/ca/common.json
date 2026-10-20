@@ -223,7 +223,19 @@
             "title": "Telemetria"
         },
         "page_title": "Administració",
-        "administrators_only": "Aquesta pàgina només està disponible per als administradors."
+        "administrators_only": "Aquesta pàgina només està disponible per als administradors.",
+        "realtime_games": {
+            "title": "Partides en temps real",
+            "allowed": "Es permeten noves partides en temps real.",
+            "paused": "Les noves partides en temps real estan aturades.",
+            "in_progress": "Partides en temps real encara en curs: {{games}}",
+            "starting": "Inicis de partides en temps real encara en procés: {{starts}}",
+            "stop": "Atura les noves partides en temps real",
+            "resume": "Permet noves partides en temps real",
+            "explanation": "En aturar-les es rebutgen els nous reptes en temps real, l'inici de partides i tornejos en temps real i els aparellaments d'Arena. Les partides que ja estan en joc continuen. Un reinici o un desplegament torna a permetre les partides en temps real.",
+            "started_while_paused": "Iniciades després de l'aturada: {{games}}",
+            "started_while_paused_reason": "Les partides de torneig entre dos bots comencen tan bon punt s'allibera la seva ronda, sense esperar que ningú estigui preparat. Deixa que acabin abans de desplegar."
+        }
     },
     "analysis": {
         "could_not_load_uhp_analysis_with_error": "No s'ha pogut carregar l'anàlisi UHP: {{error}}",

@@ -10,6 +10,7 @@ use crate::{
         TournamentStartIntent,
     },
     components::{
+        atoms::realtime_paused_notice::RealtimePausedNotice,
         layouts::page_shell::{PageShell, PageShellVariant},
         molecules::{modal::Modal, panel::Panel, time_row::TimeRow, user_identity::UserIdentity},
         organisms::{
@@ -58,6 +59,7 @@ use crate::{
         AuthContext,
         AuthIdentity,
         EliminationStateStoreFields,
+        RealtimeGames,
         RoundRobinStateStoreFields,
         SwissStateStoreFields,
         TournamentCommonStoreFields,
@@ -422,6 +424,7 @@ struct TournamentPageContext {
     manage_matches_access: Memo<Option<bool>>,
     pre_start_changes_open: Signal<bool>,
     scheduled_start_pending: Signal<bool>,
+    realtime_paused: Signal<bool>,
     now: Signal<DateTime<Utc>>,
     format: Format,
 }
@@ -594,6 +597,14 @@ fn TournamentSurface(
             state.configuration().get_untracked().time_mode() == Some(TimeMode::RealTime)
         }
     };
+    let realtime_tournament =
+        realtime_format || matches!(tournament.format, TournamentFormatState::Arena(_));
+    let realtime_games = expect_context::<RealtimeGames>();
+    let realtime_paused = Signal::derive(move || {
+        realtime_tournament
+            && realtime_games.paused.get()
+            && tournament.common.lifecycle().get().status != TournamentStatus::Finished
+    });
     let scheduling_available = Signal::derive(move || {
         let Some(user_id) = user_id.get() else {
             return false;
@@ -700,6 +711,7 @@ fn TournamentSurface(
         manage_matches_access,
         pre_start_changes_open,
         scheduled_start_pending,
+        realtime_paused,
         now,
         format,
     };
@@ -721,6 +733,7 @@ fn TournamentSurface(
                 {t!(i18n, tournaments.detail.pairing_failed)}
             </p>
         </Show>
+        <RealtimePausedNotice applies=realtime_paused />
         <main class="min-w-0">
             <Outlet />
         </main>
@@ -1003,9 +1016,13 @@ fn TournamentHeaderActions() -> impl IntoView {
                     <button
                         type="button"
                         class="ui-button ui-button-primary ui-button-sm"
-                        prop:disabled=move || !start_available.get()
+                        prop:disabled=move || {
+                            !start_available.get() || context.realtime_paused.get()
+                        }
                         on:click=move |_| {
-                            if start_available.get_untracked() {
+                            if start_available.get_untracked()
+                                && !context.realtime_paused.get_untracked()
+                            {
                                 let mut expected_entrant_ids = context
                                     .tournament
                                     .common
@@ -1217,6 +1234,7 @@ fn EliminationStartSetup(setup: TournamentStartSetup) -> impl IntoView {
                     <p class="text-xs text-gray-600 dark:text-gray-400">
                         {t!(i18n, tournaments.detail.select_a_position_to_assign_a_player)}
                     </p>
+                    <RealtimePausedNotice applies=context.realtime_paused />
                 </header>
                 <div
                     class="overflow-y-auto flex-1 py-3 px-3 min-h-0 sm:px-4"
@@ -1274,9 +1292,13 @@ fn EliminationStartSetup(setup: TournamentStartSetup) -> impl IntoView {
                     <button
                         type="button"
                         class="min-h-10 ui-button ui-button-primary ui-button-sm"
-                        prop:disabled=move || { now.get() >= deadline }
+                        prop:disabled=move || {
+                            now.get() >= deadline || context.realtime_paused.get()
+                        }
                         on:click=move |_| {
-                            if now.get_untracked() < deadline {
+                            if now.get_untracked() < deadline
+                                && !context.realtime_paused.get_untracked()
+                            {
                                 websocket
                                     .send(
                                         &ClientRequest::Tournament(

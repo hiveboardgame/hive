@@ -24,6 +24,7 @@ pub mod piece;
 pub mod profile_link;
 pub mod rating;
 pub mod rating_history;
+pub mod realtime_paused_notice;
 pub mod render_layer_view;
 pub mod select_options;
 pub mod simple_link;

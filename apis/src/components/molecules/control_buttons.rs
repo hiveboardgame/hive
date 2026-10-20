@@ -8,6 +8,7 @@ use crate::{
         ApiRequestsProvider,
         AuthContext,
         AuthIdentity,
+        RealtimeGames,
     },
 };
 use hive_lib::{Color, ColorChoice, GameControl};
@@ -130,6 +131,16 @@ pub fn ControlButtons() -> impl IntoView {
 
         _ => false,
     };
+
+    let realtime_games = expect_context::<RealtimeGames>();
+    let realtime_blocked = move || {
+        game_response.with(|game| {
+            game.as_ref()
+                .is_some_and(|game| realtime_games.blocks(game.time_mode))
+        })
+    };
+    let realtime_blocked_title =
+        move || realtime_blocked().then(|| t_string!(i18n, messages.errors.realtime_games_paused));
 
     let new_opponent = move |_| {
         let Some(details) = game_response.with_untracked(|game| {
@@ -263,13 +274,16 @@ pub fn ControlButtons() -> impl IntoView {
                             format!("{} {}", FINISHED_GAME_BUTTON_CLASS, rematch_button_tone())
                         }
 
-                        prop:disabled=sent_challenge
+                        prop:disabled=move || sent_challenge() || realtime_blocked()
+                        title=realtime_blocked_title
                         on:click=rematch
                     >
                         {rematch_text}
                     </button>
                     <button
                         class=format!("{FINISHED_GAME_BUTTON_CLASS} ui-button-primary")
+                        prop:disabled=realtime_blocked
+                        title=realtime_blocked_title
                         on:click=new_opponent
                     >
                         New Game
