@@ -11,6 +11,7 @@ use sha2::{Digest, Sha256};
 const SERVICE_WORKER_TEMPLATE: &str = include_str!("sw-template.js");
 const CACHE_NAME_PLACEHOLDER: &str = "__HIVE_CACHE_NAME__";
 const ASSETS_PLACEHOLDER: &str = "__HIVE_ASSETS__";
+const CACHE_FIRST_PLACEHOLDER: &str = "__HIVE_CACHE_FIRST__";
 
 #[get("/assets/site.webmanifest")]
 pub async fn manifest_redirect(request: actix_web::HttpRequest) -> HttpResponse {
@@ -70,14 +71,14 @@ pub struct PwaDocumentAssets {
 }
 
 impl PwaManifest {
-    pub fn from_site_root(site_root: &str) -> Self {
+    pub fn from_site_root(site_root: &str, hash_files: bool) -> Self {
         let asset_entries = collect_assets(site_root);
         let cache_version = cache_version(&asset_entries);
         let assets = asset_entries
             .into_iter()
             .map(|(asset, _)| asset)
             .collect::<Vec<_>>();
-        let worker_script = render_worker_script(&cache_version, &assets);
+        let worker_script = render_worker_script(&cache_version, &assets, hash_files);
 
         Self {
             cache_version,
@@ -111,16 +112,18 @@ impl PwaDocumentAssets {
     }
 }
 
-fn render_worker_script(cache_version: &str, assets: &[String]) -> String {
+fn render_worker_script(cache_version: &str, assets: &[String], cache_first: bool) -> String {
     let cache_name = serde_json::to_string(&format!("hivegame-cache-{cache_version}"))
         .expect("serializes cache name");
     let assets = serde_json::to_string(assets).expect("serializes cache manifest");
     let worker_script = SERVICE_WORKER_TEMPLATE
         .replace(CACHE_NAME_PLACEHOLDER, &cache_name)
-        .replace(ASSETS_PLACEHOLDER, &assets);
+        .replace(ASSETS_PLACEHOLDER, &assets)
+        .replace(CACHE_FIRST_PLACEHOLDER, &cache_first.to_string());
 
     debug_assert!(!worker_script.contains(CACHE_NAME_PLACEHOLDER));
     debug_assert!(!worker_script.contains(ASSETS_PLACEHOLDER));
+    debug_assert!(!worker_script.contains(CACHE_FIRST_PLACEHOLDER));
 
     worker_script
 }
@@ -202,6 +205,7 @@ mod tests {
         render_worker_script,
         PwaDocumentAssets,
         ASSETS_PLACEHOLDER,
+        CACHE_FIRST_PLACEHOLDER,
         CACHE_NAME_PLACEHOLDER,
     };
 
@@ -224,6 +228,7 @@ mod tests {
                 "/pkg/HiveGame.js".to_string(),
                 "/assets/site.webmanifest".to_string(),
             ],
+            true,
         );
 
         assert!(script.contains(r#"const CACHE_NAME = "hivegame-cache-abc123";"#));
@@ -232,13 +237,20 @@ mod tests {
         ));
         assert!(!script.contains(CACHE_NAME_PLACEHOLDER));
         assert!(!script.contains(ASSETS_PLACEHOLDER));
+        assert!(!script.contains(CACHE_FIRST_PLACEHOLDER));
     }
 
     #[test]
     fn render_worker_script_json_escapes_cache_name() {
-        let script = render_worker_script("quote\"slash\\", &[]);
+        let script = render_worker_script("quote\"slash\\", &[], true);
 
         assert!(script.contains(r#"const CACHE_NAME = "hivegame-cache-quote\"slash\\";"#));
         assert!(script.contains("const ASSETS_TO_CACHE = [];"));
+    }
+
+    #[test]
+    fn only_hashed_file_names_are_served_cache_first() {
+        assert!(render_worker_script("abc123", &[], true).contains("const CACHE_FIRST = true;"));
+        assert!(render_worker_script("abc123", &[], false).contains("const CACHE_FIRST = false;"));
     }
 }

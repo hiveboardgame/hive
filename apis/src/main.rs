@@ -6,7 +6,9 @@ use std::sync::Arc;
 use actix_session::config::PersistentSession;
 use actix_web::{
     cookie::{time::Duration, SameSite},
-    middleware::{from_fn, Compress},
+    http::header::ContentEncoding,
+    middleware::{from_fn, Compress, Condition, DefaultHeaders},
+    web,
 };
 use apis::{api, email, functions, jobs, notifications};
 use apis::security::{csrf, origin::ApplicationOrigin};
@@ -175,7 +177,10 @@ async fn main() -> std::io::Result<()> {
     jobs::push_device_sweep(pool.clone());
     jobs::email_drain(pool.clone(), email::EmailConfig::from_env());
     jobs::email_cleanup(pool.clone());
-    let pwa_manifest = PwaManifest::from_site_root(&conf.leptos_options.site_root);
+    let pwa_manifest = PwaManifest::from_site_root(
+        &conf.leptos_options.site_root,
+        conf.leptos_options.hash_files,
+    );
 
     println!("listening on http://{}", addr);
 
@@ -195,7 +200,15 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::from(push_telemetry.clone()))
             .app_data(Data::new(pwa_manifest.clone()))
             // serve JS/WASM/CSS from `pkg`
-            .service(Files::new("/pkg", format!("{site_root}/pkg")))
+            .service(
+                web::scope("/pkg")
+                    // Unhashed builds are fetched again after every rebuild, and gzipping the debug wasm takes minutes.
+                    .wrap(Condition::new(
+                        !leptos_options.hash_files,
+                        DefaultHeaders::new().add(ContentEncoding::Identity),
+                    ))
+                    .service(Files::new("", format!("{site_root}/pkg"))),
+            )
             .service(functions::pwa::worker)
             .service(functions::pwa::localized_manifest)
             .service(functions::pwa::manifest_redirect)
