@@ -223,7 +223,19 @@
             "title": "Telemetrie"
         },
         "page_title": "Administrare",
-        "administrators_only": "Această pagină este disponibilă doar administratorilor."
+        "administrators_only": "Această pagină este disponibilă doar administratorilor.",
+        "realtime_games": {
+            "title": "Partide în timp real",
+            "allowed": "Partidele noi în timp real sunt permise.",
+            "paused": "Partidele noi în timp real sunt oprite.",
+            "in_progress": "Partide în timp real încă în desfășurare: {{games}}",
+            "starting": "Porniri de partide în timp real încă în procesare: {{starts}}",
+            "stop": "Oprește partidele noi în timp real",
+            "resume": "Permite partidele noi în timp real",
+            "explanation": "Oprirea refuză provocările noi în timp real, pornirea partidelor și turneelor în timp real și împerecherile din Arenă. Partidele aflate deja în desfășurare continuă. O repornire sau un deploy permite din nou partidele în timp real.",
+            "started_while_paused": "Pornite după oprire: {{games}}",
+            "started_while_paused_reason": "Partidele de turneu dintre doi boți încep imediat ce runda lor este publicată, fără să aștepte ca cineva să fie pregătit. Lasă-le să se termine înainte de deploy."
+        }
     },
     "analysis": {
         "could_not_load_uhp_analysis_with_error": "Nu s-a putut încărca analiza UHP: {{error}}",

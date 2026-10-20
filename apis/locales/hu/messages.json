@@ -98,6 +98,7 @@
         "discord_unverified": "A Discord összekapcsolását nem sikerült ellenőrizni. Kezdd újra az értesítési beállításoknál.",
         "discord_failed": "A Discord összekapcsolása nem sikerült. Kezdd újra az értesítési beállításoknál.",
         "rating_above_band": "{{rating}} a {{limit}} értékszámhatár fölött van",
-        "rating_below_band": "{{rating}} a {{limit}} értékszámhatár alatt van"
+        "rating_below_band": "{{rating}} a {{limit}} értékszámhatár alatt van",
+        "realtime_games_paused": "Az új valós idejű játszmák karbantartás miatt szünetelnek."
     }
 }

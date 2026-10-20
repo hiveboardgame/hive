@@ -24,6 +24,7 @@ use crate::{
     responses::GameResponse,
     websocket::{
         messages::{AuthError, HandlerOutput, InternalServerMessage, MessageDestination, SocketTx},
+        RealtimeGamesPaused,
         WebsocketData,
         WsHub,
     },
@@ -65,6 +66,7 @@ impl std::fmt::Display for RequestHandlerError {
 impl RequestHandlerError {
     pub fn user_safe_reason(&self) -> String {
         match self {
+            Self::InternalError(_) if self.is_realtime_pause() => UiError::RealtimeGamesPaused,
             Self::InternalError(_) => UiError::RequestUnavailable,
             Self::ChatClientIdConflict => UiError::ChatRetryConflict,
             Self::AuthError(_) => UiError::Unauthorized,
@@ -76,6 +78,10 @@ impl RequestHandlerError {
             Self::TournamentNameTaken => UiError::TournamentNameTaken,
         }
         .encode()
+    }
+
+    pub fn is_realtime_pause(&self) -> bool {
+        matches!(self, Self::InternalError(error) if error.is::<RealtimeGamesPaused>())
     }
 
     /// Why an ordinary refusal happened (illegal move, not your turn, game over, bad
@@ -383,10 +389,16 @@ impl RequestHandler {
             }
             ClientRequest::Challenge(challenge_action) => {
                 self.ensure_auth()?;
-                ChallengeHandler::new(challenge_action, self.user_id, self.admin, &self.pool)
-                    .handle()
-                    .await?
-                    .into()
+                ChallengeHandler::new(
+                    challenge_action,
+                    self.user_id,
+                    self.admin,
+                    self.data.clone(),
+                    &self.pool,
+                )
+                .handle()
+                .await?
+                .into()
             }
             ClientRequest::NotificationSeen { game_id } => {
                 self.ensure_auth()?;
@@ -774,6 +786,7 @@ mod tests {
             ChallengeAction::Accept(ChallengeId("a-challenge".to_string())),
             user_id,
             false,
+            handler.data.clone(),
             &handler.pool,
         );
         let schedule = ScheduleHandler::new(

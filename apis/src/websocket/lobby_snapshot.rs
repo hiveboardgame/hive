@@ -75,6 +75,10 @@ impl WsHub {
         };
         let message = ServerResult::Ok(Box::new(ServerMessage::LobbySnapshot(Box::new(snapshot))));
         self.send_own_state_via_tx(&socket.tx, socket.format, &mut Outbound::typed(&message));
+        let paused = ServerResult::Ok(Box::new(ServerMessage::RealtimeGamesPaused(
+            self.data.realtime_gate.is_paused(),
+        )));
+        self.send_own_state_via_tx(&socket.tx, socket.format, &mut Outbound::typed(&paused));
     }
 
     fn ensure_socket_connected(

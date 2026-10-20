@@ -146,13 +146,13 @@ impl TournamentHandler {
             }
             TournamentAction::StartCancel(id, setup_id) => {
                 StartHandler::cancel(id, setup_id, self.user_id, &self.pool)
-                    .handle()
+                    .handle(&self.hub.data.realtime_gate)
                     .await?
                     .into()
             }
             TournamentAction::StartConfirm(id, setup_id, bracket_order) => {
                 StartHandler::confirm(id, setup_id, bracket_order, self.user_id, &self.pool)
-                    .handle()
+                    .handle(&self.hub.data.realtime_gate)
                     .await?
                     .into()
             }
@@ -169,7 +169,7 @@ impl TournamentHandler {
                 self.user_id,
                 &self.pool,
             )
-            .handle()
+            .handle(&self.hub.data.realtime_gate)
             .await?
             .into(),
             TournamentAction::AdjudicateResult(tournament_id, intent) => {

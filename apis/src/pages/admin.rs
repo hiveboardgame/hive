@@ -1,5 +1,5 @@
 use crate::{
-    common::with_class,
+    common::{localized_error_message, with_class},
     components::{
         atoms::simple_switch::SimpleSwitch,
         layouts::{page_header::PageHeader, page_shell::PageShell},
@@ -7,12 +7,13 @@ use crate::{
         organisms::chat::ResolvedChatWindow,
         update_from_event::update_from_input,
     },
-    functions::home_banner,
+    functions::{home_banner, realtime_games},
     i18n::{t, t_string, use_i18n},
-    providers::AuthContext,
+    providers::{AuthContext, RealtimeGames},
     security::csrf::ActionForm,
 };
 use leptos::prelude::*;
+use leptos_use::use_interval_fn;
 use shared_types::ConversationKey;
 
 #[component]
@@ -39,6 +40,12 @@ pub fn Admin() -> impl IntoView {
                     <EditBanner />
                 </Panel>
                 <Panel
+                    title=move || t_string!(i18n, common.admin.realtime_games.title)
+                    body_class="space-y-3"
+                >
+                    <RealtimeGamesControl />
+                </Panel>
+                <Panel
                     title=move || t_string!(i18n, common.admin.telemetry.title)
                     body_class="flex flex-wrap gap-2"
                 >
@@ -54,6 +61,167 @@ pub fn Admin() -> impl IntoView {
                 </Panel>
             </Show>
         </PageShell>
+    }
+}
+
+#[component]
+fn RealtimeGamesControl() -> impl IntoView {
+    let i18n = use_i18n();
+    let realtime = expect_context::<RealtimeGames>();
+    let refresh_token = RwSignal::new(0u32);
+    let set_paused = ServerAction::<realtime_games::SetPaused>::new();
+    let status = Resource::new(
+        move || (refresh_token.get(), realtime.paused.get()),
+        |_| realtime_games::status(),
+    );
+    Effect::new(move |_| {
+        if let Some(Ok(current)) = status.get() {
+            realtime.apply(current.paused);
+        }
+    });
+    Effect::watch(
+        set_paused.version(),
+        move |_, _, _| {
+            if let Some(Ok(paused)) = set_paused.value().get_untracked() {
+                realtime.apply(paused);
+            }
+        },
+        false,
+    );
+    use_interval_fn(
+        move || {
+            if realtime.paused.get_untracked() {
+                refresh_token.update(|n| *n = n.wrapping_add(1));
+            }
+        },
+        5_000,
+    );
+    let toggle_error = move || {
+        set_paused
+            .value()
+            .get()
+            .and_then(Result::err)
+            .map(|error| localized_error_message(i18n, &error.to_string()))
+    };
+    view! {
+        <Transition fallback=move || {
+            view! { <p>{t!(i18n, common.loading)}</p> }
+        }>
+            {move || {
+                status
+                    .get()
+                    .map(|result| match result {
+                        Ok(current) => view! { <RealtimeGamesStatusView current /> }.into_any(),
+                        Err(error) => {
+                            view! {
+                                <p class="ui-notice">
+                                    {localized_error_message(i18n, &error.to_string())}
+                                </p>
+                            }
+                                .into_any()
+                        }
+                    })
+            }}
+        </Transition>
+        <button
+            type="button"
+            class=move || {
+                if realtime.paused.get() {
+                    "ui-button ui-button-primary ui-button-md"
+                } else {
+                    "ui-button ui-button-danger ui-button-md"
+                }
+            }
+            disabled=move || set_paused.pending().get()
+            on:click=move |_| {
+                set_paused
+                    .dispatch(realtime_games::SetPaused {
+                        paused: !realtime.paused.get_untracked(),
+                    });
+            }
+        >
+            {move || {
+                if realtime.paused.get() {
+                    t_string!(i18n, common.admin.realtime_games.resume)
+                } else {
+                    t_string!(i18n, common.admin.realtime_games.stop)
+                }
+            }}
+        </button>
+        <Show when=move || toggle_error().is_some()>
+            <p class="ui-notice">{toggle_error}</p>
+        </Show>
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+            {t!(i18n, common.admin.realtime_games.explanation)}
+        </p>
+    }
+}
+
+#[component]
+fn RealtimeGamesStatusView(current: realtime_games::RealtimeGamesStatus) -> impl IntoView {
+    let i18n = use_i18n();
+    let late = current.started_while_paused;
+    view! {
+        <p class="font-semibold">
+            {if current.paused {
+                t_string!(i18n, common.admin.realtime_games.paused)
+            } else {
+                t_string!(i18n, common.admin.realtime_games.allowed)
+            }}
+        </p>
+        <p>
+            {t_string!(i18n, common.admin.realtime_games.in_progress, games = current.live_games)
+                .to_string()}
+        </p>
+        {(current.starting > 0)
+            .then(|| {
+                view! {
+                    <p class="font-semibold">
+                        {t_string!(
+                            i18n, common.admin.realtime_games.starting, starts = current.starting
+                        )
+                            .to_string()}
+                    </p>
+                }
+            })}
+        {(!late.is_empty())
+            .then(|| {
+                let count = late.len();
+                view! {
+                    <div
+                        role="alert"
+                        class="p-3 space-y-2 text-sm bg-orange-50 rounded border border-orange-400 dark:text-orange-100 text-orange-950 dark:bg-orange-950"
+                    >
+                        <p class="font-semibold">
+                            {t_string!(
+                                i18n, common.admin.realtime_games.started_while_paused, games = count
+                            )
+                                .to_string()}
+                        </p>
+                        <p>{t!(i18n, common.admin.realtime_games.started_while_paused_reason)}</p>
+                        <ul class="list-disc ps-5">
+                            {late
+                                .into_iter()
+                                .map(|game| {
+                                    view! {
+                                        <li>
+                                            <a
+                                                class="ui-text-link"
+                                                href=format!("/game/{}", game.game_id.0)
+                                            >
+                                                {t_string!(
+                                                    i18n, common.versus_players, white = game.white, black = game.black
+                                                )
+                                                    .to_string()}
+                                            </a>
+                                        </li>
+                                    }
+                                })
+                                .collect_view()}
+                        </ul>
+                    </div>
+                }
+            })}
     }
 }
 

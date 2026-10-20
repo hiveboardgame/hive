@@ -16,7 +16,7 @@ use crate::{
         molecules::time_row::TimeRow,
     },
     i18n::*,
-    providers::{websocket::WebsocketContext, ApiRequestsProvider, AuthContext},
+    providers::{websocket::WebsocketContext, ApiRequestsProvider, AuthContext, RealtimeGames},
     responses::ChallengeResponse,
 };
 use hive_lib::ColorChoice;
@@ -93,6 +93,10 @@ pub fn ChallengeDetails(
         })
     });
     let show_accept = Signal::derive(move || action_flags.with(|flags| flags.accept));
+    let realtime_games = expect_context::<RealtimeGames>();
+    let accept_blocked = Signal::derive(move || {
+        challenge.with_value(|challenge| realtime_games.blocks(challenge.time_mode))
+    });
     let show_decline_or_cancel = Signal::derive(move || {
         action_flags.with(|flags| flags.decline || flags.cancel || flags.admin_cancel)
     });
@@ -170,7 +174,14 @@ pub fn ChallengeDetails(
                             view! {
                                 <Show when=show_accept>
                                     <button
-                                        title=move || t_string!(i18n, game.accept_challenge)
+                                        title=move || {
+                                            if accept_blocked.get() {
+                                                t_string!(i18n, messages.errors.realtime_games_paused)
+                                            } else {
+                                                t_string!(i18n, game.accept_challenge)
+                                            }
+                                        }
+                                        disabled=accept_blocked
                                         on:click=move |_| {
                                             pending_action.set(Some(PendingAction::Accept));
                                             api.get().challenge_accept(challenge_id.get_value());

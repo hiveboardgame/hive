@@ -399,6 +399,15 @@ pub struct Game {
     pub arena_ordinal: Option<i64>,
 }
 
+#[derive(Debug, Queryable, Selectable)]
+#[diesel(table_name = games)]
+pub struct LiveRealtimeGame {
+    pub nanoid: String,
+    pub white_id: Uuid,
+    pub black_id: Uuid,
+    pub created_at: DateTime<Utc>,
+}
+
 #[derive(Queryable, Selectable)]
 #[diesel(table_name = games)]
 pub struct GameHeartbeat {
@@ -1690,6 +1699,17 @@ impl Game {
             .order(games::timeout_at.asc())
             .limit(limit)
             .select(games::id)
+            .load(conn)
+            .await?)
+    }
+
+    pub async fn live_realtime(conn: &mut DbConn<'_>) -> Result<Vec<LiveRealtimeGame>, DbError> {
+        Ok(games::table
+            .filter(finished.eq(false))
+            .filter(time_mode.eq(TimeMode::RealTime.to_string()))
+            .filter(game_status.eq(GameStatus::InProgress.to_string()))
+            .order(created_at.desc())
+            .select(LiveRealtimeGame::as_select())
             .load(conn)
             .await?)
     }

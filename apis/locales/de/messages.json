@@ -98,6 +98,7 @@
         "discord_unverified": "Discord-Verknüpfung konnte nicht überprüft werden. Starte erneut in den Benachrichtigungseinstellungen.",
         "discord_failed": "Discord-Verknüpfung fehlgeschlagen. Starte erneut in den Benachrichtigungseinstellungen.",
         "rating_above_band": "{{rating}} liegt über der Wertungsgrenze von {{limit}}",
-        "rating_below_band": "{{rating}} liegt unter der Wertungsgrenze von {{limit}}"
+        "rating_below_band": "{{rating}} liegt unter der Wertungsgrenze von {{limit}}",
+        "realtime_games_paused": "Neue Echtzeitpartien sind wegen Wartungsarbeiten pausiert."
     }
 }

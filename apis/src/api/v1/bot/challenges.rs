@@ -291,6 +291,7 @@ async fn create_challenge(
     pool: Data<DbPool>,
     hub: Data<Arc<WsHub>>,
 ) -> Result<ChallengeResponse> {
+    hub.data.realtime_gate.admit(req.time_mode)?;
     let mut conn = get_conn(&pool).await?;
 
     let opponent_id = match (&req.visibility, &req.opponent) {
@@ -404,6 +405,7 @@ async fn accept_challenge(
     let mut conn = get_conn(&pool).await?;
     let challenge = Challenge::find_by_challenge_id(&id, &mut conn).await?;
     challenge.validate_accepting_user(bot.id)?;
+    hub.data.realtime_gate.admit_challenge(&challenge)?;
     let (white_id, black_id) = match challenge.color_choice.to_lowercase().as_str() {
         "black" => (bot.id, challenge.challenger_id),
         "white" => (challenge.challenger_id, bot.id),

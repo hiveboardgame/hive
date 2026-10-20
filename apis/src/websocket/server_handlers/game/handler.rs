@@ -72,6 +72,11 @@ impl GameActionHandler {
     }
 
     pub async fn handle(&self) -> Result<HandlerOutput> {
+        let _start = if can_start_game(&self.game_action) {
+            self.data.realtime_gate.admit_start(&self.game)?
+        } else {
+            None
+        };
         let output = match self.game_action.clone() {
             GameAction::Berserk => {
                 BerserkHandler::new(self.game.id, self.user_id, self.data.clone(), &self.pool)
@@ -135,5 +140,50 @@ impl GameActionHandler {
             }
         };
         Ok(output)
+    }
+}
+
+fn can_start_game(action: &GameAction) -> bool {
+    match action {
+        GameAction::Turn(_)
+        | GameAction::Play(_)
+        | GameAction::PlayAt { .. }
+        | GameAction::Start => true,
+        GameAction::Berserk
+        | GameAction::CheckTime
+        | GameAction::Control(_)
+        | GameAction::Join
+        | GameAction::Unwatch => false,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::can_start_game;
+    use crate::common::GameAction;
+    use hive_lib::{Color, GameControl, Turn};
+
+    #[test]
+    fn every_way_to_move_or_start_needs_the_realtime_gate() {
+        for action in [
+            GameAction::Turn(Turn::Shutout),
+            GameAction::Play("wG1".to_string()),
+            GameAction::PlayAt {
+                turn: 0,
+                notation: "wG1".to_string(),
+            },
+            GameAction::Start,
+        ] {
+            assert!(can_start_game(&action), "{action:?} bypasses the gate");
+        }
+        for action in [
+            GameAction::Berserk,
+            GameAction::CheckTime,
+            GameAction::Control(GameControl::Abort(Color::White)),
+            GameAction::Join,
+            GameAction::Unwatch,
+        ] {
+            assert!(!can_start_game(&action), "{action:?} is gated");
+        }
     }
 }

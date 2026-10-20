@@ -30,6 +30,7 @@ pub enum UiError {
     DiscordFailed,
     RatingAboveBand { rating: String, limit: String },
     RatingBelowBand { rating: String, limit: String },
+    RealtimeGamesPaused,
 }
 
 impl UiError {
@@ -116,6 +117,9 @@ impl UiError {
                 limit = limit
             )
             .to_string(),
+            Self::RealtimeGamesPaused => {
+                td_string!(locale, messages.errors.realtime_games_paused).to_string()
+            }
         }
     }
 }

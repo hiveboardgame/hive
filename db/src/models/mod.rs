@@ -33,7 +33,7 @@ pub use email_request_log::{EmailRequestLog, NewEmailRequestLog};
 pub use email_state::EmailState;
 pub use email_token::{EmailToken, NewEmailToken};
 pub(crate) use game::DeadlineSettlement;
-pub use game::{Game, GameHeartbeat, NewGame};
+pub use game::{Game, GameHeartbeat, LiveRealtimeGame, NewGame};
 pub use game_hash::{GameFinishContext, GameHash};
 pub use game_user::GameUser;
 pub use home_banner::HomeBanner;

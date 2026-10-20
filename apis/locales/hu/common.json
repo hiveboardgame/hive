@@ -223,7 +223,19 @@
             "title": "Telemetria"
         },
         "page_title": "Adminisztráció",
-        "administrators_only": "Ez az oldal csak rendszergazdák számára érhető el."
+        "administrators_only": "Ez az oldal csak rendszergazdák számára érhető el.",
+        "realtime_games": {
+            "title": "Valós idejű játszmák",
+            "allowed": "Új valós idejű játszmák engedélyezve.",
+            "paused": "Új valós idejű játszmák leállítva.",
+            "in_progress": "Még folyamatban lévő valós idejű játszmák: {{games}}",
+            "starting": "Még feldolgozás alatt álló valós idejű játszmaindítások: {{starts}}",
+            "stop": "Új valós idejű játszmák leállítása",
+            "resume": "Új valós idejű játszmák engedélyezése",
+            "explanation": "Leállítás esetén a szerver elutasítja az új valós idejű kihívásokat, a valós idejű játszmák és versenyek indítását, valamint az Aréna párosításait. A már futó játszmák folytatódnak. Újraindítás vagy telepítés után a valós idejű játszmák ismét engedélyezettek.",
+            "started_while_paused": "A leállítás után indult: {{games}}",
+            "started_while_paused_reason": "A két bot közötti versenyjátszmák azonnal elindulnak, amint a fordulójuk megnyílik, anélkül hogy bárkinek jeleznie kellene, hogy kész. Várd meg, amíg befejeződnek, mielőtt telepítesz."
+        }
     },
     "analysis": {
         "could_not_load_uhp_analysis_with_error": "Nem sikerült betölteni az UHP-elemzést: {{error}}",

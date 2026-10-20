@@ -15,6 +15,7 @@ mod games_search_context;
 mod notifications;
 pub mod online_users;
 mod ping;
+mod realtime_games;
 pub mod refocus;
 pub mod schedules;
 mod snapshot;
@@ -52,6 +53,7 @@ pub use notifications::{
     TournamentPairingNotice,
 };
 pub use ping::{provide_ping, PingContext, FRESH_WINDOW_SECS};
+pub use realtime_games::{provide_realtime_games, RealtimeGames};
 pub use schedules::{provide_schedules, SchedulesContext};
 pub use sounds::{provide_sounds, SoundType, Sounds};
 pub(crate) use tournament_store::{

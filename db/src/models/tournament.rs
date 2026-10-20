@@ -23,7 +23,7 @@ use diesel::{
     dsl::sql,
     pg::{Pg, PgValue},
     prelude::*,
-    sql_types::{Jsonb, Text},
+    sql_types::{Bool, Jsonb, Text},
     AsExpression,
     FromSqlRow,
 };
@@ -707,12 +707,21 @@ impl Tournament {
         formats: &[Format],
         as_of: DateTime<Utc>,
         limit: i64,
+        include_realtime: bool,
         conn: &mut DbConn<'_>,
     ) -> Result<Vec<Uuid>, DbError> {
         if limit <= 0 || formats.is_empty() {
             return Ok(Vec::new());
         }
-        let candidates = tournaments::table
+        let mut candidates = tournaments::table.into_boxed();
+        if !include_realtime {
+            candidates = candidates.filter(sql::<Bool>(
+                "coalesce(configuration #>> '{format,configuration,clock,mode}', \
+                 configuration #>> '{format,configuration,default_plan,phases,0,clock,mode}') \
+                 IS DISTINCT FROM 'realtime'",
+            ));
+        }
+        let candidates = candidates
             .filter(tournaments::started_at.is_null())
             .filter(tournaments::finished_at.is_null())
             .filter(tournaments::starts_at.is_not_null())

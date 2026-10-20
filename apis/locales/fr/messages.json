@@ -98,6 +98,7 @@
         "discord_unverified": "L'association Discord n'a pas pu être vérifiée. Recommencez depuis les paramètres de notification.",
         "discord_failed": "L'association Discord a échoué. Recommencez depuis les paramètres de notification.",
         "rating_above_band": "{{rating}} dépasse la limite de classement de {{limit}}",
-        "rating_below_band": "{{rating}} est sous la limite de classement de {{limit}}"
+        "rating_below_band": "{{rating}} est sous la limite de classement de {{limit}}",
+        "realtime_games_paused": "Les nouvelles parties en temps réel sont suspendues pour maintenance."
     }
 }

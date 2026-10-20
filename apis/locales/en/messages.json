@@ -107,6 +107,7 @@
         "discord_unverified": "Discord link could not be verified. Start again from notification settings.",
         "discord_failed": "Discord linking failed. Start again from notification settings.",
         "rating_above_band": "{{rating}} is above the rating band of {{limit}}",
-        "rating_below_band": "{{rating}} is below the rating band of {{limit}}"
+        "rating_below_band": "{{rating}} is below the rating band of {{limit}}",
+        "realtime_games_paused": "New realtime games are paused for maintenance."
     }
 }

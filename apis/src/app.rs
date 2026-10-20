@@ -66,6 +66,7 @@ use crate::{
         provide_game_state,
         provide_notifications,
         provide_ping,
+        provide_realtime_games,
         provide_server_updates,
         provide_sounds,
         refocus::provide_refocus,
@@ -104,6 +105,7 @@ pub fn App() -> impl IntoView {
 
     //These dont expect any other context, can be provided in any order
     provide_ping();
+    provide_realtime_games();
     provide_server_updates();
     provide_schedules();
     provide_notifications();

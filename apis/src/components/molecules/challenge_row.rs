@@ -16,7 +16,7 @@ use crate::{
     },
     hooks::clipboard_copy::use_clipboard_copy,
     i18n::*,
-    providers::{ApiRequestsProvider, AuthContext},
+    providers::{ApiRequestsProvider, AuthContext, RealtimeGames},
     responses::ChallengeResponse,
 };
 use hive_lib::ColorChoice;
@@ -89,6 +89,10 @@ pub fn ChallengeRow(
             )
         })
     });
+    let realtime_games = expect_context::<RealtimeGames>();
+    let accept_blocked = Signal::derive(move || {
+        challenge_value.with_value(|challenge| realtime_games.blocks(challenge.time_mode))
+    });
     let displayed_color = Memo::new(move |_| {
         challenge_value
             .with_value(|challenge| challenge_displayed_color(challenge, viewer_role.get()))
@@ -146,6 +150,12 @@ pub fn ChallengeRow(
                 <button
                     on:click=move |_| {
                         api.get().challenge_accept(challenge_id.get_value());
+                    }
+                    disabled=accept_blocked
+                    title=move || {
+                        accept_blocked
+                            .get()
+                            .then(|| t_string!(i18n, messages.errors.realtime_games_paused))
                     }
                     class=accept_button_classes.get_value()
                 >

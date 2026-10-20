@@ -17,7 +17,7 @@ use crate::{
         SubscriptionAttempt,
         UserSettingsUpdate,
     },
-    providers::{chat::Chat, AlertType, AlertsContext, NotificationContext},
+    providers::{chat::Chat, AlertType, AlertsContext, NotificationContext, RealtimeGames},
 };
 use leptos::{
     logging::log,
@@ -87,6 +87,11 @@ pub fn handle_response(m: ServerResult) {
             Tournament(tournament_update) => handle_tournament(tournament_update),
             UserSettings(update) => handle_user_settings(update),
             Schedule(schedule_update) => handle_schedule(schedule_update),
+            RealtimeGamesPaused(paused) => {
+                if let Some(realtime_games) = use_context::<RealtimeGames>() {
+                    realtime_games.apply(paused);
+                }
+            }
             Error(reason) => {
                 if let Some(alerts) = use_context::<AlertsContext>() {
                     alerts.last_alert.set(Some(AlertType::Error(reason)));

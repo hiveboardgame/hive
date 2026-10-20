@@ -109,6 +109,12 @@ your turn, a `PlayAt` for a turn the game has moved past, a game that is over or
 notation the server cannot parse, a challenge that breaks the rules below. When the failure is on
 our side the reason is `"Unable to complete request"`, and retrying later is the only fix.
 
+During maintenance an admin can stop new realtime games. Until they are allowed again, creating
+or accepting a realtime challenge, playing the first move of a realtime game that has not
+started, and readying up for one are refused with `"New realtime games are paused for
+maintenance."`. Games already running, and correspondence and untimed games, are not affected.
+The HTTP API refuses the same requests with the same reason.
+
 A few refusals arrive as an ordinary message instead, `{"Ok": {"Error": "..."}}`: authentication
 (above), accepting a challenge outside its rating band, and challenges `DeleteMany` could not
 delete.
@@ -263,6 +269,7 @@ What a bot will receive:
 | `{"Game": {"OwnGameRemoved": "<nanoid>"}}` | one of your games left your list (finished or deleted) |
 | `{"UserProfile": {...}}` | reply to `GetUser` / `GetUsername` |
 | `{"LobbySnapshot": {...}}` | reply to `Resync` |
+| `{"RealtimeGamesPaused": true}` | whether new realtime games are stopped; sent after every lobby snapshot and whenever it changes |
 | `{"Challenge": {...}}` | a challenge was created, accepted or removed |
 | `{"UserStatus": {...}}` | someone came online, went offline or away |
 | `{"Join": "<uuid>"}` | someone joined a game you joined |

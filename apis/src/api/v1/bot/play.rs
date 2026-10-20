@@ -87,6 +87,7 @@ async fn play_move(
     let game = Game::find_by_game_id(&play.game_id, &mut conn)
         .await
         .map_err(bot_db_error)?;
+    let _start = hub.data.realtime_gate.admit_start(&game)?;
     let state = State::new_from_str(&game.history, &game.game_type)?;
     let (piece, position) = if state.turn == 0 {
         let piece = Piece::from_str(&play.piece_pos)?;

@@ -28,6 +28,7 @@ use super::{
     auth_context::{AuthContext, AuthIdentity},
     timer::TimerSignal,
     ApiRequestsProvider,
+    RealtimeGames,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -213,6 +214,9 @@ impl GameStateStore {
         if in_analysis {
             return true;
         }
+        if self.realtime_start_blocked_untracked() {
+            return false;
+        }
         let user_id = expect_context::<AuthContext>()
             .identity
             .get_untracked()
@@ -221,6 +225,19 @@ impl GameStateStore {
         self.state().with_untracked(|state| {
             live_move_allowed(user_color, state.turn_color, &state.game_status)
         })
+    }
+
+    pub fn realtime_start_blocked(&self) -> bool {
+        use_context::<RealtimeGames>().is_some_and(|realtime_games| {
+            self.game_response().with(|game| {
+                game.as_ref()
+                    .is_some_and(|game| realtime_games.blocks_start(game))
+            })
+        })
+    }
+
+    fn realtime_start_blocked_untracked(&self) -> bool {
+        untrack(|| self.realtime_start_blocked())
     }
 
     pub fn show_moves(&self, piece: Piece, position: Position) {

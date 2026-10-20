@@ -143,6 +143,7 @@ pub enum ServerMessage {
     UserSettings(UserSettingsUpdate),
     UserStatus(UserUpdate),
     UserProfile(UserResponse),
+    RealtimeGamesPaused(bool),
 }
 
 /// Authoritative best-effort lobby state sent on connect and Resync.

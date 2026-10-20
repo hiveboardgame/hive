@@ -30,7 +30,7 @@ use db_lib::{
     DbConn,
     DbPool,
 };
-use shared_types::{NotificationCategory, TournamentId, TournamentStatus};
+use shared_types::{NotificationCategory, TimeMode, TournamentId, TournamentStatus};
 use std::{sync::Arc, time::Duration};
 use tokio::time::MissedTickBehavior;
 use uuid::Uuid;
@@ -125,8 +125,17 @@ async fn reconcile(pool: &DbPool, hub: &Arc<WsHub>) -> Result<()> {
 
 async fn start_scheduled(pool: &DbPool, hub: &Arc<WsHub>) -> Result<()> {
     let mut conn = get_conn(pool).await?;
-    let candidates =
-        fixed_field::scheduled_start_candidates(Utc::now(), START_BATCH_SIZE, &mut conn).await?;
+    let realtime_start = hub.data.realtime_gate.begin_start(TimeMode::RealTime);
+    let candidates = if realtime_start.is_ok() {
+        fixed_field::scheduled_start_candidates(Utc::now(), START_BATCH_SIZE, &mut conn).await?
+    } else {
+        fixed_field::scheduled_non_realtime_start_candidates(
+            Utc::now(),
+            START_BATCH_SIZE,
+            &mut conn,
+        )
+        .await?
+    };
     for tournament_id in candidates {
         match fixed_field::start_scheduled(tournament_id, &mut conn).await {
             Ok(outcome) if outcome.started_now => {
@@ -197,6 +206,9 @@ async fn scheduled_start_deferred(
 }
 
 async fn start_scheduled_arenas(pool: &DbPool, hub: &Arc<WsHub>) -> Result<()> {
+    let Ok(_start) = hub.data.realtime_gate.begin_start(TimeMode::RealTime) else {
+        return Ok(());
+    };
     let mut conn = get_conn(pool).await?;
     let candidates =
         arena::scheduled_start_candidates(Utc::now(), START_BATCH_SIZE, &mut conn).await?;
@@ -320,6 +332,9 @@ async fn sweep_arena_once(
             Err(error) => log::error!("tournament_runtime: Arena {phase}: {error}"),
         }
     }
+    let Ok(_start) = hub.data.realtime_gate.begin_start(TimeMode::RealTime) else {
+        return Ok(());
+    };
     let candidates =
         arena::pairing_candidates(*after_id, Utc::now(), ARENA_PAIRING_BATCH_SIZE, &mut conn)
             .await?;
