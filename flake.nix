@@ -106,6 +106,7 @@
               postgresql_18
               caddy
               gum
+              gh
               direnv
               curl
               lsof

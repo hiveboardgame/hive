@@ -5,7 +5,8 @@ source "${WT_LIB:-$(dirname "${BASH_SOURCE[0]}")}/lib.sh"
 
 usage() {
     cat << USAGE
-usage: hive-run <name> [serve|watch|shell] [--share] [--lan-ip <IPv4>] [--tailnet-ip <IPv4>]
+usage: hive-run [<name>] [serve|watch|shell] [--share] [--lan-ip <IPv4>] [--tailnet-ip <IPv4>]
+  <name>  defaults to the worktree or main checkout you are in
   serve   cargo leptos serve behind $(origin_for '<name>') (default)
   watch   cargo leptos watch, hot reload on the instance's reload port
   shell   a shell in the worktree with the instance's environment
@@ -14,6 +15,19 @@ usage: hive-run <name> [serve|watch|shell] [--share] [--lan-ip <IPv4>] [--tailne
 '$MAIN_NAME' is the main checkout on :$MAIN_PORT.
 Uses local tools by default; HIVE_WORKTREE_RUNTIME=nix enters the worktree's nix shell.
 USAGE
+}
+
+current_instance() {
+    local top name
+    top=$(git rev-parse --show-toplevel 2> /dev/null) || return 0
+    top=$(cd "$top" && pwd -P)
+    if [ "$top" = "$MAIN_DIR" ]; then
+        echo "$MAIN_NAME"
+        return
+    fi
+    name=$(basename "$top")
+    [ -f "$(env_path "$name")" ] && [ "$(cd "$(wt_dir "$name")" && pwd -P)" = "$top" ] && echo "$name"
+    return 0
 }
 
 ensure_port_free() {
@@ -69,7 +83,12 @@ main() {
         ;;
     esac
     local name=$1 mode=serve mode_set=0 share=0 lan_ip="" tailnet_ip="" active
-    shift
+    if [[ $1 == --* ]] || { [[ $1 =~ ^(serve|watch|shell)$ ]] && [ ! -f "$(env_path "$1")" ]; }; then
+        name=$(current_instance)
+        [ -n "$name" ] || die "not inside a worktree or the main checkout; name the instance: hive-run <name> $*"
+    else
+        shift
+    fi
     while [ $# -gt 0 ]; do
         case $1 in
             --share)
@@ -100,6 +119,9 @@ main() {
     fi
     require_repo
     require_runtime
+    if [ "$name" != "$MAIN_NAME" ] && [ ! -f "$(env_path "$name")" ]; then
+        die "no instance named '$name'; see: hive-setup --ls"
+    fi
     for active in "${HIVE_WORKTREE:-}" "${WT_NAME:-}"; do
         if [ -n "$active" ] && [ "$active" != "$name" ]; then
             die "leave the $active environment before running $name"
