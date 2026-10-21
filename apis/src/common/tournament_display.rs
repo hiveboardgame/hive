@@ -7,7 +7,7 @@ use chrono::{DateTime, Utc};
 use hive_lib::GameStatus;
 use leptos::prelude::*;
 use shared_types::{
-    tournament::{swiss::System as SwissSystem, ReleasePolicy, SlotKey},
+    tournament::{elimination::EntrantSide, swiss::System as SwissSystem, ReleasePolicy, SlotKey},
     tournament_view::{ArenaPlayerStatsResponse, SlotResponse},
 };
 use uuid::Uuid;
@@ -19,6 +19,34 @@ pub(crate) fn arena_player_rating(stats: &ArenaPlayerStatsResponse) -> Option<u6
     stats
         .arena_rating
         .and_then(|rating| u64::try_from(rating).ok())
+}
+
+pub(crate) fn elimination_color_sequence(order: &[EntrantSide], repeats: bool) -> String {
+    let i18n = use_i18n();
+    let sequence = order
+        .iter()
+        .map(|side| match side {
+            EntrantSide::First => {
+                t_string!(i18n, tournaments.creation.elimination.colors.white_short).to_string()
+            }
+            EntrantSide::Second => {
+                t_string!(i18n, tournaments.creation.elimination.colors.black_short).to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ");
+    let colors = t_string!(
+        i18n,
+        tournaments.creation.elimination.colors.top_sequence,
+        sequence = sequence
+    )
+    .to_string();
+    if repeats {
+        let repeat = t_string!(i18n, tournaments.creation.elimination.colors.reverse_repeat);
+        format!("{colors} · {repeat}")
+    } else {
+        colors
+    }
 }
 
 pub fn tournament_slot_fragment(slot_id: Uuid) -> String {

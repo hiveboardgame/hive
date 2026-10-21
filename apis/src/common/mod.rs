@@ -161,6 +161,7 @@ pub use user_action::UserAction;
 
 pub(crate) use tournament_display::{
     arena_player_rating,
+    elimination_color_sequence,
     result_marker_color,
     rounded_percentage,
     tournament_completion_order,
