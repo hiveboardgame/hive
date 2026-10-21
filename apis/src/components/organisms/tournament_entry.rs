@@ -1,6 +1,7 @@
 use super::tournament_explanations::stage_plan_label;
 use crate::{
     common::{
+        elimination_color_sequence,
         format_compact_duration,
         format_tournament_clock,
         tournament_path_matches,
@@ -150,7 +151,7 @@ fn series_summary(plan: &SeriesPlan) -> Vec<String> {
             };
             let games =
                 t_string!(i18n, tournaments.ui.game_count, count = phase.games_per_set).to_string();
-            t_string!(
+            let rules = t_string!(
                 i18n,
                 tournaments.ui.per_set_time_control,
                 prefix = prefix,
@@ -159,7 +160,12 @@ fn series_summary(plan: &SeriesPlan) -> Vec<String> {
                 ending = ending,
                 value1 = format_tournament_clock(i18n, phase.clock, TournamentClockStyle::Detailed)
             )
-            .to_string()
+            .to_string();
+            let colors = elimination_color_sequence(
+                &phase.color_order,
+                !matches!(phase.set_limit, SetLimit::AtMost(sets) if sets.get() == 1),
+            );
+            format!("{rules} · {colors}")
         })
         .collect()
 }

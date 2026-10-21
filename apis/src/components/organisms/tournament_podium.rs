@@ -238,13 +238,9 @@ fn podium_placements(
 fn placement_label(rank: u32, shared: bool) -> String {
     let i18n = use_i18n();
     match (rank, shared) {
-        (1, false) => {
-            t_string!(i18n, tournaments.creation.elimination.colors.first_short).to_string()
-        }
+        (1, false) => t_string!(i18n, common.first).to_string(),
         (1, true) => t_string!(i18n, tournaments.ui.joint_first).to_string(),
-        (2, false) => {
-            t_string!(i18n, tournaments.creation.elimination.colors.second_short).to_string()
-        }
+        (2, false) => t_string!(i18n, common.second).to_string(),
         (2, true) => t_string!(i18n, tournaments.ui.joint_second).to_string(),
         (3, false) => t_string!(i18n, common.third).to_string(),
         (3, true) => t_string!(i18n, tournaments.ui.joint_third).to_string(),
