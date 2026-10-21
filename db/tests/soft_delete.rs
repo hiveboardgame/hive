@@ -139,6 +139,7 @@ async fn soft_delete_aborts_early_games_and_resigns_started_games() {
                 ),
                 compensation: 0.0,
                 expected_turn: None,
+                arrived_at: None,
             },
             &mut conn,
         )
@@ -154,6 +155,7 @@ async fn soft_delete_aborts_early_games_and_resigns_started_games() {
                 ),
                 compensation: 0.0,
                 expected_turn: None,
+                arrived_at: None,
             },
             &mut conn,
         )
@@ -724,6 +726,7 @@ async fn soft_delete_folds_a_preexisting_terminal_marker_before_withdrawal() {
             ),
             compensation: 0.0,
             expected_turn: None,
+            arrived_at: None,
         },
         &mut conn,
     )
@@ -739,6 +742,7 @@ async fn soft_delete_folds_a_preexisting_terminal_marker_before_withdrawal() {
             ),
             compensation: 0.0,
             expected_turn: None,
+            arrived_at: None,
         },
         &mut conn,
     )

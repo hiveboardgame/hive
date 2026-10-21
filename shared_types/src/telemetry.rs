@@ -59,6 +59,14 @@ pub struct TelemetryRow {
     pub process_vm_hwm_bytes: u64,
     pub db_pool_max_size: u64,
     pub load_user_state_permit_max: u64,
+    pub lag_moves: u64,
+    pub protocol_lag_p50_ms: u64,
+    pub protocol_lag_p90_ms: u64,
+    pub protocol_lag_missing: u64,
+    pub lag_cap_hits: u64,
+    pub tcp_rtt_connects: u64,
+    pub tcp_rtt_p50_ms: u64,
+    pub tcp_rtt_p90_ms: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -81,17 +89,23 @@ pub struct PushMetrics {
     pub retry_gave_up: u64,
 }
 
-pub const TELEMETRY_COLUMN_COUNT: usize = 38;
+pub const TELEMETRY_COLUMN_COUNT: usize = 46;
+// Rows written before the lag columns existed; their lag fields read as zero.
+const PRE_LAG_COLUMN_COUNT: usize = 38;
 
 impl TelemetryRow {
     /// Parse a single CSV row. Returns None if the row has the wrong number of
     /// fields or any field fails to parse as u64.
     pub fn from_csv_line(line: &str) -> Option<Self> {
         let parts: Vec<&str> = line.split(',').collect();
-        if parts.len() != TELEMETRY_COLUMN_COUNT {
+        if parts.len() != TELEMETRY_COLUMN_COUNT && parts.len() != PRE_LAG_COLUMN_COUNT {
             return None;
         }
         let p = |i: usize| parts[i].trim().parse::<u64>().ok();
+        let lag = |i: usize| match parts.get(i) {
+            Some(_) => p(i),
+            None => Some(0),
+        };
         Some(Self {
             timestamp: p(0)?,
             interval_secs: p(1)?,
@@ -131,6 +145,71 @@ impl TelemetryRow {
             process_vm_hwm_bytes: p(35)?,
             db_pool_max_size: p(36)?,
             load_user_state_permit_max: p(37)?,
+            lag_moves: lag(38)?,
+            protocol_lag_p50_ms: lag(39)?,
+            protocol_lag_p90_ms: lag(40)?,
+            protocol_lag_missing: lag(41)?,
+            lag_cap_hits: lag(42)?,
+            tcp_rtt_connects: lag(43)?,
+            tcp_rtt_p50_ms: lag(44)?,
+            tcp_rtt_p90_ms: lag(45)?,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn row(columns: usize) -> String {
+        (0..columns)
+            .map(|column| column.to_string())
+            .collect::<Vec<_>>()
+            .join(",")
+    }
+
+    fn lag_columns(row: &TelemetryRow) -> [u64; TELEMETRY_COLUMN_COUNT - PRE_LAG_COLUMN_COUNT] {
+        [
+            row.lag_moves,
+            row.protocol_lag_p50_ms,
+            row.protocol_lag_p90_ms,
+            row.protocol_lag_missing,
+            row.lag_cap_hits,
+            row.tcp_rtt_connects,
+            row.tcp_rtt_p50_ms,
+            row.tcp_rtt_p90_ms,
+        ]
+    }
+
+    #[test]
+    fn a_row_with_lag_columns_parses_each_in_header_order() {
+        let parsed = TelemetryRow::from_csv_line(&row(TELEMETRY_COLUMN_COUNT)).expect("parses");
+
+        assert_eq!(parsed.load_user_state_permit_max, 37);
+        assert_eq!(
+            lag_columns(&parsed),
+            std::array::from_fn(|i| (PRE_LAG_COLUMN_COUNT + i) as u64)
+        );
+    }
+
+    #[test]
+    fn a_row_from_before_the_lag_columns_still_parses() {
+        let parsed = TelemetryRow::from_csv_line(&row(PRE_LAG_COLUMN_COUNT)).expect("parses");
+
+        assert_eq!(parsed.load_user_state_permit_max, 37);
+        assert_eq!(
+            lag_columns(&parsed),
+            [0; TELEMETRY_COLUMN_COUNT - PRE_LAG_COLUMN_COUNT]
+        );
+    }
+
+    #[test]
+    fn rows_of_any_other_width_are_rejected() {
+        for columns in [PRE_LAG_COLUMN_COUNT - 1, 40, TELEMETRY_COLUMN_COUNT + 1] {
+            assert!(
+                TelemetryRow::from_csv_line(&row(columns)).is_none(),
+                "{columns}"
+            );
+        }
     }
 }

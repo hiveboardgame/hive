@@ -1,5 +1,6 @@
 use crate::{
     db_error::DbError,
+    game_command::{awaits_move, real_time_flag_grace},
     helpers::GameQueryBuilder,
     models::{Challenge, GameFinishContext, GameHash, GameUser, Rating},
     schema::{
@@ -470,6 +471,19 @@ impl GameHeartbeat {
         );
         Ok((GameId(self.nanoid.clone()), white, black))
     }
+
+    pub fn flag_due_at(&self) -> Option<DateTime<Utc>> {
+        self.timeout_at
+            .map(|deadline| deadline + flag_grace_in(&self.time_mode))
+    }
+}
+
+fn flag_grace_in(mode: &str) -> ChronoDuration {
+    if mode == TimeMode::RealTime.to_string() {
+        real_time_flag_grace()
+    } else {
+        ChronoDuration::zero()
+    }
 }
 
 fn stored_time_left(value: Option<i64>, color: Color) -> Result<Duration, DbError> {
@@ -510,10 +524,32 @@ fn clock_time_left(
 
 pub(crate) enum DeadlineSettlement {
     Active(Game),
+    // Past due, but a move already received could still beat the deadline.
+    Awaiting(Game),
     Terminal {
         game: Game,
         terminal_at: DateTime<Utc>,
     },
+}
+
+// The player on move settles their own deadline with what they earned, which rules out only a
+// move still on its way, not one already received.
+#[derive(Clone, Copy)]
+pub(crate) enum FlagGrace {
+    Earned {
+        grace: ChronoDuration,
+        own_arrival: Option<DateTime<Utc>>,
+    },
+    MovesInFlight,
+}
+
+impl FlagGrace {
+    pub(crate) fn ended() -> Self {
+        Self::Earned {
+            grace: ChronoDuration::zero(),
+            own_arrival: None,
+        }
+    }
 }
 
 impl Game {
@@ -581,19 +617,94 @@ impl Game {
         }
     }
 
+    pub fn flag_grace(&self) -> ChronoDuration {
+        flag_grace_in(&self.time_mode)
+    }
+
+    // Neither side's first move runs the clock: a game started by its moves waits for both, and an
+    // arena game for its opening.
+    pub fn in_untimed_opening(&self) -> bool {
+        self.in_arena_opening() || self.in_moves_opening()
+    }
+
+    fn in_arena_opening(&self) -> bool {
+        self.game_start == GameStart::Arena.to_string() && self.turn < 2
+    }
+
+    fn in_moves_opening(&self) -> bool {
+        self.turn < 2
+            && self.game_start == GameStart::Moves.to_string()
+            && self.game_status == GameStatus::NotStarted.to_string()
+    }
+
+    pub fn flag_due_at(&self) -> Option<DateTime<Utc>> {
+        self.timeout_at.map(|deadline| deadline + self.flag_grace())
+    }
+
+    fn awaits_move_from(
+        &self,
+        color: Color,
+        arrived_before: DateTime<Utc>,
+        own_arrival: Option<DateTime<Utc>>,
+    ) -> bool {
+        let player = match color {
+            Color::White => self.white_id,
+            Color::Black => self.black_id,
+        };
+        awaits_move(&self.nanoid, player, arrived_before, own_arrival)
+    }
+
     pub(crate) async fn settle_deadline(
         &self,
         checked_at: DateTime<Utc>,
         conn: &mut DbConn<'_>,
     ) -> Result<DeadlineSettlement, DbError> {
+        self.settle_deadline_allowing(checked_at, FlagGrace::ended(), conn)
+            .await
+    }
+
+    // A player giving the game up ends their own grace when they are on move; otherwise the
+    // opponent's move may still be in flight, as for any other command they send.
+    pub(crate) async fn settle_deadline_giving_up(
+        &self,
+        quitter: Color,
+        checked_at: DateTime<Utc>,
+        conn: &mut DbConn<'_>,
+    ) -> Result<DeadlineSettlement, DbError> {
+        let on_move = if self.turn % 2 == 0 {
+            Color::White
+        } else {
+            Color::Black
+        };
+        let flag_grace = if quitter == on_move {
+            FlagGrace::ended()
+        } else {
+            FlagGrace::MovesInFlight
+        };
+        self.settle_deadline_allowing(checked_at, flag_grace, conn)
+            .await
+    }
+
+    pub(crate) async fn settle_deadline_allowing(
+        &self,
+        checked_at: DateTime<Utc>,
+        grace: FlagGrace,
+        conn: &mut DbConn<'_>,
+    ) -> Result<DeadlineSettlement, DbError> {
         if self.finished || TimeMode::from_str(&self.time_mode)? == TimeMode::Untimed {
             return Ok(DeadlineSettlement::Active(self.clone()));
         }
-        if let Some(deadline) = self
+        let (flag_grace, own_arrival) = match grace {
+            FlagGrace::Earned { grace, own_arrival } => (grace, own_arrival),
+            FlagGrace::MovesInFlight => (self.flag_grace(), None),
+        };
+        let absent = Self::arena_absent_color(self.turn);
+        let opening_due = self
             .arena_move_due_at
-            .filter(|deadline| checked_at >= *deadline)
-        {
-            let absent = Self::arena_absent_color(self.turn);
+            .filter(|deadline| checked_at >= *deadline);
+        let awaits_opening = opening_due
+            .is_some_and(|deadline| self.awaits_move_from(absent, deadline, own_arrival));
+        if let Some(deadline) = opening_due.filter(|_| !awaits_opening) {
             let game = self
                 .finish_arena_no_start(absent, checked_at, deadline, conn)
                 .await?;
@@ -602,12 +713,18 @@ impl Game {
                 terminal_at: deadline,
             });
         }
-        if let Some(deadline) = self.timeout_at.filter(|deadline| checked_at >= *deadline) {
-            let timed_out_color = if self.turn % 2 == 0 {
-                Color::White
-            } else {
-                Color::Black
-            };
+        let timed_out_color = if self.turn % 2 == 0 {
+            Color::White
+        } else {
+            Color::Black
+        };
+        let timeout_due = self
+            .timeout_at
+            .filter(|deadline| checked_at - flag_grace >= *deadline);
+        let awaits_move = timeout_due.is_some_and(|deadline| {
+            self.awaits_move_from(timed_out_color, deadline + self.flag_grace(), own_arrival)
+        });
+        if let Some(deadline) = timeout_due.filter(|_| !awaits_move) {
             let game = self
                 .finish_timeout(timed_out_color, checked_at, deadline, conn)
                 .await?;
@@ -615,6 +732,9 @@ impl Game {
                 game,
                 terminal_at: deadline,
             });
+        }
+        if awaits_opening || awaits_move {
+            return Ok(DeadlineSettlement::Awaiting(self.clone()));
         }
         Ok(DeadlineSettlement::Active(self.clone()))
     }
@@ -967,32 +1087,38 @@ impl Game {
         shutout: bool,
         comp: f64,
         clock: RealtimeClock,
-        observed_at: DateTime<Utc>,
+        arrived_at: DateTime<Utc>,
     ) -> Result<(Option<i64>, Option<i64>), DbError> {
-        let (mut white_time, mut black_time) = self.calculate_time_left_at(observed_at)?;
-        if let (Some(w), Some(b)) = (white_time, black_time) {
-            if w == 0 || b == 0 {
-                return Ok((white_time, black_time));
-            }
+        let mover = if self.turn % 2 == 0 {
+            Color::White
+        } else {
+            Color::Black
+        };
+        let elapsed = self
+            .last_interaction
+            .and_then(|last| arrived_at.signed_duration_since(last).num_nanoseconds())
+            .unwrap_or(0)
+            .max(0);
+        // Compensation refunds time the move spent in transit: it comes off the move's own time
+        // before the flag is decided, and never exceeds it, or a fast move would gain time.
+        let charged = elapsed - ((comp * 1_000_000_000.0) as i64).min(elapsed);
+        let remaining = self.time_left_duration(mover)?.as_nanos() as i64 - charged;
+        let (mut white_time, mut black_time) = (self.white_time_left, self.black_time_left);
+        let (mover_time, opponent_time) = match mover {
+            Color::White => (&mut white_time, &mut black_time),
+            Color::Black => (&mut black_time, &mut white_time),
+        };
+        if remaining <= 0 {
+            *mover_time = Some(0);
+            return Ok((white_time, black_time));
         }
-        let comp = (comp * 1_000_000_000.0) as i64;
         // Each side carries its own increment, because a berserked player
         // forfeits theirs while the opponent keeps hers.
-        let white_increment = self.time_increment_duration(Color::White, clock).as_nanos() as i64;
-        let black_increment = self.time_increment_duration(Color::Black, clock).as_nanos() as i64;
-        if self.turn % 2 == 0 {
-            white_time = white_time.map(|time| time + white_increment + comp);
-        } else {
-            black_time = black_time.map(|time| time + black_increment + comp);
-        };
+        let increment = |color| self.time_increment_duration(color, clock).as_nanos() as i64;
+        *mover_time = Some(remaining + increment(mover));
         if shutout {
-            if self.turn % 2 == 0 {
-                black_time = black_time.map(|time| time + black_increment);
-            } else {
-                white_time = white_time.map(|time| time + white_increment);
-            };
-        };
-
+            *opponent_time = opponent_time.map(|time| time + increment(mover.opposite_color()));
+        }
         Ok((white_time, black_time))
     }
 
@@ -1028,10 +1154,7 @@ impl Game {
         observed_at: DateTime<Utc>,
     ) -> Result<TimeInfo, DbError> {
         let mut time_info = TimeInfo::new(state.game_status.clone());
-        if self.turn < 2
-            && self.game_start == GameStart::Moves.to_string()
-            && self.game_status == GameStatus::NotStarted.to_string()
-        {
+        if self.in_moves_opening() {
             if self.turn == 0 {
                 time_info.new_game_status = GameStatus::NotStarted;
             };
@@ -1056,10 +1179,7 @@ impl Game {
         observed_at: DateTime<Utc>,
     ) -> Result<TimeInfo, DbError> {
         let mut time_info = TimeInfo::new(state.game_status.clone());
-        if self.turn < 2
-            && self.game_start == GameStart::Moves.to_string()
-            && self.game_status == GameStatus::NotStarted.to_string()
-        {
+        if self.in_moves_opening() {
             if self.turn == 0 {
                 time_info.new_game_status = GameStatus::NotStarted;
             };
@@ -1120,17 +1240,18 @@ impl Game {
         &self,
         state: &State,
         compensation: f64,
+        arrived_at: DateTime<Utc>,
         effective_at: DateTime<Utc>,
         conn: &mut DbConn<'_>,
     ) -> Result<Game, DbError> {
-        let arena_opening = self.game_start == GameStart::Arena.to_string() && self.turn < 2;
+        let arena_opening = self.in_arena_opening();
         let time_info = if arena_opening {
             let mut time_info = TimeInfo::new(state.game_status.clone());
             time_info.white_time_left = self.white_time_left;
             time_info.black_time_left = self.black_time_left;
             time_info
         } else {
-            self.get_time_info_at(state, compensation, effective_at)?
+            self.get_time_info_at(state, compensation, arrived_at)?
         };
         let new_history = state
             .history
@@ -1935,11 +2056,23 @@ impl Game {
 
 #[cfg(test)]
 mod tests {
-    use super::{clock_time_left, conclusion_for};
+    use super::{clock_time_left, conclusion_for, flag_grace_in};
     use chrono::{TimeZone, Utc};
     use hive_lib::{Color, GameResult, GameStatus};
-    use shared_types::Conclusion;
+    use shared_types::{Conclusion, TimeMode};
     use std::time::Duration;
+
+    #[test]
+    fn only_a_real_time_flag_waits_for_moves_in_flight() {
+        assert_eq!(
+            flag_grace_in(&TimeMode::RealTime.to_string()),
+            chrono::Duration::seconds(1)
+        );
+        assert_eq!(
+            flag_grace_in(&TimeMode::Correspondence.to_string()),
+            chrono::Duration::zero()
+        );
+    }
 
     #[test]
     fn clock_elapsed_time_only_reduces_the_active_player_and_saturates_at_zero() {

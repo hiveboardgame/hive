@@ -33,8 +33,8 @@ you it. Nothing is pushed after authenticating, so ask for your games next with
 `bot.get_ongoing_games()` (all of them) or `bot.get_pending_games()` (your turn). The answer
 comes on the message stream, after anything that arrived while you were authenticating.
 
-The socket is read in a background task, so the connection stays up and latency pings are
-answered on time while your loop awaits its engine. That needs a free event loop: run a
+The socket is read in a background task, so the connection stays up and the server's pings
+are answered on time while your loop awaits its engine. That needs a free event loop: run a
 synchronous engine with `await asyncio.to_thread(...)` or in a subprocess, never inline, or
 nothing is read until it returns and the server hangs up.
 

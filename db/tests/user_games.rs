@@ -2,10 +2,10 @@ mod common;
 
 use chrono::{Duration, Utc};
 use common::fixtures::{create_game, create_user, new_bullet_game};
-use db_lib::get_conn;
+use db_lib::{game_command::real_time_flag_grace, get_conn};
 
-// A game past its deadline is lost on time and only waits for the sweeper, so neither "my
-// games" nor "my turn" may offer it as playable.
+// A game past its deadline and its flag grace is lost on time and only waits for the sweeper,
+// so neither "my games" nor "my turn" may offer it as playable.
 #[tokio::test(flavor = "multi_thread")]
 async fn games_past_their_deadline_are_not_listed_as_playable() {
     let db = common::db::test_db().await;
@@ -15,7 +15,7 @@ async fn games_past_their_deadline_are_not_listed_as_playable() {
 
     let live = create_game(new_bullet_game(white.id, black.id), &mut conn).await;
     let mut expired = new_bullet_game(white.id, black.id);
-    expired.timeout_at = Some(Utc::now() - Duration::seconds(1));
+    expired.timeout_at = Some(Utc::now() - real_time_flag_grace() - Duration::seconds(1));
     let expired = create_game(expired, &mut conn).await;
 
     for games in [

@@ -120,7 +120,7 @@ pub fn LiveTimer(side: Signal<Color>, #[prop(optional)] compact: bool) -> impl I
         move |_, _, _| {
             // When time runs out declare winner and style timer that ran out
             let api = api.get();
-            api.game_check_time(&game_id());
+            api.game_check_time(&game_id(), timer.with_untracked(|t| t.turn));
         },
         WatchOptions::default().immediate(true),
     );

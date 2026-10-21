@@ -3,7 +3,7 @@ use super::{
     join_handler::JoinHandler,
     start::StartHandler,
     timeout_handler::TimeoutHandler,
-    turn_handler::{TurnHandler, TurnInput},
+    turn_handler::{Mover, TurnHandler, TurnInput},
 };
 use crate::{
     common::GameAction,
@@ -15,7 +15,8 @@ use crate::{
     },
 };
 use anyhow::Result;
-use db_lib::{get_conn, models::Game, DbPool};
+use chrono::{DateTime, Utc};
+use db_lib::{game_command::ReceivedMove, get_conn, models::Game, DbPool};
 use shared_types::GameId;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -28,6 +29,8 @@ pub struct GameActionHandler {
     data: Arc<WebsocketData>,
     hub: Arc<WsHub>,
     username: String,
+    received_at: DateTime<Utc>,
+    _received_move: Option<ReceivedMove>,
 }
 
 impl GameActionHandler {
@@ -41,6 +44,14 @@ impl GameActionHandler {
         pool: &DbPool,
     ) -> Result<Self> {
         let (username, user_id) = user_details;
+        let received_move = matches!(
+            game_action,
+            GameAction::Turn(_) | GameAction::Play(_) | GameAction::PlayAt { .. }
+        )
+        .then(|| ReceivedMove::arriving(&game_id.0, user_id));
+        let received_at = received_move
+            .as_ref()
+            .map_or_else(Utc::now, ReceivedMove::arrived_at);
         let mut connection = get_conn(pool).await?;
 
         let game = Game::find_by_game_id(game_id, &mut connection).await?;
@@ -54,6 +65,8 @@ impl GameActionHandler {
             username: username.to_owned(),
             game_action,
             user_id,
+            received_at,
+            _received_move: received_move,
         })
     }
 
@@ -63,8 +76,26 @@ impl GameActionHandler {
             expected_turn,
             &self.game,
             &self.username,
-            self.user_id,
+            Mover {
+                user_id: self.user_id,
+                socket_id: self.received_from.socket_id,
+                arrived_at: self.received_at,
+            },
             self.data.clone(),
+            &self.pool,
+        )
+        .handle()
+        .await
+    }
+
+    async fn check_time(&self, turn: Option<i32>) -> Result<HandlerOutput> {
+        TimeoutHandler::new(
+            &self.game,
+            self.user_id,
+            turn,
+            self.received_from.clone(),
+            self.data.clone(),
+            self.hub.clone(),
             &self.pool,
         )
         .handle()
@@ -83,16 +114,8 @@ impl GameActionHandler {
                     .handle()
                     .await?
             }
-            GameAction::CheckTime => {
-                TimeoutHandler::new(
-                    &self.game,
-                    self.received_from.clone(),
-                    self.data.clone(),
-                    &self.pool,
-                )
-                .handle()
-                .await?
-            }
+            GameAction::CheckTime => self.check_time(None).await?,
+            GameAction::ClockRanOut(turn) => self.check_time(i32::try_from(turn).ok()).await?,
             GameAction::Turn(turn) => self.turn(TurnInput::Structured(turn), None).await?,
             GameAction::Play(notation) => self.turn(TurnInput::Notation(notation), None).await?,
             GameAction::PlayAt { turn, notation } => {
@@ -151,6 +174,7 @@ fn can_start_game(action: &GameAction) -> bool {
         | GameAction::Start => true,
         GameAction::Berserk
         | GameAction::CheckTime
+        | GameAction::ClockRanOut(_)
         | GameAction::Control(_)
         | GameAction::Join
         | GameAction::Unwatch => false,
@@ -179,6 +203,7 @@ mod tests {
         for action in [
             GameAction::Berserk,
             GameAction::CheckTime,
+            GameAction::ClockRanOut(2),
             GameAction::Control(GameControl::Abort(Color::White)),
             GameAction::Join,
             GameAction::Unwatch,

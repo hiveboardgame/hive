@@ -1,11 +1,19 @@
 use crate::{
     db_error::DbError,
     game_command::{Command, Outcome},
-    models::{DeadlineSettlement, Game, ScheduleOffer, Tournament, TournamentSlot, User},
+    models::{
+        DeadlineSettlement,
+        FlagGrace,
+        Game,
+        ScheduleOffer,
+        Tournament,
+        TournamentSlot,
+        User,
+    },
     tournaments::settle_arena_game,
     DbConn,
 };
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration as ChronoDuration, Utc};
 use diesel_async::AsyncConnection;
 use hive_lib::{Color, GameControl, GameResult, GameStatus, State, Turn};
 use shared_types::{
@@ -18,6 +26,67 @@ use shared_types::{
 };
 use std::str::FromStr;
 use uuid::Uuid;
+
+pub const MAX_MOVE_COMPENSATION_SECS: f64 = 1.0;
+
+// A real-time flag waits until no move still on its way could be compensated back under the
+// deadline. A move already received is waited for however long it takes to reach the row.
+pub fn real_time_flag_grace() -> ChronoDuration {
+    ChronoDuration::milliseconds((MAX_MOVE_COMPENSATION_SECS * 1000.0) as i64)
+}
+
+fn accepted_compensation(compensation: f64) -> Result<(), DbError> {
+    if compensation.is_finite() && (0.0..=MAX_MOVE_COMPENSATION_SECS).contains(&compensation) {
+        return Ok(());
+    }
+    Err(DbError::InvalidInput {
+        info: String::from("Move compensation is outside its accepted range"),
+        error: format!(
+            "compensation must be finite and between 0 and {MAX_MOVE_COMPENSATION_SECS} seconds"
+        ),
+    })
+}
+
+// The player on move waits out only what their own move earned: a move its compensation, any
+// other command nothing. Everyone else, and the deadline sweep, must allow for a move of theirs
+// still on its way.
+fn flag_grace_for(command: &Command, game: &Game) -> FlagGrace {
+    let on_move = if game.turn % 2 == 0 {
+        game.white_id
+    } else {
+        game.black_id
+    };
+    match command {
+        Command::Move {
+            user_id,
+            compensation,
+            arrived_at,
+            ..
+        } if *user_id == on_move => FlagGrace::Earned {
+            grace: ChronoDuration::nanoseconds((compensation * 1_000_000_000.0) as i64)
+                .min(game.flag_grace()),
+            own_arrival: *arrived_at,
+        },
+        Command::Control { user_id, .. }
+        | Command::StartReady { user_id }
+        | Command::ReadyIntent { user_id }
+        | Command::Berserk { user_id }
+            if *user_id == on_move =>
+        {
+            FlagGrace::ended()
+        }
+        Command::CheckTime { user_id, turn } if *user_id == on_move && *turn == game.turn => {
+            FlagGrace::ended()
+        }
+        _ => FlagGrace::MovesInFlight,
+    }
+}
+
+// The mover is charged up to the move's arrival; the opponent's clock starts at the commit, so
+// time the server spends in between is charged to nobody.
+fn move_arrival(arrived_at: Option<DateTime<Utc>>, effective_at: DateTime<Utc>) -> DateTime<Utc> {
+    arrived_at.map_or(effective_at, |arrived| arrived.min(effective_at))
+}
 
 pub(crate) async fn execute(
     game_id: Uuid,
@@ -53,9 +122,33 @@ where
         let game = Game::find_by_uuid_for_update(&game_id, tc).await?;
         let binding = GameBinding::for_game(&game)?;
         let effective_at = effective_at();
-        let settlement = game.settle_deadline(effective_at, tc).await?;
+        let checked_at = match &command {
+            Command::Move {
+                compensation,
+                arrived_at,
+                ..
+            } => {
+                accepted_compensation(*compensation)?;
+                move_arrival(*arrived_at, effective_at)
+            }
+            _ => effective_at,
+        };
+        let grace = flag_grace_for(&command, &game);
+        let settlement = game.settle_deadline_allowing(checked_at, grace, tc).await?;
         let (checked, newly_terminal, terminal_at) = match settlement {
-            DeadlineSettlement::Active(game) => (game, false, None),
+            // Played now, a move past its own deadline would leave no time on the clock, while
+            // another move of theirs could still be in time.
+            DeadlineSettlement::Awaiting(_)
+                if matches!(command, Command::Move { .. })
+                    && matches!(grace, FlagGrace::Earned { .. }) =>
+            {
+                return Err(DbError::InvalidAction {
+                    info: String::from("Another move of yours in this game is still being played"),
+                });
+            }
+            DeadlineSettlement::Active(game) | DeadlineSettlement::Awaiting(game) => {
+                (game, false, None)
+            }
             DeadlineSettlement::Terminal {
                 game, terminal_at, ..
             } => (game, true, Some(terminal_at)),
@@ -65,7 +158,10 @@ where
                 .await?;
         }
 
-        if matches!(&command, Command::SettleDeadline) {
+        if matches!(
+            &command,
+            Command::SettleDeadline | Command::CheckTime { .. }
+        ) {
             return Ok(Outcome::Applied {
                 game: checked,
                 newly_terminal,
@@ -147,7 +243,7 @@ where
         }
         let effective_at = effective_at();
         let game = match game.settle_deadline(effective_at, tc).await? {
-            DeadlineSettlement::Active(game) => game,
+            DeadlineSettlement::Active(game) | DeadlineSettlement::Awaiting(game) => game,
             DeadlineSettlement::Terminal { game, .. } => {
                 return Ok(Outcome::TimedOut {
                     game,
@@ -188,7 +284,9 @@ fn command_actor(command: &Command) -> Uuid {
         | Command::StartReady { user_id }
         | Command::ReadyIntent { user_id }
         | Command::Berserk { user_id } => *user_id,
-        Command::SettleDeadline => unreachable!("SettleDeadline returned before actor lookup"),
+        Command::SettleDeadline | Command::CheckTime { .. } => {
+            unreachable!("deadline checks return before actor lookup")
+        }
     }
 }
 
@@ -331,15 +429,8 @@ async fn apply_command(
             turn,
             compensation,
             expected_turn,
+            arrived_at,
         } => {
-            if !compensation.is_finite() || !(0.0..=700.0).contains(&compensation) {
-                return Err(DbError::InvalidInput {
-                    info: String::from("Move compensation is outside its accepted range"),
-                    error: String::from(
-                        "compensation must be finite and between 0 and 700 seconds",
-                    ),
-                });
-            }
             let ordinary_opening = matches!(binding, GameBinding::Ordinary)
                 && game.game_start == GameStart::Moves.to_string()
                 && game.game_status == GameStatus::NotStarted.to_string();
@@ -379,8 +470,14 @@ async fn apply_command(
                     info: String::from("Invalid game move"),
                     error: error.to_string(),
                 })?;
-            game.update_gamestate(&state, compensation, effective_at, conn)
-                .await?
+            game.update_gamestate(
+                &state,
+                compensation,
+                move_arrival(arrived_at, effective_at),
+                effective_at,
+                conn,
+            )
+            .await?
         }
         Command::Control { user_id, control } => {
             validate_control(&game, binding, user_id, control)?;
@@ -458,7 +555,9 @@ async fn apply_command(
             game.declare_berserk(color, *clock, effective_at, conn)
                 .await?
         }
-        Command::SettleDeadline => unreachable!("SettleDeadline returned before dispatch"),
+        Command::SettleDeadline | Command::CheckTime { .. } => {
+            unreachable!("deadline checks return before dispatch")
+        }
     };
     Ok(AppliedCommand::Game(game))
 }

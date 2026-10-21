@@ -352,10 +352,7 @@ impl RequestHandler {
                     _ => RequestHandlerError::InternalError(error),
                 })?
             }
-            ClientRequest::Pong(nonce) => {
-                self.data.pings.update(self.user_id, nonce);
-                HandlerOutput::empty()
-            }
+            ClientRequest::Pong(_) => HandlerOutput::empty(),
             ClientRequest::Resync => {
                 // Carries the same lobby snapshot `handle_auth` does, and both frames are
                 // live at once on a move, so leaving this one inline would have fixed half

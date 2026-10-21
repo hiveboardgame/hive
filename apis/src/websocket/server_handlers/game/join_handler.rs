@@ -50,7 +50,7 @@ impl JoinHandler {
         let mut conn = get_conn(&self.pool).await?;
         let now = Utc::now();
         let due = !self.game.finished
-            && (self.game.timeout_at.is_some_and(|deadline| deadline <= now)
+            && (self.game.flag_due_at().is_some_and(|due| due <= now)
                 || self
                     .game
                     .arena_move_due_at

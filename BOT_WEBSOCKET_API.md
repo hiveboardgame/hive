@@ -49,7 +49,9 @@ and the socket stays anonymous.
 `Authenticated` is the only frame that means your `Auth` landed, and it is how you learn your own
 `uid`. Nothing else tells you, and you need it to tell which colour you are playing. Wait for it
 rather than for the next message: the socket joins the lobby before it authenticates, so
-broadcasts and pings can arrive in between.
+broadcasts and pings can arrive in between. The answer to `Auth` always arrives: if your socket
+has gone 5 seconds without room for it because nothing reads it, the server closes the socket
+instead, and you reconnect.
 
 A socket authenticates once. Another `Auth` on an authenticated socket is refused with
 `{"Ok": {"Error": "Already authenticated"}}`. Failed attempts are limited to 3 per 10 seconds per
@@ -133,7 +135,8 @@ delete.
 
 Moves use UHP notation, the same string the `piece_pos` field takes in
 `POST /api/v1/bot/games/play`. The server resolves it against the board it replays. On the first
-move of a game, send just the piece (`"wA1"`).
+move of a game, send just the piece (`"wA1"`). There is no move to send for a pass; see
+[Shutout](#shutout).
 
 `PlayAt` is `Play` with a guard, and the better choice. Its `turn` is the `turn` field of the game
 you are answering, which counts the turns played so far. If the game has moved past that turn, the
@@ -275,25 +278,54 @@ What a bot will receive:
 | `{"Join": "<uuid>"}` | someone joined a game you joined |
 | `{"Chat": {...}}` | a chat message in a conversation you are in or subscribed to |
 | `{"Tournament": {...}}`, `{"Schedule": {...}}` | updates for tournaments and schedules you take part in or watch |
-| `{"Ping": {"nonce": 123, "value": 42.0}}` | answer with `{"Pong": 123}` (see below) |
+| `{"Ping": {"nonce": 0, "value": 42.0}}` | your measured round trip; nothing to answer (see below) |
 | `{"Error": "..."}` | an ordinary refusal (see [Results and errors](#results-and-errors)) |
 
 Ignore any message you do not recognize. New ones are added without notice.
 
+## Shutout
+
+When a move leaves the other player with no legal move, the server passes for them in the same
+step. Nobody sends a pass: `"pass"` is not a move, and the server refuses it as notation it
+cannot parse. A move that ends the game records no pass; the game is `finished` instead.
+
+The pass has no update of its own. It arrives inside the `Reaction` to the move that caused it,
+whose game is already the game after the pass:
+
+- `turn` is two past the turn the move was played on, not one;
+- `history` ends with `["pass", ""]`;
+- `current_player_id` is the player who just moved, and it is their move again.
+
+When that player is you, the `Urgent` list pushed after the `Reaction` contains the game, as
+after any move that makes it your turn. When you are the one shut out, the `Reaction` to your
+opponent's move is the only sign of it, and there is nothing for you to do.
+
+So the game in each update says whose move it is, not the update's `game_action` and not how
+many updates arrived. It is your move when the game is not `finished` and `current_player_id` is
+your `uid`. If you wait for the server to confirm a move you sent, take any update for that game
+whose `turn` is past the `turn` it had when you sent the move, or an `Err` for that game. A bot
+that waits for `turn` to grow by exactly one never sees the confirmation after a shutout, and
+loses on time while it waits.
+
+HTTP behaves the same: `POST /api/v1/bot/games/play` answers with a `history` that ends in a
+pass, and the game is back in `GET /api/v1/bot/games/pending`.
+
 ## Session behaviour
 
-**Heartbeats.** The server sends a WebSocket ping every 5 seconds and drops the connection if it
-has heard nothing for 10. Most WebSocket libraries answer pings for you; check that yours does.
-They only do it while something reads the socket, so keep reading while your engine thinks (a
-separate task or thread). A library that buffers unread messages stops reading when the buffer
-fills, and with a latency ping every second that takes seconds, not minutes.
+**Heartbeats and lag compensation.** The server sends a WebSocket ping about every second and
+drops the connection if it has heard nothing for 10 seconds. Most WebSocket libraries answer
+pings for you, echoing the payload as the protocol requires; check that yours does. They only do
+it while something reads the socket, so keep reading while your engine thinks (a separate task
+or thread). A library that buffers unread messages stops reading when the buffer fills, and with
+a `Ping` message every second that takes seconds, not minutes. The median of recent round trips
+is your measured lag, because your clock pays for the position reaching you and for your move
+coming back: on each move in a real-time game your clock is credited with up to that much,
+within a small per-game quota, never more than one second and never more than the move took.
 
-**Lag compensation.** Separately, the server sends `{"Ping": {"nonce": n, "value": ms}}` every
-second. Answer each one with `{"Pong": n}`. The server times the round trip and credits
-your real-time clock with the measured network lag on each move, up to a small per-game quota.
-`value` is your current measured lag in milliseconds. If you do not answer, you get no
-compensation. Answer promptly: compensation is capped per game, and how lag is measured may
-change.
+**`Ping` messages.** Separately, the server sends `{"Ping": {"nonce": 0, "value": ms}}` every
+second. `value` is your measured round trip in milliseconds, the median of recent ones, or 0
+before the first. `nonce` carries no meaning and there is nothing to answer; a `{"Pong": n}`
+from a bot written to an earlier version of this page is accepted and ignored.
 
 **Token expiry does not apply once you are connected.** The JWT lasts 100 minutes, and the
 server checks that when you send `Auth`, so an expired token is refused. It does not re-check an

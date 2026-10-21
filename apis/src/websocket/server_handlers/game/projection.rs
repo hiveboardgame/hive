@@ -939,6 +939,18 @@ pub(crate) async fn settle_deadline(
     Ok(project_committed_game(outcome, GameCommandContext::silent(), data, conn).await)
 }
 
+pub(crate) async fn check_time(
+    game_id: Uuid,
+    user_id: Uuid,
+    turn: i32,
+    data: &WebsocketData,
+    conn: &mut DbConn<'_>,
+) -> std::result::Result<ProjectedGame, DbError> {
+    let outcome =
+        game_command::execute(game_id, Command::CheckTime { user_id, turn }, conn).await?;
+    Ok(project_committed_game(outcome, GameCommandContext::silent(), data, conn).await)
+}
+
 #[cfg(test)]
 mod tests {
     use super::{

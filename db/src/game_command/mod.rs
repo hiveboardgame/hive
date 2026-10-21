@@ -3,10 +3,16 @@ use crate::{
     models::{Game, ScheduleOffer},
     DbConn,
 };
+use chrono::{DateTime, Utc};
 use hive_lib::{GameControl, Turn};
 use uuid::Uuid;
 
 mod execute;
+mod received_moves;
+
+pub use execute::{real_time_flag_grace, MAX_MOVE_COMPENSATION_SECS};
+pub(crate) use received_moves::awaits_move;
+pub use received_moves::ReceivedMove;
 
 #[derive(Clone, Debug)]
 pub enum Command {
@@ -15,6 +21,7 @@ pub enum Command {
         turn: Turn,
         compensation: f64,
         expected_turn: Option<usize>,
+        arrived_at: Option<DateTime<Utc>>,
     },
     Control {
         user_id: Uuid,
@@ -27,6 +34,14 @@ pub enum Command {
         user_id: Uuid,
     },
     SettleDeadline,
+    // A viewer's clock reached zero on `turn`. From the player on move on that same turn it ends
+    // their own grace, as lichess flags without grace when the flagged player's own client
+    // reports it, so callers send it only when that player has no other socket a move could
+    // still come from.
+    CheckTime {
+        user_id: Uuid,
+        turn: i32,
+    },
     Berserk {
         user_id: Uuid,
     },

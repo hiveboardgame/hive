@@ -24,6 +24,7 @@ use anyhow::Result;
 use chrono::Utc;
 use db_lib::{
     db_error::DbError,
+    game_command::real_time_flag_grace,
     get_conn,
     models::Tournament,
     tournaments::{arena, fixed_field},
@@ -249,8 +250,14 @@ async fn start_scheduled_arenas(pool: &DbPool, hub: &Arc<WsHub>) -> Result<()> {
 
 async fn finalize_arenas(pool: &DbPool, hub: &Arc<WsHub>) -> Result<()> {
     let mut conn = get_conn(pool).await?;
-    let candidates =
-        arena::cutoff_candidates(Utc::now(), ARENA_FINALIZATION_BATCH_SIZE, &mut conn).await?;
+    // Waiting out the flag grace lets a game whose clock ran out just before the cutoff be
+    // flagged first, so its result still counts.
+    let candidates = arena::cutoff_candidates(
+        Utc::now() - real_time_flag_grace(),
+        ARENA_FINALIZATION_BATCH_SIZE,
+        &mut conn,
+    )
+    .await?;
     for tournament_id in candidates {
         // Best effort only: settle deadlines already due before the cutoff,
         // then retain the finalizer's existing commit-visible snapshot rule.
@@ -309,7 +316,12 @@ async fn sweep_arena_once(
         ),
         (
             "clock deadlines",
-            arena::ordinary_timeout_candidates(as_of, ARENA_TIMEOUT_BATCH_SIZE, &mut conn).await,
+            arena::ordinary_timeout_candidates(
+                as_of - real_time_flag_grace(),
+                ARENA_TIMEOUT_BATCH_SIZE,
+                &mut conn,
+            )
+            .await,
         ),
     ] {
         match candidates {

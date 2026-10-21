@@ -71,7 +71,7 @@ mod tests {
     };
     use crate::{
         db_error::DbError,
-        game_command::{execute_at, Command, Outcome},
+        game_command::{execute_at, Command, Outcome, ReceivedMove},
         get_conn,
         models::{Game, Tournament, TournamentFinalOutcome, TournamentUser},
         schema::{
@@ -431,6 +431,7 @@ mod tests {
                         ),
                         compensation: 0.0,
                         expected_turn: None,
+                        arrived_at: None,
                     },
                     Utc::now(),
                     &mut conn,
@@ -1095,6 +1096,7 @@ mod tests {
                 ),
                 compensation: 0.0,
                 expected_turn: None,
+                arrived_at: None,
             },
             post_cutoff_move_at,
             &mut conn,
@@ -2328,6 +2330,62 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn an_opening_move_received_before_its_deadline_outlasts_the_no_start() {
+        let db = test_db().await;
+        let mut conn = get_conn(&db.pool).await.expect("get test connection");
+        let (_, _, paired) = start_arena_fixture("opening_received", 4, &mut conn).await;
+        let [in_time, too_late] = &paired[..] else {
+            panic!("four players make two games")
+        };
+        let observed_at = DateTime::from_timestamp_micros(Utc::now().timestamp_micros())
+            .expect("database-precision observation timestamp");
+        let deadline = observed_at - Duration::milliseconds(100);
+        for game in &paired {
+            update(games::table.find(game.id))
+                .set(games::arena_move_due_at.eq(Some(deadline)))
+                .execute(&mut conn)
+                .await
+                .expect("make the opening deadline due");
+        }
+        let arrived_at = deadline - Duration::milliseconds(10);
+        let _waiting = ReceivedMove::record(&in_time.nanoid, in_time.white_id, arrived_at);
+        let _late = ReceivedMove::record(&too_late.nanoid, too_late.white_id, deadline);
+
+        for (game, held_back) in [(in_time, true), (too_late, false)] {
+            let settled = execute_at(game.id, Command::SettleDeadline, observed_at, &mut conn)
+                .await
+                .expect("settle the opening deadline");
+            let Outcome::Applied { game: settled, .. } = settled else {
+                panic!("deadline settlement keeps the Arena game")
+            };
+            assert_eq!(settled.finished, !held_back, "held back: {held_back}");
+        }
+
+        let outcome = execute_at(
+            in_time.id,
+            Command::Move {
+                user_id: in_time.white_id,
+                turn: Turn::Move(
+                    "wA1".parse().expect("parse White ant"),
+                    Position::initial_spawn_position(),
+                ),
+                compensation: 0.0,
+                expected_turn: None,
+                arrived_at: Some(arrived_at),
+            },
+            observed_at,
+            &mut conn,
+        )
+        .await
+        .expect("play the received opening move");
+        let Outcome::Applied { game: moved, .. } = outcome else {
+            panic!("the opening move beat its deadline: {outcome:?}")
+        };
+        assert_eq!(moved.turn, 1);
+        assert!(!moved.finished);
     }
 
     async fn start_arena_fixture(

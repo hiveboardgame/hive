@@ -8,14 +8,18 @@ use crate::{
     },
 };
 use actix_web::{
+    dev::Payload,
     post,
     web::{Data, Json},
+    FromRequest,
+    HttpRequest,
     HttpResponse,
 };
 use anyhow::{anyhow, Result};
+use chrono::{DateTime, Utc};
 use db_lib::{
     db_error::DbError,
-    game_command::{self, Command},
+    game_command::{self, Command, ReceivedMove},
     get_conn,
     models::{Game, User},
     DbPool,
@@ -24,12 +28,36 @@ use hive_lib::{Color, GameControl, Piece, Position, State, Turn};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use shared_types::GameId;
-use std::{str::FromStr, sync::Arc};
+use std::{future::Future, pin::Pin, str::FromStr, sync::Arc};
 
 #[derive(Serialize, Deserialize)]
 struct PlayRequest {
     game_id: GameId,
     piece_pos: String,
+}
+
+// Stamped as soon as the body is read. Actix extracts Auth alongside, so the bot is not charged
+// for its database lookup.
+struct ArrivedPlay {
+    request: PlayRequest,
+    arrived_at: DateTime<Utc>,
+}
+
+impl FromRequest for ArrivedPlay {
+    type Error = actix_web::Error;
+
+    type Future = Pin<Box<dyn Future<Output = Result<Self, Self::Error>>>>;
+
+    fn from_request(req: &HttpRequest, payload: &mut Payload) -> Self::Future {
+        let request = Json::<PlayRequest>::from_request(req, payload);
+        Box::pin(async move {
+            let Json(request) = request.await?;
+            Ok(Self {
+                request,
+                arrived_at: Utc::now(),
+            })
+        })
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -40,13 +68,13 @@ struct ControlRequest {
 
 #[post("/api/v1/bot/games/play")]
 pub async fn api_play(
-    Json(req): Json<PlayRequest>,
+    arrived: ArrivedPlay,
     Auth(bot): Auth,
     pool: Data<DbPool>,
     hub: Data<Arc<WsHub>>,
 ) -> HttpResponse {
     let mut output = HandlerOutput::empty();
-    let result = play_move(req, bot.clone(), pool, hub.clone(), &mut output).await;
+    let result = play_move(arrived, bot.clone(), pool, hub.clone(), &mut output).await;
     hub.dispatch_handler_output(output).await;
     match result {
         Ok((game, _turn)) => HttpResponse::Ok().json(json!({
@@ -76,12 +104,19 @@ fn bot_db_error(error: DbError) -> anyhow::Error {
 }
 
 async fn play_move(
-    play: PlayRequest,
+    arrived: ArrivedPlay,
     bot: User,
     pool: Data<DbPool>,
     hub: Data<Arc<WsHub>>,
     output: &mut HandlerOutput,
 ) -> Result<(Game, Turn)> {
+    let ArrivedPlay {
+        request: play,
+        arrived_at,
+    } = arrived;
+    // Recorded only once the bot is known; a deadline settled before that still allowed the flag
+    // grace.
+    let _received = ReceivedMove::record(&play.game_id.0, bot.id, arrived_at);
     let cloned_pool = pool.clone();
     let mut conn = get_conn(&cloned_pool).await?;
     let game = Game::find_by_game_id(&play.game_id, &mut conn)
@@ -111,6 +146,7 @@ async fn play_move(
                 turn: played_turn.clone(),
                 compensation: 0.0,
                 expected_turn: None,
+                arrived_at: Some(arrived_at),
             },
             &mut conn,
         )
@@ -240,4 +276,57 @@ async fn handle_control(
         return Err(bot_db_error(rejected));
     }
     Ok(committed.game)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ArrivedPlay;
+    use actix_web::{dev::Payload, test, web, App, FromRequest, HttpRequest, HttpResponse};
+    use chrono::Utc;
+    use serde_json::json;
+    use std::{future::Future, pin::Pin, time::Duration};
+
+    const LOOKUP: Duration = Duration::from_millis(300);
+
+    struct SlowLookup;
+
+    impl FromRequest for SlowLookup {
+        type Error = actix_web::Error;
+
+        type Future = Pin<Box<dyn Future<Output = Result<Self, Self::Error>>>>;
+
+        fn from_request(_: &HttpRequest, _: &mut Payload) -> Self::Future {
+            Box::pin(async {
+                tokio::time::sleep(LOOKUP).await;
+                Ok(Self)
+            })
+        }
+    }
+
+    #[actix_web::test]
+    async fn a_move_is_stamped_without_waiting_for_the_bot_lookup() {
+        let app = test::init_service(App::new().route(
+            "/",
+            web::post().to(|_: SlowLookup, arrived: ArrivedPlay| async move {
+                let waited = Utc::now() - arrived.arrived_at;
+                HttpResponse::Ok().body(waited.num_milliseconds().to_string())
+            }),
+        ))
+        .await;
+        let request = test::TestRequest::post()
+            .uri("/")
+            .set_json(json!({"game_id": "game", "piece_pos": "wA1"}))
+            .to_request();
+
+        let body = test::call_and_read_body(&app, request).await;
+
+        let waited: u128 = std::str::from_utf8(&body)
+            .expect("utf-8")
+            .parse()
+            .expect("milliseconds");
+        assert!(
+            waited >= LOOKUP.as_millis() - 50,
+            "stamped {waited} ms before the handler ran"
+        );
+    }
 }
