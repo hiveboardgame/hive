@@ -33,6 +33,11 @@ A move that ends the game is scored by its result: won 100, drawn 50, lost 0. Wh
 game ended is the site's call (`hive_lib`), not the engine's. A move that leaves the opponent
 nothing but a pass is scored from the position after that pass.
 
+Each marked move gets the line the engine would play instead: its best move, then at every
+step its own `bestmove` with the `line` budget, until 12 moves or the end of the game. Each
+move of the line so gets a search of its own, where the moves deep in one search's line
+were barely looked at.
+
 ## Engines
 
 The engines file (default `~/.config/hive-evaluator/engines.toml`, or `--engines-file` /
@@ -48,10 +53,12 @@ args = ["--server-port={port}"]           # {port}: the port of its helper, if i
 dir = "/opt/deep"                         # working directory (optional)
 env = { DEEP_THREADS = "1" }              # extra environment (optional)
 analyze = "analyze nodes {budget}"        # the analysis command; {budget} is filled in
+bestmove = "bestmove nodes {budget}"      # one move of a line
 count = 1                                 # engines, or engines per helper (default 1)
 fingerprint = ["/opt/deep/weights.bin"]   # files that tell its versions apart (optional)
 screen = 100                              # budget for every position
 full = 1000                               # budget for the rechecks
+line = 1000                               # budget per line move (default: full)
 threshold = 2.0                           # optional
 
 # Optional: a process the engines talk to, such as a server holding a net.
@@ -68,6 +75,7 @@ first_port = 40100
 [engines.quick]
 command = "/opt/quick/engine"
 analyze = "analyze depth {budget}"
+bestmove = "bestmove depth {budget}"
 count = 4
 screen = 4
 full = 8
@@ -85,6 +93,8 @@ stdin and stdout. Every reply ends with a line `ok`; a line starting with `err` 
 - `newgame <GameString>` sets up the position to search, e.g.
   `newgame Base+MLP;InProgress;Black[2];wL;bL wL-;wQ /wL`.
 - `validmoves`: an answer of just `pass` means there is nothing to search.
+- `play <move>`, and the `bestmove` command, which answers with its move on the last line
+  (`info` lines before it are ignored).
 - The `analyze` command answers with a line
   `cand <best move> | winprob <0–100> | pv <move>;<move>;…`: the move it would play, the side
   to move's win chance, and the line it expects. `pv` is optional; other fields and lines are
@@ -102,9 +112,10 @@ The site needs a shared secret for workers. Without it every worker request is r
 EVAL_WORKER_TOKEN=<long random string>
 ```
 
-On prod, `scripts/setup-evaluator.sh` sets up the worker and `scripts/run-evaluator.sh` runs it
-(see `scripts/README.md`, Evals). By hand, at the lowest priority so the site always comes
-first:
+For a local worktree instance, `hive-run <name> evaluator` runs the worker against it with the
+site's token (see `scripts/worktree/README.md`). On prod, `scripts/setup-evaluator.sh` sets up
+the worker and `scripts/run-evaluator.sh` runs it (see `scripts/README.md`, Evals). By hand, at
+the lowest priority so the site always comes first:
 
 ```sh
 EVAL_WORKER_TOKEN=<same secret> \

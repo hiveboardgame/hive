@@ -5,10 +5,13 @@ source "${WT_LIB:-$(dirname "${BASH_SOURCE[0]}")}/lib.sh"
 
 usage() {
     cat << USAGE
-usage: hive-run <name> [serve|watch|shell] [--share] [--lan-ip <IPv4>] [--tailnet-ip <IPv4>]
+usage: hive-run <name> [serve|watch|shell|evaluator] [--share] [--lan-ip <IPv4>] [--tailnet-ip <IPv4>]
   serve   cargo leptos serve behind $(origin_for '<name>') (default)
   watch   cargo leptos watch, hot reload on the instance's reload port
   shell   a shell in the worktree with the instance's environment
+  evaluator  hive-evaluator for the running instance, with the engines in
+          \${EVAL_ENGINES_FILE:-~/.config/hive-evaluator/engines.toml}; user requests only
+          unless EVAL_AUTO=true
   --share print LAN and Tailnet URLs using detected IPv4 addresses and sslip.io
   --lan-ip / --tailnet-ip override address detection when sharing
 '$MAIN_NAME' is the main checkout on :$MAIN_PORT.
@@ -50,6 +53,23 @@ watch_health() {
     fi
 }
 
+run_evaluator() {
+    local name=$1 engines=${EVAL_ENGINES_FILE:-$HOME/.config/hive-evaluator/engines.toml} token
+    [ -r "$engines" ] || die "no engines file at $engines; describe the engine there (hive-evaluator/README.md, Engines) or set EVAL_ENGINES_FILE"
+    # The token the instance's site reads: its environment first, then the checkout's .env.
+    token=${EVAL_WORKER_TOKEN:-$(sed -n 's/^EVAL_WORKER_TOKEN=//p' .env 2> /dev/null | tr -d "\"'" | head -1)}
+    [ -n "$token" ] || die "the site has no EVAL_WORKER_TOKEN, so it refuses every worker; set one in $MAIN_DIR/$ENV_FILE and restart $name"
+    curl_instance "$name" /health > /dev/null \
+        || warn "$(origin_for "$name") is not answering; start it with 'hive-run $name' (the worker keeps trying)"
+    export EVAL_WORKER_TOKEN=$token EVAL_ENGINES_FILE=$engines HIVE_URL="http://localhost:$WT_PORT"
+    export EVAL_WORKER_NAME=${EVAL_WORKER_NAME:-local-$name} EVAL_AUTO=${EVAL_AUTO:-false}
+    log "hive-evaluator for $name on :$WT_PORT, engines from $engines, auto $EVAL_AUTO"
+    if [ "$WORKTREE_RUNTIME" = nix ]; then
+        exec nix develop .#evaluator -c cargo run --release -p hive-evaluator
+    fi
+    exec cargo run --release -p hive-evaluator
+}
+
 print_instance_urls() {
     local name=$1 index
     printf '%-8s %s\n' Local: "$(origin_for "$name")" >&2
@@ -86,7 +106,7 @@ main() {
                 tailnet_ip=$2
                 shift 2
                 ;;
-            serve | watch | shell)
+            serve | watch | shell | evaluator)
                 [ "$mode_set" = 0 ] || die "only one run mode may be selected"
                 mode=$1
                 mode_set=1
@@ -105,17 +125,21 @@ main() {
             die "leave the $active environment before running $name"
         fi
     done
-    if [ "$mode" = shell ] && [ "$share" = 1 ]; then
-        die "--share configures serve/watch; shell uses the instance's saved sharing settings"
+    if { [ "$mode" = shell ] || [ "$mode" = evaluator ]; } && [ "$share" = 1 ]; then
+        die "--share configures serve/watch; $mode uses the instance's saved sharing settings"
     fi
-    if [ "$mode" != shell ]; then require_commands caddy curl lsof; fi
+    case $mode in
+        serve | watch) require_commands caddy curl lsof ;;
+        evaluator) require_commands curl ;;
+    esac
     if [ "$WORKTREE_RUNTIME" = native ] && [ "$mode" != shell ]; then
-        require_commands cargo cargo-leptos
+        require_commands cargo
+        [ "$mode" = evaluator ] || require_commands cargo-leptos
     fi
 
     load_env "$name"
     [ -d "$WT_DIR" ] || die "$WT_DIR is missing"
-    if [ "$mode" = shell ]; then
+    if [ "$mode" = shell ] || [ "$mode" = evaluator ]; then
         load_share_addresses "$name"
     else
         if [ "$share" = 1 ]; then detect_share_addresses "$lan_ip" "$tailnet_ip"; fi
@@ -124,6 +148,7 @@ main() {
     fi
     export_instance_env "$name" "$WT_PORT" "$WT_DB" "$WT_TEST_DB"
     cd "$WT_DIR"
+    if [ "$mode" = evaluator ]; then run_evaluator "$name"; fi
 
     if [ "$mode" = shell ]; then
         log "shell for $name ($WT_BRANCH), db $WT_DB, :$WT_PORT"

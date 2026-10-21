@@ -4,9 +4,10 @@ use crate::{
     scheme::{assemble, positions_to_recheck, Scheme, Searched},
 };
 use anyhow::{anyhow, Result};
-use shared_types::MoveEval;
+use shared_types::{MoveEval, MAX_EVAL_LINE};
 use std::{
     collections::HashMap,
+    future::Future,
     sync::{
         atomic::{AtomicBool, AtomicUsize, Ordering},
         Arc,
@@ -48,25 +49,26 @@ impl Progress {
     }
 }
 
-/// Searches `plies` with `budget`, spread over all engines; the final position is scored by
-/// `ending` instead when the game ended on the board. The engines come back even when the pass
-/// fails, so the caller decides whether to restart them.
-async fn run_pass(
+/// Does `work` for every ply in `jobs`, spread over all engines. The engines come back even
+/// when a job fails, so the caller decides whether to restart them.
+async fn spread<J, R, W, F>(
     engines: Vec<Engine>,
-    game_type: &str,
-    moves: &Arc<Vec<String>>,
-    ending: Option<f32>,
-    plies: Vec<usize>,
-    budget: u32,
+    jobs: Vec<(usize, J)>,
     progress: &Arc<Progress>,
-) -> (Vec<Engine>, Result<HashMap<usize, Searched>>) {
-    let plies = Arc::new(plies);
+    work: W,
+) -> (Vec<Engine>, Result<HashMap<usize, R>>)
+where
+    J: Clone + Send + Sync + 'static,
+    R: Send + 'static,
+    W: Fn(Engine, usize, J) -> F + Clone + Send + 'static,
+    F: Future<Output = (Engine, Result<R>)> + Send + 'static,
+{
+    let jobs = Arc::new(jobs);
     let next = Arc::new(AtomicUsize::new(0));
     let mut tasks = Vec::new();
     for mut engine in engines {
-        let (plies, next, moves, progress) =
-            (plies.clone(), next.clone(), moves.clone(), progress.clone());
-        let game_type = game_type.to_string();
+        let (jobs, next, progress, work) =
+            (jobs.clone(), next.clone(), progress.clone(), work.clone());
         tasks.push(tokio::spawn(async move {
             let mut found = Vec::new();
             loop {
@@ -77,16 +79,15 @@ async fn run_pass(
                 {
                     return (engine, Ok(found));
                 }
-                let Some(&ply) = plies.get(next.fetch_add(1, Ordering::Relaxed)) else {
+                let Some((ply, job)) = jobs.get(next.fetch_add(1, Ordering::Relaxed)).cloned()
+                else {
                     return (engine, Ok(found));
                 };
-                let searched = match ending.filter(|_| ply == moves.len()) {
-                    Some(winprob) => Ok(Searched::GameOver { winprob }),
-                    None => engine.search(&game_type, &moves, ply, budget).await,
-                };
-                match searched {
-                    Ok(searched) => {
-                        found.push((ply, searched));
+                let (back, done) = work(engine, ply, job).await;
+                engine = back;
+                match done {
+                    Ok(done) => {
+                        found.push((ply, done));
                         progress.done.fetch_add(1, Ordering::Relaxed);
                     }
                     Err(e) => {
@@ -116,6 +117,54 @@ async fn run_pass(
         error = Some(anyhow!("the site took the eval back"));
     }
     (engines, error.map_or(Ok(results), Err))
+}
+
+/// Searches `plies` with `budget`; the final position is scored by `ending` instead when the
+/// game ended on the board.
+async fn run_pass(
+    engines: Vec<Engine>,
+    game_type: &str,
+    moves: &Arc<Vec<String>>,
+    ending: Option<f32>,
+    plies: Vec<usize>,
+    budget: u32,
+    progress: &Arc<Progress>,
+) -> (Vec<Engine>, Result<HashMap<usize, Searched>>) {
+    let (game_type, moves) = (Arc::new(game_type.to_string()), moves.clone());
+    let jobs = plies.into_iter().map(|ply| (ply, ())).collect();
+    spread(engines, jobs, progress, move |mut engine, ply, ()| {
+        let (game_type, moves) = (game_type.clone(), moves.clone());
+        async move {
+            let searched = match ending.filter(|_| ply == moves.len()) {
+                Some(winprob) => Ok(Searched::GameOver { winprob }),
+                None => engine.search(&game_type, &moves, ply, budget).await,
+            };
+            (engine, searched)
+        }
+    })
+    .await
+}
+
+/// The engine's line instead of each marked move, from the position before it.
+async fn find_lines(
+    engines: Vec<Engine>,
+    game_type: &str,
+    moves: &Arc<Vec<String>>,
+    marked: Vec<(usize, String)>,
+    budget: u32,
+    progress: &Arc<Progress>,
+) -> (Vec<Engine>, Result<HashMap<usize, Vec<String>>>) {
+    let (game_type, moves) = (Arc::new(game_type.to_string()), moves.clone());
+    spread(engines, marked, progress, move |mut engine, ply, best| {
+        let (game_type, moves) = (game_type.clone(), moves.clone());
+        async move {
+            let line = engine
+                .line(&game_type, &moves[..ply], &best, budget, MAX_EVAL_LINE)
+                .await;
+            (engine, line)
+        }
+    })
+    .await
 }
 
 pub async fn evaluate(
@@ -186,7 +235,30 @@ pub async fn evaluate(
         }
     }
 
-    let result = assemble(&moves, &screen, &full, scheme);
+    let mut result = assemble(&moves, &screen, &full, scheme);
+    // Only a marked move's line is shown, and a line of the engine's own best moves holds up
+    // where the tail of one search does not.
+    let marked: Vec<(usize, String)> = result
+        .iter()
+        .enumerate()
+        .filter_map(|(ply, eval)| {
+            let eval = eval.as_ref()?;
+            eval.grade().map(|_| (ply, eval.best.clone()))
+        })
+        .collect();
+    progress.total.fetch_add(marked.len(), Ordering::Relaxed);
+    let (engines, lines) =
+        find_lines(engines, game_type, &moves, marked, scheme.line, progress).await;
+    match lines {
+        Ok(lines) => {
+            for (ply, line) in lines {
+                if let Some(eval) = result[ply].as_mut() {
+                    eval.line = line;
+                }
+            }
+        }
+        Err(e) => return (engines, Err(e)),
+    }
     (engines, Ok(result))
 }
 

@@ -12,6 +12,7 @@ Run these from your main checkout:
 | `hive-setup <branch>` | Create a worktree for an existing or new branch. |
 | `hive-run <name> watch` | Build and serve with hot reload. Omit `watch` to serve without watching. |
 | `hive-run <name> shell` | Open a shell with that instance's environment. |
+| `hive-run <name> evaluator` | Run the engine eval worker for that instance, next to a running `hive-run <name>`. |
 | `hive-setup --ls` | List instances and their URLs. |
 | `hive-setup --refresh <name>` | Replace the development database with a fresh copy of its saved template. |
 | `hive-cleanup` | Select environments to remove. |
@@ -25,6 +26,11 @@ alone does not load the environment. Exit that shell before selecting another in
 
 Ctrl-C stops the app or watcher. The shared Caddy proxy stays running; stop it with
 `caddy stop --address localhost:2019` when no instance needs it.
+
+The evaluator mode searches with the engine described in `~/.config/hive-evaluator/engines.toml`
+(or `EVAL_ENGINES_FILE`; format in `hive-evaluator/README.md`) and takes only evals someone
+asked for; `EVAL_AUTO=true` lets it pick games too. With the Nix runtime it runs in
+`nix develop .#evaluator`.
 
 ## Setup
 

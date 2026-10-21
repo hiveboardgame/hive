@@ -39,9 +39,9 @@ use diesel_async::{AsyncConnection, RunQueryDsl};
 use shared_types::{history_moves, EvalResult, EvalStatus, GameEvalView, GameId, RecentEval};
 use uuid::Uuid;
 
-/// Seconds per move before any eval has finished, from the prod benchmark of the
-/// 50 > 800 scheme on three eval servers (~69 s for a median 41-move game).
-const DEFAULT_SECS_PER_MOVE: f64 = 1.7;
+/// Seconds per move before any eval has finished. 1024 > 4096 with 4096-sim lines took 10 s a
+/// move on a dev Mac, and the prod box ran the earlier, cheaper scheme about 1.4 times slower.
+const DEFAULT_SECS_PER_MOVE: f64 = 14.0;
 const RECENT_FOR_ESTIMATE: i64 = 20;
 
 /// (moves, started_at, finished_at) of a finished eval.

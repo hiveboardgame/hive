@@ -21,17 +21,22 @@ pub enum Searched {
 
 /// How the game is searched: everything with the `screen` budget, then the moves that look like
 /// they lost at least `threshold` points, or swing by more than their mark shows, are searched
-/// again with the `full` budget (see `positions_to_recheck`).
+/// again with the `full` budget (see `positions_to_recheck`). Each move of the line shown after a
+/// marked move gets the `line` budget.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Scheme {
     pub screen: u32,
     pub threshold: f32,
     pub full: u32,
+    pub line: u32,
 }
 
 impl Scheme {
     pub fn label(&self) -> String {
-        format!("{}>{}>{}", self.screen, self.threshold, self.full)
+        format!(
+            "{}>{}>{} line {}",
+            self.screen, self.threshold, self.full, self.line
+        )
     }
 }
 
@@ -151,6 +156,7 @@ mod tests {
         screen: 50,
         threshold: 2.0,
         full: 800,
+        line: 800,
     };
 
     fn pos(winprob: f32, best: &str) -> Searched {

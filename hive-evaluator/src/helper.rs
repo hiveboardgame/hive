@@ -106,26 +106,21 @@ mod tests {
         }
     }
 
-    fn free_port() -> u16 {
-        let listener = std::net::TcpListener::bind(("127.0.0.1", 0)).unwrap();
-        listener.local_addr().unwrap().port()
-    }
-
+    // Port 0 always passes the in-use check, so tests running side by side never collide.
     #[tokio::test]
     async fn a_helper_is_ready_when_it_says_so_on_either_stream() {
         for script in [
             "echo loading; echo READY on {port}; exec sleep 30",
             "echo loading >&2; echo READY >&2; exec sleep 30",
         ] {
-            let port = free_port();
-            let helper = Helper::start(&shell(script), port).await.unwrap();
-            assert_eq!(helper.port, port);
+            let helper = Helper::start(&shell(script), 0).await.unwrap();
+            assert_eq!(helper.port, 0);
         }
     }
 
     #[tokio::test]
     async fn a_helper_that_dies_first_says_what_it_printed() {
-        let error = Helper::start(&shell("echo no weights here >&2; exit 1"), free_port())
+        let error = Helper::start(&shell("echo no weights here >&2; exit 1"), 0)
             .await
             .err()
             .unwrap();

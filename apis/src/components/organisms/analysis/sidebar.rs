@@ -149,7 +149,10 @@ pub fn AnalysisSidebar(
                     </div>
                 </Show>
                 <Show when=move || shown() == AnalysisTab::Evals>
-                    <Evals />
+                    <div class="flex flex-col flex-1 gap-3 min-h-0">
+                        <AnalysisHistoryControls />
+                        <Evals />
+                    </div>
                 </Show>
             </div>
         </div>

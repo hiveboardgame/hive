@@ -28,6 +28,8 @@ pub struct EngineConfig {
     pub env: BTreeMap<String, String>,
     /// The analysis command, with `{budget}` where the search budget goes.
     pub analyze: String,
+    /// The command for one move of the line shown after a marked move, with `{budget}`.
+    pub bestmove: String,
     /// Engines in all, or per helper when there are helpers.
     #[serde(default = "one")]
     pub count: u16,
@@ -38,6 +40,8 @@ pub struct EngineConfig {
     pub screen: u32,
     /// The budget the moves that may have lost are searched with again.
     pub full: u32,
+    /// The budget for each move of a line; `full` when not given.
+    pub line: Option<u32>,
     #[serde(default = "default_threshold")]
     pub threshold: f32,
     pub helper: Option<HelperConfig>,
@@ -97,8 +101,10 @@ impl EngineConfig {
             .get(&name)
             .cloned()
             .ok_or_else(|| anyhow!("no engine named {name}; there is {}", names()))?;
-        if !engine.analyze.contains("{budget}") {
-            bail!("engines.{name}.analyze has no {{budget}}");
+        for (key, command) in [("analyze", &engine.analyze), ("bestmove", &engine.bestmove)] {
+            if !command.contains("{budget}") {
+                bail!("engines.{name}.{key} has no {{budget}}");
+            }
         }
         if engine.count == 0 || engine.helper.as_ref().is_some_and(|h| h.count == 0) {
             bail!("engines.{name}: a count of 0 leaves nothing to search with");
@@ -111,6 +117,7 @@ impl EngineConfig {
             screen: self.screen,
             threshold: self.threshold,
             full: self.full,
+            line: self.line.unwrap_or(self.full),
         }
     }
 }
@@ -144,9 +151,11 @@ mod tests {
         dir = "/opt/net-engine"
         env = { ENGINE_LOG = "quiet" }
         analyze = "analyze sims {budget}"
+        bestmove = "bestmove sims {budget}"
         fingerprint = ["/opt/net-engine/weights.bin"]
         screen = 64
         full = 800
+        line = 400
         threshold = 3.0
 
         [engines.net.helper]
@@ -159,6 +168,7 @@ mod tests {
         [engines.classic]
         command = "classic-engine"
         analyze = "analyze depth {budget}"
+        bestmove = "bestmove depth {budget}"
         count = 4
         screen = 4
         full = 8
@@ -175,7 +185,8 @@ mod tests {
             Scheme {
                 screen: 64,
                 threshold: 3.0,
-                full: 800
+                full: 800,
+                line: 400,
             }
         );
         let helper = net.helper.unwrap();
@@ -190,6 +201,11 @@ mod tests {
         assert_eq!(name, "classic");
         assert!(classic.helper.is_none());
         assert_eq!((classic.count, classic.threshold), (4, 2.0));
+        assert_eq!(
+            classic.scheme().line,
+            8,
+            "a line is searched like a recheck unless told"
+        );
     }
 
     #[test]
@@ -198,6 +214,7 @@ mod tests {
             [engines.only]
             command = "engine"
             analyze = "analyze {budget}"
+            bestmove = "bestmove {budget}"
             screen = 100
             full = 2000
         "#;
@@ -211,6 +228,8 @@ mod tests {
         assert!(EngineConfig::pick(TWO, Some("missing")).is_err());
         let no_budget = TWO.replace("analyze sims {budget}", "analyze sims 800");
         assert!(EngineConfig::pick(&no_budget, None).is_err());
+        let no_line_budget = TWO.replace("bestmove sims {budget}", "bestmove");
+        assert!(EngineConfig::pick(&no_line_budget, None).is_err());
         let typo = TWO.replace("first_port", "first_prot");
         assert!(EngineConfig::pick(&typo, None).is_err());
         let none = TWO.replace("count = 3", "count = 0");

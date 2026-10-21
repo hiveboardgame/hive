@@ -1,6 +1,6 @@
 use crate::{
     config::{with_port, EngineConfig},
-    rules::same_move,
+    rules::{ending, same_move},
     scheme::{PositionEval, Searched},
 };
 use anyhow::{anyhow, bail, Context, Result};
@@ -19,6 +19,7 @@ pub struct Engine {
     stdin: ChildStdin,
     stdout: Lines<BufReader<ChildStdout>>,
     analyze: String,
+    bestmove: String,
     pub id: String,
 }
 
@@ -46,6 +47,7 @@ impl Engine {
             stdin,
             stdout,
             analyze: config.analyze.clone(),
+            bestmove: config.bestmove.clone(),
             id: String::new(),
         };
         // UHP engines greet with their id before any command.
@@ -111,6 +113,46 @@ impl Engine {
             }
         }
         Ok(Searched::Position(eval))
+    }
+
+    /// How the engine plays on from the position after `moves`, starting with `first`: each
+    /// further move is its own `bestmove` search with `budget`, until `length` moves or the end of
+    /// the game. A move the site's rules refuse ends the line before it.
+    pub async fn line(
+        &mut self,
+        game_type: &str,
+        moves: &[String],
+        first: &str,
+        budget: u32,
+        length: usize,
+    ) -> Result<Vec<String>> {
+        let state = self.command(&newgame(game_type, moves)).await?;
+        if let Some(err) = state.iter().find(|l| l.starts_with("err")) {
+            bail!("setting up the position after {} moves: {err}", moves.len());
+        }
+        let bestmove = self.bestmove.replace("{budget}", &budget.to_string());
+        let mut played = moves.to_vec();
+        let mut next = first.to_string();
+        loop {
+            played.push(next.clone());
+            let Ok(ended) = ending(game_type, &played) else {
+                played.pop();
+                break;
+            };
+            if ended.is_some() || played.len() - moves.len() >= length {
+                break;
+            }
+            let reply = self.command(&format!("play {next}")).await?;
+            if reply.iter().any(|l| l.starts_with("err")) {
+                break;
+            }
+            let reply = self.command(&bestmove).await?;
+            match reply.iter().rev().find(|l| !l.starts_with("info")) {
+                Some(mv) if !mv.starts_with("err") => next = mv.clone(),
+                _ => break,
+            }
+        }
+        Ok(played.split_off(moves.len()))
     }
 }
 
@@ -215,17 +257,28 @@ mod tests {
 
     /// A UHP engine in a few lines of shell: it knows the positions after three and four moves,
     /// can only pass after three, and analyses at budget 7 only.
+    /// Its best moves after four are, in turn, the next moves of a real game, then one the rules
+    /// refuse.
     fn fake_engine() -> EngineConfig {
         let script = r#"
             say() { printf '%s\n' "$@" ok; }
             say "id Fake 1.0"
             while read -r line; do
                 case "$line" in
-                    "newgame Base+MLP;InProgress;White[3];"*) plies=4; say "${line#newgame }" ;;
+                    "newgame Base+MLP;InProgress;White[3];"*) plies=4; n=0; say "${line#newgame }" ;;
                     "newgame Base+MLP;InProgress;Black[2];"*) plies=3; say "${line#newgame }" ;;
                     newgame*) say "err not this position" ;;
                     validmoves) if [ "$plies" = 3 ]; then say pass; else say "wA1 bL-;wQ -wL"; fi ;;
                     "think 7") say 'cand wA1 bL- | winprob 61.5 | pv wA1 bL-;bQ bL\' ;;
+                    play*) say "${line#play }" ;;
+                    "pick 9")
+                        n=$((n + 1))
+                        case $n in
+                            1) say "info depth 1" 'bG1 \bM' ;;
+                            2) say 'wQ wM\' ;;
+                            3) say 'bQ \bG1' ;;
+                            *) say 'wB3 wL-' ;;
+                        esac ;;
                     *) say "err unknown command" ;;
                 esac
             done
@@ -235,6 +288,7 @@ mod tests {
             [engines.fake]
             command = "sh"
             analyze = "think {budget}"
+            bestmove = "pick {budget}"
             screen = 7
             full = 7
             "#,
@@ -270,5 +324,23 @@ mod tests {
             engine.search("Base+MLP", &moves, 4, 8).await.is_err(),
             "the budget reaches the engine"
         );
+    }
+
+    #[tokio::test]
+    async fn a_line_is_the_engines_best_move_at_every_step_while_the_rules_allow() {
+        let opening: Vec<String> = ["wL", "bP wL-", "wM -wL", "bM bP-"]
+            .map(String::from)
+            .to_vec();
+        let mut engine = Engine::start(&fake_engine(), None).await.unwrap();
+        let line = engine
+            .line("Base+MLP", &opening, r"wA1 \wL", 9, 12)
+            .await
+            .unwrap();
+        assert_eq!(line, [r"wA1 \wL", r"bG1 \bM", r"wQ wM\", r"bQ \bG1"]);
+        let short = engine
+            .line("Base+MLP", &opening, r"wA1 \wL", 9, 2)
+            .await
+            .unwrap();
+        assert_eq!(short, [r"wA1 \wL", r"bG1 \bM"]);
     }
 }
