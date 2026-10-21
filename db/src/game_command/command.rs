@@ -1,12 +1,10 @@
 use crate::{
     db_error::DbError,
     models::{Game, ScheduleOffer},
-    DbConn,
 };
+use chrono::{DateTime, Utc};
 use hive_lib::{GameControl, Turn};
 use uuid::Uuid;
-
-mod execute;
 
 #[derive(Clone, Debug)]
 pub enum Command {
@@ -15,6 +13,7 @@ pub enum Command {
         turn: Turn,
         compensation: f64,
         expected_turn: Option<usize>,
+        arrived_at: Option<DateTime<Utc>>,
     },
     Control {
         user_id: Uuid,
@@ -27,6 +26,13 @@ pub enum Command {
         user_id: Uuid,
     },
     SettleDeadline,
+    // The player on move reporting their own clock for the current turn ends their grace, as on
+    // lichess. Callers send it rather than SettleDeadline only when no other socket of theirs
+    // could still send a move.
+    CheckTime {
+        user_id: Uuid,
+        turn: i32,
+    },
     Berserk {
         user_id: Uuid,
     },
@@ -48,14 +54,3 @@ pub enum Outcome {
         previous: Game,
     },
 }
-
-pub async fn execute(
-    game_id: Uuid,
-    command: Command,
-    conn: &mut DbConn<'_>,
-) -> Result<Outcome, DbError> {
-    execute::execute(game_id, command, conn).await
-}
-
-#[cfg(test)]
-pub(crate) use execute::execute_at;

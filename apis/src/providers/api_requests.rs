@@ -42,11 +42,6 @@ impl ApiRequests {
         games.own_games_remove(&game_id);
     }
 
-    pub fn pong(&self, nonce: u64) {
-        let msg = ClientRequest::Pong(nonce);
-        self.websocket.send(&msg);
-    }
-
     pub fn game_control(&self, game_id: GameId, gc: GameControl) {
         let msg = ClientRequest::Game {
             game_id,
@@ -73,10 +68,10 @@ impl ApiRequests {
         self.websocket.send(&msg)
     }
 
-    pub fn game_check_time(&self, game_id: &GameId) {
+    pub fn game_check_time(&self, game_id: &GameId, turn: usize) {
         let msg = ClientRequest::Game {
             game_id: game_id.clone(),
-            action: GameAction::CheckTime,
+            action: GameAction::ClockRanOut(turn),
         };
         self.websocket.send(&msg);
     }

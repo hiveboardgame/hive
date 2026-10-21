@@ -223,6 +223,7 @@ async fn create_game(
                 ),
                 compensation: 0.0,
                 expected_turn: Some(index),
+                arrived_at: None,
             },
             conn,
         )

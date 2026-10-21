@@ -1,6 +1,17 @@
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::{
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Mutex,
+        PoisonError,
+    },
+    time::Duration,
+};
 
-use super::{messages::MessageDestination, ws_hub::LOAD_USER_STATE_CONCURRENCY};
+use super::{
+    lag_tracking::{rtt_ms, ProtocolLag},
+    messages::MessageDestination,
+    ws_hub::LOAD_USER_STATE_CONCURRENCY,
+};
 use db_lib::DB_POOL_MAX_SIZE;
 
 #[derive(Debug, Default)]
@@ -36,6 +47,7 @@ pub struct WsTelemetry {
     pub lobby_subscribers: AtomicU64,
     // Lossy max-gauge — fetch_max on send, swap(0) on snapshot read
     pub max_queue_depth_seen: AtomicU64,
+    lag_samples: Mutex<LagSamples>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -76,12 +88,13 @@ pub enum DisconnectReason {
     Timeout = 1,
     PingFail = 2,
     StreamErr = 3,
+    HandlerStopped = 4,
 }
 
-pub const DISCONNECT_REASON_COUNT: usize = 4;
+pub const DISCONNECT_REASON_COUNT: usize = 5;
 
 const _: () = {
-    assert!((DisconnectReason::StreamErr as usize) == DISCONNECT_REASON_COUNT - 1);
+    assert!((DisconnectReason::HandlerStopped as usize) == DISCONNECT_REASON_COUNT - 1);
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -89,6 +102,59 @@ pub enum SendOutcome {
     Ok,
     Full,
     Closed,
+}
+
+// Bounds the buffer when nothing drains it (telemetry is off by default in debug builds).
+const MAX_LAG_SAMPLES: usize = 10_000;
+#[derive(Debug, Default)]
+struct LagSamples {
+    moves: Vec<ProtocolLag>,
+    tcp_rtt_ms: Vec<f64>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct LagSnapshot {
+    pub moves: u64,
+    pub protocol_p50_ms: u64,
+    pub protocol_p90_ms: u64,
+    pub protocol_missing: u64,
+    pub cap_hits: u64,
+    pub tcp_rtt_connects: u64,
+    pub tcp_rtt_p50_ms: u64,
+    pub tcp_rtt_p90_ms: u64,
+}
+
+impl From<LagSamples> for LagSnapshot {
+    fn from(samples: LagSamples) -> Self {
+        let protocol = sorted(samples.moves.iter().filter_map(|lag| lag.estimate_ms));
+        let tcp = sorted(samples.tcp_rtt_ms.into_iter());
+        let cap_hits = samples.moves.iter().filter(|lag| lag.capped()).count();
+        let count = |n: usize| n as u64;
+        Self {
+            moves: count(samples.moves.len()),
+            protocol_p50_ms: percentile_ms(&protocol, 0.5),
+            protocol_p90_ms: percentile_ms(&protocol, 0.9),
+            protocol_missing: count(samples.moves.len() - protocol.len()),
+            cap_hits: count(cap_hits),
+            tcp_rtt_connects: count(tcp.len()),
+            tcp_rtt_p50_ms: percentile_ms(&tcp, 0.5),
+            tcp_rtt_p90_ms: percentile_ms(&tcp, 0.9),
+        }
+    }
+}
+
+fn sorted(values: impl Iterator<Item = f64>) -> Vec<f64> {
+    let mut values: Vec<f64> = values.collect();
+    values.sort_by(f64::total_cmp);
+    values
+}
+
+fn percentile_ms(sorted: &[f64], quantile: f64) -> u64 {
+    if sorted.is_empty() {
+        return 0;
+    }
+    let rank = (quantile * sorted.len() as f64).ceil() as usize;
+    sorted[rank.clamp(1, sorted.len()) - 1].round().max(0.0) as u64
 }
 
 #[derive(Debug, Clone, Default)]
@@ -118,6 +184,7 @@ pub struct TelemetrySnapshot {
     pub active_games: u64,
     pub lobby_subscribers: u64,
     pub max_queue_depth_seen: u64,
+    pub lag: LagSnapshot,
     // Computed from external state at snapshot time.
     pub lags_trackers_len: u64,
     pub game_start_games_date_len: u64,
@@ -235,12 +302,43 @@ impl WsTelemetry {
         self.own_state_drops_total.fetch_add(1, Ordering::Relaxed);
     }
 
+    pub fn record_move_lag(&self, protocol: ProtocolLag) {
+        let mut samples = self
+            .lag_samples
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        if samples.moves.len() < MAX_LAG_SAMPLES {
+            samples.moves.push(protocol);
+        }
+    }
+
+    pub fn record_tcp_rtt(&self, rtt: Duration) {
+        let mut samples = self
+            .lag_samples
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        if samples.tcp_rtt_ms.len() < MAX_LAG_SAMPLES {
+            samples.tcp_rtt_ms.push(rtt_ms(rtt));
+        }
+    }
+
+    fn drain_lag_samples(&self) -> LagSnapshot {
+        let samples = std::mem::take(
+            &mut *self
+                .lag_samples
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner),
+        );
+        LagSnapshot::from(samples)
+    }
+
     /// Read all counters/gauges into a `TelemetrySnapshot`.
     ///
     /// # Side effect
     ///
     /// `max_queue_depth_seen` is **reset to 0** on every call (it's a
-    /// max-since-last-read gauge, not a running maximum). Only one caller
+    /// max-since-last-read gauge, not a running maximum), and the lag samples
+    /// behind `lag` are drained the same way. Only one caller
     /// should poll `snapshot()` or you'll observe interval-skew: each
     /// reader will see a fraction of the actual peak. Today only
     /// `jobs::ws_telemetry` drains it; if you add a second reader (e.g. a
@@ -280,6 +378,7 @@ impl WsTelemetry {
             active_games: load(&self.active_games),
             lobby_subscribers: load(&self.lobby_subscribers),
             max_queue_depth_seen: self.max_queue_depth_seen.swap(0, Ordering::Relaxed),
+            lag: self.drain_lag_samples(),
             // Filled in by snapshot_with_state at the call site.
             ..TelemetrySnapshot::default()
         }
@@ -348,4 +447,54 @@ fn parse_kb(s: &str) -> u64 {
         .next()
         .and_then(|t| t.parse::<u64>().ok())
         .unwrap_or(0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn protocol(estimate_ms: Option<f64>, cap_ms: f64) -> ProtocolLag {
+        ProtocolLag {
+            estimate_ms,
+            cap_ms,
+        }
+    }
+
+    #[test]
+    fn a_snapshot_summarises_and_drains_the_interval() {
+        let telemetry = WsTelemetry::default();
+        telemetry.record_move_lag(protocol(Some(25.0), 1000.0));
+        telemetry.record_move_lag(protocol(Some(35.0), 1000.0));
+        telemetry.record_move_lag(protocol(Some(30.0), 70.0));
+        telemetry.record_move_lag(protocol(None, 1000.0));
+        telemetry.record_move_lag(protocol(Some(1500.0), 1000.0));
+        telemetry.record_move_lag(protocol(Some(900.0), 1000.0));
+        telemetry.record_tcp_rtt(Duration::from_millis(40));
+        telemetry.record_tcp_rtt(Duration::from_millis(60));
+
+        assert_eq!(
+            telemetry.snapshot().lag,
+            LagSnapshot {
+                moves: 6,
+                protocol_p50_ms: 35,
+                protocol_p90_ms: 1500,
+                protocol_missing: 1,
+                cap_hits: 1,
+                tcp_rtt_connects: 2,
+                tcp_rtt_p50_ms: 40,
+                tcp_rtt_p90_ms: 60,
+            }
+        );
+        assert_eq!(telemetry.snapshot().lag, LagSnapshot::default());
+    }
+
+    #[test]
+    fn the_lag_sample_buffer_is_bounded() {
+        let telemetry = WsTelemetry::default();
+        for _ in 0..MAX_LAG_SAMPLES + 5 {
+            telemetry.record_move_lag(protocol(Some(10.0), 1000.0));
+        }
+
+        assert_eq!(telemetry.snapshot().lag.moves, MAX_LAG_SAMPLES as u64);
+    }
 }

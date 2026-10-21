@@ -3,7 +3,7 @@ use super::{
     join_handler::JoinHandler,
     start::StartHandler,
     timeout_handler::TimeoutHandler,
-    turn_handler::{TurnHandler, TurnInput},
+    turn_handler::{Mover, TurnHandler, TurnInput},
 };
 use crate::{
     common::GameAction,
@@ -15,6 +15,7 @@ use crate::{
     },
 };
 use anyhow::Result;
+use chrono::{DateTime, Utc};
 use db_lib::{get_conn, models::Game, DbPool};
 use shared_types::GameId;
 use std::sync::Arc;
@@ -57,13 +58,22 @@ impl GameActionHandler {
         })
     }
 
-    async fn turn(&self, input: TurnInput, expected_turn: Option<usize>) -> Result<HandlerOutput> {
+    async fn turn(
+        &self,
+        input: TurnInput,
+        expected_turn: Option<usize>,
+        arrived_at: DateTime<Utc>,
+    ) -> Result<HandlerOutput> {
         TurnHandler::new(
             input,
             expected_turn,
             &self.game,
             &self.username,
-            self.user_id,
+            Mover {
+                user_id: self.user_id,
+                socket_id: self.received_from.socket_id,
+                arrived_at,
+            },
             self.data.clone(),
             &self.pool,
         )
@@ -71,7 +81,22 @@ impl GameActionHandler {
         .await
     }
 
-    pub async fn handle(&self) -> Result<HandlerOutput> {
+    async fn check_time(&self, turn: Option<i32>) -> Result<HandlerOutput> {
+        TimeoutHandler::new(
+            &self.game,
+            self.user_id,
+            turn,
+            self.received_from.clone(),
+            self.data.clone(),
+            self.hub.clone(),
+            &self.pool,
+        )
+        .handle()
+        .await
+    }
+
+    pub async fn handle(&self, move_arrival: Option<DateTime<Utc>>) -> Result<HandlerOutput> {
+        let arrived_at = move_arrival.unwrap_or_else(Utc::now);
         let _start = if can_start_game(&self.game_action) {
             self.data.realtime_gate.admit_start(&self.game)?
         } else {
@@ -83,20 +108,19 @@ impl GameActionHandler {
                     .handle()
                     .await?
             }
-            GameAction::CheckTime => {
-                TimeoutHandler::new(
-                    &self.game,
-                    self.received_from.clone(),
-                    self.data.clone(),
-                    &self.pool,
-                )
-                .handle()
-                .await?
+            GameAction::CheckTime => self.check_time(None).await?,
+            GameAction::ClockRanOut(turn) => self.check_time(i32::try_from(turn).ok()).await?,
+            GameAction::Turn(turn) => {
+                self.turn(TurnInput::Structured(turn), None, arrived_at)
+                    .await?
             }
-            GameAction::Turn(turn) => self.turn(TurnInput::Structured(turn), None).await?,
-            GameAction::Play(notation) => self.turn(TurnInput::Notation(notation), None).await?,
+            GameAction::Play(notation) => {
+                self.turn(TurnInput::Notation(notation), None, arrived_at)
+                    .await?
+            }
             GameAction::PlayAt { turn, notation } => {
-                self.turn(TurnInput::Notation(notation), Some(turn)).await?
+                self.turn(TurnInput::Notation(notation), Some(turn), arrived_at)
+                    .await?
             }
             GameAction::Control(control) => {
                 GameControlHandler::new(
@@ -151,6 +175,7 @@ fn can_start_game(action: &GameAction) -> bool {
         | GameAction::Start => true,
         GameAction::Berserk
         | GameAction::CheckTime
+        | GameAction::ClockRanOut(_)
         | GameAction::Control(_)
         | GameAction::Join
         | GameAction::Unwatch => false,
@@ -179,6 +204,7 @@ mod tests {
         for action in [
             GameAction::Berserk,
             GameAction::CheckTime,
+            GameAction::ClockRanOut(2),
             GameAction::Control(GameControl::Abort(Color::White)),
             GameAction::Join,
             GameAction::Unwatch,

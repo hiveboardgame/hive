@@ -2771,6 +2771,7 @@ async fn add_opening_moves(game: &Game, conn: &mut DbConn<'_>) -> Result<()> {
                 turn: Turn::Move(piece.parse()?, position),
                 compensation: 0.0,
                 expected_turn: None,
+                arrived_at: None,
             },
             conn,
         )

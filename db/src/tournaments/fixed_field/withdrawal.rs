@@ -322,8 +322,12 @@ async fn apply_withdrawal_command(
                 }
                 WithdrawalObligation::Played { game_id, color, .. } => {
                     let game = Game::find_by_uuid(&game_id, conn).await?;
-                    let checked = match game.settle_deadline(withdrawn_at, conn).await? {
+                    let checked = match game
+                        .settle_deadline_giving_up(color, withdrawn_at, conn)
+                        .await?
+                    {
                         DeadlineSettlement::Active(game)
+                        | DeadlineSettlement::Awaiting(game)
                         | DeadlineSettlement::Terminal { game, .. } => game,
                     };
                     let terminal = if checked.finished {
