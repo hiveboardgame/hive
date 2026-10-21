@@ -131,6 +131,7 @@ pub fn ChallengeDetails(
                                             username=user.username.clone()
                                             patreon=user.patreon
                                             bot=user.bot
+                                            chat_muted=user.chat_muted
                                             deleted=user.deleted
                                             extend_tw_classes="truncate max-w-[9rem]"
                                             wrapper_tw_classes="min-w-0 shrink"

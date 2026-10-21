@@ -1,4 +1,5 @@
 {
+    "muted_by_admin": "Réduit au silence par un administrateur",
     "yes": "Oui",
     "no": "Non",
     "cancel": "Annuler",
@@ -130,6 +131,8 @@
         "title": "Compte"
     },
     "admin": {
+        "chat_moderation": "Modération du chat",
+        "chat_muted": "Chat désactivé",
         "send_global_warning": "Avertir tout le monde",
         "edit_banner": "Modifier la bannière",
         "open_ws_telemetry_dashboard": "Ouvrir la télémétrie WS",

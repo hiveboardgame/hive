@@ -1,4 +1,5 @@
 {
+    "muted_by_admin": "Silenciat per un administrador",
     "yes": "Sí",
     "no": "No",
     "cancel": "Cancel·la",
@@ -130,6 +131,8 @@
         "title": "Compte"
     },
     "admin": {
+        "chat_moderation": "Moderació del xat",
+        "chat_muted": "Xat silenciat",
         "send_global_warning": "Envia un avís global",
         "edit_banner": "Edita el bàner",
         "open_ws_telemetry_dashboard": "Obre el tauler de telemetria WS",

@@ -1,5 +1,7 @@
 {
     "chat": {
+        "muted_notice": "Ai fost amuțit de un administrator. Pentru a contesta decizia, contactează administratorii pe Discord.",
+        "muted_peer_notice": "{{username}} a fost amuțit de un administrator și nu poate răspunde.",
         "spectators": "Spectatori",
         "players_chat": "Chat jucatori",
         "spectator_chat": "Chat spectatori",

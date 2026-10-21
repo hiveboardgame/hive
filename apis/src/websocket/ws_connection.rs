@@ -363,6 +363,7 @@ fn external_server_error(
                     crate::common::ChatSendError::ClientIdConflict
                 }
                 RequestHandlerError::RateLimited(_) => crate::common::ChatSendError::RateLimited,
+                RequestHandlerError::ChatMuted => ChatSendError::Muted,
                 RequestHandlerError::Forbidden => match &request.key {
                     ConversationKey::Direct(_) => crate::common::ChatSendError::DirectRestricted,
                     ConversationKey::Global => crate::common::ChatSendError::AdminOnly,
@@ -397,6 +398,7 @@ fn external_server_error(
                     SubscriptionError::AccessDenied
                 }
                 RequestHandlerError::InternalError(_)
+                | RequestHandlerError::ChatMuted
                 | RequestHandlerError::ChatClientIdConflict => SubscriptionError::Unavailable,
                 RequestHandlerError::TournamentNameTaken => SubscriptionError::Unavailable,
             };
@@ -445,6 +447,7 @@ fn should_log_request_error(err: &RequestHandlerError) -> bool {
             | RequestHandlerError::Forbidden
             | RequestHandlerError::RateLimited(_)
             | RequestHandlerError::ChatClientIdConflict
+            | RequestHandlerError::ChatMuted
     ) && !err.is_realtime_pause()
 }
 

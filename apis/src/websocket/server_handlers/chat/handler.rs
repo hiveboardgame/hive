@@ -27,15 +27,14 @@ use uuid::Uuid;
 pub enum ChatHandlerError {
     #[error("Chat client ID conflicts with an existing message")]
     ClientIdConflict,
+    #[error("You have been muted by an admin")]
+    Muted,
     #[error(transparent)]
     Internal(#[from] anyhow::Error),
 }
 
 fn is_persist_failure(error: &DbError) -> bool {
-    !matches!(
-        error,
-        DbError::ChatClientIdConflict | DbError::InvalidInput { .. }
-    )
+    !matches!(error, DbError::InvalidInput { .. })
 }
 
 pub struct ChatHandler<'a> {
@@ -63,6 +62,7 @@ impl<'a> ChatHandler<'a> {
         }
         let (persisted, inserted) = match self.insert(conn).await {
             Ok(persisted) => persisted,
+            Err(DbError::ChatMuted) => return Err(ChatHandlerError::Muted),
             Err(DbError::ChatClientIdConflict) => return Err(ChatHandlerError::ClientIdConflict),
             Err(error) => {
                 if is_persist_failure(&error) {

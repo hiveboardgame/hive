@@ -8,6 +8,7 @@ pub mod db;
 pub mod devices;
 pub mod games;
 pub mod home_banner;
+pub mod moderation;
 pub mod notification_preferences;
 pub mod oauth;
 #[cfg(feature = "ssr")]

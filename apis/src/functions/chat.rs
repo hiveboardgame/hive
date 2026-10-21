@@ -17,7 +17,7 @@ use db_lib::{
         get_tournament_thread_data as db_get_tournament_thread_data,
         is_tournament_chat_muted,
         load_chat_history,
-        load_game_chat_capabilities,
+        load_game_chat_route_data,
         mark_chat_read as db_mark_chat_read,
         muted_tournament_ids_for_user,
         unread_chat_count_for_channel,
@@ -58,7 +58,10 @@ pub enum TournamentRouteResponse {
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum GameChatRouteResponse {
-    Ready(GameChatCapabilities),
+    Ready {
+        access: GameChatCapabilities,
+        muted_peer: Option<String>,
+    },
     NotFound,
 }
 
@@ -68,6 +71,7 @@ pub enum DmRouteResponse {
         other_user_id: Uuid,
         username: String,
         peer_deleted: bool,
+        peer_chat_muted: bool,
     },
     NotFound,
 }
@@ -282,11 +286,14 @@ pub async fn resolve_dm_route_user(username: String) -> Result<DmRouteResponse, 
         .await
         .map_err(|err| chat_unexpected_error("resolving direct-message user", err))?
     {
-        Some((other_user_id, username, peer_deleted)) => Ok(DmRouteResponse::Ready {
-            other_user_id,
-            username,
-            peer_deleted,
-        }),
+        Some((other_user_id, username, peer_deleted, peer_chat_muted)) => {
+            Ok(DmRouteResponse::Ready {
+                other_user_id,
+                username,
+                peer_deleted,
+                peer_chat_muted,
+            })
+        }
         None => Ok(DmRouteResponse::NotFound),
     }
 }
@@ -318,11 +325,11 @@ pub async fn get_game_chat_route_data(
     let user_id = uuid().await?;
     let pool = pool().await?;
     let mut conn = chat_connection(&pool).await?;
-    match load_game_chat_capabilities(&mut conn, user_id, &game_id)
+    match load_game_chat_route_data(&mut conn, user_id, &game_id)
         .await
         .map_err(|err| chat_unexpected_error("loading game chat capabilities", err))?
     {
-        Some(access) => Ok(GameChatRouteResponse::Ready(access)),
+        Some((access, muted_peer)) => Ok(GameChatRouteResponse::Ready { access, muted_peer }),
         None => Ok(GameChatRouteResponse::NotFound),
     }
 }

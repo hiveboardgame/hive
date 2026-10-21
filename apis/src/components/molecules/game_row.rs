@@ -195,6 +195,7 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
                                     patreon=white_player.patreon
                                     username=white_player.username.clone()
                                     bot=white_player.bot
+                                    chat_muted=white_player.chat_muted
                                     deleted=white_player.deleted
                                     attr:class="truncate z-30 mr-1 max-w-full"
                                 />
@@ -215,6 +216,7 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
                                     username=black_player.username.clone()
                                     patreon=black_player.patreon
                                     bot=black_player.bot
+                                    chat_muted=black_player.chat_muted
                                     deleted=black_player.deleted
                                     attr:class="truncate z-30 ml-1 max-w-full"
                                 />

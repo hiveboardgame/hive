@@ -248,13 +248,14 @@ pub fn provide_auth() {
     });
     // Account refreshes must not rebuild protected pages for an unchanged session.
     let identity = Memo::new(move |_| state.with(AuthState::identity)).into();
-    let admin = Signal::derive(move || {
+    let admin = Memo::new(move |_| {
         state.with(|state| match state {
             AuthState::Loading => None,
             AuthState::Anonymous => Some(false),
             AuthState::User(account) => Some(account.user.admin),
         })
-    });
+    })
+    .into();
     let session_actions = AuthSessionActions {
         state,
         account_refresh_generation,
@@ -330,6 +331,7 @@ mod tests {
                 uid: user_id,
                 patreon: false,
                 bot: false,
+                chat_muted: false,
                 admin: false,
                 deleted: false,
                 ratings: HashMap::new(),
@@ -418,6 +420,39 @@ mod tests {
         apply_account_refresh(state, &websocket, None, false);
         assert_eq!(identity_consumer.get(), Some(AuthIdentity::Anonymous));
         assert_eq!(evaluations.load(Ordering::Relaxed), 4);
+    }
+
+    #[test]
+    fn account_refresh_only_invalidates_admin_consumers_when_privileges_change() {
+        let owner = Owner::new();
+        owner.set();
+        let (websocket, _, _) = websocket_with_transition_counts();
+        provide_context(websocket.clone());
+        provide_auth();
+        let auth = expect_context::<AuthContext>();
+        let state = auth.session_actions.state;
+        let evaluations = Arc::new(AtomicUsize::new(0));
+        let count = Arc::clone(&evaluations);
+        let admin_consumer = Memo::new(move |_| {
+            count.fetch_add(1, Ordering::Relaxed);
+            auth.admin.get()
+        });
+        assert_eq!(admin_consumer.get(), None);
+        let mut admin = account(Uuid::new_v4(), "admin");
+        admin.user.admin = true;
+        apply_account_refresh(state, &websocket, Some(admin.clone()), false);
+        assert_eq!(admin_consumer.get(), Some(true));
+        assert_eq!(evaluations.load(Ordering::Relaxed), 2);
+
+        admin.user.chat_muted = true;
+        apply_account_refresh(state, &websocket, Some(admin.clone()), false);
+        assert_eq!(admin_consumer.get(), Some(true));
+        assert_eq!(evaluations.load(Ordering::Relaxed), 2);
+
+        admin.user.admin = false;
+        apply_account_refresh(state, &websocket, Some(admin), false);
+        assert_eq!(admin_consumer.get(), Some(false));
+        assert_eq!(evaluations.load(Ordering::Relaxed), 3);
     }
 
     #[test]

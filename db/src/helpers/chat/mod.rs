@@ -27,7 +27,7 @@ pub use read_receipts::{mark_chat_read, unread_chat_count_for_channel};
 pub(crate) use target::authorize_tournament_chat_access;
 pub use target::{
     get_tournament_thread_data,
-    load_game_chat_capabilities,
+    load_game_chat_route_data,
     resolve_chat_target,
     DbChatTarget,
 };

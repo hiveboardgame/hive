@@ -1,5 +1,7 @@
 {
     "chat": {
+        "muted_notice": "Un amministratore ti ha silenziato. Per fare ricorso, contatta gli amministratori su Discord.",
+        "muted_peer_notice": "{{username}} è stato silenziato da un amministratore e non può rispondere.",
         "spectators": "Spettatori",
         "players_chat": "Chat giocatori",
         "spectator_chat": "Chat spettatori",

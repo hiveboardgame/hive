@@ -35,3 +35,4 @@ pub mod tile_definitions;
 pub mod title;
 pub mod toggle_controls;
 pub mod unread_badge;
+pub mod user_badges;

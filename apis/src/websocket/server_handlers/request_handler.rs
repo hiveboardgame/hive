@@ -40,6 +40,7 @@ use uuid::Uuid;
 pub enum RequestHandlerError {
     InternalError(#[from] anyhow::Error),
     ChatClientIdConflict,
+    ChatMuted,
     AuthError(#[from] AuthError),
     Forbidden,
     RateLimited(ChatLimitError),
@@ -54,6 +55,7 @@ impl std::fmt::Display for RequestHandlerError {
                 write!(f, "Chat client ID conflicts with an existing message")
             }
             RequestHandlerError::AuthError(e) => write!(f, "{e}"),
+            RequestHandlerError::ChatMuted => write!(f, "Chat muted by an admin"),
             RequestHandlerError::Forbidden => write!(f, "Chat access denied"),
             RequestHandlerError::RateLimited(error) => write!(f, "{}", error.reason()),
             RequestHandlerError::TournamentNameTaken => {
@@ -69,6 +71,7 @@ impl RequestHandlerError {
             Self::InternalError(_) if self.is_realtime_pause() => UiError::RealtimeGamesPaused,
             Self::InternalError(_) => UiError::RequestUnavailable,
             Self::ChatClientIdConflict => UiError::ChatRetryConflict,
+            Self::ChatMuted => UiError::ChatMuted,
             Self::AuthError(_) => UiError::Unauthorized,
             Self::Forbidden => UiError::ChatAccessDenied,
             Self::RateLimited(ChatLimitError::SubscriptionAttempts { .. }) => {
@@ -246,6 +249,7 @@ impl RequestHandler {
                     .handle(&mut conn, &self.data.telemetry)
                     .await
                     .map_err(|error| match error {
+                        ChatHandlerError::Muted => RequestHandlerError::ChatMuted,
                         ChatHandlerError::ClientIdConflict => {
                             RequestHandlerError::ChatClientIdConflict
                         }

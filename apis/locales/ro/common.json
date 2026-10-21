@@ -1,4 +1,5 @@
 {
+    "muted_by_admin": "Amuțit de un administrator",
     "yes": "Da",
     "no": "Nu",
     "cancel": "Anulează",
@@ -130,6 +131,8 @@
         "title": "Cont"
     },
     "admin": {
+        "chat_moderation": "Moderarea chatului",
+        "chat_muted": "Chat dezactivat",
         "send_global_warning": "Trimite avertisment global",
         "edit_banner": "Editează bannerul",
         "open_ws_telemetry_dashboard": "Deschide tabloul de telemetrie WS",

@@ -23,7 +23,11 @@ use db_lib::{
     schema::{chat_channels, users},
     DbConn,
 };
-use diesel::prelude::*;
+use diesel::{
+    prelude::*,
+    result::{DatabaseErrorKind, Error as DieselError},
+    sql_types::Uuid as SqlUuid,
+};
 use diesel_async::{AsyncConnection, RunQueryDsl};
 use hive_lib::{GameStatus, GameType};
 use shared_types::{
@@ -824,6 +828,114 @@ async fn deleted_senders_cannot_persist_chat_messages() {
     )
     .await
     .is_err());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_chat_mute_blocks_both_send_paths_without_blocking_reads_and_can_be_lifted() {
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.unwrap();
+    let sender = create_user("muted_sender", &mut conn).await;
+    let peer = create_user("mute_peer", &mut conn).await;
+    assert!(!sender.chat_muted);
+    let null_mute = diesel::sql_query("UPDATE users SET chat_muted = NULL WHERE id = $1")
+        .bind::<SqlUuid, _>(sender.id)
+        .execute(&mut conn)
+        .await;
+    assert!(matches!(
+        null_mute,
+        Err(DieselError::DatabaseError(
+            DatabaseErrorKind::NotNullViolation,
+            _
+        ))
+    ));
+    let sender_key = ConversationKey::direct(peer.id);
+    let target = resolve_chat_target(&mut conn, Some(sender.id), &sender_key)
+        .await
+        .unwrap();
+    User::set_chat_muted(sender.id, true, &mut conn)
+        .await
+        .unwrap();
+    // Targets and socket credentials obtained before the mute cannot bypass it.
+    assert!(matches!(
+        insert_chat_message(
+            &mut conn,
+            sender.id,
+            Uuid::new_v4(),
+            &target,
+            "blocked",
+            None,
+        )
+        .await,
+        Err(DbError::ChatMuted)
+    ));
+    assert!(matches!(
+        insert_chat_message_and_mark_sender_read(
+            &mut conn,
+            sender.id,
+            Uuid::new_v4(),
+            &target,
+            "also blocked",
+            None,
+        )
+        .await,
+        Err(DbError::ChatMuted)
+    ));
+    assert_eq!(
+        db_lib::schema::chat_messages::table
+            .count()
+            .get_result::<i64>(&mut conn)
+            .await
+            .unwrap(),
+        0
+    );
+
+    let peer_target = resolve_chat_target(
+        &mut conn,
+        Some(peer.id),
+        &ConversationKey::direct(sender.id),
+    )
+    .await
+    .unwrap();
+    insert_chat_message(
+        &mut conn,
+        peer.id,
+        Uuid::new_v4(),
+        &peer_target,
+        "still readable",
+        None,
+    )
+    .await
+    .unwrap();
+    let target = resolve_chat_target(&mut conn, Some(sender.id), &sender_key)
+        .await
+        .unwrap();
+    let history = load_chat_history(&mut conn, &target, None, 50)
+        .await
+        .unwrap();
+    assert_eq!(history.messages.len(), 1);
+    User::set_chat_muted(sender.id, false, &mut conn)
+        .await
+        .unwrap();
+    insert_chat_message(
+        &mut conn,
+        sender.id,
+        Uuid::new_v4(),
+        &target,
+        "unmuted",
+        None,
+    )
+    .await
+    .unwrap();
+    insert_chat_message_and_mark_sender_read(
+        &mut conn,
+        sender.id,
+        Uuid::new_v4(),
+        &target,
+        "unmuted tracked",
+        None,
+    )
+    .await
+    .unwrap();
 }
 
 async fn create_user(username: &str, conn: &mut DbConn<'_>) -> User {
