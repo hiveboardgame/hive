@@ -28,9 +28,15 @@ pub fn BoardPieces(
                 session.as_ref().and_then(|session| session.lesson().blank_visible())
             })
         });
+        let revealed = tutorial.map_or_else(Vec::new, |tutorial| {
+            tutorial.session.with(|session| {
+                session.as_ref().map_or_else(Vec::new, |session| session.revealed_neighbours())
+            })
+        });
         tile_opts.with(HivegroundPaint::new)
             .with_blank_movers(movers)
             .with_visible_pieces(visible)
+            .with_revealed_pieces(&revealed)
     });
     let model = Memo::new(move |_| {
         state.with(|state| {

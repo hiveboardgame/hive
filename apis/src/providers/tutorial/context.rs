@@ -143,12 +143,6 @@ impl TutorialContext {
                 .and_then(Session::current_step)
                 .is_some_and(|step| step.your_turn)
         });
-        let hint = self.session.with_untracked(|session| {
-            session
-                .as_ref()
-                .and_then(Session::current_step)
-                .map_or("", |step| step.hint)
-        });
         let outcome = self
             .session
             .try_update(|session| {
@@ -160,6 +154,9 @@ impl TutorialContext {
         let Some(outcome) = outcome else {
             return;
         };
+        let hint = self.session.with_untracked(|session| {
+            session.as_ref().and_then(Session::hint).unwrap_or("")
+        });
         self.sync_board();
         self.feedback.set(match outcome {
             Outcome::Illegal => None,
@@ -256,12 +253,17 @@ impl TutorialContext {
                         })
                         .chain(marks.iter().map(|mark| Marker {
                             position: mark.position,
-                            shape: MarkerShape::Ring,
+                            shape: if session.current_step().is_some_and(|step| step.thin_frames) { MarkerShape::ThinRing } else { MarkerShape::Ring },
                             color: AnnotationColor::Orange,
+                        }))
+                        .chain(session.green_marks().into_iter().map(|mark| Marker {
+                            position: mark.position,
+                            shape: if session.current_step().is_some_and(|step| step.thin_frames) { MarkerShape::ThinRing } else { MarkerShape::Ring },
+                            color: AnnotationColor::Green,
                         }))
                         .chain(session.red_marks().into_iter().map(|mark| Marker {
                             position: mark.position,
-                            shape: MarkerShape::Ring,
+                            shape: if session.current_step().is_some_and(|step| step.thin_frames) { MarkerShape::ThinRing } else { MarkerShape::Ring },
                             color: AnnotationColor::Red,
                         }))
                         .chain(session.placement_crosses().into_iter().map(|position| Marker {

@@ -3,10 +3,16 @@ use hive_lib::{Board, Bug, Color, Direction, Piece, Position, State};
 pub enum Goal {
     Continue,
     MoveAny,
+    PlayAny,
+    LiftAnyOf { pieces: &'static [&'static str], by: &'static str },
     Lift {
         piece: &'static str,
         by: &'static str,
         to: &'static str,
+    },
+    LiftAny {
+        piece: &'static str,
+        by: &'static str,
     },
     PlaceAny,
     PlaceIn(&'static [&'static str]),
@@ -52,6 +58,7 @@ pub enum Condition {
     Pinned(&'static str),
     Stuck(&'static str),
     Surrounded(&'static str),
+    Won(Color),
     KillSpotsFilled { queen: Color, at_least: usize },
     DirectDrops { by: Color, at_least: usize },
     SpawnBlocked { around: &'static str, color: Color },
@@ -80,6 +87,7 @@ impl Condition {
                     }))
                 })
             }
+            Condition::Won(color) => state.game_status == hive_lib::GameStatus::Finished(hive_lib::GameResult::Winner(*color)),
             Condition::AnyPlaced(color) => board.played_by(*color) > 0,
             Condition::Placed(spec) => placed(board, spec).next().is_some(),
             Condition::Touching(a, b) => placed(board, a)

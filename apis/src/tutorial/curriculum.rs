@@ -84,8 +84,13 @@ pub const LESSON_GROUPS: &[LessonGroup] = &[
         title: "The Pillbug",
         lessons: &[
             "bugs.pillbug", "bugs.pillbug_save", "bugs.pillbug_enemy",
-            "bugs.pillbug_walk", "bugs.pillbug_gate", "bugs.pillbug_deactivate",
+            "bugs.pillbug_gate", "bugs.pillbug_deactivate",
         ],
+    },
+    LessonGroup {
+        id: "bugs.mosquitoes",
+        title: "The Mosquito",
+        lessons: &["bugs.mosquito", "bugs.mosquito_climb", "bugs.mosquito_ability", "bugs.mosquito_other"],
     },
     LessonGroup {
         id: "bugs.ants",

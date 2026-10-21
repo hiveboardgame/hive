@@ -36,6 +36,15 @@ impl HivegroundPaint {
         self
     }
 
+    pub fn with_revealed_pieces(mut self, revealed: &[Piece]) -> Self {
+        if let Some(visible) = self.blank_movers.as_mut() {
+            for piece in revealed {
+                if !visible.contains(piece) { visible.push(*piece); }
+            }
+        }
+        self
+    }
+
     pub fn piece(&self, piece: Piece, shadow: PieceShadow) -> PiecePaint {
         let shadow_href = match shadow {
             PieceShadow::Design => ShadowHref::for_design(&self.tile_options.design),

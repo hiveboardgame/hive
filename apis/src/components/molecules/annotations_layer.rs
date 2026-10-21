@@ -247,12 +247,12 @@ fn marker_view(
             }
             .into_any()
         }
-        MarkerShape::Ring => view! {
+        MarkerShape::Ring | MarkerShape::ThinRing => view! {
             <path
                 d=rounded_hex_path(cx, cy, HIGHLIGHT_SIZE)
                 fill="none"
                 stroke=fill
-                stroke-width="4"
+                stroke-width=if shape == MarkerShape::ThinRing { "1.5" } else { "4" }
                 stroke-opacity="0.95"
                 stroke-linejoin="round"
             />
@@ -338,7 +338,7 @@ fn mark_preview_view(
             />
         }
         .into_any(),
-        AnnotationTool::Marker(MarkerShape::Ring) => view! {
+        AnnotationTool::Marker(MarkerShape::Ring | MarkerShape::ThinRing) => view! {
             <path
                 d=rounded_hex_path(cx, cy, HIGHLIGHT_SIZE)
                 fill="none"

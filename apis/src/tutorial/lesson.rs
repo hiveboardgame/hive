@@ -20,12 +20,16 @@ pub struct Lesson {
 
 pub enum Setup {
     Position(&'static str),
+    ForcedPass { position: &'static str, color: hive_lib::Color },
     BlankPosition(&'static str),
     BlankExercise {
         position: &'static str,
         movable: &'static [&'static str],
         swap: Option<(&'static str, &'static str)>,
         visible: Option<&'static [&'static str]>,
+        start_as: Option<hive_lib::Color>,
+        extras: &'static [(&'static str, &'static str)],
+        reveal_neighbours: Option<&'static str>,
     },
     AfterLesson {
         lesson: &'static str,
@@ -66,6 +70,13 @@ pub struct Step {
     pub placement_crosses: Option<&'static str>,
     pub immobile_marks: bool,
     pub red_marks: &'static [&'static str],
+    pub green_marks: &'static [&'static str],
+    pub previous_move_from: Option<&'static str>,
+    pub continue_label: &'static str,
+    pub thin_frames: bool,
+    pub conditional_hint: Option<(&'static super::goal::Condition, &'static str)>,
+    pub conditional_red_marks: Option<(&'static super::goal::Condition, &'static [&'static str])>,
+    pub crosses_for: Option<hive_lib::Color>,
     pub win_prompt: Option<(hive_lib::Color, &'static str)>,
     pub announce_winner: bool,
     pub red_arrows: &'static [(&'static str, &'static str)],
@@ -78,9 +89,13 @@ pub struct Step {
     pub random_wrong_reply: bool,
     pub route_hint_after: Option<u8>,
     pub retry_after_moves: Option<u8>,
+    pub escape_reply: Option<&'static str>,
+    pub cover_reply: Option<(&'static [&'static str], &'static [&'static str])>,
 }
 
 pub enum Reply {
+    InitialPosition,
+    RandomPlacementNear { near: &'static str },
     RandomPreservingWin {
         piece: &'static str,
         to: &'static str,
@@ -120,6 +135,13 @@ impl Step {
             placement_crosses: None,
             immobile_marks: false,
             red_marks: &[],
+            green_marks: &[],
+            previous_move_from: None,
+            continue_label: "Continue",
+            thin_frames: false,
+            conditional_hint: None,
+            conditional_red_marks: None,
+            crosses_for: None,
             win_prompt: None,
             announce_winner: false,
             red_arrows: &[],
@@ -132,6 +154,8 @@ impl Step {
             random_wrong_reply: false,
             route_hint_after: None,
             retry_after_moves: None,
+            escape_reply: None,
+            cover_reply: None,
         }
     }
 
@@ -157,6 +181,13 @@ impl Step {
             placement_crosses: None,
             immobile_marks: false,
             red_marks: &[],
+            green_marks: &[],
+            previous_move_from: None,
+            continue_label: "Continue",
+            thin_frames: false,
+            conditional_hint: None,
+            conditional_red_marks: None,
+            crosses_for: None,
             win_prompt: None,
             announce_winner: false,
             red_arrows: &[],
@@ -169,6 +200,8 @@ impl Step {
             random_wrong_reply: false,
             route_hint_after: None,
             retry_after_moves: None,
+            escape_reply: None,
+            cover_reply: None,
         }
     }
 
@@ -227,6 +260,12 @@ impl Step {
 
     pub const fn reply(mut self, piece: &'static str, to: &'static str) -> Self {
         self.then = Reply::Opponent { piece, to };
+        self
+    }
+
+    /// Begin the next part from the lesson's initial diagram, keeping progress.
+    pub const fn restart_position(mut self) -> Self {
+        self.then = Reply::InitialPosition;
         self
     }
 
@@ -303,9 +342,72 @@ impl Step {
         self
     }
 
+    pub const fn retry_after_moves(mut self, limit: u8) -> Self {
+        self.retry_after_moves = Some(limit);
+        self
+    }
+
     pub const fn guided_exploration(mut self, hint_after: u8, retry_after: u8) -> Self {
         self.route_hint_after = Some(hint_after);
         self.retry_after_moves = Some(retry_after);
+        self
+    }
+
+    pub const fn outlined_green(mut self, pieces: &'static [&'static str]) -> Self {
+        self.green_marks = pieces;
+        self
+    }
+
+    /// Supply an authored previous hex when HOP only records the last mover.
+    pub const fn previous_move_from(mut self, from: &'static str) -> Self {
+        self.previous_move_from = Some(from);
+        self
+    }
+
+    pub const fn thin_frames(mut self) -> Self {
+        self.thin_frames = true;
+        self
+    }
+
+    pub const fn explain_when(
+        mut self,
+        condition: &'static super::goal::Condition,
+        hint: &'static str,
+        marks: &'static [&'static str],
+    ) -> Self {
+        self.conditional_hint = Some((condition, hint));
+        self.conditional_red_marks = Some((condition, marks));
+        self
+    }
+
+    pub const fn placement_crosses_for(mut self, color: hive_lib::Color) -> Self {
+        self.crosses_for = Some(color);
+        self
+    }
+
+    pub const fn random_placement_near(mut self, near: &'static str) -> Self {
+        self.then = Reply::RandomPlacementNear { near };
+        self
+    }
+
+    pub const fn next_button(mut self) -> Self {
+        self.continue_label = "Next";
+        self
+    }
+
+    /// Punish a move if an opponent Beetle can legally cover a named piece.
+    pub const fn punish_cover(
+        mut self,
+        beetles: &'static [&'static str],
+        targets: &'static [&'static str],
+    ) -> Self {
+        self.cover_reply = Some((beetles, targets));
+        self
+    }
+
+    /// Let an opponent piece escape immediately when a learner move frees it.
+    pub const fn punish_escape(mut self, piece: &'static str) -> Self {
+        self.escape_reply = Some(piece);
         self
     }
 
@@ -365,7 +467,7 @@ impl Lesson {
     }
 
     pub fn has_board(&self) -> bool {
-        matches!(self.setup, Setup::Position(_) | Setup::BlankPosition(_) | Setup::BlankExercise { .. } | Setup::AfterLesson { .. } | Setup::SwapPieces { .. } | Setup::Clocked { .. })
+        matches!(self.setup, Setup::ForcedPass { .. } | Setup::Position(_) | Setup::BlankPosition(_) | Setup::BlankExercise { .. } | Setup::AfterLesson { .. } | Setup::SwapPieces { .. } | Setup::Clocked { .. })
     }
 
     pub fn uses_blank_tiles(&self) -> bool {

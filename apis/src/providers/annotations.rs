@@ -92,6 +92,7 @@ pub enum MarkerShape {
     Circle,
     Cross,
     Ring,
+    ThinRing,
     Grid,
 }
 

@@ -8,7 +8,7 @@ pub const CHAPTER: Chapter = Chapter {
     id: "basics",
     title: "The basics",
     summary: "How a turn works, how pieces enter the game, and the two rules every move obeys.",
-    lessons: &[WELCOME, PLACING, QUEEN_RULE, MOVE_PIECES, ONE_HIVE, SURROUND, DRAW],
+    lessons: &[WELCOME, PLACING, QUEEN_RULE, MOVE_PIECES, ONE_HIVE, SURROUND, DRAW, PASS],
 };
 
 const WELCOME: Lesson = Lesson {
@@ -210,4 +210,29 @@ const DRAW: Lesson = Lesson {
         ),
     ],
     outro: "",
+};
+
+
+const PASS: Lesson = Lesson {
+    id: "basics.pass",
+    title: "Can I pass?",
+    intro: &[
+        "You may pass only when you have no legal move and no legal placement. If you can play, you must take your turn.",
+        "Black has spent too many turns moving only a few pieces. White has blocked every place where a new Black piece could enter, and none of Black's pieces can move. This is called a **shut-out**.",
+        "Black must pass, so White plays again. Black will keep passing only while it has no legal move or placement; a pass is never a choice when a move is available.",
+    ],
+    brief: "Supplied HOP A+ql+gA2+s+M3-L4-Q,w. Verify a real Black forced pass, then accept any legal White placement or movement. Show forbidden placement crosses around Black pieces. TODO part two: awaiting an authored position with one forced White move followed by a winning Black reply.",
+    setup: Setup::ForcedPass {
+        position: "A+ql+gA2+s+M3-L4-Q,w",
+        color: Color::Black,
+    },
+    steps: &[
+        Step::play(
+            "Black has no legal move or placement and has passed. You play as White again: place any piece from your reserve or make any legal move.",
+            PlayAny,
+            "Make any legal move or placement as White.",
+        )
+        .placement_crosses_for(Color::Black),
+    ],
+    outro: "Well done! You used the extra turn. Black can play again as soon as a legal move or placement becomes available. Remember: you must play if you have a legal move, even when it leads to a loss.",
 };

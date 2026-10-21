@@ -166,7 +166,7 @@ fn shape_glyph(shape: MarkerShape) -> &'static str {
     match shape {
         MarkerShape::Circle => "●",
         MarkerShape::Cross => "✕",
-        MarkerShape::Ring => "⬡",
+        MarkerShape::Ring | MarkerShape::ThinRing => "⬡",
         MarkerShape::Grid => "⬡",
     }
 }
@@ -175,7 +175,7 @@ fn shape_title(shape: MarkerShape) -> &'static str {
     match shape {
         MarkerShape::Circle => "Circle (W)",
         MarkerShape::Cross => "Cross (E)",
-        MarkerShape::Ring => "Ring",
+        MarkerShape::Ring | MarkerShape::ThinRing => "Ring",
         MarkerShape::Grid => "Grid",
     }
 }

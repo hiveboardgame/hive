@@ -345,10 +345,16 @@ pub fn LessonPanel(
                     <Show when=move || waits_for_continue() && !text_only()>
                         <button
                             type="button"
-                            class="ui-button ui-button-primary ui-button-sm"
+                            class=move || {
+                                if tutorial.session.with(|session| session.as_ref().is_some_and(|session| session.continue_label() == "Next")) {
+                                    "ui-button ui-button-sm bg-blue-600 text-white hover:bg-blue-700"
+                                } else {
+                                    "ui-button ui-button-primary ui-button-sm"
+                                }
+                            }
                             on:click=move |_| tutorial.advance()
                         >
-                            "Continue"
+                            {move || tutorial.session.with(|session| session.as_ref().map_or("Continue", Session::continue_label))}
                         </button>
                     </Show>
                     <Show when=move || tutorial.session.with(Option::is_some) && !text_only()>

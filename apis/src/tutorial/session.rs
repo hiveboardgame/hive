@@ -57,10 +57,22 @@ impl Session {
         lesson: &'static Lesson,
         starting: Option<State>,
     ) -> Result<Self, SessionError> {
-        let state = if let Some(state) = starting {
+        let mut state = if let Some(state) = starting {
             state
         } else {
             match lesson.setup {
+                Setup::ForcedPass { position, color } => {
+                    let parsed = hop::parse(position)
+                        .map_err(|error| SessionError::Position(error.to_string()))?;
+                    let mut state = State::new_from_position(parsed.board, parsed.game_type, color)
+                        .map_err(|error| SessionError::Position(error.to_string()))?;
+                    state.play_turn_from_history("pass", "")
+                        .map_err(|error| SessionError::Position(error.to_string()))?;
+                    if state.turn_color != parsed.to_move {
+                        return Err(SessionError::Position("forced pass leaves the wrong side to move".into()));
+                    }
+                    state
+                }
                 Setup::Clocked { moves, .. } => State::new_from_str(moves, "Base+MLP")
                     .map_err(|error| SessionError::Position(error.to_string()))?,
                 Setup::Position(raw)
@@ -110,6 +122,33 @@ impl Session {
                 Setup::TextOnly => State::new(GameType::MLP, false),
             }
         };
+        if let Setup::BlankExercise { start_as, extras, .. } = lesson.setup {
+            for (spec, target) in extras {
+                let piece = spec.parse::<Piece>()
+                    .map_err(|error| SessionError::Position(error.to_string()))?;
+                let at = hex(&state.board, target)
+                    .ok_or_else(|| SessionError::Position(format!("extra tile target {target} is missing")))?;
+                if state.board.occupied(at) || state.board.position_of_piece(piece).is_some() {
+                    return Err(SessionError::Position("extra tile overlaps an existing piece".into()));
+                }
+                state.board.insert(at, piece, true);
+            }
+            if !extras.is_empty() {
+                state = State::new_from_position(state.board, state.game_type, state.turn_color)
+                    .map_err(|error| SessionError::Position(error.to_string()))?;
+            }
+            if start_as.is_some_and(|color| color != state.turn_color) {
+                state.pass_out_of_turn();
+            }
+        }
+        if let Some(from) = lesson.steps.first().and_then(|step| step.previous_move_from) {
+            let from = hex(&state.board, from)
+                .ok_or_else(|| SessionError::Position("previous move origin is missing".into()))?;
+            if state.board.occupied(from) {
+                return Err(SessionError::Position("previous move origin must be empty".into()));
+            }
+            state.board.last_move = (Some(from), state.board.last_moved.map(|(_, at)| at));
+        }
         Ok(Self {
             lesson,
             step: 0,
@@ -165,6 +204,13 @@ impl Session {
 
     pub fn current_step(&self) -> Option<&'static Step> {
         self.lesson.steps.get(self.step)
+    }
+
+    pub fn hint(&self) -> Option<&'static str> {
+        let step = self.current_step()?;
+        Some(step.conditional_hint
+            .filter(|(condition, _)| condition.holds(&self.state))
+            .map_or(step.hint, |(_, hint)| hint))
     }
 
     pub fn prompt(&self) -> Option<&'static str> {
@@ -287,21 +333,52 @@ impl Session {
         })
     }
 
+    pub fn revealed_neighbours(&self) -> Vec<Piece> {
+        let Setup::BlankExercise { reveal_neighbours: Some(anchor), .. } = self.lesson.setup else {
+            return Vec::new();
+        };
+        let Some(at) = hex(&self.state.board, anchor) else { return Vec::new(); };
+        at.positions_around().filter_map(|at| self.state.board.top_piece(at)).collect()
+    }
+
+    pub fn green_marks(&self) -> Vec<Target> {
+        self.current_step().map_or_else(Vec::new, |step| {
+            self.targets(step.green_marks, false, |_| true)
+        })
+    }
+
+    pub fn continue_label(&self) -> &'static str {
+        self.current_step().map_or("Continue", |step| step.continue_label)
+    }
+
     pub fn red_marks(&self) -> Vec<Target> {
         self.current_step().map_or_else(Vec::new, |step| {
-            self.targets(step.red_marks, false, |_| true)
+            let mut marks = self.targets(step.red_marks, false, |_| true);
+            if let Some((condition, extra)) = step.conditional_red_marks {
+                if condition.holds(&self.state) {
+                    marks.extend(self.targets(extra, false, |_| true));
+                }
+            }
+            marks
         })
     }
 
     pub fn placement_crosses(&self) -> Vec<Position> {
-        let Some(around) = self.current_step().and_then(|step| step.placement_crosses) else {
-            return Vec::new();
-        };
+        let Some(step) = self.current_step() else { return Vec::new(); };
         let board = self.annotation_board();
-        let Some(anchor) = hex(board, around) else { return Vec::new(); };
-        anchor.positions_around()
-            .filter(|position| !board.occupied(*position) && !board.spawnable(self.learner, *position))
-            .collect()
+        let color = step.crosses_for.unwrap_or(self.learner);
+        let anchors: Vec<_> = if step.crosses_for.is_some() {
+            board.all_taken_positions().filter(|at| {
+                board.top_piece(*at).is_some_and(|piece| piece.color() == color)
+            }).collect()
+        } else {
+            step.placement_crosses.and_then(|anchor| hex(board, anchor)).into_iter().collect()
+        };
+        let mut crosses: Vec<_> = anchors.into_iter().flat_map(|at| at.positions_around())
+            .filter(|at| !board.occupied(*at) && !board.spawnable(color, *at)).collect();
+        crosses.sort_by_key(|at| (at.q, at.r));
+        crosses.dedup();
+        crosses
     }
 
     pub fn highlights(&self) -> Vec<Position> {
@@ -325,7 +402,22 @@ impl Session {
                 .chain(step.arrows.iter().map(|(_, to)| to)))
             .filter_map(|notation| hex(&self.initial.board, notation))
             .collect();
+        targets.extend(self.initial.board.last_move.0);
+        targets.extend(self.placement_crosses());
         for step in self.lesson.steps {
+            if let Goal::LiftAnyOf { pieces, .. } = &step.goal {
+                for at in pieces.iter().filter_map(|piece| hex(&self.initial.board, piece)) {
+                    targets.extend(at.positions_around().flat_map(|at| at.positions_around()));
+                }
+            }
+            if let Goal::LiftAny { piece, by } = &step.goal {
+                if let (Ok(piece), Some(ability)) = (piece.parse::<Piece>(), hex(&self.initial.board, by)) {
+                    if let Some(from) = self.initial.board.position_of_piece(piece) {
+                        targets.extend(Self::destinations_in(&self.initial, self.initial.turn_color, piece, false)
+                            .into_iter().filter(|to| hive_lib::Bug::can_throw(ability, from, *to, &self.initial.board)));
+                    }
+                }
+            }
             if let Some(piece) = step.legal_arrows.and_then(|spec| spec.parse::<Piece>().ok()) {
                 targets.extend(Self::destinations_in(
                     &self.initial, self.initial.turn_color, piece,
@@ -411,6 +503,16 @@ impl Session {
     }
 
     fn move_hints(&self, goal: &Goal) -> Vec<(Position, Position)> {
+        if let Goal::Lift { piece, by, to } = goal {
+            return self.lift_hints(piece, by, Some(to));
+        }
+        if let Goal::LiftAny { piece, by } = goal {
+            return self.lift_hints(piece, by, None);
+        }
+        if let Goal::LiftAnyOf { pieces, by } = goal {
+            return pieces.iter().map(|piece| self.lift_hints(piece, by, None))
+                .find(|hints| !hints.is_empty()).unwrap_or_default();
+        }
         if let Goal::Explore { pieces, condition } = goal {
             return self.explore_hint(pieces, condition).into_iter().collect();
         }
@@ -431,7 +533,7 @@ impl Session {
         }
         let board = &self.state.board;
         let (spec, target, excluded, touching) = match goal {
-            Goal::Move { piece, to } | Goal::Lift { piece, to, .. } => (*piece, hex(board, to), None, None),
+            Goal::Move { piece, to } => (*piece, hex(board, to), None, None),
             Goal::MoveExcept { piece, except } => (*piece, None, hex(board, except), None),
             Goal::MovePiece { piece, touching } => (
                 *piece,
@@ -463,6 +565,19 @@ impl Session {
         hints
     }
 
+    fn lift_hints(&self, spec: &str, by: &str, target: Option<&str>) -> Vec<(Position, Position)> {
+        let board = &self.state.board;
+        let (Ok(piece), Some(ability)) = (spec.parse::<Piece>(), hex(board, by)) else {
+            return Vec::new();
+        };
+        let Some(from) = board.position_of_piece(piece) else { return Vec::new(); };
+        let required = target.and_then(|to| hex(board, to));
+        self.destinations(piece).into_iter()
+            .find(|to| required.is_none_or(|required| required == *to)
+                && hive_lib::Bug::can_throw(ability, from, *to, board))
+            .map_or_else(Vec::new, |to| vec![(from, ability), (ability, to)])
+    }
+
     fn explore_hint(&self, specs: &[&str], condition: &super::goal::Condition) -> Option<(Position, Position)> {
         self.explore_route(specs, condition).first().copied()
     }
@@ -473,11 +588,14 @@ impl Session {
         use std::collections::{HashSet, VecDeque};
         let pieces: Vec<Piece> = specs.iter().filter_map(|spec| spec.parse().ok()).collect();
         let key = |state: &State| pieces.iter()
-            .map(|piece| state.board.position_of_piece(*piece)).collect::<Vec<_>>();
+            .map(|piece| state.board.position_of_piece(*piece)
+                .map(|at| (at, state.board.level_of_piece(*piece, at)))).collect::<Vec<_>>();
         let mut seen = HashSet::from([key(&self.state)]);
         let mut queue = VecDeque::from([(self.state.clone(), Vec::new())]);
         while let Some((state, route)) = queue.pop_front() {
-            if route.len() >= 16 { continue; }
+            let limit = self.current_step().and_then(|step| step.retry_after_moves)
+                .map_or(16, |limit| limit.saturating_sub(self.exploration_moves[self.step]) as usize);
+            if route.len() >= limit { continue; }
             for piece in &pieces {
                 let Some(from) = state.board.position_of_piece(*piece) else { continue; };
                 for to in Self::destinations_in(&state, self.learner, *piece, self.lesson.uses_blank_tiles()) {
@@ -486,6 +604,9 @@ impl Session {
                     if next.play_turn_from_position(*piece, to).is_err() { continue; }
                     let mut path = route.clone();
                     path.push((from, to));
+                    if self.current_step().is_some_and(|step| Self::tactical_reply_in(&next, step).is_some()) {
+                        continue;
+                    }
                     if condition.holds(&next) { return path; }
                     if matches!(next.game_status, GameStatus::Finished(_)) { continue; }
                     next.pass_out_of_turn();
@@ -622,15 +743,15 @@ impl Session {
                 {
                     return self.wrong();
                 }
+                if self.refute_escape(step) { return Outcome::Refuted; }
                 if condition.holds(&self.state) {
                     self.complete_step(step)
                 } else {
-                    if step.route_hint_after.is_some()
-                        || step.hint_moves.is_some_and(|(spec, _)| spec_matches(spec, piece))
-                    {
-                        self.exploration_moves[self.step] =
-                            self.exploration_moves[self.step].saturating_add(1);
+                    if matches!(self.state.game_status, GameStatus::Finished(_)) {
+                        return self.wrong();
                     }
+                    self.exploration_moves[self.step] =
+                        self.exploration_moves[self.step].saturating_add(1);
                     if step.retry_after_moves.is_some_and(|limit| self.exploration_moves[self.step] >= limit) {
                         return self.wrong();
                     }
@@ -645,6 +766,27 @@ impl Session {
             Goal::Lift { piece: spec, by, to } => {
                 let lifted = spec_matches(spec, piece)
                     && hex(&before.board, to) == Some(position)
+                    && hex(&before.board, by).is_some_and(|ability| {
+                        before.board.position_of_piece(piece).is_some_and(|from| {
+                            hive_lib::Bug::can_throw(ability, from, position, &before.board)
+                        })
+                    });
+                if lifted { self.complete_step(step) } else { self.wrong() }
+            }
+            Goal::LiftAnyOf { pieces, by } => {
+                let lifted = pieces.iter().any(|spec| spec_matches(spec, piece))
+                    && hex(&before.board, by).is_some_and(|ability| {
+                        before.board.position_of_piece(piece).is_some_and(|from| {
+                            hive_lib::Bug::can_throw(ability, from, position, &before.board)
+                        })
+                    });
+                if lifted { self.complete_step(step) } else { self.wrong() }
+            }
+            Goal::PlayAny => {
+                if piece.is_color(self.learner) { self.complete_step(step) } else { self.wrong() }
+            }
+            Goal::LiftAny { piece: spec, by } => {
+                let lifted = spec_matches(spec, piece)
                     && hex(&before.board, by).is_some_and(|ability| {
                         before.board.position_of_piece(piece).is_some_and(|from| {
                             hive_lib::Bug::can_throw(ability, from, position, &before.board)
@@ -827,6 +969,19 @@ impl Session {
             return Outcome::LessonDone;
         }
         match step.then {
+            Reply::RandomPlacementNear { near } => {
+                if self.state.turn_color == self.learner {
+                    self.state.pass_out_of_turn();
+                }
+                if !self.random_placement_near(near) {
+                    log::warn!("tutorial {}: no legal placement near {near}", self.lesson.id);
+                }
+            }
+            Reply::InitialPosition => {
+                self.state = self.initial.clone();
+                self.learner = self.initial.turn_color;
+                self.last_black_arrow = None;
+            }
             Reply::RandomPreservingWin { piece, to } => {
                 if !self.random_opponent_reply(Some((piece, to))) {
                     log::warn!("tutorial {}: no safe random reply", self.lesson.id);
@@ -904,6 +1059,52 @@ impl Session {
         }
     }
 
+    fn escape_reply_in(state: &State, spec: &str) -> Option<(Piece, Position)> {
+        if matches!(state.game_status, GameStatus::Finished(_)) { return None; }
+        let piece = spec.parse::<Piece>().ok()?;
+        if piece.color() != state.turn_color { return None; }
+        let mut targets = Self::destinations_in(state, state.turn_color, piece, false);
+        targets.sort_by_key(|to| (
+            to.positions_around().filter(|at| state.board.occupied(*at)).count(),
+            to.q, to.r,
+        ));
+        targets.into_iter().find(|to| {
+            let mut reply = state.clone();
+            reply.play_turn_from_position(piece, *to).is_ok()
+        }).map(|to| (piece, to))
+    }
+
+    fn tactical_reply_in(state: &State, step: &Step) -> Option<(Piece, Position)> {
+        if matches!(state.game_status, GameStatus::Finished(_)) { return None; }
+        if let Some((beetles, targets)) = step.cover_reply {
+            for spec in beetles {
+                let Ok(beetle) = spec.parse::<Piece>() else { continue; };
+                if beetle.color() != state.turn_color { continue; }
+                for to in Self::destinations_in(state, state.turn_color, beetle, true) {
+                    if !state.board.top_piece(to).is_some_and(|top| {
+                        targets.iter().any(|target| spec_matches(target, top))
+                    }) { continue; }
+                    let mut reply = state.clone();
+                    if reply.play_turn_from_position(beetle, to).is_ok() {
+                        return Some((beetle, to));
+                    }
+                }
+            }
+        }
+        step.escape_reply.and_then(|spec| Self::escape_reply_in(state, spec))
+    }
+
+    fn refute_escape(&mut self, step: &Step) -> bool {
+        let Some((piece, target)) = Self::tactical_reply_in(&self.state, step)
+        else { return false; };
+        let before = self.state.clone();
+        if self.state.play_turn_from_position(piece, target).is_err() { return false; }
+        self.remember_black_move(&before);
+        self.failed_attempts[self.step] = self.failures().saturating_add(1);
+        self.refuted = true;
+        true
+    }
+
     /// Sample only legal Black turns. On a successful exercise move, keep the
     /// intended next winning jump available; wrong attempts need no such filter.
     fn random_opponent_reply(&mut self, winning: Option<(&str, &str)>) -> bool {
@@ -934,6 +1135,31 @@ impl Session {
                 { continue; }
             }
             candidates.push((piece, to));
+        }
+        if candidates.is_empty() { return false; }
+        let index = uuid::Uuid::new_v4().as_u128() as usize % candidates.len();
+        let (piece, to) = candidates[index];
+        let before = self.state.clone();
+        if self.state.play_turn_from_position(piece, to).is_err() { return false; }
+        self.remember_black_move(&before);
+        true
+    }
+
+    fn random_placement_near(&mut self, near: &str) -> bool {
+        let Some(anchor) = hex(&self.state.board, near) else { return false; };
+        let color = self.state.turn_color;
+        let spawns: Vec<_> = self.state.board.spawnable_positions(color)
+            .filter(|at| at.is_neighbor(anchor)).collect();
+        let mut candidates = Vec::new();
+        for piece in self.state.reserve(color).values().filter_map(|pieces| pieces.first())
+            .filter_map(|piece| piece.parse::<Piece>().ok())
+        {
+            for to in &spawns {
+                let mut state = self.state.clone();
+                if state.play_turn_from_position(piece, *to).is_ok() {
+                    candidates.push((piece, *to));
+                }
+            }
         }
         if candidates.is_empty() { return false; }
         let index = uuid::Uuid::new_v4().as_u128() as usize % candidates.len();

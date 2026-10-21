@@ -108,7 +108,7 @@ pub fn Tutorial() -> impl IntoView {
         find_lesson(lesson_id.get()).and_then(|lesson| match lesson.setup {
             Setup::Pending => Some("The board for this lesson is still being built."),
             Setup::TextOnly => Some("No board needed for this one: just read along."),
-            Setup::Position(_) | Setup::BlankPosition(_) | Setup::BlankExercise { .. } | Setup::AfterLesson { .. } | Setup::SwapPieces { .. } | Setup::Clocked { .. } => None,
+            Setup::ForcedPass { .. } | Setup::Position(_) | Setup::BlankPosition(_) | Setup::BlankExercise { .. } | Setup::AfterLesson { .. } | Setup::SwapPieces { .. } | Setup::Clocked { .. } => None,
         })
     };
     let board_placeholder = move || {
