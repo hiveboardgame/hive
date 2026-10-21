@@ -56,7 +56,12 @@ pub fn AnnotationsLayer(
             let path = rounded_hex_path(cx, cy, HIGHLIGHT_SIZE);
             let fill = highlight.color.fill();
             let stroke = highlight.color.stroke(prefers_dark);
-            let interactive = highlight.color == AnnotationColor::Red && on_red_hex.is_some();
+            let occupied = if show_history {
+                history_board.with(|board| board.occupied(highlight.position))
+            } else {
+                state.with(|state| state.board.occupied(highlight.position))
+            };
+            let interactive = highlight.color == AnnotationColor::Red && on_red_hex.is_some() && !occupied;
             let position = highlight.position;
             views.push(
                 view! {

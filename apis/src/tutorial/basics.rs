@@ -14,7 +14,7 @@ pub const CHAPTER: Chapter = Chapter {
 const WELCOME: Lesson = Lesson {
     id: "basics.welcome",
     title: "Welcome to Hivegame.com!",
-    intro: &["Hive has no board: the pieces are the board. Every move must still keep the hive connected, and the winner is the player who surrounds the opponent's Queen Bee.",
+    intro: &["Hive has no board: the pieces are the board. Every move must still keep the hive connected, and the winner is the player who surrounds the opponent's Queen Bee [[bQ]].",
         "When the game starts, all pieces are in the reserve. White goes first.",
     ],
     brief: "Empty board, White to move.",
@@ -46,20 +46,24 @@ const PLACING: Lesson = Lesson {
     intro: &[
         "The first two pieces of the game have to touch each other.",
         "From now on, **every new piece you place must touch at least one of your own pieces and none of your opponent's pieces**.",
-        "Here both players opened with their Ladybug, a popular start. Ants are a good piece to place next since they are very flexible",
+        "Here both players started with their Ladybug [[wL]], a popular opening. Ants [[wA1]] are a good piece to place next since they are very flexible, but there are plenty of interesting setups out there!",
     ],
     brief: "After both players open with Ladybug, White places any piece legally; Black replied by placing bQ on any legal hex.",
     setup: Setup::Position("L+l!,w"),
     steps: &[
         Step::play(
-            "Play as White: pick any piece you like from the reserve and place it. New pieces entering the game cannot touch opponent pieces. The board will show the hexes available for placement.",
+            "Play as White: pick any piece you like from the reserve and place it. Remember:
+
+- New pieces entering the game cannot touch opponent pieces.
+
+The board will show the hexes available for placement.",
             PlaceAny,
             "Choose a piece from your reserve, then a highlighted hex.",
         )
         .reply_placement("bQ")
         .placement_crosses("bL"),
         Step::read(
-            "Well done! None of the hexes touching a black piece were available to your piece. Remember this rule only applies to placing. Once a piece is in play, it may move also to hexes touching the opponent pieces.\n\nBlack replied to your move by placing their Queen Bee.",
+            "Well done! None of the hexes touching a black piece were available to your piece. Remember this rule only applies to placing. Once a piece is in play, it may move also to hexes touching the opponent pieces.\n\nBlack replied to your move by placing their Queen Bee [[bQ]].",
             &[],
         )
         .placement_crosses("bL"),
@@ -71,7 +75,7 @@ const QUEEN_RULE: Lesson = Lesson {
     id: "basics.queen_rule",
     title: "An army needs its Queen",
     intro: &[
-        "Until your Queen is on the board, none of your pieces may move: you can only place new ones.",
+        "Until your Queen [[wQ]] is on the board, none of your pieces may move: you can only place new ones.",
         "She cannot open the game, and she must arrive by your 4th turn.",
     ],
     brief: "From a 2000+ game (corpus game 1, after three moves each), White's fourth turn: wL, wM and wA1 placed, no wQ yet. Black's scripted reply bA1 bM- is legal wherever wQ lands; placing the Queen and Black's reply complete this lesson. Movement follows in the next lesson.",
@@ -84,11 +88,11 @@ const QUEEN_RULE: Lesson = Lesson {
         )
         .reply("bA1", "bM-"),
         Step::read(
-            "Once your Queen Bee is in play, you can choose on every turn whether to move a piece already in play or place a new one.",
+            "Once your Queen Bee [[wQ]] is in play, you can move your pieces already in play during your turn.",
             &[],
         )
         .with_completion_tip(
-            "Tip: Bring your Queen Bee into play as soon as possible so you can move your pieces early.",
+            "Tip: Bring your Queen Bee [[wQ]] into play as soon as possible so you can move your pieces early.",
         ),
     ],
     outro: "",
@@ -98,7 +102,7 @@ const MOVE_PIECES: Lesson = Lesson {
     id: "basics.move_pieces",
     title: "Move your pieces",
     intro: &[
-        "Your Queen Bee is now in play, so you can move pieces that are already on the hive.",
+        "Your Queen Bee [[wQ]] is now in play, so you can move pieces that are already on the hive.",
         "On each turn, you may move a piece in play or place a new piece from your reserve.",
     ],
     brief: "Continue the exact completed position of basics.queen_rule, after Black's Ant reply. When opened directly, use a representative completed position. Any legal movement of a White piece completes the lesson.",
@@ -110,7 +114,7 @@ const MOVE_PIECES: Lesson = Lesson {
         Step::play(
             "You play as White. Click your pieces to see their legal moves, then move any piece already in play.",
             MoveAny,
-            "Move a piece that is already on the board instead of placing a new one.",
+            "That placement is allowed in a game, but this lesson is about moving pieces already in play. Move one of your pieces on the board.",
         ),
         Step::read("Well done! You have moved a piece in play.", &[]),
     ],
@@ -122,14 +126,16 @@ const ONE_HIVE: Lesson = Lesson {
     title: "One Hive Rule",
     intro: &[
         "This is the most important rule in Hive: **all pieces in play must form one connected group at all times**.",
-        "A piece cannot move if moving it would break the hive into two or more groups.",
+        "A piece cannot move if moving it would break the hive into two or more groups. Such a piece is **pinned**.",
         "To check whether a move is legal, imagine taking the piece you want to move into your hand. If the rest of the hive breaks into two or more disconnected groups, that move is illegal, even if the piece could land somewhere that would reconnect the hive.",
     ],
     brief: "From a 2000+ game (corpus game 2, after five moves each), White to move. wP and wG1 each hold part of the hive together (pinned); wQ, wA1 and wM are free. Move a White piece, then a Black piece. On Black's turn mark bL and bQ only if they are actually immobile; White can free them with some moves. Placements do not count.",
     setup: Setup::Position("AGl+qp+a1+P+Q1-M4+m,w"),
     steps: &[
         Step::play(
-            "The highlighted pieces cannot move without breaking the hive. You play as White. Your Queen Bee, Ant and Mosquito can move.
+            "The highlighted pieces cannot move without breaking the hive. These pieces are pinned.
+
+You play as White. Your Queen Bee [[wQ]], Ant [[wA1]] and Mosquito [[wM]] can move!
 
 Click your pieces to inspect their moves, then move one of them. Don't worry if you don't know how pieces move yet, you'll learn soon!",
             MoveAny,
@@ -155,24 +161,24 @@ const SURROUND: Lesson = Lesson {
     id: "basics.surround",
     title: "How to Win",
     intro: &[
-        "The goal in Hive is to surround the opponent's Queen Bee on all six sides. Both your pieces and your opponent's pieces count.",
-        "This is the end of a real game between two strong players. The black Queen has pieces on five of her six sides, and it's White's move.",
+        "The goal in Hive is to surround the opponent's Queen Bee [[bQ]] on all six sides. Both your pieces and your opponent's pieces count.",
+        "This is the end of a real game between two strong players. The black Queen [[bQ]] has pieces on five of her six sides, and it's White's move.",
     ],
     brief: "From a 2000+ game (corpus game 420, after 14 moves each), White to move and win. No stacks; bQ is uncovered with five filled sides, and wA1 and wA2 can run into the last one (-bL). The winning hex is highlighted without arrows.",
     setup: Setup::Position("A+slLmb3+(qM+A1+G1-A)4-(s-P-Qb3+a),w"),
     steps: &[
         Step::play(
-            "Move one of your Ants into the highlighted hex to completely surround the black Queen Bee.",
+            "Move one of your Ants [[wA1]] into the highlighted hex to completely surround the black Queen Bee [[bQ]].",
             Reach(Surrounded("bQ")),
             "Move one of your Ants into the highlighted hex.",
         )
         .highlighted(&["-bL"]),
         Step::read(
-            "That's the whole goal of Hive: surround your opponent's Queen Bee first.\n\nIt doesn't matter what colour the pieces surrounding the Queen Bee are. Here, the black Ladybug [[bL]] is actually hurting Black!",
+            "That's the whole goal of Hive: surround your opponent's Queen Bee [[bQ]] first.\n\nIt doesn't matter what colour the pieces surrounding the Queen Bee [[wQ]] are. Here, the black Ladybug [[bL]] is actually hurting Black!",
             &[],
         )
         .with_completion_tip(
-            "Tip: Be careful which pieces you place next to your own Queen Bee!",
+            "Tip: Be careful which pieces you place next to your own Queen Bee [[wQ]]!",
         ),
     ],
     outro: "",
@@ -182,8 +188,8 @@ const DRAW: Lesson = Lesson {
     id: "basics.draw",
     title: "Draw?",
     intro: &[
-        "Games can also end in a draw. The most common way this happens is when both Queen Bees are surrounded at the same time.",
-        "In this game, the highlighted hex is crucial: by moving a piece there, both Queen Bees lose their last hex of freedom!",
+        "Games can also end in a draw. The most common way this happens is when both Queen Bees [[wQ]] [[bQ]] are surrounded at the same time.",
+        "In this game, the highlighted hex is crucial: by moving a piece there, both Queen Bees [[wQ]] [[bQ]] lose their last hex of freedom!",
     ],
     brief: "White to move. Only wG1 to wQ- completes the lesson by surrounding both Queens at the same time; every other legal move is rejected.",
     setup: Setup::SwapPieces {
@@ -193,7 +199,7 @@ const DRAW: Lesson = Lesson {
     },
     steps: &[
         Step::play(
-            "You play as White. Move your Grasshopper [[wG1]] to surround both Queen Bees at the same time.",
+            "You play as White. Move your Grasshopper [[wG1]] to surround both Queen Bees [[wQ]] [[bQ]] at the same time.",
             Move {
                 piece: "wG1",
                 to: "wQ-",
@@ -206,7 +212,7 @@ const DRAW: Lesson = Lesson {
             &[],
         )
         .with_completion_tip(
-            "Tip: When the Queen Bees are very close to each other, a draw is more likely!",
+            "Tip: When the Queen Bees [[wQ]] [[bQ]] are very close to each other, a draw is more likely!",
         ),
     ],
     outro: "",
@@ -221,18 +227,27 @@ const PASS: Lesson = Lesson {
         "Black has spent too many turns moving only a few pieces. White has blocked every place where a new Black piece could enter, and none of Black's pieces can move. This is called a **shut-out**.",
         "Black must pass, so White plays again. Black will keep passing only while it has no legal move or placement; a pass is never a choice when a move is available.",
     ],
-    brief: "Supplied HOP A+ql+gA2+s+M3-L4-Q,w. Verify a real Black forced pass, then accept any legal White placement or movement. Show forbidden placement crosses around Black pieces. TODO part two: awaiting an authored position with one forced White move followed by a winning Black reply.",
+    brief: "Supplied HOP A+ql+gA2+s+M3-L4-Q,w. Verify a real Black forced pass, then require two consecutive White placements while Black remains shut out. Show forbidden placement crosses around Black pieces. TODO part two: awaiting an authored position with one forced White move followed by a winning Black reply.",
     setup: Setup::ForcedPass {
         position: "A+ql+gA2+s+M3-L4-Q,w",
         color: Color::Black,
     },
     steps: &[
         Step::play(
-            "Black has no legal move or placement and has passed. You play as White again: place any piece from your reserve or make any legal move.",
-            PlayAny,
-            "Make any legal move or placement as White.",
+            "Black has no legal move or placement and has passed. You play as White: place any piece from your reserve.",
+            PlaceAny,
+            "Place a piece from your reserve so Black stays shut out.",
+        )
+        .placement_crosses_for(Color::Black)
+        .your_turn(),
+        Step::play(
+            "Black still has no legal move or placement and passed again. You play as White once more: place another piece from your reserve.",
+            PlaceAny,
+            "Place another piece from your reserve.",
         )
         .placement_crosses_for(Color::Black),
+        Step::read("Well done! Black had to pass twice, so you placed two pieces in a row.", &[])
+            .placement_crosses_for(Color::Black),
     ],
-    outro: "Well done! You used the extra turn. Black can play again as soon as a legal move or placement becomes available. Remember: you must play if you have a legal move, even when it leads to a loss.",
+    outro: "Black can play again as soon as a legal move or placement becomes available. Remember: you must play if you have a legal move, even when it leads to a loss.",
 };

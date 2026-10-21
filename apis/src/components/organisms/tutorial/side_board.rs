@@ -143,7 +143,19 @@ pub fn TutorialGameControls() -> impl IntoView {
     };
     let buttons = CONTROLS
         .into_iter()
-        .map(|(game_control, _)| view! { <GameControlButton game_control on_confirm /> })
+        .enumerate()
+        .map(|(index, (game_control, _))| {
+            let highlighted = move || tutorial.session.with(|session| {
+                session.as_ref().is_some_and(|session| session.lesson().id == "online.controls"
+                    && !session.is_finished() && session.step_index() == index)
+            });
+            view! {
+                <div class="flex justify-center rounded-md grow"
+                    class:ring-2=highlighted class:ring-green-600=highlighted>
+                    <GameControlButton game_control on_confirm />
+                </div>
+            }
+        })
         .collect_view();
     view! {
         <div class="flex flex-col items-center grow shrink">

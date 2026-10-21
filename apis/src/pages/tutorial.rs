@@ -9,6 +9,7 @@ use crate::{
             tutorial::{
                 ChapterList,
                 LessonPanel,
+                OnlinePreview,
                 MobileLessonAbout,
                 TutorialGameControls,
                 TutorialOverview,
@@ -53,16 +54,9 @@ pub fn Tutorial() -> impl IntoView {
             .map(|lesson| lesson.id)
     });
     let lesson_id = Signal::derive(move || chosen.get().unwrap_or_default());
+    // Keep small exercises near reserve-tile size, while still fitting larger hives.
     let fit_options = Signal::derive(move || {
-        if lesson_id.get() == "bugs.queen" {
-            if vertical() {
-                (1.6, 42.0)
-            } else {
-                (2.3, 12.0)
-            }
-        } else {
-            (2.0, 24.0)
-        }
+        if vertical() { (0.9, 20.0) } else { (1.1, 24.0) }
     });
 
     // Loading during setup lets the server render the lesson exactly as the browser will.
@@ -91,7 +85,8 @@ pub fn Tutorial() -> impl IntoView {
     let clocked =
         move || find_lesson(lesson_id.get()).is_some_and(|lesson| lesson.clock().is_some());
 
-    let blank_tiles = move || find_lesson(lesson_id.get()).is_some_and(|lesson| lesson.uses_blank_tiles());
+    let show_game_panel = move || clocked() || lesson_id.get() == "online.controls";
+    let blank_tiles = move || find_lesson(lesson_id.get()).is_some_and(|lesson| lesson.uses_blank_tiles() || lesson.guide().is_some());
     let has_board = move || {
         tutorial.session.with(Option::is_some)
             && find_lesson(lesson_id.get()).is_some_and(|lesson| lesson.has_board())
@@ -107,13 +102,17 @@ pub fn Tutorial() -> impl IntoView {
     let placeholder_text = move || {
         find_lesson(lesson_id.get()).and_then(|lesson| match lesson.setup {
             Setup::Pending => Some("The board for this lesson is still being built."),
+            Setup::Guide(_) => None,
             Setup::TextOnly => Some("No board needed for this one: just read along."),
             Setup::ForcedPass { .. } | Setup::Position(_) | Setup::BlankPosition(_) | Setup::BlankExercise { .. } | Setup::AfterLesson { .. } | Setup::SwapPieces { .. } | Setup::Clocked { .. } => None,
         })
     };
     let board_placeholder = move || {
         view! {
-            <div class="flex col-span-full row-span-full justify-center items-center p-6 w-full h-full">
+            <div class="flex col-span-full row-span-full justify-center items-center min-h-0 w-full h-full">
+                <ShowLet some=move || find_lesson(lesson_id.get()).and_then(|lesson| lesson.guide()) let:page>
+                    <OnlinePreview page />
+                </ShowLet>
                 <ShowLet some=placeholder_text let:text>
                     <div class="max-w-sm text-center ui-empty-state">{text}</div>
                 </ShowLet>
@@ -154,7 +153,7 @@ pub fn Tutorial() -> impl IntoView {
                             </div>
                             <Show when=move || !blank_tiles()>
                             <Show
-                                when=clocked
+                                when=show_game_panel
                                 fallback=move || {
                                     view! {
                                         <div class="flex flex-col col-span-2 col-start-9 row-span-6 row-start-1 justify-between p-1 my-1 mr-1 min-h-0 ui-board-side-panel">
@@ -211,7 +210,7 @@ pub fn Tutorial() -> impl IntoView {
                                 }
                             }
                         />
-                        <Show when=clocked>
+                        <Show when=show_game_panel>
                             <div class="flex shrink-0 ui-board-reserve">
                                 <TutorialGameControls />
                             </div>
@@ -225,7 +224,7 @@ pub fn Tutorial() -> impl IntoView {
                                 interaction
                                 history_board
                             />
-                            <Show when=clocked>
+                            <Show when=show_game_panel>
                                 <div class="flex w-16 min-h-0 shrink-0">
                                     <DisplayTimer vertical=true placement=Placement::Top />
                                 </div>
@@ -246,7 +245,7 @@ pub fn Tutorial() -> impl IntoView {
                                 interaction
                                 history_board
                             />
-                            <Show when=clocked>
+                            <Show when=show_game_panel>
                                 <div class="flex w-16 min-h-0 shrink-0">
                                     <DisplayTimer vertical=true placement=Placement::Bottom />
                                 </div>

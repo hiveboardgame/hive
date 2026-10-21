@@ -18,7 +18,11 @@ pub struct Lesson {
     pub outro: &'static str,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum GuidePage { Home, Controls, Settings, Correspondence, Tournaments, Ready }
+
 pub enum Setup {
+    Guide(GuidePage),
     Position(&'static str),
     ForcedPass { position: &'static str, color: hive_lib::Color },
     BlankPosition(&'static str),
@@ -74,6 +78,7 @@ pub struct Step {
     pub previous_move_from: Option<&'static str>,
     pub continue_label: &'static str,
     pub thin_frames: bool,
+    pub conditional_prompt: Option<(&'static super::goal::Condition, &'static str)>,
     pub conditional_hint: Option<(&'static super::goal::Condition, &'static str)>,
     pub conditional_red_marks: Option<(&'static super::goal::Condition, &'static [&'static str])>,
     pub crosses_for: Option<hive_lib::Color>,
@@ -101,6 +106,7 @@ pub enum Reply {
         to: &'static str,
     },
     LearnerAgain,
+    KeepTurn,
     NextPlayer(hive_lib::Color),
     Opponent {
         piece: &'static str,
@@ -139,6 +145,7 @@ impl Step {
             previous_move_from: None,
             continue_label: "Continue",
             thin_frames: false,
+            conditional_prompt: None,
             conditional_hint: None,
             conditional_red_marks: None,
             crosses_for: None,
@@ -185,6 +192,7 @@ impl Step {
             previous_move_from: None,
             continue_label: "Continue",
             thin_frames: false,
+            conditional_prompt: None,
             conditional_hint: None,
             conditional_red_marks: None,
             crosses_for: None,
@@ -364,6 +372,16 @@ impl Step {
         self
     }
 
+    pub const fn prompt_when(mut self, condition: &'static super::goal::Condition, prompt: &'static str) -> Self {
+        self.conditional_prompt = Some((condition, prompt));
+        self
+    }
+
+    pub const fn await_opponent(mut self) -> Self {
+        self.then = Reply::KeepTurn;
+        self
+    }
+
     pub const fn thin_frames(mut self) -> Self {
         self.thin_frames = true;
         self
@@ -487,6 +505,10 @@ impl Lesson {
             Setup::BlankExercise { visible, .. } => visible,
             _ => None,
         }
+    }
+
+    pub fn guide(&self) -> Option<GuidePage> {
+        match self.setup { Setup::Guide(page) => Some(page), _ => None }
     }
 
     pub fn clock(&self) -> Option<(u64, u64)> {

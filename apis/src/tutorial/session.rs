@@ -46,6 +46,7 @@ pub struct Session {
     exploration_moves: Vec<u8>,
     last_black_arrow: Option<(Position, Position)>,
     route_arrows: Vec<(Position, Position)>,
+    revealed_pieces: Vec<Piece>,
 }
 
 impl Session {
@@ -119,7 +120,7 @@ impl Session {
                         .map_err(|error| SessionError::Position(error.to_string()))?
                 }
                 Setup::Pending => return Err(SessionError::Pending),
-                Setup::TextOnly => State::new(GameType::MLP, false),
+                Setup::Guide(_) | Setup::TextOnly => State::new(GameType::MLP, false),
             }
         };
         if let Setup::BlankExercise { start_as, extras, .. } = lesson.setup {
@@ -149,6 +150,7 @@ impl Session {
             }
             state.board.last_move = (Some(from), state.board.last_moved.map(|(_, at)| at));
         }
+        let revealed_pieces = Self::neighbours_to_reveal(lesson, &state);
         Ok(Self {
             lesson,
             step: 0,
@@ -163,6 +165,7 @@ impl Session {
             exploration_moves: vec![0; lesson.steps.len()],
             last_black_arrow: None,
             route_arrows: Vec::new(),
+            revealed_pieces,
         })
     }
 
@@ -189,16 +192,10 @@ impl Session {
     fn remember_black_move(&mut self, before: &State) {
         let Some((piece, to)) = self.state.board.last_moved else { return; };
         if piece.color() != Color::Black { return; }
-        let from = before.board.position_of_piece(piece).unwrap_or_else(|| {
-            let occupied: Vec<_> = before.board.all_taken_positions().collect();
-            let count = occupied.len().max(1) as f32;
-            let cq = occupied.iter().map(|p| p.q as f32).sum::<f32>() / count;
-            let cr = occupied.iter().map(|p| p.r as f32).sum::<f32>() / count;
-            let distance = |p: Position| (p.q as f32 - cq).powi(2) + (p.r as f32 - cr).powi(2);
-            to.positions_around().filter(|p| !self.state.board.occupied(*p))
-                .min_by(|a, b| distance(*a).total_cmp(&distance(*b)))
-                .unwrap_or(to)
-        });
+        let Some(from) = before.board.position_of_piece(piece) else {
+            self.last_black_arrow = None;
+            return;
+        };
         self.last_black_arrow = (from != to).then_some((from, to));
     }
 
@@ -222,7 +219,9 @@ impl Session {
                 }
             }
         }
-        Some(step.prompt)
+        Some(step.conditional_prompt
+            .filter(|(condition, _)| condition.holds(&self.state))
+            .map_or(step.prompt, |(_, prompt)| prompt))
     }
 
     pub fn completion_result(&self) -> Option<&'static str> {
@@ -333,12 +332,35 @@ impl Session {
         })
     }
 
-    pub fn revealed_neighbours(&self) -> Vec<Piece> {
-        let Setup::BlankExercise { reveal_neighbours: Some(anchor), .. } = self.lesson.setup else {
+    fn neighbours_to_reveal(lesson: &Lesson, state: &State) -> Vec<Piece> {
+        let Setup::BlankExercise { reveal_neighbours: Some(anchor), .. } = lesson.setup else {
             return Vec::new();
         };
-        let Some(at) = hex(&self.state.board, anchor) else { return Vec::new(); };
-        at.positions_around().filter_map(|at| self.state.board.top_piece(at)).collect()
+        let Some(at) = hex(&state.board, anchor) else { return Vec::new(); };
+        at.positions_around().filter_map(|at| state.board.top_piece(at)).collect()
+    }
+
+    fn remember_revealed(&mut self) {
+        for piece in Self::neighbours_to_reveal(self.lesson, &self.state) {
+            if !self.revealed_pieces.contains(&piece) { self.revealed_pieces.push(piece); }
+        }
+    }
+
+    pub fn revealed_neighbours(&self) -> Vec<Piece> {
+        self.revealed_pieces.clone()
+    }
+
+    pub fn timeout(&mut self, loser: Color) -> Outcome {
+        if self.is_finished() || self.needs_retry() { return Outcome::Illegal; }
+        let Some(step) = self.current_step() else { return Outcome::Illegal; };
+        self.state.game_status = GameStatus::Finished(hive_lib::GameResult::Winner(loser.opposite_color()));
+        if matches!(step.goal, Goal::WaitForTimeout(expected) if expected == loser) {
+            self.complete_step(step)
+        } else {
+            self.failed_attempts[self.step] = self.failures().saturating_add(1);
+            self.wrong = true;
+            Outcome::Wrong
+        }
     }
 
     pub fn green_marks(&self) -> Vec<Target> {
@@ -440,6 +462,8 @@ impl Session {
                 Outcome::StepDone | Outcome::LessonDone => {
                     if let Some((from, to)) = preview.black_reply_arrow() {
                         targets.extend([from, to]);
+                    } else {
+                        targets.extend(preview.state.board.last_move.1);
                     }
                 }
                 _ => break,
@@ -454,6 +478,12 @@ impl Session {
             step.forbidden
                 .iter()
                 .filter_map(|notation| hex(self.annotation_board(), notation))
+                .filter(|position| !self.annotation_board().occupied(*position))
+                .filter(|position| {
+                    if let Goal::Travel { piece, .. } = step.goal {
+                        piece.parse::<Piece>().ok().is_none_or(|piece| !self.destinations(piece).contains(position))
+                    } else { true }
+                })
                 .collect()
         })
     }
@@ -517,7 +547,12 @@ impl Session {
             return self.explore_hint(pieces, condition).into_iter().collect();
         }
         if let Goal::Travel { piece, to } = goal {
-            return self.travel_hint(piece, to).into_iter().collect();
+            let route = self.travel_route(piece, to);
+            return if self.current_step().is_some_and(|step| step.hint_moves.is_some()) {
+                route
+            } else {
+                route.into_iter().take(1).collect()
+            };
         }
         if let Goal::MoveSatisfying { piece: spec, condition } = goal {
             for ((piece, from), targets) in self.state.board.moves(self.learner) {
@@ -618,30 +653,31 @@ impl Session {
         Vec::new()
     }
 
-    fn travel_hint(&self, spec: &str, notation: &str) -> Option<(Position, Position)> {
+    fn travel_route(&self, spec: &str, notation: &str) -> Vec<(Position, Position)> {
         use std::collections::{HashSet, VecDeque};
-        let piece: Piece = spec.parse().ok()?;
-        let target = hex(&self.state.board, notation)?;
-        let start = self.state.board.position_of_piece(piece)?;
+        let Some(piece) = spec.parse::<Piece>().ok() else { return Vec::new(); };
+        let Some(target) = hex(&self.state.board, notation) else { return Vec::new(); };
+        let Some(start) = self.state.board.position_of_piece(piece) else { return Vec::new(); };
         let mut visited = HashSet::from([start]);
-        let mut queue = VecDeque::from([(self.state.clone(), None)]);
-        while let Some((state, first)) = queue.pop_front() {
+        let mut queue = VecDeque::from([(self.state.clone(), Vec::new())]);
+        while let Some((state, path)) = queue.pop_front() {
             for ((mover, from), targets) in state.board.moves(self.learner) {
                 if mover != piece { continue; }
                 for to in targets {
                     if !visited.insert(to) { continue; }
-                    let first = first.unwrap_or((from, to));
-                    if to == target { return Some(first); }
+                    let mut path = path.clone();
+                    path.push((from, to));
+                    if to == target { return path; }
                     let mut next = state.clone();
                     if next.play_turn_from_position(piece, to).is_ok() {
                         next.pass_out_of_turn();
-                        queue.push_back((next, Some(first)));
+                        queue.push_back((next, path));
                     }
                 }
             }
             if visited.len() > 256 { break; }
         }
-        None
+        Vec::new()
     }
 
     pub fn stars(&self) -> Vec<Target> {
@@ -732,8 +768,9 @@ impl Session {
             };
         }
         self.remember_black_move(&before);
+        self.remember_revealed();
         match &step.goal {
-            Goal::Continue => {
+            Goal::Continue | Goal::WaitForTimeout(_) => {
                 self.state = before;
                 Outcome::Illegal
             }
@@ -836,6 +873,8 @@ impl Session {
                 } else if hex(&before.board, to) == Some(position) {
                     self.complete_step(step)
                 } else {
+                    self.exploration_moves[self.step] =
+                        self.exploration_moves[self.step].saturating_add(1);
                     self.hand_back();
                     self.checkpoint = self.state.clone();
                     Outcome::Progress
@@ -901,6 +940,7 @@ impl Session {
     /// Retry the whole lesson; keep error counts so help survives repeated attempts.
     pub fn retry(&mut self) {
         self.state = self.initial.clone();
+        self.revealed_pieces = Self::neighbours_to_reveal(self.lesson, &self.initial);
         self.checkpoint = self.initial.clone();
         self.step = 0;
         self.learner = self.initial.turn_color;
@@ -989,6 +1029,7 @@ impl Session {
                 }
             }
             Reply::LearnerAgain => self.hand_back(),
+            Reply::KeepTurn => {},
             Reply::NextPlayer(color) => {
                 self.learner = color;
                 self.hand_back();
@@ -1051,6 +1092,7 @@ impl Session {
                 }
             }
         }
+        self.remember_revealed();
         self.checkpoint = self.state.clone();
         if self.is_finished() {
             Outcome::LessonDone

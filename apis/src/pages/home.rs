@@ -50,10 +50,10 @@ pub fn Home() -> impl IntoView {
                     <div class="order-2 w-full lg:order-1">
                         <FeaturedVideo />
                     </div>
-                    <div class="order-1 w-full lg:order-2">
+                    <div id="tutorial-quickplay" class="order-1 w-full lg:order-2">
                         <QuickPlay />
                     </div>
-                    <div class="order-3 w-full">
+                    <div id="tutorial-open-challenges" class="order-3 w-full">
                         <Challenges />
                     </div>
                     <div class="order-4 w-full">
@@ -71,6 +71,11 @@ pub fn Home() -> impl IntoView {
                     <OnlineUsers />
                 </div>
             </div>
+            <footer id="home-feedback" class="flex flex-wrap gap-3 justify-center items-center py-5 mt-6 text-sm border-t border-black/10 dark:border-white/10">
+                <span>"Have feedback?"</span>
+                <a class="underline" href="https://github.com/hiveboardgame/hive/issues" target="_blank" rel="noopener noreferrer">"Feedback and bugs"</a>
+                <a class="underline" href="https://discord.gg/jNTjr5vj9Z" target="_blank" rel="noopener noreferrer">"Community Discord"</a>
+            </footer>
         </PageShell>
     }
 }

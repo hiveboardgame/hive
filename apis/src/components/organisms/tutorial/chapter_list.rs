@@ -49,6 +49,7 @@ pub fn ChapterList(
     view! {
         <nav class="flex flex-col gap-1 p-3 ui-panel" aria-label="Tutorial lessons">
             {chapters}
+            <p class="pt-3 text-xs text-gray-500 dark:text-gray-400">"More lessons coming soon."</p>
         </nav>
     }
 }
@@ -113,6 +114,9 @@ pub fn TutorialOverview(progress: TutorialProgress) -> impl IntoView {
                 </ShowLet>
             </div>
             <div class="grid grid-cols-1 gap-4 items-start md:grid-cols-2">{cards}</div>
+            <p class="text-sm text-gray-600 dark:text-gray-300">
+                "Coming soon: Standard Openings, First Strategy, and Tactics."
+            </p>
         </PageShell>
     }
 }

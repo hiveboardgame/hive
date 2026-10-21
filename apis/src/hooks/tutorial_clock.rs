@@ -33,6 +33,12 @@ pub fn use_tutorial_clock(tutorial: TutorialContext, timer: TimerSignal) {
         move || {
             if timer.signal.with_untracked(is_running) {
                 timer.signal.update(tick);
+                let loser = timer.signal.with_untracked(|clock| {
+                    if clock.white_timed_out { Some(hive_lib::Color::White) }
+                    else if clock.black_timed_out { Some(hive_lib::Color::Black) }
+                    else { None }
+                });
+                if let Some(loser) = loser { tutorial.timeout(loser); }
             }
         },
         TICK.as_millis() as u64,
@@ -100,6 +106,8 @@ fn tick(clock: &mut Timer) {
         _ => {
             *time = Duration::ZERO;
             clock.finished = true;
+            clock.white_timed_out = clock.turn.is_multiple_of(2);
+            clock.black_timed_out = !clock.turn.is_multiple_of(2);
         }
     }
 }

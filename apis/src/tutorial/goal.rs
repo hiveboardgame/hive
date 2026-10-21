@@ -2,6 +2,7 @@ use hive_lib::{Board, Bug, Color, Direction, Piece, Position, State};
 
 pub enum Goal {
     Continue,
+    WaitForTimeout(Color),
     MoveAny,
     PlayAny,
     LiftAnyOf { pieces: &'static [&'static str], by: &'static str },

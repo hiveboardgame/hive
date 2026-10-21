@@ -176,6 +176,21 @@ impl TutorialContext {
         }
     }
 
+    pub fn timeout(&self, loser: hive_lib::Color) {
+        let outcome = self.session.try_update(|session| session.as_mut().map(|session| session.timeout(loser))).flatten();
+        self.sync_board();
+        match outcome {
+            Some(Outcome::LessonDone) => {
+                self.feedback.set(Some(Feedback::LessonComplete));
+                self.complete_lesson();
+            }
+            Some(Outcome::Wrong) => {
+                self.feedback.set(Some(Feedback::Hint("Your time ran out. Press Try again to restart with one minute.")));
+            }
+            _ => {}
+        }
+    }
+
     pub fn try_again(&self) {
         self.session.update(|session| {
             if let Some(session) = session {
@@ -284,11 +299,6 @@ impl TutorialContext {
                             from,
                             to,
                             color: AnnotationColor::Red,
-                        }))
-                        .chain(session.black_reply_arrow().into_iter().map(|(from, to)| Arrow {
-                            from,
-                            to,
-                            color: AnnotationColor::Grey,
                         }))
                         .collect(),
                     labels,

@@ -11,14 +11,25 @@ use super::{
 pub const CHAPTERS: &[Chapter] = &[
     basics::CHAPTER,
     bugs::CHAPTER,
+    online::CHAPTER,
+];
+
+/// Kept in the repository for later releases, excluded from navigation and progress.
+#[allow(dead_code)]
+pub const UNRELEASED_CHAPTERS: &[Chapter] = &[
     openings::CHAPTER,
     strategy::CHAPTER,
     tactics::CHAPTER,
-    online::CHAPTER,
 ];
 
 pub fn lessons() -> impl Iterator<Item = &'static Lesson> {
     CHAPTERS.iter().flat_map(|chapter| chapter.lessons.iter())
+}
+
+#[cfg(test)]
+pub fn find_authored_lesson(id: &str) -> Option<&'static Lesson> {
+    CHAPTERS.iter().chain(UNRELEASED_CHAPTERS).flat_map(|chapter| chapter.lessons.iter())
+        .find(|lesson| lesson.id == id)
 }
 
 pub fn lesson_count() -> usize {

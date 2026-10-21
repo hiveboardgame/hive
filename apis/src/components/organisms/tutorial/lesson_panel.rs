@@ -88,6 +88,27 @@ fn prompt_line(text: &'static str) -> impl IntoView {
 }
 
 fn tutorial_prompt(prompt: &'static str) -> impl IntoView {
+    if prompt.lines().any(|line| line.starts_with("- ")) {
+        let mut blocks = Vec::new();
+        let mut items = Vec::new();
+        for line in prompt.lines() {
+            if let Some(item) = line.strip_prefix("- ") {
+                items.push(item);
+            } else {
+                if !items.is_empty() {
+                    let entries = std::mem::take(&mut items).into_iter()
+                        .map(|item| view! { <li>{prompt_line(item)}</li> }).collect_view();
+                    blocks.push(view! { <ul class="pl-5 my-1 space-y-1 list-disc">{entries}</ul> }.into_any());
+                }
+                blocks.push(view! { <p>{prompt_line(line)}</p> }.into_any());
+            }
+        }
+        if !items.is_empty() {
+            let entries = items.into_iter().map(|item| view! { <li>{prompt_line(item)}</li> }).collect_view();
+            blocks.push(view! { <ul class="pl-5 my-1 space-y-1 list-disc">{entries}</ul> }.into_any());
+        }
+        return blocks.collect_view().into_any();
+    }
     prompt
         .split('\n')
         .enumerate()
@@ -99,7 +120,7 @@ fn tutorial_prompt(prompt: &'static str) -> impl IntoView {
                 view! { <br /> {line} }.into_any()
             }
         })
-        .collect_view()
+        .collect_view().into_any()
 }
 
 #[component]
