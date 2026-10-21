@@ -22,7 +22,7 @@ pub use chat::{
     insert_chat_message_and_mark_sender_read,
     latest_message_id_for_target,
     load_chat_history,
-    load_game_chat_capabilities,
+    load_game_chat_route_data,
     mark_chat_read,
     resolve_chat_target,
     unread_chat_count_for_channel,

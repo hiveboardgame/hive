@@ -1,5 +1,7 @@
 {
     "chat": {
+        "muted_notice": "Egy adminisztrátor elnémított. Fellebbezéshez keresd az adminisztrátorokat a Discordon.",
+        "muted_peer_notice": "{{username}} felhasználót egy adminisztrátor elnémította, ezért nem tud válaszolni.",
         "spectators": "Nezok",
         "players_chat": "Jatekos cseveges",
         "spectator_chat": "Nezoi cseveges",

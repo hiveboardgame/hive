@@ -100,12 +100,15 @@ pub enum ComposerMode {
 #[component]
 pub(super) fn SendErrorMessage(error: SendIssue) -> impl IntoView {
     let i18n = use_i18n();
-    match error {
+    let auth = expect_context::<AuthContext>();
+    let mute_error = error == SendIssue::Server(ChatSendError::Muted);
+    let message = match error {
         SendIssue::LoginRequired => t_string!(i18n, messages.chat.login_to_send).to_string(),
         SendIssue::ConnectionUnavailable => {
             t_string!(i18n, messages.chat.connection_unavailable).to_string()
         }
         SendIssue::Server(error) => match error {
+            ChatSendError::Muted => t_string!(i18n, messages.chat.muted_notice).to_string(),
             ChatSendError::ClientIdConflict => {
                 t_string!(i18n, messages.chat.client_id_conflict).to_string()
             }
@@ -129,6 +132,15 @@ pub(super) fn SendErrorMessage(error: SendIssue) -> impl IntoView {
                 t_string!(i18n, messages.chat.delivery_failed).to_string()
             }
         },
+    };
+    move || {
+        let already_shown = mute_error
+            && auth.user.with(|account| {
+                account
+                    .as_ref()
+                    .is_some_and(|account| account.user.chat_muted)
+            });
+        (!already_shown).then(|| message.clone())
     }
 }
 
@@ -142,6 +154,13 @@ pub(super) fn Composer(
     let i18n = use_i18n();
     let auth = expect_context::<AuthContext>();
     let initial_history = conversation.initial();
+    let muted = Signal::derive(move || {
+        auth.user.with(|account| {
+            account
+                .as_ref()
+                .is_some_and(|account| account.user.chat_muted)
+        })
+    });
     let visible_send_error = conversation.send_error();
     let conversation = StoredValue::new(conversation);
     let composer_class = if compact {
@@ -206,11 +225,22 @@ pub(super) fn Composer(
                                     }
                                 }
                             >
-                                <ChatInput
-                                    conversation=conversation.get_value()
-                                    mode=composer_mode
-                                    focus_on_mount=!compact
-                                />
+                                <Show
+                                    when=move || !muted.get()
+                                    fallback=move || {
+                                        view! {
+                                            <p class="ui-warning-notice" role="status">
+                                                {t!(i18n, messages.chat.muted_notice)}
+                                            </p>
+                                        }
+                                    }
+                                >
+                                    <ChatInput
+                                        conversation=conversation.get_value()
+                                        mode=composer_mode
+                                        focus_on_mount=!compact
+                                    />
+                                </Show>
                             </Show>
                         </Show>
                     </div>

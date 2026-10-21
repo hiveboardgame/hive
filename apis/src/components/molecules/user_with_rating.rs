@@ -42,6 +42,7 @@ pub fn UserWithRating(
         player.with(|p| p.as_ref().map_or(String::new(), |p| p.username.clone()))
     });
     let patreon = move || player.with(|p| p.as_ref().is_some_and(|p| p.patreon));
+    let chat_muted = move || player.with(|p| p.as_ref().is_some_and(|p| p.chat_muted));
     let bot = move || player.with(|p| p.as_ref().is_some_and(|p| p.bot));
     let deleted = move || player.with(|p| p.as_ref().is_some_and(|p| p.deleted));
     let berserked = Signal::derive(move || {
@@ -80,6 +81,7 @@ pub fn UserWithRating(
                             patreon=patreon()
                             username=username()
                             bot=bot()
+                            chat_muted=chat_muted()
                             deleted=deleted()
                             extend_tw_classes=text_color
                         />

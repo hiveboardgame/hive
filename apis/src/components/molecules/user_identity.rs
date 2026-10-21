@@ -25,6 +25,7 @@ pub fn UserIdentity(
             <ProfileLink
                 patreon=user.patreon
                 bot=user.bot
+                chat_muted=user.chat_muted
                 username=user.username
                 deleted=user.deleted
                 extend_tw_classes=link_class

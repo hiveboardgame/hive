@@ -92,6 +92,7 @@ pub fn UpcomingGameRow(
                             username=white_username.get_value()
                             patreon=game.white_player.patreon
                             bot=game.white_player.bot
+                            chat_muted=game.white_player.chat_muted
                             deleted=white_deleted
                             extend_tw_classes="font-semibold"
                         />
@@ -102,6 +103,7 @@ pub fn UpcomingGameRow(
                             username=black_username.get_value()
                             patreon=game.black_player.patreon
                             bot=game.black_player.bot
+                            chat_muted=game.black_player.chat_muted
                             deleted=black_deleted
                             extend_tw_classes="font-semibold"
                         />

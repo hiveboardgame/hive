@@ -57,15 +57,18 @@ async fn ensure_active_chat_sender(
     conn: &mut AsyncPgConnection,
     sender_id: Uuid,
 ) -> Result<(), DbError> {
-    users::table
+    let muted = users::table
         .filter(users::id.eq(sender_id))
         .filter(users::deleted.eq(false))
-        .select(users::id)
+        .select(users::chat_muted)
         .for_share()
-        .first::<Uuid>(conn)
-        .await
-        .map(|_| ())
-        .map_err(DbError::from)
+        .first::<bool>(conn)
+        .await?;
+    if muted {
+        Err(DbError::ChatMuted)
+    } else {
+        Ok(())
+    }
 }
 
 async fn resolve_channel_id(

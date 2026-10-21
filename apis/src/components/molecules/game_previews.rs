@@ -7,7 +7,7 @@ use crate::{
         RatingChangeInfo,
     },
     components::{
-        atoms::{color_hex::ColorHex, rating::Rating},
+        atoms::{color_hex::ColorHex, rating::Rating, user_badges::UserBadges},
         molecules::{
             rating_and_change::RatingAndChange,
             thumbnail_pieces::ThumbnailPieces,
@@ -69,7 +69,22 @@ pub fn GamePreview(
                         view! {
                             <div class="grid gap-1.5 items-center h-5 grid-cols-[1rem_minmax(0,1fr)_auto]">
                                 <ColorHex color=Signal::derive(move || side) />
-                                <span class="font-medium truncate">{move || username(player)}</span>
+                                <span class="inline-flex items-center min-w-0 font-medium">
+                                    <span class="truncate">{move || username(player)}</span>
+                                    {player
+                                        .with_value(|player| {
+                                            (!player.deleted)
+                                                .then(|| {
+                                                    view! {
+                                                        <UserBadges
+                                                            patreon=player.patreon
+                                                            bot=player.bot
+                                                            chat_muted=player.chat_muted
+                                                        />
+                                                    }
+                                                })
+                                        })}
+                                </span>
                                 <span class="flex gap-1 items-center text-xs shrink-0">
                                     {if finished {
                                         view! { <RatingAndChange ratings side /> }.into_any()

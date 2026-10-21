@@ -1,4 +1,5 @@
 {
+    "muted_by_admin": "Muted by an admin",
     "result": "Result",
     "previous": "Previous",
     "next": "Next",
@@ -130,6 +131,8 @@
         "title": "Account"
     },
     "admin": {
+        "chat_moderation": "Chat moderation",
+        "chat_muted": "Chat muted",
         "send_global_warning": "Send Global Warning",
         "edit_banner": "Edit Banner",
         "open_ws_telemetry_dashboard": "Open WS telemetry dashboard",

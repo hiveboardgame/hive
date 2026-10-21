@@ -75,6 +75,7 @@ mod tests {
                 uid: id,
                 patreon: false,
                 bot: false,
+                chat_muted: false,
                 admin: false,
                 deleted: false,
                 ratings: HashMap::from([(

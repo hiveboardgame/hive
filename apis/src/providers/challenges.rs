@@ -121,6 +121,7 @@ mod tests {
             uid: Uuid::new_v4(),
             patreon: false,
             bot: false,
+            chat_muted: false,
             admin: false,
             deleted: false,
             ratings: HashMap::new(),

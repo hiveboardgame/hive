@@ -1,18 +1,24 @@
 use crate::{
-    common::{localized_error_message, with_class},
+    common::{localized_error_message, with_class, UserAction},
     components::{
         atoms::simple_switch::SimpleSwitch,
         layouts::{page_header::PageHeader, page_shell::PageShell},
-        molecules::{panel::Panel, rl_banner::RlBanner},
+        molecules::{
+            panel::Panel,
+            rl_banner::RlBanner,
+            user_identity::UserIdentity,
+            user_search::UserSearch,
+        },
         organisms::chat::ResolvedChatWindow,
         update_from_event::update_from_input,
     },
-    functions::{home_banner, realtime_games},
+    functions::{home_banner, moderation, realtime_games, users::get_profile},
     i18n::{t, t_string, use_i18n},
     providers::{AuthContext, RealtimeGames},
+    responses::UserResponse,
     security::csrf::ActionForm,
 };
-use leptos::prelude::*;
+use leptos::{html, prelude::*};
 use leptos_use::use_interval_fn;
 use shared_types::ConversationKey;
 
@@ -27,6 +33,12 @@ pub fn Admin() -> impl IntoView {
             <Show when=move || {
                 auth_context.user.with(|a| a.as_ref().is_some_and(|v| v.user.admin))
             }>
+                <Panel
+                    title=move || t_string!(i18n, common.admin.chat_moderation)
+                    body_class="space-y-3"
+                >
+                    <ChatModeration />
+                </Panel>
                 <Panel
                     title=move || t_string!(i18n, common.admin.send_global_warning)
                     body_class="space-y-3"
@@ -327,5 +339,99 @@ fn EditBanner() -> impl IntoView {
                     })
             }}
         </Transition>
+    }
+}
+
+#[component]
+fn ChatModeration() -> impl IntoView {
+    let i18n = use_i18n();
+    let selected = RwSignal::new(None::<String>);
+    let user = LocalResource::new(move || async move {
+        match selected.get() {
+            Some(username) => get_profile(username).await.map(Some),
+            None => Ok(None),
+        }
+    });
+    view! {
+        <UserSearch
+            value=Signal::derive(move || selected.get())
+            actions=vec![UserAction::Select(Callback::new(move |username| selected.set(username)))]
+        />
+        {move || {
+            match user.get() {
+                Some(Ok(Some(user))) if selected.get().as_ref() == Some(&user.username) => {
+                    view! { <ChatMuteControl user /> }.into_any()
+                }
+                Some(Err(error)) => {
+                    view! {
+                        <p class="ui-danger-notice" role="alert">
+                            {localized_error_message(i18n, &error.to_string())}
+                        </p>
+                    }
+                        .into_any()
+                }
+                _ => ().into_any(),
+            }
+        }}
+    }
+}
+
+#[component]
+fn ChatMuteControl(user: UserResponse) -> impl IntoView {
+    let i18n = use_i18n();
+    let action = ServerAction::<moderation::SetChatMuted>::new();
+    let user_id = user.uid;
+    let user = StoredValue::new(user);
+    let muted = RwSignal::new(user.with_value(|user| user.chat_muted));
+    let mute_toggle = NodeRef::<html::Input>::new();
+    Effect::watch(
+        action.version(),
+        move |_, _, _| match action.value().get_untracked() {
+            Some(Ok(value)) => muted.set(value),
+            Some(Err(_)) => {
+                if let Some(input) = mute_toggle.get_untracked() {
+                    input.set_checked(muted.get_untracked());
+                }
+            }
+            None => {}
+        },
+        false,
+    );
+    view! {
+        <div class="flex flex-wrap gap-3 justify-between items-center">
+            {move || {
+                let mut user = user.get_value();
+                user.chat_muted = muted.get();
+                view! { <UserIdentity user /> }
+            }} <label class="flex gap-2 items-center">
+                <input
+                    type="checkbox"
+                    node_ref=mute_toggle
+                    prop:checked=muted
+                    prop:disabled=action.pending()
+                    on:change=move |event| {
+                        action
+                            .dispatch(moderation::SetChatMuted {
+                                user_id,
+                                muted: event_target_checked(&event),
+                            });
+                    }
+                />
+                {t!(i18n, common.admin.chat_muted)}
+            </label>
+        </div>
+        {move || {
+            action
+                .value()
+                .get()
+                .and_then(Result::err)
+                .map(|error| {
+                    view! {
+                        <p class="ui-danger-notice" role="alert">
+                            {localized_error_message(i18n, &error.to_string())}
+                        </p>
+                    }
+                })
+        }}
     }
 }

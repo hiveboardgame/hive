@@ -1,5 +1,7 @@
 {
     "chat": {
+        "muted_notice": "Un administrador t’ha silenciat. Per apel·lar, contacta amb els administradors a Discord.",
+        "muted_peer_notice": "{{username}} està silenciat per un administrador i no pot respondre.",
         "spectators": "Espectadors",
         "players_chat": "Xat de jugadors",
         "spectator_chat": "Xat d'espectadors",

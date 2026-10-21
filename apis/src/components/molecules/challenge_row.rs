@@ -246,6 +246,7 @@ pub fn ChallengeRow(
                                             username=user.username.clone()
                                             patreon=user.patreon
                                             bot=user.bot
+                                            chat_muted=user.chat_muted
                                             deleted=user.deleted
                                             extend_tw_classes="truncate max-w-[60px] xs:max-w-[80px] sm:max-w-[120px] md:max-w-[140px] lg:max-w-[160px]"
                                         />

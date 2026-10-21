@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 pub enum UiError {
     RequestUnavailable,
     ChatRetryConflict,
+    ChatMuted,
     Unauthorized,
     ChatAccessDenied,
     ChatSubscriptionLimited,
@@ -47,6 +48,7 @@ impl UiError {
             Self::RequestUnavailable => {
                 td_string!(locale, messages.errors.request_unavailable).to_string()
             }
+            Self::ChatMuted => td_string!(locale, messages.chat.muted_notice).to_string(),
             Self::ChatRetryConflict => {
                 td_string!(locale, messages.errors.chat_retry_conflict).to_string()
             }

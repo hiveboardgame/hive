@@ -1,4 +1,5 @@
 {
+    "muted_by_admin": "Чат отключён администратором",
     "yes": "Да",
     "no": "Нет",
     "cancel": "Отмена",
@@ -132,6 +133,8 @@
         "title": "Учётная запись"
     },
     "admin": {
+        "chat_moderation": "Модерация чата",
+        "chat_muted": "Чат отключён",
         "send_global_warning": "Отправить общее предупреждение",
         "edit_banner": "Изменить баннер",
         "open_ws_telemetry_dashboard": "Открыть панель телеметрии WS",

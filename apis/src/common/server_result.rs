@@ -59,6 +59,7 @@ pub enum ChatSendError {
     PlayersRestricted,
     SpectatorsRestricted,
     Unavailable,
+    Muted,
 }
 
 impl ChatSendError {
@@ -76,6 +77,7 @@ impl ChatSendError {
                 "Players cannot send to spectator chat while the game is ongoing."
             }
             Self::Unavailable => "Unable to send the chat message.",
+            Self::Muted => "You have been muted by an admin.",
         }
     }
 }
@@ -203,6 +205,7 @@ pub enum TournamentUpdate {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum UserSettingsUpdate {
+    ChatMuted,
     BlockedUser {
         user_id: Uuid,
         blocked: bool,

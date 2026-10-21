@@ -1,4 +1,5 @@
 {
+    "muted_by_admin": "Silenciado por un administrador",
     "yes": "Sí",
     "no": "No",
     "cancel": "Cancelar",
@@ -132,6 +133,8 @@
         "title": "Cuenta"
     },
     "admin": {
+        "chat_moderation": "Moderación del chat",
+        "chat_muted": "Chat silenciado",
         "send_global_warning": "Enviar aviso global",
         "edit_banner": "Editar banner",
         "open_ws_telemetry_dashboard": "Abrir panel de telemetría WS",

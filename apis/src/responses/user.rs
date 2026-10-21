@@ -1,10 +1,10 @@
 use super::rating::RatingResponse;
-use serde::{Deserialize, Serialize};
+use serde::{ser::SerializeMap, Deserialize, Serialize, Serializer};
 use shared_types::{GameSpeed, Takeback};
 use std::collections::HashMap;
 use uuid::Uuid;
 
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[derive(Clone, Deserialize, Debug, PartialEq, Eq)]
 pub struct UserResponse {
     pub username: String,
     pub uid: Uuid,
@@ -15,6 +15,32 @@ pub struct UserResponse {
     pub ratings: HashMap<GameSpeed, RatingResponse>,
     pub takeback: Takeback,
     pub lang: Option<String>,
+    #[serde(default)]
+    pub chat_muted: bool,
+}
+
+// Temporary compatibility for pre-mute browser tabs during blue-green deploys (2026-10).
+// Their decoders accept named fields but reject an extra positional field, breaking live games.
+// Revisit around 2026-11: once remaining pre-mute tabs can be required to refresh,
+// remove this impl and restore derived Serialize.
+impl Serialize for UserResponse {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut fields = serializer.serialize_map(Some(10))?;
+        fields.serialize_entry("username", &self.username)?;
+        fields.serialize_entry("uid", &self.uid)?;
+        fields.serialize_entry("patreon", &self.patreon)?;
+        fields.serialize_entry("bot", &self.bot)?;
+        fields.serialize_entry("admin", &self.admin)?;
+        fields.serialize_entry("deleted", &self.deleted)?;
+        fields.serialize_entry("ratings", &self.ratings)?;
+        fields.serialize_entry("takeback", &self.takeback)?;
+        fields.serialize_entry("lang", &self.lang)?;
+        fields.serialize_entry("chat_muted", &self.chat_muted)?;
+        fields.end()
+    }
 }
 
 impl UserResponse {
@@ -137,6 +163,7 @@ impl UserResponse {
             uid: user.id,
             patreon: user.patreon,
             bot: user.bot,
+            chat_muted: user.chat_muted,
             admin: user.admin,
             deleted: user.deleted,
             takeback: Takeback::from_str_or_default(&user.takeback),
@@ -170,3 +197,110 @@ impl UserResponse {
     }
 }
 }}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use codee::{binary::MsgpackSerdeCodec, Decoder, Encoder};
+    use shared_types::Certainty;
+
+    // The positional layout in browser bundles shipped before admin chat mutes.
+    #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+    struct PreMuteUserResponse {
+        username: String,
+        uid: Uuid,
+        patreon: bool,
+        bot: bool,
+        admin: bool,
+        deleted: bool,
+        ratings: HashMap<GameSpeed, RatingResponse>,
+        takeback: Takeback,
+        lang: Option<String>,
+    }
+
+    fn pre_mute_user() -> PreMuteUserResponse {
+        let uid = Uuid::from_u128(1);
+        PreMuteUserResponse {
+            username: "Nash102".to_string(),
+            uid,
+            patreon: true,
+            bot: false,
+            admin: false,
+            deleted: false,
+            ratings: HashMap::from([(
+                GameSpeed::Blitz,
+                RatingResponse {
+                    speed: GameSpeed::Blitz,
+                    rating: 1600,
+                    played: 10,
+                    win: 6,
+                    loss: 3,
+                    draw: 1,
+                    certainty: Certainty::Rankable,
+                    user_uid: uid,
+                },
+            )]),
+            takeback: Takeback::CasualOnly,
+            lang: Some("en".to_string()),
+        }
+    }
+
+    fn user(chat_muted: bool) -> UserResponse {
+        let previous = pre_mute_user();
+        UserResponse {
+            username: previous.username,
+            uid: previous.uid,
+            patreon: previous.patreon,
+            bot: previous.bot,
+            admin: previous.admin,
+            deleted: previous.deleted,
+            ratings: previous.ratings,
+            takeback: previous.takeback,
+            lang: previous.lang,
+            chat_muted,
+        }
+    }
+
+    #[test]
+    fn pre_mute_clients_decode_user_responses_with_either_mute_status() {
+        for chat_muted in [false, true] {
+            let bytes = MsgpackSerdeCodec::encode(&user(chat_muted)).unwrap();
+            let decoded: PreMuteUserResponse = MsgpackSerdeCodec::decode(&bytes)
+                .expect("old tabs must keep decoding users embedded in game updates and snapshots");
+            assert_eq!(decoded, pre_mute_user());
+        }
+    }
+
+    #[test]
+    fn new_clients_decode_pre_mute_positional_user_responses() {
+        let bytes = MsgpackSerdeCodec::encode(&pre_mute_user()).unwrap();
+        let decoded: UserResponse = MsgpackSerdeCodec::decode(&bytes)
+            .expect("new tabs must accept responses from the previous server during rollback");
+        assert_eq!(decoded, user(false));
+    }
+
+    #[test]
+    fn new_clients_preserve_mute_status_in_named_and_positional_user_responses() {
+        for chat_muted in [false, true] {
+            let expected = user(chat_muted);
+            let named = MsgpackSerdeCodec::encode(&expected).unwrap();
+            let positional = MsgpackSerdeCodec::encode(&(
+                &expected.username,
+                expected.uid,
+                expected.patreon,
+                expected.bot,
+                expected.admin,
+                expected.deleted,
+                &expected.ratings,
+                &expected.takeback,
+                &expected.lang,
+                expected.chat_muted,
+            ))
+            .unwrap();
+            for bytes in [named, positional] {
+                let decoded: UserResponse = MsgpackSerdeCodec::decode(&bytes).unwrap();
+                assert_eq!(decoded, expected);
+            }
+        }
+    }
+}

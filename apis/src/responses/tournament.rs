@@ -1169,6 +1169,7 @@ mod invitation_privacy_tests {
             uid: Uuid::from_u128(id),
             patreon: false,
             bot: false,
+            chat_muted: false,
             admin: false,
             deleted: false,
             ratings: HashMap::new(),

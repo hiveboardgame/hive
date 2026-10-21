@@ -10,6 +10,7 @@ use super::{
 use crate::{
     common::{
         login_redirect_url,
+        ChatSendError,
         ExternalServerError,
         LobbySnapshot as LobbySnapshotPayload,
         ServerMessage::*,
@@ -17,11 +18,18 @@ use crate::{
         SubscriptionAttempt,
         UserSettingsUpdate,
     },
-    providers::{chat::Chat, AlertType, AlertsContext, NotificationContext, RealtimeGames},
+    providers::{
+        chat::Chat,
+        AlertType,
+        AlertsContext,
+        AuthContext,
+        NotificationContext,
+        RealtimeGames,
+    },
 };
 use leptos::{
     logging::log,
-    prelude::{expect_context, untrack, use_context, Set},
+    prelude::{expect_context, untrack, use_context, Set, WithUntracked},
 };
 use leptos_router::hooks::use_navigate;
 use shared_types::ConversationKey;
@@ -37,10 +45,15 @@ fn handle_lobby_snapshot(snapshot: LobbySnapshotPayload) {
 }
 
 fn handle_user_settings(update: UserSettingsUpdate) {
+    if matches!(update, UserSettingsUpdate::ChatMuted) {
+        expect_context::<AuthContext>().refresh_account();
+        return;
+    }
     let Some(chat) = use_context::<Chat>() else {
         return;
     };
     match update {
+        UserSettingsUpdate::ChatMuted => {}
         UserSettingsUpdate::BlockedUser { user_id, blocked } => {
             chat.apply_blocked_user_update(user_id, blocked);
         }
@@ -118,6 +131,16 @@ pub fn handle_response(m: ServerResult) {
                     client_id,
                     error,
                 } => {
+                    if error == ChatSendError::Muted {
+                        let auth = expect_context::<AuthContext>();
+                        if !auth.user.with_untracked(|account| {
+                            account
+                                .as_ref()
+                                .is_some_and(|account| account.user.chat_muted)
+                        }) {
+                            auth.refresh_account();
+                        }
+                    }
                     if let Some(chat) = use_context::<Chat>() {
                         chat.handle_failed_chat_send(key, client_id, error.into());
                     }

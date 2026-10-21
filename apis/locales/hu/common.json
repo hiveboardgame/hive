@@ -1,4 +1,5 @@
 {
+    "muted_by_admin": "Egy adminisztrátor elnémította",
     "yes": "Igen",
     "no": "Nem",
     "cancel": "Mégse",
@@ -132,6 +133,8 @@
         "title": "Fiók"
     },
     "admin": {
+        "chat_moderation": "Csevegés moderálása",
+        "chat_muted": "Csevegés elnémítva",
         "send_global_warning": "Általános figyelmeztetés küldése",
         "edit_banner": "Sáv szerkesztése",
         "open_ws_telemetry_dashboard": "WS-telemetria megnyitása",
