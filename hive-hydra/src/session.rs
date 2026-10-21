@@ -23,7 +23,8 @@ use tracing::{debug, error, info, warn};
 type Socket = WebSocketStream<MaybeTlsStream<TcpStream>>;
 
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
-// The server sends a protocol ping every 5 s, so this much silence means the connection is dead.
+// The server sends a protocol ping about every second, so this much silence means the connection
+// is dead.
 const SILENCE_TIMEOUT: Duration = Duration::from_secs(15);
 // Pushes cover every move and challenge; this retries turns whose engine run failed and
 // challenges whose accept was refused.

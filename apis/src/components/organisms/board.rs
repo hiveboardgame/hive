@@ -77,6 +77,8 @@ const ZOOM_IN_LIMIT: f32 = 150.0;
 const ZOOM_OUT_LIMIT_MIN: f32 = 2500.0;
 const ZOOM_OUT_LIMIT_FACTOR: f32 = 2.5;
 const BOARD_FIT_PADDING: f32 = 24.0;
+// The timer confirms a placed piece, and chatting or switching side tabs leaves it to be confirmed.
+const KEEPS_SELECTION: &str = "#timer, #chat, #chat-menu, [data-keeps-board-selection]";
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct ViewportSelection {
@@ -763,12 +765,12 @@ pub fn Board(
         if annotation_drawing_on(annotations) || interaction.is_click_swallowed() {
             return;
         }
-        let clicked_timer = event
+        let keeps_selection = event
             .target()
             .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
-            .and_then(|el| el.closest("#timer").ok().flatten())
+            .and_then(|el| el.closest(KEEPS_SELECTION).ok().flatten())
             .is_some();
-        if !clicked_timer {
+        if !keeps_selection {
             interaction.cancel_selection();
         }
     });

@@ -212,6 +212,7 @@ async fn only_black_can_berserk_after_white_has_moved() {
             expected_turn: Some(game.turn.try_into().unwrap()),
             turn: Turn::Move("wA1".parse().unwrap(), Position::initial_spawn_position()),
             compensation: 0.0,
+            arrived_at: None,
         },
         &mut conn,
     )

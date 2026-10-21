@@ -38,6 +38,8 @@ pub enum ClientRequest {
     Challenge(ChallengeAction),
     Game { game_id: GameId, action: GameAction },
     NotificationSeen { game_id: GameId },
+    // Bots written to the first bot API answer every Ping with one. Ignored, but accepted so
+    // they are not told their frame is malformed every second.
     Pong(u64),
     Resync,
     Schedule(ScheduleAction),
@@ -120,6 +122,14 @@ mod tests {
                 },
             }),
             r#"{"Game":{"game_id":"abc","action":{"PlayAt":{"turn":12,"notation":"wA1 -bQ"}}}}"#
+        );
+    }
+
+    #[test]
+    fn a_pong_from_a_bot_written_to_the_first_api_still_decodes() {
+        assert_eq!(
+            serde_json::from_str::<ClientRequest>(r#"{"Pong":7}"#).expect("decodes"),
+            ClientRequest::Pong(7)
         );
     }
 
@@ -214,7 +224,6 @@ mod tests {
             }),
             r#"{"Game":{"game_id":"abc","action":"Berserk"}}"#
         );
-        assert_eq!(json(&ClientRequest::Pong(123)), r#"{"Pong":123}"#);
 
         let result = |result: &ServerResult| serde_json::to_string(result).expect("encodes");
         assert_eq!(
