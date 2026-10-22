@@ -144,7 +144,7 @@ main() {
         ensure_port_free "$name"
         [ "$name" = "$MAIN_NAME" ] || write_env "$name" "$WT_BRANCH" "$WT_PORT"
     fi
-    export_instance_env "$name" "$WT_PORT" "$WT_DB" "$WT_TEST_DB"
+    export_instance_env "$name" "$WT_PORT" "$WT_DB" "$WT_TEST_DB" "$WT_DIR"
     cd "$WT_DIR"
 
     if [ "$mode" = shell ]; then

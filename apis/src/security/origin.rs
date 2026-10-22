@@ -24,8 +24,10 @@ impl ApplicationOrigin {
     }
 
     pub fn with_development_origins(mut self, additional: &str) -> Result<Self, &'static str> {
+        // A local shell can supply development settings to a release binary. Keep
+        // its configured origin restriction without enabling those extra origins.
         if !cfg!(debug_assertions) {
-            return Err("Additional application origins are only permitted in development builds");
+            return Ok(self);
         }
         let Self::Configured(origins) = &mut self else {
             return Err("APP_ORIGIN must be configured before adding development origins");
@@ -267,10 +269,6 @@ mod tests {
         let shared = configured.clone().with_development_origins(
             "http://tournaments.192-168-1-20.sslip.io:8080,http://tournaments.100-90-80-70.sslip.io:8080",
         );
-        if !cfg!(debug_assertions) {
-            assert!(shared.is_err());
-            return;
-        }
         let shared = shared.unwrap();
         for origin in [
             "http://tournaments.localhost:8080",
@@ -282,7 +280,13 @@ mod tests {
                     .app_data(Data::new(shared.clone()))
                     .insert_header(("Origin", origin))
                     .to_http_request();
-                assert!(validate_request_origin(&req, websocket).is_ok(), "{origin}");
+                let allowed =
+                    origin == "http://tournaments.localhost:8080" || cfg!(debug_assertions);
+                assert_eq!(
+                    validate_request_origin(&req, websocket).is_ok(),
+                    allowed,
+                    "{origin}"
+                );
             }
         }
         for origin in [
@@ -314,14 +318,14 @@ mod tests {
     #[test]
     fn shared_origins_preserve_websocket_origin_and_http_referer_checks() {
         let configured = ApplicationOrigin::parse("http://tournaments.localhost:8080").unwrap();
+        if !cfg!(debug_assertions) {
+            return;
+        }
         for invalid in ["", "http://example.test/path", "http://example.test,"] {
             assert!(configured
                 .clone()
                 .with_development_origins(invalid)
                 .is_err());
-        }
-        if !cfg!(debug_assertions) {
-            return;
         }
         let shared = configured
             .with_development_origins("http://tournaments.192-168-1-20.sslip.io:8080")

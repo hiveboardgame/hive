@@ -79,7 +79,7 @@ async fn main() -> std::io::Result<()> {
     };
     if let Ok(additional) = std::env::var("APP_DEV_ORIGINS") {
         public_origin = public_origin.with_development_origins(&additional)
-            .expect("APP_DEV_ORIGINS requires a development build and explicit HTTP(S) origins");
+            .expect("APP_DEV_ORIGINS must contain explicit HTTP(S) origins in development builds");
     }
     let public_origin = Data::new(public_origin);
     let routes = generate_route_list(App);

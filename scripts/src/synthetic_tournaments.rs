@@ -26,7 +26,7 @@ use db_lib::{
 use diesel::{
     prelude::*,
     sql_query,
-    sql_types::{BigInt, Integer, Text, Uuid as SqlUuid},
+    sql_types::{BigInt, Integer, Nullable, Text, Uuid as SqlUuid},
 };
 use diesel_async::{AsyncConnection, RunQueryDsl, SimpleAsyncConnection};
 use hive_lib::{Color, Direction, GameControl, GameStatus, Position, Turn};
@@ -77,14 +77,17 @@ use shared_types::{
 };
 use std::{
     collections::{HashMap, HashSet},
+    env,
+    ffi::OsString,
     num::{NonZeroU16, NonZeroU32},
+    path::{Path, PathBuf},
+    process::Command as ProcessCommand,
 };
 use tournamint::swiss::SwissLeg;
 use uuid::Uuid;
 
 pub const ACCOUNT_PREFIX: &str = "zz_qa_t_";
 pub const QA_PASSWORD: &str = "hivegame";
-const ALLOWED_DATABASE: &str = "hive-local";
 const FIXTURE_DESCRIPTION: &str = "Synthetic tournament for local manual QA.";
 const QA_PLAYER_COUNT: usize = 160;
 const QA_ACCOUNT_COUNT: usize = QA_PLAYER_COUNT + 2;
@@ -111,9 +114,45 @@ const DUE_TRANSITION_SECONDS: i64 = 65;
 const OPERATOR_LOCK_KEY: i64 = 0x4849_5645_5141_5631;
 
 #[derive(QueryableByName)]
-struct DatabaseName {
+struct DatabaseIdentity {
     #[diesel(sql_type = Text)]
     name: String,
+    #[diesel(sql_type = Nullable<Text>)]
+    marker: Option<String>,
+}
+
+struct WorktreeSelection {
+    name: String,
+    root: PathBuf,
+    database: String,
+}
+
+impl WorktreeSelection {
+    fn read(get_env: impl Fn(&str) -> Option<OsString>) -> Result<Self> {
+        let required = |name| {
+            get_env(name)
+                .filter(|value| !value.is_empty())
+                .with_context(|| format!("{name} must be set; reopen 'hive-run <instance> shell'"))
+        };
+        let name = required("HIVE_WORKTREE")?
+            .into_string()
+            .ok()
+            .context("HIVE_WORKTREE must be valid UTF-8")?;
+        let root = PathBuf::from(required("HIVE_WORKTREE_ROOT")?)
+            .canonicalize()
+            .context(
+                "could not resolve the selected worktree root; reopen 'hive-run <instance> shell'",
+            )?;
+        let database = required("HIVE_WORKTREE_DB")?
+            .into_string()
+            .ok()
+            .context("HIVE_WORKTREE_DB must be valid UTF-8")?;
+        Ok(Self {
+            name,
+            root,
+            database,
+        })
+    }
 }
 
 #[derive(QueryableByName)]
@@ -217,7 +256,7 @@ pub async fn seed(
         );
     }
     println!(
-        "Cleanup: cargo run -p script -- synthetic-tournaments cleanup --confirm-database-name {ALLOWED_DATABASE}"
+        "Cleanup: cargo run -p script -- synthetic-tournaments cleanup --confirm-database-name {confirmed}"
     );
     Ok(())
 }
@@ -784,20 +823,148 @@ async fn verify_cleanup(conn: &mut DbConn<'_>) -> Result<()> {
     Ok(())
 }
 
-async fn confirm_local_database(conn: &mut DbConn<'_>, confirmed: &str) -> Result<()> {
+fn checkout_git(directory: &Path) -> ProcessCommand {
+    let mut command = ProcessCommand::new("git");
+    command
+        .current_dir(directory)
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_WORK_TREE")
+        .env_remove("GIT_COMMON_DIR")
+        .env_remove("GIT_INDEX_FILE")
+        .env_remove("GIT_OBJECT_DIRECTORY")
+        .env_remove("GIT_ALTERNATE_OBJECT_DIRECTORIES");
+    command
+}
+
+fn current_checkout_roots(directory: &Path) -> Result<(PathBuf, PathBuf)> {
+    let output = checkout_git(directory)
+        .args([
+            "rev-parse",
+            "--path-format=absolute",
+            "--show-toplevel",
+            "--absolute-git-dir",
+            "--git-common-dir",
+        ])
+        .output()
+        .context("could not run Git to identify the current checkout")?;
     ensure!(
-        confirmed == ALLOWED_DATABASE,
-        "refusing: --confirm-database-name must be exactly {ALLOWED_DATABASE:?}"
+        output.status.success(),
+        "could not identify the current checkout; run synthetic-tournaments from the selected Git checkout"
     );
-    let actual = sql_query("select current_database()::text as name")
-        .get_result::<DatabaseName>(conn)
-        .await
-        .context("could not read current_database()")?;
+    let identity =
+        String::from_utf8(output.stdout).context("Git checkout paths must be valid UTF-8")?;
+    let mut paths = identity.lines();
+    let root = Path::new(
+        paths
+            .next()
+            .context("Git did not report the checkout root")?,
+    )
+    .canonicalize()
+    .context("could not resolve the current checkout root")?;
+    let git_dir = Path::new(
+        paths
+            .next()
+            .context("Git did not report its metadata directory")?,
+    )
+    .canonicalize()
+    .context("could not resolve the Git metadata directory")?;
+    let common = Path::new(
+        paths
+            .next()
+            .context("Git did not report its common directory")?,
+    )
+    .canonicalize()
+    .context("could not resolve the common Git directory")?;
+    if git_dir == common {
+        return Ok((root.clone(), root));
+    }
+    let output = checkout_git(directory)
+        .args(["worktree", "list", "--porcelain", "-z"])
+        .output()
+        .context("could not list Git worktrees")?;
+    ensure!(output.status.success(), "could not list Git worktrees");
+    let worktrees =
+        String::from_utf8(output.stdout).context("Git checkout paths must be valid UTF-8")?;
+    // Git lists main first, but separate metadata can make that entry a Git directory.
+    let main = worktrees
+        .split('\0')
+        .find_map(|field| field.strip_prefix("worktree "))
+        .context("Git did not report the main checkout root")?;
+    let main = Path::new(main)
+        .canonicalize()
+        .context("could not resolve the main checkout root")?;
     ensure!(
-        actual.name == ALLOWED_DATABASE && actual.name == confirmed,
-        "refusing: connected database is {:?}, expected explicitly confirmed local database {:?}",
+        main.join(".git").exists(),
+        "cannot resolve the main checkout from this linked worktree: Git reports a metadata directory instead of a checkout; use a layout where 'git worktree list' reports the main checkout"
+    );
+    Ok((root, main))
+}
+
+async fn confirm_local_database(conn: &mut DbConn<'_>, confirmed: &str) -> Result<()> {
+    let selected = WorktreeSelection::read(|name| env::var_os(name))?;
+    let (checkout_root, main_root) = current_checkout_roots(
+        &env::current_dir().context("could not read the current directory")?,
+    )?;
+    let actual = sql_query(
+        "select datname::text as name, shobj_description(oid, 'pg_database') as marker \
+         from pg_database where datname = current_database()",
+    )
+    .get_result::<DatabaseIdentity>(conn)
+    .await
+    .context("could not read the connected database's identity")?;
+    validate_local_database(&selected, &checkout_root, &main_root, confirmed, &actual)
+}
+
+fn validate_local_database(
+    selected: &WorktreeSelection,
+    checkout_root: &Path,
+    main_root: &Path,
+    confirmed: &str,
+    actual: &DatabaseIdentity,
+) -> Result<()> {
+    ensure!(
+        selected.root == checkout_root,
+        "refusing: selected worktree differs from the current checkout; reopen 'hive-run <instance> shell'"
+    );
+    let is_main = checkout_root == main_root;
+    let expected_instance = if is_main {
+        "hive"
+    } else {
+        checkout_root
+            .file_name()
+            .and_then(|name| name.to_str())
+            .context("could not determine this checkout's instance name")?
+    };
+    ensure!(
+        selected.name == expected_instance,
+        "refusing: selected instance does not match the current checkout; reopen 'hive-run <instance> shell'"
+    );
+    ensure!(
+        !is_main || selected.database == "hive-local",
+        "refusing: the main checkout's development database must be hive-local"
+    );
+    ensure!(
+        confirmed == selected.database && actual.name == selected.database,
+        "refusing: selected development database is {:?}, confirmation is {confirmed:?}, connected database is {:?}",
+        selected.database,
         actual.name,
-        ALLOWED_DATABASE,
+    );
+    let expected_marker = format!(
+        "hive-worktree:{}:{}:dev",
+        main_root.display(),
+        selected.name
+    );
+    ensure!(
+        is_main || actual.marker.is_some(),
+        "refusing: connected database has no development ownership marker. Verify this is this checkout's local development database, then run the following SQL in psql \"$DATABASE_URL\":\nCOMMENT ON DATABASE \"{}\" IS '{}';",
+        actual.name.replace('"', "\"\""),
+        expected_marker.replace('\'', "''"),
+    );
+    // Only hive-local may predate managed ownership markers in the main checkout.
+    ensure!(
+        actual.marker.as_deref() == Some(expected_marker.as_str())
+            || (is_main && actual.marker.is_none()),
+        "refusing: connected database has a conflicting ownership marker; do not overwrite another instance's ownership"
     );
     Ok(())
 }
@@ -3267,6 +3434,7 @@ mod tests {
         get_conn,
         schema::{ratings, tournaments_organizers, users},
     };
+    use std::fs;
 
     mod test_database {
         include!(concat!(
@@ -3281,6 +3449,242 @@ mod tests {
             env!("CARGO_MANIFEST_DIR"),
             "/../db/tests/common/tournament.rs"
         ));
+    }
+
+    #[test]
+    fn checkout_identity_comes_from_the_runtime_directory() {
+        let temporary = tempfile::tempdir().unwrap();
+        let root = temporary.path().join("checkout");
+        let nested = root.join("nested");
+        fs::create_dir_all(&nested).unwrap();
+        let initialized = checkout_git(temporary.path())
+            .arg("init")
+            .arg("--quiet")
+            .arg(&root)
+            .output()
+            .unwrap();
+        assert!(initialized.status.success());
+        let (checkout, main) = current_checkout_roots(&nested).unwrap();
+        let expected = root.canonicalize().unwrap();
+        assert_eq!(checkout, expected);
+        assert_eq!(main, expected);
+    }
+
+    #[test]
+    fn checkout_identity_resolves_linked_worktrees_and_separate_main_metadata() {
+        for separate in [false, true] {
+            let temporary = tempfile::tempdir().unwrap();
+            let root = temporary.path().join("checkout");
+            let metadata = temporary.path().join("metadata");
+            let linked = temporary.path().join("linked");
+            let mut init = checkout_git(temporary.path());
+            init.args(["init", "--quiet"]);
+            if separate {
+                init.arg("--separate-git-dir").arg(&metadata);
+            }
+            assert!(init.arg(&root).status().unwrap().success());
+            assert!(checkout_git(&root)
+                .args([
+                    "-c",
+                    "user.name=Fixture",
+                    "-c",
+                    "user.email=fixture@example.test",
+                    "-c",
+                    "commit.gpgsign=false",
+                    "-c",
+                    "core.hooksPath=/dev/null",
+                    "commit",
+                    "--quiet",
+                    "--allow-empty",
+                    "-m",
+                    "fixture"
+                ])
+                .status()
+                .unwrap()
+                .success());
+            assert!(checkout_git(&root)
+                .args([
+                    "-c",
+                    "core.hooksPath=/dev/null",
+                    "worktree",
+                    "add",
+                    "--quiet",
+                    "--detach"
+                ])
+                .arg(&linked)
+                .status()
+                .unwrap()
+                .success());
+            let expected_main = root.canonicalize().unwrap();
+            assert_eq!(
+                current_checkout_roots(&root).unwrap(),
+                (expected_main.clone(), expected_main.clone())
+            );
+            let nested = linked.join("nested");
+            fs::create_dir(&nested).unwrap();
+            let identity = current_checkout_roots(&nested);
+            if separate {
+                // This Git layout has no backlink from the shared metadata to main.
+                assert!(identity.is_err());
+            } else {
+                assert_eq!(
+                    identity.unwrap(),
+                    (linked.canonicalize().unwrap(), expected_main)
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn main_checkout_refuses_other_databases_even_when_selection_matches() {
+        let main = Path::new("/main");
+        for database in [
+            "hive-test",
+            "hive-template",
+            "hive-template-legacy",
+            "hive-other",
+        ] {
+            let selected = WorktreeSelection {
+                name: "hive".into(),
+                root: main.into(),
+                database: database.into(),
+            };
+            for marker in [None, Some("hive-worktree:/main:hive:dev".into())] {
+                let actual = DatabaseIdentity {
+                    name: database.into(),
+                    marker,
+                };
+                assert!(validate_local_database(&selected, main, main, database, &actual).is_err());
+            }
+        }
+    }
+
+    #[test]
+    fn synthetic_writes_require_confirmation_and_the_selected_database() {
+        let main = Path::new("/main");
+        for (name, root, database, marker) in [
+            ("hive", main, "hive-local", None),
+            (
+                "example",
+                Path::new("/worktrees/example"),
+                "hive-example",
+                Some("hive-worktree:/main:example:dev"),
+            ),
+        ] {
+            let selected = WorktreeSelection {
+                name: name.into(),
+                root: root.into(),
+                database: database.into(),
+            };
+            let mut actual = DatabaseIdentity {
+                name: database.into(),
+                marker: marker.map(String::from),
+            };
+            assert!(validate_local_database(&selected, root, main, database, &actual).is_ok());
+            for (confirmed, connected) in [
+                ("hive-other", database),
+                (database, "hive-other"),
+                ("hive-other", "hive-other"),
+                ("hive-hive", "hive-hive"),
+                ("hive-test", "hive-test"),
+                ("hive-example-test", "hive-example-test"),
+                ("hive-template", "hive-template"),
+            ] {
+                actual.name = connected.into();
+                assert!(
+                    validate_local_database(&selected, root, main, confirmed, &actual).is_err()
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn synthetic_writes_require_a_matching_development_marker() {
+        let main = Path::new("/main");
+        let root = Path::new("/worktrees/regression-test");
+        let selected = WorktreeSelection {
+            name: "regression-test".into(),
+            root: root.into(),
+            database: "hive-regression-test".into(),
+        };
+        for marker in [
+            None,
+            Some("hive-worktree:/main:regression:test"),
+            Some("hive-worktree:/main:regression-test:test"),
+            Some("hive-worktree:/main:other:dev"),
+            Some("hive-worktree:/other:regression-test:dev"),
+        ] {
+            let actual = DatabaseIdentity {
+                name: selected.database.clone(),
+                marker: marker.map(String::from),
+            };
+            assert!(
+                validate_local_database(&selected, root, main, &selected.database, &actual)
+                    .is_err()
+            );
+        }
+        let actual = DatabaseIdentity {
+            name: selected.database.clone(),
+            marker: Some("hive-worktree:/main:regression-test:dev".into()),
+        };
+        assert!(
+            validate_local_database(&selected, root, main, &selected.database, &actual).is_ok()
+        );
+    }
+
+    #[test]
+    fn synthetic_writes_reject_a_mismatched_checkout_or_instance() {
+        let main = Path::new("/main");
+        let root = Path::new("/worktrees/example");
+        for (name, selected_root, checkout_root) in [
+            ("example", Path::new("/sibling/example"), root),
+            ("hive", root, root),
+            ("other", root, root),
+            ("example", main, main),
+        ] {
+            let actual = DatabaseIdentity {
+                name: "hive-example".into(),
+                marker: Some(format!("hive-worktree:/main:{name}:dev")),
+            };
+            let selected = WorktreeSelection {
+                name: name.into(),
+                root: selected_root.into(),
+                database: actual.name.clone(),
+            };
+            assert!(
+                validate_local_database(&selected, checkout_root, main, &actual.name, &actual)
+                    .is_err()
+            );
+        }
+    }
+
+    #[test]
+    fn synthetic_writes_require_a_complete_worktree_environment() {
+        let root = env::temp_dir();
+        let variables = [
+            ("HIVE_WORKTREE", OsString::from("example")),
+            ("HIVE_WORKTREE_ROOT", root.into_os_string()),
+            ("HIVE_WORKTREE_DB", OsString::from("hive-example")),
+        ];
+        let read = |missing: Option<&str>, empty: bool| {
+            WorktreeSelection::read(|name| {
+                variables
+                    .iter()
+                    .find(|(key, _)| *key == name)
+                    .and_then(|(_, value)| {
+                        if missing == Some(name) {
+                            empty.then(OsString::new)
+                        } else {
+                            Some(value.clone())
+                        }
+                    })
+            })
+        };
+        assert!(read(None, false).is_ok());
+        for (name, _) in &variables {
+            assert!(read(Some(name), false).is_err());
+            assert!(read(Some(name), true).is_err());
+        }
     }
 
     async fn register_account(id: Uuid, conn: &mut DbConn<'_>) {

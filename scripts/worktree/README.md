@@ -90,6 +90,8 @@ hive-run <name> watch --share
 
 Open the printed LAN or Tailnet URL on a device that can reach your machine.
 Sharing needs DNS that allows private IP addresses and access to the proxy port.
+Additional development origins are ignored in release builds, which accept only
+the configured `APP_ORIGIN`; use the printed proxy URL for those builds.
 To stop sharing, stop the watcher, then run it again without `--share`.
 
 ## Cleanup
