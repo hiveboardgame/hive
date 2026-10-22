@@ -48,6 +48,9 @@ pub fn ResolvedChatWindow(
     conversation: ConversationKey,
     #[prop(optional, into)] composer_mode: Signal<ComposerMode>,
     #[prop(optional)] compact: bool,
+    // The notice follows loaded user data; stale display is acceptable because
+    // every send checks the current mute status in the database.
+    #[prop(optional, into)] muted_peer: Signal<Option<String>>,
 ) -> impl IntoView {
     let chat = expect_context::<Chat>();
     let conversation = StoredValue::new(conversation);
@@ -58,7 +61,7 @@ pub fn ResolvedChatWindow(
             each=move || { Some((chat.session_epoch(), conversation.get_value())).into_iter() }
             key=|(session_epoch, conversation)| (*session_epoch, conversation.clone())
             children=move |(_, conversation)| {
-                view! { <ResolvedChatWindowBody conversation composer_mode compact /> }
+                view! { <ResolvedChatWindowBody conversation composer_mode compact muted_peer /> }
             }
         />
     }
@@ -69,6 +72,7 @@ fn ResolvedChatWindowBody(
     conversation: ConversationKey,
     composer_mode: Signal<ComposerMode>,
     compact: bool,
+    muted_peer: Signal<Option<String>>,
 ) -> impl IntoView {
     let i18n = use_i18n();
     let chat = expect_context::<Chat>();
@@ -401,6 +405,17 @@ fn ResolvedChatWindowBody(
                 scroll_to_latest
                 compact
             />
+            {move || {
+                muted_peer
+                    .get()
+                    .map(|username| {
+                        view! {
+                            <p class="p-2 text-sm ui-warning-notice" role="status">
+                                {t!(i18n, messages.chat.muted_peer_notice, username = username)}
+                            </p>
+                        }
+                    })
+            }}
             <Composer conversation=conversation_handle composer_mode compact visible_thread_error />
         </div>
     }
@@ -418,6 +433,26 @@ pub fn GameChatWindow(#[prop(into)] selected_thread: Signal<GameThread>) -> impl
             .get("nanoid")
             .map(|nanoid| GameId(nanoid.to_string()))
     });
+    let auth = expect_context::<AuthContext>();
+    let response = game_state.game_response();
+    let muted_peer = Signal::derive(move || {
+        if selected_thread.get() != GameThread::Players {
+            return None;
+        }
+        let viewer_id = auth.identity.get().and_then(AuthIdentity::user_id)?;
+        let game_id = route_game_id.get()?;
+        response.with(|response| {
+            let game = response.as_ref().filter(|game| game.game_id == game_id)?;
+            let peer = if game.white_player.uid == viewer_id {
+                &game.black_player
+            } else if game.black_player.uid == viewer_id {
+                &game.white_player
+            } else {
+                return None;
+            };
+            (peer.chat_muted && !peer.deleted).then(|| peer.username.clone())
+        })
+    });
     let conversation = Memo::new(move |_| {
         let game_id = route_game_id.get()?;
         let thread = selected_thread.get();
@@ -433,7 +468,7 @@ pub fn GameChatWindow(#[prop(into)] selected_thread: Signal<GameThread>) -> impl
     view! {
         {move || match conversation.get() {
             Some(conversation) => {
-                Either::Left(view! { <ResolvedChatWindow conversation compact=true /> })
+                Either::Left(view! { <ResolvedChatWindow conversation compact=true muted_peer /> })
             }
             None => {
                 Either::Right(

@@ -1,4 +1,5 @@
 {
+    "muted_by_admin": "Silenziato da un amministratore",
     "yes": "Sì",
     "no": "No",
     "cancel": "Annulla",
@@ -130,6 +131,8 @@
         "title": "Account"
     },
     "admin": {
+        "chat_moderation": "Moderazione della chat",
+        "chat_muted": "Chat silenziata",
         "send_global_warning": "Invia avviso globale",
         "edit_banner": "Modifica banner",
         "open_ws_telemetry_dashboard": "Apri telemetria WS",

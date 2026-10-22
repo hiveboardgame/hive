@@ -25,6 +25,7 @@ use crate::{
         users::{
             self,
             dsl::{
+                chat_muted,
                 deleted as deleted_field,
                 email as email_field,
                 normalized_username,
@@ -301,6 +302,7 @@ pub struct User {
     pub lang: Option<String>,
     pub email_verified: bool,
     pub pending_email: Option<String>,
+    pub chat_muted: bool,
 }
 
 struct RankingGate {
@@ -325,6 +327,19 @@ impl RankingGate {
 }
 
 impl User {
+    pub async fn set_chat_muted(
+        user_id: Uuid,
+        muted: bool,
+        conn: &mut DbConn<'_>,
+    ) -> Result<(), DbError> {
+        diesel::update(users_table.find(user_id).filter(deleted_field.eq(false)))
+            .set(chat_muted.eq(muted))
+            .returning(users::id)
+            .get_result::<Uuid>(conn)
+            .await?;
+        Ok(())
+    }
+
     fn assign_ranks(rows: Vec<(User, Rating)>) -> Vec<(User, Rating, i64)> {
         let mut last_rating: Option<f64> = None;
         let mut last_rank = 0_i64;
@@ -510,10 +525,10 @@ impl User {
     pub async fn find_dm_route_user_by_username(
         username: &str,
         conn: &mut DbConn<'_>,
-    ) -> Result<Option<(Uuid, String, bool)>, DbError> {
+    ) -> Result<Option<(Uuid, String, bool, bool)>, DbError> {
         Ok(users_table
             .filter(normalized_username.eq(username.to_lowercase()))
-            .select((users::id, username_field, deleted_field))
+            .select((users::id, username_field, deleted_field, chat_muted))
             .first(conn)
             .await
             .optional()?)

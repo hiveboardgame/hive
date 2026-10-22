@@ -1,7 +1,7 @@
 use crate::{
     db_error::DbError,
     models::{ChatChannelKind, User},
-    schema::{chat_channels, games},
+    schema::{chat_channels, games, users},
     DbConn,
 };
 use diesel::{
@@ -117,21 +117,40 @@ async fn ensure_direct_peer_exists(
     }
 }
 
-pub async fn load_game_chat_capabilities(
+pub async fn load_game_chat_route_data(
     conn: &mut DbConn<'_>,
     user_id: Uuid,
     game_id: &GameId,
-) -> Result<Option<GameChatCapabilities>, DbError> {
+) -> Result<Option<(GameChatCapabilities, Option<String>)>, DbError> {
     match games::table
         .filter(games::nanoid.eq(&game_id.0))
         .select((games::white_id, games::black_id, games::finished))
         .first::<(Uuid, Uuid, bool)>(conn)
         .await
     {
-        Ok((white_id, black_id, finished)) => Ok(Some(GameChatCapabilities::new(
-            white_id == user_id || black_id == user_id,
-            finished,
-        ))),
+        Ok((white_id, black_id, finished)) => {
+            let peer_id = if white_id == user_id {
+                Some(black_id)
+            } else if black_id == user_id {
+                Some(white_id)
+            } else {
+                None
+            };
+            let muted_peer = if let Some(peer_id) = peer_id {
+                let (username, muted, deleted) = users::table
+                    .find(peer_id)
+                    .select((users::username, users::chat_muted, users::deleted))
+                    .first::<(String, bool, bool)>(conn)
+                    .await?;
+                (muted && !deleted).then_some(username)
+            } else {
+                None
+            };
+            Ok(Some((
+                GameChatCapabilities::new(peer_id.is_some(), finished),
+                muted_peer,
+            )))
+        }
         Err(diesel::result::Error::NotFound) => Ok(None),
         Err(error) => Err(DbError::from(error)),
     }

@@ -32,7 +32,10 @@ fn blocks_mutes_user_action_error(context: &'static str, err: DbError) -> Server
 }
 
 #[cfg(feature = "ssr")]
-async fn dispatch_user_settings_update(user_id: Uuid, update: crate::common::UserSettingsUpdate) {
+pub(super) async fn dispatch_user_settings_update(
+    user_id: Uuid,
+    update: crate::common::UserSettingsUpdate,
+) {
     use crate::{
         common::{ServerMessage, ServerResult},
         websocket::{MessageDestination, WsHub},

@@ -1,6 +1,9 @@
-use crate::{components::molecules::hover_ratings::HoverRating, i18n::*, responses::UserResponse};
+use crate::{
+    components::{atoms::user_badges::UserBadges, molecules::hover_ratings::HoverRating},
+    i18n::*,
+    responses::UserResponse,
+};
 use leptos::{html, prelude::*};
-use leptos_icons::*;
 
 #[component]
 pub fn ProfileLink(
@@ -11,6 +14,7 @@ pub fn ProfileLink(
     username: String,
     patreon: bool,
     bot: bool,
+    chat_muted: bool,
 ) -> impl IntoView {
     let i18n = use_i18n();
     let name_classes = StoredValue::new(format!(
@@ -20,8 +24,6 @@ pub fn ProfileLink(
     let username = StoredValue::new(username);
     let profile_link = StoredValue::new(format!("/@/{}", username.get_value()));
     let hover_show = RwSignal::new(false);
-    let patreon = RwSignal::new(patreon);
-    let bot = RwSignal::new(bot);
     let link_ref = NodeRef::<html::A>::new();
     view! {
         <div class=wrapper_classes.get_value()>
@@ -48,18 +50,9 @@ pub fn ProfileLink(
                     on:mouseleave=move |_| hover_show.set(false)
                     href=move || profile_link.get_value()
                 >
-                    <span class=name_classes
-                        .get_value()>
-                        {username.get_value()} <Show when=patreon>
-                            <Icon
-                                icon=icondata_lu::LuCrown
-                                attr:class="size-2 shrink-0 self-start"
-                            />
-                        </Show> <Show when=bot>
-                            <span class="ml-1 text-[80%]">
-                                {move || t_string!(i18n, common.bot)}
-                            </span>
-                        </Show>
+                    <span class=name_classes.get_value()>
+                        <span class="truncate">{username.get_value()}</span>
+                        <UserBadges patreon bot chat_muted />
                     </span>
                 </a>
                 <Show when=move || user_is_hoverable.with(|u| u.is_some()) && hover_show()>

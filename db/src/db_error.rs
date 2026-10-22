@@ -24,6 +24,8 @@ pub enum DbError {
     InternalError { reason: String },
     #[error("Chat client ID conflicts with an existing message")]
     ChatClientIdConflict,
+    #[error("You have been muted by an admin")]
+    ChatMuted,
     #[error("Invalid input")]
     InvalidInput { info: String, error: String },
     #[error("Invalid username: {0}")]

@@ -1,5 +1,7 @@
 {
     "chat": {
+        "muted_notice": "You have been muted by an admin. To appeal, contact the admins on Discord.",
+        "muted_peer_notice": "{{username}} is muted by an admin and cannot reply.",
         "spectators": "Spectators",
         "players_chat": "Players chat",
         "spectator_chat": "Spectator chat",

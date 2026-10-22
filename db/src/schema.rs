@@ -403,6 +403,7 @@ diesel::table! {
         lang -> Nullable<Text>,
         email_verified -> Bool,
         pending_email -> Nullable<Text>,
+        chat_muted -> Bool,
     }
 }
 

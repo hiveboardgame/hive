@@ -1,5 +1,7 @@
 {
     "chat": {
+        "muted_notice": "Du wurdest von einem Admin stummgeschaltet. Für einen Einspruch kontaktiere die Admins auf Discord.",
+        "muted_peer_notice": "{{username}} wurde von einem Admin stummgeschaltet und kann nicht antworten.",
         "spectators": "Zuschauer",
         "players_chat": "Spieler-Chat",
         "spectator_chat": "Zuschauer-Chat",

@@ -74,6 +74,7 @@ pub(super) fn MessagesResolvedDmView(
     other_user_id: Uuid,
     username: String,
     peer_deleted: bool,
+    peer_chat_muted: bool,
 ) -> impl IntoView {
     let auth = expect_context::<AuthContext>();
     let i18n = use_i18n();
@@ -85,6 +86,10 @@ pub(super) fn MessagesResolvedDmView(
         } else {
             ComposerMode::Enabled
         }
+    });
+    let mute_notice_username = username.clone();
+    let muted_peer = Signal::derive(move || {
+        (peer_chat_muted && !peer_deleted).then(|| mute_notice_username.clone())
     });
     let conversation = ConversationKey::Direct(other_user_id);
     let current_user_id =
@@ -109,6 +114,7 @@ pub(super) fn MessagesResolvedDmView(
                                 <ResolvedChatWindow
                                     conversation=conversation.clone()
                                     composer_mode
+                                    muted_peer
                                 />
                             </div>
                         },
@@ -144,8 +150,12 @@ pub(super) fn MessagesResolvedGameView(
     game_id: GameId,
     thread: GameThread,
     access: GameChatCapabilities,
+    muted_peer: Option<String>,
 ) -> impl IntoView {
     let i18n = use_i18n();
+    let muted_peer = (thread == GameThread::Players)
+        .then_some(muted_peer)
+        .flatten();
     let conversation = ConversationKey::game(&game_id, thread);
     let title = Signal::derive(move || match thread {
         GameThread::Players => t_string!(i18n, messages.chat.players_chat).to_string(),
@@ -158,7 +168,7 @@ pub(super) fn MessagesResolvedGameView(
                 Either::Left(
                     view! {
                         <div class=MESSAGES_CHAT_BODY_CLASS>
-                            <ResolvedChatWindow conversation />
+                            <ResolvedChatWindow conversation muted_peer />
                         </div>
                     },
                 )

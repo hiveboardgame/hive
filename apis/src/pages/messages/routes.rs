@@ -42,6 +42,7 @@ struct DmRouteData {
     other_user_id: Uuid,
     username: String,
     peer_deleted: bool,
+    peer_chat_muted: bool,
 }
 
 #[derive(Clone)]
@@ -184,10 +185,12 @@ pub fn MessagesDmThread() -> impl IntoView {
                     other_user_id,
                     username,
                     peer_deleted,
+                    peer_chat_muted,
                 } => RouteState::Ready(DmRouteData {
                     other_user_id,
                     username,
                     peer_deleted,
+                    peer_chat_muted,
                 }),
                 DmRouteResponse::NotFound => RouteState::Missing,
             })
@@ -210,6 +213,7 @@ pub fn MessagesDmThread() -> impl IntoView {
                         other_user_id=route_data.other_user_id
                         username=route_data.username
                         peer_deleted=route_data.peer_deleted
+                        peer_chat_muted=route_data.peer_chat_muted
                     />
                 }
             }
@@ -274,7 +278,9 @@ pub fn MessagesGameThread(thread: GameThread) -> impl IntoView {
         get_game_chat_route_data(game_id)
             .await
             .map(|response| match response {
-                GameChatRouteResponse::Ready(access) => RouteState::Ready(access),
+                GameChatRouteResponse::Ready { access, muted_peer } => {
+                    RouteState::Ready((access, muted_peer))
+                }
                 GameChatRouteResponse::NotFound => RouteState::Missing,
             })
     });
@@ -287,7 +293,7 @@ pub fn MessagesGameThread(thread: GameThread) -> impl IntoView {
             missing_title=title
             missing_message=failed
             access_denied_message=failed
-            render_ready=|(game_id, thread), access| {
+            render_ready=|(game_id, thread), (access, muted_peer)| {
                 if thread == GameThread::Players && !access.can_read(GameThread::Players)
                     && access.can_read(GameThread::Spectators)
                 {
@@ -303,7 +309,9 @@ pub fn MessagesGameThread(thread: GameThread) -> impl IntoView {
                         },
                     )
                 } else {
-                    Either::Right(view! { <MessagesResolvedGameView game_id thread access /> })
+                    Either::Right(
+                        view! { <MessagesResolvedGameView game_id thread access muted_peer /> },
+                    )
                 }
             }
         />
