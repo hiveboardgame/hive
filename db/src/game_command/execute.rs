@@ -122,11 +122,12 @@ where
         let grace = flag_grace_for(&command, &game);
         let settlement = game.settle_deadline_allowing(checked_at, grace, tc).await?;
         let (checked, newly_terminal, terminal_at) = match settlement {
-            // Played now, a move past its own deadline would leave no time on the clock, while
-            // another move of theirs could still be in time.
+            // The player on move is past their deadline, and whether they lost on time waits on
+            // another move of theirs. Played now, a move would leave no time on the clock, and an
+            // accepted draw or takeback would stand even if that move fails.
             DeadlineSettlement::Awaiting(_)
-                if matches!(command, Command::Move { .. })
-                    && matches!(grace, FlagGrace::Earned { .. }) =>
+                if matches!(grace, FlagGrace::Earned { .. })
+                    && !matches!(command, Command::CheckTime { .. }) =>
             {
                 return Err(DbError::InvalidAction {
                     info: String::from("Another move of yours in this game is still being played"),

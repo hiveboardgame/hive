@@ -106,7 +106,7 @@ pub fn SideboardTabs(
         <div class="flex relative flex-col col-span-2 row-span-4 row-start-2 h-full min-h-0 select-none ui-board-side-panel">
 
             <div>
-                <div class="sticky top-0 z-10 ui-board-tab-list">
+                <div class="sticky top-0 z-10 ui-board-tab-list" data-keeps-board-selection="">
                     <TriggerButton name=TabView::Reserve tab />
                     <TriggerButton name=TabView::History tab />
                     <TriggerButton name=TabView::Chat tab />
@@ -124,18 +124,23 @@ pub fn SideboardTabs(
                 class="flex flex-col flex-grow justify-between h-full min-h-0 max-h-full"
             >
                 <HistoryControls interaction history_board />
-                <Show when=show_buttons>
-                    <GameThreadToggle
-                        selected=game_chat.selected_thread
-                        players_enabled=true
-                        spectators_enabled=Signal::derive(move || {
-                            game_chat.access.get().can_read(GameThread::Spectators)
-                        })
-                        size=GameThreadToggleSize::Compact
-                    />
-                </Show>
-                <div class="flex overflow-hidden flex-col flex-1 min-h-0">
-                    <GameChatWindow selected_thread=game_chat.selected_thread />
+                <div
+                    class="flex overflow-hidden flex-col flex-1 min-h-0"
+                    data-keeps-board-selection=""
+                >
+                    <Show when=show_buttons>
+                        <GameThreadToggle
+                            selected=game_chat.selected_thread
+                            players_enabled=true
+                            spectators_enabled=Signal::derive(move || {
+                                game_chat.access.get().can_read(GameThread::Spectators)
+                            })
+                            size=GameThreadToggleSize::Compact
+                        />
+                    </Show>
+                    <div class="flex overflow-hidden flex-col flex-1 min-h-0">
+                        <GameChatWindow selected_thread=game_chat.selected_thread />
+                    </div>
                 </div>
             </TabsContent>
         </div>

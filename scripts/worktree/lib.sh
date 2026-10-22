@@ -263,7 +263,10 @@ EOT
 }
 
 export_instance_env() {
-    local name=$1 port=$2 db=$3 test_db=$4 origin address additional=""
+    local name=$1 port=$2 db=$3 test_db=$4 origin address
+    # The app also answers on its own port; a page opened there would otherwise load but neither
+    # connect nor log in.
+    local additional="http://localhost:$port,http://127.0.0.1:$port"
     origin=$(origin_for "$name")
     if [ "$name" != "$MAIN_NAME" ]; then
         export DATABASE_URL TEST_DATABASE_URL LEPTOS_SITE_ADDR EMAIL_BASE_URL
@@ -272,7 +275,7 @@ export_instance_env() {
         LEPTOS_SITE_ADDR="127.0.0.1:$port"
         EMAIL_BASE_URL=$origin
     else
-        additional="http://localhost:$port,http://127.0.0.1:$port,http://localhost:$PROXY_PORT,http://127.0.0.1:$PROXY_PORT"
+        additional+=",http://localhost:$PROXY_PORT,http://127.0.0.1:$PROXY_PORT"
     fi
     for address in "${SHARE_IPS[@]}"; do
         additional+="${additional:+,}$(shared_origin_for "$name" "$address")"

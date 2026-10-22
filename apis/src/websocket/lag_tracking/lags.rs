@@ -11,7 +11,6 @@ pub struct Lags {
 #[derive(Debug)]
 pub struct PendingLag {
     key: (Uuid, GameId),
-    lag_seconds: f64,
     pub seconds: f64,
     base: usize,
     inc: usize,
@@ -49,7 +48,6 @@ impl Lags {
             .unwrap_or_else(|| LagTracker::new(base, inc).compensation_for(lag_seconds));
         PendingLag {
             key,
-            lag_seconds,
             seconds,
             base,
             inc,
@@ -62,7 +60,7 @@ impl Lags {
             trackers
                 .entry(pending.key)
                 .or_insert_with(|| LagTracker::new(pending.base, pending.inc))
-                .settle(pending.lag_seconds, refunded.min(pending.seconds));
+                .settle(refunded.min(pending.seconds));
         }
     }
 

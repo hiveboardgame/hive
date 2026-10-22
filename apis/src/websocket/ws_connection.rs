@@ -147,7 +147,7 @@ pub async fn reader_task(
     loop {
         tokio::select! {
             () = requests.closed() => {
-                guard.set_reason(DisconnectReason::PingFail);
+                guard.set_reason(DisconnectReason::HandlerStopped);
                 break;
             }
             _ = hb_interval.tick() => {
@@ -190,7 +190,7 @@ pub async fn reader_task(
                     };
                     probes.reader_stalled(last_hb.elapsed());
                     if !queued {
-                        guard.set_reason(DisconnectReason::PingFail);
+                        guard.set_reason(DisconnectReason::HandlerStopped);
                         break;
                     }
                 }
@@ -209,7 +209,7 @@ pub async fn reader_task(
                     let queued = requests.send(incoming).await.is_ok();
                     probes.reader_stalled(last_hb.elapsed());
                     if !queued {
-                        guard.set_reason(DisconnectReason::PingFail);
+                        guard.set_reason(DisconnectReason::HandlerStopped);
                         break;
                     }
                 }
@@ -222,9 +222,12 @@ pub async fn reader_task(
     }
 
     drop(requests);
+    // Others see the socket gone at once, while the requests it already sent still run; the guard
+    // then scrubs whatever they subscribed it to.
+    hub.on_disconnect(socket.socket_id, current_identity(&identity));
+    let _ = session.close(None).await;
     let _ = handling.await;
     drop(guard);
-    let _ = session.close(None).await;
 }
 
 fn probe_delay() -> Duration {
@@ -1236,25 +1239,28 @@ mod tests {
     }
 
     // A real socket, so frames go through actix-ws: unit tests cannot see the reader loop's wiring.
+    async fn hub_without_database() -> std::sync::Arc<crate::websocket::WsHub> {
+        crate::websocket::WsHub::new(
+            std::sync::Arc::new(crate::websocket::WebsocketData::default()),
+            unreachable_pool().await,
+        )
+    }
+
     async fn serve_reader(
         socket_id: Uuid,
         user: shared_types::SimpleUser,
-        data: std::sync::Arc<crate::websocket::WebsocketData>,
+        hub: std::sync::Arc<crate::websocket::WsHub>,
         tcp_rtt: Option<Duration>,
     ) -> std::net::SocketAddr {
         use super::{reader_task, Deps};
         use crate::{
             api::v1::auth::jwt_secret::JwtSecret,
-            websocket::{
-                messages::{SocketFormat, SocketTx},
-                ws_hub::WsHub,
-            },
+            websocket::messages::{SocketFormat, SocketTx},
         };
         use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
         use std::sync::Arc;
 
-        let pool = unreachable_pool().await;
-        let hub = WsHub::new(data.clone(), pool.clone());
+        let (data, pool) = (Arc::clone(&hub.data), hub.pool.clone());
         let server = HttpServer::new(move || {
             let (hub, data, pool, user) = (hub.clone(), data.clone(), pool.clone(), user.clone());
             App::new().route(
@@ -1362,15 +1368,15 @@ mod tests {
 
     #[actix_web::test]
     async fn protocol_pongs_measure_their_socket_until_it_closes() {
-        use crate::websocket::WebsocketData;
         use std::{io::Write, sync::Arc};
 
         const NETWORK_DELAY: Duration = Duration::from_millis(100);
         const TCP_RTT: Duration = Duration::from_millis(40);
 
-        let data = Arc::new(WebsocketData::default());
+        let hub = hub_without_database().await;
+        let data = Arc::clone(&hub.data);
         let socket_id = Uuid::new_v4();
-        let addr = serve_reader(socket_id, anonymous(), data.clone(), Some(TCP_RTT)).await;
+        let addr = serve_reader(socket_id, anonymous(), hub, Some(TCP_RTT)).await;
 
         let client = tokio::task::spawn_blocking(move || {
             use std::io::Read;
@@ -1427,30 +1433,32 @@ mod tests {
         assert!(forgotten, "a closed socket leaves no lag state behind");
     }
 
-    // The unreachable pool keeps the first request waiting for a connection far longer than the
-    // client's read timeout.
+    // The unreachable pool keeps it waiting for a connection far longer than the client's read
+    // timeout.
+    fn join_waiting_for_the_pool() -> Vec<u8> {
+        serde_json::to_vec(&ClientRequest::Game {
+            game_id: GameId("waiting-for-the-pool".to_string()),
+            action: crate::common::GameAction::Join,
+        })
+        .expect("the request encodes")
+    }
+
     #[actix_web::test]
     async fn frames_behind_a_request_still_being_handled_are_read() {
-        use crate::{common::GameAction, websocket::WebsocketData};
-        use std::{io::Write, sync::Arc};
+        use std::io::Write;
 
         let addr = serve_reader(
             Uuid::new_v4(),
             anonymous(),
-            Arc::new(WebsocketData::default()),
+            hub_without_database().await,
             None,
         )
         .await;
-        let join = serde_json::to_vec(&ClientRequest::Game {
-            game_id: GameId("waiting-for-the-pool".to_string()),
-            action: GameAction::Join,
-        })
-        .expect("the request encodes");
 
         tokio::task::spawn_blocking(move || {
             let mut stream = upgraded(addr);
             stream
-                .write_all(&masked(0x1, &join))
+                .write_all(&masked(0x1, &join_waiting_for_the_pool()))
                 .expect("sends a request");
             stream
                 .write_all(&masked(0x9, b"behind"))
@@ -1459,6 +1467,48 @@ mod tests {
         })
         .await
         .expect("the ping is answered while the request still waits");
+    }
+
+    #[actix_web::test]
+    async fn a_closed_socket_is_gone_while_its_requests_still_wait() {
+        use std::{io::Write, sync::Arc};
+
+        let player = shared_types::SimpleUser {
+            authed: true,
+            ..anonymous()
+        };
+        let user_id = player.user_id;
+        let hub = hub_without_database().await;
+        let addr = serve_reader(Uuid::new_v4(), player, Arc::clone(&hub), None).await;
+
+        let client_hub = Arc::clone(&hub);
+        tokio::task::spawn_blocking(move || {
+            let mut stream = upgraded(addr);
+            stream
+                .write_all(&masked(0x1, &join_waiting_for_the_pool()))
+                .expect("sends a request");
+            stream
+                .write_all(&masked(0x9, b"queued"))
+                .expect("pings the server");
+            await_pong(&mut stream, b"queued");
+            assert_eq!(client_hub.socket_count(user_id), 1);
+            stream.write_all(&masked(0x8, &[])).expect("closes");
+        })
+        .await
+        .expect("the client thread finishes");
+
+        let mut gone = false;
+        for _ in 0..100 {
+            if hub.socket_count(user_id) == 0 {
+                gone = true;
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+        assert!(
+            gone,
+            "the socket must not stay registered behind a waiting request"
+        );
     }
 
     #[test]

@@ -88,12 +88,13 @@ pub enum DisconnectReason {
     Timeout = 1,
     PingFail = 2,
     StreamErr = 3,
+    HandlerStopped = 4,
 }
 
-pub const DISCONNECT_REASON_COUNT: usize = 4;
+pub const DISCONNECT_REASON_COUNT: usize = 5;
 
 const _: () = {
-    assert!((DisconnectReason::StreamErr as usize) == DISCONNECT_REASON_COUNT - 1);
+    assert!((DisconnectReason::HandlerStopped as usize) == DISCONNECT_REASON_COUNT - 1);
 };
 
 #[derive(Debug, Clone, Copy)]

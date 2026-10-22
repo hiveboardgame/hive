@@ -1,9 +1,7 @@
-mod decaying_stats;
 mod lag_tracker;
 mod lags;
 mod probes;
 mod socket_lags;
-mod stats;
 
 pub use lags::{Lags, PendingLag};
 pub use probes::Probes;

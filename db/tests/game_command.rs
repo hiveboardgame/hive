@@ -809,7 +809,7 @@ async fn a_received_move_is_not_flagged_by_another_command_of_its_player() {
     assert!(matches!(error, DbError::InvalidAction { .. }), "{error:?}");
     drop(late);
 
-    let outcome = execute(
+    let error = execute(
         game.id,
         Command::Control {
             user_id: white.id,
@@ -818,11 +818,15 @@ async fn a_received_move_is_not_flagged_by_another_command_of_its_player() {
         &mut conn,
     )
     .await
-    .expect("the offer is processed");
-    let Outcome::Applied { game: offered, .. } = outcome else {
-        panic!("white's move received in time is still to be played: {outcome:?}")
-    };
-    assert!(!offered.finished);
+    .expect_err("the offer waits for white's move");
+    assert!(matches!(error, DbError::InvalidAction { .. }), "{error:?}");
+    let waiting = Game::find_by_uuid(&game.id, &mut conn)
+        .await
+        .expect("reload the game");
+    assert!(
+        !waiting.finished,
+        "white's move received in time is still to be played"
+    );
 
     let outcome = move_arriving(&game, &white, saved_at, 0.1, &mut conn).await;
     drop(saved);
@@ -830,6 +834,74 @@ async fn a_received_move_is_not_flagged_by_another_command_of_its_player() {
         panic!("the earlier move is saved by its compensation: {outcome:?}")
     };
     assert_eq!(moved.white_time_left, Some(SECOND / 20));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn an_expired_player_cannot_accept_while_a_move_of_theirs_is_unresolved() {
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.expect("get connection");
+    for (label, request, accept) in [
+        (
+            "rcv_draw",
+            GameControl::DrawOffer(Color::Black),
+            GameControl::DrawAccept(Color::White),
+        ),
+        (
+            "rcv_takeback",
+            GameControl::TakebackRequest(Color::Black),
+            GameControl::TakebackAccept(Color::White),
+        ),
+    ] {
+        let last_move = Utc::now().trunc_subsecs(3) - ChronoDuration::milliseconds(60_200);
+        let (game, white) =
+            minute_game_switched_at(label, TimeMode::RealTime, last_move, &mut conn).await;
+        let deadline = last_move + ChronoDuration::seconds(60);
+        let received = ReceivedMove::record(
+            &game.nanoid,
+            white.id,
+            deadline + ChronoDuration::milliseconds(50),
+        );
+        execute(
+            game.id,
+            Command::Control {
+                user_id: game.black_id,
+                control: request,
+            },
+            &mut conn,
+        )
+        .await
+        .expect("black asks while white's move could still save white");
+        let accepting = || Command::Control {
+            user_id: white.id,
+            control: accept,
+        };
+
+        let error = execute(game.id, accepting(), &mut conn)
+            .await
+            .expect_err("white's acceptance waits for white's move");
+        assert!(
+            matches!(error, DbError::InvalidAction { .. }),
+            "{label}: {error:?}"
+        );
+        let waiting = Game::find_by_uuid(&game.id, &mut conn)
+            .await
+            .expect("reload the game");
+        assert!(!waiting.finished, "{label}");
+        assert_eq!(waiting.white_time_left, game.white_time_left, "{label}");
+
+        drop(received);
+        let outcome = execute(game.id, accepting(), &mut conn)
+            .await
+            .expect("the acceptance is processed");
+        let Outcome::TimedOut { game: flagged, .. } = outcome else {
+            panic!("{label}: with that move gone, white has lost on time: {outcome:?}")
+        };
+        assert_eq!(
+            flagged.conclusion,
+            Conclusion::Timeout.to_string(),
+            "{label}"
+        );
+    }
 }
 
 async fn settled(game: &Game, conn: &mut DbConn<'_>) -> Game {

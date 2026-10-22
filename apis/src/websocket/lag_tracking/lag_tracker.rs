@@ -1,16 +1,8 @@
-use crate::websocket::lag_tracking::{decaying_stats::DecayingStats, stats::Stats};
-
 #[derive(Clone, Debug)]
 pub struct LagTracker {
     pub quota_gain: f64,
     pub quota: f64,
     pub quota_max: f64,
-    pub lag_estimator: Option<DecayingStats>,
-    pub uncomp_stats: Stats,
-    pub lag_stats: Stats,
-    pub comp_est_sq_err: f64,
-    pub comp_est_overs: f64,
-    pub comp_estimate: Option<f64>,
 }
 
 impl LagTracker {
@@ -21,12 +13,6 @@ impl LagTracker {
             quota_gain,
             quota: quota_gain * 3.0,
             quota_max: quota_gain * 7.0,
-            lag_estimator: None,
-            uncomp_stats: Stats::default(),
-            lag_stats: Stats::default(),
-            comp_est_sq_err: 0.0,
-            comp_est_overs: 0.0,
-            comp_estimate: None,
         }
     }
 
@@ -41,80 +27,9 @@ impl LagTracker {
 
     // `comp` may have been granted against an earlier view of the quota that another accepted move
     // has spent from since, so the quota bottoms out at zero instead of going negative.
-    pub fn settle(&mut self, lag: f64, comp: f64) {
-        let uncomped = lag - comp;
-        let ce_diff = self.comp_estimate.unwrap_or(0.01) - comp;
-        let new_quota = (self.quota + self.quota_gain - comp).clamp(0.0, self.quota_max);
-
-        if uncomped != 0.0 || self.uncomp_stats.samples != 0 {
-            self.uncomp_stats.record(uncomped);
-        }
-
-        self.lag_stats.record(lag.min(20.0));
-        self.comp_est_sq_err += ce_diff * ce_diff;
-        self.comp_est_overs += ce_diff.max(0.0);
-        self.quota = new_quota;
-        self.record_lag(lag);
+    pub fn settle(&mut self, comp: f64) {
+        self.quota = (self.quota + self.quota_gain - comp).clamp(0.0, self.quota_max);
     }
-
-    fn record_lag(&mut self, lag: f64) {
-        let lag = lag.min(self.quota_max);
-        let estimator = match self.lag_estimator.take() {
-            Some(mut estimator) => {
-                estimator.record(lag);
-                estimator
-            }
-            None => DecayingStats::first(lag),
-        };
-        self.comp_estimate = Some(
-            (estimator.mean - 0.8 * estimator.deviation)
-                .max(0.0)
-                .min(self.quota),
-        );
-        self.lag_estimator = Some(estimator);
-    }
-
-    // These are currently unused but it would be nice to create a page where you can view all of
-    // them at a later date
-    // pub fn moves(&self) -> usize {
-    //     self.lag_stats.samples
-    // }
-    //
-    // pub fn lag_mean(&self) -> Option<f64> {
-    //     if self.moves() > 0 {
-    //         Some(self.lag_stats.total / self.moves() as f64)
-    //     } else {
-    //         None
-    //     }
-    // }
-    //
-    // pub fn comp_est_std_err(&self) -> Option<f64> {
-    //     if self.moves() > 2 {
-    //         Some(self.comp_est_sq_err.sqrt() / ((self.moves() - 2) as f64))
-    //     } else {
-    //         None
-    //     }
-    // }
-    //
-    // pub fn comp_avg(&self) -> Option<f64> {
-    //     if self.moves() > 0 {
-    //         Some(self.total_comp() / self.moves() as f64)
-    //     } else {
-    //         None
-    //     }
-    // }
-    //
-    // pub fn total_comp(&self) -> f64 {
-    //     self.total_lag() - self.total_uncomped()
-    // }
-    //
-    // pub fn total_lag(&self) -> f64 {
-    //     self.lag_stats.total
-    // }
-    //
-    // pub fn total_uncomped(&self) -> f64 {
-    //     self.uncomp_stats.total
-    // }
 }
 
 #[cfg(test)]
@@ -123,7 +38,7 @@ mod tests {
 
     fn on_move(tracker: &mut LagTracker, lag: f64) -> f64 {
         let comp = tracker.compensation_for(lag);
-        tracker.settle(lag, comp);
+        tracker.settle(comp);
         comp
     }
 
@@ -171,18 +86,5 @@ mod tests {
         }
 
         assert_close(tracker.quota, tracker.quota_max);
-    }
-
-    #[test]
-    fn the_compensation_estimate_stays_between_zero_and_the_quota() {
-        let mut tracker = LagTracker::new(60, 0);
-        on_move(&mut tracker, 0.0);
-        assert_eq!(tracker.comp_estimate, Some(0.0));
-
-        for _ in 0..10 {
-            on_move(&mut tracker, 5.0);
-        }
-        let estimate = tracker.comp_estimate.expect("recorded");
-        assert!(estimate > 0.0 && estimate <= tracker.quota, "{estimate}");
     }
 }
