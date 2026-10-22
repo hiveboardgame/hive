@@ -2,7 +2,15 @@ use crate::websocket::{server_handlers::game::settle_deadline, WsHub};
 use actix_web::web::Data;
 use anyhow::{Error, Result};
 use chrono::Utc;
-use db_lib::{db_error::DbError, get_conn, models::Game, tournaments::fixed_field, DbConn, DbPool};
+use db_lib::{
+    db_error::DbError,
+    game_command::real_time_flag_grace,
+    get_conn,
+    models::Game,
+    tournaments::fixed_field,
+    DbConn,
+    DbPool,
+};
 use std::{sync::Arc, time::Duration};
 use tokio::time::MissedTickBehavior;
 use uuid::Uuid;
@@ -28,7 +36,7 @@ pub fn run(pool: DbPool, hub: Data<Arc<WsHub>>) {
 
 async fn sweep_once(pool: &DbPool, hub: &Arc<WsHub>) -> Result<()> {
     let mut conn = get_conn(pool).await?;
-    let as_of = Utc::now();
+    let as_of = Utc::now() - real_time_flag_grace();
     let expired = Game::find_expired_ids_by_timeout_at(as_of, SWEEP_BATCH_SIZE, &mut conn).await?;
     for game_id in expired {
         if let Err(e) = sweep_game_one(game_id, hub, &mut conn).await {

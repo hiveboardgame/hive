@@ -1,6 +1,7 @@
 use super::rating::Rating;
 use crate::{
     db_error::DbError,
+    game_command::real_time_flag_grace,
     helpers::{run_serializable, stable_unique_uuids},
     models::{
         Challenge,
@@ -71,6 +72,7 @@ use shared_types::{
     GameSpeed,
     LeaderboardKind,
     Takeback,
+    TimeMode,
     TournamentId,
     RANKABLE_DEVIATION,
     RESERVED_USERNAMES,
@@ -795,23 +797,26 @@ impl User {
                         .iter()
                         .filter(|(game, _)| game.tournament_id == Some(tournament.id))
                     {
-                        let (terminal, terminal_at) =
-                            match game.settle_deadline(withdrawn_at, tc).await? {
-                                DeadlineSettlement::Terminal {
-                                    game, terminal_at, ..
-                                } => (game, terminal_at),
-                                DeadlineSettlement::Active(game) => (
-                                    game.finish_game_control(
-                                        GameControl::Resign(*color),
-                                        GameResult::Winner(color.opposite_color()),
-                                        Conclusion::Resigned,
-                                        withdrawn_at,
-                                        tc,
-                                    )
-                                    .await?,
+                        let (terminal, terminal_at) = match game
+                            .settle_deadline_giving_up(*color, withdrawn_at, tc)
+                            .await?
+                        {
+                            DeadlineSettlement::Terminal {
+                                game, terminal_at, ..
+                            } => (game, terminal_at),
+                            DeadlineSettlement::Active(game)
+                            | DeadlineSettlement::Awaiting(game) => (
+                                game.finish_game_control(
+                                    GameControl::Resign(*color),
+                                    GameResult::Winner(color.opposite_color()),
+                                    Conclusion::Resigned,
                                     withdrawn_at,
-                                ),
-                            };
+                                    tc,
+                                )
+                                .await?,
+                                withdrawn_at,
+                            ),
+                        };
                         settle_arena_game(tournament.id, &terminal, terminal_at, withdrawn_at, tc)
                             .await?;
                         report.tournament_terminal_games.push(terminal);
@@ -957,8 +962,12 @@ impl User {
                 }
 
                 for (game, color) in ordinary_games {
-                    let checked = match game.settle_deadline(withdrawn_at, tc).await? {
+                    let checked = match game
+                        .settle_deadline_giving_up(color, withdrawn_at, tc)
+                        .await?
+                    {
                         DeadlineSettlement::Active(game)
+                        | DeadlineSettlement::Awaiting(game)
                         | DeadlineSettlement::Terminal { game, .. } => game,
                     };
                     if checked.finished {
@@ -1003,15 +1012,22 @@ impl User {
         .await
     }
 
-    // A game past its deadline is already lost on time; it only waits for the sweeper to
-    // finalize it, so it is not one the player can still act in.
+    // A game past its deadline and flag grace is already lost on time; it only waits for the
+    // sweeper to finalize it, so it is not one the player can still act in.
     pub async fn get_ongoing_games(&self, conn: &mut DbConn<'_>) -> Result<Vec<Game>, DbError> {
         let now = Utc::now();
         Ok(GameUser::belonging_to(self)
             .inner_join(games::table)
             .select(Game::as_select())
             .filter(finished.eq(false))
-            .filter(games::timeout_at.is_null().or(games::timeout_at.gt(now)))
+            .filter(
+                games::timeout_at
+                    .is_null()
+                    .or(games::timeout_at.gt(now))
+                    .or(games::time_mode
+                        .eq(TimeMode::RealTime.to_string())
+                        .and(games::timeout_at.gt(now - real_time_flag_grace()))),
+            )
             .filter(
                 games::arena_move_due_at
                     .is_null()
@@ -1036,7 +1052,14 @@ impl User {
                     .ne(GameStatus::NotStarted.to_string())
                     .or(games::tournament_slot_id.is_null()),
             )
-            .filter(games::timeout_at.is_null().or(games::timeout_at.gt(now)))
+            .filter(
+                games::timeout_at
+                    .is_null()
+                    .or(games::timeout_at.gt(now))
+                    .or(games::time_mode
+                        .eq(TimeMode::RealTime.to_string())
+                        .and(games::timeout_at.gt(now - real_time_flag_grace()))),
+            )
             .filter(
                 games::arena_move_due_at
                     .is_null()

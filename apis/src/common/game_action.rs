@@ -6,7 +6,9 @@ use std::fmt;
 pub enum GameAction {
     Start,
     Berserk,
+    // Sent by tabs from before ClockRanOut, without the turn whose clock ran out.
     CheckTime,
+    ClockRanOut(usize),
     Control(GameControl),
     Join,
     Turn(Turn),
@@ -19,6 +21,7 @@ impl fmt::Display for GameAction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             GameAction::CheckTime => write!(f, "CheckTime"),
+            GameAction::ClockRanOut(turn) => write!(f, "ClockRanOut({turn})"),
             GameAction::Berserk => write!(f, "Berserk"),
             GameAction::Control(ref gc) => write!(f, "{gc}"),
             GameAction::Join => write!(f, "Join"),

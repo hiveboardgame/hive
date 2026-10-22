@@ -45,7 +45,7 @@ use crate::{
     },
 };
 use bytes::Bytes;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use dashmap::{DashMap, DashSet};
 use db_lib::{
     db_error::DbError,
@@ -58,7 +58,6 @@ use db_lib::{
 use diesel::{ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl};
 use hive_lib::GameStatus;
 use log::error;
-use rand::RngExt;
 use shared_types::{
     tournament::Format,
     ConversationKey,
@@ -159,6 +158,9 @@ pub struct WsHub {
     /// open. Authentication is cached on each socket, so central auth checks
     /// consult this process-local set before accepting user actions.
     revoked_users: DashSet<Uuid>,
+    /// The flag deadlines each game has a re-check scheduled for, so a burst of `CheckTime`
+    /// requests schedules one per deadline and a sooner deadline is never left waiting.
+    pub(in crate::websocket) flag_rechecks: DashSet<(Uuid, DateTime<Utc>)>,
 }
 
 #[derive(Default)]
@@ -471,6 +473,7 @@ impl WsHub {
             lobby_snapshot_leases: Arc::new(DashMap::new()),
             chat_limits: ChatRateLimits::default(),
             revoked_users: DashSet::new(),
+            flag_rechecks: DashSet::new(),
         })
     }
 
@@ -495,6 +498,12 @@ impl WsHub {
                 }
             }
         }
+    }
+
+    pub(in crate::websocket) fn socket_count(&self, user_id: Uuid) -> usize {
+        self.sessions
+            .get(&user_id)
+            .map_or(0, |sockets| sockets.len())
     }
 
     /// Every `Auth` costs a token decode and, for a real bot token, a user lookup, so each
@@ -722,7 +731,6 @@ impl WsHub {
                 let removed = self.sessions.remove_if(&user_id, |_, s| s.is_empty());
                 if removed.is_some() {
                     self.data.telemetry.dec_active_user();
-                    self.data.pings.remove(user_id);
                     true
                 } else {
                     // A concurrent on_connect inserted a new socket between our
@@ -1356,16 +1364,31 @@ impl WsHub {
     // ─── periodic jobs ────────────────────────────────────────────────────────
 
     pub fn ping_all(&self) {
-        let mut rng = rand::rng();
-        let user_ids: Vec<Uuid> = self.sessions.iter().map(|e| *e.key()).collect();
-        for user_id in user_ids {
-            let nonce = rng.random::<u64>();
-            self.data.pings.set_nonce(user_id, nonce);
+        let mut sockets = Vec::new();
+        for user in self.sessions.iter() {
+            sockets.extend(
+                user.value()
+                    .iter()
+                    .map(|socket| (*user.key(), *socket.key())),
+            );
+        }
+        for (user_id, socket_id) in sockets {
+            // `nonce` stays because tabs from older releases still decode it.
             let message = ServerResult::Ok(Box::new(ServerMessage::Ping {
-                nonce,
-                value: self.data.pings.value(user_id),
+                nonce: 0,
+                value: self
+                    .data
+                    .socket_lags
+                    .lag(socket_id)
+                    .estimate_ms
+                    .unwrap_or_default(),
             }));
-            self.send_to_user(&user_id, DestKind::User, &mut Outbound::typed(&message));
+            self.send_to_socket(
+                &user_id,
+                &socket_id,
+                DestKind::User,
+                &mut Outbound::typed(&message),
+            );
         }
     }
 
@@ -1415,9 +1438,7 @@ impl WsHub {
                 && (observed
                     .arena_move_due_at
                     .is_some_and(|deadline| observed_at >= deadline)
-                    || observed
-                        .timeout_at
-                        .is_some_and(|deadline| observed_at >= deadline));
+                    || observed.flag_due_at().is_some_and(|due| observed_at >= due));
             let game = if deadline_due {
                 match settle_deadline(observed.id, self.data.as_ref(), &mut conn).await {
                     Ok(projected) => {
@@ -1586,6 +1607,31 @@ impl WsHub {
             .telemetry
             .record_send(dest, outcome, used, charged);
         outcome
+    }
+
+    // For the few replies a client cannot go on without: a full queue delays them instead of
+    // dropping them.
+    pub(in crate::websocket) async fn send_direct_waiting(
+        &self,
+        socket: &SocketTx,
+        out: &mut Outbound<'_>,
+        patience: Duration,
+    ) -> bool {
+        self.data.telemetry.record_dispatch(DestKind::Direct);
+        let Some(bytes) = out.bytes(socket.format).cloned() else {
+            return false;
+        };
+        let (outcome, charged) =
+            match tokio::time::timeout(patience, socket.tx.send(bytes.clone())).await {
+                Ok(Ok(())) => (SendOutcome::Ok, bytes.len()),
+                Ok(Err(_)) => (SendOutcome::Closed, 0),
+                Err(_) => (SendOutcome::Full, 0),
+            };
+        let used = SOCKET_BUFFER_CAPACITY.saturating_sub(socket.tx.capacity());
+        self.data
+            .telemetry
+            .record_send(DestKind::Direct, outcome, used, charged);
+        matches!(outcome, SendOutcome::Ok)
     }
 
     pub(in crate::websocket) fn send_own_state_via_tx(

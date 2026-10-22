@@ -5,6 +5,7 @@ use crate::{
     common::WEBSOCKET_PROTOCOL_VERSION,
     security::origin::validate_request_origin,
     websocket::{
+        lag_tracking::tcp_rtt_from_headers,
         messages::{SocketFormat, SocketTx},
         ws_connection::{reader_task, Deps},
         ws_hub::{WsHub, SOCKET_BUFFER_CAPACITY},
@@ -83,6 +84,10 @@ pub async fn start_connection(
     // is well above any legitimate msgpack frame in this app.
     let msg_stream = msg_stream.aggregate_continuations();
     data.telemetry.record_connect();
+    let tcp_rtt = tcp_rtt_from_headers(req.headers());
+    if let Some(rtt) = tcp_rtt {
+        data.telemetry.record_tcp_rtt(rtt);
+    }
 
     let socket_id = Uuid::new_v4();
     let (tx, mut out_rx) = mpsc::channel::<Bytes>(SOCKET_BUFFER_CAPACITY);
@@ -132,6 +137,7 @@ pub async fn start_connection(
             jwt_secret,
         },
         user,
+        tcp_rtt,
     ));
 
     Ok(response)

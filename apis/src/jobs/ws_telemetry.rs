@@ -16,7 +16,9 @@ const CSV_HEADER: &str = "timestamp,interval_secs,\
     chat_persist_failures,chat_rate_limit_rejections,\
     sessions_outer,sessions_inner_total,membership_games_sockets,membership_sockets_games,\
     game_response_cache,last_tv_broadcast,process_vm_rss_bytes,process_vm_hwm_bytes,\
-    db_pool_max_size,load_user_state_permit_max";
+    db_pool_max_size,load_user_state_permit_max,\
+    lag_moves,protocol_lag_p50_ms,protocol_lag_p90_ms,protocol_lag_missing,lag_cap_hits,\
+    tcp_rtt_connects,tcp_rtt_p50_ms,tcp_rtt_p90_ms";
 
 /// Spawn the periodic WS telemetry snapshot task.
 ///
@@ -95,6 +97,14 @@ pub fn run(hub: Data<Arc<WsHub>>, interval_secs: u64, csv_path: Option<String>) 
                         curr.process_vm_hwm_bytes,
                         curr.db_pool_max_size,
                         curr.load_user_state_permit_max,
+                        curr.lag.moves,
+                        curr.lag.protocol_p50_ms,
+                        curr.lag.protocol_p90_ms,
+                        curr.lag.protocol_missing,
+                        curr.lag.cap_hits,
+                        curr.lag.tcp_rtt_connects,
+                        curr.lag.tcp_rtt_p50_ms,
+                        curr.lag.tcp_rtt_p90_ms,
                     ];
                     let fields = fields.map(|value| value.to_string());
                     let _ = writeln!(file, "{ts},{interval_secs},{}", fields.join(","));

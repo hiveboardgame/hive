@@ -30,6 +30,7 @@ use crate::{
     },
 };
 use anyhow::Context;
+use chrono::{DateTime, Utc};
 use db_lib::{db_error::DbError, get_conn, models::Game, DbConn, DbPool};
 use hive_lib::GameError;
 use shared_types::{normalize_chat_message, ConversationKey, GameId, SimpleUser};
@@ -105,6 +106,7 @@ impl RequestHandlerError {
 }
 pub struct RequestHandler {
     command: ClientRequest,
+    move_arrival: Option<DateTime<Utc>>,
     data: Arc<WebsocketData>,
     hub: Arc<WsHub>,
     received_from: SocketTx,
@@ -128,6 +130,7 @@ type Result<T> = std::result::Result<T, RequestHandlerError>;
 impl RequestHandler {
     pub fn new(
         command: ClientRequest,
+        move_arrival: Option<DateTime<Utc>>,
         data: Arc<WebsocketData>,
         hub: Arc<WsHub>,
         sender_addr: SocketTx,
@@ -137,6 +140,7 @@ impl RequestHandler {
         Self {
             received_from: sender_addr,
             command,
+            move_arrival,
             data,
             hub,
             pool,
@@ -191,7 +195,7 @@ impl RequestHandler {
             &self.pool,
         ))
         .await?;
-        Ok(Box::pin(handler.handle()).await?)
+        Ok(Box::pin(handler.handle(self.move_arrival)).await?)
     }
     async fn chat_connection(&self, context: &'static str) -> Result<DbConn<'_>> {
         db_lib::get_conn(&self.pool).await.map_err(|error| {
@@ -352,10 +356,7 @@ impl RequestHandler {
                     _ => RequestHandlerError::InternalError(error),
                 })?
             }
-            ClientRequest::Pong(nonce) => {
-                self.data.pings.update(self.user_id, nonce);
-                HandlerOutput::empty()
-            }
+            ClientRequest::Pong(_) => HandlerOutput::empty(),
             ClientRequest::Resync => {
                 // Carries the same lobby snapshot `handle_auth` does, and both frames are
                 // live at once on a move, so leaving this one inline would have fixed half
@@ -463,6 +464,7 @@ mod tests {
         let (tx, _rx) = mpsc::channel(8);
         RequestHandler::new(
             command,
+            None,
             data,
             hub,
             SocketTx {

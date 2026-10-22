@@ -203,15 +203,12 @@ class HiveBot:
     async def _read_forever(self, socket: Any, inbox: asyncio.Queue[Any]) -> None:
         # A bot awaiting its engine is not asking for messages. Without a reader of its own,
         # `websockets` stops reading once 16 frames queue up, the connection's pings go
-        # unanswered and the server hangs up; and a latency ping answered late counts as lag.
+        # unanswered and the server hangs up; and a ping answered late counts as lag.
         try:
             while True:
                 message = await self._receive(socket)
-                ping = message.get("Ping")
-                if ping is None:
+                if "Ping" not in message:
                     inbox.put_nowait(message)
-                else:
-                    await socket.send(json.dumps({"Pong": ping["nonce"]}))
         except Exception as error:
             inbox.put_nowait(error)
 

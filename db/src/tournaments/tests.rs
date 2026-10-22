@@ -1281,6 +1281,7 @@ async fn terminal_game_commits_while_tournament_is_locked_and_reconciliation_adv
                 turn: Turn::Move(piece.parse().expect("parse ant"), position),
                 compensation: 0.0,
                 expected_turn: None,
+                arrived_at: None,
             },
             &mut conn,
         )
@@ -1899,6 +1900,7 @@ async fn command_after_deadline_commits_timeout_before_rejection_and_leaves_reco
             ),
             compensation: 0.0,
             expected_turn: None,
+            arrived_at: None,
         },
         Utc::now() + Duration::days(1),
         &mut conn,
@@ -2271,6 +2273,7 @@ async fn swiss_progression_finishes_when_projection_reports_exhaustion() {
                     turn: Turn::Move(piece.parse().expect("parse ant"), position),
                     compensation: 0.0,
                     expected_turn: None,
+                    arrived_at: None,
                 },
                 &mut conn,
             )
@@ -2747,6 +2750,7 @@ async fn swiss_withdrawal_finishes_after_a_bye_only_round() {
                         turn: Turn::Move(piece.parse().expect("parse ant"), position),
                         compensation: 0.0,
                         expected_turn: None,
+                        arrived_at: None,
                     },
                     &mut conn,
                 )
@@ -3853,6 +3857,7 @@ async fn a_backward_clock_observation_preserves_remaining_time_and_applies_incre
             turn: Turn::Move("wA1".parse().unwrap(), Position::initial_spawn_position()),
             compensation: 0.0,
             expected_turn: None,
+            arrived_at: None,
         },
         before.last_interaction.unwrap() - Duration::seconds(1),
         &mut conn,
