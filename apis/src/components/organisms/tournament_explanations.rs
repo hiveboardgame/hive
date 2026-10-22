@@ -1,5 +1,6 @@
 use crate::{
     common::{
+        elimination_color_sequence,
         game_point_presentation,
         standings_value_text,
         ScorePresentation,
@@ -469,6 +470,7 @@ pub fn TournamentFormatConfigurationDetails(configuration: FormatConfig) -> impl
                     (
                         phase_text(phase.games_per_set, phase.set_limit, phase.clinch),
                         phase.clock,
+                        elimination_color_sequence(&phase.color_order, !matches!(phase.set_limit, SetLimit::AtMost(sets) if sets.get() == 1)),
                     )
                 })
                 .collect::<Vec<_>>();
@@ -478,8 +480,12 @@ pub fn TournamentFormatConfigurationDetails(configuration: FormatConfig) -> impl
                     <ol class="pl-5 space-y-1 list-decimal">
                         {phases
                             .into_iter()
-                            .map(|(phase, clock)| {
-                                view! { <li>{phase}<TimeRow time_control=Some(clock) /></li> }
+                            .map(|(phase, clock, colors)| {
+                                view! {
+                                    <li>
+                                        {phase}<TimeRow time_control=Some(clock) /><p>{colors}</p>
+                                    </li>
+                                }
                             })
                             .collect_view()}
                     </ol>
@@ -513,6 +519,16 @@ pub fn TournamentFormatConfigurationDetails(configuration: FormatConfig) -> impl
                                                             phase.set_limit,
                                                             phase.clinch,
                                                         )}<TimeRow time_control=Some(phase.clock) />
+                                                        <p>
+                                                            {elimination_color_sequence(
+                                                                &phase.color_order,
+                                                                !matches!(
+                                                                    phase.set_limit,
+                                                                    SetLimit::AtMost(sets)
+                                                                    if sets.get() == 1
+                                                                ),
+                                                            )}
+                                                        </p>
                                                     </li>
                                                 }
                                             })

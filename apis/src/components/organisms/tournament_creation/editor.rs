@@ -9,7 +9,7 @@ use super::model::{
     EDITOR_MAX_PHASES,
 };
 use crate::{
-    common::{format_tournament_clock, TournamentClockStyle},
+    common::{elimination_color_sequence, format_tournament_clock, TournamentClockStyle},
     components::{atoms::simple_switch::SimpleSwitch, molecules::panel::Panel},
     i18n::*,
 };
@@ -479,19 +479,7 @@ fn phase_summary(phase: &EliminationPhaseDraft, is_last: bool) -> String {
     } else {
         format_tournament_clock(i18n, phase.clock, TournamentClockStyle::PhaseSummary)
     };
-    let alternating = phase
-        .color_order
-        .windows(2)
-        .all(|colors| colors[0] != colors[1]);
-    let colors = if alternating {
-        t_string!(
-            i18n,
-            tournaments.creation.elimination.summary.alternating_colors
-        )
-        .to_string()
-    } else {
-        t_string!(i18n, tournaments.creation.elimination.summary.custom_colors).to_string()
-    };
+    let colors = elimination_color_sequence(&phase.color_order, is_last || phase.finite_sets > 1);
     let repeats = if is_last {
         t_string!(
             i18n,
