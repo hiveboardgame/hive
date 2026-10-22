@@ -4,9 +4,9 @@ use std::{
 };
 
 const PROBE_TTL: Duration = Duration::from_secs(10);
-// The reader handles one thing at a time, so a pong that arrives while it is busy is read late. A
-// probe that waited on more than this much reader work says more about us, or about a client
-// keeping the reader busy on purpose, than about the network.
+// A pong behind a frame the reader is still queueing, or a ping it is still answering, is read
+// late. A probe held up longer than this says more about us, or about a client keeping the request
+// queue full on purpose, than about the network.
 const BUSY_TOLERANCE: Duration = Duration::from_millis(5);
 
 // Browsers answer protocol pings in their network stack, out of reach of page code, so a page

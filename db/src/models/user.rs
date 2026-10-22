@@ -1012,9 +1012,8 @@ impl User {
         .await
     }
 
-    // A game past its deadline and its flag grace is already lost on time; it only waits for the
-    // sweeper to finalize it, so it is not one the player can still act in. Inside the grace a
-    // compensated move can still save it.
+    // A game past its deadline and flag grace is already lost on time; it only waits for the
+    // sweeper to finalize it, so it is not one the player can still act in.
     pub async fn get_ongoing_games(&self, conn: &mut DbConn<'_>) -> Result<Vec<Game>, DbError> {
         let now = Utc::now();
         Ok(GameUser::belonging_to(self)

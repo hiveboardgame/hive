@@ -1364,17 +1364,14 @@ impl WsHub {
     // ─── periodic jobs ────────────────────────────────────────────────────────
 
     pub fn ping_all(&self) {
-        let sockets: Vec<(Uuid, Uuid)> = self
-            .sessions
-            .iter()
-            .flat_map(|user| {
-                let user_id = *user.key();
+        let mut sockets = Vec::new();
+        for user in self.sessions.iter() {
+            sockets.extend(
                 user.value()
                     .iter()
-                    .map(|socket| (user_id, *socket.key()))
-                    .collect::<Vec<_>>()
-            })
-            .collect();
+                    .map(|socket| (*user.key(), *socket.key())),
+            );
+        }
         for (user_id, socket_id) in sockets {
             // `nonce` stays because tabs from older releases still decode it.
             let message = ServerResult::Ok(Box::new(ServerMessage::Ping {

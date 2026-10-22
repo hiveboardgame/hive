@@ -564,7 +564,6 @@ async fn create_moves_game(
 
 const SECOND: i64 = 1_000_000_000;
 
-// A one-minute game in progress, white to move, whose clock last switched at `last_move`.
 async fn minute_game_switched_at(
     label: &str,
     time_mode: TimeMode,

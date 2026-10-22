@@ -16,21 +16,13 @@ use crate::{
 use chrono::{DateTime, Duration as ChronoDuration, Utc};
 use diesel_async::AsyncConnection;
 use hive_lib::{Color, GameControl, GameResult, GameStatus, State, Turn};
-use shared_types::{
-    tournament::FormatConfig,
-    Clock,
-    Conclusion,
-    GameStart,
-    RealtimeClock,
-    TimeMode,
-};
+use shared_types::{tournament::FormatConfig, Conclusion, GameStart, RealtimeClock};
 use std::str::FromStr;
 use uuid::Uuid;
 
 pub const MAX_MOVE_COMPENSATION_SECS: f64 = 1.0;
 
-// A real-time flag waits until no move still on its way could be compensated back under the
-// deadline. A move already received is waited for however long it takes to reach the row.
+// Past this, no move still on its way can be compensated back under the deadline.
 pub fn real_time_flag_grace() -> ChronoDuration {
     ChronoDuration::milliseconds((MAX_MOVE_COMPENSATION_SECS * 1000.0) as i64)
 }
@@ -47,15 +39,10 @@ fn accepted_compensation(compensation: f64) -> Result<(), DbError> {
     })
 }
 
-// The player on move waits out only what their own move earned: a move its compensation, any
-// other command nothing. Everyone else, and the deadline sweep, must allow for a move of theirs
-// still on its way.
+// The player on move waits out only what their own move earned. Anyone else, and the deadline
+// sweep, must allow for a move of theirs still on its way.
 fn flag_grace_for(command: &Command, game: &Game) -> FlagGrace {
-    let on_move = if game.turn % 2 == 0 {
-        game.white_id
-    } else {
-        game.black_id
-    };
+    let on_move = game.player_id(game.color_on_move());
     match command {
         Command::Move {
             user_id,
@@ -68,7 +55,6 @@ fn flag_grace_for(command: &Command, game: &Game) -> FlagGrace {
             own_arrival: *arrived_at,
         },
         Command::Control { user_id, .. }
-        | Command::StartReady { user_id }
         | Command::ReadyIntent { user_id }
         | Command::Berserk { user_id }
             if *user_id == on_move =>
@@ -88,7 +74,7 @@ fn move_arrival(arrived_at: Option<DateTime<Utc>>, effective_at: DateTime<Utc>) 
     arrived_at.map_or(effective_at, |arrived| arrived.min(effective_at))
 }
 
-pub(crate) async fn execute(
+pub async fn execute(
     game_id: Uuid,
     command: Command,
     conn: &mut DbConn<'_>,
@@ -337,23 +323,10 @@ impl GameBinding {
 }
 
 fn arena_clock(game: &Game) -> Result<RealtimeClock, DbError> {
-    let mode = TimeMode::from_str(&game.time_mode).map_err(|error| {
-        DbError::InvalidPersistedTournament {
-            reason: format!("Arena Game has an invalid time mode: {error}"),
-        }
-    })?;
-    let clock =
-        Clock::from_time_parts(mode, game.time_base, game.time_increment).map_err(|error| {
-            DbError::InvalidPersistedTournament {
-                reason: format!("Arena Game has an invalid clock: {error}"),
-            }
-        })?;
-    match clock {
-        Some(Clock::Realtime(clock)) => Ok(clock),
-        None | Some(Clock::Correspondence(_)) => Err(DbError::InvalidPersistedTournament {
+    game.realtime_clock()?
+        .ok_or_else(|| DbError::InvalidPersistedTournament {
             reason: String::from("Arena Game does not have a realtime clock"),
-        }),
-    }
+        })
 }
 
 async fn settle_terminal_tournament_game(

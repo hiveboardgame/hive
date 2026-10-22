@@ -22,8 +22,9 @@ use crate::{
     responses::UserResponse,
 };
 use actix_ws::{AggregatedMessage, AggregatedMessageStream, Session};
+use chrono::{DateTime, Utc};
 use codee::{binary::MsgpackSerdeCodec, Decoder};
-use db_lib::{get_conn, models::User, DbPool};
+use db_lib::{game_command::ReceivedMove, get_conn, models::User, DbPool};
 use futures_util::StreamExt;
 use indoc::printdoc;
 use shared_types::{ConversationKey, GameThread, SimpleUser};
@@ -33,6 +34,7 @@ use std::{
     sync::{Arc, Mutex, PoisonError},
     time::{Duration, Instant},
 };
+use tokio::sync::mpsc;
 use uuid::Uuid;
 
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
@@ -43,10 +45,12 @@ const PROBE_PATIENCE: Duration = Duration::from_millis(100);
 // its samples thrown out.
 const PROBE_JITTER: f64 = 0.25;
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
+// Enough for a move to be read behind a few slow requests; each can hold a frame of up to 1 MiB.
+const QUEUED_REQUESTS: usize = 4;
 
 /// RAII cleanup so the WS subsystem stays consistent even if the reader loop
-/// unwinds — without this, a panic anywhere inside `handle_binary` (a poisoned
-/// lock, a handler `.unwrap()`) skips `on_disconnect` and leaks the user in
+/// unwinds — without this, a panic in it (a poisoned lock) skips
+/// `on_disconnect` and leaks the user in
 /// `sessions`/membership, leaving `active_sockets`/`active_users` overcounted
 /// for the lifetime of the process.
 struct DisconnectGuard {
@@ -122,6 +126,19 @@ pub async fn reader_task(
         reason: Cell::new(DisconnectReason::Close),
     };
 
+    let (requests, queued) = mpsc::channel(QUEUED_REQUESTS);
+    let handling = actix_web::rt::spawn(handle_requests(
+        queued,
+        Deps {
+            hub: Arc::clone(&hub),
+            data: Arc::clone(&data),
+            pool,
+            jwt_secret,
+        },
+        socket.clone(),
+        Arc::clone(&identity),
+    ));
+
     let mut last_hb = Instant::now();
     let mut hb_interval = tokio::time::interval(HEARTBEAT_INTERVAL);
     let mut probes = Probes::default();
@@ -129,6 +146,10 @@ pub async fn reader_task(
 
     loop {
         tokio::select! {
+            () = requests.closed() => {
+                guard.set_reason(DisconnectReason::PingFail);
+                break;
+            }
             _ = hb_interval.tick() => {
                 if last_hb.elapsed() > CLIENT_TIMEOUT {
                     guard.set_reason(DisconnectReason::Timeout);
@@ -162,11 +183,13 @@ pub async fn reader_task(
                 }
                 Some(Ok(AggregatedMessage::Binary(bytes))) => {
                     last_hb = Instant::now();
-                    let flow =
-                        handle_binary(&bytes, &hub, &socket, &data, &pool, &jwt_secret, &identity)
-                            .await;
+                    data.telemetry.record_message_received(bytes.len());
+                    let queued = match MsgpackSerdeCodec::decode(&bytes) {
+                        Ok(request) => requests.send(received(request, &identity)).await.is_ok(),
+                        Err(_) => true,
+                    };
                     probes.reader_stalled(last_hb.elapsed());
-                    if flow.is_break() {
+                    if !queued {
                         guard.set_reason(DisconnectReason::PingFail);
                         break;
                     }
@@ -178,11 +201,14 @@ pub async fn reader_task(
                 }
                 Some(Ok(AggregatedMessage::Text(text))) => {
                     last_hb = Instant::now();
-                    let flow =
-                        handle_text(&text, &hub, &socket, &data, &pool, &jwt_secret, &identity)
-                            .await;
+                    data.telemetry.record_message_received(text.len());
+                    let incoming = serde_json::from_str(&text).map_or_else(
+                        |error| Incoming::Malformed(format!("Malformed request: {error}")),
+                        |request| received(request, &identity),
+                    );
+                    let queued = requests.send(incoming).await.is_ok();
                     probes.reader_stalled(last_hb.elapsed());
-                    if flow.is_break() {
+                    if !queued {
                         guard.set_reason(DisconnectReason::PingFail);
                         break;
                     }
@@ -195,6 +221,8 @@ pub async fn reader_task(
         }
     }
 
+    drop(requests);
+    let _ = handling.await;
     drop(guard);
     let _ = session.close(None).await;
 }
@@ -205,8 +233,8 @@ fn probe_delay() -> Duration {
 
 // The round trip starts once the ping is queued, so waiting for room in our send queue is not
 // counted as the client's lag, and a ping behind a backlog there only proves the client is alive.
-// Frames already passed on to actix-ws and below are out of sight; the game's own updates wait
-// behind them too, and the TCP cap bounds what they add.
+// Backlog further down is out of sight, but the game's updates wait behind it too, and the TCP cap
+// bounds it.
 async fn send_probe(
     session: &mut Session,
     socket: &SocketTx,
@@ -227,62 +255,81 @@ async fn send_probe(
     true
 }
 
-async fn handle_binary(
-    bytes: &[u8],
-    hub: &Arc<WsHub>,
-    socket: &SocketTx,
-    data: &Arc<WebsocketData>,
-    pool: &DbPool,
-    jwt_secret: &Arc<JwtSecret>,
-    identity: &Arc<Mutex<SimpleUser>>,
-) -> ControlFlow<()> {
-    data.telemetry.record_message_received(bytes.len());
-
-    let Ok(request) = MsgpackSerdeCodec::decode(bytes) else {
-        return ControlFlow::Continue(());
-    };
-    handle_request(request, hub, socket, data, pool, jwt_secret, identity).await
+enum Incoming {
+    Request {
+        request: ClientRequest,
+        received_move: Option<ReceivedMove>,
+    },
+    Malformed(String),
 }
 
-async fn handle_text(
-    text: &str,
-    hub: &Arc<WsHub>,
-    socket: &SocketTx,
-    data: &Arc<WebsocketData>,
-    pool: &DbPool,
-    jwt_secret: &Arc<JwtSecret>,
-    identity: &Arc<Mutex<SimpleUser>>,
-) -> ControlFlow<()> {
-    data.telemetry.record_message_received(text.len());
-
-    // Only bots send text frames, and they are writing the JSON by hand: tell them what is
-    // wrong instead of leaving them waiting for a reply that will never come.
-    let request = match serde_json::from_str(text) {
-        Ok(request) => request,
-        Err(error) => {
-            let message = ServerResult::Err(ExternalServerError::Request {
-                reason: format!("Malformed request: {error}"),
-            });
-            hub.dispatch_out(
-                &MessageDestination::Direct(socket.clone()),
-                &mut Outbound::typed(&message),
-            )
-            .await;
-            return ControlFlow::Continue(());
+// A move is stamped and recorded as it is read, so time it then waits behind slower requests is
+// not charged to the mover.
+fn received(request: ClientRequest, identity: &Mutex<SimpleUser>) -> Incoming {
+    let received_move = match &request {
+        ClientRequest::Game {
+            game_id,
+            action: GameAction::Turn(_) | GameAction::Play(_) | GameAction::PlayAt { .. },
+        } => {
+            let user = current_identity(identity);
+            user.authed
+                .then(|| ReceivedMove::arriving(&game_id.0, user.user_id))
         }
+        _ => None,
     };
-    handle_request(request, hub, socket, data, pool, jwt_secret, identity).await
+    Incoming::Request {
+        request,
+        received_move,
+    }
+}
+
+async fn handle_requests(
+    mut queued: mpsc::Receiver<Incoming>,
+    deps: Deps,
+    socket: SocketTx,
+    identity: Arc<Mutex<SimpleUser>>,
+) {
+    while let Some(incoming) = queued.recv().await {
+        let flow = match incoming {
+            Incoming::Request {
+                request,
+                received_move,
+            } => {
+                let move_arrival = received_move.as_ref().map(ReceivedMove::arrived_at);
+                handle_request(request, move_arrival, &deps, &socket, &identity).await
+            }
+            Incoming::Malformed(reason) => {
+                // Only bots send text frames, and they are writing the JSON by hand: tell them
+                // what is wrong instead of leaving them waiting for a reply that will never come.
+                let message = ServerResult::Err(ExternalServerError::Request { reason });
+                deps.hub
+                    .dispatch_out(
+                        &MessageDestination::Direct(socket.clone()),
+                        &mut Outbound::typed(&message),
+                    )
+                    .await;
+                ControlFlow::Continue(())
+            }
+        };
+        if flow.is_break() {
+            return;
+        }
+    }
 }
 
 async fn handle_request(
     request: ClientRequest,
-    hub: &Arc<WsHub>,
+    move_arrival: Option<DateTime<Utc>>,
+    deps: &Deps,
     socket: &SocketTx,
-    data: &Arc<WebsocketData>,
-    pool: &DbPool,
-    jwt_secret: &Arc<JwtSecret>,
     identity: &Arc<Mutex<SimpleUser>>,
 ) -> ControlFlow<()> {
+    let Deps {
+        hub,
+        data,
+        pool,
+        jwt_secret,
+    } = deps;
     if let ClientRequest::Auth(token) = request {
         // Boxed so the login, profile build and lobby snapshot behind it stay out of the
         // future every *other* frame — an ordinary move included — is dispatched through.
@@ -303,6 +350,7 @@ async fn handle_request(
 
     let handler = RequestHandler::new(
         request.clone(),
+        move_arrival,
         data.clone(),
         hub.clone(),
         socket.clone(),
@@ -1158,20 +1206,19 @@ mod tests {
             admin: false,
             authed: false,
         }));
-        let jwt_secret = Arc::new(JwtSecret::new("test-secret".to_string()));
+        let deps = super::Deps {
+            hub,
+            data,
+            pool,
+            jwt_secret: Arc::new(JwtSecret::new("test-secret".to_string())),
+        };
         let request = ClientRequest::Game {
             game_id: GameId("some-game".to_string()),
             action: GameAction::Play("wA1 -bQ".to_string()),
         };
 
         let size = std::mem::size_of_val(&super::handle_request(
-            request,
-            &hub,
-            &socket,
-            &data,
-            &pool,
-            &jwt_secret,
-            &identity,
+            request, None, &deps, &socket, &identity,
         ));
 
         println!("handle_request future: {size} bytes of {DISPATCH_FUTURE_BUDGET}");
@@ -1182,121 +1229,157 @@ mod tests {
         );
     }
 
-    // A real socket, so the probe goes out through actix-ws and the pong comes back as a frame:
-    // unit tests of `Probes` and `SocketLags` cannot see the reader loop's wiring.
-    #[actix_web::test]
-    async fn protocol_pongs_measure_their_socket_until_it_closes() {
+    async fn unreachable_pool() -> db_lib::DbPool {
+        db_lib::get_pool("postgresql://test:test@127.0.0.1:9/test")
+            .await
+            .expect("bb8 pool builds without connecting")
+    }
+
+    // A real socket, so frames go through actix-ws: unit tests cannot see the reader loop's wiring.
+    async fn serve_reader(
+        socket_id: Uuid,
+        user: shared_types::SimpleUser,
+        data: std::sync::Arc<crate::websocket::WebsocketData>,
+        tcp_rtt: Option<Duration>,
+    ) -> std::net::SocketAddr {
         use super::{reader_task, Deps};
         use crate::{
             api::v1::auth::jwt_secret::JwtSecret,
             websocket::{
                 messages::{SocketFormat, SocketTx},
                 ws_hub::WsHub,
-                WebsocketData,
             },
         };
         use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
-        use shared_types::SimpleUser;
-        use std::{
-            io::{Read, Write},
-            net::TcpStream,
-            sync::Arc,
-        };
+        use std::sync::Arc;
+
+        let pool = unreachable_pool().await;
+        let hub = WsHub::new(data.clone(), pool.clone());
+        let server = HttpServer::new(move || {
+            let (hub, data, pool, user) = (hub.clone(), data.clone(), pool.clone(), user.clone());
+            App::new().route(
+                "/ws/",
+                web::get().to(move |req: HttpRequest, body: web::Payload| {
+                    let (hub, data, pool, user) =
+                        (hub.clone(), data.clone(), pool.clone(), user.clone());
+                    async move {
+                        let (response, session, stream) = actix_ws::handle(&req, body)?;
+                        let (tx, outbound) = tokio::sync::mpsc::channel(8);
+                        actix_web::rt::spawn(async move {
+                            let _outbound = outbound;
+                            reader_task(
+                                session,
+                                stream.aggregate_continuations(),
+                                SocketTx {
+                                    socket_id,
+                                    format: SocketFormat::Json,
+                                    tx,
+                                },
+                                Deps {
+                                    hub,
+                                    data,
+                                    pool,
+                                    jwt_secret: Arc::new(JwtSecret::new("test-secret".to_string())),
+                                },
+                                user,
+                                tcp_rtt,
+                            )
+                            .await;
+                        });
+                        Ok::<HttpResponse, actix_web::Error>(response)
+                    }
+                }),
+            )
+        })
+        .workers(1)
+        .bind(("127.0.0.1", 0))
+        .expect("binds a free port");
+        let addr = server.addrs()[0];
+        actix_web::rt::spawn(server.run());
+        addr
+    }
+
+    fn upgraded(addr: std::net::SocketAddr) -> std::net::TcpStream {
+        use std::io::{Read, Write};
+
+        let mut stream = std::net::TcpStream::connect(addr).expect("connects");
+        stream
+            .set_read_timeout(Some(Duration::from_secs(5)))
+            .expect("sets a read timeout");
+        write!(
+            stream,
+            "GET /ws/ HTTP/1.1\r\nHost: {addr}\r\nUpgrade: websocket\r\n\
+             Connection: Upgrade\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\
+             Sec-WebSocket-Version: 13\r\n\r\n"
+        )
+        .expect("sends the upgrade");
+        let mut head = Vec::new();
+        let mut byte = [0u8; 1];
+        while !head.ends_with(b"\r\n\r\n") {
+            stream.read_exact(&mut byte).expect("reads the upgrade");
+            head.push(byte[0]);
+        }
+        assert!(
+            head.starts_with(b"HTTP/1.1 101"),
+            "{:?}",
+            String::from_utf8_lossy(&head)
+        );
+        stream
+    }
+
+    fn masked(opcode: u8, payload: &[u8]) -> Vec<u8> {
+        let mut frame = vec![0x80 | opcode, 0x80 | payload.len() as u8, 0, 0, 0, 0];
+        frame.extend_from_slice(payload);
+        frame
+    }
+
+    fn await_pong(stream: &mut std::net::TcpStream, payload: &[u8]) {
+        use std::io::Read;
+
+        loop {
+            let mut header = [0u8; 2];
+            stream
+                .read_exact(&mut header)
+                .expect("reads a frame header");
+            let mut frame = vec![0u8; usize::from(header[1] & 0x7F)];
+            stream
+                .read_exact(&mut frame)
+                .expect("reads a frame payload");
+            if header[0] == 0x8A && frame == payload {
+                return;
+            }
+        }
+    }
+
+    fn anonymous() -> shared_types::SimpleUser {
+        shared_types::SimpleUser {
+            user_id: Uuid::new_v4(),
+            username: "anonymous".to_string(),
+            admin: false,
+            authed: false,
+        }
+    }
+
+    #[actix_web::test]
+    async fn protocol_pongs_measure_their_socket_until_it_closes() {
+        use crate::websocket::WebsocketData;
+        use std::{io::Write, sync::Arc};
 
         const NETWORK_DELAY: Duration = Duration::from_millis(100);
         const TCP_RTT: Duration = Duration::from_millis(40);
 
-        let pool = db_lib::get_pool("postgresql://test:test@127.0.0.1:9/test")
-            .await
-            .expect("bb8 pool builds without connecting");
         let data = Arc::new(WebsocketData::default());
-        let hub = WsHub::new(data.clone(), pool.clone());
         let socket_id = Uuid::new_v4();
-
-        let server = {
-            let (hub, data) = (hub.clone(), data.clone());
-            HttpServer::new(move || {
-                let (hub, data, pool) = (hub.clone(), data.clone(), pool.clone());
-                App::new().route(
-                    "/ws/",
-                    web::get().to(move |req: HttpRequest, body: web::Payload| {
-                        let (hub, data, pool) = (hub.clone(), data.clone(), pool.clone());
-                        async move {
-                            let (response, session, stream) = actix_ws::handle(&req, body)?;
-                            let (tx, outbound) = tokio::sync::mpsc::channel(8);
-                            actix_web::rt::spawn(async move {
-                                let _outbound = outbound;
-                                reader_task(
-                                    session,
-                                    stream.aggregate_continuations(),
-                                    SocketTx {
-                                        socket_id,
-                                        format: SocketFormat::Json,
-                                        tx,
-                                    },
-                                    Deps {
-                                        hub,
-                                        data,
-                                        pool,
-                                        jwt_secret: Arc::new(JwtSecret::new(
-                                            "test-secret".to_string(),
-                                        )),
-                                    },
-                                    SimpleUser {
-                                        user_id: Uuid::new_v4(),
-                                        username: "anonymous".to_string(),
-                                        admin: false,
-                                        authed: false,
-                                    },
-                                    Some(TCP_RTT),
-                                )
-                                .await;
-                            });
-                            Ok::<HttpResponse, actix_web::Error>(response)
-                        }
-                    }),
-                )
-            })
-            .workers(1)
-            .bind(("127.0.0.1", 0))
-            .expect("binds a free port")
-        };
-        let addr = server.addrs()[0];
-        actix_web::rt::spawn(server.run());
+        let addr = serve_reader(socket_id, anonymous(), data.clone(), Some(TCP_RTT)).await;
 
         let client = tokio::task::spawn_blocking(move || {
-            let mut stream = TcpStream::connect(addr).expect("connects");
-            stream
-                .set_read_timeout(Some(Duration::from_secs(5)))
-                .expect("sets a read timeout");
-            write!(
-                stream,
-                "GET /ws/ HTTP/1.1\r\nHost: {addr}\r\nUpgrade: websocket\r\n\
-                 Connection: Upgrade\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\
-                 Sec-WebSocket-Version: 13\r\n\r\n"
-            )
-            .expect("sends the upgrade");
-            let mut head = Vec::new();
-            let mut byte = [0u8; 1];
-            while !head.ends_with(b"\r\n\r\n") {
-                stream.read_exact(&mut byte).expect("reads the upgrade");
-                head.push(byte[0]);
-            }
-            assert!(
-                head.starts_with(b"HTTP/1.1 101"),
-                "{:?}",
-                String::from_utf8_lossy(&head)
-            );
+            use std::io::Read;
 
+            let mut stream = upgraded(addr);
             let mut ping = [0u8; 10];
             stream.read_exact(&mut ping).expect("reads the first probe");
             assert_eq!(&ping[..2], &[0x89, 8], "an unmasked 8-byte ping frame");
             std::thread::sleep(NETWORK_DELAY);
-            let masked = |opcode: u8, payload: &[u8]| {
-                let mut frame = vec![0x80 | opcode, 0x80 | payload.len() as u8, 0, 0, 0, 0];
-                frame.extend_from_slice(payload);
-                frame
-            };
             stream
                 .write_all(&masked(0xA, &ping[2..]))
                 .expect("answers the probe");
@@ -1311,19 +1394,7 @@ mod tests {
             stream
                 .write_all(&masked(0x9, b"sync"))
                 .expect("pings the server");
-            loop {
-                let mut header = [0u8; 2];
-                stream
-                    .read_exact(&mut header)
-                    .expect("reads a frame header");
-                let mut payload = vec![0u8; usize::from(header[1] & 0x7F)];
-                stream
-                    .read_exact(&mut payload)
-                    .expect("reads a frame payload");
-                if header[0] == 0x8A && payload == b"sync" {
-                    break;
-                }
-            }
+            await_pong(&mut stream, b"sync");
             stream
         })
         .await
@@ -1354,5 +1425,81 @@ mod tests {
             tokio::time::sleep(Duration::from_millis(20)).await;
         }
         assert!(forgotten, "a closed socket leaves no lag state behind");
+    }
+
+    // The unreachable pool keeps the first request waiting for a connection far longer than the
+    // client's read timeout.
+    #[actix_web::test]
+    async fn frames_behind_a_request_still_being_handled_are_read() {
+        use crate::{common::GameAction, websocket::WebsocketData};
+        use std::{io::Write, sync::Arc};
+
+        let addr = serve_reader(
+            Uuid::new_v4(),
+            anonymous(),
+            Arc::new(WebsocketData::default()),
+            None,
+        )
+        .await;
+        let join = serde_json::to_vec(&ClientRequest::Game {
+            game_id: GameId("waiting-for-the-pool".to_string()),
+            action: GameAction::Join,
+        })
+        .expect("the request encodes");
+
+        tokio::task::spawn_blocking(move || {
+            let mut stream = upgraded(addr);
+            stream
+                .write_all(&masked(0x1, &join))
+                .expect("sends a request");
+            stream
+                .write_all(&masked(0x9, b"behind"))
+                .expect("pings the server");
+            await_pong(&mut stream, b"behind");
+        })
+        .await
+        .expect("the ping is answered while the request still waits");
+    }
+
+    #[test]
+    fn a_move_is_stamped_as_it_is_read_and_only_for_a_signed_in_player() {
+        use super::{received, Incoming};
+        use crate::common::GameAction;
+        use chrono::Utc;
+        use std::sync::Mutex;
+
+        let player = shared_types::SimpleUser {
+            authed: true,
+            ..anonymous()
+        };
+        let game_id = GameId("read-time".to_string());
+        let play = || ClientRequest::Game {
+            game_id: game_id.clone(),
+            action: GameAction::Play("wA1".to_string()),
+        };
+
+        let before = Utc::now();
+        let Incoming::Request {
+            received_move: Some(received_move),
+            ..
+        } = received(play(), &Mutex::new(player.clone()))
+        else {
+            panic!("a move is recorded as it is read");
+        };
+        assert!((before..=Utc::now()).contains(&received_move.arrived_at()));
+
+        let join = ClientRequest::Game {
+            game_id: game_id.clone(),
+            action: GameAction::Join,
+        };
+        for (request, user) in [(play(), anonymous()), (join, player)] {
+            assert!(matches!(
+                received(request, &Mutex::new(user)),
+                Incoming::Request {
+                    received_move: None,
+                    ..
+                }
+            ));
+        }
     }
 }

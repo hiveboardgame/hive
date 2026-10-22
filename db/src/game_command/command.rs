@@ -1,18 +1,10 @@
 use crate::{
     db_error::DbError,
     models::{Game, ScheduleOffer},
-    DbConn,
 };
 use chrono::{DateTime, Utc};
 use hive_lib::{GameControl, Turn};
 use uuid::Uuid;
-
-mod execute;
-mod received_moves;
-
-pub use execute::{real_time_flag_grace, MAX_MOVE_COMPENSATION_SECS};
-pub(crate) use received_moves::awaits_move;
-pub use received_moves::ReceivedMove;
 
 #[derive(Clone, Debug)]
 pub enum Command {
@@ -34,10 +26,9 @@ pub enum Command {
         user_id: Uuid,
     },
     SettleDeadline,
-    // A viewer's clock reached zero on `turn`. From the player on move on that same turn it ends
-    // their own grace, as lichess flags without grace when the flagged player's own client
-    // reports it, so callers send it only when that player has no other socket a move could
-    // still come from.
+    // The player on move reporting their own clock for the current turn ends their grace, as on
+    // lichess. Callers send it rather than SettleDeadline only when no other socket of theirs
+    // could still send a move.
     CheckTime {
         user_id: Uuid,
         turn: i32,
@@ -63,14 +54,3 @@ pub enum Outcome {
         previous: Game,
     },
 }
-
-pub async fn execute(
-    game_id: Uuid,
-    command: Command,
-    conn: &mut DbConn<'_>,
-) -> Result<Outcome, DbError> {
-    execute::execute(game_id, command, conn).await
-}
-
-#[cfg(test)]
-pub(crate) use execute::execute_at;

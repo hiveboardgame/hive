@@ -36,8 +36,7 @@ struct PlayRequest {
     piece_pos: String,
 }
 
-// Stamped as soon as the body is read. Actix extracts Auth alongside, so the bot is not charged
-// for its database lookup.
+// Actix extracts Auth alongside this, so stamping here keeps the bot's login lookup off its clock.
 struct ArrivedPlay {
     request: PlayRequest,
     arrived_at: DateTime<Utc>,
@@ -114,8 +113,7 @@ async fn play_move(
         request: play,
         arrived_at,
     } = arrived;
-    // Recorded only once the bot is known; a deadline settled before that still allowed the flag
-    // grace.
+    // A deadline settled before the bot is known still allowed the full flag grace.
     let _received = ReceivedMove::record(&play.game_id.0, bot.id, arrived_at);
     let cloned_pool = pool.clone();
     let mut conn = get_conn(&cloned_pool).await?;

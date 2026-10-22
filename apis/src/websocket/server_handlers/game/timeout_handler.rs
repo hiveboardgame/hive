@@ -102,9 +102,9 @@ impl TimeoutHandler {
     }
 }
 
-// A clock that reads zero is not flagged until its grace has passed, and the client asks only
-// once, so check again when the grace ends, and again for each next flag that close. A flag
-// still due afterwards waits on a received move, which may yet be rejected.
+// A clock that reads zero is not flagged until its grace has passed, and no client may be left to
+// ask again, so check again when the grace ends. A flag still due afterwards waits on a received
+// move, which may yet be rejected; each check locks the row that move waits for, so they back off.
 fn settle_after_the_grace(hub: &Arc<WsHub>, game: &Game) {
     let Some(due) = game.flag_due_at() else {
         return;
@@ -151,7 +151,8 @@ impl Recheck {
             game_id,
             due,
         };
-        Some((recheck, wait))
+        let backoff = overdue.min(MAX_RECHECK_WAIT.saturating_sub(overdue));
+        Some((recheck, wait.max(backoff)))
     }
 
     async fn settle(&self) -> Option<Game> {
@@ -243,5 +244,164 @@ mod tests {
         assert_eq!(wait, Duration::ZERO);
         let long_overdue = now - longest - ChronoDuration::milliseconds(1);
         assert!(Recheck::claim(&hub, Uuid::new_v4(), long_overdue, now).is_none());
+    }
+
+    #[tokio::test]
+    async fn an_overdue_flag_waits_as_long_again_until_the_longest_wait() {
+        let hub = hub().await;
+        let now = Utc::now();
+        let wait_when = |overdue_ms| {
+            Recheck::claim(
+                &hub,
+                Uuid::new_v4(),
+                now - ChronoDuration::milliseconds(overdue_ms),
+                now,
+            )
+            .expect("an overdue flag is checked again")
+            .1
+        };
+
+        assert_eq!(wait_when(400), Duration::from_millis(400));
+        assert_eq!(wait_when(3200), Duration::from_millis(1800));
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn the_flagged_players_only_tab_ends_the_grace() {
+        use super::TimeoutHandler;
+        use crate::websocket::{
+            messages::{SocketFormat, SocketTx},
+            test_db::test_db,
+            ws_hub::SOCKET_BUFFER_CAPACITY,
+        };
+        use db_lib::{
+            get_conn,
+            models::{Game, NewGame, NewUser, User},
+        };
+        use hive_lib::{GameStatus, GameType};
+        use shared_types::{
+            Conclusion,
+            GameSpeed,
+            GameStart,
+            SimpleUser,
+            TimeMode,
+            TournamentGameResult,
+        };
+
+        let db = test_db().await;
+        let pool = db.pool.clone();
+        tokio::task::LocalSet::new()
+            .run_until(async move {
+                let mut conn = get_conn(&pool).await.expect("test database connection");
+                let mut players = Vec::new();
+                for name in ["ownflagw", "ownflagb"] {
+                    let new_user = NewUser::new(name, "password", &format!("{name}@example.com"))
+                        .expect("valid user");
+                    players.push(User::create(new_user, &mut conn).await.expect("user"));
+                }
+                let (white, black) = (&players[0], &players[1]);
+                let started = Utc::now() - ChronoDuration::milliseconds(60_100);
+                let game = Game::create(
+                    NewGame {
+                        nanoid: Uuid::new_v4().simple().to_string()[..12].to_string(),
+                        current_player_id: white.id,
+                        black_id: black.id,
+                        finished: false,
+                        game_status: GameStatus::InProgress.to_string(),
+                        game_type: GameType::MLP.to_string(),
+                        history: "wQ;bQ wQ-;".to_string(),
+                        game_control_history: String::new(),
+                        rated: false,
+                        tournament_queen_rule: false,
+                        turn: 2,
+                        white_id: white.id,
+                        white_rating: None,
+                        black_rating: None,
+                        white_rating_change: None,
+                        black_rating_change: None,
+                        created_at: started,
+                        updated_at: started,
+                        time_mode: TimeMode::RealTime.to_string(),
+                        time_base: Some(60),
+                        time_increment: Some(0),
+                        last_interaction: Some(started),
+                        black_time_left: Some(60_000_000_000),
+                        white_time_left: Some(60_000_000_000),
+                        speed: GameSpeed::Bullet.to_string(),
+                        hashes: Vec::new(),
+                        conclusion: Conclusion::Unknown.to_string(),
+                        tournament_id: None,
+                        tournament_game_result: TournamentGameResult::Unknown.to_string(),
+                        game_start: GameStart::Moves.to_string(),
+                        move_times: Vec::new(),
+                        timeout_at: Some(started + ChronoDuration::seconds(60)),
+                        white_berserked: false,
+                        black_berserked: false,
+                        arena_move_due_at: None,
+                        tournament_slot_id: None,
+                        arena_ordinal: None,
+                    },
+                    &mut conn,
+                )
+                .await
+                .expect("the game is created");
+                drop(conn);
+
+                let data = Arc::new(WebsocketData::default());
+                let hub = WsHub::new(Arc::clone(&data), pool.clone());
+                let identity = SimpleUser {
+                    user_id: white.id,
+                    username: white.username.clone(),
+                    admin: false,
+                    authed: true,
+                };
+                let mut receivers = Vec::new();
+                let mut sockets = Vec::new();
+                for _ in 0..2 {
+                    let (tx, rx) = tokio::sync::mpsc::channel(SOCKET_BUFFER_CAPACITY);
+                    let socket = SocketTx {
+                        socket_id: Uuid::new_v4(),
+                        format: SocketFormat::Msgpack,
+                        tx,
+                    };
+                    Arc::clone(&hub).on_connect(
+                        socket.socket_id,
+                        socket.tx.clone(),
+                        socket.format,
+                        identity.clone(),
+                    );
+                    receivers.push(rx);
+                    sockets.push(socket);
+                }
+                let check = |socket: &SocketTx| {
+                    TimeoutHandler::new(
+                        &game,
+                        white.id,
+                        Some(game.turn),
+                        socket.clone(),
+                        Arc::clone(&data),
+                        Arc::clone(&hub),
+                        &pool,
+                    )
+                };
+                let conclusion = || async {
+                    let mut conn = get_conn(&pool).await.expect("test database connection");
+                    Game::find_by_uuid(&game.id, &mut conn)
+                        .await
+                        .expect("reload the game")
+                        .conclusion
+                };
+
+                check(&sockets[0]).handle().await.expect("the check runs");
+                assert_eq!(
+                    conclusion().await,
+                    Conclusion::Unknown.to_string(),
+                    "a move from white's other device may still be on its way"
+                );
+
+                hub.on_disconnect(sockets[1].socket_id, identity.clone());
+                check(&sockets[0]).handle().await.expect("the check runs");
+                assert_eq!(conclusion().await, Conclusion::Timeout.to_string());
+            })
+            .await;
     }
 }

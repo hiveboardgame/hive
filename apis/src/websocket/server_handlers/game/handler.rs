@@ -16,7 +16,7 @@ use crate::{
 };
 use anyhow::Result;
 use chrono::{DateTime, Utc};
-use db_lib::{game_command::ReceivedMove, get_conn, models::Game, DbPool};
+use db_lib::{get_conn, models::Game, DbPool};
 use shared_types::GameId;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -29,8 +29,6 @@ pub struct GameActionHandler {
     data: Arc<WebsocketData>,
     hub: Arc<WsHub>,
     username: String,
-    received_at: DateTime<Utc>,
-    _received_move: Option<ReceivedMove>,
 }
 
 impl GameActionHandler {
@@ -44,14 +42,6 @@ impl GameActionHandler {
         pool: &DbPool,
     ) -> Result<Self> {
         let (username, user_id) = user_details;
-        let received_move = matches!(
-            game_action,
-            GameAction::Turn(_) | GameAction::Play(_) | GameAction::PlayAt { .. }
-        )
-        .then(|| ReceivedMove::arriving(&game_id.0, user_id));
-        let received_at = received_move
-            .as_ref()
-            .map_or_else(Utc::now, ReceivedMove::arrived_at);
         let mut connection = get_conn(pool).await?;
 
         let game = Game::find_by_game_id(game_id, &mut connection).await?;
@@ -65,12 +55,15 @@ impl GameActionHandler {
             username: username.to_owned(),
             game_action,
             user_id,
-            received_at,
-            _received_move: received_move,
         })
     }
 
-    async fn turn(&self, input: TurnInput, expected_turn: Option<usize>) -> Result<HandlerOutput> {
+    async fn turn(
+        &self,
+        input: TurnInput,
+        expected_turn: Option<usize>,
+        arrived_at: DateTime<Utc>,
+    ) -> Result<HandlerOutput> {
         TurnHandler::new(
             input,
             expected_turn,
@@ -79,7 +72,7 @@ impl GameActionHandler {
             Mover {
                 user_id: self.user_id,
                 socket_id: self.received_from.socket_id,
-                arrived_at: self.received_at,
+                arrived_at,
             },
             self.data.clone(),
             &self.pool,
@@ -102,7 +95,8 @@ impl GameActionHandler {
         .await
     }
 
-    pub async fn handle(&self) -> Result<HandlerOutput> {
+    pub async fn handle(&self, move_arrival: Option<DateTime<Utc>>) -> Result<HandlerOutput> {
+        let arrived_at = move_arrival.unwrap_or_else(Utc::now);
         let _start = if can_start_game(&self.game_action) {
             self.data.realtime_gate.admit_start(&self.game)?
         } else {
@@ -116,10 +110,17 @@ impl GameActionHandler {
             }
             GameAction::CheckTime => self.check_time(None).await?,
             GameAction::ClockRanOut(turn) => self.check_time(i32::try_from(turn).ok()).await?,
-            GameAction::Turn(turn) => self.turn(TurnInput::Structured(turn), None).await?,
-            GameAction::Play(notation) => self.turn(TurnInput::Notation(notation), None).await?,
+            GameAction::Turn(turn) => {
+                self.turn(TurnInput::Structured(turn), None, arrived_at)
+                    .await?
+            }
+            GameAction::Play(notation) => {
+                self.turn(TurnInput::Notation(notation), None, arrived_at)
+                    .await?
+            }
             GameAction::PlayAt { turn, notation } => {
-                self.turn(TurnInput::Notation(notation), Some(turn)).await?
+                self.turn(TurnInput::Notation(notation), Some(turn), arrived_at)
+                    .await?
             }
             GameAction::Control(control) => {
                 GameControlHandler::new(

@@ -16,7 +16,7 @@ use db_lib::{
     DbPool,
 };
 use hive_lib::{GameError, Piece, Position, State, Turn};
-use shared_types::{Clock, GameId, RealtimeClock, TimeMode};
+use shared_types::{GameId, RealtimeClock};
 use std::{str::FromStr, sync::Arc};
 use uuid::Uuid;
 
@@ -107,7 +107,10 @@ impl TurnHandler {
         )
         .await?;
         if let (Some(compensation), Outcome::Applied { .. }) = (compensation, &outcome) {
-            compensation.commit(&self.data);
+            let refunded = self
+                .game
+                .compensation_refund(compensation.seconds(), self.mover.arrived_at);
+            compensation.commit(refunded.as_seconds_f64(), &self.data);
         }
         let context = GameCommandContext::websocket(
             GameReaction::Turn(turn),
@@ -130,11 +133,7 @@ impl TurnHandler {
         if self.game.in_untimed_opening() {
             return None;
         }
-        let clock = realtime_clock(
-            &self.game.time_mode,
-            self.game.time_base,
-            self.game.time_increment,
-        )?;
+        let clock = self.game.realtime_clock().ok().flatten()?;
         Some(MoveCompensation::measure(
             &self.data,
             self.mover.user_id,
@@ -142,18 +141,6 @@ impl TurnHandler {
             GameId(self.game.nanoid.clone()),
             clock,
         ))
-    }
-}
-
-fn realtime_clock(
-    time_mode: &str,
-    base: Option<i32>,
-    increment: Option<i32>,
-) -> Option<RealtimeClock> {
-    let mode = TimeMode::from_str(time_mode).ok()?;
-    match Clock::from_time_parts(mode, base, increment).ok()? {
-        Some(Clock::Realtime(clock)) => Some(clock),
-        Some(Clock::Correspondence(_)) | None => None,
     }
 }
 
@@ -185,18 +172,18 @@ impl MoveCompensation {
         self.lag.seconds
     }
 
-    fn commit(self, data: &WebsocketData) {
+    fn commit(self, refunded: f64, data: &WebsocketData) {
         data.telemetry.record_move_lag(self.protocol);
-        data.lags.commit(self.lag);
+        data.lags.commit(self.lag, refunded);
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{realtime_clock, MoveCompensation};
+    use super::MoveCompensation;
     use crate::websocket::WebsocketData;
     use db_lib::game_command::MAX_MOVE_COMPENSATION_SECS;
-    use shared_types::{GameId, RealtimeClock, TimeMode};
+    use shared_types::{GameId, RealtimeClock};
     use std::{num::NonZeroU32, time::Duration};
     use uuid::Uuid;
 
@@ -220,28 +207,6 @@ mod tests {
     }
 
     #[test]
-    fn only_real_time_games_are_compensated() {
-        let real_time = TimeMode::RealTime.to_string();
-        assert_eq!(
-            realtime_clock(&real_time, Some(180), Some(2)),
-            Some(clock(180, 2))
-        );
-        assert_eq!(
-            realtime_clock(&TimeMode::Correspondence.to_string(), None, Some(86400)),
-            None
-        );
-        assert_eq!(
-            realtime_clock(&TimeMode::Correspondence.to_string(), Some(86400), None),
-            None
-        );
-        assert_eq!(
-            realtime_clock(&TimeMode::Untimed.to_string(), None, None),
-            None
-        );
-        assert_eq!(realtime_clock(&real_time, None, None), None);
-    }
-
-    #[test]
     fn a_move_is_compensated_for_its_own_sockets_lag() {
         let data = WebsocketData::default();
         let (user_id, game_id) = (Uuid::new_v4(), game());
@@ -251,7 +216,7 @@ mod tests {
         let fast =
             MoveCompensation::measure(&data, user_id, fast_tab, game_id.clone(), clock(180, 2));
         assert_eq!(fast.seconds(), 0.04);
-        fast.commit(&data);
+        fast.commit(0.04, &data);
         let slow = MoveCompensation::measure(&data, user_id, slow_tab, game_id, clock(180, 2));
         assert_eq!(slow.seconds(), 0.6);
     }
@@ -271,7 +236,7 @@ mod tests {
         assert_eq!(accepted.seconds(), 1.0);
         assert_eq!(data.telemetry.snapshot().lag.moves, 0);
 
-        accepted.commit(&data);
+        accepted.commit(1.0, &data);
         assert!(measure().seconds() < 1.0);
         assert_eq!(data.telemetry.snapshot().lag.moves, 1);
     }

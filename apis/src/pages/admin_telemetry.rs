@@ -547,9 +547,9 @@ fn ChartMoveLag(data: ReadSignal<Vec<TelemetryRow>>) -> impl IntoView {
 fn ChartLagChecks(data: ReadSignal<Vec<TelemetryRow>>) -> impl IntoView {
     let series = Series::new(ts)
         .line(tline!("moves", lag_moves))
-        .line(tline!("capped (tcp or 1 s)", lag_cap_hits))
-        .line(tline!("no protocol estimate", protocol_lag_missing))
-        .line(tline!("tcp rtt connects", tcp_rtt_connects));
+        .line(tline!("capped", lag_cap_hits))
+        .line(tline!("no estimate", protocol_lag_missing))
+        .line(tline!("tcp connects", tcp_rtt_connects));
     base_chart(series, data)
 }
 

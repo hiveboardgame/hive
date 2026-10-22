@@ -10,6 +10,7 @@ use crate::{
         Sounds,
     },
 };
+use chrono::{DateTime, TimeDelta, Utc};
 use hive_lib::Color;
 use leptos::prelude::*;
 use leptos_router::hooks::use_params_map;
@@ -23,6 +24,8 @@ use leptos_use::{
 };
 use shared_types::GameId;
 use std::time::Duration;
+
+const REPORT_AGAIN_AFTER: TimeDelta = TimeDelta::seconds(1);
 
 #[component]
 pub fn LiveTimer(side: Signal<Color>, #[prop(optional)] compact: bool) -> impl IntoView {
@@ -115,12 +118,22 @@ pub fn LiveTimer(side: Signal<Color>, #[prop(optional)] compact: bool) -> impl I
         WatchOptions::default().immediate(true),
     );
 
+    // Reports repeat while the clock reads zero, and each locks the game row a late move may be
+    // waiting for; the server rechecks a flag it cannot settle yet.
+    let last_report = StoredValue::new(None::<(GameId, usize, DateTime<Utc>)>);
     let _ = whenever_with_options(
         move || time_is_zero() && timer().ordinary_clock_running,
         move |_, _, _| {
-            // When time runs out declare winner and style timer that ran out
-            let api = api.get();
-            api.game_check_time(&game_id(), timer.with_untracked(|t| t.turn));
+            let (game_id, turn, now) = (game_id(), timer.with_untracked(|t| t.turn), Utc::now());
+            let reported = last_report.with_value(|last| {
+                last.as_ref().is_some_and(|(game, at_turn, at)| {
+                    *game == game_id && *at_turn == turn && now - *at < REPORT_AGAIN_AFTER
+                })
+            });
+            if !reported {
+                last_report.set_value(Some((game_id.clone(), turn, now)));
+                api.get().game_check_time(&game_id, turn);
+            }
         },
         WatchOptions::default().immediate(true),
     );

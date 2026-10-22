@@ -36,7 +36,6 @@ pub fn run(pool: DbPool, hub: Data<Arc<WsHub>>) {
 
 async fn sweep_once(pool: &DbPool, hub: &Arc<WsHub>) -> Result<()> {
     let mut conn = get_conn(pool).await?;
-    // A real-time deadline cannot be settled before its flag grace has passed.
     let as_of = Utc::now() - real_time_flag_grace();
     let expired = Game::find_expired_ids_by_timeout_at(as_of, SWEEP_BATCH_SIZE, &mut conn).await?;
     for game_id in expired {

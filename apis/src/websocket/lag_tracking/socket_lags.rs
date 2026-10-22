@@ -103,12 +103,18 @@ impl SocketLags {
 // The lower of the two middle samples, so holding back up to half the window's pongs cannot lift
 // the estimate past an honest one.
 fn lower_median(samples: impl Iterator<Item = f64>) -> Option<f64> {
-    let mut sorted: Vec<f64> = samples.collect();
-    if sorted.is_empty() {
+    let mut window = [0.0; WINDOW];
+    let mut len = 0;
+    for (slot, sample) in window.iter_mut().zip(samples) {
+        *slot = sample;
+        len += 1;
+    }
+    if len == 0 {
         return None;
     }
+    let sorted = &mut window[..len];
     sorted.sort_by(f64::total_cmp);
-    Some(sorted[(sorted.len() - 1) / 2])
+    Some(sorted[(len - 1) / 2])
 }
 
 fn cap_ms(tcp_rtt: Option<Duration>) -> f64 {

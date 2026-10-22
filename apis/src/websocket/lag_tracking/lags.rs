@@ -56,12 +56,13 @@ impl Lags {
         }
     }
 
-    pub fn commit(&self, pending: PendingLag) {
+    // A move quicker than its lag gets back only the time it took, and pays only for that.
+    pub fn commit(&self, pending: PendingLag, refunded: f64) {
         if let Ok(mut trackers) = self.trackers.write() {
             trackers
                 .entry(pending.key)
                 .or_insert_with(|| LagTracker::new(pending.base, pending.inc))
-                .settle(pending.lag_seconds, pending.seconds);
+                .settle(pending.lag_seconds, refunded.min(pending.seconds));
         }
     }
 
@@ -106,14 +107,27 @@ mod tests {
         let first = preview();
         let second = preview();
         assert_eq!((first.seconds, second.seconds), (1.0, 1.0));
-        lags.commit(first);
-        lags.commit(second);
+        lags.commit(first, 1.0);
+        lags.commit(second, 1.0);
 
         assert_eq!(
             preview().seconds,
             0.0,
             "1.17 s of quota cannot pay for two 1 s refunds"
         );
+    }
+
+    #[test]
+    fn a_premove_pays_only_for_what_its_clock_got_back() {
+        let lags = Lags::default();
+        let (user, game) = (Uuid::new_v4(), GameId("premove".to_string()));
+        let premove = lags.preview(user, game.clone(), 400.0, 60, 0);
+        assert_eq!(premove.seconds, 0.4);
+
+        lags.commit(premove, 0.15);
+
+        let quota = lags.preview(user, game, 5000.0, 60, 0).seconds;
+        assert!((quota - (1.17 + 0.39 - 0.15)).abs() < 1e-9, "{quota}");
     }
 
     #[test]

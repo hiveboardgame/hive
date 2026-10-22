@@ -524,7 +524,6 @@ fn clock_time_left(
 
 pub(crate) enum DeadlineSettlement {
     Active(Game),
-    // Past due, but a move already received could still beat the deadline.
     Awaiting(Game),
     Terminal {
         game: Game,
@@ -621,8 +620,54 @@ impl Game {
         flag_grace_in(&self.time_mode)
     }
 
-    // Neither side's first move runs the clock: a game started by its moves waits for both, and an
-    // arena game for its opening.
+    pub fn color_on_move(&self) -> Color {
+        if self.turn % 2 == 0 {
+            Color::White
+        } else {
+            Color::Black
+        }
+    }
+
+    pub fn player_id(&self, color: Color) -> Uuid {
+        match color {
+            Color::White => self.white_id,
+            Color::Black => self.black_id,
+        }
+    }
+
+    pub fn clock(&self) -> Result<Option<Clock>, DbError> {
+        let mode = TimeMode::from_str(&self.time_mode)?;
+        Clock::from_time_parts(mode, self.time_base, self.time_increment).map_err(|error| {
+            DbError::InternalError {
+                reason: format!("game has an invalid persisted time control: {error}"),
+            }
+        })
+    }
+
+    pub fn realtime_clock(&self) -> Result<Option<RealtimeClock>, DbError> {
+        Ok(match self.clock()? {
+            Some(Clock::Realtime(clock)) => Some(clock),
+            Some(Clock::Correspondence(_)) | None => None,
+        })
+    }
+
+    // Compensation refunds time the move spent in transit, never more than the move took, or a
+    // fast move would gain time.
+    pub fn compensation_refund(
+        &self,
+        compensation: f64,
+        arrived_at: DateTime<Utc>,
+    ) -> ChronoDuration {
+        ChronoDuration::nanoseconds((compensation * 1_000_000_000.0) as i64)
+            .min(self.move_time(arrived_at))
+    }
+
+    fn move_time(&self, arrived_at: DateTime<Utc>) -> ChronoDuration {
+        self.last_interaction
+            .map_or(ChronoDuration::zero(), |last| arrived_at - last)
+            .max(ChronoDuration::zero())
+    }
+
     pub fn in_untimed_opening(&self) -> bool {
         self.in_arena_opening() || self.in_moves_opening()
     }
@@ -647,11 +692,12 @@ impl Game {
         arrived_before: DateTime<Utc>,
         own_arrival: Option<DateTime<Utc>>,
     ) -> bool {
-        let player = match color {
-            Color::White => self.white_id,
-            Color::Black => self.black_id,
-        };
-        awaits_move(&self.nanoid, player, arrived_before, own_arrival)
+        awaits_move(
+            &self.nanoid,
+            self.player_id(color),
+            arrived_before,
+            own_arrival,
+        )
     }
 
     pub(crate) async fn settle_deadline(
@@ -663,20 +709,14 @@ impl Game {
             .await
     }
 
-    // A player giving the game up ends their own grace when they are on move; otherwise the
-    // opponent's move may still be in flight, as for any other command they send.
+    // Off move, the quitter's opponent may still have a move in flight.
     pub(crate) async fn settle_deadline_giving_up(
         &self,
         quitter: Color,
         checked_at: DateTime<Utc>,
         conn: &mut DbConn<'_>,
     ) -> Result<DeadlineSettlement, DbError> {
-        let on_move = if self.turn % 2 == 0 {
-            Color::White
-        } else {
-            Color::Black
-        };
-        let flag_grace = if quitter == on_move {
+        let flag_grace = if quitter == self.color_on_move() {
             FlagGrace::ended()
         } else {
             FlagGrace::MovesInFlight
@@ -713,11 +753,7 @@ impl Game {
                 terminal_at: deadline,
             });
         }
-        let timed_out_color = if self.turn % 2 == 0 {
-            Color::White
-        } else {
-            Color::Black
-        };
+        let timed_out_color = self.color_on_move();
         let timeout_due = self
             .timeout_at
             .filter(|deadline| checked_at - flag_grace >= *deadline);
@@ -1089,19 +1125,10 @@ impl Game {
         clock: RealtimeClock,
         arrived_at: DateTime<Utc>,
     ) -> Result<(Option<i64>, Option<i64>), DbError> {
-        let mover = if self.turn % 2 == 0 {
-            Color::White
-        } else {
-            Color::Black
-        };
-        let elapsed = self
-            .last_interaction
-            .and_then(|last| arrived_at.signed_duration_since(last).num_nanoseconds())
-            .unwrap_or(0)
-            .max(0);
-        // Compensation refunds time the move spent in transit: it comes off the move's own time
-        // before the flag is decided, and never exceeds it, or a fast move would gain time.
-        let charged = elapsed - ((comp * 1_000_000_000.0) as i64).min(elapsed);
+        let mover = self.color_on_move();
+        let charged = (self.move_time(arrived_at) - self.compensation_refund(comp, arrived_at))
+            .num_nanoseconds()
+            .unwrap_or(i64::MAX);
         let remaining = self.time_left_duration(mover)?.as_nanos() as i64 - charged;
         let (mut white_time, mut black_time) = (self.white_time_left, self.black_time_left);
         let (mover_time, opponent_time) = match mover {
@@ -1128,14 +1155,7 @@ impl Game {
         comp: f64,
         observed_at: DateTime<Utc>,
     ) -> Result<TimeInfo, DbError> {
-        let mode = TimeMode::from_str(&self.time_mode)?;
-        let clock =
-            Clock::from_time_parts(mode, self.time_base, self.time_increment).map_err(|error| {
-                DbError::InternalError {
-                    reason: format!("game has an invalid persisted time control: {error}"),
-                }
-            })?;
-        match clock {
+        match self.clock()? {
             None => Ok(TimeInfo::new(state.game_status.clone())),
             Some(Clock::Realtime(clock)) => {
                 self.get_realtime_time_info_at(state, comp, clock, observed_at)
@@ -1531,14 +1551,7 @@ impl Game {
     }
 
     fn get_takeback_time(&self, popped: i32) -> Result<(Option<i64>, Option<i64>), DbError> {
-        let mode = TimeMode::from_str(&self.time_mode)?;
-        let clock =
-            Clock::from_time_parts(mode, self.time_base, self.time_increment).map_err(|error| {
-                DbError::InternalError {
-                    reason: format!("game has an invalid persisted time control: {error}"),
-                }
-            })?;
-        match clock {
+        match self.clock()? {
             None => Ok((None, None)),
             Some(Clock::Realtime(clock)) => {
                 Ok(self.get_takeback_time_realtime(popped, clock.increment_seconds))
