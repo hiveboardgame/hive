@@ -719,9 +719,9 @@ fn TournamentSurface(
             </p>
         </Show>
         <RealtimePausedNotice applies=realtime_paused />
-        <main class="min-w-0">
+        <div class="min-w-0">
             <Outlet />
-        </main>
+        </div>
     }
 }
 

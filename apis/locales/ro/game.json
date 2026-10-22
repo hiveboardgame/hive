@@ -149,5 +149,27 @@
         "hours_minutes": "{{hours}}h{{minutes}}",
         "arena_hours_minutes": "{{hours}}h {{minutes}}m"
     },
-    "aborted_by": "{{actor}} a anulat partida"
+    "aborted_by": "{{actor}} a anulat partida",
+    "history_navigation": {
+        "first": "Prima mutare",
+        "previous": "Mutarea anterioară",
+        "next": "Mutarea următoare",
+        "last": "Ultima mutare"
+    },
+    "board": {
+        "pieces": {
+            "ant": "Furnică",
+            "beetle": "Gândac",
+            "grasshopper": "Lăcustă",
+            "ladybug": "Buburuză",
+            "mosquito": "Țânțar",
+            "pillbug": "Izopod",
+            "queen": "Regină",
+            "spider": "Păianjen"
+        },
+        "on_board": "{{piece}}{{order}} ({{color}}) pe tablă",
+        "in_reserve": "{{piece}}{{order}} ({{color}}) în rezervă",
+        "move_preview": "Previzualizarea mutării pentru {{piece}}{{order}} ({{color}})",
+        "move_to_position": "Mută la poziția {{q}}, {{r}} de pe tablă"
+    }
 }

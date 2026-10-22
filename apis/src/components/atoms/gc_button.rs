@@ -86,16 +86,10 @@ pub fn ConfirmButton(
     };
     let pending = move |game_control: GameControl| match game_control_pending.get() {
         Some(GameControl::DrawOffer(gc_color)) => {
-            if color == gc_color && matches!(game_control, GameControl::DrawOffer(_)) {
-                return true;
-            }
-            false
+            color == gc_color && matches!(game_control, GameControl::DrawOffer(_))
         }
         Some(GameControl::TakebackRequest(gc_color)) => {
-            if color == gc_color && matches!(game_control, GameControl::TakebackRequest(_)) {
-                return true;
-            }
-            false
+            color == gc_color && matches!(game_control, GameControl::TakebackRequest(_))
         }
         _ => false,
     };

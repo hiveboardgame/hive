@@ -1,0 +1,20 @@
+{
+  "name": "end2end",
+  "version": "1.0.0",
+  "description": "Focused Hive browser interaction and integration checks",
+  "scripts": {
+    "test": "node run.mjs",
+    "test:attached": "playwright test",
+    "test:list": "playwright test --list",
+    "typecheck": "tsc --noEmit",
+    "test:runner": "node --test run.test.mjs"
+  },
+  "license": "AGPL-3.0-only",
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.5.0",
+    "pg": "^8.23.0",
+    "typescript": "^7.0.2"
+  },
+  "private": true
+}

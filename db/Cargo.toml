@@ -14,6 +14,14 @@ path = "src/lib.rs"
 name = "db_bin"
 path = "src/main.rs"
 
+[[bin]]
+name = "hive-e2e"
+path = "src/bin/hive_e2e.rs"
+required-features = ["test-fixtures"]
+
+[features]
+test-fixtures = ["dep:url"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -34,6 +42,7 @@ skillratings = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true }
 tournamint = { workspace = true }
+url = { workspace = true, optional = true }
 uuid = { workspace = true }
 
 [dev-dependencies]

@@ -353,6 +353,29 @@ pub fn Board(
         });
     };
 
+    let pan_viewbox = move |delta_x, delta_y| {
+        if viewbox_state.is_panning.get_untracked() && interaction.is_viewport_pan_allowed() {
+            let future_viewbox = viewbox_signal
+                .get_untracked()
+                .calculate_pan(delta_x, delta_y);
+            if viewbox_state.is_visible.get() || will_svg_be_visible(g_ref, &future_viewbox) {
+                viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                    viewbox_controls.x = future_viewbox.x;
+                    viewbox_controls.y = future_viewbox.y;
+                });
+            }
+        }
+    };
+    let finish_pan = move || {
+        // A release can arrive before RAF. Apply received motion while the
+        // gesture still owns panning, before pointerup finishes a piece drag.
+        if let Some(ViewBoxUpdateType::Pan { delta_x, delta_y }) = pending_update.get_untracked() {
+            pending_update.set(None);
+            pan_viewbox(delta_x, delta_y);
+        }
+        viewbox_state.is_panning.update_untracked(|b| *b = false);
+    };
+
     let raf_controller = use_raf_fn(move |_| {
         let update = pending_update.get_untracked();
         if let Some(update) = update {
@@ -391,21 +414,7 @@ pub fn Board(
                     }
                 }
                 ViewBoxUpdateType::Pan { delta_x, delta_y } => {
-                    if viewbox_state.is_panning.get_untracked()
-                        && interaction.is_viewport_pan_allowed()
-                    {
-                        let future_viewbox = viewbox_signal
-                            .get_untracked()
-                            .calculate_pan(delta_x, delta_y);
-                        if viewbox_state.is_visible.get()
-                            || will_svg_be_visible(g_ref, &future_viewbox)
-                        {
-                            viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                                viewbox_controls.x = future_viewbox.x;
-                                viewbox_controls.y = future_viewbox.y;
-                            });
-                        }
-                    }
+                    pan_viewbox(delta_x, delta_y);
                 }
                 ViewBoxUpdateType::Zoom {
                     center_x,
@@ -710,7 +719,7 @@ pub fn Board(
 
     //Stop panning when user releases touch/click
     _ = use_event_listener(viewbox_ref, pointerup, move |evt| {
-        viewbox_state.is_panning.update_untracked(|b| *b = false);
+        finish_pan();
         // A stationary left-click while drawing clears this position's annotations.
         if let Some(annotations) = annotations {
             if evt.button() == 0 && !is_touch_like(&evt) && annotation_drawing_on(Some(annotations))
@@ -728,7 +737,7 @@ pub fn Board(
 
     //Stop panning when pointer leaves board area
     _ = use_event_listener(viewbox_ref, pointerleave, move |_| {
-        viewbox_state.is_panning.update_untracked(|b| *b = false);
+        finish_pan();
         // Leaving the board ends any in-progress drag. Quick-draw stays open while
         // the modifier is held (closed on keyup) so the palette can be clicked.
         if let Some(annotations) = annotations {
@@ -767,6 +776,7 @@ pub fn Board(
         <div node_ref=div_ref class=board_style style=background_style>
 
             <svg
+                data-testid="hive-board"
                 width="100%"
                 height="100%"
                 viewBox=viewbox_string

@@ -62,10 +62,13 @@ pub fn UserWithRating(
         })
     };
     view! {
-        <div class=format!(
-            "ml-1 flex items-center {} justify-center",
-            if vertical { "flex-row gap-1" } else { "flex-col" },
-        )>
+        <div
+            data-game-player-color=move || side().to_string()
+            class=format!(
+                "ml-1 flex items-center {} justify-center",
+                if vertical { "flex-row gap-1" } else { "flex-col" },
+            )
+        >
             {move || {
                 view! {
                     <div class="flex items-center">
@@ -105,7 +108,7 @@ pub fn UserWithRating(
             <Show
                 when=game_state.is_finished()
                 fallback=move || {
-                    view! { <div class=format!("{text_color}")>{rating}</div> }
+                    view! { <div class=text_color>{rating}</div> }
                 }
             >
 

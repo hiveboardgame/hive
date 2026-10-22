@@ -42,6 +42,7 @@ pub fn PreviewTiles() -> impl IntoView {
     view! {
         <div class=container_classes style=background_style>
             <svg
+                aria-hidden="true"
                 viewBox="1159 695 225 100"
                 class="size-full touch-none"
                 xmlns="http://www.w3.org/2000/svg"

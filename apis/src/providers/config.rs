@@ -1,4 +1,4 @@
-use crate::common::{MoveConfirm, TileDesign, TileDots, TileRotation};
+use crate::common::{MoveConfirm, TileDesign, TileDots, TileRotation, SECURE_COOKIES};
 use codee::{binary::MsgpackSerdeCodec, string::Base64};
 use leptos::prelude::*;
 use leptos_use::{use_cookie_with_options, SameSite, UseCookieOptions};
@@ -101,7 +101,7 @@ pub fn provide_config() {
         USER_CONFIG_COOKIE,
         UseCookieOptions::<ConfigOpts, _, _>::default()
             .same_site(SameSite::Lax)
-            .secure(true)
+            .secure(SECURE_COOKIES)
             .max_age(CONF_MAX_AGE)
             .default_value(Some(ConfigOpts::default()))
             .path("/"),

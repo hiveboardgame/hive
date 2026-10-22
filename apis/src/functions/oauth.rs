@@ -16,7 +16,7 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 
 use crate::{
     security::csrf::session_fingerprint,
-    common::{localized_error_message_for_locale, request_locale},
+    common::{localized_error_message_for_locale, request_locale, SECURE_COOKIES},
 };
 use actix_identity::Identity;
 use actix_session::SessionExt;
@@ -64,7 +64,7 @@ fn discord_link_key(request: &HttpRequest) -> Result<&Key, Error> {
 fn discord_link_cookie(value: String) -> Cookie<'static> {
     Cookie::build(DISCORD_LINK_COOKIE, value)
         .path("/")
-        .secure(!cfg!(debug_assertions))
+        .secure(SECURE_COOKIES)
         .http_only(true)
         .same_site(SameSite::Lax)
         .max_age(DISCORD_LINK_LIFETIME)

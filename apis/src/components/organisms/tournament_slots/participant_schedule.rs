@@ -1119,7 +1119,7 @@ pub fn ParticipantScheduleLayout(
                         </Show>
                     </nav>
                 </aside>
-                <main class=move || {
+                <div class=move || {
                     let route = current_schedule_route(&context);
                     format!(
                         "h-full min-w-0 min-h-0 flex-col overflow-y-auto bg-even-light/95 dark:bg-surface-panel {} tournament-two:!flex",
@@ -1132,7 +1132,7 @@ pub fn ParticipantScheduleLayout(
                     )
                 }>
                     <Outlet />
-                </main>
+                </div>
             </div>
         </div>
         <ScheduleEditorDialog tournament schedules user_id selected_slot dialog_el route_active />

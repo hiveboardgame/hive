@@ -149,5 +149,27 @@
         "hours_minutes": "{{hours}}h{{minutes}}",
         "arena_hours_minutes": "{{hours}}h {{minutes}}min"
     },
-    "aborted_by": "{{actor}} a annulé la partie"
+    "aborted_by": "{{actor}} a annulé la partie",
+    "history_navigation": {
+        "first": "Premier coup",
+        "previous": "Coup précédent",
+        "next": "Coup suivant",
+        "last": "Dernier coup"
+    },
+    "board": {
+        "pieces": {
+            "ant": "Fourmi",
+            "beetle": "Scarabée",
+            "grasshopper": "Sauterelle",
+            "ladybug": "Coccinelle",
+            "mosquito": "Moustique",
+            "pillbug": "Cloporte",
+            "queen": "Reine",
+            "spider": "Araignée"
+        },
+        "on_board": "{{piece}}{{order}} ({{color}}) sur le plateau",
+        "in_reserve": "{{piece}}{{order}} ({{color}}) en réserve",
+        "move_preview": "Aperçu du déplacement de {{piece}}{{order}} ({{color}})",
+        "move_to_position": "Déplacer vers la position {{q}}, {{r}} du plateau"
+    }
 }

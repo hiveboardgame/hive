@@ -1,6 +1,17 @@
-# Get started with a build env with Rust nightly,
-# using bullseye because bookworm refused to build it 
-FROM rustlang/rust:nightly-bookworm AS builder
+FROM debian:bookworm AS builder
+
+ENV RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH=/usr/local/cargo/bin:$PATH
+RUN apt-get update && \
+    apt-get install --no-install-recommends -y \
+      build-essential ca-certificates curl wget pkg-config libssl-dev libpq-dev && \
+    rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY rust-toolchain.toml ./
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+    sh -s -- -y --profile minimal --default-toolchain none && \
+    rustup toolchain install --no-self-update
 
 # Install cargo-binstall, which makes it easier to install other
 # cargo extensions like cargo-leptos
@@ -8,16 +19,10 @@ RUN wget --progress=dot:giga https://github.com/cargo-bins/cargo-binstall/releas
     tar -xvf cargo-binstall-x86_64-unknown-linux-musl.tgz && \
     cp cargo-binstall /usr/local/cargo/bin && \
     # Install cargo-leptos
-    cargo binstall cargo-leptos -y && \
-    # Make an /app dir, which everything will eventually live in
-    mkdir -p /app
-
-WORKDIR /app
+    cargo binstall cargo-leptos -y
 
 # Copy the application source code
 COPY . .
-
-RUN rustup show && rustup target add wasm32-unknown-unknown
 
 # Build the app
 RUN LEPTOS_HASH_FILES=true cargo leptos build -r -P -vv

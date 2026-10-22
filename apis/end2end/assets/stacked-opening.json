@@ -1,0 +1,79 @@
+[
+  {
+    "key": "openingAnt",
+    "piece": "wA1",
+    "name": "White Ant 1",
+    "position": {
+      "q": 16,
+      "r": 16
+    },
+    "notation": "wA1",
+    "level": 0
+  },
+  {
+    "key": "blackAnt",
+    "piece": "bA1",
+    "name": "Black Ant 1",
+    "position": {
+      "q": 15,
+      "r": 16
+    },
+    "notation": "bA1 -wA1",
+    "level": 0
+  },
+  {
+    "key": "whiteQueen",
+    "piece": "wQ",
+    "name": "White Queen",
+    "position": {
+      "q": 16,
+      "r": 17
+    },
+    "notation": "wQ wA1\\",
+    "level": 0
+  },
+  {
+    "key": "blackQueen",
+    "piece": "bQ",
+    "name": "Black Queen",
+    "position": {
+      "q": 15,
+      "r": 15
+    },
+    "notation": "bQ \\bA1",
+    "level": 0
+  },
+  {
+    "key": "whiteBeetle",
+    "piece": "wB1",
+    "name": "White Beetle 1",
+    "position": {
+      "q": 17,
+      "r": 16
+    },
+    "notation": "wB1 wA1-",
+    "level": 0
+  },
+  {
+    "key": "blackGrasshopper",
+    "piece": "bG1",
+    "name": "Black Grasshopper 1",
+    "position": {
+      "q": 16,
+      "r": 14
+    },
+    "notation": "bG1 bQ/",
+    "level": 0
+  },
+  {
+    "key": "beetleMove",
+    "piece": "wB1",
+    "name": "White Beetle 1",
+    "position": {
+      "q": 16,
+      "r": 17
+    },
+    "notation": "wB1 wQ",
+    "level": 1
+  }
+]

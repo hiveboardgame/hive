@@ -4,6 +4,7 @@ mod challenge_viewer;
 mod chat_link;
 mod client_message;
 mod config_options;
+mod cookie_options;
 mod date_time;
 mod download;
 mod fitted_pagination;
@@ -59,6 +60,7 @@ pub use challenge_viewer::{
 pub use chat_link::{chat_link_href, external_link_destination, validated_link_url};
 pub use client_message::{ChatSendRequest, ClientRequest, SubscriptionAttempt, TvInterest};
 pub use config_options::{CurrentConfirm, MoveConfirm, TileDesign, TileDots, TileRotation};
+pub(crate) use cookie_options::SECURE_COOKIES;
 #[cfg(feature = "ssr")]
 pub(crate) use date_time::format_utc_datetime;
 pub(crate) use date_time::{format_local_datetime, format_tournament_datetime};

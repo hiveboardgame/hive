@@ -149,5 +149,27 @@
         "hours_minutes": "{{hours}}h{{minutes}}",
         "arena_hours_minutes": "{{hours}}h {{minutes}}m"
     },
-    "aborted_by": "{{actor}} abortó la partida"
+    "aborted_by": "{{actor}} abortó la partida",
+    "history_navigation": {
+        "first": "Primera jugada",
+        "previous": "Jugada anterior",
+        "next": "Jugada siguiente",
+        "last": "Última jugada"
+    },
+    "board": {
+        "pieces": {
+            "ant": "Hormiga",
+            "beetle": "Escarabajo",
+            "grasshopper": "Saltamontes",
+            "ladybug": "Mariquita",
+            "mosquito": "Mosquito",
+            "pillbug": "Cochinilla",
+            "queen": "Reina",
+            "spider": "Araña"
+        },
+        "on_board": "{{piece}}{{order}} ({{color}}) en el tablero",
+        "in_reserve": "{{piece}}{{order}} ({{color}}) en la reserva",
+        "move_preview": "Vista previa de {{piece}}{{order}} ({{color}})",
+        "move_to_position": "Mover a la posición del tablero {{q}}, {{r}}"
+    }
 }
