@@ -152,12 +152,11 @@ fn opening_highlights_and_arrows_point_at_real_hexes() {
             "{}: a highlight does not resolve",
             lesson.id
         );
-        assert_eq!(
-            session.arrows().len(),
-            expected_arrow_count(&session, step),
-            "{}: an arrow does not resolve",
-            lesson.id
-        );
+        if let Some(expected) = expected_arrow_count(&session, step) {
+            assert_eq!(session.arrows().len(), expected, "{}: an arrow does not resolve",lesson.id);
+        } else {
+            assert!(session.arrows().iter().all(|(from,to)| from.is_neighbor(*to)));
+        }
     }
 }
 
@@ -531,7 +530,7 @@ fn solve(mut session: Session) -> Result<(), String> {
         let step = session.step_index();
         if let Some(current) = session.current_step() {
             if session.highlights().len() != current.highlights.len()
-                || session.arrows().len() != expected_arrow_count(&session, current)
+                || expected_arrow_count(&session, current).is_some_and(|expected| session.arrows().len() != expected)
                 || (!current.immobile_marks && session.marks().len() != current.marks.len())
             {
                 return Err(format!(
@@ -925,36 +924,31 @@ fn blank_hive_only_allows_white_queen_and_has_no_opponent_responses() {
         }
     }
     assert_eq!(session.state().turn_color, Color::White);
-    assert_eq!(session.current_step().unwrap().prompt, "Well done!");
+    assert_eq!(session.current_step().unwrap().prompt, "White wins!");
     assert_eq!(session.completion_result(), Some("White wins!"));
     assert!(session.current_step().unwrap().completion_tip.is_empty());
 }
 
 #[test]
 fn blank_hive_illegal_moves_are_not_applied_and_hints_find_the_route() {
-    let lesson = find_lesson("bugs.dont_break_the_hive").unwrap();
-    let mut session = Session::new(lesson).unwrap();
-    let queen: Piece = "wQ".parse().unwrap();
-    let initial = session.state().board.clone();
-    let from = initial.position_of_piece(queen).unwrap();
-    let first = hex(&initial, "bL/").unwrap();
-    let target = hex(&initial, "bQ/").unwrap();
-    let red = session.forbidden();
-    assert_eq!(red.len(), 1);
-    assert!(!initial.occupied(red[0]));
-    assert!(session.arrows().is_empty());
-    for count in 1..=2 {
-        assert_eq!(session.play(queen, red[0]), Outcome::Wrong);
-        assert!(session.needs_retry());
-        assert!(session.state().board == initial);
-        session.retry();
-        assert_eq!(session.arrows().is_empty(), count < 2);
-    }
-    assert_eq!(session.arrows(), vec![(from, first), (first, target)]);
-    assert_eq!(session.play(queen, first), Outcome::Progress);
-    assert_eq!(session.arrows(), vec![(first, target)]);
-    assert_eq!(session.play(queen, target), Outcome::LessonDone);
-    assert!(session.arrows().is_empty());
+    let mut session=Session::new(find_lesson("bugs.dont_break_the_hive").unwrap()).unwrap();
+    let queen="wQ".parse().unwrap();
+    let initial=session.state().board.clone();
+    let from=hex(&initial,"wQ").unwrap();
+    let red=hex(&initial,"wM/").unwrap();
+    assert!(session.forbidden().is_empty());
+    assert_eq!(session.red_arrows(),vec![(from,red)]);
+    assert!(!session.destinations(queen).contains(&red));
+    assert_eq!(session.play(queen,red),Outcome::Illegal);
+    assert!(session.state().board==initial);
+    assert!(!session.needs_retry());
+    let first=hex(&initial,"bL/").unwrap();
+    assert_eq!(session.play(queen,first),Outcome::Progress);
+    assert!(session.red_arrows().is_empty());
+    assert_eq!(session.play(queen,from),Outcome::Progress);
+    assert!(session.red_arrows().is_empty(),"returning to the initial hex must not restore the red arrow");
+    session.retry();
+    assert_eq!(session.red_arrows(),vec![(from,red)]);
 }
 
 #[test]
@@ -1072,7 +1066,7 @@ fn placing_accepts_every_legal_piece_at_every_white_placement() {
         let mut session = initial.clone();
         assert_eq!(session.play(piece, target), Outcome::LessonDone);
         assert!(session.state().board.position_of_piece("bQ".parse().unwrap()).is_some());
-        assert!(session.prompt().unwrap().contains("your piece"));
+        assert!(!session.prompt().unwrap().contains("Ant"));
         pieces.insert(piece.bug());
     }
     assert_eq!(pieces.len(), 7);
@@ -1092,14 +1086,14 @@ fn one_hive_black_win_easter_egg_requires_an_actual_win() {
         assert_eq!(win.play(name.parse().unwrap(), black_target), Outcome::LessonDone);
         assert_eq!(win.state().game_status,
             hive_lib::GameStatus::Finished(hive_lib::GameResult::Winner(Color::Black)));
-        assert_eq!(win.prompt(), Some("Good job, Black won!"));
+        assert_eq!(win.prompt(), Some("Black wins!"));
     }
     for (piece, target) in board_moves(session.state()) {
         let mut attempt = session.clone();
         assert_eq!(attempt.play(piece, target), Outcome::LessonDone);
         let won = attempt.state().game_status ==
             hive_lib::GameStatus::Finished(hive_lib::GameResult::Winner(Color::Black));
-        assert_eq!(attempt.prompt() == Some("Good job, Black won!"), won);
+        assert_eq!(attempt.prompt() == Some("Black wins!"), won);
     }
 }
 
@@ -1364,10 +1358,11 @@ fn backtracking_lesson_finishes_without_a_move_or_continue_button() {
     }
 }
 
-fn expected_arrow_count(session: &Session, step: &Step) -> usize {
-    step.arrows.len() + step.legal_arrows
+fn expected_arrow_count(session: &Session, step: &Step) -> Option<usize> {
+    if step.movement_paths.is_some() { return None; }
+    Some(step.arrows.len() + step.legal_arrows
         .and_then(|spec| spec.parse::<Piece>().ok())
-        .map_or(0, |piece| session.destinations(piece).len())
+        .map_or(0, |piece| session.destinations(piece).len()))
 }
 
 #[test]
@@ -1384,19 +1379,18 @@ fn corrected_door_position_has_a_two_move_route_and_arrows_follow_the_spider() {
     assert!(!session.destinations(spider).contains(&goal));
     assert_eq!(session.highlights(), vec![goal]);
     assert!(session.current_step().unwrap().small_arrows);
-    assert_eq!(session.arrows().len(), 4);
+    assert_spider_step_arrows(&session);
     for at in session.state().board.all_taken_positions() {
         let piece = session.state().board.top_piece(at).unwrap();
         assert_eq!(session.can_select(piece), piece == spider);
     }
     let ordinary: HashSet<_> = session.destinations(spider).into_iter().collect();
-    assert!(session.arrows().iter().all(|(start, to)| *start == from && ordinary.contains(to)));
+    assert!(session.arrows().iter().all(|(start,to)| start.is_neighbor(*to)));
     for to in ordinary {
         let mut attempt = session.clone();
         assert_eq!(attempt.play(spider, to), Outcome::Progress);
         assert!(!attempt.needs_retry());
-        assert!(attempt.arrows().iter().all(|(start, target)|
-            *start == to && attempt.destinations(spider).contains(target)));
+        assert_spider_step_arrows(&attempt);
     }
     let via = hex(&session.state().board, "wA2\\").unwrap();
     assert_eq!(session.play(spider, via), Outcome::Progress);
@@ -1536,7 +1530,7 @@ fn spawn_points_only_accept_the_two_new_hexes_for_any_reserve_piece() {
 #[test]
 fn beetle_gates_has_only_beetle_graphics_and_both_routes_still_win() {
     let lesson = find_lesson("bugs.beetle_gate").unwrap();
-    assert_eq!(lesson.blank_visible().unwrap(), &["wB1", "wB2", "bB1", "bB2"]);
+    assert_eq!(lesson.blank_visible().unwrap(), &["wB1", "wB2", "bB1", "bB2", "bQ"]);
     assert!(lesson.outro.is_empty());
     for obstacle in ["bB1", "bB2"] {
         let mut session = Session::new(lesson).unwrap();
@@ -1552,6 +1546,7 @@ fn beetle_gates_has_only_beetle_graphics_and_both_routes_still_win() {
         assert!(session.black_reply_arrow().is_none());
         assert_eq!(session.play(beetle, goal), Outcome::LessonDone);
         assert!(Condition::Surrounded("bQ").holds(session.state()));
+        assert_eq!(session.completion_result(),Some("White wins!"));
     }
 }
 
@@ -1631,7 +1626,8 @@ fn grasshopper_placement_only_accepts_the_winning_hex_and_black_refutes_wrong_pl
     for attempt in 0..2 {
         assert_eq!(session.play(hopper, trap), Outcome::Refuted);
         session.retry();
-        assert_eq!(session.highlights(), if attempt == 1 { vec![goal] } else { vec![] });
+        assert!(session.highlights().is_empty());
+        assert_eq!(session.arrows(),if attempt==1 {vec![(goal,hex(&session.state().board,"\\bQ").unwrap())]} else {vec![]});
     }
 }
 
@@ -1757,7 +1753,7 @@ fn jumping_path_hints_appear_after_ten_moves_and_retry_after_sixteen() {
 }
 
 #[test]
-fn ladybug_gate_has_exactly_two_move_pinning_routes_and_hides_other_pieces() {
+fn ladybug_gate_keeps_a_safe_two_move_pinning_route_and_hides_other_pieces() {
     let initial = Session::new(find_lesson("bugs.ladybug_gate").unwrap()).unwrap();
     let ladybug: Piece = "wL".parse().unwrap();
     let from = initial.state().board.position_of_piece(ladybug).unwrap();
@@ -1784,11 +1780,11 @@ fn ladybug_gate_has_exactly_two_move_pinning_routes_and_hides_other_pieces() {
             assert!(Condition::Pinned("bQ").holds(session.state()));
             assert!(Condition::Stuck("bQ").holds(session.state()));
         } else {
-            assert_eq!(result, Outcome::Wrong);
+            assert!(matches!(result,Outcome::Wrong|Outcome::Refuted));
             assert!(session.needs_retry());
         }
     }
-    assert_eq!(good, 2);
+    assert_eq!(good, 1);
     let visible = initial.lesson().blank_visible().unwrap();
     assert!(visible.contains(&"bQ") && visible.contains(&"wL"));
     assert!(!visible.contains(&"wQ"));
@@ -1860,7 +1856,7 @@ fn pillbug_rescue_accepts_every_drop_resets_the_position_and_requires_both_parts
         assert!(!rescued.accepts_moves());
         assert_eq!(rescued.advance(), Outcome::StepDone);
         assert!(rescued.state().board == initial.state().board);
-        assert!(rescued.prompt().unwrap().contains("can also move by itself"));
+        assert!(rescued.prompt().unwrap().contains("Pillbug [[wP]] itself"));
         assert!(rescued.black_reply_arrow().is_none());
         let moves = rescued.destinations(pillbug);
         assert_eq!(moves.len(), 2);
@@ -2167,8 +2163,12 @@ fn mosquito_hints_after_two_errors_solve_the_exercise_in_exactly_two_moves() {
     }
     for i in 0..2 {
         let arrows = session.arrows();
-        assert_eq!(arrows.len(), 1);
-        assert_eq!(session.play(mosquito, arrows[0].1),
+        assert_eq!(arrows.len(), 3);
+        assert!(arrows.iter().all(|(from,to)| from.is_neighbor(*to)));
+        assert!(session.state().board.occupied(arrows[0].1));
+        assert!(session.state().board.occupied(arrows[1].1));
+        assert!(!session.state().board.occupied(arrows[2].1));
+        assert_eq!(session.play(mosquito, arrows[2].1),
             if i == 0 { Outcome::Progress } else { Outcome::LessonDone });
     }
 }
@@ -2465,4 +2465,89 @@ fn freedom_gate_starts_with_red_queen_arrow_and_mosqueetle_frames_the_goal() {
     let mosqueetle = Session::new(find_lesson("bugs.mosquito_climb").unwrap()).unwrap();
     assert!(mosqueetle.red_marks().iter().any(|mark| mark.position == hex(&mosqueetle.state().board, "bQ").unwrap()));
     assert_eq!(find_lesson("bugs.mosquito").unwrap().title, "Mosquito");
+}
+
+
+fn assert_spider_step_arrows(session: &Session) {
+    let spider="wS1".parse().unwrap();
+    let from=session.state().board.position_of_piece(spider).unwrap();
+    let arrows=session.arrows();
+    assert!(!arrows.is_empty());
+    let mut board=session.state().board.clone();
+    board.remove(from);
+    for (a,b) in &arrows {
+        assert!(a.is_neighbor(*b));
+        assert!(!board.occupied(*b));
+        let (left,right)=a.common_adjacent_positions(*b);
+        assert!(board.occupied(left)||board.occupied(right));
+        assert!(!board.gated(1,*a,*b));
+    }
+    for target in session.destinations(spider) {
+        assert!(arrows.iter().any(|(a,first)| *a==from && arrows.iter().any(|(b,second)|
+            b==first && *second!=from && arrows.contains(&(*second,target)) && target!=from && target!=*first)),
+            "every legal Spider destination needs a three-step route");
+    }
+}
+
+#[test]
+fn spider_power_both_spiders_start_mobile_and_help_after_twelve_moves() {
+    let mut session=Session::new(find_lesson("bugs.spider_power").unwrap()).unwrap();
+    for name in ["wS1","wS2"] { assert!(!session.destinations(name.parse().unwrap()).is_empty()); }
+    let spider="wS2".parse().unwrap();
+    let from=session.state().board.position_of_piece(spider).unwrap();
+    let away=session.destinations(spider)[0];
+    for index in 1..=12 {
+        assert_eq!(session.play(spider,if index%2==1 {away}else{from}),Outcome::Progress);
+        assert_eq!(!session.arrows().is_empty(),index>=12);
+    }
+    for _ in 0..10 {
+        if session.is_finished() { break; }
+        let arrows=session.arrows();
+        assert_eq!(arrows.len(),3);
+        assert!(arrows.iter().all(|(a,b)| a.is_neighbor(*b)));
+        let mover=session.state().board.top_piece(arrows[0].0).unwrap();
+        assert!(mover.bug()==hive_lib::Bug::Spider);
+        assert!(session.destinations(mover).contains(&arrows[2].1));
+        assert!(matches!(session.play(mover,arrows[2].1),Outcome::Progress|Outcome::LessonDone));
+    }
+    assert!(session.is_finished());
+    assert_eq!(session.completion_result(),Some("White wins!"));
+}
+
+#[test]
+fn ladybug_and_mosquito_wrong_approaches_are_covered_and_retry_restores_them() {
+    for (id,piece,target,beetle) in [
+        ("bugs.ladybug_gate","wL",Position::new(16,16),"bB2"),
+        ("bugs.mosquito_other","wM",Position::new(15,20),"bB1"),
+        ("bugs.mosquito_other","wM",Position::new(17,18),"bB1"),
+    ] {
+        let mut session=Session::new(find_lesson(id).unwrap()).unwrap();
+        let before=session.state().board.clone();
+        let piece=piece.parse().unwrap();
+        assert!(session.destinations(piece).contains(&target));
+        assert_eq!(session.play(piece,target),Outcome::Refuted);
+        assert_eq!(session.state().board.top_piece(target),Some(beetle.parse().unwrap()));
+        assert_eq!(session.state().board.under_piece(target),Some(piece));
+        assert!(session.needs_retry());
+        session.retry();
+        assert!(session.state().board==before);
+        assert!(!session.needs_retry());
+    }
+}
+
+#[test]
+fn online_controls_uses_the_requested_hop_and_clock_lesson_only_accepts_placement() {
+    let session=Session::new(find_lesson("online.controls").unwrap()).unwrap();
+    let parsed=hive_lib::hop::parse("L+Q1-l-q!,w").unwrap();
+    for p in ["wQ","bQ","wL","bL"] {
+        let p=p.parse().unwrap();
+        assert_eq!(session.state().board.position_of_piece(p),parsed.board.position_of_piece(p));
+    }
+    let initial=Session::new(find_lesson("online.time_controls").unwrap()).unwrap();
+    for (p,to) in legal_moves(initial.state()) {
+        let mut attempt=initial.clone();
+        assert_eq!(attempt.play(p,to),if initial.state().board.position_of_piece(p).is_none() {
+            Outcome::StepDone
+        } else { Outcome::Wrong });
+    }
 }

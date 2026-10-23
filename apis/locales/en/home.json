@@ -1,6 +1,6 @@
 {
     "learn_to_play": "Learn to play",
-    "create_game": "Create a game",
+    "create_game": "Create new game",
     "search_players": "Search players",
     "found_players": "Found:",
     "online_players_one": "{{count}} Online player",
@@ -49,5 +49,6 @@
             "humans": "No human challenges are open. Create one above to get a game started.",
             "bots": "No bot challenges are open right now."
         }
-    }
+    },
+    "join_game": "Join a game"
 }

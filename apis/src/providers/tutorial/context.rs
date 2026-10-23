@@ -185,7 +185,7 @@ impl TutorialContext {
                 self.complete_lesson();
             }
             Some(Outcome::Wrong) => {
-                self.feedback.set(Some(Feedback::Hint("Your time ran out. Press Try again to restart with one minute.")));
+                self.feedback.set(Some(Feedback::Hint("Your time ran out. Choose Try again to restart.")));
             }
             _ => {}
         }

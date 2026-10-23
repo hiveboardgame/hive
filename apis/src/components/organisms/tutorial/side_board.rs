@@ -36,15 +36,15 @@ impl Tab {
 const CONTROLS: [(GameControl, &str); 3] = [
     (
         GameControl::TakebackRequest(Color::White),
-        "Takeback requested. Your opponent sees the request and can accept, which undoes your last move, or decline it.",
+        "Your opponent must agree to undo your last move.",
     ),
     (
         GameControl::DrawOffer(Color::White),
-        "Draw offered. If your opponent accepts, the game ends and nobody wins. If not, play goes on.",
+        "Your opponent can accept the draw or keep playing.",
     ),
     (
         GameControl::Resign(Color::White),
-        "You resigned. In a real game that ends it at once and your opponent wins. Here nothing happened, so carry on.",
+        "In a real game, resigning gives your opponent the win. This tutorial is unchanged.",
     ),
 ];
 

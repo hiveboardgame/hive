@@ -421,6 +421,7 @@ impl Session {
                 .chain(step.hint_highlights.iter())
                 .chain(step.forbidden.iter())
                 .chain(step.red_arrows.iter().map(|(_, to)| to))
+                .chain(step.hint_arrows.iter().flat_map(|(from, to)| [from, to]))
                 .chain(step.arrows.iter().map(|(_, to)| to)))
             .filter_map(|notation| hex(&self.initial.board, notation))
             .collect();
@@ -492,24 +493,38 @@ impl Session {
         if self.needs_retry() { return Vec::new(); }
         self.current_step().map_or_else(Vec::new, |step| {
             let hint = self.hint_visible(step);
+            let expand = |arrows: Vec<(Position, Position)>| -> Vec<(Position, Position)> {
+                arrows.into_iter().flat_map(|(from,to)| {
+                    step.movement_paths.map_or_else(|| vec![(from,to)], |bug|
+                        super::paths::movement_path(bug,&self.state.board,from,to))
+                }).collect()
+            };
             let mut arrows: Vec<_> = if hint && step.legal_arrows.is_some() {
                 Vec::new()
             } else {
-                step.arrows.iter().filter_map(|(from, to)| {
-                    Some((hex(self.annotation_board(), from)?, hex(self.annotation_board(), to)?))
-                }).collect()
+                step.arrows.iter().filter_map(|(from,to)|
+                    Some((hex(self.annotation_board(),from)?,hex(self.annotation_board(),to)?))).collect()
             };
             if !hint {
                 if let Some(piece) = step.legal_arrows.and_then(|spec| spec.parse::<Piece>().ok()) {
                     if let Some(from) = self.state.board.position_of_piece(piece) {
-                        arrows.extend(self.destinations(piece).into_iter().map(|to| (from, to)));
+                        arrows.extend(expand(self.destinations(piece).into_iter().map(|to| (from,to)).collect()));
                     }
                 }
             }
-            if step.hint_highlights.is_empty() && hint {
-                arrows.extend(self.move_hints(&step.goal));
+            if hint {
+                arrows.extend(step.hint_arrows.iter().filter_map(|(from,to)|
+                    Some((hex(self.annotation_board(),from)?,hex(self.annotation_board(),to)?))));
+                if step.hint_highlights.is_empty() && step.hint_arrows.is_empty() {
+                    arrows.extend(expand(self.move_hints(&step.goal)));
+                }
             }
-            arrows.extend(self.route_arrows.iter().copied());
+            if step.movement_paths.is_some() {
+                // Show one complete three-step turn, updating after the learner moves.
+                arrows.extend(expand(self.route_arrows.iter().take(1).copied().collect()));
+            } else { arrows.extend(self.route_arrows.iter().copied()); }
+            let mut seen=std::collections::HashSet::new();
+            arrows.retain(|edge| seen.insert(*edge));
             arrows
         })
     }
@@ -517,6 +532,7 @@ impl Session {
     pub fn red_arrows(&self) -> Vec<(Position, Position)> {
         if self.needs_retry() { return Vec::new(); }
         self.current_step().map_or_else(Vec::new, |step| {
+            if step.initial_red_arrows && self.exploration_moves[self.step] > 0 { return Vec::new(); }
             if step.legal_arrows.is_some() && self.hint_visible(step) { return Vec::new(); }
             step.red_arrows.iter().filter_map(|(piece, to)| {
                 let mover: Piece = piece.parse().ok()?;
@@ -634,6 +650,8 @@ impl Session {
             for piece in &pieces {
                 let Some(from) = state.board.position_of_piece(*piece) else { continue; };
                 for to in Self::destinations_in(&state, self.learner, *piece, self.lesson.uses_blank_tiles()) {
+                    if self.current_step().and_then(|step| step.movement_paths).is_some_and(|bug|
+                        super::paths::movement_path(bug,&state.board,from,to).is_empty()) { continue; }
                     let mut next = state.clone();
                     next.hashes_count.clear();
                     if next.play_turn_from_position(*piece, to).is_err() { continue; }
@@ -769,6 +787,8 @@ impl Session {
         }
         self.remember_black_move(&before);
         self.remember_revealed();
+        if !matches!(step.goal, Goal::Explore { .. }) && step.cover_reply.is_some()
+            && self.refute_escape(step) { return Outcome::Refuted; }
         match &step.goal {
             Goal::Continue | Goal::WaitForTimeout(_) => {
                 self.state = before;

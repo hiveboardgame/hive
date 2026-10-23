@@ -14,24 +14,23 @@ pub const CHAPTER: Chapter = Chapter {
 const CREATE_JOIN: Lesson = Lesson {
     id: "online.create_join",
     title: "A bit more about hivegame.com",
-    intro: &["The homepage gives you three ways to start playing: choose a ready-made time control, create a custom game, or join an open game."],
+    intro: &["The homepage lets you create a game or join one.\nThis is a read-only tour; use Continue to follow along."],
     brief: "Actual homepage, rendered read-only. Point to quick games, Custom, and open challenges in three read-only stages.",
     setup: Setup::Guide(GuidePage::Home),
     steps: &[
-        Step::read("Choose one of these ready-made time controls to start a game quickly. The two numbers show minutes per player and seconds added after each move.", &[]),
-        Step::read("Choose Custom to set your own time control and game options, including whether the game is rated and which colour you prefer.", &[]),
-        Step::read("You can also join a game someone else has created. Check the time control and game details in the open challenges list, then choose Join.", &[]),
+        Step::read("These hexagonal buttons create new open games with preset time controls.\nPress Continue to see the Custom options.", &[]),
+        Step::read("Custom lets you choose your game options.\nPress Continue to see open games.", &[]),
+        Step::read("Join accepts a game another player created.\nCheck its time control before joining.", &[]),
     ],
-    outro: "Pick a comfortable time control for your first games, so you have time to think.",
+    outro: "Tip: Start with a slower time control (10+10 or 20+20) so you have more time to think.",
 };
 
 const TIME_CONTROLS: Lesson = Lesson {
     id: "online.time_controls",
     title: "Reading a time control",
     intro: &[
-        "A time control has two numbers. In 5+4, each player starts with 5 minutes and gains 4 seconds after every move.",
-        "Here we use 1+0: one minute each, with no increment. Your clock runs only during your turn. Reaching zero loses the game.",
-        "Make a move before your minute runs out, then watch Black's clock count down.",
+        "A clock such as **5+4** gives each player 5 minutes, plus 4 seconds after each move.",
+        "Here, **1+0** means one minute each, with no extra seconds.\nYour clock runs only on your turn. Reaching zero loses the game.",
     ],
     brief: "A local 1+0 demonstration using the existing four-ply board. Any legal White turn starts Black's clock. Black makes no move and loses at zero; a White timeout requires retry.",
     setup: Setup::Clocked {
@@ -41,16 +40,16 @@ const TIME_CONTROLS: Lesson = Lesson {
     },
     steps: &[
         Step::play(
-            "You play as White. Both players have one minute. Make any legal move or placement before your clock reaches zero, then watch your opponent's clock.",
-            PlayAny,
-            "Make a legal White move before your minute runs out.",
+            "You play as White. You have one minute.\nMake any legal placement before your clock reaches zero.",
+            PlaceAny,
+            "Make a legal White move before your clock reaches zero.",
         ).await_opponent(),
         Step::play(
-            "Your clock has stopped and Black's clock is running. Black will not move in this exercise: watch what happens when the clock reaches zero.",
+            "Your clock has stopped. Black will not move.\nYou can watch Black's clock count down to zero if you like (it will turn red).",
             WaitForTimeout(Color::Black),
             "Wait for Black's clock to reach zero.",
         ).await_opponent(),
-        Step::read("Black ran out of time, so White wins! The red clock shows which player lost on time.", &[]).announce_winner(),
+        Step::read("Black ran out of time. White wins!\nThe losing clock turns red.", &[]).announce_winner(),
     ],
     outro: "",
 };
@@ -58,13 +57,13 @@ const TIME_CONTROLS: Lesson = Lesson {
 const CONTROLS: Lesson = Lesson {
     id: "online.controls",
     title: "Undo, offer a draw and resign",
-    intro: &["These three controls appear beside the board. In a real game, the first click selects an action and a second click confirms it."],
+    intro: &["These controls sit beside the board.\nIn a game, click once to select an action and again to confirm.\nThese tutorial controls do not affect a real game."],
     brief: "The actual board, reserves and game-control components, with each control highlighted in its normal sidebar position.",
-    setup: Setup::Position("L+l+Q+q,w"),
+    setup: Setup::Position("L+Q1-l-q!,w"),
     steps: &[
-        Step::read("Undo requests a takeback of your last move. Your opponent can accept or decline the request; a request does not undo a move automatically.", &[]),
-        Step::read("Offer draw asks your opponent to agree to a draw. If they accept, the game ends with no winner. If they decline, the game continues.", &[]),
-        Step::read("Resign ends the game immediately and gives your opponent the win. Use it when you decide you no longer want to continue the game.", &[]),
+        Step::read("Undo asks to take back your last move.\nYour opponent must agree.", &[]),
+        Step::read("Offer draw asks to end the game as a draw.\nIf your opponent declines, play continues.", &[]),
+        Step::read("Resign ends the game and gives your opponent the win.", &[]),
     ],
     outro: "",
 };
@@ -72,30 +71,27 @@ const CONTROLS: Lesson = Lesson {
 const SETTINGS: Lesson = Lesson {
     id: "online.settings",
     title: "Change settings",
-    intro: &["Open your profile menu at the top right and choose Config to find your settings."],
+    intro: &["Open your profile menu at the top right, then choose **Config**."],
     brief: "The actual Settings component is rendered read-only in a script-free frame.",
     setup: Setup::Guide(GuidePage::Settings),
     steps: &[
-        Step::read("This is the actual Settings page. You can reach it by opening your profile menu at the top right and choosing Config.", &[]),
+        Step::read("Settings controls board appearance and move confirmation.\nScroll to explore this read-only page.", &[]),
 
     ],
-    outro: "You can return to Config from your profile menu whenever you want.",
+    outro: "",
 };
 
 const CORRESPONDENCE: Lesson = Lesson {
     id: "online.correspondence",
     title: "Correspondence games",
     intro: &[
-        "Real-time games are played in one sitting. Correspondence games are played over days: make your move when it suits you, and the site tells you when it is your turn.",
-        "Look for the envelope symbol to recognise correspondence games.",
+        "Correspondence games run over days rather than one sitting.\nPlay when it suits you; the site shows when it is your turn.",
+        "The envelope icon marks correspondence games.",
     ],
     brief: "The actual custom-game form shows correspondence controls, with an envelope icon and the two clock flavours explained as a bullet list.",
     setup: Setup::Guide(GuidePage::Correspondence),
     steps: &[Step::read(
-        "Correspondence comes in two flavours:
-- **Days per move:** you have that many days for each move. The allowance refills after every move.
-- **Total days:** each player has that many days for the whole game.
-You can also play untimed games with no clock.",
+        "Two clock options:\n\n- **Days per move:** refills after each move.\n- **Total time each:** lasts the whole game.",
         &[],
     )],
     outro: "",
@@ -104,12 +100,12 @@ You can also play untimed games with no clock.",
 const TOURNAMENTS: Lesson = Lesson {
     id: "online.tournaments",
     title: "Tournaments",
-    intro: &["The Tournaments menu lets you browse events and organise your own."],
+    intro: &["Use **Tournaments** to browse events or organise one."],
     brief: "The actual tournament list and creation page, rendered read-only. Continue is the only action required.",
     setup: Setup::Guide(GuidePage::Tournaments),
     steps: &[
-        Step::read("Browse tournaments here to see their status, time control and participants. Open an event in the real site to read its rules before joining.", &[]),
-        Step::read("Create Tournament lets an organiser choose a name, description, format, player limits, time control and start rules. When you organise an event, explain its rules clearly to everyone joining.", &[]),
+        Step::read("This page lists events and their details.\nPress Continue to see the creation page.", &[]),
+        Step::read("Choose the event's name, rules, format and clock here.\nPress Continue to finish this read-only tour.", &[]),
     ],
     outro: "",
 };
@@ -121,7 +117,7 @@ const READY: Lesson = Lesson {
     brief: "The actual homepage is scrolled to the feedback links in its footer.",
     setup: Setup::Guide(GuidePage::Ready),
     steps: &[Step::read(
-        "You've learned everything you need to get started. Now comes the best part: play and enjoy! Let us know if you have any feedback using the links in the homepage footer.",
+        "You're ready: play and enjoy!\nShare feedback through the links in the homepage footer.",
         &[],
     )],
     outro: "",

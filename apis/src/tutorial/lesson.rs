@@ -84,6 +84,9 @@ pub struct Step {
     pub crosses_for: Option<hive_lib::Color>,
     pub win_prompt: Option<(hive_lib::Color, &'static str)>,
     pub announce_winner: bool,
+    pub initial_red_arrows: bool,
+    pub hint_arrows: &'static [(&'static str, &'static str)],
+    pub movement_paths: Option<hive_lib::Bug>,
     pub red_arrows: &'static [(&'static str, &'static str)],
     pub hint_moves: Option<(&'static str, u8)>,
     pub wrong_reply: Option<&'static str>,
@@ -151,6 +154,9 @@ impl Step {
             crosses_for: None,
             win_prompt: None,
             announce_winner: false,
+            initial_red_arrows: false,
+            hint_arrows: &[],
+            movement_paths: None,
             red_arrows: &[],
             hint_moves: None,
             wrong_reply: None,
@@ -198,6 +204,9 @@ impl Step {
             crosses_for: None,
             win_prompt: None,
             announce_winner: false,
+            initial_red_arrows: false,
+            hint_arrows: &[],
+            movement_paths: None,
             red_arrows: &[],
             hint_moves: None,
             wrong_reply: None,
@@ -327,6 +336,27 @@ impl Step {
 
     pub const fn announce_winner(mut self) -> Self {
         self.announce_winner = true;
+        self
+    }
+
+    pub const fn with_initial_red_arrows(mut self, arrows: &'static [(&'static str, &'static str)]) -> Self {
+        self.red_arrows = arrows;
+        self.initial_red_arrows = true;
+        self
+    }
+
+    pub const fn with_hint_arrows(mut self, arrows: &'static [(&'static str, &'static str)]) -> Self {
+        self.hint_arrows = arrows;
+        self
+    }
+
+    pub const fn with_movement_paths(mut self, bug: hive_lib::Bug) -> Self {
+        self.movement_paths = Some(bug);
+        self
+    }
+
+    pub const fn route_hint_after_moves(mut self, moves: u8) -> Self {
+        self.route_hint_after = Some(moves);
         self
     }
 

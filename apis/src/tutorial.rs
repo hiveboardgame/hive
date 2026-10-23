@@ -7,6 +7,8 @@ mod online;
 #[allow(dead_code)]
 mod openings;
 mod session;
+mod paths;
+pub mod text;
 mod sources;
 #[allow(dead_code)]
 mod strategy;

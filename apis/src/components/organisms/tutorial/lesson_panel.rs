@@ -15,35 +15,8 @@ use hive_lib::Piece;
 use leptos::{html, prelude::*};
 use leptos_router::{components::A, hooks::use_navigate};
 
-enum PromptPart {
-    Text(&'static str),
-    Piece(Piece),
-}
-
-fn prompt_parts(mut text: &'static str) -> Vec<PromptPart> {
-    let mut parts = Vec::new();
-    while let Some(start) = text.find("[[") {
-        if start > 0 {
-            parts.push(PromptPart::Text(&text[..start]));
-        }
-        let token_start = start + 2;
-        let Some(end) = text[token_start..].find("]]") else {
-            parts.push(PromptPart::Text(&text[start..]));
-            return parts;
-        };
-        let token_end = token_start + end;
-        let token = &text[token_start..token_end];
-        match token.parse::<Piece>() {
-            Ok(piece) => parts.push(PromptPart::Piece(piece)),
-            Err(_) => parts.push(PromptPart::Text(&text[start..token_end + 2])),
-        }
-        text = &text[token_end + 2..];
-    }
-    if !text.is_empty() {
-        parts.push(PromptPart::Text(text));
-    }
-    parts
-}
+use crate::tutorial::text::{inline_parts, InlineContent, TextColor};
+use crate::providers::annotations::AnnotationColor;
 
 fn piece_icon(piece: Piece) -> impl IntoView {
     let label = format!("{} {} piece", piece.color().name(), piece.bug().name());
@@ -63,31 +36,25 @@ fn piece_icon(piece: Piece) -> impl IntoView {
 }
 
 
-fn piece_content(text: &'static str) -> impl IntoView {
-    prompt_parts(text)
-        .into_iter()
-        .map(|part| match part {
-            PromptPart::Text(text) => view! { <span>{text}</span> }.into_any(),
-            PromptPart::Piece(piece) => piece_icon(piece).into_any(),
-        })
-        .collect_view()
+fn rich_text(text: &str, links: bool) -> impl IntoView {
+    inline_parts(text).into_iter().map(|part| {
+        let content = match part.content {
+            InlineContent::Text(text) if links => view! { <span>{linked_text(text)}</span> }.into_any(),
+            InlineContent::Text(text) => view! { <span>{text.to_string()}</span> }.into_any(),
+            InlineContent::Piece(piece) => piece_icon(piece).into_any(),
+        };
+        let content = if part.bold { view! { <strong>{content}</strong> }.into_any() } else { content };
+        if let Some(color) = part.color {
+            let annotation = match color { TextColor::Green => AnnotationColor::Green, TextColor::Red => AnnotationColor::Red };
+            let style = format!("--lesson-color:{};--lesson-color-dark:{}", annotation.stroke(false), annotation.stroke(true));
+            view! { <span class="[color:var(--lesson-color)] dark:[color:var(--lesson-color-dark)]" style=style>{content}</span> }.into_any()
+        } else { content }
+    }).collect_view()
 }
 
-fn prompt_line(text: &'static str) -> impl IntoView {
-    text.split("**")
-        .enumerate()
-        .map(|(index, text)| {
-            let content = piece_content(text);
-            if index % 2 == 0 {
-                view! { <span>{content}</span> }.into_any()
-            } else {
-                view! { <strong>{content}</strong> }.into_any()
-            }
-        })
-        .collect_view()
-}
+fn prompt_line(text: &str) -> impl IntoView { rich_text(text, false) }
 
-fn tutorial_prompt(prompt: &'static str) -> impl IntoView {
+fn tutorial_prompt(prompt: &str) -> impl IntoView {
     if prompt.lines().any(|line| line.starts_with("- ")) {
         let mut blocks = Vec::new();
         let mut items = Vec::new();
@@ -192,7 +159,7 @@ pub fn LessonPanel(
             )),
             Feedback::KeepGoing => Some((
                 "text-green-700 dark:text-green-400",
-                "Good! It's back where it started, so try the next one.".to_string(),
+                "Back at the start. Try the next destination.".to_string(),
             )),
             Feedback::YourTurn => Some((
                 "text-gray-700 dark:text-gray-200",
@@ -211,7 +178,7 @@ pub fn LessonPanel(
             )),
             Feedback::ContinueFirst => Some((
                 "text-gray-600 dark:text-gray-300",
-                "Look around as much as you like. Press Continue when you're ready to move."
+                "Press Continue before making a move."
                     .to_string(),
             )),
         })
@@ -328,7 +295,7 @@ pub fn LessonPanel(
                 </ShowLet>
                 <ShowLet some=feedback let:feedback>
                     <div class=format!("font-medium {}", feedback.0) role="status">
-                        {feedback.1}
+                        {tutorial_prompt(&feedback.1)}
                     </div>
                 </ShowLet>
                 <Show when=move || finished() && !completion_tip().is_empty()>
@@ -480,7 +447,7 @@ pub fn MobileLessonAbout(#[prop(into)] lesson_id: Signal<&'static str>) -> impl 
                 class="flex justify-between items-center px-3 h-11 w-full text-left bg-even-light shrink-0 dark:bg-surface-panel"
                 on:click=move |_| expanded.update(|open| *open = !*open)
             >
-                <span>"Read more"</span>
+                <span>{move || if expanded.get() { "Read less" } else { "Read more" }}</span>
                 <svg
                     class="transition-transform size-5 shrink-0"
                     class:rotate-180=move || !expanded.get()
@@ -499,7 +466,7 @@ pub fn MobileLessonAbout(#[prop(into)] lesson_id: Signal<&'static str>) -> impl 
     }
 }
 
-fn linked_text(text: &'static str) -> impl IntoView {
+fn linked_text(text: &str) -> impl IntoView {
     let mut parts = Vec::new();
     let mut plain = String::new();
     for word in text.split_inclusive(' ') {
@@ -511,8 +478,8 @@ fn linked_text(text: &'static str) -> impl IntoView {
                 }
                 parts.push(
                     view! {
-                        <a href=word.trim_end() target="_blank" rel="noopener noreferrer">
-                            {shown}
+                        <a href=word.trim_end().to_string() target="_blank" rel="noopener noreferrer">
+                            {shown.to_string()}
                         </a>
                     }
                     .into_any(),
@@ -531,25 +498,5 @@ fn linked_text(text: &'static str) -> impl IntoView {
 }
 
 fn paragraph(text: &'static str) -> impl IntoView {
-    let parts = text
-        .split("**")
-        .enumerate()
-        .map(|(index, text)| {
-            let content = prompt_parts(text)
-                .into_iter()
-                .map(|part| match part {
-                    PromptPart::Text(text) => {
-                        view! { <span>{linked_text(text)}</span> }.into_any()
-                    }
-                    PromptPart::Piece(piece) => piece_icon(piece).into_any(),
-                })
-                .collect_view();
-            if index % 2 == 0 {
-                view! { <span>{content}</span> }.into_any()
-            } else {
-                view! { <strong>{content}</strong> }.into_any()
-            }
-        })
-        .collect_view();
-    view! { <p>{parts}</p> }
+    view! { <p class="whitespace-pre-line">{rich_text(text, true)}</p> }
 }
