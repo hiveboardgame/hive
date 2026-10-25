@@ -72,8 +72,10 @@
         "community": "Comunitar",
         "pride": "Pride",
         "carbon_three_d": "Carbon 3D",
-        "carbon": "Carbon"
+        "carbon": "Carbon",
+        "fantasy": "Fantezie"
     },
+    "fantasy_icon_credits": "Pictograme fantastice de Lorc, Delapouite și Skoll (<license_link>CC BY 3.0</license_link>), culori de DimeVEck. Adaptate pentru Hive. <credits_link>Surse și autori</credits_link>.",
     "tile_design_browser_notice": "Unele browsere nu acceptă toate stilurile de piese. Firefox oferă cea mai uniformă afișare.",
     "settings": {
         "settings": "Setări",

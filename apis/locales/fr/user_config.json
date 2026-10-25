@@ -67,8 +67,10 @@
         "community": "Communauté",
         "pride": "Pride",
         "carbon_three_d": "Carbone 3D",
-        "carbon": "Carbone"
+        "carbon": "Carbone",
+        "fantasy": "Fantaisie"
     },
+    "fantasy_icon_credits": "Icônes de fantaisie de Lorc, Delapouite et Skoll (<license_link>CC BY 3.0</license_link>), couleurs de DimeVEck. Adaptées pour Hive. <credits_link>Sources et crédits</credits_link>.",
     "tile_design_browser_notice": "Certains navigateurs ne prennent pas en charge tous les styles de pièces. Firefox offre le rendu le plus fiable.",
     "settings": {
         "settings": "Paramètres",

@@ -79,8 +79,10 @@
         "community": "Community",
         "pride": "Pride",
         "carbon_three_d": "Carbon 3D",
-        "carbon": "Carbon"
+        "carbon": "Carbon",
+        "fantasy": "Fantasy"
     },
+    "fantasy_icon_credits": "Fantasy icons by Lorc, Delapouite and Skoll (<license_link>CC BY 3.0</license_link>), colors by DimeVEck. Adapted for Hive. <credits_link>Sources and credits</credits_link>.",
     "tile_design_browser_notice": "Some browsers do not support every tile design. Firefox gives the most consistent rendering.",
     "settings": {
         "settings": "Settings",

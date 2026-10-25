@@ -1,0 +1,40 @@
+Hive fantasy tile icons
+=======================
+
+Icons from Game-icons.net, licensed under Creative Commons Attribution 3.0
+Unported (CC BY 3.0): https://creativecommons.org/licenses/by/3.0/
+License text: https://creativecommons.org/licenses/by/3.0/legalcode
+
+Queen: "Queen crown" by Lorc
+https://game-icons.net/1x1/lorc/queen-crown.html
+
+Ant: "Mounted knight" by Skoll
+https://game-icons.net/1x1/skoll/mounted-knight.html
+
+Beetle: "Mailed fist" by Lorc
+https://game-icons.net/1x1/lorc/mailed-fist.html
+
+Grasshopper: "Heavy arrow" by Lorc
+https://game-icons.net/1x1/lorc/heavy-arrow.html
+
+Spider: "Spartan helmet" by Delapouite
+https://game-icons.net/1x1/delapouite/spartan-helmet.html
+
+Ladybug: "Cloak and Dagger" by Lorc
+https://game-icons.net/1x1/lorc/cloak-dagger.html
+
+Mosquito: "Jester hat" by Delapouite
+https://game-icons.net/1x1/delapouite/jester-hat.html
+
+Pillbug: "Magic swirl" by Lorc
+https://game-icons.net/1x1/lorc/magic-swirl.html
+
+Color palette and recoloring by DimeVEck.
+Adapted for Hive.
+
+Author links:
+Lorc: https://lorcblog.blogspot.com/
+Delapouite: https://delapouite.com/
+Skoll: https://game-icons.net/
+
+These icon graphics retain their CC BY 3.0 license separately from Hive's code.

@@ -72,8 +72,10 @@
         "community": "Сообщество",
         "pride": "Прайд",
         "carbon_three_d": "Карбон 3D",
-        "carbon": "Карбон"
+        "carbon": "Карбон",
+        "fantasy": "Фэнтези"
     },
+    "fantasy_icon_credits": "Значки фэнтези от Lorc, Delapouite и Skoll (<license_link>CC BY 3.0</license_link>), цвета от DimeVEck. Адаптированы для Hive. <credits_link>Источники и авторы</credits_link>.",
     "tile_design_browser_notice": "Не все браузеры поддерживают все оформления фишек. Firefox обеспечивает наиболее стабильное отображение.",
     "settings": {
         "settings": "Настройки",

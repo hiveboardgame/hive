@@ -32,7 +32,8 @@ impl ShadowHref {
             | TileDesign::Official
             | TileDesign::Flat
             | TileDesign::Pride
-            | TileDesign::Carbon => Self::CommonDropShadow,
+            | TileDesign::Carbon
+            | TileDesign::Fantasy => Self::CommonDropShadow,
         }
     }
 
@@ -99,6 +100,15 @@ const HIGH_CONTRAST_DOT_PALETTE: BugDotPalette = BugDotPalette {
     fallback: "#FF0000",
 };
 
+// Matches DimeVEck's icon fills in assets/tiles/fantasy.
+const FANTASY_DOT_PALETTE: BugDotPalette = BugDotPalette {
+    ant: "#009ddd",
+    beetle: "#9889c0",
+    grasshopper: "#40ac48",
+    spider: "#a76433",
+    fallback: "#FF0000",
+};
+
 pub fn resolve_piece_paint(
     piece: Piece,
     tile_options: &TileOptions,
@@ -119,6 +129,7 @@ fn piece_dot_color(piece: Piece, design: &TileDesign) -> &'static str {
     match design {
         TileDesign::Official | TileDesign::ThreeD => OFFICIAL_DOT_PALETTE.color_for(piece.bug()),
         TileDesign::Flat => FLAT_DOT_PALETTE.color_for(piece.bug()),
+        TileDesign::Fantasy => FANTASY_DOT_PALETTE.color_for(piece.bug()),
         TileDesign::HighContrast | TileDesign::Community => {
             HIGH_CONTRAST_DOT_PALETTE.color_for(piece.bug())
         }
@@ -157,7 +168,8 @@ fn piece_bug_href(piece: Piece, design: &TileDesign) -> String {
         TileDesign::Official
         | TileDesign::Flat
         | TileDesign::HighContrast
-        | TileDesign::Community => format!("{asset_path}#{}", bug.name()),
+        | TileDesign::Community
+        | TileDesign::Fantasy => format!("{asset_path}#{}", bug.name()),
         TileDesign::ThreeD | TileDesign::Pride | TileDesign::Carbon3D | TileDesign::Carbon => {
             format!("{asset_path}#{prefix}{}{}", color.name(), bug.name())
         }
@@ -166,6 +178,10 @@ fn piece_bug_href(piece: Piece, design: &TileDesign) -> String {
 
 fn piece_tile_href(piece: Piece, design: &TileDesign) -> String {
     let color = piece.color();
+    let design = match design {
+        TileDesign::Fantasy => &TileDesign::HighContrast,
+        _ => design,
+    };
     match inline_tile_sprite(design) {
         Some((_, prefix)) => format!("#{prefix}{}", color.name()),
         None => format!("{}#{}", tile_asset_path(design), color.name()),
@@ -189,6 +205,7 @@ fn tile_asset_path(design: &TileDesign) -> &'static str {
         TileDesign::Pride => "/assets/tiles/lgbtq/lgbtq.svg",
         TileDesign::Carbon3D => "/assets/tiles/carbon-3d/carbon-3d.svg",
         TileDesign::Carbon => "/assets/tiles/carbon/carbon.svg",
+        TileDesign::Fantasy => "/assets/tiles/fantasy/fantasy.svg",
     }
 }
 
