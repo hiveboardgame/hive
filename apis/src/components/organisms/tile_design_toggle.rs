@@ -20,7 +20,15 @@ pub fn TileDesignToggle() -> impl IntoView {
                 <TileDesignButton tile_design=TileDesign::Pride />
                 <TileDesignButton tile_design=TileDesign::Carbon />
                 <TileDesignButton tile_design=TileDesign::Carbon3D />
+                <TileDesignButton tile_design=TileDesign::Fantasy />
             </div>
+            <p class="ui-field-helper">
+                {t!(
+                    i18n, user_config.fantasy_icon_credits,
+                    <credits_link> = <a class="ui-text-link" href="/assets/tiles/fantasy/CREDITS.txt" target="_blank" rel="noopener"/>,
+                    <license_link> = <a class="ui-text-link" href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="external noopener"/>
+                )}
+            </p>
         </div>
     }
 }
@@ -62,6 +70,12 @@ pub fn TilePreview(tile_design: TileDesign) -> impl IntoView {
         TileDesign::Pride => "lgbtq",
         TileDesign::Carbon3D => "carbon-3d",
         TileDesign::Carbon => "carbon",
+        TileDesign::Fantasy => "fantasy",
+    };
+
+    let background_folder = match tile_design {
+        TileDesign::Fantasy => "high-contrast",
+        _ => design_folder,
     };
 
     let (light_piece_name, dark_piece_name) = match tile_design {
@@ -75,12 +89,12 @@ pub fn TilePreview(tile_design: TileDesign) -> impl IntoView {
     view! {
         <div class="relative size-12">
             <img
-                src=format!("/assets/tiles/{}/white.svg", design_folder)
+                src=format!("/assets/tiles/{}/white.svg", background_folder)
                 alt=move || t_string!(i18n, user_config.white_background)
                 class="object-contain absolute inset-0 dark:hidden size-full"
             />
             <img
-                src=format!("/assets/tiles/{}/black.svg", design_folder)
+                src=format!("/assets/tiles/{}/black.svg", background_folder)
                 alt=move || t_string!(i18n, user_config.black_background)
                 class="hidden object-contain absolute inset-0 dark:block size-full"
             />
@@ -119,5 +133,6 @@ fn tile_design_label(i18n: I18nContext<Locale, I18nKeys>, design: &TileDesign) -
         TileDesign::Pride => t_string!(i18n, user_config.tile_design.pride),
         TileDesign::Carbon3D => t_string!(i18n, user_config.tile_design.carbon_three_d),
         TileDesign::Carbon => t_string!(i18n, user_config.tile_design.carbon),
+        TileDesign::Fantasy => t_string!(i18n, user_config.tile_design.fantasy),
     }
 }

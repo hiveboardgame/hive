@@ -73,8 +73,10 @@
         "community": "Community",
         "pride": "Pride",
         "carbon_three_d": "Carbon 3D",
-        "carbon": "Carbon"
+        "carbon": "Carbon",
+        "fantasy": "Fantasy"
     },
+    "fantasy_icon_credits": "Fantasy-Symbole von Lorc, Delapouite und Skoll (<license_link>CC BY 3.0</license_link>), Farbgestaltung von DimeVEck. Für Hive angepasst. <credits_link>Quellen und Danksagungen</credits_link>.",
     "tile_design_browser_notice": "Manche Browser unterstützen nicht jedes Steindesign. Firefox stellt sie am zuverlässigsten dar.",
     "settings": {
         "settings": "Einstellungen",

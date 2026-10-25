@@ -72,8 +72,10 @@
         "community": "Közösségi",
         "pride": "Pride",
         "carbon_three_d": "Karbon 3D",
-        "carbon": "Karbon"
+        "carbon": "Karbon",
+        "fantasy": "Fantázia"
     },
+    "fantasy_icon_credits": "Fantáziaikonok: Lorc, Delapouite és Skoll (<license_link>CC BY 3.0</license_link>), színek: DimeVEck. A Hive számára átdolgozva. <credits_link>Források és készítők</credits_link>.",
     "tile_design_browser_notice": "Egyes böngészők nem támogatnak minden bábukészletet. A Firefox jeleníti meg őket a legmegbízhatóbban.",
     "settings": {
         "settings": "Beállítások",
