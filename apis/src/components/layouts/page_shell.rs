@@ -27,7 +27,7 @@ impl PageShellVariant {
         }
     }
 
-    fn footer_class(self) -> &'static str {
+    pub(crate) fn footer_class(self) -> &'static str {
         match self {
             PageShellVariant::Content | PageShellVariant::Form => "max-w-5xl px-4 sm:px-6",
             // .ui-home-grid's max widths plus the 1rem shell padding on each side.

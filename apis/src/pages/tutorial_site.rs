@@ -1,6 +1,7 @@
 use crate::{
     common::TimeParamsStoreFields,
-    components::layouts::page_shell::PageShell,
+    components::layouts::page_shell::{PageShell, PageShellVariant},
+    hooks::site_footer::use_site_footer,
     pages::{
         challenge_create::ChallengeCreate,
         config::Config,
@@ -35,6 +36,11 @@ pub fn TutorialSitePage() -> impl IntoView {
             .time_mode()
             .set(TimeMode::Correspondence);
     }
+    // Register before the asynchronous homepage body renders: the read-only
+    // frame cannot run hydration to reveal a footer registered later.
+    if screen.is_empty() || screen == "home" {
+        use_site_footer(PageShellVariant::Dashboard.footer_class());
+    }
     let content = match screen.as_str() {
         "settings" => view! { <Config /> }.into_any(),
         "tournaments" => view! {
@@ -60,8 +66,8 @@ pub fn TutorialSitePage() -> impl IntoView {
         _ => ("#tutorial-no-focus", ""),
     };
     let css = format!(
-        "main.ui-app-background {{ display: block !important; }}
-         main > div.absolute {{ display: none !important; }}
+        "div.ui-app-background {{ display: flex !important; }}
+         div.ui-app-background > div.absolute {{ display: none !important; }}
          a, button, input, select, textarea, summary, video {{ pointer-events: none !important; }}
          html {{ scroll-padding-top: 65px; }}
          fieldset[aria-label='Read-only actual site page'] :disabled {{ opacity: 1 !important; }}
