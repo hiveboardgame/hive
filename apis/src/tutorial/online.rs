@@ -155,8 +155,8 @@ const NOTATION: Lesson = Lesson {
     id: "online.notation",
     title: "Writing moves down",
     intro: &[
-        "Every piece has a short name: w or b for its colour, then a letter for its kind: Q Queen [[wQ]], A Ant [[wA1]], G Grasshopper [[wG1]], B Beetle [[wB1]], S Spider [[wS1]], M Mosquito [[wM]], L Ladybug [[wL]], P Pillbug [[wP]].",
-        "Kinds you have several of also get a number, in the order they entered the game. So wA1 is White's first Ant [[wA1]].",
+        "Every piece has a short name: w or b for its colour, then a letter for its kind: Q Queen [[wQ]], A Ant [[wA1]], G Grasshopper [[wG1]], B Beetle [[wB1]], S Spider [[wS1]], M Mosquito [[wM]], L Ladybug [[wL]], P Pillbug [[wP]]",
+        "Kinds you have several of also get a number, in the order they entered the game. So wA1 is White's first Ant [[wA1]]",
     ],
     brief: "From a 2000+ game (corpus game 0, after four moves each), White to move. wA1 moves to -bP (highlight and arrow); Black's scripted reply is bG1 bL-. Both show in the move list, in normal turn order.",
     setup: Setup::Position("AL+Q1+M2-l-qp+a,w"),

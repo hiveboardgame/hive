@@ -100,6 +100,14 @@ pub fn Tutorial() -> impl IntoView {
         })
     });
     let opponent = Signal::derive(move || learner.get().opposite_color());
+    let desktop_bottom = Signal::derive(move || {
+        if lesson_id.get() == "basics.welcome" {
+            Color::White
+        } else {
+            learner.get()
+        }
+    });
+    let desktop_top = Signal::derive(move || desktop_bottom.get().opposite_color());
     let placeholder_text = move || {
         find_lesson(lesson_id.get()).and_then(|lesson| match lesson.setup {
             Setup::Pending => Some("The board for this lesson is still being built."),
@@ -174,18 +182,40 @@ pub fn Tutorial() -> impl IntoView {
                                     fallback=move || {
                                         view! {
                                             <div class="flex flex-col col-span-2 col-start-9 row-span-6 row-start-1 justify-between p-1 my-1 mr-1 min-h-0 ui-board-side-panel">
-                                                <Reserve
-                                                    color=opponent
-                                                    alignment=Alignment::DoubleRow
-                                                    interaction
-                                                    history_board
-                                                />
-                                                <Reserve
-                                                    color=learner
-                                                    alignment=Alignment::DoubleRow
-                                                    interaction
-                                                    history_board
-                                                />
+                                                <div>
+                                                    <p class="px-2 pt-1 text-sm">
+                                                        {move || {
+                                                            if desktop_top.get() == Color::White {
+                                                                "White's reserve"
+                                                            } else {
+                                                                "Black's reserve"
+                                                            }
+                                                        }}
+                                                    </p>
+                                                    <Reserve
+                                                        color=desktop_top
+                                                        alignment=Alignment::DoubleRow
+                                                        interaction
+                                                        history_board
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <p class="px-2 pt-1 text-sm">
+                                                        {move || {
+                                                            if desktop_bottom.get() == Color::White {
+                                                                "White's reserve"
+                                                            } else {
+                                                                "Black's reserve"
+                                                            }
+                                                        }}
+                                                    </p>
+                                                    <Reserve
+                                                        color=desktop_bottom
+                                                        alignment=Alignment::DoubleRow
+                                                        interaction
+                                                        history_board
+                                                    />
+                                                </div>
                                             </div>
                                         }
                                     }
@@ -238,19 +268,30 @@ pub fn Tutorial() -> impl IntoView {
                             </div>
                         </Show>
                         <Show when=move || !blank_tiles()>
-                            <div class="flex justify-between ml-1 h-12 max-h-12 shrink-0 ui-board-reserve">
-                                <Reserve
-                                    color=opponent
-                                    alignment=Alignment::SingleRow
-                                    viewbox_str=MOBILE_RESERVE_VIEWBOX
-                                    interaction
-                                    history_board
-                                />
-                                <Show when=show_game_panel>
-                                    <div class="flex w-16 min-h-0 shrink-0">
-                                        <DisplayTimer vertical=true placement=Placement::Top />
-                                    </div>
-                                </Show>
+                            <div class="flex flex-col ml-1 h-16 max-h-16 shrink-0 ui-board-reserve">
+                                <p class="px-2 text-xs">
+                                    {move || {
+                                        if opponent.get() == Color::White {
+                                            "White's reserve"
+                                        } else {
+                                            "Black's reserve"
+                                        }
+                                    }}
+                                </p>
+                                <div class="flex justify-between min-h-0 grow">
+                                    <Reserve
+                                        color=opponent
+                                        alignment=Alignment::SingleRow
+                                        viewbox_str=MOBILE_RESERVE_VIEWBOX
+                                        interaction
+                                        history_board
+                                    />
+                                    <Show when=show_game_panel>
+                                        <div class="flex w-16 min-h-0 shrink-0">
+                                            <DisplayTimer vertical=true placement=Placement::Top />
+                                        </div>
+                                    </Show>
+                                </div>
                             </div>
                         </Show>
                         <div class="flex relative min-h-0 grow">
@@ -264,19 +305,30 @@ pub fn Tutorial() -> impl IntoView {
                             </Show>
                         </div>
                         <Show when=move || !blank_tiles()>
-                            <div class="flex justify-between ml-1 h-16 max-h-16 shrink-0 ui-board-reserve">
-                                <Reserve
-                                    color=learner
-                                    alignment=Alignment::SingleRow
-                                    viewbox_str=MOBILE_RESERVE_VIEWBOX
-                                    interaction
-                                    history_board
-                                />
-                                <Show when=show_game_panel>
-                                    <div class="flex w-16 min-h-0 shrink-0">
-                                        <DisplayTimer vertical=true placement=Placement::Bottom />
-                                    </div>
-                                </Show>
+                            <div class="flex flex-col ml-1 h-20 max-h-20 shrink-0 ui-board-reserve">
+                                <p class="px-2 text-xs">
+                                    {move || {
+                                        if learner.get() == Color::White {
+                                            "White's reserve"
+                                        } else {
+                                            "Black's reserve"
+                                        }
+                                    }}
+                                </p>
+                                <div class="flex justify-between min-h-0 grow">
+                                    <Reserve
+                                        color=learner
+                                        alignment=Alignment::SingleRow
+                                        viewbox_str=MOBILE_RESERVE_VIEWBOX
+                                        interaction
+                                        history_board
+                                    />
+                                    <Show when=show_game_panel>
+                                        <div class="flex w-16 min-h-0 shrink-0">
+                                            <DisplayTimer vertical=true placement=Placement::Bottom />
+                                        </div>
+                                    </Show>
+                                </div>
                             </div>
                         </Show>
                     </div>

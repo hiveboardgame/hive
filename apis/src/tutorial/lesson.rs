@@ -79,6 +79,8 @@ pub struct Step {
     pub grid: bool,
     pub history: bool,
     pub hint_after: Option<u8>,
+    pub hint_after_retries: Option<u8>,
+    pub backtrack_arrows: Option<&'static str>,
     pub your_turn: bool,
     pub forbidden: &'static [&'static str],
     pub hint_highlights: &'static [&'static str],
@@ -151,6 +153,8 @@ impl Step {
             grid: false,
             history: false,
             hint_after: None,
+            hint_after_retries: None,
+            backtrack_arrows: None,
             your_turn: false,
             forbidden: &[],
             hint_highlights: &[],
@@ -201,6 +205,8 @@ impl Step {
             grid: false,
             history: false,
             hint_after: None,
+            hint_after_retries: None,
+            backtrack_arrows: None,
             your_turn: false,
             forbidden: &[],
             hint_highlights: &[],
@@ -301,6 +307,21 @@ impl Step {
 
     pub const fn hint_after(mut self, attempts: u8) -> Self {
         self.hint_after = Some(attempts);
+        self
+    }
+
+    pub const fn highlight_hint_after_retry(
+        mut self,
+        retries: u8,
+        hexes: &'static [&'static str],
+    ) -> Self {
+        self.hint_after_retries = Some(retries);
+        self.hint_highlights = hexes;
+        self
+    }
+
+    pub const fn with_backtracking_arrows(mut self, piece: &'static str) -> Self {
+        self.backtrack_arrows = Some(piece);
         self
     }
 

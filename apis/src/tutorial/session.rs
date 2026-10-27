@@ -43,6 +43,7 @@ pub struct Session {
     refuted: bool,
     wrong: bool,
     failed_attempts: Vec<u8>,
+    retried_attempts: Vec<u8>,
     exploration_moves: Vec<u8>,
     last_black_arrow: Option<(Position, Position)>,
     route_arrows: Vec<(Position, Position)>,
@@ -202,6 +203,7 @@ impl Session {
             refuted: false,
             wrong: false,
             failed_attempts: vec![0; lesson.steps.len()],
+            retried_attempts: vec![0; lesson.steps.len()],
             exploration_moves: vec![0; lesson.steps.len()],
             last_black_arrow: None,
             route_arrows: Vec::new(),
@@ -355,8 +357,11 @@ impl Session {
     }
 
     fn hint_visible(&self, step: &Step) -> bool {
-        step.hint_after
-            .is_some_and(|limit| self.failures() >= limit)
+        step.hint_after_retries
+            .is_some_and(|limit| self.retried_attempts[self.step] >= limit)
+            || step
+                .hint_after
+                .is_some_and(|limit| self.failures() >= limit)
             || step.hint_moves.is_some_and(|(_, limit)| {
                 self.exploration_moves.get(self.step).copied().unwrap_or(0) >= limit
             })
@@ -420,6 +425,12 @@ impl Session {
     }
 
     fn remember_revealed(&mut self) {
+        // This introductory exercise reveals only the movements available now.
+        // Later Mosquito lessons intentionally retain previously revealed pieces.
+        if self.lesson.id == "bugs.mosquito" {
+            self.revealed_pieces = Self::neighbours_to_reveal(self.lesson, &self.state);
+            return;
+        }
         for piece in Self::neighbours_to_reveal(self.lesson, &self.state) {
             if !self.revealed_pieces.contains(&piece) {
                 self.revealed_pieces.push(piece);
@@ -641,20 +652,21 @@ impl Session {
                     })
                     .collect()
             };
-            let mut arrows: Vec<_> = if hint && step.legal_arrows.is_some() {
-                Vec::new()
-            } else {
-                step.arrows
-                    .iter()
-                    .filter_map(|(from, to)| {
-                        Some((
-                            hex(self.annotation_board(), from)?,
-                            hex(self.annotation_board(), to)?,
-                        ))
-                    })
-                    .collect()
-            };
-            if !hint {
+            let mut arrows: Vec<_> =
+                if hint && step.legal_arrows.is_some() && step.hint_highlights.is_empty() {
+                    Vec::new()
+                } else {
+                    step.arrows
+                        .iter()
+                        .filter_map(|(from, to)| {
+                            Some((
+                                hex(self.annotation_board(), from)?,
+                                hex(self.annotation_board(), to)?,
+                            ))
+                        })
+                        .collect()
+                };
+            if !hint || !step.hint_highlights.is_empty() {
                 if let Some(piece) = step
                     .legal_arrows
                     .and_then(|spec| spec.parse::<Piece>().ok())
@@ -697,6 +709,12 @@ impl Session {
             return Vec::new();
         }
         self.current_step().map_or_else(Vec::new, |step| {
+            if let Some(from) = step
+                .backtrack_arrows
+                .and_then(|piece| hex(&self.state.board, piece))
+            {
+                return super::paths::spider_backtracking_path(&self.state.board, from);
+            }
             if step.initial_red_arrows && self.exploration_moves[self.step] > 0 {
                 return Vec::new();
             }
@@ -1258,6 +1276,9 @@ impl Session {
 
     /// Retry the whole lesson; keep error counts so help survives repeated attempts.
     pub fn retry(&mut self) {
+        if self.needs_retry() {
+            self.retried_attempts[self.step] = self.retried_attempts[self.step].saturating_add(1);
+        }
         self.state = self.initial.clone();
         self.revealed_pieces = Self::neighbours_to_reveal(self.lesson, &self.initial);
         self.checkpoint = self.initial.clone();

@@ -69,3 +69,34 @@ pub fn movement_path(
     }
     Vec::new()
 }
+
+// An intentionally invalid three-step crawl, used only to explain backtracking.
+// Every individual slide is possible, but a previously visited hex is revisited.
+pub fn spider_backtracking_path(board: &Board, from: Position) -> Vec<(Position, Position)> {
+    let mut remaining = board.clone();
+    remaining.remove(from);
+    let crawls = |at: Position| {
+        at.positions_around()
+            .filter(|next| {
+                let (a, b) = at.common_adjacent_positions(*next);
+                (remaining.occupied(a) || remaining.occupied(b))
+                    && !remaining.occupied(*next)
+                    && !remaining.gated(1, at, *next)
+            })
+            .collect::<Vec<_>>()
+    };
+    for first in crawls(from) {
+        for second in crawls(first).into_iter().filter(|at| *at != from) {
+            for third in crawls(second) {
+                if third == from || third == first {
+                    return vec![(from, first), (first, second), (second, third)];
+                }
+            }
+        }
+    }
+    // A one-hex dead end forces an immediate return to the starting hex.
+    if let Some(first) = crawls(from).first().copied() {
+        return vec![(from, first), (first, from), (from, first)];
+    }
+    Vec::new()
+}

@@ -28,6 +28,7 @@ pub const CHAPTER: Chapter = Chapter {
         LADYBUG_GATE,
         PILLBUG,
         PILLBUG_SAVE,
+        PILLBUG_ESCAPE,
         PILLBUG_ENEMY,
         PILLBUG_GATE,
         PILLBUG_DEACTIVATE,
@@ -93,7 +94,7 @@ const FREEDOM_TO_MOVE: Lesson = Lesson {
     setup: Setup::Position("AB-M+B1-(q-l+La+s!3-(Qa1+ab1-A)),w"),
     steps: &[
         Step::play(
-            "You play as White.\nMove your Ant [[wA2]] to open a path for the Queen [[wQ]].",
+            "You play as White.\nMove your Ant [[wA2]] to open a path for the Queen [[wQ]]",
             MoveExcept {
                 piece: "wA2",
                 except: "-wL",
@@ -129,13 +130,13 @@ const DONT_BREAK_THE_HIVE: Lesson = Lesson {
     intro: &[
         "A piece must stay connected to the hive throughout its move.",
         "Only your Queen [[wQ]] can move here, the blank tiles stay fixed.\nThe Queen cannot follow the [red]red arrow[/red] because she would lose contact with the hive.",
-        "Go around the hive to reach the last empty space next to the black Queen [[bQ]].",
+        "Go around the hive to reach the last empty space next to the black Queen [[bQ]]",
     ],
     brief: "Supplied HOP with fixed blank tiles for every non-Queen piece. Only wQ may move. Crawl around the hive to bQ/, the last hole beside bQ. No opponent moves. The adjacent wM/ hex is red because wQ would lose contact while sliding there directly.",
     setup: Setup::BlankPosition("A+B-aa1-(lqA1-L+A-a2+M)3+m!3-Q,w"),
     steps: &[
         Step::play(
-            "You play as White. Keep moving your Queen [[wQ]].\nReach the [green]green hex [/green]to surround the black Queen [[bQ]].",
+            "You play as White. Keep moving your Queen [[wQ]]\nReach the [green]green hex [/green]to surround the black Queen [[bQ]]",
             Travel { piece: "wQ", to: "bQ/" },
             "Keep your Queen touching the hive as she moves toward the green hex.",
         )
@@ -158,7 +159,7 @@ const ANT_FIRST_MOVES: Lesson = Lesson {
     setup: Setup::Position("ALl-qp!1+Q,w"),
     steps: &[
         Step::play(
-            "You play as White.\nMove your Ant [[wA1]] beside the black Queen [[bQ]].",
+            "You play as White.\nMove your Ant [[wA1]] beside the black Queen [[bQ]]",
             MovePiece {
                 piece: "wA1",
                 touching: Some("bQ"),
@@ -167,7 +168,7 @@ const ANT_FIRST_MOVES: Lesson = Lesson {
         )
         .hint_after(2),
         Step::read(
-            "Well done! Your Ant [[wA1]] is beside the black Queen [[bQ]].",
+            "Well done! Your Ant [[wA1]] is beside the black Queen [[bQ]]",
             &[],
         ),
     ],
@@ -193,7 +194,7 @@ const ANT: Lesson = Lesson {
     },
     steps: &[
         Step::play(
-            "You play as White. Open the gate.\nUse your Ant [[wA1]] to surround the black Queen [[bQ]].",
+            "You play as White. Open the gate.\nUse your Ant [[wA1]] to surround the black Queen [[bQ]]",
             Explore {
                 pieces: &["wQ", "wA1"],
                 condition: All(&[Surrounded("bQ"), Touching("wA1", "bQ")]),
@@ -204,7 +205,7 @@ const ANT: Lesson = Lesson {
         .hint_after_moves("wA1", 2)
         .hint_after(2)
         .your_turn(),
-        Step::read("Well done! Your Ant [[wA1]] passed through and surrounded the black Queen [[bQ]].", &[])
+        Step::read("Well done! Your Ant [[wA1]] passed through and surrounded the black Queen [[bQ]]", &[])
             .announce_winner(),
     ],
     outro: "",
@@ -229,7 +230,7 @@ const ANT_ATTACK: Lesson = Lesson {
             },
             "Move your Ant beside the black Queen where she cannot leave without splitting the hive.",
         )
-        .highlight_hint_after(2, &["/bQ", "bQ\\", "bQ-"])
+        .highlight_hint_after_retry(2, &["/bQ", "bQ\\", "bQ-"])
         .reply_on_mistake("bQ"),
         Step::read(
             "Well done! The black Queen [[bQ]] is pinned: moving her would split the hive.",
@@ -257,6 +258,8 @@ const SPIDER: Lesson = Lesson {
             "Move your Spider, not another piece.",
         )
         .marked(&["wS1"])
+        .with_legal_arrows("wS1")
+        .with_movement_paths(hive_lib::Bug::Spider)
         .highlight_hint_after(2, &["\\wA1", "\\bA2"]),
         Step::read(
             "Well done! Restart to try the other destination.",
@@ -282,6 +285,7 @@ const SPIDER_DEAD_END: Lesson = Lesson {
             "This Spider [[wS1]] has no 3-step route without **backtracking**.\nThere is no move to play; choose Next lesson.",
             &["wS1"],
         )
+        .with_backtracking_arrows("wS1")
         .observation(),
     ],
     outro: "",
@@ -316,7 +320,7 @@ const SPIDER_DOOR: Lesson = Lesson {
         .with_small_arrows(&[])
         .your_turn(),
         Step::read(
-            "Well done! Your Spider [[wS1]] reached the green hex beside the black Queen [[bQ]].",
+            "Well done! Your Spider [[wS1]] reached the green hex beside the black Queen [[bQ]]",
             &[],
         ),
     ],
@@ -354,7 +358,7 @@ const SPIDER_POWER: Lesson = Lesson {
         .with_movement_paths(hive_lib::Bug::Spider)
         .your_turn(),
         Step::read(
-            "Well done! Both Spiders [[wS1]] [[wS2]] helped surround the black Queen [[bQ]].",
+            "Well done! Both Spiders [[wS1]] [[wS2]] helped surround the black Queen [[bQ]]",
             &[],
         )
         .announce_winner(),
@@ -413,7 +417,7 @@ const GRASSHOPPER_PLACE: Lesson = Lesson {
     },
     steps: &[
         Step::play(
-            "You play as White. Black may pin a poorly placed Grasshopper [[wG3]].\nPlace it to win with your next jump.",
+            "You play as White. Black may pin a poorly placed Grasshopper [[wG3]]\nPlace it to win with your next jump.",
             PlaceIn(&["/wA3"]),
             "Find a placement where your last Grasshopper can jump beside the black Queen without being pinned.",
         )
@@ -439,7 +443,7 @@ const GRASSHOPPER_PLACE: Lesson = Lesson {
         .normal_moves_only()
         .hint_after(2),
         Step::read(
-            "Well done! You placed safely, then jumped in to surround the black Queen [[bQ]].",
+            "Well done! You placed safely, then jumped in to surround the black Queen [[bQ]]",
             &[],
         )
         .outlined_red(&["bQ"])
@@ -466,7 +470,7 @@ const GRASSHOPPER_PATHS: Lesson = Lesson {
     },
     steps: &[
         Step::play(
-            "You play as White and keep taking turns.\nUse both Grasshoppers [[wG2]] [[wG3]] to fill the last 2 spaces around Black's Queen [[bQ]].",
+            "You play as White and keep taking turns.\nUse both Grasshoppers [[wG2]] [[wG3]] to fill the last 2 spaces around Black's Queen [[bQ]]",
             Explore {
                 pieces: &["wG2", "wG3"],
                 condition: All(&[
@@ -481,7 +485,7 @@ const GRASSHOPPER_PATHS: Lesson = Lesson {
         .guided_exploration(10, 16)
         .your_turn(),
         Step::read(
-            "Well done! Both Grasshoppers [[wG2]] [[wG3]] surrounded the black Queen [[bQ]].",
+            "Well done! Both Grasshoppers [[wG2]] [[wG3]] surrounded the black Queen [[bQ]]",
             &[],
         )
         .announce_winner(),
@@ -493,40 +497,40 @@ const BEETLE: Lesson = Lesson {
     id: "bugs.beetle",
     title: "Climbing",
     intro: &[
-        "The Beetle [[wB1]] moves one hex per turn.\nIt can crawl on the ground or **climb** onto other pieces.",
-        "Stacks have no height limit. Many beetles can climb over each other, but only the top piece can move. Covered pieces cannot move or use any ability.",
+        "The Beetle [[wB1]] moves one hex per turn.
+It can crawl on the ground or climb onto other pieces.",
+        "Only the top piece in a stack can move. Covered pieces cannot move or use an ability.",
         "To inspect a stack, right-click on desktop. On mobile, hold it, then slide your finger away.",
     ],
-    brief: "Supplied HOP AM-Q+G-pm1-PBl!+q5+a,w. wB1 climbs onto bL; Black places bB1 bQ\\ between bQ and bM; wB1 covers bQ; bB1 covers wB1. Show all legal Beetle moves and the illegal Queen gap first, replacing these with a single correct hint after two errors.",
-    setup: Setup::Position("AM-Q+G-pm1-PBl!+q5+a,w"),
+    brief: "Original Climbing layout with bM replaced by bB1. Only Queens and Beetles are visible; only wB1 may move. Explore until wB1 covers bQ, then bB1 covers wB1 on the same stack.",
+    setup: Setup::BlankExercise {
+        position: "AM-Q+G-pb1-PBl!+q5+a,w",
+        movable: &["wB1"],
+        swap: None,
+        visible: Some(&["wQ", "bQ", "wB1", "bB1"]),
+        start_as: None,
+        extras: &[],
+        reveal_neighbours: None,
+    },
     steps: &[
         Step::play(
-            "You play as White. The red arrow is blocked by a gate.\nClimb onto the black Ladybug [[bL]] with your Beetle [[wB1]].\nTo inspect a stack, right-click on desktop. On mobile, hold it, then slide your finger away.",
-            Move { piece: "wB1", to: "bL" },
-            "Move your Beetle onto the black Ladybug.",
+            "You play as White.
+
+Move your Beetle [[wB1]] around the hive and cover the black Queen [[bQ]]",
+            Explore { pieces: &["wB1"], condition: OnTop("wB1", "bQ") },
+            "Keep moving your Beetle toward the black Queen.",
         )
-        .marked(&["wB1"])
-        .with_legal_arrows("wB1")
+        .highlighted(&["bQ"])
         .normal_moves_only()
-        .with_red_arrows(&[("wB1", "-bP")])
         .hint_after(2)
+        .route_hint_after_moves(6)
         .your_turn()
-        .reply("bB1", "bQ\\"),
-        Step::play(
-            "Black replied by placing a Beetle [[bB1]]\nCover the black Queen [[bQ]] with your Beetle [[wB1]].",
-            Move { piece: "wB1", to: "bQ" },
-            "Move your Beetle onto the black Queen.",
-        )
-        .marked(&["wB1"])
-        .with_legal_arrows("wB1")
-        .normal_moves_only()
-        .hint_after(2)
         .reply("bB1", "wB1"),
         Step::read(
-            "Black replied by covering your Beetle [[wB1]]\nOnly the black Beetle [[bB1]] on top can move now.",
-            &["bB1"],
-        )
-        .without_mark_numbers(),
+            "Well done! Black covered your Beetle [[wB1]] with their Beetle [[bB1]]
+Only the piece on top can move.",
+            &[],
+        ),
     ],
     outro: "",
 };
@@ -602,7 +606,7 @@ const BEETLE_GATE: Lesson = Lesson {
             "Move your Beetle into the green hex.",
         )
         .highlighted(&["-bB1"]),
-        Step::read("Well done! You surrounded the black Queen [[bQ]].", &[]).announce_winner(),
+        Step::read("Well done! You surrounded the black Queen [[bQ]]", &[]).announce_winner(),
     ],
     outro: "",
 };
@@ -612,7 +616,7 @@ const MOSQUITO: Lesson = Lesson {
     title: "Mosquito",
     intro: &[
         "The Mosquito [[wM]] copies the movement of any piece touching it.\nIts options change as its neighbours change.",
-        "Here, your Mosquito [[wM]] touches a Queen [[wQ]], Ladybug [[wL]], Ant [[wA3]] and Grasshopper [[bG1]].",
+        "Here, your Mosquito [[wM]] touches a Queen [[wQ]], Ladybug [[wL]], Ant [[wA3]] and Grasshopper [[bG1]]",
 
     ],
     brief: "Supplied HOP. White solo exercise, exactly two wM moves. The four successful first destinations are (18,15), (16,16), (18,16), (18,18); then (15,18) wins. Reveal both Queens, wM and the pieces currently adjacent to wM.",
@@ -661,7 +665,7 @@ const MOSQUITO_CLIMB: Lesson = Lesson {
     setup: Setup::Position("AM+L-p+s1+Q4-qb!,w"),
     steps: &[
         Step::play(
-            "You play as White. The goal is to cover the black Queen [[bQ]].\nFirst, pin the black Beetle [[bB1]] with your Mosquito [[wM]].",
+            "You play as White. The goal is to cover the black Queen [[bQ]]\nFirst, pin the black Beetle [[bB1]] with your Mosquito [[wM]]",
             MoveSatisfying {
                 piece: "wM",
                 condition: All(&[Touching("wM", "bB1"), Pinned("bB1")]),
@@ -676,7 +680,7 @@ const MOSQUITO_CLIMB: Lesson = Lesson {
         .reply_placement_near("bA1", "bS1")
         .your_turn(),
         Step::play(
-            "Black replied with a placement.\nClimb onto the black Beetle [[bB1]] with your Mosquito [[wM]].",
+            "Black replied with a placement.\nClimb onto the black Beetle [[bB1]] with your Mosquito [[wM]]",
             Move { piece: "wM", to: "bB1" },
             "Move your Mosquito onto the black Beetle.",
         )
@@ -687,7 +691,7 @@ const MOSQUITO_CLIMB: Lesson = Lesson {
         .reply_placement_near("bA2", "bS1")
         .your_turn(),
         Step::play(
-            "Your Mosquito [[wM]] still moves like a Beetle [[wB1]].\nCover the black Queen [[bQ]].",
+            "Your Mosquito [[wM]] still moves like a Beetle [[wB1]]\nCover the black Queen [[bQ]]",
             Move { piece: "wM", to: "bQ" },
             "Move your Mosquito from the stack onto the black Queen.",
         )
@@ -696,7 +700,7 @@ const MOSQUITO_CLIMB: Lesson = Lesson {
         .normal_moves_only()
         .hint_after(2),
         Step::read(
-            "Well done! Your Mosquito [[wM]] copied the black Beetle [[bB1]] and covered the black Queen [[bQ]].",
+            "Well done! Your Mosquito [[wM]] copied the black Beetle [[bB1]] and covered the black Queen [[bQ]]",
             &[],
         ),
     ],
@@ -731,13 +735,13 @@ const MOSQUITO_ABILITY: Lesson = Lesson {
         .highlight_hint_after(2, &["-bP", "bP-"])
         .your_turn(),
         Step::play(
-            "Your Mosquito [[wM]] can copy the Pillbug's [[bP]] ability.\nSelect the black Pillbug [[bP]] or Queen [[bQ]], then an empty hex beside your Mosquito [[wM]].",
+            "Your Mosquito [[wM]] can copy the Pillbug's [[bP]] ability.\nSelect the black Pillbug [[bP]] or Queen [[bQ]], then an empty hex beside your Mosquito [[wM]]",
             LiftAnyOf { pieces: &["bP", "bQ"], by: "wM" },
             "Lift an adjacent black piece using the Mosquito's copied ability; do not move the Mosquito itself.",
         )
         .prompt_when(
             &Not(&Touching("wM", "bQ")),
-            "Your Mosquito [[wM]] can copy the Pillbug's [[bP]] ability.\nSelect the black Pillbug [[bP]], then an empty hex beside your Mosquito [[wM]].",
+            "Your Mosquito [[wM]] can copy the Pillbug's [[bP]] ability.\nSelect the black Pillbug [[bP]], then an empty hex beside your Mosquito [[wM]]",
         )
         .hint_after(2),
         Step::read(
@@ -760,7 +764,7 @@ const MOSQUITO_OTHER: Lesson = Lesson {
     setup: Setup::Position("AL+Q+P1+M2-(l-qm!2+b2-p),w"),
     steps: &[
         Step::play(
-            "You play as White.\nPin the black Beetle [[bB1]] with your Mosquito [[wM]].",
+            "You play as White.\nPin the black Beetle [[bB1]] with your Mosquito [[wM]]",
             MoveSatisfying {
                 piece: "wM",
                 condition: All(&[Touching("wM", "bB1"), Pinned("bB1")]),
@@ -791,7 +795,7 @@ const MOSQUITO_OTHER: Lesson = Lesson {
         .random_placement_near("bP")
         .your_turn(),
         Step::play(
-            "Your Mosquito [[wM]] can now copy the Ant [[wA1]].\nMake any legal move with the Mosquito [[wM]].",
+            "Your Mosquito [[wM]] can now copy the Ant [[wA1]]\nMake any legal move with the Mosquito [[wM]]",
             MovePiece { piece: "wM", touching: None },
             "Move your Mosquito using its Ant neighbour.",
         )
@@ -876,7 +880,7 @@ const LADYBUG_GATE: Lesson = Lesson {
         )
         .hint_after(2),
         Step::read(
-            "Well done! Your Ladybug [[wL]] went around the gate and pinned the black Queen [[bQ]].",
+            "Well done! Your Ladybug [[wL]] went around the gate and pinned the black Queen [[bQ]]",
             &[],
         )
         .outlined_red(&["bQ"]),
@@ -889,7 +893,7 @@ const PILLBUG: Lesson = Lesson {
     title: "The Pillbug's ability",
     intro: &[
         "The Pillbug [[wP]] has two options:",
-        "• Crawl one hex, like the Queen [[wQ]].",
+        "• Crawl one hex, like the Queen [[wQ]]",
         "• Lift an adjacent piece (yours or your opponent's) over its back and then drop it into another empty hex next to itself.",
         "Its special ability has **limits**:",
         "• The hive must stay connected.",
@@ -926,39 +930,46 @@ const PILLBUG_SAVE: Lesson = Lesson {
     title: "Pillbug, save the Queen!",
     intro: &[
         "Your Queen [[wQ]] has only one empty neighbouring hex.",
-        "Your Pillbug [[wP]] can lift her out of danger.",
-        "After the rescue, press Next to reset the position and try a different escape.",
+        "Your Pillbug [[wP]] can move her out of danger.",
     ],
-    brief: "Supplied HOP. Part one: wP lifts wQ to any of its three legal drops. Keep the rescue visible until Next resets to the same initial board. Part two: wP makes either legal normal crawl, leaving its original hex beside wQ empty. Both parts are required.",
+    brief: "Supplied rescue HOP. Complete the lesson when wP moves wQ to any legal drop. Keep the rescued Queen visible on completion.",
     setup: Setup::Position("A+qA+M2+(l+Lg-a+g!2-(QP1-a))2-p,w"),
     steps: &[
         Step::play(
-            "Part 1: You play as White.\nMove your Queen [[wQ]] to safety using the Pillbug [[wP]].",
+            "You play as White.
+
+Move your Queen [[wQ]] to safety using the Pillbug [[wP]]",
             LiftAny { piece: "wQ", by: "wP" },
             "Select your Queen, then an empty hex beside the Pillbug.",
         )
         .outlined_green(&["wQ"])
         .hint_after(2),
-        Step::read(
-            "Your Queen [[wQ]] is safe!\nPress Next to try part 2.",
-            &[],
-        )
-        .restart_position()
-        .next_button(),
+        Step::read("Well done! Your Pillbug [[wP]] moved your Queen [[wQ]] to safety.", &[]),
+    ],
+    outro: "",
+};
+
+const PILLBUG_ESCAPE: Lesson = Lesson {
+    id: "bugs.pillbug_escape",
+    title: "Make room for the Queen",
+    intro: &[
+        "A Pillbug [[wP]] can also move itself one hex, like a Queen [[wQ]]",
+        "Moving it away creates another empty space beside your Queen [[wQ]]",
+    ],
+    brief: "Use the same initial rescue position. Complete when wP makes a normal crawl away from wQ; do not use its lifting ability.",
+    setup: Setup::Position("A+qA+M2+(l+Lg-a+g!2-(QP1-a))2-p,w"),
+    steps: &[
         Step::play(
-            "Part 2: The position has reset.\nMove the Pillbug [[wP]] itself one hex away from your Queen [[wQ]]",
-            MoveSatisfying {
-                piece: "wP",
-                condition: Not(&Touching("wP", "wQ")),
-            },
-            "Move the Pillbug itself to give your Queen more space.",
+            "You play as White. Try another way to make space.
+
+Move the Pillbug [[wP]] itself away from your Queen [[wQ]]",
+            MoveSatisfying { piece: "wP", condition: Not(&Touching("wP", "wQ")) },
+            "Move the Pillbug itself one hex away from your Queen.",
         )
+        .outlined_green(&["wQ"])
         .normal_moves_only()
         .hint_after(2),
-        Step::read(
-            "Well done! You lifted your Queen [[wQ]] to safety, then created space by moving the Pillbug [[wP]] itself.",
-            &[],
-        ),
+        Step::read("Well done! Moving your Pillbug [[wP]] gave your Queen [[wQ]] more space.", &[]),
     ],
     outro: "",
 };
@@ -979,7 +990,7 @@ const PILLBUG_ENEMY: Lesson = Lesson {
     },
     steps: &[
         Step::play(
-            "You play as White. The marked Ant [[bA2]] cannot be lifted this turn.\nUse your Pillbug [[wP]] to lift Black's other Ant [[bA1]].",
+            "You play as White. The marked Ant [[bA2]] cannot be lifted this turn.\nUse your Pillbug [[wP]] to lift Black's other Ant [[bA1]]",
             LiftAny { piece: "bA1", by: "wP" },
             "Use your Pillbug to lift the black Ant that did not move last turn.",
         )
@@ -997,7 +1008,7 @@ const PILLBUG_GATE: Lesson = Lesson {
     id: "bugs.pillbug_gate",
     title: "Beetle gates (part 3)",
     intro: &[
-        "The highlighted stacks block the Pillbug [[wP]] from lifting your Queen [[wQ]].",
+        "The highlighted stacks block the Pillbug [[wP]] from lifting your Queen [[wQ]]",
         "Open the gate with a white Beetle [[wB1]]\n\nBe careful: one stack hides a black Beetle [[bB1]] that could cover your Queen [[wQ]]",
     ],
     brief: "Supplied HOP. wB1 can move to any of its four legal destinations except wQ and wP, opening a legal Queen lift. Every wB2 move frees bB1, whose legal reply bB1 wQ covers the Queen. After a correct wB1 move, wP lifts wQ to any legal drop. No Black reply after a correct first move.",
@@ -1028,7 +1039,7 @@ const PILLBUG_GATE: Lesson = Lesson {
         )
         .hint_after(2),
         Step::read(
-            "Well done! You opened the gate safely and rescued your Queen [[wQ]] with the Pillbug [[wP]].",
+            "Well done! You opened the gate safely and rescued your Queen [[wQ]] with the Pillbug [[wP]]",
             &[],
         ),
     ],
@@ -1040,7 +1051,7 @@ const PILLBUG_DEACTIVATE: Lesson = Lesson {
     title: "Neutralise the Pillbug",
     intro: &[
         "Covering the Pillbug stops its ability.\nCovering the Queen also prevents a rescue.",
-        "Here, you will use both Beetles [[wB1]] [[wB2]] to surround the black Queen [[bQ]].\nBlack's Beetle [[bB1]] can cover yours if they get too close, so be careful.",
+        "Here, you will use both Beetles [[wB1]] [[wB2]] to surround the black Queen [[bQ]]\nBlack's Beetle [[bB1]] can cover yours if they get too close, so be careful.",
 
     ],
     brief: "Supplied HOP, White solo turns. Fixed blank wG2 pins wS1. Any actual White win with the two Beetles succeeds, in any order. Immediately refute any legal Black Beetle cover or Black Queen escape, except after a finished White win.",
@@ -1068,7 +1079,7 @@ const PILLBUG_DEACTIVATE: Lesson = Lesson {
         .hint_after(2)
         .your_turn(),
         Step::read(
-            "Well done! Your Beetles [[wB1]] [[wB2]] stopped the rescue and surrounded the black Queen [[bQ]].",
+            "Well done! Your Beetles [[wB1]] [[wB2]] stopped the rescue and surrounded the black Queen [[bQ]]",
             &[],
         )
         .announce_winner(),

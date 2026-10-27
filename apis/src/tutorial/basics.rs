@@ -14,6 +14,7 @@ pub const CHAPTER: Chapter = Chapter {
         QUEEN_RULE,
         MOVE_PIECES,
         ONE_HIVE,
+        FREEDOM_TO_MOVE,
         SURROUND,
         DRAW,
         PASS,
@@ -70,8 +71,7 @@ const PLACING: Lesson = Lesson {
         Step::read(
             "Well done! Black replied by placing their Queen Bee [[bQ]]",
             &[],
-        )
-        .placement_crosses("bL"),
+        ),
     ],
     outro: "",
 };
@@ -132,7 +132,7 @@ const ONE_HIVE: Lesson = Lesson {
     intro: &[
         "The **One Hive Rule**: all pieces must stay connected throughout a move.",
         "A piece is **pinned** if removing it would split the hive into separate groups. A **pinned** piece cannot move.",
-        "To check whether a piece can move, imagine picking the piece up.\nIf the remaining pieces (the hive) become disconnected, it cannot move. This applies even if its destination would reconnect the hive.",
+        "To check whether a piece can move, imagine picking the piece up. If the remaining pieces (the hive) become disconnected, it cannot move. This applies even if its destination would reconnect the hive.",
     ],
     brief: "From a 2000+ game (corpus game 2, after five moves each), White to move. wP and wG1 each hold part of the hive together (pinned); wQ, wA1 and wM are free. Move a White piece, then a Black piece. On Black's turn mark bL and bQ only if they are actually immobile; White can free them with some moves. Placements do not count.",
     setup: Setup::Position("AGl+qp+a1+P+Q1-M4+m,w"),
@@ -158,6 +158,42 @@ const ONE_HIVE: Lesson = Lesson {
     outro: "",
 };
 
+const FREEDOM_TO_MOVE: Lesson = Lesson {
+    id: "basics.freedom_to_move",
+    title: "Freedom to Move rule",
+    intro: &[
+        "A crawling piece must have enough room to slide between its neighbours.",
+        "Here, your Ant [[wA1]] cannot squeeze through the gate shown by the [red]red arrow[/red]. Moving your Spider [[wS1]] opens the gate.",
+    ],
+    brief: "Supplied HOP GAG-gmp1+M-Q1-S4+a-q5-s!,w. wA1 is trapped by wG2 and wS1 at the exit wS1-. Move wS1 by any legal normal crawl; Black places bB1. Then move wA1 by any legal normal crawl.",
+    setup: Setup::Position("GAG-gmp1+M-Q1-S4+a-q5-s!,w"),
+    steps: &[
+        Step::play(
+            "You play as White. Your Ant [[wA1]] cannot slide through this gate.
+
+Move your Spider [[wS1]] to open it.",
+            MovePiece { piece: "wS1", touching: None },
+            "Move your Spider to make room for the Ant.",
+        )
+        .with_red_arrows(&[("wA1", "wS1-")])
+        .normal_moves_only()
+        .hint_after(2)
+        .reply_placement("bB1")
+        .your_turn(),
+        Step::play(
+            "Black placed a Beetle [[bB1]] and the gate is open.
+
+Move your Ant [[wA1]] to any available hex.",
+            MovePiece { piece: "wA1", touching: None },
+            "Move your Ant through the open gate.",
+        )
+        .normal_moves_only()
+        .hint_after(2),
+        Step::read("Well done! Opening the gate allowed your Ant [[wA1]] to slide out.", &[]),
+    ],
+    outro: "",
+};
+
 const SURROUND: Lesson = Lesson {
     id: "basics.surround",
     title: "How to Win",
@@ -169,7 +205,7 @@ const SURROUND: Lesson = Lesson {
     setup: Setup::Position("A+slLmb3+(qM+A1+G1-A)4-(s-P-Qb3+a),w"),
     steps: &[
         Step::play(
-            "You play as White.\nMove an Ant [[wA1]] into the [green]green hex[/green] to surround the black Queen [[bQ]].",
+            "You play as White.\nMove an Ant [[wA1]] into the [green]green hex[/green] to surround the black Queen [[bQ]]",
             Reach(Surrounded("bQ")),
             "It doesn't surround the black Queen! [[bQ]]. Move a white Ant [[wA1]] into the [green]green hex[/green].",
         )
@@ -227,26 +263,26 @@ const PASS: Lesson = Lesson {
         "Black cannot move any piece without breaking the hive, and White has blocked all of Black's spawn points.\nThis situation is called **shut-out**.",
         "Black must pass, so White plays again.",
     ],
-    brief: "Supplied HOP A+ql+gA2+s+M3-L4-Q,w. Verify a real Black forced pass, then require two consecutive White placements while Black remains shut out. Show forbidden placement crosses around Black pieces. TODO part two: awaiting an authored position with one forced White move followed by a winning Black reply.",
+    brief: "Supplied HOP A+ql+gA2+s+M3-L4-Q,w. Verify a real Black forced pass, then require two consecutive White turns while Black remains shut out. Show forbidden placement crosses around Black pieces. TODO part two: awaiting an authored position with one forced White move followed by a winning Black reply.",
     setup: Setup::ForcedPass {
         position: "A+ql+gA2+s+M3-L4-Q,w",
         color: Color::Black,
     },
     steps: &[
         Step::play(
-            "Black has passed. You play as White again.\nPlace any piece from the reserve.",
-            PlaceAny,
-            "Place a piece from the reserve so Black stays shut out.",
+            "Black has passed. You play as White.\n\nPlace any piece from the reserve or move any piece leaving Black in shut-out.",
+            Reach(ShutOut(Color::Black)),
+            "Choose a placement or move that leaves Black without any legal move or placement.",
         )
         .placement_crosses_for(Color::Black)
         .your_turn(),
         Step::play(
-            "Black must pass again.\nPlace another white piece from the reserve.",
-            PlaceAny,
-            "Place another white piece from the reserve.",
+            "Black must pass again.\n\nPlace or move another piece, keeping Black in shut-out.",
+            Reach(ShutOut(Color::Black)),
+            "Keep Black without any legal move or placement.",
         )
         .placement_crosses_for(Color::Black),
-        Step::read("Well done! Black passed twice, so White was able to place two pieces in a row.", &[])
+        Step::read("Well done! Black passed twice, so White could play two turns in a row.", &[])
             .placement_crosses_for(Color::Black),
     ],
     outro: "Black can play again as soon as a legal move or placement becomes available.",

@@ -105,6 +105,7 @@ pub const LESSON_GROUPS: &[LessonGroup] = &[
         lessons: &[
             "bugs.pillbug",
             "bugs.pillbug_save",
+            "bugs.pillbug_escape",
             "bugs.pillbug_enemy",
             "bugs.pillbug_gate",
             "bugs.pillbug_deactivate",
