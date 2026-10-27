@@ -1,10 +1,9 @@
-use crate::providers::annotations::{
-    AnnotationColor,
-    AnnotationTool,
-    AnnotationsSignal,
-    MarkerShape,
+use crate::{
+    i18n::*,
+    providers::annotations::{AnnotationColor, AnnotationTool, AnnotationsSignal, MarkerShape},
 };
 use leptos::prelude::*;
+use leptos_i18n::I18nContext;
 use leptos_icons::*;
 
 const BTN: &str = "flex justify-center items-center size-8 overflow-hidden rounded-md transition-colors duration-200 active:scale-95 hover:bg-pillbug-teal dark:hover:bg-pillbug-teal";
@@ -17,6 +16,7 @@ pub fn AnnotationToggle(
     #[prop(optional)] class: Option<&'static str>,
     #[prop(optional)] active_tw_classes: Option<&'static str>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let annotations = use_context::<AnnotationsSignal>();
     let uses_default_button = class.is_none();
     let base_class = class.unwrap_or("ui-button ui-button-icon m-1");
@@ -40,7 +40,7 @@ pub fn AnnotationToggle(
                 view! {
                     // Match DownloadPgn's box so it lines up with the control icons.
                     <button
-                        title="Annotate (markers, arrows, highlights)"
+                        title=move || t_string!(i18n, analysis.annotate_markers_arrows_highlights)
                         class=button_class
                         on:click=move |_| annotations.toggle_mode()
                     >
@@ -55,6 +55,7 @@ pub fn AnnotationToggle(
 /// control row — see [`AnnotationToggle`].)
 #[component]
 pub fn AnnotationToolbar(annotations: AnnotationsSignal) -> impl IntoView {
+    let i18n = use_i18n();
     let mode = annotations.mode;
     let quick_draw = annotations.quick_draw;
     view! {
@@ -71,7 +72,7 @@ pub fn AnnotationToolbar(annotations: AnnotationsSignal) -> impl IntoView {
                     annotations,
                     AnnotationTool::Highlight,
                     "⬡",
-                    "Hexagon (Q)",
+                    move || t_string!(i18n, analysis.hexagon_q).to_string(),
                     "text-2xl",
                 )}
                 {MarkerShape::all()
@@ -81,14 +82,14 @@ pub fn AnnotationToolbar(annotations: AnnotationsSignal) -> impl IntoView {
                             annotations,
                             AnnotationTool::Marker(shape),
                             shape_glyph(shape),
-                            shape_title(shape),
+                            move || shape_title(i18n, shape),
                             "text-base",
                         )
                     })
                     .collect_view()}
                 <div class=TOOLBAR_DIVIDER_CLASS></div>
                 <button
-                    title="Clear annotations on this position"
+                    title=move || t_string!(i18n, analysis.clear_annotations_on_this_position)
                     class=format!("{BTN} bg-inherit")
                     on:click=move |_| annotations.clear_current()
                 >
@@ -100,24 +101,25 @@ pub fn AnnotationToolbar(annotations: AnnotationsSignal) -> impl IntoView {
 }
 
 /// Modifier held while drawing to pick this color.
-fn color_hint(color: AnnotationColor) -> &'static str {
+fn color_hint(i18n: I18nContext<Locale, I18nKeys>, color: AnnotationColor) -> String {
     match color {
-        AnnotationColor::White => "White (Ctrl)",
-        AnnotationColor::Black => "Black (Alt)",
-        AnnotationColor::Red => "Red (Ctrl+Alt)",
-        AnnotationColor::Green => "Green (Meta)",
-        AnnotationColor::Orange => "Orange",
-        AnnotationColor::Grey => "Grey",
+        AnnotationColor::White => t_string!(i18n, analysis.white_ctrl).to_string(),
+        AnnotationColor::Black => t_string!(i18n, analysis.black_alt).to_string(),
+        AnnotationColor::Red => t_string!(i18n, analysis.red_ctrl_alt).to_string(),
+        AnnotationColor::Green => t_string!(i18n, analysis.green_meta).to_string(),
+        AnnotationColor::Orange => "Orange".to_string(),
+        AnnotationColor::Grey => "Grey".to_string(),
     }
 }
 
 fn color_swatch(annotations: AnnotationsSignal, color: AnnotationColor) -> impl IntoView {
+    let i18n = use_i18n();
     let selected = annotations.color;
     // Neutral border so the white/black swatches stay visible on either bg.
     let style = format!("background-color: {}", color.fill());
     view! {
         <button
-            title=color_hint(color)
+            title=move || color_hint(i18n, color)
             class="flex justify-center items-center size-7"
             on:click=move |_| selected.set(color)
         >
@@ -142,7 +144,7 @@ fn tool_button(
     annotations: AnnotationsSignal,
     tool: AnnotationTool,
     glyph: &'static str,
-    title: &'static str,
+    title: impl Fn() -> String + Send + Sync + Copy + 'static,
     glyph_class: &'static str,
 ) -> impl IntoView {
     let selected = annotations.tool;
@@ -171,11 +173,11 @@ fn shape_glyph(shape: MarkerShape) -> &'static str {
     }
 }
 
-fn shape_title(shape: MarkerShape) -> &'static str {
+fn shape_title(i18n: I18nContext<Locale, I18nKeys>, shape: MarkerShape) -> String {
     match shape {
-        MarkerShape::Circle => "Circle (W)",
-        MarkerShape::Cross => "Cross (E)",
-        MarkerShape::Ring | MarkerShape::ThinRing => "Ring",
-        MarkerShape::Grid => "Grid",
+        MarkerShape::Circle => t_string!(i18n, analysis.circle_w).to_string(),
+        MarkerShape::Cross => t_string!(i18n, analysis.cross_e).to_string(),
+        MarkerShape::Ring | MarkerShape::ThinRing => "Ring".to_string(),
+        MarkerShape::Grid => "Grid".to_string(),
     }
 }

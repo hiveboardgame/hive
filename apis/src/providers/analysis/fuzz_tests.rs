@@ -104,7 +104,7 @@ fn check_reconstruction(store: &AnalysisStore, game_state: GameStateStore, seed:
         replayed, live,
         "reconstruction diverged from the live state (seed {seed}, step {step})"
     );
-    let hop = game_state.state().with_untracked(|state| state_hop(state));
+    let hop = game_state.state().with_untracked(state_hop);
     hop::parse(&hop)
         .unwrap_or_else(|e| panic!("live position must reload: {e} (seed {seed}, step {step})"));
 }

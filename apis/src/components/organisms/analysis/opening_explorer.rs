@@ -1,7 +1,17 @@
 use crate::{
-    common::PieceType,
-    components::atoms::{bug_tile::BugTile, rating::icon_for_speed},
+    common::{
+        display_username,
+        format_time_control,
+        game_result_label,
+        game_speed_label,
+        PieceType,
+    },
+    components::atoms::{
+        bug_tile::BugTile,
+        rating::{icon_for_speed, Rating},
+    },
     functions::opening_explorer::opening_explorer,
+    i18n::*,
     providers::{
         analysis::{AnalysisContext, AnalysisPreviewSnapshot},
         game_state::{GameStateStore, GameStateStoreFields},
@@ -19,7 +29,6 @@ use shared_types::{
     GameProgress,
     GameSpeed,
     GamesQueryOptions,
-    TimeMode,
 };
 use std::{collections::HashMap, str::FromStr};
 
@@ -128,6 +137,7 @@ fn ResultBar(white: i64, draws: i64, black: i64, total: i64) -> impl IntoView {
 
 #[component]
 pub fn OpeningExplorer() -> impl IntoView {
+    let i18n = use_i18n();
     let analysis = expect_context::<AnalysisContext>();
     let game_state = expect_context::<GameStateStore>();
     let api = expect_context::<ApiRequestsProvider>().0;
@@ -226,7 +236,7 @@ pub fn OpeningExplorer() -> impl IntoView {
 
     let suggestions = move || {
         resource.get().map(|result| match result {
-            Err(_) => view! { <div class="p-2">"Failed to load opening data."</div> }.into_any(),
+            Err(_) => view! { <div class="p-2">{move || t_string!(i18n, analysis.failed_to_load_opening_data)}</div> }.into_any(),
             Ok(response) => local_position.with(|(local, white_to_move)| {
                 let handlers = RowHandlers {
                     play: play_move,
@@ -242,14 +252,14 @@ pub fn OpeningExplorer() -> impl IntoView {
     view! {
         <div class="flex flex-col gap-3 min-h-0 text-sm select-none">
             <div class="text-xs font-semibold text-gray-600 uppercase dark:text-gray-300">
-                "Opening Explorer"
+                {move || t_string!(i18n, analysis.opening_explorer)}
             </div>
             <FilterControls filters />
             // Transition (not Suspense) keeps the prior results on screen while a new query loads,
             // so toggling filters doesn't collapse the panel to "Loading…" and jump.
             <div class="min-h-64">
                 <Transition fallback=move || {
-                    view! { <div class="p-2">"Loading…"</div> }
+                    view! { <div class="p-2">{t!(i18n, common.loading)}</div> }
                 }>{suggestions}</Transition>
             </div>
         </div>
@@ -262,13 +272,10 @@ fn render_response(
     local: &HashMap<u64, (Piece, Position, String)>,
     search_href: Option<String>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let header = response.position_total;
     let total = header.total;
-    let games_label = if total == 1 {
-        "1 game".to_string()
-    } else {
-        format!("{total} games")
-    };
+    let games_label = move || t_string!(i18n, profile.games_played, count = total).to_string();
     let has_top = !response.top_games.is_empty();
     let has_recent = !response.recent_games.is_empty();
     let rows = response
@@ -296,10 +303,18 @@ fn render_response(
             <table class="w-full text-xs border-collapse table-fixed">
                 <thead>
                     <tr class="text-left text-gray-500 dark:text-gray-400">
-                        <th class="py-1 px-1 w-1/3 font-normal">"Move"</th>
-                        <th class="py-1 px-1 w-1/5 font-normal text-right">"Games"</th>
-                        <th class="py-1 px-1 w-1/5 font-normal text-right">"Score"</th>
-                        <th class="py-1 px-1 font-normal">"W / D / B"</th>
+                        <th class="py-1 px-1 w-1/3 font-normal">
+                            {move || t_string!(i18n, analysis.move_label)}
+                        </th>
+                        <th class="py-1 px-1 w-1/5 font-normal text-right">
+                            {move || t_string!(i18n, common.games)}
+                        </th>
+                        <th class="py-1 px-1 w-1/5 font-normal text-right">
+                            {move || t_string!(i18n, common.score)}
+                        </th>
+                        <th class="py-1 px-1 font-normal">
+                            {move || t_string!(i18n, analysis.w_d_b)}
+                        </th>
                     </tr>
                 </thead>
                 <tbody>{rows}</tbody>
@@ -307,7 +322,12 @@ fn render_response(
         }
         .into_any()
     } else {
-        view! { <div class="py-2 px-2 italic">"No games for this position."</div> }.into_any()
+        view! {
+            <div class="py-2 px-2 italic">
+                {move || t_string!(i18n, analysis.no_games_for_this_position)}
+            </div>
+        }
+        .into_any()
     };
     let search_link = search_href.map(|href| {
         view! {
@@ -318,7 +338,7 @@ fn render_response(
                     rel="noopener"
                     class="w-full ui-button ui-button-primary ui-button-sm no-link-style"
                 >
-                    "Search this position ↗"
+                    {move || t_string!(i18n, analysis.search_this_position)}
                 </a>
             </div>
         }
@@ -326,13 +346,13 @@ fn render_response(
     let top_header =
         has_top.then(|| view! {
             <div class="mt-3 mb-1 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
-                "Top games"
+                {move || t_string!(i18n, analysis.top_games)}
             </div>
         });
     let recent_header =
         has_recent.then(|| view! {
             <div class="mt-3 mb-1 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
-                "Recent games"
+                {move || t_string!(i18n, analysis.recent_games)}
             </div>
         });
 
@@ -361,15 +381,15 @@ fn render_response(
 /// One entry in the "Top games" list: players + ratings, result and time control, opens the game
 /// in a new tab.
 fn top_game_row(g: crate::responses::GameResponse) -> impl IntoView {
+    let i18n = use_i18n();
     let href = format!("/game/{}", g.game_id.0);
-    let rating = |r: Option<f64>| {
-        r.map(|r| format!(" ({})", r.round() as i64))
-            .unwrap_or_default()
-    };
-    let white = format!("{}{}", g.white_player.username, rating(g.white_rating));
-    let black = format!("{}{}", g.black_player.username, rating(g.black_rating));
-    let result = match &g.game_status {
-        GameStatus::Finished(res) => res.to_string(),
+    let white_name = display_username(i18n, g.white_player.deleted, &g.white_player.username);
+    let black_name = display_username(i18n, g.black_player.deleted, &g.black_player.username);
+    let white_rating = g.white_rating;
+    let black_rating = g.black_rating;
+    let game_status = g.game_status.clone();
+    let result = move || match &game_status {
+        GameStatus::Finished(res) => game_result_label(i18n, res),
         _ => String::new(),
     };
     let (conclusion_icon, is_rep) = match g.conclusion {
@@ -381,23 +401,8 @@ fn top_game_row(g: crate::responses::GameResponse) -> impl IntoView {
         _ => (None, false),
     };
     let speed_icon = icon_for_speed(g.speed);
-    let time_text = match g.time_mode {
-        TimeMode::Untimed => "∞".to_string(),
-        TimeMode::RealTime => format!(
-            "{} + {}",
-            g.time_base.unwrap_or(0) / 60,
-            g.time_increment.unwrap_or(0),
-        ),
-        TimeMode::Correspondence => {
-            if let Some(base) = g.time_base {
-                format!("{} d/side", base / 86400)
-            } else if let Some(inc) = g.time_increment {
-                format!("{} d/move", inc / 86400)
-            } else {
-                String::new()
-            }
-        }
-    };
+    let time_control = g.time_control();
+    let time_text = move || format_time_control(i18n, time_control);
     view! {
         <a
             href=href
@@ -406,17 +411,35 @@ fn top_game_row(g: crate::responses::GameResponse) -> impl IntoView {
             class="block py-1 px-2 rounded transition-colors no-link-style dark:hover:bg-pillbug-teal/15 hover:bg-blue-light/70"
         >
             <div class="grid gap-y-0.5 gap-x-2 items-center grid-cols-[minmax(0,1fr)_5rem]">
-                <span class="min-w-0 truncate">{white} " – " {black}</span>
-                <span class="flex row-span-2 gap-1 justify-end items-center self-center font-mono shrink-0">
+                <span class="min-w-0 truncate">
+                    {white_name}
+                    {white_rating
+                        .map(|rating| {
+                            view! {
+                                " ("
+                                <Rating value=rating />
+                                ")"
+                            }
+                        })} " – " {black_name}
+                    {black_rating
+                        .map(|rating| {
+                            view! {
+                                " ("
+                                <Rating value=rating />
+                                ")"
+                            }
+                        })}
+                </span>
+                <span class="flex gap-1 justify-end items-center self-center font-mono shrink-0">
                     {conclusion_icon
                         .map(|icon| view! { <Icon icon attr:class="size-4 shrink-0" /> })}
                     {is_rep.then_some("↺")} {result}
                 </span>
-                <span class="flex gap-1 items-center min-w-0 text-xs leading-tight text-gray-500 dark:text-gray-400">
+                <span class="flex flex-wrap col-span-2 gap-1 items-center min-w-0 text-xs leading-tight text-gray-500 dark:text-gray-400">
                     <Icon icon=speed_icon attr:class="size-4 shrink-0" />
                     <span class="whitespace-nowrap">{time_text}</span>
                     <span class="shrink-0">" · "</span>
-                    <span class="truncate">{g.created_at.format("%Y-%m-%d").to_string()}</span>
+                    <span class="shrink-0">{g.created_at.format("%Y-%m-%d").to_string()}</span>
                 </span>
             </div>
         </a>
@@ -483,6 +506,7 @@ fn move_row(
 
 #[component]
 fn FilterControls(filters: RwSignal<ExplorerFilters>) -> impl IntoView {
+    let i18n = use_i18n();
     // Speed pill: highlighted when its speed is in the selected set.
     let speed_pill_class = move |speed: GameSpeed| {
         move || {
@@ -515,7 +539,9 @@ fn FilterControls(filters: RwSignal<ExplorerFilters>) -> impl IntoView {
         <div class="py-1 space-y-2">
             <div class="grid grid-cols-2 gap-2">
                 <div class="space-y-1">
-                    <label class="ui-field-label">"Type"</label>
+                    <label class="ui-field-label">
+                        {move || t_string!(i18n, common.type_label)}
+                    </label>
                     <select
                         class="ui-field-select"
                         prop:value=Signal::derive(move || filters.with(|f| f.game_type.to_string()))
@@ -526,12 +552,14 @@ fn FilterControls(filters: RwSignal<ExplorerFilters>) -> impl IntoView {
                             }
                         }
                     >
-                        <option value="Base">"Base"</option>
-                        <option value="Base+MLP">"Base+MLP"</option>
+                        <option value="Base">{move || t_string!(i18n, common.base)}</option>
+                        <option value="Base+MLP">
+                            {move || t_string!(i18n, analysis.base_mlp)}
+                        </option>
                     </select>
                 </div>
                 <div class="space-y-1">
-                    <label class="ui-field-label">"Rated"</label>
+                    <label class="ui-field-label">{t!(i18n, game.rated)}</label>
                     <select
                         class="ui-field-select"
                         prop:value=Signal::derive(move || match filters.with(|f| f.rated) {
@@ -557,9 +585,9 @@ fn FilterControls(filters: RwSignal<ExplorerFilters>) -> impl IntoView {
                                 });
                         }
                     >
-                        <option value="rated">"Rated"</option>
-                        <option value="any">"Any"</option>
-                        <option value="casual">"Casual"</option>
+                        <option value="rated">{t!(i18n, game.rated)}</option>
+                        <option value="any">{t!(i18n, common.any)}</option>
+                        <option value="casual">{t!(i18n, game.casual)}</option>
                     </select>
                 </div>
             </div>
@@ -575,7 +603,10 @@ fn FilterControls(filters: RwSignal<ExplorerFilters>) -> impl IntoView {
                     .map(|speed| {
                         let icon = icon_for_speed(speed);
                         view! {
-                            <label class=speed_pill_class(speed) title=speed.to_string()>
+                            <label
+                                class=speed_pill_class(speed)
+                                title=move || game_speed_label(i18n, speed)
+                            >
                                 <input
                                     type="checkbox"
                                     class="sr-only"
@@ -583,7 +614,7 @@ fn FilterControls(filters: RwSignal<ExplorerFilters>) -> impl IntoView {
                                     on:change=move |_| toggle_speed(speed)
                                 />
                                 <Icon icon attr:class="size-5" />
-                                <span class="sr-only">{speed.to_string()}</span>
+                                <span class="sr-only">{move || game_speed_label(i18n, speed)}</span>
                             </label>
                         }
                     })
@@ -598,7 +629,7 @@ fn FilterControls(filters: RwSignal<ExplorerFilters>) -> impl IntoView {
                             format!("{base} invisible pointer-events-none")
                         }
                     }
-                    title="Untimed"
+                    title=move || t_string!(i18n, game.speeds.untimed)
                 >
                     <input
                         type="checkbox"
@@ -609,7 +640,7 @@ fn FilterControls(filters: RwSignal<ExplorerFilters>) -> impl IntoView {
                         on:change=move |_| toggle_speed(GameSpeed::Untimed)
                     />
                     <Icon icon=icon_for_speed(GameSpeed::Untimed) attr:class="size-5" />
-                    <span class="sr-only">"Untimed"</span>
+                    <span class="sr-only">{t!(i18n, game.speeds.untimed)}</span>
                 </label>
             </div>
         </div>

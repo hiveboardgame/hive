@@ -43,21 +43,26 @@ pub fn DisplayTimer(
     };
     let css_grid_row = "row-start-1";
     let (outer_container_style, timer_container_style, user_container_style) = match vertical {
-        false => ("grid h-16 grid-cols-2 col-span-2 row-span-1 overflow-hidden ui-board-side-panel short:h-full short:grid-rows-2",
+        false => ("flex col-span-2 row-span-1 short:h-full",
                 "col-span-1 row-span-2 md:row-span-1 short:row-span-2 overflow-hidden transition-colors duration-300",
-                "h-full flex justify-center md:leading-4 row-span-2 md:row-span-1 short:row-span-2 short:text-xs items-center flex-col select-none"),
+                "h-full flex justify-center overflow-hidden md:leading-4 row-span-2 md:row-span-1 short:row-span-2 short:text-xs items-center flex-col select-none"),
         true => (
             "flex h-full grow justify-end items-stretch",
             "h-full w-16 shrink-0 grow-0 overflow-hidden rounded-none transition-colors duration-300",
             "",
         ),
     };
+    let panel_class = if vertical {
+        "contents"
+    } else {
+        "grid h-16 w-full shrink-0 grid-cols-2 ui-board-side-panel short:h-auto short:min-h-10 short:flex-1 short:grid-rows-2 lg:short:min-h-14"
+    };
     let timer = expect_context::<TimerSignal>().signal;
     let active_side = Memo::new(move |_| {
         let timer = timer();
-        match timer.finished {
-            true => BOARD_TIMER_IDLE_CLASS,
-            false => {
+        match timer.ordinary_clock_running {
+            false => BOARD_TIMER_IDLE_CLASS,
+            true => {
                 if (side() == Color::White) == timer.turn.is_multiple_of(2) {
                     "bg-grasshopper-green"
                 } else {
@@ -117,37 +122,44 @@ pub fn DisplayTimer(
 
     view! {
         <div class=outer_container_class>
-            <button on:click=onclick class=button_class id="timer">
-                <Show
-                    when=move || {
-                        matches!(timer().time_mode, TimeMode::Correspondence | TimeMode::RealTime)
-                    }
-
-                    fallback=|| {
-                        view! {
-                            <Icon
-                                icon=icondata_bi::BiInfiniteRegular
-                                attr:class="size-full bg-inherit"
-                            />
-                        }
-                    }
-                >
-
-                    <LiveTimer side compact=vertical />
-                </Show>
-            </button>
-            <Show when=move || !vertical>
-                <div class=classes>
-                    {match name {
-                        Some(name) => Either::Left(view! { <span class=text_color()>{name}</span> }),
-                        None => {
-                            Either::Right(
-                                view! { <UserWithRating side=side() text_color=text_color() /> },
+            <div class=panel_class>
+                <button on:click=onclick class=button_class id="timer">
+                    <Show
+                        when=move || {
+                            matches!(
+                                timer().time_mode,
+                                TimeMode::Correspondence | TimeMode::RealTime
                             )
                         }
-                    }}
-                </div>
-            </Show>
+
+                        fallback=|| {
+                            view! {
+                                <Icon
+                                    icon=icondata_bi::BiInfiniteRegular
+                                    attr:class="size-full bg-inherit"
+                                />
+                            }
+                        }
+                    >
+
+                        <LiveTimer side compact=vertical />
+                    </Show>
+                </button>
+                <Show when=move || !vertical>
+                    <div class=classes>
+                        {match name {
+                            Some(name) => {
+                                Either::Left(view! { <span class=text_color()>{name}</span> })
+                            }
+                            None => {
+                                Either::Right(
+                                    view! { <UserWithRating side=side() text_color=text_color() /> },
+                                )
+                            }
+                        }}
+                    </div>
+                </Show>
+            </div>
         </div>
     }
 }

@@ -1,60 +1,49 @@
 {
     "piece_style": "Stilul piesei",
-    "style_buttons": {
-        "official": "Oficial",
-        "flat": "Plat",
-        "three_d": "3D"
-    },
     "rotation": "Rotire",
-    "rotation_buttons": {
-        "no": "Nu",
-        "yes": "Da"
-    },
     "show_dots": "Afișează puncte",
     "dots_buttons": {
-        "no": "Nu",
         "angled": "Înclinate",
         "vertical": "Verticale"
     },
+    "preselect": "Preselectare",
+    "preselect_description": "Permite selectarea unei piese în timpul turei adversarului.",
+    "premove": "Mutare anticipată",
+    "premove_description": "Planifică o mutare în timpul turei adversarului. Mutările anticipate sunt executate automat, fără confirmare, dacă sunt încă legale.",
+    "drag_and_drop": "Tragere și plasare",
+    "drag_and_drop_description": "Mută piesele prin tragere. Mutările din timpul turei tale respectă setarea de confirmare a mutărilor.",
     "game_speed": "Viteza jocului:",
     "move_confirm": "Confirmarea mutării:",
     "color_scheme": "Schema de culori:",
     "preview": "Previzualizare:",
     "edit_account": {
-        "current_password": "Parola actuală",
-        "new_password": "Parola nouă",
-        "confirm_password": "Confirmă parola",
-        "confirm_password_placeholder": "Parola nouă (din nou)",
-        "save_button": "Salvează"
+        "confirm_password_placeholder": "Parola nouă (din nou)"
     },
     "create_account": {
         "username": {
-            "title": "Nume de utilizator",
             "description": "Te rugăm să alegi un nume de utilizator potrivit pentru toată familia. Orice conturi cu nume de utilizator nepotrivite vor fi închise!",
             "error": {
                 "taken": "Nume de utilizator luat",
-                "invalid": "Caracter invalid în numele de utilizator"
+                "invalid": "Caracter invalid în numele de utilizator",
+                "reserved": "Acest nume de utilizator este rezervat.",
+                "length": "Numele de utilizator trebuie să aibă între {{min}} și {{max}} caractere."
             }
         },
         "email": {
-            "title": "Email",
             "error": {
                 "invalid": "Email invalid"
             },
             "description": "Avem nevoie de adresa ta de email pentru a-ți trimite un email de confirmare atunci când creezi un cont."
         },
-        "password": "Parolă",
-        "confirm_password": "Confirmă parola",
-        "password_requirements": "Cel puțin 8 caractere",
-        "password_error": "Parolă prea scurtă sau nu se potrivește",
+        "password_requirements": "Folosește între {{min}} și {{max}} de caractere.",
         "be_nice_checkbox": "Sunt de acord să fiu amabil cu ceilalți jucători și să raportez abuzurile pe Discord",
+        "legal_notice": "Prin crearea unui cont, ești de acord cu <terms_link>Termenii serviciului</terms_link>. <privacy_link>Politica de confidențialitate</privacy_link> explică modul în care îți prelucrăm datele.",
         "signup_button": "Înscrie-te",
         "registration_error": "Înregistrarea a eșuat",
         "existing_account_prompt": "Ai deja un cont? <login_link>Autentifică-te</login_link>"
     },
     "login": {
         "email": "Email",
-        "password": "Parolă",
         "login_button": "Conectează-te",
         "no_account_prompt": "Nu ai un cont? <register_link>Înscrie-te</register_link>",
         "invalid_login": "Email sau parolă incorecte"
@@ -64,5 +53,33 @@
         "always": "Întotdeauna",
         "never": "Niciodată",
         "casual_only": "Doar necotat"
+    },
+    "click_on_your_clock": "Clic pe ceasul tău",
+    "double_click": "Clic dublu",
+    "single_click": "Clic simplu",
+    "light_mode": "Mod luminos",
+    "dark_mode": "Mod întunecat",
+    "white_background": "Fundal alb",
+    "black_background": "Fundal negru",
+    "current_color": "Curent: {{color}}",
+    "ant_light_preview": "Furnică {{design}} (mod luminos)",
+    "ant_dark_preview": "Furnică {{design}} (mod întunecat)",
+    "tile_design": {
+        "official": "Oficial",
+        "flat": "Plat",
+        "three_d": "3D",
+        "high_contrast": "Contrast ridicat",
+        "community": "Comunitar",
+        "pride": "Pride",
+        "carbon_three_d": "Carbon 3D",
+        "carbon": "Carbon"
+    },
+    "tile_design_browser_notice": "Unele browsere nu acceptă toate stilurile de piese. Firefox oferă cea mai uniformă afișare.",
+    "settings": {
+        "settings": "Setări",
+        "tune_board_visuals_and_move_input_preferences": "Ajustează aspectul tablei și preferințele de introducere a mutărilor.",
+        "board_appearance": "Aspectul tablei",
+        "play_preferences": "Preferințe de joc",
+        "if_either_player_has_takebacks_disabled_game_controls_will": "Dacă oricare dintre jucători a dezactivat anularea mutărilor, comenzile jocului nu vor permite astfel de cereri."
     }
 }

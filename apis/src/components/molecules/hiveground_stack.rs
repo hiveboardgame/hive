@@ -77,12 +77,14 @@ mod tests {
             level: 0,
             kind: RenderLayerKind::Active {
                 state: ActiveMarkerState::Board,
+                source: None,
             },
         };
         let reserve_active = RenderLayer {
             level: 1,
             kind: RenderLayerKind::Active {
                 state: ActiveMarkerState::Reserve,
+                source: None,
             },
         };
         let ground_target = RenderLayer {

@@ -4,6 +4,7 @@ use crate::{
         reserve::{Alignment, Reserve},
     },
     hiveground::HivegroundInteraction,
+    i18n::*,
 };
 use hive_lib::{Board, Color};
 use leptos::prelude::*;
@@ -16,6 +17,7 @@ enum AnalysisTab {
 
 #[component]
 fn AnalysisTabList(tab: RwSignal<AnalysisTab>) -> impl IntoView {
+    let i18n = use_i18n();
     let trigger_class = move |name: AnalysisTab| {
         move || {
             format!(
@@ -37,7 +39,7 @@ fn AnalysisTabList(tab: RwSignal<AnalysisTab>) -> impl IntoView {
                 aria-pressed=move || (tab() == AnalysisTab::History).to_string()
                 on:click=move |_| tab.set(AnalysisTab::History)
             >
-                "History"
+                {move || t_string!(i18n, common.history)}
             </button>
             <button
                 type="button"
@@ -45,7 +47,7 @@ fn AnalysisTabList(tab: RwSignal<AnalysisTab>) -> impl IntoView {
                 aria-pressed=move || (tab() == AnalysisTab::Explorer).to_string()
                 on:click=move |_| tab.set(AnalysisTab::Explorer)
             >
-                "Explorer"
+                {move || t_string!(i18n, analysis.explorer)}
             </button>
         </div>
     }

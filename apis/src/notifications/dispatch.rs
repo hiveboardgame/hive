@@ -3,16 +3,33 @@ use super::{
     payload::Push,
     service::Notifier,
     web_push::WebPushNotifier,
+    RecordedOutcome,
+    TournamentNotice,
 };
 use dashmap::{mapref::entry::Entry, DashMap};
-use db_lib::models::User;
+use db_lib::{
+    models::{Tournament, User},
+    schema::tournament_slots,
+    DbConn,
+};
+use diesel::{ExpressionMethods, QueryDsl};
+use diesel_async::RunQueryDsl;
 use hive_lib::{Color, GameResult, GameStatus};
-use shared_types::{Conclusion, TimeMode};
+use shared_types::{
+    rounded_rating_change,
+    Conclusion,
+    GameSpeed,
+    NotificationCategory,
+    TimeMode,
+    TournamentGameResult,
+};
 use std::{
+    collections::HashMap,
     str::FromStr,
     sync::{LazyLock, OnceLock},
     time::{Duration, Instant},
 };
+use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub enum NotifyOutcome {
@@ -123,7 +140,6 @@ pub async fn notify_game_ended_excluding(
             .unwrap_or_default()
     };
     let (white_name, black_name) = (name(game.white_id), name(game.black_id));
-    let round = |c: Option<f64>| c.map(|v| v.round() as i32);
     if exclude != Some(game.white_id) {
         notify(Event::GameEnded {
             recipient: game.white_id,
@@ -131,7 +147,7 @@ pub async fn notify_game_ended_excluding(
             game_nanoid: game.nanoid.clone(),
             outcome: white_outcome,
             reason,
-            rating_change: round(game.white_rating_change),
+            rating_change: game.white_rating_change.map(rounded_rating_change),
         });
     }
     if exclude != Some(game.black_id) {
@@ -141,7 +157,7 @@ pub async fn notify_game_ended_excluding(
             game_nanoid: game.nanoid.clone(),
             outcome: black_outcome,
             reason,
-            rating_change: round(game.black_rating_change),
+            rating_change: game.black_rating_change.map(rounded_rating_change),
         });
     }
     Ok(())
@@ -164,6 +180,17 @@ pub fn notify_game_control(
 }
 
 pub fn notify_your_turn(game: &db_lib::models::Game, opponent: String) {
+    let speed = match game.speed.parse::<GameSpeed>() {
+        Ok(speed) => speed,
+        Err(error) => {
+            log::error!(
+                "Game {} has invalid notification speed {:?}: {error}",
+                game.nanoid,
+                game.speed
+            );
+            return;
+        }
+    };
     let time_left = match TimeMode::from_str(&game.time_mode) {
         Ok(TimeMode::Untimed) => None,
         _ => Some(game.str_time_left_for_player(game.current_player_id)),
@@ -173,6 +200,47 @@ pub fn notify_your_turn(game: &db_lib::models::Game, opponent: String) {
         opponent,
         game_nanoid: game.nanoid.clone(),
         time_left,
-        speed: shared_types::GameSpeed::from_base_increment(game.time_base, game.time_increment),
+        speed,
     });
+}
+
+pub async fn notify_adjudicated_slots(
+    tournament: &Tournament,
+    slot_ids: &[Uuid],
+    result: &TournamentGameResult,
+    conn: &mut DbConn<'_>,
+) -> anyhow::Result<()> {
+    if slot_ids.is_empty() || *result == TournamentGameResult::Unknown {
+        return Ok(());
+    }
+    let slots = tournament_slots::table
+        .filter(tournament_slots::tournament_id.eq(tournament.id))
+        .filter(tournament_slots::id.eq_any(slot_ids))
+        .select((tournament_slots::white_id, tournament_slots::black_id))
+        .load::<(Uuid, Uuid)>(conn)
+        .await?;
+    let mut recipients = HashMap::<Uuid, Vec<RecordedOutcome>>::new();
+    for (white_id, black_id) in slots {
+        for (recipient, color) in [(white_id, Color::White), (black_id, Color::Black)] {
+            let outcome = match result {
+                TournamentGameResult::DoubleForfeit => RecordedOutcome::DoubleForfeit,
+                TournamentGameResult::Draw => RecordedOutcome::Draw,
+                TournamentGameResult::Winner(winner) if *winner == color => RecordedOutcome::Win,
+                TournamentGameResult::Winner(_) => RecordedOutcome::Loss,
+                TournamentGameResult::Unknown => continue,
+            };
+            recipients.entry(recipient).or_default().push(outcome);
+        }
+    }
+    for (recipient, outcomes) in recipients {
+        let description = TournamentNotice::ResultsRecorded(outcomes);
+        notify(Event::TournamentNotice {
+            recipient,
+            tournament_name: tournament.name.clone(),
+            tournament_nanoid: tournament.nanoid.clone(),
+            description,
+            category: NotificationCategory::GameEnded,
+        });
+    }
+    Ok(())
 }

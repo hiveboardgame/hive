@@ -1,9 +1,14 @@
-use crate::{components::molecules::game_previews::GamePreviews, providers::games::GamesSignal};
+use crate::{
+    common::TvInterest,
+    components::molecules::game_previews::GamePreviews,
+    providers::{games::GamesSignal, websocket::use_tv_subscription},
+};
 use leptos::prelude::*;
 
 #[component]
 pub fn Tv() -> impl IntoView {
     let games = expect_context::<GamesSignal>();
+    use_tv_subscription(TvInterest::Lobby);
     let live_games = Signal::derive(move || {
         games
             .live

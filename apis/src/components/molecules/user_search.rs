@@ -6,6 +6,7 @@ use crate::{
     responses::UserResponse,
 };
 use leptos::{html, leptos_dom::helpers::debounce, prelude::*};
+use shared_types::MAX_USERNAME_LENGTH;
 use std::{
     collections::{BTreeMap, HashSet},
     time::Duration,
@@ -15,7 +16,7 @@ use wasm_bindgen::JsCast;
 const MIN_SEARCH_LENGTH: usize = 2;
 const MAX_SUGGESTIONS: usize = 10;
 
-/// Usernames are ASCII (`db`'s `valid_username_char`), so the ASCII fold is exact.
+/// Usernames are ASCII (`shared_types::validate_username`), so the ASCII fold is exact.
 fn sorted_by_username(users: BTreeMap<String, UserResponse>) -> Vec<(String, UserResponse)> {
     let mut users: Vec<_> = users.into_iter().collect();
     users.sort_by_cached_key(|(username, _)| username.to_ascii_lowercase());
@@ -24,7 +25,7 @@ fn sorted_by_username(users: BTreeMap<String, UserResponse>) -> Vec<(String, Use
 
 #[component]
 pub fn UserSearch(
-    #[prop(optional)] placeholder: Option<String>,
+    #[prop(optional, into)] placeholder: Option<TextProp>,
     #[prop(optional)] fallback_users: Option<Signal<BTreeMap<String, UserResponse>>>,
     #[prop(optional, into)] filtered_users: Option<Signal<HashSet<String>>>,
     #[prop(optional)] value: Option<Signal<Option<String>>>,
@@ -139,11 +140,9 @@ pub fn UserSearch(
         }
     });
 
-    let input_placeholder = move || {
-        placeholder
-            .clone()
-            .unwrap_or_else(|| t_string!(i18n, home.search_players).to_string())
-    };
+    let input_placeholder = placeholder.unwrap_or_else(|| {
+        TextProp::from(move || t_string!(i18n, common.search_players).to_string())
+    });
 
     let has_select = select_callback.is_some();
     let wrapped_actions_stored = StoredValue::new(wrapped_actions);
@@ -193,7 +192,7 @@ pub fn UserSearch(
                     }
                     placeholder=input_placeholder
                     prop:value=display_value
-                    maxlength="20"
+                    maxlength=MAX_USERNAME_LENGTH.to_string()
                 />
                 // The clear (×) button only exists for the select-style usage
                 // (archive player filters). Reserving its slot keeps the two
@@ -206,7 +205,7 @@ pub fn UserSearch(
                             <button
                                 type="button"
                                 class="ui-button ui-button-ghost ui-button-icon-lg"
-                                aria-label="Clear selection"
+                                aria-label=move || t_string!(i18n, game.clear_selection)
                                 on:click=do_clear
                             >
                                 "×"
@@ -221,14 +220,21 @@ pub fn UserSearch(
                         <div class="h-5">
                             <Show when=move || { pattern_len() > 0 && !has_search_query() }>
                                 <span class="text-xs text-yellow-600">
-                                    {move || format!("Minimum {MIN_SEARCH_LENGTH} characters")}
+                                    {move || {
+                                        t_string!(
+                                            i18n, common.search_minimum_characters, count = MIN_SEARCH_LENGTH
+                                        )
+                                            .to_string()
+                                    }}
                                 </span>
                             </Show>
                         </div>
                         <Suspense fallback=move || {
                             view! {
                                 <div class="h-5">
-                                    <p class="text-xs text-gray-500">"Searching..."</p>
+                                    <p class="text-xs text-gray-500">
+                                        {move || t_string!(i18n, game.searching)}
+                                    </p>
                                 </div>
                             }
                         }>
@@ -245,7 +251,10 @@ pub fn UserSearch(
                                         && visible_users.get().is_empty()
                                 }>
                                     <span class="text-xs text-gray-500">
-                                        {move || format!("No users found for \"{}\"", pattern())}
+                                        {move || {
+                                            t_string!(i18n, common.no_users_matching, query = pattern())
+                                                .to_string()
+                                        }}
                                     </span>
                                 </Show>
                             </div>

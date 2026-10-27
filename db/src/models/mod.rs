@@ -1,3 +1,4 @@
+mod arena_game_result;
 mod challenge;
 mod chat_channel;
 mod chat_message;
@@ -14,13 +15,17 @@ mod push_device;
 mod rating;
 mod schedule;
 mod tournament;
+mod tournament_elimination_node;
+mod tournament_final_outcome;
 mod tournament_invitation;
 mod tournament_organizer;
-mod tournament_series;
-mod tournament_series_organizer;
+mod tournament_organizer_invitation;
+mod tournament_slot;
+mod tournament_swiss_round;
 mod tournament_user;
 mod tutorial_progress;
 mod user;
+pub(crate) use arena_game_result::ArenaGameResult;
 pub use challenge::{Challenge, NewChallenge};
 pub use chat_channel::ChatChannelKind;
 pub use chat_message::ChatMessage;
@@ -28,7 +33,8 @@ pub use email_queue::{EmailQueueItem, NewEmailQueueItem};
 pub use email_request_log::{EmailRequestLog, NewEmailRequestLog};
 pub use email_state::EmailState;
 pub use email_token::{EmailToken, NewEmailToken};
-pub use game::{Game, NewGame};
+pub(crate) use game::DeadlineSettlement;
+pub use game::{Game, GameHeartbeat, LiveRealtimeGame, NewGame};
 pub use game_hash::{GameFinishContext, GameHash};
 pub use game_user::GameUser;
 pub use home_banner::HomeBanner;
@@ -39,12 +45,21 @@ pub use notification_preferences::{
 };
 pub use push_device::{NewPushDevice, PushDevice};
 pub use rating::{NewRating, Rating};
-pub use schedule::{NewSchedule, Schedule};
-pub use tournament::{NewTournament, Tournament};
+pub use schedule::ScheduleOffer;
+pub(crate) use tournament::PersistedConfigError;
+pub use tournament::{InvitationCreateOutcome, NewTournament, Tournament};
+pub use tournament_elimination_node::{EliminationProgress, TournamentEliminationNode};
+pub use tournament_final_outcome::{
+    FrozenArenaRating,
+    TournamentFinalOutcome,
+    TournamentFinishReason,
+};
 pub use tournament_invitation::TournamentInvitation;
 pub use tournament_organizer::TournamentOrganizer;
-pub use tournament_series::{NewTournamentSeries, TournamentSeries};
-pub use tournament_series_organizer::TournamentSeriesOrganizer;
+pub use tournament_organizer_invitation::TournamentOrganizerInvitation;
+pub use tournament_slot::TournamentSlot;
+pub(crate) use tournament_slot::TournamentSlotInsert;
+pub use tournament_swiss_round::TournamentSwissRound;
 pub use tournament_user::TournamentUser;
 pub use tutorial_progress::TutorialProgress;
 pub use user::{NewUser, SoftDeleteReport, User};

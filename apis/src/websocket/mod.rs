@@ -7,18 +7,23 @@ pub mod client_handlers;
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     mod lobby_snapshot;
     mod messages;
+    mod realtime_gate;
     mod start_conn;
     mod telemetry;
+    #[cfg(test)]
+    mod test_db;
     mod tournament_game_start;
     mod ws_connection;
     mod ws_hub;
     pub mod server_handlers;
 
+    pub use realtime_gate::{RealtimeGamesPaused, RealtimeGate};
     pub use start_conn::start_connection;
     pub use telemetry::{TelemetrySnapshot, WsTelemetry};
     pub(crate) use tournament_game_start::TournamentGameStart;
     pub use ws_hub::{WsHub, SOCKET_BUFFER_CAPACITY};
-    pub use messages::{reaction_messages, GameFinalize, InternalServerMessage, MessageDestination, Reaction};
+    pub use messages::{GameFinalize, InternalServerMessage, MessageDestination, Reaction, TournamentAudience};
+    pub(crate) use messages::HandlerOutput;
 
     use crate::notifications::PendingNotifications;
     use chrono::{DateTime, Utc};
@@ -56,6 +61,7 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
         /// `notify_waiters` so parked tasks re-read the cache.
         game_response_inflight: DashMap<GameId, Arc<Notify>>,
         pub pending_notifications: Arc<PendingNotifications>,
+        pub realtime_gate: RealtimeGate,
     }
 
     impl Default for WebsocketData {
@@ -68,11 +74,16 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
                 game_response_cache: DashMap::new(),
                 game_response_inflight: DashMap::new(),
                 pending_notifications: Arc::new(PendingNotifications::default()),
+                realtime_gate: RealtimeGate::default(),
             }
         }
     }
 
     impl WebsocketData {
+        pub(crate) fn invalidate_game_response(&self, game_id: &GameId) {
+            self.game_response_cache.remove(game_id);
+        }
+
         /// Return a cached `GameResponse` if fresh; otherwise build, cache, and return it.
         ///
         /// Singleflight semantics: concurrent callers on the same `GameId` share

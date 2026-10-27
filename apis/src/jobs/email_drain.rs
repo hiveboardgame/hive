@@ -1,12 +1,20 @@
-use crate::email::{deliver, render_password_reset, EmailConfig};
+use crate::{
+    common::parse_locale,
+    email::{deliver, render_password_reset, EmailConfig},
+    i18n::*,
+};
 use chrono::{Duration as ChronoDuration, Utc};
 use db_lib::{get_conn, models::EmailQueueItem, DbConn, DbPool};
 use std::time::Duration;
 use tokio::time::MissedTickBehavior;
 
 const DRAIN_INTERVAL_SECS: u64 = 3;
-const BATCH_SIZE: i64 = 50;
+const BATCH_SIZE: i64 = 10;
 const MAX_ATTEMPTS: i16 = 3;
+
+const DELIVERY_TIMEOUT: Duration = Duration::from_secs(20);
+// Must outlast BATCH_SIZE * DELIVERY_TIMEOUT, or another instance re-sends mail still in flight.
+const CLAIM_LEASE: ChronoDuration = ChronoDuration::seconds(300);
 
 pub fn run(pool: DbPool, config: EmailConfig) {
     actix_rt::spawn(async move {
@@ -14,15 +22,18 @@ pub fn run(pool: DbPool, config: EmailConfig) {
         interval.set_missed_tick_behavior(MissedTickBehavior::Delay);
         loop {
             interval.tick().await;
+            crate::active_instance::wait_until_active().await;
             match get_conn(&pool).await {
-                Ok(mut conn) => match EmailQueueItem::claim_batch(BATCH_SIZE, &mut conn).await {
-                    Ok(batch) => {
-                        for item in batch {
-                            process(&config, item, &mut conn).await;
+                Ok(mut conn) => {
+                    match EmailQueueItem::claim_batch(BATCH_SIZE, CLAIM_LEASE, &mut conn).await {
+                        Ok(batch) => {
+                            for item in batch {
+                                process(&config, item, &mut conn).await;
+                            }
                         }
+                        Err(err) => log::warn!("email_drain: claim_batch failed: {err}"),
                     }
-                    Err(err) => log::warn!("email_drain: claim_batch failed: {err}"),
-                },
+                }
                 Err(err) => log::warn!("email_drain: get_conn failed: {err}"),
             }
         }
@@ -34,7 +45,16 @@ async fn process(config: &EmailConfig, item: EmailQueueItem, conn: &mut DbConn<'
         let _ = EmailQueueItem::mark_skipped(item.id, "skipped: cannot render", conn).await;
         return;
     };
-    match deliver(config, &item.to_address, &subject, &body).await {
+    let sent = match tokio::time::timeout(
+        DELIVERY_TIMEOUT,
+        deliver(config, &item.to_address, &subject, &body),
+    )
+    .await
+    {
+        Ok(result) => result,
+        Err(_) => Err(format!("timed out after {}s", DELIVERY_TIMEOUT.as_secs())),
+    };
+    match sent {
         Ok(()) => {
             if let Err(err) = EmailQueueItem::mark_sent(item.id, conn).await {
                 log::warn!("email_drain: mark_sent failed for {}: {err}", item.id);
@@ -66,12 +86,26 @@ fn render(config: &EmailConfig, item: &EmailQueueItem) -> Option<(String, String
     match item.kind.as_str() {
         "password_reset" => {
             let token = item.payload.get("token")?.as_str()?;
+            let locale = item
+                .payload
+                .get("locale")
+                .and_then(|value| value.as_str())
+                .unwrap_or("en");
+            let locale = parse_locale(locale);
             let username = item
                 .payload
                 .get("username")
                 .and_then(|v| v.as_str())
-                .unwrap_or("there");
-            Some(render_password_reset(&config.base_url, username, token))
+                .map(str::to_owned)
+                .unwrap_or_else(|| {
+                    td_string!(locale, notifications.email.recipient_fallback).to_string()
+                });
+            Some(render_password_reset(
+                locale,
+                &config.base_url,
+                &username,
+                token,
+            ))
         }
         _ => None,
     }

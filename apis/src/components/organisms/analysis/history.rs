@@ -13,6 +13,7 @@ use crate::{
         },
     },
     hiveground::HivegroundInteraction,
+    i18n::*,
     providers::{
         analysis::AnalysisContext,
         game_state::{state_hop, GameStateStore, GameStateStoreFields},
@@ -49,6 +50,7 @@ pub fn History(
     history_board: Memo<Board>,
     #[prop(optional)] mobile: bool,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let analysis = expect_context::<AnalysisContext>();
     let store = analysis.store;
     let reserve_class =
@@ -149,13 +151,13 @@ pub fn History(
                     on:click=move |_| store.promote_current_variation(true)
                     class=ACTION_BUTTON_CLASS
                 >
-                    "Make main line"
+                    {move || t_string!(i18n, analysis.make_main_line)}
                 </button>
                 <button
                     on:click=move |_| store.promote_current_variation(false)
                     class=ACTION_BUTTON_CLASS
                 >
-                    "Promote variation"
+                    {move || t_string!(i18n, analysis.promote_variation)}
                 </button>
             </div>
             <div

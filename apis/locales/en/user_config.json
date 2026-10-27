@@ -1,21 +1,8 @@
 {
-    "language": "Language",
     "piece_style": "Piece style",
-    "style_buttons": {
-        "official": "Official",
-        "flat": "Flat",
-        "three_d": "ThreeD",
-        "community": "Community",
-        "high_contrast": "HighContrast"
-    },
     "rotation": "Rotation",
-    "rotation_buttons": {
-        "no": "No",
-        "yes": "Yes"
-    },
     "show_dots": "Show dots",
     "dots_buttons": {
-        "no": "No",
         "angled": "Angled",
         "vertical": "Vertical"
     },
@@ -25,61 +12,86 @@
         "on": "On"
     },
     "background_color": "Background Color",
+    "preselect": "Preselect",
+    "preselect_description": "Allow selecting a piece during the opponent's turn.",
+    "premove": "Premove",
+    "premove_description": "Queue a move during the opponent's turn. Premoves play automatically without confirmation if they are still legal.",
+    "drag_and_drop": "Drag and drop",
+    "drag_and_drop_description": "Move pieces by dragging them. Moves on your turn follow your move confirmation setting.",
     "game_speed": "Game speed:",
     "move_confirm": "Move confirmation:",
     "color_scheme": "Color scheme:",
     "preview": "Preview:",
-
     "edit_account": {
-        "current_password": "Current password",
-        "new_password": "New password",
-        "confirm_password": "Confirm password",
-        "confirm_password_placeholder": "New password (again)",
-        "save_button": "Save"
+        "confirm_password_placeholder": "New password (again)"
     },
     "delete_account": {
         "title": "Delete Account",
         "description": "Deleting your account logs you out, anonymizes the account, and resigns or aborts unfinished games.",
-        "password": "Current password",
         "button": "Delete Account",
         "error": "Could not delete account. Please check your password and try again."
     },
     "create_account": {
         "username": {
-            "title": "Username",
             "description": "Please choose a family-friendly username. Any accounts with inappropriate usernames will be closed!",
             "error": {
                 "taken": "Username is taken",
-                "invalid": "Invalid character in username"
+                "invalid": "Invalid character in username",
+                "reserved": "This username is reserved.",
+                "length": "Username must be between {{min}} and {{max}} characters."
             }
         },
         "email": {
-            "title": "Email",
             "error": {
                 "invalid": "Invalid email"
             },
             "description": "We need your email address to send you a confirmation email when you create an account."
         },
-        "password": "Password",
-        "confirm_password": "Confirm password",
-        "password_requirements": "At least 8 characters",
-        "password_error": "Password too short or does not match",
+        "password_requirements": "Use {{min}}–{{max}} characters.",
         "be_nice_checkbox": "I agree to be nice to other players and to report abuse on Discord",
+        "legal_notice": "By creating an account, you agree to our <terms_link>Terms of Service</terms_link>. Our <privacy_link>Privacy Policy</privacy_link> explains how we handle your data.",
         "signup_button": "Sign up",
         "registration_error": "Registration failed",
         "existing_account_prompt": "Already have an account? <login_link>Sign in</login_link>"
     },
     "login": {
         "email": "Email or username",
-        "password": "Password",
         "login_button": "Sign in",
         "no_account_prompt": "Don't have an account? <register_link>Sign up</register_link>",
         "invalid_login": "Invalid email/user or password"
     },
-   "allow_takeback": "Allow takebacks",
-   "allow_takeback_buttons": {
-    "always": "Always",
-    "never": "Never",
-    "casual_only": "Casual only"
-   }
+    "allow_takeback": "Allow takebacks",
+    "allow_takeback_buttons": {
+        "always": "Always",
+        "never": "Never",
+        "casual_only": "Casual only"
+    },
+    "click_on_your_clock": "Click on your clock",
+    "double_click": "Double click",
+    "single_click": "Single click",
+    "light_mode": "Light mode",
+    "dark_mode": "Dark mode",
+    "white_background": "White Background",
+    "black_background": "Black Background",
+    "current_color": "Current: {{color}}",
+    "ant_light_preview": "{{design}} Ant (Light Mode)",
+    "ant_dark_preview": "{{design}} Ant (Dark Mode)",
+    "tile_design": {
+        "official": "Official",
+        "flat": "Flat",
+        "three_d": "3D",
+        "high_contrast": "High contrast",
+        "community": "Community",
+        "pride": "Pride",
+        "carbon_three_d": "Carbon 3D",
+        "carbon": "Carbon"
+    },
+    "tile_design_browser_notice": "Some browsers do not support every tile design. Firefox gives the most consistent rendering.",
+    "settings": {
+        "settings": "Settings",
+        "tune_board_visuals_and_move_input_preferences": "Tune board visuals and move input preferences.",
+        "board_appearance": "Board Appearance",
+        "play_preferences": "Play Preferences",
+        "if_either_player_has_takebacks_disabled_game_controls_will": "If either player has takebacks disabled, game controls will not allow takeback requests."
+    }
 }

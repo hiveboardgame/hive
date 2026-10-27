@@ -7,10 +7,12 @@ use crate::{
             annotations_layer::AnnotationsLayer,
             board_grid::BoardGrid,
             board_pieces::BoardPieces,
+            drag_ghost::DragGhost,
             history_pieces::HistoryPieces,
         },
     },
     hiveground::HivegroundInteraction,
+    hooks::piece_drag::use_piece_drag,
     providers::{
         analysis::{AnalysisContext, NodeId},
         annotations::{AnnotationColor, AnnotationTool, AnnotationsSignal, MarkerShape},
@@ -179,6 +181,16 @@ impl ViewBoxControls {
         self
     }
 
+    fn resize_around_center(&mut self, previous_width: f32, width: f32, height: f32) {
+        let units_per_px = self.width / previous_width;
+        let center_x = self.x + self.width / 2.0;
+        let center_y = self.y + self.height / 2.0;
+        self.width = width * units_per_px;
+        self.height = height * units_per_px;
+        self.x = center_x - self.width / 2.0;
+        self.y = center_y - self.height / 2.0;
+    }
+
     fn recover_offscreen(&mut self, tiles: &[TileBounds], width: f32, height: f32) -> bool {
         if tiles.iter().any(|tile| {
             tile.right + self.x_transform > self.x
@@ -232,7 +244,6 @@ impl ViewBoxControls {
 
 struct ViewBoxState {
     is_panning: RwSignal<bool>,
-    has_zoomed: RwSignal<bool>,
     is_visible: RwSignal<bool>,
 }
 
@@ -240,7 +251,6 @@ impl ViewBoxState {
     fn new() -> Self {
         Self {
             is_panning: RwSignal::new(false),
-            has_zoomed: RwSignal::new(false),
             is_visible: RwSignal::new(true),
         }
     }
@@ -264,13 +274,14 @@ pub fn Board(
     history_board: Memo<HiveBoard>,
     #[prop(optional, into)] fit_on: Option<Signal<u64>>,
     #[prop(optional, into)] fit_options: Option<Signal<(f32, f32)>>,
+    #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateStore>();
     let analysis = use_context::<AnalysisContext>();
     let annotations = use_context::<AnnotationsSignal>();
     let tutorial = use_context::<crate::providers::tutorial::TutorialContext>();
-    let on_red_hex = tutorial
-        .map(|tutorial| Callback::new(move |position| tutorial.try_forbidden(position)));
+    let on_red_hex =
+        tutorial.map(|tutorial| Callback::new(move |position| tutorial.try_forbidden(position)));
 
     // Hex where the current draw gesture started (set on the draw-button press).
     let annotation_start = RwSignal::new(None::<Position>);
@@ -280,6 +291,7 @@ pub fn Board(
     let config = expect_context::<Config>().0;
     let viewbox_state = ViewBoxState::new();
     let viewbox_signal = RwSignal::new(ViewBoxControls::new());
+    let board_width = StoredValue::new(0.0_f32);
     let initial_touch_distance = RwSignal::<f32>::new(0.0);
     // Snapshot taken at the start of a pinch: (viewbox, anchor_x, anchor_y).
     let pinch_base = RwSignal::<Option<(ViewBoxControls, f32, f32)>>::new(None);
@@ -352,26 +364,15 @@ pub fn Board(
     );
 
     // Unified RAF-based viewbox update system
-    let update_viewbox_size = move |width: f32, height: f32, respect_zoom: bool| {
+    let center_on_hive = move |width: f32, height: f32| {
         let current_center = displayed_board.with_untracked(HiveBoard::center_coordinates);
         let svg_pos = SvgPos::center_for_level(current_center, 0, straight);
-        let (scale_x, scale_y) = if respect_zoom && viewbox_state.has_zoomed.get_untracked() {
-            let svg = viewbox_ref.get_untracked().expect("It exists");
-            viewbox_signal.with_untracked(|vb| {
-                (
-                    svg.client_width() as f32 / vb.width,
-                    svg.client_height() as f32 / vb.height,
-                )
-            })
-        } else {
-            (1.0, 1.0)
-        };
-
+        board_width.set_value(width);
         viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
             viewbox_controls.x = 0.0;
             viewbox_controls.y = 0.0;
-            viewbox_controls.width = width / scale_x;
-            viewbox_controls.height = height / scale_y;
+            viewbox_controls.width = width;
+            viewbox_controls.height = height;
             viewbox_controls.x_transform = -(svg_pos.0 - (viewbox_controls.width / 2.0));
             viewbox_controls.y_transform = -(svg_pos.1 - (viewbox_controls.height / 2.0));
         });
@@ -393,7 +394,10 @@ pub fn Board(
                     if fit_on.is_some() {
                         if let Some(tutorial) = tutorial {
                             let targets = tutorial.session.with_untracked(|session| {
-                                session.as_ref().map(|session| session.fit_targets()).unwrap_or_default()
+                                session
+                                    .as_ref()
+                                    .map(|session| session.fit_targets())
+                                    .unwrap_or_default()
                             });
                             for position in targets {
                                 let (x, y) = SvgPos::center_for_level(position, 0, straight);
@@ -407,7 +411,8 @@ pub fn Board(
                         }
                         if let Some(annotations) = annotations {
                             for highlight in annotations.current().get_untracked().highlights {
-                                let (x, y) = SvgPos::center_for_level(highlight.position, 0, straight);
+                                let (x, y) =
+                                    SvgPos::center_for_level(highlight.position, 0, straight);
                                 // Tutorial destinations can sit outside the occupied hive.
                                 fitted_tiles.push(TileBounds {
                                     left: x - 32.0,
@@ -424,7 +429,6 @@ pub fn Board(
         });
         if let Some(next) = fitted {
             viewbox_signal.set(next);
-            viewbox_state.has_zoomed.set(true);
             viewbox_state.is_panning.set(false);
             pinch_base.set(None);
         }
@@ -450,7 +454,6 @@ pub fn Board(
                     });
                     if let Some(next) = recovered {
                         viewbox_signal.set(next);
-                        viewbox_state.has_zoomed.set(true);
                         viewbox_state.is_panning.set(false);
                         pinch_base.set(None);
                     }
@@ -460,7 +463,22 @@ pub fn Board(
                     if fit_on.is_some() {
                         apply_fit();
                     } else {
-                        update_viewbox_size(width, height, true);
+                        if width <= 0.0 || height <= 0.0 {
+                            return;
+                        }
+                        let previous_width = board_width.get_value();
+                        if previous_width > 0.0 {
+                            board_width.set_value(width);
+                            viewbox_signal.update(|viewbox_controls| {
+                                viewbox_controls.resize_around_center(
+                                    previous_width,
+                                    width,
+                                    height,
+                                );
+                            });
+                        } else {
+                            center_on_hive(width, height);
+                        }
                     }
                 }
                 ViewBoxUpdateType::Pan { delta_x, delta_y } => {
@@ -497,7 +515,6 @@ pub fn Board(
                         viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
                             *viewbox_controls = future_viewbox;
                         });
-                        viewbox_state.has_zoomed.set(true);
                     }
                 }
                 ViewBoxUpdateType::PinchZoom {
@@ -516,7 +533,6 @@ pub fn Board(
                         viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
                             *viewbox_controls = future_viewbox;
                         });
-                        viewbox_state.has_zoomed.set(true);
                     }
                 }
             }
@@ -564,18 +580,22 @@ pub fn Board(
         move |_, _, _| {
             let div = div_ref.get_untracked().expect("it exists");
             let rect = div.get_bounding_client_rect();
-            update_viewbox_size(rect.width() as f32, rect.height() as f32, false);
+            center_on_hive(rect.width() as f32, rect.height() as f32);
         },
         true,
     );
 
     Effect::watch(
         move || game_id_slice.get(),
-        move |_, _, _| {
+        // Refetches (reconnect, game end, takeback) replace the whole store and
+        // re-notify game_id without changing it.
+        move |game_id, previous, _| {
+            if previous == Some(game_id) {
+                return;
+            }
             if let Some(div) = div_ref.get_untracked() {
-                viewbox_state.has_zoomed.set(false);
                 let rect = div.get_bounding_client_rect();
-                update_viewbox_size(rect.width() as f32, rect.height() as f32, false);
+                center_on_hive(rect.width() as f32, rect.height() as f32);
             }
         },
         false,
@@ -826,9 +846,20 @@ pub fn Board(
         left_press.set(None);
     });
 
+    use_piece_drag(interaction, move |evt| {
+        drop_hex(viewbox_ref, viewbox_signal, evt)
+    });
+    let board_scale: Signal<f32> = Memo::new(move |_| {
+        let width = viewbox_signal.with(|vb| vb.width);
+        viewbox_ref
+            .get_untracked()
+            .map_or(1.0, |svg| svg.client_width() as f32 / width)
+    })
+    .into();
+
     _ = on_click_outside(g_ref, move |event| {
         // While drawing, an off-hive click is an annotation, not a selection to cancel.
-        if annotation_drawing_on(annotations) {
+        if annotation_drawing_on(annotations) || interaction.is_click_swallowed() {
             return;
         }
         let clicked_timer = event
@@ -880,7 +911,9 @@ pub fn Board(
                         })}
                 </g>
             </svg>
+            {children.map(|children| children())}
             {annotations.map(|annotations| view! { <AnnotationToolbar annotations /> })}
+            <DragGhost interaction tile_opts board_scale />
         </div>
     }
 }
@@ -1201,6 +1234,42 @@ fn stack_position_from_element(element: Element) -> Option<Position> {
     Some(Position::new(q, r))
 }
 
+// Stacked targets render raised in 3D, so the flat grid would pick the hex row above. Only
+// target overlays are trusted: piece shadows spill over neighbouring hexes.
+fn drop_hex(
+    svg: NodeRef<svg::Svg>,
+    viewbox_signal: RwSignal<ViewBoxControls>,
+    evt: &web_sys::PointerEvent,
+) -> Option<Position> {
+    let board = svg.get_untracked()?;
+    let rect = board.get_bounding_client_rect();
+    let (x, y) = (f64::from(evt.client_x()), f64::from(evt.client_y()));
+    if !(rect.left()..=rect.right()).contains(&x) || !(rect.top()..=rect.bottom()).contains(&y) {
+        return None;
+    }
+    let rendered_target = web_sys::window()
+        .and_then(|window| window.document())
+        .and_then(|document| {
+            document
+                .elements_from_point(x as f32, y as f32)
+                .iter()
+                .filter_map(|element| element.dyn_into::<Element>().ok())
+                .filter(|element| board.contains(Some(element)))
+                .find_map(|element| target_position(&element))
+        });
+    Some(rendered_target.unwrap_or_else(|| pointer_hex(svg, viewbox_signal, evt)))
+}
+
+fn target_position(element: &Element) -> Option<Position> {
+    let target = element
+        .closest("[data-hg-target-q][data-hg-target-r]")
+        .ok()
+        .flatten()?;
+    let q = target.get_attribute("data-hg-target-q")?.parse().ok()?;
+    let r = target.get_attribute("data-hg-target-r")?.parse().ok()?;
+    Some(Position::new(q, r))
+}
+
 fn screen_to_svg_coordinates(svg: NodeRef<svg::Svg>, x: f32, y: f32) -> (f32, f32) {
     let svg = svg.get_untracked().expect("svg should exist already");
     let svg_graphics_element = svg.unchecked_ref::<web_sys::SvgGraphicsElement>();
@@ -1285,8 +1354,18 @@ mod tests {
     #[test]
     fn tutorial_fit_padding_keeps_the_position_centered_and_visible() {
         let tiles = [
-            TileBounds { left: -180.0, right: -120.0, top: -80.0, bottom: -20.0 },
-            TileBounds { left: 120.0, right: 180.0, top: 20.0, bottom: 80.0 },
+            TileBounds {
+                left: -180.0,
+                right: -120.0,
+                top: -80.0,
+                bottom: -20.0,
+            },
+            TileBounds {
+                left: 120.0,
+                right: 180.0,
+                top: 20.0,
+                bottom: 80.0,
+            },
         ];
         for (width, height) in [(390.0, 300.0), (700.0, 800.0)] {
             let mut normal = ViewBoxControls::new();
@@ -1387,6 +1466,25 @@ mod tests {
             },
         ];
         assert!(viewbox.recover_offscreen(&tiles, 390.0, 640.0));
+    }
+
+    #[test]
+    fn resize_keeps_pan_and_zoom() {
+        let mut viewbox = ViewBoxControls::new();
+        viewbox.x = 100.0;
+        viewbox.y = -50.0;
+        viewbox.width = 200.0;
+        viewbox.height = 100.0;
+        viewbox.x_transform = 30.0;
+        viewbox.y_transform = 40.0;
+
+        viewbox.resize_around_center(400.0, 800.0, 600.0);
+
+        assert_eq!(
+            (viewbox.x, viewbox.y, viewbox.width, viewbox.height),
+            (0.0, -150.0, 400.0, 300.0),
+        );
+        assert_eq!((viewbox.x_transform, viewbox.y_transform), (30.0, 40.0));
     }
 
     #[test]

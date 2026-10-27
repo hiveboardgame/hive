@@ -1,0 +1,1 @@
+DROP INDEX CONCURRENTLY games_users_user_id_game_id_idx;

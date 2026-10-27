@@ -5,6 +5,7 @@ use crate::{
             hamburger::Hamburger,
             schedule_notification::{AcceptanceNotification, ProposalNotification},
             tournament_invitation_notification::TournamentInvitationNotification,
+            tournament_organizer_invitation_notification::TournamentOrganizerInvitationNotification,
             tournament_status_notification::TournamentStatusNotification,
         },
     },
@@ -13,6 +14,8 @@ use crate::{
     providers::{
         challenges::ChallengeStateSignal,
         chat::Chat,
+        AuthContext,
+        AuthIdentity,
         NotificationContext,
         SchedulesContext,
     },
@@ -29,6 +32,15 @@ pub fn NotificationDropdown(current_game_id: Signal<Option<GameId>>) -> impl Int
     let chat = expect_context::<Chat>();
     let notifications_context = expect_context::<NotificationContext>();
     let schedules_context = expect_context::<SchedulesContext>();
+    let auth = expect_context::<AuthContext>();
+    Effect::new(move |_| {
+        let identity = auth.identity.get();
+        notifications_context
+            .tournament_pairings
+            .update(|pairings| {
+                pairings.retain(|_, notice| identity == Some(AuthIdentity::User(notice.recipient)));
+            });
+    });
     let latest_chat_unread_message_id = Memo::new(move |_| {
         let current_game_id = current_game_id.get();
         chat.latest_unread_message_id_excluding_game(current_game_id.as_ref())
@@ -71,35 +83,39 @@ pub fn NotificationDropdown(current_game_id: Signal<Option<GameId>>) -> impl Int
                 </span>
             }
             id="Notifications"
-            aria_label="Open notifications"
+            aria_label=Signal::derive(move || {
+                t_string!(i18n, tournaments.ui.open_notifications).to_string()
+            })
         >
             <Show
                 when=has_notifications
-                fallback=|| {
-                    view! { <div class="ui-notification-empty">"No notifications right now"</div> }
+                fallback=move || {
+                    view! {
+                        <div class="ui-notification-empty">
+                            {t!(i18n, tournaments.ui.no_notifications_right_now)}
+                        </div>
+                    }
                 }
             >
                 <div class="ui-notification-list">
                     <Show when=has_chat_notification>
                         <div class="ui-notification-item">
                             <div class="relative flex-1 min-w-0">
-                                <div class="ui-notification-label">
-                                    {t!(i18n, messages.page.title)}
-                                </div>
+                                <div class="ui-notification-label">{t!(i18n, common.messages)}</div>
                                 <div class="ui-notification-title">
                                     {t!(i18n, messages.chat.new_chat_message)}
                                 </div>
                                 <a
                                     class="absolute top-0 left-0 z-10 size-full"
                                     href="/message"
-                                    aria-label=move || t_string!(i18n, header.user_menu.messages)
+                                    aria-label=move || t_string!(i18n, common.messages)
                                     on:click=move |_| hamburger_show.set(false)
                                 ></a>
                             </div>
                             <button
                                 type="button"
-                                title=move || t_string!(i18n, messages.chat.dismiss)
-                                aria-label=move || t_string!(i18n, messages.chat.dismiss)
+                                title=move || t_string!(i18n, common.dismiss)
+                                aria-label=move || t_string!(i18n, common.dismiss)
                                 on:click=move |event| {
                                     event.prevent_default();
                                     event.stop_propagation();
@@ -129,7 +145,9 @@ pub fn NotificationDropdown(current_game_id: Signal<Option<GameId>>) -> impl Int
                                             view! {
                                                 <ChallengeDetails
                                                     challenge=challenge
-                                                    label="Direct Challenge"
+                                                    label=move || {
+                                                        t_string!(i18n, tournaments.ui.direct_challenge).to_string()
+                                                    }
                                                     class="ui-notification-item"
                                                 />
                                             }
@@ -142,17 +160,13 @@ pub fn NotificationDropdown(current_game_id: Signal<Option<GameId>>) -> impl Int
                     <For
                         each=move || {
                             schedules_context
-                                .own
+                                .notification_schedules
                                 .with(|schedules| {
                                     notifications_context
                                         .schedule_proposals()
                                         .into_iter()
                                         .filter_map(|schedule_id| {
-                                            schedules
-                                                .values()
-                                                .find_map(|game_schedules| {
-                                                    game_schedules.get(&schedule_id).cloned()
-                                                })
+                                            schedules.get(&schedule_id).cloned()
                                         })
                                         .collect::<Vec<_>>()
                                 })
@@ -161,27 +175,26 @@ pub fn NotificationDropdown(current_game_id: Signal<Option<GameId>>) -> impl Int
                         let:schedule
                     >
                         <ProposalNotification
+                            tournament_name=schedule.tournament_name
+                            slot_context=schedule.slot_context
                             schedule_id=schedule.id
                             proposer_username=schedule.proposer_username
                             tournament_id=schedule.tournament_id
-                            start_time=schedule.start_t
+                            slot_id=schedule.slot_id
+                            candidate_times=schedule.candidate_times
                         />
                     </For>
 
                     <For
                         each=move || {
                             schedules_context
-                                .own
+                                .notification_schedules
                                 .with(|schedules| {
                                     notifications_context
                                         .schedule_acceptances()
                                         .into_iter()
                                         .filter_map(|schedule_id| {
-                                            schedules
-                                                .values()
-                                                .find_map(|game_schedules| {
-                                                    game_schedules.get(&schedule_id).cloned()
-                                                })
+                                            schedules.get(&schedule_id).cloned()
                                         })
                                         .collect::<Vec<_>>()
                                 })
@@ -189,18 +202,87 @@ pub fn NotificationDropdown(current_game_id: Signal<Option<GameId>>) -> impl Int
                         key=|schedule| schedule.id
                         let:schedule
                     >
-                        <AcceptanceNotification
-                            tournament_name=schedule.tournament_name
-                            schedule_id=schedule.id
-                            accepter_username=schedule.opponent_username
-                            tournament_id=schedule.tournament_id
-                            start_time=schedule.start_t
-                        />
+                        {schedule
+                            .selected_time
+                            .map(|selected_time| {
+                                view! {
+                                    <AcceptanceNotification
+                                        tournament_name=schedule.tournament_name
+                                        schedule_id=schedule.id
+                                        accepter_username=schedule.opponent_username
+                                        tournament_id=schedule.tournament_id
+                                        slot_id=schedule.slot_id
+                                        selected_time=selected_time
+                                    />
+                                }
+                            })}
                     </For>
 
+                    <For
+                        each=move || {
+                            let mut notices = notifications_context
+                                .tournament_pairings
+                                .get()
+                                .into_values()
+                                .collect::<Vec<_>>();
+                            notices.sort_by(|a, b| a.tournament_id.0.cmp(&b.tournament_id.0));
+                            notices
+                        }
+                        key=|notice| (notice.tournament_id.clone(), notice.game_id.clone())
+                        children=move |notice| {
+                            let id = StoredValue::new(notice.game_id.clone());
+                            let description = notice.clone();
+                            view! {
+                                <div class="ui-notification-item">
+                                    <a
+                                        class="flex-1 min-w-0 no-link-style"
+                                        href=format!("/game/{}", notice.game_id)
+                                        on:click=move |_| {
+                                            notifications_context
+                                                .tournament_pairings
+                                                .update(|pairings| {
+                                                    pairings.remove(&id.get_value());
+                                                });
+                                            hamburger_show.set(false);
+                                        }
+                                    >
+
+                                        <div class="ui-notification-label">
+                                            {move || {
+                                                t_string!(i18n, tournaments.ui.tournament_pairing)
+                                                    .to_string()
+                                            }}
+                                        </div>
+                                        <div class="ui-notification-title">
+                                            {notice.tournament_name}
+                                        </div>
+                                        <div class="ui-notification-meta">
+                                            {move || description.description(i18n.get_locale())}
+                                        </div>
+                                    </a>
+                                    <button
+                                        class="ui-button ui-button-danger ui-button-icon"
+                                        title=move || {
+                                            t_string!(i18n, notifications.actions.dismiss).to_string()
+                                        }
+                                        on:click=move |_| {
+                                            notifications_context
+                                                .tournament_pairings
+                                                .update(|pairings| {
+                                                    pairings.remove(&id.get_value());
+                                                });
+                                        }
+                                    >
+                                        <Icon icon=icondata_io::IoCloseSharp attr:class="size-6" />
+                                    </button>
+                                </div>
+                            }
+                        }
+                    />
+
                     <Show when=has_tournament_notifications>
-                        <Transition fallback=|| {
-                            "Loading tournaments..."
+                        <Transition fallback=move || {
+                            t_string!(i18n, tournaments.ui.loading_tournaments).to_string()
                         }>
                             {move || {
                                 tournaments_resource
@@ -208,19 +290,31 @@ pub fn NotificationDropdown(current_game_id: Signal<Option<GameId>>) -> impl Int
                                     .map(|tournaments| {
                                         let invitation_ids = notifications_context
                                             .tournament_invitations();
+                                        let organizer_invitation_ids = notifications_context
+                                            .tournament_organizer_invitations();
                                         let started_ids = notifications_context
                                             .tournament_started
                                             .get();
                                         let finished_ids = notifications_context
                                             .tournament_finished
                                             .get();
-                                        let (invitations, started, finished) = tournaments
+                                        let (
+                                            invitations,
+                                            started,
+                                            finished,
+                                            organizer_invitations,
+                                        ) = tournaments
                                             .unwrap_or_default()
                                             .into_iter()
                                             .fold(
-                                                (Vec::new(), Vec::new(), Vec::new()),
+                                                (Vec::new(), Vec::new(), Vec::new(), Vec::new()),
                                                 |mut notifications, tournament| {
                                                     let tournament_id = tournament.tournament_id.clone();
+                                                    if organizer_invitation_ids.contains(&tournament_id)
+                                                        && tournament.finished_at.is_none()
+                                                    {
+                                                        notifications.3.push(tournament.clone());
+                                                    }
                                                     if invitation_ids.contains(&tournament_id) {
                                                         notifications.0.push(tournament.clone());
                                                     }
@@ -237,6 +331,13 @@ pub fn NotificationDropdown(current_game_id: Signal<Option<GameId>>) -> impl Int
                                             );
 
                                         view! {
+                                            <For
+                                                each=move || organizer_invitations.clone()
+                                                key=|tournament| tournament.tournament_id.clone()
+                                                let:tournament
+                                            >
+                                                <TournamentOrganizerInvitationNotification tournament />
+                                            </For>
                                             <For
                                                 each=move || invitations.clone()
                                                 key=|tournament| {

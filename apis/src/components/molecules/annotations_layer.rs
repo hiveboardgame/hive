@@ -61,7 +61,8 @@ pub fn AnnotationsLayer(
             } else {
                 state.with(|state| state.board.occupied(highlight.position))
             };
-            let interactive = highlight.color == AnnotationColor::Red && on_red_hex.is_some() && !occupied;
+            let interactive =
+                highlight.color == AnnotationColor::Red && on_red_hex.is_some() && !occupied;
             let position = highlight.position;
             views.push(
                 view! {
@@ -132,7 +133,9 @@ pub fn AnnotationsLayer(
 
         let small_arrows = tutorial.is_some_and(|tutorial| {
             tutorial.session.with(|session| {
-                session.as_ref().and_then(|session| session.current_step())
+                session
+                    .as_ref()
+                    .and_then(|session| session.current_step())
                     .is_some_and(|step| step.small_arrows)
             })
         });

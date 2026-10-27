@@ -3,12 +3,12 @@
         "correspondence": {
             "days_move_one": "{{count}} nap lépésenként",
             "days_move_other": "{{count}} nap lépésenként",
-            "title": "Levelező",
             "days_side_other": "{{count}} nap játékosonként",
-            "days_side_one": "{{count}} nap játékosonként"
+            "days_side_one": "{{count}} nap játékosonként",
+            "duration_move": "{{duration}} lépésenként",
+            "duration_side": "{{duration}} játékosonként"
         },
-        "real_time": "Valós idő",
-        "untimed": "Végtelen"
+        "real_time": "Valós idő"
     },
     "played_in": "Verseny:",
     "rated": "Rangsorolt",
@@ -41,12 +41,113 @@
         "both_click": "A játék akkor veszi kezdetét ha mindketten rákattintotok az Indulhat gombra 30 másodpercen belül",
         "both_ready": "Ez a verseny-játszma akkor veszi kezdetét ha mindkét játékos készenáll"
     },
+    "arena": {
+        "berserk": "Berserk",
+        "berserk_title": "Mondj le a bónuszidőről, és amikor alkalmazható, az alapidő feléről extra arénapontokért.",
+        "back_to_arena": "Vissza az arénába",
+        "return_for_pairing": "Lépj vissza a következő ellenfélhez.",
+        "pairing_paused": "Párosítás szünetel. Folytasd az arénában, ha kész vagy."
+    },
+    "realtime_assignments": {
+        "title": "Valós idejű játszmák készen állnak",
+        "challenge": "Valós idejű kihívás",
+        "tournament": "Versenyjátszma",
+        "arena": "Aréna-játszma",
+        "opening_due": "A nyitólépés határideje {{count}} mp",
+        "opening_due_now": "A nyitólépés most esedékes",
+        "open_new_tab": "Megnyitás új lapon"
+    },
     "speeds": {
         "bullet": "Bullet",
         "blitz": "Blitz",
         "rapid": "Rapid",
         "classic": "Klasszikus",
         "correspondence": "Levelező",
-        "untimed": "Végtelen"
-    }
+        "untimed": "Végtelen",
+        "puzzle": "Feladvány"
+    },
+    "tournament_result": {
+        "white_won": "Világos nyert",
+        "draw": "Döntetlen",
+        "black_won": "Sötét nyert",
+        "white_won_by_forfeit": "Világos játék nélkül nyert",
+        "black_won_by_forfeit": "Sötét játék nélkül nyert",
+        "adjudicated_draw": "Megítélt döntetlen",
+        "white_draw_black_forfeit_loss": "Világos döntetlent kapott; Sötét játék nélküli vereséget",
+        "white_forfeit_loss_black_draw": "Világos játék nélküli vereséget kapott; Sötét döntetlent",
+        "double_forfeit": "Kettős játék nélküli vereség"
+    },
+    "rating_range": "ELO-tartomány",
+    "speeds_label": "Játéktempók",
+    "view": "Megtekintés",
+    "quickplay_tooltip": "{{speed}}\n{{base}} perc alapidő\n+{{increment}} másodperc lépésenként",
+    "rematch": "Visszavágó",
+    "rematch_sent": "Elküldve",
+    "accept_challenge": "Kihívás elfogadása",
+    "cancel_challenge": "Kihívás törlése",
+    "decline_challenge": "Kihívás elutasítása",
+    "accepting": "Elfogadás…",
+    "removing": "Eltávolítás…",
+    "challenge_to_a_game": "Kihívás játszmára",
+    "abort": "Megszakítás",
+    "accept_draw": "Döntetlen elfogadása",
+    "offer_draw": "Döntetlen ajánlása",
+    "reject_draw": "Döntetlen elutasítása",
+    "resign": "Feladás",
+    "accept_takeback": "Visszavonás elfogadása",
+    "reject_takeback": "Visszavonás elutasítása",
+    "request_takeback": "Visszavonás kérése",
+    "invite_as_organizer": "Meghívás szervezőnek",
+    "no_rating_history_yet": "Még nincs értékszámelőzmény",
+    "not_enough_games_to_build_a_graph": "Nincs elég játszma a grafikonhoz",
+    "error_loading_history": "Nem sikerült betölteni az előzményeket",
+    "show_controls": "Vezérlők megjelenítése",
+    "hide_controls": "Vezérlők elrejtése",
+    "opponent_wants_a_takeback": "Az ellenfél visszavonást kér",
+    "opponent_offers_a_draw": "Az ellenfél döntetlent ajánl",
+    "playing_now": "Folyamatban",
+    "view_game_details": "Játszma adatainak megtekintése",
+    "connected": "Csatlakozva",
+    "disconnected": "Szétkapcsolva",
+    "offline": "nem elérhető",
+    "unknown_player": "Ismeretlen játékos",
+    "clear_selection": "Kijelölés törlése",
+    "searching": "Keresés…",
+    "played_in_label": "Verseny",
+    "open_navigation_menu": "Navigációs menü megnyitása",
+    "no_data": "Nincs adat",
+    "analyze_here": "Elemzés itt",
+    "rating_history_title": "{{speed}} értékszámelőzmények",
+    "in_tournament": "itt: {{tournament}}",
+    "played_in_tournament": "itt játszva: {{tournament}}",
+    "site_description": "A legjobb hely az online Hive-hoz – a táblát nem igénylő stratégiai játékhoz. Ingyenes, reklámmentes, értékelt játszmákkal, versenyekkel, barátokkal, véletlenszerű ellenfelekkel vagy botokkal.",
+    "site_title": "HiveGame.com • Játssz Hive-ot online",
+    "rating_history_minimum_games": "Játssz legalább öt értékelt játszmát ebben a tempóban a grafikon megjelenítéséhez.",
+    "result": {
+        "winner_timeout": "{{winner}} időtúllépéssel nyert",
+        "winner_resignation": "{{winner}} feladással nyert",
+        "winner_board": "{{winner}} a táblán nyert",
+        "winner_committee": "{{winner}} bizottsági döntéssel nyert",
+        "winner_withdrawal": "{{winner}} visszalépés miatt nyert",
+        "winner_forfeit": "{{winner}} játék nélküli győzelmet aratott",
+        "double_forfeit": "A játszma mindkét fél játék nélküli vereségével zárult",
+        "draw_summary": "{{result}} {{conclusion}}",
+        "winner": "{{winner}} nyert"
+    },
+    "conclusion": {
+        "board": "A táblán befejezve",
+        "committee": "Bizottsági döntés",
+        "draw": "Megegyezéses döntetlen",
+        "forfeit": "Játék nélküli vereség",
+        "repetition": "Háromszori lépésismétlés",
+        "resigned": "Feladva",
+        "timeout": "Időtúllépés"
+    },
+    "clock": {
+        "days": "{{days}}n",
+        "days_hours": "{{days}}n:{{hours}}ó",
+        "hours_minutes": "{{hours}}ó{{minutes}}",
+        "arena_hours_minutes": "{{hours}}ó {{minutes}}p"
+    },
+    "aborted_by": "{{actor}} megszakította a játszmát"
 }

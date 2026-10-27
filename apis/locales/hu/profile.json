@@ -1,27 +1,28 @@
 {
     "game_result": "Játék eredménye:",
-    "game_buttons": {
-        "pending": "Függő",
-        "playing": "Folyamatban lévő",
-        "finished": "Befejezett"
-    },
-    "color_buttons": {
-        "white": "Fehér",
-        "black": "Fekete",
-        "both": "Mindkettő"
-    },
     "result_buttons": {
         "win": "Győzelem",
         "loss": "Vereség",
-        "draw": "Döntetlen",
-        "all": "Mind"
+        "draw": "Döntetlen"
     },
-    "stats_box": {
-        "total": "Összesen",
-        "draws": "Döntetlenek",
-        "wins": "Győzelmek",
-        "losses": "Vereségek"
+    "include_speeds": "Kiválasztott játékidők:",
+    "speed_statistics": "{{speed}} statisztikák",
+    "expansion_buttons": {
+        "basic": "Alap",
+        "full": "Teljes"
     },
-    "player_color": "Játékos színe:",
-    "include_speeds": "Kiválasztott játékidők:"
+    "player_color": "Játékos színe",
+    "rating": "ELO",
+    "games_played_one": "{{count}} játszma",
+    "games_played_other": "{{count}} játszma",
+    "page": {
+        "redirecting": "Átirányítás…",
+        "user_not_found": "A felhasználó nem található"
+    },
+    "leaderboards": {
+        "top_rated_players": "Legjobb értékelt játékosok",
+        "highest_rated_players_by_speed": "Legmagasabb értékszámú játékosok tempónként.",
+        "top_rated_bots": "Legjobb értékelt botok",
+        "highest_rated_bots_by_speed": "Legmagasabb értékszámú botok tempónként."
+    }
 }

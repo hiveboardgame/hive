@@ -1,61 +1,49 @@
 {
-    "language": "Язык",
     "piece_style": "Вид фигур",
-    "rotation_buttons": {
-        "no": "Нет",
-        "yes": "Да"
-    },
     "show_dots": "Показывать точки",
     "dots_buttons": {
-        "no": "Нет",
         "vertical": "Вертикально",
         "angled": "Под углом"
     },
+    "preselect": "Предварительный выбор",
+    "preselect_description": "Разрешает выбирать фигуру во время хода соперника.",
+    "premove": "Предварительный ход",
+    "premove_description": "Запланируйте ход во время хода соперника. Предварительные ходы выполняются автоматически без подтверждения, если они по-прежнему допустимы.",
+    "drag_and_drop": "Перетаскивание",
+    "drag_and_drop_description": "Перемещайте фигуры перетаскиванием. Ходы в вашу очередь учитывают настройку подтверждения ходов.",
     "game_speed": "Контроль времени:",
     "move_confirm": "Подтверждение хода:",
     "create_account": {
         "username": {
             "error": {
                 "invalid": "Ник содержит недопустимый символ",
-                "taken": "Этот ник уже кем-то занят"
+                "taken": "Этот ник уже кем-то занят",
+                "reserved": "Это имя пользователя зарезервировано.",
+                "length": "Имя пользователя должно содержать от {{min}} до {{max}} символов."
             },
-            "title": "Ник",
             "description": "Пожалуйста, не используйте непристойных слов в нике. Аккаунт с неподобающим ником будет закрыт!"
         },
         "email": {
-            "title": "Почта",
             "error": {
                 "invalid": "Недопустимый почтовый ящик"
             },
             "description": "Нам требуется ваша почта, чтобы отправить письмо с подтверждением при создании аккаунта."
         },
         "existing_account_prompt": "У вас уже есть аккаунт? <login_link>Войти</login_link>",
-        "password": "Пароль",
-        "confirm_password": "Подтвердите пароль",
         "be_nice_checkbox": "Соглашаюсь достойно себя вести по отношению к другим игрокам, а о недостойном поведении других сообщать в Дискорде",
+        "legal_notice": "Создавая аккаунт, вы соглашаетесь с нашими <terms_link>Условиями использования</terms_link>. В <privacy_link>Политике конфиденциальности</privacy_link> описано, как мы обращаемся с вашими данными.",
         "signup_button": "Регистрация",
         "registration_error": "Регистрация не удалась",
-        "password_requirements": "Минимум 8 символов",
-        "password_error": "Пароль слишком короткий или не совпадает"
+        "password_requirements": "Используйте от {{min}} до {{max}} символов."
     },
     "login": {
         "email": "Почта",
-        "password": "Пароль",
         "login_button": "Войти",
         "no_account_prompt": "Пока нет аккаунта? <register_link>Зарегистрироваться</register_link>",
         "invalid_login": "Неверная почта или пароль"
     },
     "edit_account": {
-        "confirm_password_placeholder": "Новый пароль (ещё раз)",
-        "save_button": "Сохранить",
-        "current_password": "Текущий пароль",
-        "new_password": "Новый пароль",
-        "confirm_password": "Подтвердить пароль"
-    },
-    "style_buttons": {
-        "official": "Официальный",
-        "three_d": "3D",
-        "flat": "Плоский"
+        "confirm_password_placeholder": "Новый пароль (ещё раз)"
     },
     "rotation": "Поворот фигур",
     "color_scheme": "Цветовая палитра:",
@@ -65,5 +53,33 @@
         "casual_only": "Только в играх без рейтинга",
         "always": "Разрешена всегда",
         "never": "Никогда"
+    },
+    "click_on_your_clock": "Нажатие на свои часы",
+    "double_click": "Двойной щелчок",
+    "single_click": "Один щелчок",
+    "light_mode": "Светлая тема",
+    "dark_mode": "Тёмная тема",
+    "white_background": "Белый фон",
+    "black_background": "Чёрный фон",
+    "current_color": "Текущий: {{color}}",
+    "ant_light_preview": "Муравей {{design}} (светлая тема)",
+    "ant_dark_preview": "Муравей {{design}} (тёмная тема)",
+    "tile_design": {
+        "official": "Официальный",
+        "flat": "Плоский",
+        "three_d": "3D",
+        "high_contrast": "Высокий контраст",
+        "community": "Сообщество",
+        "pride": "Прайд",
+        "carbon_three_d": "Карбон 3D",
+        "carbon": "Карбон"
+    },
+    "tile_design_browser_notice": "Не все браузеры поддерживают все оформления фишек. Firefox обеспечивает наиболее стабильное отображение.",
+    "settings": {
+        "settings": "Настройки",
+        "tune_board_visuals_and_move_input_preferences": "Настройка вида доски и способа ввода ходов.",
+        "board_appearance": "Вид доски",
+        "play_preferences": "Настройки игры",
+        "if_either_player_has_takebacks_disabled_game_controls_will": "Если хотя бы один игрок запретил возврат ходов, запросить возврат в меню действий будет нельзя."
     }
 }

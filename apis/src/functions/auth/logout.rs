@@ -1,11 +1,13 @@
+#[cfg(feature = "ssr")]
+use crate::security::csrf::reset_session;
+use crate::security::csrf::CsrfClient;
+#[cfg(feature = "ssr")]
+use actix_session::Session;
 use leptos::prelude::*;
 
-#[server]
+#[server(client = CsrfClient)]
 pub async fn logout(device_endpoint: Option<String>) -> Result<(), ServerFnError> {
-    use crate::functions::{
-        auth::identity::{identity, uuid},
-        db::pool,
-    };
+    use crate::functions::{auth::identity::uuid, db::pool};
     use db_lib::{get_conn, models::PushDevice};
 
     if let Ok(user_id) = uuid().await {
@@ -19,9 +21,8 @@ pub async fn logout(device_endpoint: Option<String>) -> Result<(), ServerFnError
         }
     }
 
-    if let Ok(id) = identity().await {
-        id.logout();
-    }
+    let session: Session = leptos_actix::extract().await?;
+    reset_session(&session)?;
 
     Ok(())
 }

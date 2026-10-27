@@ -1,21 +1,35 @@
 {
     "page": {
-        "heading": "Notificări",
         "intro_before_link": "Alege cum vrei să fii notificat pentru fiecare tip de eveniment. Notificările push ajung la browserele pe care le activezi mai jos. Configurarea Discord este în ",
         "account_link": "secțiunea Discord",
         "intro_after_link": " de mai jos.",
         "col_push": "Push",
         "col_discord": "Discord",
-        "email_coming_soon": "Trimiterea prin e-mail va fi disponibilă în curând.",
         "saving": "Se salvează…",
         "saved": "Salvat.",
         "save_failed": "Salvarea a eșuat:",
-        "loading": "Se încarcă…"
+        "push_discord_and_device_delivery_settings": "Setări de livrare pentru notificări push, Discord și dispozitive.",
+        "notification_preferences": "Preferințe notificări",
+        "enable_browser_notifications_before_choosing_push_delivery": "Activează notificările în browser înainte de a alege livrarea push.",
+        "discord_link_instructions": "Alătură-te serverului Discord HiveGame și conectează mai jos contul Discord pentru a activa setările notificărilor Discord.",
+        "discord_integration": "Integrare Discord",
+        "step_1": "Pasul 1",
+        "join_the_hivegame_discord_server": "Alătură-te serverului Discord HiveGame.",
+        "join_discord": "Intră pe Discord",
+        "step_2": "Pasul 2",
+        "link_this_hivegame_account_to_discord": "Conectează acest cont HiveGame la Discord.",
+        "no_discord_account_linked": "Niciun cont Discord conectat",
+        "sign_in_to_link_discord": "Autentifică-te pentru a conecta Discord",
+        "discord_status_temporarily_unavailable": "Starea Discord nu este disponibilă temporar",
+        "error_loading_discord_name": "Eroare la încărcarea numelui Discord",
+        "link_discord_account": "Conectează contul Discord",
+        "push_delivery_is_enabled_for_this_browser": "Livrarea push este activată pentru acest browser.",
+        "push_delivery_is_enabled_on_another_browser": "Livrarea push este activată într-un alt browser.",
+        "browser_notifications_are_not_available_in_this_browser": "Notificările nu sunt disponibile în acest browser."
     },
     "events": {
         "your_turn": "Este rândul tău",
         "challenges": "Provocare primită",
-        "game_ended": "Partidă încheiată",
         "tournament": "Invitație la turneu",
         "schedules": "Propunere de oră",
         "dms": "Mesaj direct"
@@ -23,21 +37,19 @@
     "browser": {
         "heading": "Acest browser",
         "body": "Primește în acest browser notificările push selectate mai sus, chiar și când nu este deschisă nicio filă HiveGame. Activează-le separat pe fiecare dispozitiv care vrei să fie notificat.",
+        "working": "Se procesează…",
         "enable": "Activează notificările browserului",
         "disable": "Dezactivează notificările browserului",
-        "working": "Se procesează…",
         "send_test": "Trimite un test",
         "test_sent": "Notificare de test trimisă — verifică-ți notificările.",
         "test_failed": "Testul a eșuat:"
     },
     "ios": {
-        "heading": "Pe iPhone-ul sau iPad-ul tău",
         "body": "Pentru a primi notificări pe iOS, adaugă HiveGame pe ecranul principal: apasă butonul Partajează, apoi «Adaugă pe ecranul principal» și deschide-l de acolo."
     },
     "devices": {
         "heading": "Dispozitivele tale",
         "body": "Toate dispozitivele configurate momentan să primească push. Elimină-le pe cele pe care nu le mai folosești.",
-        "remove": "Elimină",
         "this_browser": "(acest browser)",
         "last_active": "ultima activitate",
         "platform_web": "Browser"
@@ -47,14 +59,32 @@
         "body_before_link": "Activează notificările browserului pentru acest dispozitiv. Gestionează-le oricând pe ",
         "link": "pagina de notificări",
         "body_after_link": ".",
-        "enable": "Activează",
-        "enabling": "Se activează…",
-        "dismiss": "Închide"
+        "enabling": "Se activează…"
     },
     "install": {
         "title": "Instalează HiveGame ca aplicație",
         "button": "Instalează",
         "ios_hint": "Instalează HiveGame: apasă Partajează, apoi «Adaugă pe ecranul principal»."
+    },
+    "actions": {
+        "dismiss": "Închide",
+        "accept": "Acceptă",
+        "decline": "Refuză",
+        "view_tournament": "Vezi turneul",
+        "view_named_tournament": "Vezi turneul: {{name}}"
+    },
+    "schedule": {
+        "proposed": "{{proposer}} a propus să jucați la {{time}}",
+        "accepted": "{{player}} a acceptat să jucați la {{time}}"
+    },
+    "tournament_status": {
+        "label": "Turneu"
+    },
+    "tournament_invitation": {
+        "label": "Invitație la turneu",
+        "players": "Jucători: {{count}}",
+        "accept": "Acceptă invitația",
+        "decline": "Refuză invitația"
     },
     "push": {
         "your_turn_title": "E rândul tău",
@@ -65,7 +95,6 @@
         "challenge_casual": "{{challenger}} · {{time_control}} · amicală",
         "game_started_title": "Joc început",
         "game_started_body": "vs {{opponent}} · {{time_control}}",
-        "game_ended_title": "Joc încheiat",
         "game_ended_won_resignation": "{{opponent}} a abandonat",
         "game_ended_won_timeout": "{{opponent}} a depășit timpul",
         "game_ended_won": "L-ai învins pe {{opponent}}",
@@ -94,5 +123,94 @@
         "takeback_rejected_body": "{{actor}} a refuzat reluarea mutării",
         "test_title": "HiveGame",
         "test_body": "Notificare de test — notificările funcționează"
+    },
+    "tournament_notice": {
+        "start_deferred": "La ora programată nu erau suficienți participanți. Pornește turneul manual după înscrierea unui număr suficient de participanți.",
+        "games_ready": "{{count}} partide sunt pregătite. Deschide turneul pentru a vedea împerecherile.",
+        "recorded_one": "Un organizator a înregistrat un rezultat de {{outcome}} pentru partida ta.",
+        "recorded_many": "Un organizator a înregistrat rezultatele a {{count}} dintre partidele tale: {{outcomes}}.",
+        "schedule_cancelled": "{{actor}} a anulat ora convenită pentru partida ta ({{time}})",
+        "outcome": {
+            "double_forfeit": "forfait dublu",
+            "draw": "remiză",
+            "win": "victorie",
+            "loss": "înfrângere"
+        }
+    },
+    "external": {
+        "open_description": "{{description}}. Deschide: {{link}}",
+        "organizer_title": "Invitație de organizare a unui turneu",
+        "organizer_body": "Ai fost invitat să organizezi {{tournament_name}}.",
+        "schedule_many": "{{proposer}} a propus {{count}} ore pentru meciul tău. Deschide pentru a alege.",
+        "organizer_discord": "Invitație de organizare a [turneului {{tournament_name}}](<https://hivegame.com/tournament/{{tournament_nanoid}}>).",
+        "schedule_many_discord": "[Oră propusă](<{{link}}>) — {{proposer}} a propus {{count}} ore pentru partida ta. Deschide pentru a alege.",
+        "organizer_subject": "Invitație de organizator: {{tournament_name}}",
+        "organizer_email": "Ai fost invitat să organizezi {{tournament_name}}. Deschide: {{link}}",
+        "schedule_many_subject": "{{proposer}} a propus ore de joc",
+        "schedule_many_email": "{{proposer}} a propus {{count}} ore pentru partida ta. Deschide pentru a alege: {{link}}",
+        "your_turn_discord": "[E rândul tău](<https://hivegame.com/game/{{game_nanoid}}>) în partida cu {{opponent}}.",
+        "challenge_discord": "[Provocare nouă](<https://hivegame.com/challenge/{{challenge_nanoid}}>) de la {{challenger}} · {{time_control}} · {{rated}}.",
+        "game_started_discord": "[Partida ta](<https://hivegame.com/game/{{game_nanoid}}>) cu {{opponent}} a început · {{time_control}}.",
+        "game_ended_won_discord": "ai câștigat împotriva lui {{opponent}}",
+        "game_ended_draw_agreement_discord": "ai remizat prin acord cu {{opponent}}",
+        "game_ended_draw_discord": "ai remizat cu {{opponent}}",
+        "game_ended_discord": "[Partida ta](<https://hivegame.com/game/{{game_nanoid}}>) s-a încheiat — {{detail}}{{change}}.",
+        "tournament_invite_discord": "Ai fost invitat la [turneul {{tournament_name}}](<https://hivegame.com/tournament/{{tournament_nanoid}}>).",
+        "tournament_started_discord": "[Turneul {{tournament_name}}](<https://hivegame.com/tournament/{{tournament_nanoid}}>) a început! Partidele tale sunt pregătite.",
+        "schedule_propose_discord": "[Oră propusă](<{{link}}>) — {{proposer}} a propus {{when}} pentru partida ta.",
+        "schedule_accept_discord": "[Oră acceptată](<{{link}}>) — {{opponent}} a acceptat {{when}} pentru partida ta.",
+        "direct_message_discord": "Mesaj privat de la {{sender}}: {{preview}}",
+        "game_control_discord": "[Partida ta](<https://hivegame.com/game/{{game_nanoid}}>) — {{actor}} {{action}}.",
+        "your_turn_subject": "E rândul tău cu {{opponent}}",
+        "your_turn_email": "{{opponent}} tocmai a mutat în partida ta. Continuă la https://hivegame.com/game/{{game_nanoid}}",
+        "challenge_subject": "{{challenger}} te-a provocat pe HiveGame",
+        "challenge_email": "{{challenger}} ți-a trimis o provocare {{time_control}} · {{rated}}. Deschide: {{link}}",
+        "game_started_subject": "Partida cu {{opponent}} a început",
+        "game_started_email": "Provocarea ta {{time_control}} a fost acceptată. Deschide: {{link}}",
+        "game_ended_email": "Revezi partida: {{link}}",
+        "tournament_invite_subject": "Invitație la turneu: {{tournament_name}}",
+        "tournament_invite_email": "Ai fost invitat la {{tournament_name}}. Deschide: {{link}}",
+        "tournament_started_subject": "Turneul {{tournament_name}} a început",
+        "tournament_started_email": "{{tournament_name}} a început, iar partidele tale sunt pregătite. Deschide: {{link}}",
+        "schedule_propose_subject": "{{proposer}} a propus o oră de joc",
+        "schedule_propose_email": "{{proposer}} a propus {{when}} pentru partida ta. Deschide: {{link}}",
+        "schedule_accept_subject": "{{opponent}} a acceptat ora propusă",
+        "schedule_accept_email": "{{opponent}} a acceptat {{when}} pentru partida ta. Deschide: {{link}}",
+        "game_control_subject": "{{actor}} {{action}}",
+        "game_control_email": "{{title}} în partida ta. Deschide: {{link}}",
+        "test_subject": "Notificare de test HiveGame",
+        "test_email": "Notificările push funcționează.",
+        "direct_message_subject": "Mesaj nou de la {{sender}}"
+    },
+    "push_errors": {
+        "enable_first": "Activează mai întâi notificările.",
+        "test_failed": "Nu s-a putut trimite notificarea de test.",
+        "unavailable": "Notificările nu sunt disponibile în acest browser.",
+        "service_workers_unsupported": "Acest browser nu acceptă service workers.",
+        "registration_lookup_failed": "Nu s-a găsit serviciul de notificări al browserului.",
+        "service_worker_missing": "Reîncarcă pagina și încearcă din nou; serviciul de notificări nu este pregătit.",
+        "permission_blocked": "Notificările sunt blocate pentru acest site în setările browserului.",
+        "permission_request_failed": "Nu s-a putut solicita permisiunea pentru notificări.",
+        "permission_not_granted": "Permisiunea pentru notificări nu a fost acordată.",
+        "server_key_missing": "Web Push nu este configurat pe server.",
+        "push_manager_failed": "Nu s-au putut accesa notificările browserului.",
+        "server_key_invalid": "Serverul a returnat o cheie de notificare invalidă.",
+        "subscribe_failed": "Nu s-a putut activa abonarea la notificări.",
+        "subscription_invalid": "Browserul a returnat un abonament invalid.",
+        "registration_failed": "Nu s-au putut înregistra notificările browserului.",
+        "unsubscribe_failed": "Nu s-a putut dezactiva abonarea la notificări.",
+        "subscription_not_released": "Browserul nu a eliminat abonamentul la notificări."
+    },
+    "discord": {},
+    "email": {
+        "password_reset_body": "Salut, {{username}}!\n\nAm primit o cerere de resetare a parolei tale. Linkul expiră în 1 oră.\nDacă nu ai solicitat acest lucru, ignoră acest e-mail — parola ta nu a fost schimbată.\n\n{{link}}\n\n--\nAcest e-mail a fost trimis de hivegame.com. Dacă nu te-ai înregistrat, poți ignora acest mesaj.\n\nVrei să vorbești cu cineva? Alătură-te comunității noastre Discord și caută-i pe Ion sau leex:\nhttps://discord.gg/7EwNTJnfab\n",
+        "recipient_fallback": "jucătorule"
+    },
+    "control": {
+        "offered_draw": "a propus remiză",
+        "requested_takeback": "a cerut anularea mutării",
+        "declined_draw": "a refuzat remiza",
+        "accepted_takeback": "a acceptat anularea mutării",
+        "declined_takeback": "a refuzat anularea mutării"
     }
 }

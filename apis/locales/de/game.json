@@ -1,13 +1,13 @@
 {
     "time_mode": {
-        "untimed": "Kein Zeitlimit",
         "real_time": "Echtzeit",
         "correspondence": {
-            "title": "Korrespondenz",
             "days_move_one": "{{count}} Tag pro Zug",
             "days_move_other": "{{count}} Tage pro Zug",
             "days_side_one": "{{count}} Tag pro Seite",
-            "days_side_other": "{{count}} Tage pro Seite"
+            "days_side_other": "{{count}} Tage pro Seite",
+            "duration_move": "{{duration}} pro Zug",
+            "duration_side": "{{duration}} pro Seite"
         }
     },
     "played_in": "Gespielt in:",
@@ -41,12 +41,113 @@
         "both_click": "Das Spiel beginnt, wenn ihr beide innerhalb von 30 Sekunden bereit klickt",
         "both_ready": "Dieses Turnierspiel beginnt, wenn beide Spieler:innnen bereit sind"
     },
+    "arena": {
+        "berserk": "Berserk",
+        "berserk_title": "Verzichte auf den Zeitbonus und, wenn zulässig, auf die Hälfte der Grundzeit für zusätzliche Arena-Punkte.",
+        "back_to_arena": "Zur Arena",
+        "return_for_pairing": "Zur Arena für den nächsten Gegner.",
+        "pairing_paused": "Paarung pausiert. Fortsetzen in der Arena, wenn du bereit bist."
+    },
+    "realtime_assignments": {
+        "title": "Echtzeitpartien sind bereit",
+        "challenge": "Echtzeit-Herausforderung",
+        "tournament": "Turnierpartie",
+        "arena": "Arena-Partie",
+        "opening_due": "Eröffnungszug fällig in {{count}} s",
+        "opening_due_now": "Eröffnungszug ist jetzt fällig",
+        "open_new_tab": "In neuem Tab öffnen"
+    },
     "speeds": {
         "bullet": "Bullet",
         "blitz": "Blitz",
         "rapid": "Rapid",
         "classic": "Klassisch",
         "correspondence": "Korrespondenz",
-        "untimed": "Unbegrenzt"
-    }
+        "untimed": "Unbegrenzt",
+        "puzzle": "Rätsel"
+    },
+    "tournament_result": {
+        "white_won": "Weiß hat gewonnen",
+        "draw": "Remis",
+        "black_won": "Schwarz hat gewonnen",
+        "white_won_by_forfeit": "Weiß gewann durch Nichtantritt",
+        "black_won_by_forfeit": "Schwarz gewann durch Nichtantritt",
+        "adjudicated_draw": "Remis durch Schiedsentscheidung",
+        "white_draw_black_forfeit_loss": "Remis für Weiß; Niederlage für Schwarz durch Nichtantritt",
+        "white_forfeit_loss_black_draw": "Niederlage für Weiß durch Nichtantritt; Remis für Schwarz",
+        "double_forfeit": "Beidseitiger Nichtantritt"
+    },
+    "rating_range": "Bewertungsbereich",
+    "speeds_label": "Spieltempi",
+    "view": "Ansehen",
+    "quickplay_tooltip": "{{speed}}\n{{base}} Min. Grundzeit\n+{{increment}} Sek. pro Zug",
+    "rematch": "Revanche",
+    "rematch_sent": "Gesendet",
+    "accept_challenge": "Herausforderung annehmen",
+    "cancel_challenge": "Herausforderung abbrechen",
+    "decline_challenge": "Herausforderung ablehnen",
+    "accepting": "Wird angenommen…",
+    "removing": "Wird entfernt…",
+    "challenge_to_a_game": "Zu einer Partie herausfordern",
+    "abort": "Abbrechen",
+    "accept_draw": "Remis annehmen",
+    "offer_draw": "Remis anbieten",
+    "reject_draw": "Remis ablehnen",
+    "resign": "Aufgeben",
+    "accept_takeback": "Rücknahme annehmen",
+    "reject_takeback": "Rücknahme ablehnen",
+    "request_takeback": "Rücknahme anfragen",
+    "invite_as_organizer": "Als Organisator einladen",
+    "no_rating_history_yet": "Noch kein Wertungsverlauf",
+    "not_enough_games_to_build_a_graph": "Zu wenige Partien für ein Diagramm",
+    "error_loading_history": "Verlauf konnte nicht geladen werden",
+    "show_controls": "Steuerung anzeigen",
+    "hide_controls": "Steuerung ausblenden",
+    "opponent_wants_a_takeback": "Gegner möchte einen Zug zurücknehmen",
+    "opponent_offers_a_draw": "Gegner bietet Remis an",
+    "playing_now": "Läuft gerade",
+    "view_game_details": "Spieldetails anzeigen",
+    "connected": "Verbunden",
+    "disconnected": "Getrennt",
+    "offline": "offline",
+    "unknown_player": "Unbekannter Spieler",
+    "clear_selection": "Auswahl löschen",
+    "searching": "Suche…",
+    "played_in_label": "Gespielt in",
+    "open_navigation_menu": "Navigationsmenü öffnen",
+    "no_data": "Keine Daten",
+    "analyze_here": "Hier analysieren",
+    "rating_history_title": "{{speed}}-Wertungsverlauf",
+    "in_tournament": "in {{tournament}}",
+    "played_in_tournament": "gespielt in {{tournament}}",
+    "site_description": "Der beste Ort, um Hive online zu spielen – das Strategiespiel ohne Spielbrett. Kostenlos, ohne Werbung, mit gewerteten Partien, Turnieren und Spielen gegen Freunde, zufällige Gegner oder Bots.",
+    "site_title": "HiveGame.com • Hive online spielen",
+    "rating_history_minimum_games": "Spiele mindestens fünf gewertete Partien mit diesem Tempo, um das Diagramm anzuzeigen.",
+    "result": {
+        "winner_timeout": "{{winner}} gewinnt durch Zeitüberschreitung",
+        "winner_resignation": "{{winner}} gewinnt durch Aufgabe",
+        "winner_board": "{{winner}} gewinnt auf dem Brett",
+        "winner_committee": "{{winner}} gewinnt durch Komiteeentscheidung",
+        "winner_withdrawal": "{{winner}} gewinnt durch Rückzug",
+        "winner_forfeit": "{{winner}} gewinnt kampflos",
+        "double_forfeit": "Die Partie endet mit einer beiderseitigen Niederlage",
+        "draw_summary": "{{result}} {{conclusion}}",
+        "winner": "{{winner}} gewinnt"
+    },
+    "conclusion": {
+        "board": "Auf dem Brett beendet",
+        "committee": "Komiteeentscheidung",
+        "draw": "Remis vereinbart",
+        "forfeit": "Kampflos",
+        "repetition": "Dreifache Zugwiederholung",
+        "resigned": "Aufgegeben",
+        "timeout": "Zeitüberschreitung"
+    },
+    "clock": {
+        "days": "{{days}}T",
+        "days_hours": "{{days}}T:{{hours}}h",
+        "hours_minutes": "{{hours}}h{{minutes}}",
+        "arena_hours_minutes": "{{hours}}h {{minutes}}m"
+    },
+    "aborted_by": "{{actor}} hat die Partie abgebrochen"
 }

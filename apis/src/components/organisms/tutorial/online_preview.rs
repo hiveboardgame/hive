@@ -5,14 +5,16 @@ use leptos::prelude::*;
 pub fn OnlinePreview(page: GuidePage) -> impl IntoView {
     let tutorial = expect_context::<TutorialContext>();
     let source = move || {
-        let step = tutorial.session.with(|session| session.as_ref().map_or(0, |session| session.step_index()));
+        let step = tutorial
+            .session
+            .with(|session| session.as_ref().map_or(0, |session| session.step_index()));
         let (screen, focus, anchor) = match page {
             GuidePage::Home => match step.min(2) {
                 0 => ("home", "quickplay", "tutorial-quickplay"),
                 1 => ("home", "custom", "tutorial-custom-game"),
                 _ => ("home", "challenges", "tutorial-open-challenges"),
             },
-            GuidePage::Ready => ("home", "feedback", "home-feedback"),
+            GuidePage::Ready => ("home", "feedback", "site-footer"),
             GuidePage::Settings => ("settings", "", ""),
             GuidePage::Correspondence => ("correspondence", "", ""),
             GuidePage::Tournaments if step == 0 => ("tournaments", "", ""),
@@ -23,7 +25,7 @@ pub fn OnlinePreview(page: GuidePage) -> impl IntoView {
     };
     view! {
         <div class="flex flex-col w-full h-full min-h-0">
-            <p class="px-3 py-2 text-xs text-gray-600 shrink-0 dark:text-gray-300">
+            <p class="py-2 px-3 text-xs text-gray-600 dark:text-gray-300 shrink-0">
                 "Actual site page · read-only · scroll to explore"
             </p>
             <Show when=move || page == GuidePage::Correspondence>

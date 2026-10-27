@@ -1,5 +1,5 @@
 use crate::{
-    common::with_class,
+    common::{localized_error_message, with_class},
     components::{
         atoms::simple_switch::SimpleSwitchWithCallback,
         layouts::{
@@ -11,12 +11,12 @@ use crate::{
     functions::{
         devices::{list_devices, unregister_device},
         notification_preferences::{get_notification_preferences, set_notification_preferences},
-        oauth::{get_discord_handle, DiscordHandleStatus},
+        oauth::{get_discord_handle, DiscordHandleStatus, StartDiscordLink},
     },
     i18n::*,
-    providers::ApiRequestsProvider,
     pwa,
     responses::NotificationPreferencesResponse,
+    security::csrf::ActionForm,
 };
 use leptos::{prelude::*, task::spawn_local};
 use leptos_i18n::I18nContext;
@@ -36,10 +36,7 @@ pub fn Notifications() -> impl IntoView {
     let prefs = RwSignal::new(NotificationPreferencesResponse::default());
     let loaded = RwSignal::new(false);
     let device_refresh = RwSignal::new(0_u32);
-    let api = expect_context::<ApiRequestsProvider>();
-    let oauth = move |_: leptos::ev::MouseEvent| {
-        api.0.get().link_discord();
-    };
+    let oauth = ServerAction::<StartDiscordLink>::new();
     let discord_name = Action::new(move |_: &()| async { get_discord_handle().await });
     Effect::new(move |_| {
         discord_name.dispatch(());
@@ -99,7 +96,8 @@ pub fn Notifications() -> impl IntoView {
             Some(Err(e)) => Some(
                 view! {
                     <p class="text-red-600 dark:text-red-400">
-                        {t!(i18n, notifications.page.save_failed)} " " {e.to_string()}
+                        {t!(i18n, notifications.page.save_failed)} " "
+                        {move || localized_error_message(i18n, &e.to_string())}
                     </p>
                 }
                 .into_any(),
@@ -111,18 +109,23 @@ pub fn Notifications() -> impl IntoView {
     view! {
         <PageShell variant=PageShellVariant::Content class="max-w-4xl">
             <PageHeader
-                title=move || t_string!(i18n, notifications.page.heading)
-                subtitle="Push, Discord, and device delivery settings."
+                title=move || t_string!(i18n, common.notifications)
+                subtitle=move || {
+                    t_string!(i18n, notifications.page.push_discord_and_device_delivery_settings)
+                }
             />
             <Suspense fallback=move || {
                 view! {
                     <Panel>
-                        <p class="ui-field-helper">{t!(i18n, notifications.page.loading)}</p>
+                        <p class="ui-field-helper">{t!(i18n, common.loading)}</p>
                     </Panel>
                 }
             }>
                 <Show when=loaded>
-                    <Panel title="Notification preferences" body_class="space-y-4">
+                    <Panel
+                        title=move || t_string!(i18n, notifications.page.notification_preferences)
+                        body_class="space-y-4"
+                    >
                         <p class="ui-field-helper">
                             {t!(i18n, notifications.page.intro_before_link)}
                             <a href="#discord-notifications" class="ui-text-link">
@@ -174,12 +177,14 @@ pub fn Notifications() -> impl IntoView {
                         </div>
                         <Show when=push_disabled>
                             <p class="ui-field-helper">
-                                "Enable browser notifications before choosing push delivery."
+                                {t!(
+                                    i18n, notifications.page.enable_browser_notifications_before_choosing_push_delivery
+                                )}
                             </p>
                         </Show>
                         <Show when=discord_disabled>
                             <p class="ui-field-helper">
-                                "Join the HiveGame Discord server and link your Discord account below to enable Discord notification settings."
+                                {t!(i18n, notifications.page.discord_link_instructions)}
                             </p>
                         </Show>
                         <div class="text-sm min-h-5">{save_message}</div>
@@ -188,13 +193,20 @@ pub fn Notifications() -> impl IntoView {
                     <DevicesSection device_refresh=device_refresh />
 
                     <div id="discord-notifications">
-                        <Panel title="Discord integration" body_class="space-y-3">
+                        <Panel
+                            title=move || t_string!(i18n, notifications.page.discord_integration)
+                            body_class="space-y-3"
+                        >
                             <div class="ui-setting-group">
                                 <div class="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
                                     <div class="min-w-0">
-                                        <p class="ui-field-label">"Step 1"</p>
+                                        <p class="ui-field-label">
+                                            {t!(i18n, notifications.page.step_1)}
+                                        </p>
                                         <p class="ui-field-helper">
-                                            "Join the HiveGame Discord server."
+                                            {t!(
+                                                i18n, notifications.page.join_the_hivegame_discord_server
+                                            )}
                                         </p>
                                     </div>
                                     <a
@@ -203,16 +215,20 @@ pub fn Notifications() -> impl IntoView {
                                         rel="noopener noreferrer"
                                         class="w-full ui-button ui-button-primary ui-button-md no-link-style sm:w-fit"
                                     >
-                                        "Join Discord"
+                                        {t!(i18n, notifications.page.join_discord)}
                                     </a>
                                 </div>
                             </div>
                             <div class="ui-setting-group">
                                 <div class="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-end">
                                     <div class="flex-1 min-w-0">
-                                        <p class="ui-field-label">"Step 2"</p>
+                                        <p class="ui-field-label">
+                                            {t!(i18n, notifications.page.step_2)}
+                                        </p>
                                         <p class="ui-field-helper">
-                                            "Link this HiveGame account to Discord."
+                                            {t!(
+                                                i18n, notifications.page.link_this_hivegame_account_to_discord
+                                            )}
                                         </p>
                                         <div class=with_class(
                                             "ui-field-input",
@@ -231,7 +247,7 @@ pub fn Notifications() -> impl IntoView {
                                                     Some(Ok(DiscordHandleStatus::NotLinked)) => {
                                                         view! {
                                                             <span class="ui-field-helper">
-                                                                "No Discord account linked"
+                                                                {t!(i18n, notifications.page.no_discord_account_linked)}
                                                             </span>
                                                         }
                                                             .into_any()
@@ -239,7 +255,7 @@ pub fn Notifications() -> impl IntoView {
                                                     Some(Ok(DiscordHandleStatus::NotLoggedIn)) => {
                                                         view! {
                                                             <span class="ui-field-helper">
-                                                                "Sign in to link Discord"
+                                                                {t!(i18n, notifications.page.sign_in_to_link_discord)}
                                                             </span>
                                                         }
                                                             .into_any()
@@ -247,7 +263,9 @@ pub fn Notifications() -> impl IntoView {
                                                     Some(Ok(DiscordHandleStatus::Unavailable)) => {
                                                         view! {
                                                             <span class="ui-field-error">
-                                                                "Discord status temporarily unavailable"
+                                                                {t!(
+                                                                    i18n, notifications.page.discord_status_temporarily_unavailable
+                                                                )}
                                                             </span>
                                                         }
                                                             .into_any()
@@ -255,7 +273,7 @@ pub fn Notifications() -> impl IntoView {
                                                     Some(Err(_)) => {
                                                         view! {
                                                             <span class="ui-field-error">
-                                                                "Error loading Discord name"
+                                                                {t!(i18n, notifications.page.error_loading_discord_name)}
                                                             </span>
                                                         }
                                                             .into_any()
@@ -263,7 +281,7 @@ pub fn Notifications() -> impl IntoView {
                                                     None => {
                                                         view! {
                                                             <span class="ui-field-helper">
-                                                                "No Discord account linked"
+                                                                {t!(i18n, notifications.page.no_discord_account_linked)}
                                                             </span>
                                                         }
                                                             .into_any()
@@ -272,14 +290,30 @@ pub fn Notifications() -> impl IntoView {
                                             }}
                                         </div>
                                     </div>
-                                    <button
-                                        type="button"
-                                        class="w-full sm:w-auto ui-button ui-button-primary ui-button-md"
-                                        on:click=oauth
-                                    >
-                                        "Link Discord account"
-                                    </button>
+                                    <ActionForm action=oauth>
+
+                                        <button
+                                            type="submit"
+                                            class="w-full sm:w-auto ui-button ui-button-primary ui-button-md"
+                                            disabled=move || oauth.pending().get()
+                                        >
+                                            {t!(i18n, notifications.page.link_discord_account)}
+                                        </button>
+                                    </ActionForm>
                                 </div>
+                                {move || {
+                                    oauth
+                                        .value()
+                                        .get()
+                                        .and_then(Result::err)
+                                        .map(|error| {
+                                            view! {
+                                                <p class="ui-field-error">
+                                                    {move || localized_error_message(i18n, &error.to_string())}
+                                                </p>
+                                            }
+                                        })
+                                }}
                             </div>
                         </Panel>
                     </div>
@@ -305,7 +339,9 @@ fn DevicesSection(device_refresh: RwSignal<u32>) -> impl IntoView {
             let _ = if is_current {
                 pwa::unsubscribe().await
             } else {
-                unregister_device(id).await.map_err(|e| e.to_string())
+                unregister_device(id)
+                    .await
+                    .map_err(|_| pwa::PushError::RegistrationFailed)
             };
             device_refresh.update(|n| *n += 1);
         });
@@ -348,7 +384,7 @@ fn DevicesSection(device_refresh: RwSignal<u32>) -> impl IntoView {
                                         class="ui-button ui-button-secondary ui-button-sm"
                                         on:click=move |_| remove(id.clone(), is_current)
                                     >
-                                        {t!(i18n, notifications.devices.remove)}
+                                        {t!(i18n, common.remove)}
                                     </button>
                                 </div>
                             }
@@ -383,8 +419,8 @@ fn BrowserPushSetup(
 ) -> impl IntoView {
     let i18n = use_i18n();
     let busy = RwSignal::new(false);
-    let error = RwSignal::new(None::<String>);
-    let test_msg = RwSignal::new(None::<Result<(), String>>);
+    let error = RwSignal::new(None::<pwa::PushError>);
+    let test_msg = RwSignal::new(None::<Result<(), pwa::PushError>>);
 
     let status = LocalResource::new(move || {
         device_refresh.track();
@@ -468,14 +504,26 @@ fn BrowserPushSetup(
                             {move || {
                                 if has_devices() {
                                     if subscribed() {
-                                        "Push delivery is enabled for this browser."
+                                        t_string!(
+                                            i18n, notifications.page.push_delivery_is_enabled_for_this_browser
+                                        )
+                                            .to_string()
                                     } else {
-                                        "Push delivery is enabled on another browser."
+                                        t_string!(
+                                            i18n, notifications.page.push_delivery_is_enabled_on_another_browser
+                                        )
+                                            .to_string()
                                     }
                                 } else if supported() {
-                                    "Enable browser notifications before choosing push delivery."
+                                    t_string!(
+                                        i18n, notifications.page.enable_browser_notifications_before_choosing_push_delivery
+                                    )
+                                        .to_string()
                                 } else {
-                                    "Browser notifications are not available in this browser."
+                                    t_string!(
+                                        i18n, notifications.page.browser_notifications_are_not_available_in_this_browser
+                                    )
+                                        .to_string()
                                 }
                             }}
                         </p>
@@ -510,7 +558,9 @@ fn BrowserPushSetup(
                 </div>
             </div>
             <Show when=move || error.with(Option::is_some)>
-                <p class="mt-2 ui-field-error">{move || error.get().unwrap_or_default()}</p>
+                <p class="mt-2 ui-field-error">
+                    {move || error.get().map(|error| error.message(i18n))}
+                </p>
             </Show>
             {move || {
                 test_msg
@@ -527,7 +577,8 @@ fn BrowserPushSetup(
                         Err(e) => {
                             view! {
                                 <p class="mt-2 ui-field-error">
-                                    {t!(i18n, notifications.browser.test_failed)} " " {e}
+                                    {t!(i18n, notifications.browser.test_failed)} " "
+                                    {move || e.message(i18n)}
                                 </p>
                             }
                                 .into_any()
@@ -573,7 +624,7 @@ fn notification_event_label(
     match category {
         NotificationCategory::YourTurn => t_string!(i18n, notifications.events.your_turn),
         NotificationCategory::Challenges => t_string!(i18n, notifications.events.challenges),
-        NotificationCategory::GameEnded => t_string!(i18n, notifications.events.game_ended),
+        NotificationCategory::GameEnded => t_string!(i18n, common.game_ended),
         NotificationCategory::Tournament => t_string!(i18n, notifications.events.tournament),
         NotificationCategory::Schedules => t_string!(i18n, notifications.events.schedules),
         NotificationCategory::Dms => t_string!(i18n, notifications.events.dms),

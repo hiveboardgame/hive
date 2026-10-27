@@ -3,22 +3,21 @@ use super::{
     join_handler::JoinHandler,
     start::StartHandler,
     timeout_handler::TimeoutHandler,
-    turn_handler::TurnHandler,
+    turn_handler::{TurnHandler, TurnInput},
 };
 use crate::{
     common::GameAction,
     websocket::{
         messages::{HandlerOutput, SocketTx},
+        server_handlers::tournaments::berserk::BerserkHandler,
         WebsocketData,
         WsHub,
     },
 };
 use anyhow::Result;
 use db_lib::{get_conn, models::Game, DbPool};
-use diesel_async::AsyncConnection;
-use hive_lib::{GameError, GameStatus};
 use shared_types::GameId;
-use std::{str::FromStr, sync::Arc};
+use std::sync::Arc;
 use uuid::Uuid;
 pub struct GameActionHandler {
     game_action: GameAction,
@@ -44,12 +43,7 @@ impl GameActionHandler {
         let (username, user_id) = user_details;
         let mut connection = get_conn(pool).await?;
 
-        let game = connection
-            .transaction::<_, anyhow::Error, _>(async move |conn| {
-                // find_by_game_id automatically times the game out if needed
-                Ok(Game::find_by_game_id(game_id, conn).await?)
-            })
-            .await?;
+        let game = Game::find_by_game_id(game_id, &mut connection).await?;
 
         Ok(Self {
             pool: pool.clone(),
@@ -63,37 +57,48 @@ impl GameActionHandler {
         })
     }
 
+    async fn turn(&self, input: TurnInput, expected_turn: Option<usize>) -> Result<HandlerOutput> {
+        TurnHandler::new(
+            input,
+            expected_turn,
+            &self.game,
+            &self.username,
+            self.user_id,
+            self.data.clone(),
+            &self.pool,
+        )
+        .handle()
+        .await
+    }
+
     pub async fn handle(&self) -> Result<HandlerOutput> {
+        let _start = if can_start_game(&self.game_action) {
+            self.data.realtime_gate.admit_start(&self.game)?
+        } else {
+            None
+        };
         let output = match self.game_action.clone() {
+            GameAction::Berserk => {
+                BerserkHandler::new(self.game.id, self.user_id, self.data.clone(), &self.pool)
+                    .handle()
+                    .await?
+            }
             GameAction::CheckTime => {
                 TimeoutHandler::new(
                     &self.game,
-                    &self.username,
-                    self.user_id,
+                    self.received_from.clone(),
                     self.data.clone(),
                     &self.pool,
                 )
                 .handle()
                 .await?
             }
-            GameAction::Turn(turn) => {
-                self.ensure_not_finished()?;
-                self.ensure_user_is_player()?;
-                TurnHandler::new(
-                    turn,
-                    &self.game,
-                    &self.username,
-                    self.user_id,
-                    self.data.clone(),
-                    self.hub.clone(),
-                    &self.pool,
-                )
-                .handle()
-                .await?
+            GameAction::Turn(turn) => self.turn(TurnInput::Structured(turn), None).await?,
+            GameAction::Play(notation) => self.turn(TurnInput::Notation(notation), None).await?,
+            GameAction::PlayAt { turn, notation } => {
+                self.turn(TurnInput::Notation(notation), Some(turn)).await?
             }
             GameAction::Control(control) => {
-                self.ensure_not_finished()?;
-                self.ensure_user_is_player()?;
                 GameControlHandler::new(
                     &control,
                     &self.game,
@@ -120,8 +125,6 @@ impl GameActionHandler {
                 .await?
             }
             GameAction::Start => {
-                self.ensure_not_finished()?;
-                self.ensure_user_is_player()?;
                 StartHandler::new(
                     &self.game,
                     self.user_id,
@@ -138,26 +141,49 @@ impl GameActionHandler {
         };
         Ok(output)
     }
+}
 
-    fn ensure_not_finished(&self) -> Result<()> {
-        if let GameStatus::Finished(_) | GameStatus::Adjudicated =
-            GameStatus::from_str(&self.game.game_status).unwrap()
-        {
-            Err(GameError::GameIsOver {
-                username: self.username.to_owned(),
-                game: self.game.nanoid.to_owned(),
-            })?;
-        }
-        Ok(())
+fn can_start_game(action: &GameAction) -> bool {
+    match action {
+        GameAction::Turn(_)
+        | GameAction::Play(_)
+        | GameAction::PlayAt { .. }
+        | GameAction::Start => true,
+        GameAction::Berserk
+        | GameAction::CheckTime
+        | GameAction::Control(_)
+        | GameAction::Join
+        | GameAction::Unwatch => false,
     }
+}
 
-    fn ensure_user_is_player(&self) -> Result<()> {
-        if !self.game.user_is_player(self.user_id) {
-            Err(GameError::NotPlayer {
-                username: self.username.to_owned(),
-                game: self.game.nanoid.clone(),
-            })?;
+#[cfg(test)]
+mod tests {
+    use super::can_start_game;
+    use crate::common::GameAction;
+    use hive_lib::{Color, GameControl, Turn};
+
+    #[test]
+    fn every_way_to_move_or_start_needs_the_realtime_gate() {
+        for action in [
+            GameAction::Turn(Turn::Shutout),
+            GameAction::Play("wG1".to_string()),
+            GameAction::PlayAt {
+                turn: 0,
+                notation: "wG1".to_string(),
+            },
+            GameAction::Start,
+        ] {
+            assert!(can_start_game(&action), "{action:?} bypasses the gate");
         }
-        Ok(())
+        for action in [
+            GameAction::Berserk,
+            GameAction::CheckTime,
+            GameAction::Control(GameControl::Abort(Color::White)),
+            GameAction::Join,
+            GameAction::Unwatch,
+        ] {
+            assert!(!can_start_game(&action), "{action:?} is gated");
+        }
     }
 }

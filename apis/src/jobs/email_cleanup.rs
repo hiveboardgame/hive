@@ -7,13 +7,14 @@ use db_lib::{
 };
 use std::time::Duration;
 
-const CLEANUP_INTERVAL_SECS: u64 = 60 * 60 * 24;
+const CLEANUP_INTERVAL_SECS: u64 = 60 * 60;
 
 pub fn run(pool: DbPool) {
     actix_rt::spawn(async move {
         let mut interval = actix_rt::time::interval(Duration::from_secs(CLEANUP_INTERVAL_SECS));
         loop {
             interval.tick().await;
+            crate::active_instance::wait_until_active().await;
             match get_conn(&pool).await {
                 Ok(mut conn) => {
                     if let Err(err) = cleanup(&mut conn).await {

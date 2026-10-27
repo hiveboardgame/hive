@@ -187,7 +187,7 @@ pub fn GamesFilter(username: String, ctx: GamesSearchContext) -> impl IntoView {
             <details node_ref=dropdown_ref>
                 <summary class="py-1 px-3 ml-0.5 text-sm cursor-pointer ui-button ui-button-secondary ui-button-md max-w-fit [&::-webkit-details-marker]:hidden">
                     <Icon icon=icondata_lu::LuSlidersHorizontal attr:class="size-4" />
-                    <span>"Filters"</span>
+                    <span>{move || t_string!(i18n, common.filters)}</span>
                 </summary>
                 <DropdownPanel class="absolute right-0 top-full z-40 p-2 mt-1 max-w-screen-sm lg:p-0 lg:mt-2 lg:max-w-none w-[90vw] lg:w-[31rem]">
                     <ActiveFiltersDisplay ctx current_tab i18n />
@@ -249,7 +249,7 @@ pub fn GamesFilter(username: String, ctx: GamesSearchContext) -> impl IntoView {
                                                 pending.update(|state| state.result = None)
                                             }
                                         >
-                                            "Any"
+                                            {t!(i18n, common.any)}
                                         </FilterButton>
                                     </div>
                                 </div>
@@ -300,7 +300,9 @@ pub fn GamesFilter(username: String, ctx: GamesSearchContext) -> impl IntoView {
                             </div>
 
                             <div class="flex justify-between items-center lg:pt-2">
-                                <span class="ui-field-label">"Bot Games:"</span>
+                                <span class="ui-field-label">
+                                    {move || t_string!(i18n, archive.bot_games)}
+                                </span>
                                 <FilterButton
                                     is_active=Signal::derive(move || {
                                         !pending.with(|state| state.exclude_bots)
@@ -313,9 +315,9 @@ pub fn GamesFilter(username: String, ctx: GamesSearchContext) -> impl IntoView {
                                 >
                                     {move || {
                                         if pending.with(|state| state.exclude_bots) {
-                                            "Exclude"
+                                            t_string!(i18n, archive.exclude)
                                         } else {
-                                            "Include"
+                                            t_string!(i18n, archive.include)
                                         }
                                     }}
                                 </FilterButton>
@@ -327,7 +329,9 @@ pub fn GamesFilter(username: String, ctx: GamesSearchContext) -> impl IntoView {
                         <div class=with_class(
                             "ui-warning-notice",
                             "mx-0 mb-0 lg:mx-4 lg:mb-4",
-                        )>"Please select at least one game speed"</div>
+                        )>
+                            {move || t_string!(i18n, archive.please_select_at_least_one_game_speed)}
+                        </div>
                     </Show>
 
                     <div class=with_class(
@@ -377,14 +381,14 @@ fn ActiveFiltersDisplay(
         <div class="pb-2 mb-2 ui-divider-bottom">
             <div class="flex flex-wrap gap-1 items-center p-2 min-h-[24px]">
                 <span class="mr-1 text-xs font-medium text-gray-600 dark:text-gray-400">
-                    "Active:"
+                    {move || t_string!(i18n, archive.active)}
                 </span>
 
                 <Show when=move || ctx.filters.with(|state| state.color.is_some())>
                     <FilterPill>
                         {move || match ctx.filters.with(|state| state.color) {
-                            Some(Color::Black) => t_string!(i18n, profile.color_buttons.black),
-                            Some(Color::White) => t_string!(i18n, profile.color_buttons.white),
+                            Some(Color::Black) => t_string!(i18n, common.black),
+                            Some(Color::White) => t_string!(i18n, common.white),
                             None => "",
                         }}
                     </FilterPill>
@@ -413,8 +417,8 @@ fn ActiveFiltersDisplay(
                 <Show when=move || ctx.filters.with(|state| state.expansions.is_some())>
                     <FilterPill>
                         {move || match ctx.filters.get().expansions {
-                            Some(true) => "Full",
-                            Some(false) => "Basic",
+                            Some(true) => t_string!(i18n, profile.expansion_buttons.full),
+                            Some(false) => t_string!(i18n, profile.expansion_buttons.basic),
                             None => "",
                         }}
                     </FilterPill>
@@ -423,8 +427,8 @@ fn ActiveFiltersDisplay(
                 <Show when=move || ctx.filters.with(|state| state.rated.is_some())>
                     <FilterPill>
                         {move || match ctx.filters.get().rated {
-                            Some(true) => "Rated",
-                            Some(false) => "Unrated",
+                            Some(true) => t_string!(i18n, game.rated),
+                            Some(false) => t_string!(i18n, game.casual),
                             None => "",
                         }}
                     </FilterPill>
@@ -433,7 +437,7 @@ fn ActiveFiltersDisplay(
                 <Show when=move || !ctx.filters.with(|state| state.exclude_bots)>
                     <FilterPill>
                         <Icon icon=icondata_mdi::MdiRobotHappy attr:class="size-3" />
-                        <span>"Bots"</span>
+                        <span>{move || t_string!(i18n, home.challenge_tabs.bots)}</span>
                     </FilterPill>
                 </Show>
             </div>
@@ -513,28 +517,28 @@ fn TriStateFilter(
         <div class="space-y-1 lg:space-y-2">
             <label class="ui-field-label">
                 {move || match filter_type {
-                    TriStateType::Color => "Player Color",
-                    TriStateType::Expansion => "Expansions",
-                    TriStateType::Rating => "Rating",
+                    TriStateType::Color => t_string!(i18n, profile.player_color),
+                    TriStateType::Expansion => t_string!(i18n, common.expansions),
+                    TriStateType::Rating => t_string!(i18n, profile.rating),
                 }}
             </label>
             <div class=format!("grid grid-cols-3 gap-1 {}", grid_class)>
                 <FilterButton is_active=is_option1_active on_click=set_option1 flex_class="">
                     {move || match filter_type {
-                        TriStateType::Color => t_string!(i18n, profile.color_buttons.black),
-                        TriStateType::Expansion => "Basic",
-                        TriStateType::Rating => "Casual",
+                        TriStateType::Color => t_string!(i18n, common.black),
+                        TriStateType::Expansion => t_string!(i18n, profile.expansion_buttons.basic),
+                        TriStateType::Rating => t_string!(i18n, game.casual),
                     }}
                 </FilterButton>
                 <FilterButton is_active=is_option2_active on_click=set_option2 flex_class="">
                     {move || match filter_type {
-                        TriStateType::Color => t_string!(i18n, profile.color_buttons.white),
-                        TriStateType::Expansion => "Full",
-                        TriStateType::Rating => "Rated",
+                        TriStateType::Color => t_string!(i18n, common.white),
+                        TriStateType::Expansion => t_string!(i18n, profile.expansion_buttons.full),
+                        TriStateType::Rating => t_string!(i18n, game.rated),
                     }}
                 </FilterButton>
                 <FilterButton is_active=is_any_active on_click=set_any flex_class="">
-                    "Any"
+                    {t!(i18n, common.any)}
                 </FilterButton>
             </div>
         </div>
@@ -550,12 +554,12 @@ enum FilterActionKind {
 }
 
 impl FilterActionKind {
-    fn label(&self) -> &'static str {
+    fn label(&self, i18n: I18nContext<Locale, I18nKeys>) -> &'static str {
         match self {
-            FilterActionKind::Apply => "Apply",
-            FilterActionKind::Save => "Save",
-            FilterActionKind::Reset => "Reset",
-            FilterActionKind::Clear => "Clear",
+            FilterActionKind::Apply => t_string!(i18n, common.apply),
+            FilterActionKind::Save => t_string!(i18n, common.save),
+            FilterActionKind::Reset => t_string!(i18n, common.reset),
+            FilterActionKind::Clear => t_string!(i18n, common.clear),
         }
     }
 
@@ -580,6 +584,7 @@ fn ActionButton<F>(on_click: F, disabled: Signal<bool>, variant: FilterActionKin
 where
     F: Fn(leptos::ev::MouseEvent) + 'static,
 {
+    let i18n = use_i18n();
     view! {
         <button
             on:click=on_click
@@ -592,7 +597,7 @@ where
                 )
             }
         >
-            <span class="ui-fit-label">{variant.label()}</span>
+            <span class="ui-fit-label">{move || variant.label(i18n)}</span>
         </button>
     }
 }

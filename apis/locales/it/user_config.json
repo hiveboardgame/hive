@@ -1,62 +1,79 @@
 {
-    "style_buttons": {
-        "official": "Ufficiale",
-        "flat": "Piatti",
-        "three_d": "3D"
-    },
     "piece_style": "Design",
     "dots_buttons": {
-        "no": "No",
         "angled": "Angolati",
         "vertical": "Verticali"
     },
     "rotation": "Rotazione",
-    "rotation_buttons": {
-        "no": "No",
-        "yes": "Si"
-    },
     "show_dots": "Mostra puntini",
+    "preselect": "Preselezione",
+    "preselect_description": "Consente di selezionare un pezzo durante il turno dell'avversario.",
+    "premove": "Premossa",
+    "premove_description": "Programma una mossa durante il turno dell'avversario. Le premosse vengono giocate automaticamente senza conferma se sono ancora legali.",
+    "drag_and_drop": "Trascina e rilascia",
+    "drag_and_drop_description": "Muovi i pezzi trascinandoli. Le mosse durante il tuo turno seguono la tua impostazione di conferma delle mosse.",
     "game_speed": "Velocitá della partita:",
     "move_confirm": "Conferma della mossa:",
     "preview": "Anteprima:",
     "edit_account": {
-        "current_password": "Password attuale",
-        "new_password": "Nuova password",
-        "confirm_password": "Conferma password",
-        "confirm_password_placeholder": "Nuova password (di nuovo)",
-        "save_button": "Salva"
+        "confirm_password_placeholder": "Nuova password (di nuovo)"
     },
     "create_account": {
         "username": {
-            "title": "Username",
             "description": "Per favore scegli un username decoroso. Profili con username non appropriati verranno chiusi!",
             "error": {
                 "taken": "Username giá esistente",
-                "invalid": "Carattere invalido"
+                "invalid": "Carattere invalido",
+                "reserved": "Questo nome utente è riservato.",
+                "length": "Il nome utente deve contenere da {{min}} a {{max}} caratteri."
             }
         },
         "email": {
-            "title": "Email",
             "error": {
                 "invalid": "Email invalida"
             },
             "description": "Abbiamo bisogno del tuo indirizzo email per mandarti la conferma quando crei un profilo."
         },
-        "confirm_password": "Conferma Password",
         "be_nice_checkbox": "Accetto di comportarmi bene con altri giocatori e riportare offese su Discord",
+        "legal_notice": "Creando un profilo, accetti i nostri <terms_link>Termini di servizio</terms_link>. La nostra <privacy_link>Informativa sulla privacy</privacy_link> spiega come trattiamo i tuoi dati.",
         "signup_button": "Registrati",
-        "password_requirements": "Almeno 8 caratteri",
-        "password_error": "Password troppo breve o non corrispondente",
+        "password_requirements": "Usa da {{min}} a {{max}} caratteri.",
         "registration_error": "Registrazione non riuscita",
-        "existing_account_prompt": "Hai giá un profilo? <login_link>Entra</login_link>",
-        "password": "Password"
+        "existing_account_prompt": "Hai giá un profilo? <login_link>Entra</login_link>"
     },
     "login": {
         "email": "Email",
-        "password": "Password",
         "login_button": "Entra",
         "no_account_prompt": "Non hai un profilo? <register_link>Registrati</register_link>",
         "invalid_login": "Email o password non valida"
     },
-    "color_scheme": "Schema di colori:"
+    "color_scheme": "Schema di colori:",
+    "click_on_your_clock": "Clicca sul tuo orologio",
+    "double_click": "Doppio clic",
+    "single_click": "Clic singolo",
+    "light_mode": "Tema chiaro",
+    "dark_mode": "Tema scuro",
+    "white_background": "Sfondo bianco",
+    "black_background": "Sfondo nero",
+    "current_color": "Attuale: {{color}}",
+    "ant_light_preview": "Formica {{design}} (tema chiaro)",
+    "ant_dark_preview": "Formica {{design}} (tema scuro)",
+    "tile_design": {
+        "official": "Ufficiale",
+        "flat": "Piatto",
+        "three_d": "3D",
+        "high_contrast": "Alto contrasto",
+        "community": "Comunità",
+        "pride": "Pride",
+        "carbon_three_d": "Carbonio 3D",
+        "carbon": "Carbonio"
+    },
+    "tile_design_browser_notice": "Alcuni browser non supportano tutti gli stili delle pedine. Firefox offre la resa più uniforme.",
+    "settings": {
+        "settings": "Impostazioni",
+        "tune_board_visuals_and_move_input_preferences": "Personalizza l'aspetto del tavoliere e l'inserimento delle mosse.",
+        "board_appearance": "Aspetto del tavoliere",
+        "play_preferences": "Preferenze di gioco",
+        "if_either_player_has_takebacks_disabled_game_controls_will": "Se uno dei giocatori ha disattivato i ritiri delle mosse, i comandi di gioco non permetteranno di richiederli."
+    }
 }

@@ -45,7 +45,13 @@ impl AnnotationColor {
                 }
             }
             AnnotationColor::Black => "#23262d",
-            AnnotationColor::Grey => if prefers_dark { "#b6bbc2" } else { "#737880" },
+            AnnotationColor::Grey => {
+                if prefers_dark {
+                    "#b6bbc2"
+                } else {
+                    "#737880"
+                }
+            }
             AnnotationColor::Red => "#d61a35",
             AnnotationColor::Green => {
                 if prefers_dark {

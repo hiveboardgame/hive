@@ -1,11 +1,11 @@
-use crate::responses::ExplorerResponse;
+use crate::{responses::ExplorerResponse, security::csrf::CsrfClient};
 use leptos::prelude::*;
 use server_fn::codec;
 use shared_types::ExplorerFilters;
 
 /// `None` means nothing is selected: list the opening roots rather than self-join. An explicit
 /// `Option`, not a 0 sentinel - the empty board with Black to move hashes to literally 0.
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn opening_explorer(
     hash: Option<i64>,
     filters: ExplorerFilters,

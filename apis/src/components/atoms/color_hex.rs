@@ -1,3 +1,4 @@
+use crate::i18n::*;
 use hive_lib::Color;
 use leptos::prelude::*;
 
@@ -7,13 +8,14 @@ pub fn ColorHex(
     #[prop(into)] color: Signal<Color>,
     #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let src = move || match color.get() {
         Color::White => "/assets/tiles/flat/white.svg",
         Color::Black => "/assets/tiles/flat/black.svg",
     };
     let alt = move || match color.get() {
-        Color::White => "White",
-        Color::Black => "Black",
+        Color::White => t_string!(i18n, common.white).to_string(),
+        Color::Black => t_string!(i18n, common.black).to_string(),
     };
     let style = move || {
         if color.get() == Color::White {

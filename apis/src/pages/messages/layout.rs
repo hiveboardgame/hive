@@ -27,7 +27,7 @@ pub fn MessagesLayout() -> impl IntoView {
                 )
             }>
                 <div class=MESSAGES_PRIMARY_HEADER_CLASS>
-                    <h1 class="text-xl ui-page-title">{t!(i18n, messages.page.title)}</h1>
+                    <h1 class="text-xl ui-page-title">{t!(i18n, common.messages)}</h1>
                 </div>
                 <div class="overflow-y-auto flex-1 p-2 pb-6 min-h-0 sm:pb-2">
                     <MessagesSidebar current_path />

@@ -66,7 +66,9 @@
             fi
 
             if ! psql -h localhost -d postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname='hive-dev'" | grep -q 1; then
-              createuser -h localhost hive-dev
+              createuser -h localhost --createdb hive-dev
+            elif ! psql -h localhost -d postgres -tAc "SELECT rolcreatedb FROM pg_roles WHERE rolname='hive-dev'" | grep -q t; then
+              psql -h localhost -d postgres -c 'ALTER ROLE "hive-dev" CREATEDB'
             fi
 
             for db in hive-local hive-test; do
@@ -95,6 +97,32 @@
             cargo run --package hive-hydra -- --config hive-hydra/hive-hydra.prod.yaml
           '')
         ];
+        worktreeCommand =
+          name:
+          pkgs.writeShellApplication {
+            name = "hive-${name}";
+            runtimeInputs = with pkgs; [
+              git
+              postgresql_18
+              caddy
+              gum
+              gh
+              direnv
+              curl
+              lsof
+              coreutils
+              gnused
+              gnugrep
+            ];
+            runtimeEnv.WT_LIB = "${./scripts/worktree}";
+            runtimeEnv.HIVE_WORKTREE_RUNTIME = "nix";
+            text = builtins.readFile (./scripts/worktree + "/${name}.sh");
+          };
+        worktreeCommands = map worktreeCommand [
+          "setup"
+          "run"
+          "cleanup"
+        ];
       in
       with pkgs;
       {
@@ -119,6 +147,8 @@
               binaryen
               tailwindcss_4
               openssl
+              # Only for clients/python: the bot client and its one dependency.
+              (python3.withPackages (ps: [ ps.websockets ]))
               # nokamute # The AI used by hive-hydra - temporarily disabled due to darwin SDK issue
               (rust-bin.selectLatestNightlyWith (
                 toolchain:
@@ -131,7 +161,8 @@
                 }
               ))
             ]
-            ++ aliases;
+            ++ aliases
+            ++ worktreeCommands;
           shellHook = ''
             export CARGO_TARGET_DIR="$PWD/.cargo/target"
             # Install wasm-bindgen-cli at the version matching our Cargo.lock
@@ -149,6 +180,8 @@
             echo "'migration' to 'run', 'revert', ... DB changes"
             echo "'pg-stop' to stop PosgreSQL"
             echo "'database' to connect to the PosgreSQL database"
+            echo "'hive-setup <branch>' for a worktree with its own database and URL"
+            echo "'hive-run <name>' to serve a worktree, 'hive-cleanup' to remove worktrees"
           '';
           LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath buildInputs;
         };

@@ -8,19 +8,12 @@ use super::{
     tactics,
 };
 
-pub const CHAPTERS: &[Chapter] = &[
-    basics::CHAPTER,
-    bugs::CHAPTER,
-    online::CHAPTER,
-];
+pub const CHAPTERS: &[Chapter] = &[basics::CHAPTER, bugs::CHAPTER, online::CHAPTER];
 
 /// Kept in the repository for later releases, excluded from navigation and progress.
 #[allow(dead_code)]
-pub const UNRELEASED_CHAPTERS: &[Chapter] = &[
-    openings::CHAPTER,
-    strategy::CHAPTER,
-    tactics::CHAPTER,
-];
+pub const UNRELEASED_CHAPTERS: &[Chapter] =
+    &[openings::CHAPTER, strategy::CHAPTER, tactics::CHAPTER];
 
 pub fn lessons() -> impl Iterator<Item = &'static Lesson> {
     CHAPTERS.iter().flat_map(|chapter| chapter.lessons.iter())
@@ -28,7 +21,10 @@ pub fn lessons() -> impl Iterator<Item = &'static Lesson> {
 
 #[cfg(test)]
 pub fn find_authored_lesson(id: &str) -> Option<&'static Lesson> {
-    CHAPTERS.iter().chain(UNRELEASED_CHAPTERS).flat_map(|chapter| chapter.lessons.iter())
+    CHAPTERS
+        .iter()
+        .chain(UNRELEASED_CHAPTERS)
+        .flat_map(|chapter| chapter.lessons.iter())
         .find(|lesson| lesson.id == id)
 }
 
@@ -68,12 +64,21 @@ pub const LESSON_GROUPS: &[LessonGroup] = &[
     LessonGroup {
         id: "bugs.queens",
         title: "The Queen Bee",
-        lessons: &["bugs.queen", "bugs.freedom_to_move", "bugs.dont_break_the_hive"],
+        lessons: &[
+            "bugs.queen",
+            "bugs.freedom_to_move",
+            "bugs.dont_break_the_hive",
+        ],
     },
     LessonGroup {
         id: "bugs.spiders",
         title: "The Spider",
-        lessons: &["bugs.spider", "bugs.spider_dead_end", "bugs.spider_door", "bugs.spider_power"],
+        lessons: &[
+            "bugs.spider",
+            "bugs.spider_dead_end",
+            "bugs.spider_door",
+            "bugs.spider_power",
+        ],
     },
     LessonGroup {
         id: "bugs.beetles",
@@ -83,7 +88,11 @@ pub const LESSON_GROUPS: &[LessonGroup] = &[
     LessonGroup {
         id: "bugs.grasshoppers",
         title: "The Grasshopper",
-        lessons: &["bugs.grasshopper", "bugs.grasshopper_place", "bugs.grasshopper_paths"],
+        lessons: &[
+            "bugs.grasshopper",
+            "bugs.grasshopper_place",
+            "bugs.grasshopper_paths",
+        ],
     },
     LessonGroup {
         id: "bugs.ladybugs",
@@ -94,14 +103,22 @@ pub const LESSON_GROUPS: &[LessonGroup] = &[
         id: "bugs.pillbugs",
         title: "The Pillbug",
         lessons: &[
-            "bugs.pillbug", "bugs.pillbug_save", "bugs.pillbug_enemy",
-            "bugs.pillbug_gate", "bugs.pillbug_deactivate",
+            "bugs.pillbug",
+            "bugs.pillbug_save",
+            "bugs.pillbug_enemy",
+            "bugs.pillbug_gate",
+            "bugs.pillbug_deactivate",
         ],
     },
     LessonGroup {
         id: "bugs.mosquitoes",
         title: "The Mosquito",
-        lessons: &["bugs.mosquito", "bugs.mosquito_climb", "bugs.mosquito_ability", "bugs.mosquito_other"],
+        lessons: &[
+            "bugs.mosquito",
+            "bugs.mosquito_climb",
+            "bugs.mosquito_ability",
+            "bugs.mosquito_other",
+        ],
     },
     LessonGroup {
         id: "bugs.ants",
@@ -111,5 +128,7 @@ pub const LESSON_GROUPS: &[LessonGroup] = &[
 ];
 
 pub fn group_of(id: &str) -> Option<&'static LessonGroup> {
-    LESSON_GROUPS.iter().find(|group| group.lessons.contains(&id))
+    LESSON_GROUPS
+        .iter()
+        .find(|group| group.lessons.contains(&id))
 }

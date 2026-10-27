@@ -5,15 +5,16 @@ use crate::{
         challenge_create::ChallengeCreate,
         config::Config,
         home::Home,
-        tournament_create::TournamentCreate,
-        tournaments::{Tournaments, TournamentsByStatus},
+        tournament_create::TournamentCreateChooser,
+        tournaments::{TournamentList, Tournaments},
     },
     providers::{ChallengeParams, ChallengeParamsStoreFields},
+    responses::TournamentCategory,
 };
 use leptos::prelude::*;
 use leptos_router::hooks::use_query_map;
 use reactive_stores::Store;
-use shared_types::{TimeMode, TournamentStatus};
+use shared_types::TimeMode;
 
 /// The real page components, rendered in a script-free, read-only lesson frame.
 /// The iframe sandbox blocks scripts and form submission. Disabled form controls
@@ -21,25 +22,40 @@ use shared_types::{TimeMode, TournamentStatus};
 #[component]
 pub fn TutorialSitePage() -> impl IntoView {
     let query = use_query_map();
-    let screen = query.with_untracked(|query| query.get("screen")).unwrap_or_default();
-    let focus = query.with_untracked(|query| query.get("focus")).unwrap_or_default();
+    let screen = query
+        .with_untracked(|query| query.get("screen"))
+        .unwrap_or_default();
+    let focus = query
+        .with_untracked(|query| query.get("focus"))
+        .unwrap_or_default();
     if screen == "correspondence" {
         let params = expect_context::<Store<ChallengeParams>>();
-        params.time_signals().time_mode().set(TimeMode::Correspondence);
+        params
+            .time_signals()
+            .time_mode()
+            .set(TimeMode::Correspondence);
     }
     let content = match screen.as_str() {
         "settings" => view! { <Config /> }.into_any(),
         "tournaments" => view! {
-            <Tournaments><TournamentsByStatus status=TournamentStatus::NotStarted /></Tournaments>
-        }.into_any(),
-        "tournament-create" => view! { <TournamentCreate /> }.into_any(),
-        "correspondence" => view! { <PageShell><ChallengeCreate /></PageShell> }.into_any(),
+            <Tournaments>
+                <TournamentList category=TournamentCategory::Upcoming />
+            </Tournaments>
+        }
+        .into_any(),
+        "tournament-create" => view! { <TournamentCreateChooser /> }.into_any(),
+        "correspondence" => view! {
+            <PageShell>
+                <ChallengeCreate />
+            </PageShell>
+        }
+        .into_any(),
         _ => view! { <TutorialHomepage /> }.into_any(),
     };
     let target = match focus.as_str() {
         "custom" => ("#tutorial-custom-game", "➜ Create your own game"),
         "challenges" => ("#tutorial-open-challenges", "➜ Join an open game here"),
-        "feedback" => ("#home-feedback", "➜ Share your feedback here"),
+        "feedback" => ("#site-footer", "➜ Share your feedback here"),
         "quickplay" => ("#tutorial-quickplay", "➜ Choose a time control"),
         _ => ("#tutorial-no-focus", ""),
     };
@@ -55,7 +71,9 @@ pub fn TutorialSitePage() -> impl IntoView {
     );
     view! {
         <style>{css}</style>
-        <fieldset disabled class="contents" aria-label="Read-only actual site page">{content}</fieldset>
+        <fieldset disabled class="contents" aria-label="Read-only actual site page">
+            {content}
+        </fieldset>
     }
 }
 
@@ -70,9 +88,11 @@ fn TutorialHomepage() -> impl IntoView {
                 let pool = pool().await?;
                 let mut conn = get_conn(&pool).await?;
                 let models = Challenge::get_public(&mut conn).await?;
-                ChallengeResponse::from_models_batch(models, &mut conn).await
+                ChallengeResponse::from_models_batch(models, &mut conn)
+                    .await
                     .map_err(ServerFnError::new)
-            }.await;
+            }
+            .await;
             match loaded {
                 Ok(challenges) => return challenges,
                 Err(error) => log::warn!("tutorial homepage challenges: {error}"),
@@ -82,12 +102,18 @@ fn TutorialHomepage() -> impl IntoView {
     });
     let challenge_state = expect_context::<crate::providers::challenges::ChallengeStateSignal>();
     view! {
-        <Suspense fallback=|| view! { <p>"Loading homepage…"</p> }>
-            {move || challenges.get().map(|challenges| {
-                let mut challenge_state = challenge_state;
-                challenge_state.snapshot_apply(challenges);
-                view! { <Home /> }
-            })}
+        <Suspense fallback=|| {
+            view! { <p>"Loading homepage…"</p> }
+        }>
+            {move || {
+                challenges
+                    .get()
+                    .map(|challenges| {
+                        let mut challenge_state = challenge_state;
+                        challenge_state.snapshot_apply(challenges);
+                        view! { <Home /> }
+                    })
+            }}
         </Suspense>
     }
 }

@@ -1,21 +1,21 @@
+use super::projection::settle_deadline;
 use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
-    notifications::{game_end_reason_from, notify_game_ended, GameEndReason},
     websocket::{
-        messages::{GameFinalize, HandlerOutput, InternalServerMessage, MessageDestination},
+        messages::{HandlerOutput, InternalServerMessage, MessageDestination, SocketTx},
         WebsocketData,
     },
 };
 use anyhow::Result;
 use db_lib::{get_conn, models::Game, DbPool};
-use shared_types::GameId;
-use std::sync::Arc;
+use hive_lib::GameStatus;
+use shared_types::{Conclusion, GameId};
+use std::{str::FromStr, sync::Arc};
 use uuid::Uuid;
 
 pub struct TimeoutHandler {
-    game: Game,
-    username: String,
-    user_id: Uuid,
+    game_id: Uuid,
+    received_from: SocketTx,
     data: Arc<WebsocketData>,
     pool: DbPool,
 }
@@ -23,15 +23,13 @@ pub struct TimeoutHandler {
 impl TimeoutHandler {
     pub fn new(
         game: &Game,
-        username: &str,
-        user_id: Uuid,
+        received_from: SocketTx,
         data: Arc<WebsocketData>,
         pool: &DbPool,
     ) -> Self {
         Self {
-            game: game.to_owned(),
-            username: username.to_owned(),
-            user_id,
+            game_id: game.id,
+            received_from,
             data,
             pool: pool.clone(),
         }
@@ -39,41 +37,33 @@ impl TimeoutHandler {
 
     pub async fn handle(&self) -> Result<HandlerOutput> {
         let mut conn = get_conn(&self.pool).await?;
-        let mut messages = Vec::new();
-        let mut finalize_games = Vec::new();
-
-        if self.game.finished {
-            let game_response = self
+        let mut projected = settle_deadline(self.game_id, self.data.as_ref(), &mut conn).await?;
+        if projected.game.finished && projected.output.finalize_games.is_empty() {
+            let game = self
                 .data
-                .get_or_build_response(&self.game, &mut conn)
+                .get_or_build_response(&projected.game, &mut conn)
                 .await?;
-            messages.push(InternalServerMessage {
-                destination: MessageDestination::Global,
+            let reaction = if projected.game.conclusion == Conclusion::Timeout.to_string() {
+                GameReaction::TimedOut
+            } else if matches!(
+                GameStatus::from_str(&projected.game.game_status),
+                Ok(GameStatus::Adjudicated)
+            ) {
+                GameReaction::Adjudicated
+            } else {
+                GameReaction::Finished
+            };
+            projected.output.messages.push(InternalServerMessage {
+                destination: MessageDestination::Direct(self.received_from.clone()),
                 message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
-                    game_action: GameReaction::TimedOut,
-                    game: (*game_response).clone(),
-                    game_id: GameId(self.game.nanoid.clone()),
-                    user_id: self.user_id,
-                    username: self.username.clone(),
+                    game_id: GameId(projected.game.nanoid.clone()),
+                    game: game.clone(),
+                    game_action: reaction,
+                    user_id: projected.game.current_player_id,
+                    username: String::new(),
                 }))),
             });
-            let reason = game_end_reason_from(&self.game, GameEndReason::Move);
-            if let Err(e) = notify_game_ended(&self.game, reason, &mut conn).await {
-                log::error!("notify game ended {}: {e}", self.game.nanoid);
-            }
-            let finalize = GameFinalize {
-                game_id: GameId(self.game.nanoid.clone()),
-                white_id: self.game.white_id,
-                black_id: self.game.black_id,
-            };
-            messages.extend(finalize.own_game_removed_messages());
-            finalize_games.push(finalize);
         }
-
-        Ok(HandlerOutput {
-            messages,
-            reactions: Vec::new(),
-            finalize_games,
-        })
+        Ok(projected.output)
     }
 }

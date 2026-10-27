@@ -1,5 +1,5 @@
 use crate::{
-    common::{with_class, UserAction},
+    common::{game_speed_label, with_class, UserAction},
     components::{
         atoms::{color_hex::ColorHex, rating::icon_for_speed},
         molecules::user_search::UserSearch,
@@ -213,12 +213,11 @@ fn ArchiveSpeedField(draft_options: RwSignal<GamesQueryOptions>) -> impl IntoVie
 
     view! {
         <div class=FIELD_BLOCK_CLASS>
-            <label class="ui-field-label">{t!(i18n, archive.speeds)}</label>
+            <label class="ui-field-label">{t!(i18n, game.speeds_label)}</label>
             <div class="flex flex-wrap gap-2">
                 {GameSpeed::all_games()
                     .into_iter()
                     .map(|speed| {
-                        let label = speed.to_string();
                         let is_selected = Signal::derive(move || {
                             draft_options.with(|o| o.speeds.contains(&speed))
                         });
@@ -250,7 +249,7 @@ fn ArchiveSpeedField(draft_options: RwSignal<GamesQueryOptions>) -> impl IntoVie
                                     }
                                 />
                                 <Icon icon=icon_for_speed(speed) attr:class="size-5" />
-                                <span class="sr-only">{label.clone()}</span>
+                                <span class="sr-only">{move || game_speed_label(i18n, speed)}</span>
                             </label>
                         }
                     })
@@ -267,7 +266,7 @@ fn ArchiveRatedExpansions(draft_options: RwSignal<GamesQueryOptions>) -> impl In
     view! {
         <div class="grid grid-cols-2 gap-3">
             <div class=FIELD_BLOCK_CLASS>
-                <label class="ui-field-label">{t!(i18n, archive.rated)}</label>
+                <label class="ui-field-label">{t!(i18n, game.rated)}</label>
                 <select
                     class="ui-field-select"
                     prop:value=Signal::derive(move || match draft_options.with(|o| o.rated) {
@@ -289,13 +288,13 @@ fn ArchiveRatedExpansions(draft_options: RwSignal<GamesQueryOptions>) -> impl In
                             });
                     }
                 >
-                    <option value="any">{t!(i18n, archive.any)}</option>
-                    <option value="true">{t!(i18n, archive.rated)}</option>
-                    <option value="false">{t!(i18n, archive.casual)}</option>
+                    <option value="any">{t!(i18n, common.any)}</option>
+                    <option value="true">{t!(i18n, game.rated)}</option>
+                    <option value="false">{t!(i18n, game.casual)}</option>
                 </select>
             </div>
             <div class=FIELD_BLOCK_CLASS>
-                <label class="ui-field-label">{t!(i18n, archive.expansions)}</label>
+                <label class="ui-field-label">{t!(i18n, common.expansions)}</label>
                 <select
                     class="ui-field-select"
                     prop:value=Signal::derive(move || match draft_options.with(|o| o.expansions) {
@@ -316,7 +315,7 @@ fn ArchiveRatedExpansions(draft_options: RwSignal<GamesQueryOptions>) -> impl In
                             });
                     }
                 >
-                    <option value="any">{t!(i18n, archive.any)}</option>
+                    <option value="any">{t!(i18n, common.any)}</option>
                     <option value="true">{t!(i18n, archive.with_expansions)}</option>
                     <option value="false">{t!(i18n, archive.base_only)}</option>
                 </select>
@@ -340,7 +339,7 @@ fn ArchiveAdvancedFilters(
                     if draft_options.with(|o| o.rated != Some(true)) { "opacity-60" } else { "" },
                 )
             }>
-                <label class="ui-field-label">{t!(i18n, archive.rating_range)}</label>
+                <label class="ui-field-label">{t!(i18n, game.rating_range)}</label>
                 <div class="grid grid-cols-2 gap-2">
                     <input
                         class=move || {
@@ -601,7 +600,7 @@ pub fn ArchiveSearchForm(
                         </div>
                         <ArchiveSpeedField draft_options=draft_options />
                         <div class=FIELD_BLOCK_CLASS>
-                            <label class="ui-field-label">{t!(i18n, archive.result)}</label>
+                            <label class="ui-field-label">{t!(i18n, common.result)}</label>
                             <select
                                 class="ui-field-select"
                                 prop:value=Signal::derive(move || {

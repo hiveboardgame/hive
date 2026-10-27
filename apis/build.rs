@@ -17,6 +17,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         // Commented out very incomplete locales (< 30% translated)
         // .add_locales(["cs", "ja", "nl", "sv"])?
         .add_namespaces([
+            "common",
+            "analysis",
             "header",
             "home",
             "faq",
@@ -26,6 +28,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             "game",
             "tournaments",
             "donate",
+            "footer",
             "archive",
             "notifications",
             "messages",

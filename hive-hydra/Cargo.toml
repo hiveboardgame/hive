@@ -7,7 +7,10 @@ edition = "2021"
 workspace = true
 
 [dependencies]
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["process", "io-util"] }
+tokio-tungstenite = { version = "0.30", features = ["rustls-tls-webpki-roots"] }
+futures-util = { workspace = true }
+rustls = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 reqwest = { version = "0.13.1", features = ["rustls", "json"], default-features = false }
@@ -15,7 +18,7 @@ thiserror = { workspace = true }
 async-trait = "0.1"
 clap = { workspace = true }
 config = "0.15"
-tracing = "0.1"
+tracing = { workspace = true }
 tracing-subscriber = { version = "0.3", features = ["local-time", "env-filter"] }
 tracing-appender = "0.2"
 time = { version = "0.3", features = ["formatting"] }

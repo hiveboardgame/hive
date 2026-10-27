@@ -1,5 +1,7 @@
 use crate::{
+    common::localized_error_message,
     functions::games::get::get_batch_from_options,
+    i18n::use_i18n,
     pages::archive::{
         form::{guarded_search, ArchiveSearchForm},
         list::ArchiveGameList,
@@ -42,6 +44,7 @@ impl std::error::Error for GameSearchViewError {}
 
 #[component]
 pub fn GameSearch() -> impl IntoView {
+    let i18n = use_i18n();
     let draft_options = RwSignal::new(default_search_options());
 
     let games = RwSignal::new(Vec::new());
@@ -240,7 +243,7 @@ pub fn GameSearch() -> impl IntoView {
                             <div class="flex flex-col flex-1 min-h-0">
                                 <div class="space-y-1 ui-danger-notice">
                                     <For each=messages key=|msg| msg.clone() let:msg>
-                                        <p>{msg}</p>
+                                        <p>{move || localized_error_message(i18n, &msg)}</p>
                                     </For>
                                 </div>
                             </div>

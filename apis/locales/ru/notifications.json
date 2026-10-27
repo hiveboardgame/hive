@@ -1,21 +1,35 @@
 {
     "page": {
-        "heading": "Уведомления",
         "intro_before_link": "Выберите, как вы хотите получать уведомления для каждого типа событий. Push-уведомления приходят в браузеры, которые вы включите ниже. Настройка Discord находится в ",
         "account_link": "разделе Discord",
         "intro_after_link": " ниже.",
         "col_push": "Push",
         "col_discord": "Discord",
-        "email_coming_soon": "Отправка по электронной почте появится скоро.",
         "saving": "Сохранение…",
         "saved": "Сохранено.",
         "save_failed": "Не удалось сохранить:",
-        "loading": "Загрузка…"
+        "push_discord_and_device_delivery_settings": "Настройки доставки уведомлений через push, Discord и устройства.",
+        "notification_preferences": "Настройки уведомлений",
+        "enable_browser_notifications_before_choosing_push_delivery": "Разрешите уведомления в браузере, прежде чем выбирать доставку push.",
+        "discord_link_instructions": "Присоединитесь к серверу HiveGame в Discord и привяжите свой аккаунт ниже, чтобы настроить уведомления Discord.",
+        "discord_integration": "Интеграция с Discord",
+        "step_1": "Шаг 1",
+        "join_the_hivegame_discord_server": "Присоединитесь к серверу HiveGame в Discord.",
+        "join_discord": "Вступить в Discord",
+        "step_2": "Шаг 2",
+        "link_this_hivegame_account_to_discord": "Привяжите эту учётную запись HiveGame к Discord.",
+        "no_discord_account_linked": "Аккаунт Discord не привязан",
+        "sign_in_to_link_discord": "Войдите для привязки Discord",
+        "discord_status_temporarily_unavailable": "Статус Discord временно недоступен",
+        "error_loading_discord_name": "Ошибка загрузки имени Discord",
+        "link_discord_account": "Привязать Discord",
+        "push_delivery_is_enabled_for_this_browser": "Push-уведомления включены в этом браузере.",
+        "push_delivery_is_enabled_on_another_browser": "Push-уведомления включены в другом браузере.",
+        "browser_notifications_are_not_available_in_this_browser": "Уведомления недоступны в этом браузере."
     },
     "events": {
         "your_turn": "Ваш ход",
         "challenges": "Получен вызов",
-        "game_ended": "Партия завершена",
         "tournament": "Приглашение на турнир",
         "schedules": "Предложение времени",
         "dms": "Личное сообщение"
@@ -23,21 +37,19 @@
     "browser": {
         "heading": "Этот браузер",
         "body": "Получайте в этом браузере выбранные выше push-уведомления, даже когда вкладка HiveGame не открыта. Включите их отдельно на каждом устройстве, на котором хотите получать уведомления.",
+        "working": "Выполнение…",
         "enable": "Включить уведомления браузера",
         "disable": "Отключить уведомления браузера",
-        "working": "Выполнение…",
         "send_test": "Отправить тест",
         "test_sent": "Тестовое уведомление отправлено — проверьте свои уведомления.",
         "test_failed": "Тест не удался:"
     },
     "ios": {
-        "heading": "На вашем iPhone или iPad",
         "body": "Чтобы получать уведомления на iOS, добавьте HiveGame на домашний экран: нажмите кнопку «Поделиться», затем «На экран Домой» и откройте его оттуда."
     },
     "devices": {
         "heading": "Ваши устройства",
         "body": "Все устройства, на которых сейчас настроены push-уведомления. Удалите те, которыми больше не пользуетесь.",
-        "remove": "Удалить",
         "this_browser": "(этот браузер)",
         "last_active": "последняя активность",
         "platform_web": "Браузер"
@@ -47,14 +59,32 @@
         "body_before_link": "Включите уведомления браузера для этого устройства. Управляйте ими в любое время на ",
         "link": "странице уведомлений",
         "body_after_link": ".",
-        "enable": "Включить",
-        "enabling": "Включение…",
-        "dismiss": "Закрыть"
+        "enabling": "Включение…"
     },
     "install": {
         "title": "Установить HiveGame как приложение",
         "button": "Установить",
         "ios_hint": "Установите HiveGame: нажмите «Поделиться», затем «На экран Домой»."
+    },
+    "actions": {
+        "dismiss": "Закрыть",
+        "accept": "Принять",
+        "decline": "Отклонить",
+        "view_tournament": "Открыть турнир",
+        "view_named_tournament": "Открыть турнир: {{name}}"
+    },
+    "schedule": {
+        "proposed": "{{proposer}} предложил(а) сыграть {{time}}",
+        "accepted": "{{player}} согласился(-ась) сыграть {{time}}"
+    },
+    "tournament_status": {
+        "label": "Турнир"
+    },
+    "tournament_invitation": {
+        "label": "Приглашение на турнир",
+        "players": "Игроки: {{count}}",
+        "accept": "Принять приглашение",
+        "decline": "Отклонить приглашение"
     },
     "push": {
         "your_turn_title": "Ваш ход",
@@ -65,7 +95,6 @@
         "challenge_casual": "{{challenger}} · {{time_control}} · без рейтинга",
         "game_started_title": "Партия началась",
         "game_started_body": "против {{opponent}} · {{time_control}}",
-        "game_ended_title": "Партия завершена",
         "game_ended_won_resignation": "{{opponent}}: сдача",
         "game_ended_won_timeout": "У {{opponent}} закончилось время",
         "game_ended_won": "Вы победили {{opponent}}",
@@ -94,5 +123,94 @@
         "takeback_rejected_body": "От {{actor}}: отмена хода отклонена",
         "test_title": "HiveGame",
         "test_body": "Тестовое уведомление — push работает"
+    },
+    "tournament_notice": {
+        "start_deferred": "К назначенному началу участников оказалось слишком мало. Запустите турнир вручную, когда наберётся достаточно игроков.",
+        "games_ready": "Готово партий: {{count}}. Откройте турнир, чтобы посмотреть пары.",
+        "recorded_one": "Организатор записал результат вашей партии: {{outcome}}.",
+        "recorded_many": "Организатор записал результаты ваших партий ({{count}}): {{outcomes}}.",
+        "schedule_cancelled": "{{actor}} отменил согласованное время вашей партии ({{time}})",
+        "outcome": {
+            "double_forfeit": "обоюдное поражение",
+            "draw": "ничья",
+            "win": "победа",
+            "loss": "поражение"
+        }
+    },
+    "external": {
+        "open_description": "{{description}}. Открыть: {{link}}",
+        "organizer_title": "Приглашение организовать турнир",
+        "organizer_body": "Вас пригласили организовать {{tournament_name}}.",
+        "schedule_many": "{{proposer}} предложил время для вашего матча (вариантов: {{count}}). Откройте, чтобы выбрать.",
+        "organizer_discord": "Вас пригласили организовать [турнир {{tournament_name}}](<https://hivegame.com/tournament/{{tournament_nanoid}}>).",
+        "schedule_many_discord": "[Предложено время](<{{link}}>) — {{proposer}} предложил время для вашей партии (вариантов: {{count}}). Откройте, чтобы выбрать.",
+        "organizer_subject": "Приглашение организатора: {{tournament_name}}",
+        "organizer_email": "Вас пригласили организовать {{tournament_name}}. Открыть: {{link}}",
+        "schedule_many_subject": "{{proposer}} предложил время партий",
+        "schedule_many_email": "{{proposer}} предложил время для вашей партии (вариантов: {{count}}). Выбрать: {{link}}",
+        "your_turn_discord": "[Ваш ход](<https://hivegame.com/game/{{game_nanoid}}>) в партии с {{opponent}}.",
+        "challenge_discord": "[Новый вызов](<https://hivegame.com/challenge/{{challenge_nanoid}}>) от {{challenger}} · {{time_control}} · {{rated}}.",
+        "game_started_discord": "[Ваша партия](<https://hivegame.com/game/{{game_nanoid}}>) с {{opponent}} началась · {{time_control}}.",
+        "game_ended_won_discord": "победа над {{opponent}}",
+        "game_ended_draw_agreement_discord": "ничья по соглашению с {{opponent}}",
+        "game_ended_draw_discord": "ничья с {{opponent}}",
+        "game_ended_discord": "Ваша [партия](<https://hivegame.com/game/{{game_nanoid}}>) завершилась — {{detail}}{{change}}.",
+        "tournament_invite_discord": "Вас пригласили на [турнир {{tournament_name}}](<https://hivegame.com/tournament/{{tournament_nanoid}}>).",
+        "tournament_started_discord": "[Турнир {{tournament_name}}](<https://hivegame.com/tournament/{{tournament_nanoid}}>) начался! Ваши партии готовы.",
+        "schedule_propose_discord": "[Предложено время](<{{link}}>) — {{proposer}} предлагает {{when}} для вашей партии.",
+        "schedule_accept_discord": "[Время принято](<{{link}}>) — {{opponent}} принимает {{when}} для вашей партии.",
+        "direct_message_discord": "Личное сообщение от {{sender}}: {{preview}}",
+        "game_control_discord": "[Ваша партия](<https://hivegame.com/game/{{game_nanoid}}>) — {{actor}} {{action}}.",
+        "your_turn_subject": "Ваш ход против {{opponent}}",
+        "your_turn_email": "{{opponent}} делает ход в вашей партии. Продолжить: https://hivegame.com/game/{{game_nanoid}}",
+        "challenge_subject": "{{challenger}} вызывает вас на HiveGame",
+        "challenge_email": "{{challenger}} присылает вам вызов: {{time_control}} · {{rated}}. Открыть: {{link}}",
+        "game_started_subject": "Началась партия с {{opponent}}",
+        "game_started_email": "Ваш вызов {{time_control}} принят. Открыть: {{link}}",
+        "game_ended_email": "Посмотреть партию: {{link}}",
+        "tournament_invite_subject": "Приглашение на турнир: {{tournament_name}}",
+        "tournament_invite_email": "Вас приглашают на {{tournament_name}}. Открыть: {{link}}",
+        "tournament_started_subject": "Начался турнир {{tournament_name}}",
+        "tournament_started_email": "{{tournament_name}} начался, ваши партии готовы. Открыть: {{link}}",
+        "schedule_propose_subject": "{{proposer}} предлагает время партии",
+        "schedule_propose_email": "{{proposer}} предлагает {{when}} для вашей партии. Открыть: {{link}}",
+        "schedule_accept_subject": "{{opponent}} принимает предложенное время",
+        "schedule_accept_email": "{{opponent}} принимает {{when}} для вашей партии. Открыть: {{link}}",
+        "game_control_subject": "{{actor}} {{action}}",
+        "game_control_email": "{{title}} в вашей партии. Открыть: {{link}}",
+        "test_subject": "Тестовое уведомление HiveGame",
+        "test_email": "Push-уведомления работают.",
+        "direct_message_subject": "Новое сообщение от {{sender}}"
+    },
+    "push_errors": {
+        "enable_first": "Сначала разрешите уведомления.",
+        "test_failed": "Не удалось отправить тестовое уведомление.",
+        "unavailable": "Уведомления недоступны в этом браузере.",
+        "service_workers_unsupported": "Этот браузер не поддерживает сервис-воркеры.",
+        "registration_lookup_failed": "Не удалось найти службу уведомлений браузера.",
+        "service_worker_missing": "Обновите страницу и повторите попытку: служба уведомлений ещё не готова.",
+        "permission_blocked": "Уведомления для этого сайта заблокированы в настройках браузера.",
+        "permission_request_failed": "Не удалось запросить разрешение на уведомления.",
+        "permission_not_granted": "Разрешение на уведомления не предоставлено.",
+        "server_key_missing": "Web Push не настроен на сервере.",
+        "push_manager_failed": "Не удалось получить доступ к уведомлениям браузера.",
+        "server_key_invalid": "Сервер вернул недействительный ключ уведомлений.",
+        "subscribe_failed": "Не удалось подписаться на уведомления.",
+        "subscription_invalid": "Браузер вернул недействительную подписку.",
+        "registration_failed": "Не удалось зарегистрировать уведомления браузера.",
+        "unsubscribe_failed": "Не удалось отписаться от уведомлений.",
+        "subscription_not_released": "Браузер не удалил подписку на уведомления."
+    },
+    "discord": {},
+    "email": {
+        "password_reset_body": "Здравствуйте, {{username}}!\n\nМы получили запрос на сброс вашего пароля. Ссылка действует в течение 1 часа.\nЕсли вы не отправляли запрос, проигнорируйте это письмо — ваш пароль не изменился.\n\n{{link}}\n\n--\nЭто письмо отправлено сайтом hivegame.com. Если вы не регистрировались, можете проигнорировать сообщение.\n\nХотите поговорить с человеком? Присоединяйтесь к нашему Discord и найдите Ion или leex:\nhttps://discord.gg/7EwNTJnfab\n",
+        "recipient_fallback": "игрок"
+    },
+    "control": {
+        "offered_draw": "предлагает ничью",
+        "requested_takeback": "просит вернуть ход",
+        "declined_draw": "отклоняет ничью",
+        "accepted_takeback": "разрешает возврат хода",
+        "declined_takeback": "отклоняет возврат хода"
     }
 }

@@ -1,8 +1,9 @@
 use crate::{
     common::with_class,
+    i18n::*,
     providers::game_state::{GameStateStore, GameStateStoreFields},
 };
-use hive_lib::GameControl;
+use hive_lib::{GameControl, GameStatus};
 use icondata_core;
 use leptos::prelude::*;
 use leptos_icons::*;
@@ -63,8 +64,10 @@ pub fn GameControlButton(
     on_confirm: Callback<GameControl>,
     #[prop(optional, into)] hidden: Signal<bool>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let game_state = expect_context::<GameStateStore>();
     let game_control_pending = game_state.game_control_pending();
+    let game_response = game_state.game_response();
     let state = game_state.state();
     let turn = Memo::new(move |_| state.with(|state| state.turn as i32));
     let (icon, title) = get_icon_and_title(game_control);
@@ -110,7 +113,32 @@ pub fn GameControlButton(
 
     let disabled = move || {
         let game_control = game_control;
-        if game_control.allowed_on_turn(turn()) {
+        let begun_tournament_resignation = matches!(game_control, GameControl::Resign(_))
+            && game_response.with(|response| {
+                response.as_ref().is_some_and(|game| {
+                    game.tournament.is_some() && game.game_status == GameStatus::InProgress
+                })
+            });
+        let resumed_move_opening_turn = game_response.with(|response| {
+            response.as_ref().and_then(|game| {
+                game.game_start
+                    .is_resumed_move_opening(
+                        game.tournament.is_none(),
+                        game.game_status.clone(),
+                        game.turn,
+                    )
+                    .then_some(game.turn)
+            })
+        });
+        let allowed_on_turn = resumed_move_opening_turn.map_or_else(
+            || game_control.allowed_on_turn(turn()),
+            |turn| match game_control {
+                GameControl::Abort(_) => false,
+                GameControl::TakebackRequest(_) => turn > 0,
+                _ => true,
+            },
+        );
+        if begun_tournament_resignation || allowed_on_turn {
             !matches!(game_control, GameControl::Resign(_))
                 && (pending(GameControl::DrawOffer(color))
                     || pending(GameControl::TakebackRequest(color)))
@@ -141,7 +169,7 @@ pub fn GameControlButton(
             </button>
             <Show when=is_clicked>
                 <button
-                    title="Cancel"
+                    title=move || t_string!(i18n, common.cancel)
                     on:click=cancel
                     class="ui-game-control-button ui-button-danger"
                 >
@@ -154,15 +182,27 @@ pub fn GameControlButton(
 
 pub(crate) fn get_icon_and_title(
     game_control: GameControl,
-) -> (&'static icondata_core::IconData, &'static str) {
-    match game_control {
-        GameControl::Abort(_) => (icondata_ai::AiStopOutlined, "Abort"),
-        GameControl::DrawAccept(_) => (icondata_fa::FaHandshakeSimpleSolid, "Accept Draw"),
-        GameControl::DrawOffer(_) => (icondata_fa::FaHandshakeSimpleSolid, "Offer Draw"),
-        GameControl::DrawReject(_) => (icondata_fa::FaHandshakeSimpleSolid, "Reject Draw"),
-        GameControl::Resign(_) => (icondata_ai::AiFlagOutlined, "Resign"),
-        GameControl::TakebackAccept(_) => (icondata_bi::BiUndoRegular, "Accept Takeback"),
-        GameControl::TakebackReject(_) => (icondata_bi::BiUndoRegular, "Reject Takeback"),
-        GameControl::TakebackRequest(_) => (icondata_bi::BiUndoRegular, "Request Takeback"),
-    }
+) -> (&'static icondata_core::IconData, impl Fn() -> String + Copy) {
+    let i18n = use_i18n();
+    let icon = match game_control {
+        GameControl::Abort(_) => icondata_ai::AiStopOutlined,
+        GameControl::DrawAccept(_) | GameControl::DrawOffer(_) | GameControl::DrawReject(_) => {
+            icondata_fa::FaHandshakeSimpleSolid
+        }
+        GameControl::Resign(_) => icondata_ai::AiFlagOutlined,
+        GameControl::TakebackAccept(_)
+        | GameControl::TakebackReject(_)
+        | GameControl::TakebackRequest(_) => icondata_bi::BiUndoRegular,
+    };
+    let title = move || match game_control {
+        GameControl::Abort(_) => t_string!(i18n, game.abort).to_string(),
+        GameControl::DrawAccept(_) => t_string!(i18n, game.accept_draw).to_string(),
+        GameControl::DrawOffer(_) => t_string!(i18n, game.offer_draw).to_string(),
+        GameControl::DrawReject(_) => t_string!(i18n, game.reject_draw).to_string(),
+        GameControl::Resign(_) => t_string!(i18n, game.resign).to_string(),
+        GameControl::TakebackAccept(_) => t_string!(i18n, game.accept_takeback).to_string(),
+        GameControl::TakebackReject(_) => t_string!(i18n, game.reject_takeback).to_string(),
+        GameControl::TakebackRequest(_) => t_string!(i18n, game.request_takeback).to_string(),
+    };
+    (icon, title)
 }

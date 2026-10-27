@@ -1,5 +1,16 @@
 use super::{
-    messages::{GameSpectatorAudience, MessageDestination, SocketTx, TournamentAudience},
+    messages::{
+        GameSpectatorAudience,
+        HandlerOutput,
+        InternalServerMessage,
+        MessageDestination,
+        Outbound,
+        SocketFormat,
+        SocketHandle,
+        SocketTx,
+        TerminalGameRetry,
+        TournamentAudience,
+    },
     server_handlers::chat::limits::{ChatLimitError, ChatRateLimits},
     telemetry::{
         read_proc_vm_bytes,
@@ -12,36 +23,66 @@ use super::{
     WebsocketData,
 };
 use crate::{
-    common::{GameUpdate, ServerMessage, ServerResult, UserStatus, UserUpdate},
-    notifications::{notify_game_ended, GameEndReason},
-    responses::{HeartbeatResponse, UserResponse},
+    common::{
+        GameReaction,
+        GameUpdate,
+        ServerMessage,
+        ServerResult,
+        TournamentPairingLabel,
+        TournamentUpdate,
+        TvInterest,
+        UserStatus,
+        UserUpdate,
+    },
+    notifications::{notify, Event, TournamentNotice},
+    responses::{HeartbeatResponse, TournamentMemberships, TournamentPatch, UserResponse},
+    websocket::server_handlers::game::{
+        project_committed_game,
+        retry_deleted_terminal_game_projection,
+        settle_deadline,
+        GameCommandContext,
+        GameProjectionInput,
+    },
 };
 use bytes::Bytes;
 use chrono::Utc;
-use codee::{binary::MsgpackSerdeCodec, Encoder};
 use dashmap::{DashMap, DashSet};
 use db_lib::{
+    db_error::DbError,
     get_conn,
-    models::{Game, Tournament, User},
-    DbConn,
+    models::{Game, GameHeartbeat, Tournament, User},
+    schema::{games, tournaments},
     DbPool,
     DB_POOL_MAX_SIZE,
 };
+use diesel::{ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl};
 use hive_lib::GameStatus;
 use log::error;
 use rand::RngExt;
-use shared_types::{Conclusion, ConversationKey, GameId, SimpleUser, TimeMode, TournamentId};
+use shared_types::{
+    tournament::Format,
+    ConversationKey,
+    GameId,
+    GameStart,
+    NotificationCategory,
+    SimpleUser,
+    TimeMode,
+    TournamentId,
+};
 use std::{
     collections::{HashMap, HashSet},
     str::FromStr,
     sync::{Arc, RwLock},
     time::{Duration, Instant},
 };
-use tokio::sync::{mpsc, Semaphore};
+use tokio::sync::{mpsc, OwnedSemaphorePermit, Semaphore};
 use uuid::Uuid;
 
 pub const SOCKET_BUFFER_CAPACITY: usize = 128;
 const LOBBY_GAME_ID: &str = "lobby";
+const MAX_TV_GAMES_PER_SOCKET: usize = 8;
+const MAX_TV_GAME_ID_BYTES: usize = 64;
+const TV_SNAPSHOT_COOLDOWN: Duration = Duration::from_millis(500);
 /// Cap on concurrent `load_user_state` tasks. Sized so loaders cannot starve
 /// the rest of the app of pool connections.
 pub const LOAD_USER_STATE_CONCURRENCY: usize = DB_POOL_MAX_SIZE as usize / 2;
@@ -62,6 +103,9 @@ const FINISHED_GAME_GRACE: Duration = Duration::from_secs(5);
 /// for entries that never get re-read (e.g., abandoned games where neither
 /// player returns).
 const GAME_RESPONSE_CACHE_MAX_AGE: Duration = Duration::from_secs(300);
+/// Bound retries for a physically deleted game whose response cannot be
+/// rebuilt. There is no row left to recover after this process exits.
+const PENDING_DELETED_GAME_MAX_AGE: Duration = Duration::from_secs(300);
 
 /// Per-socket minimum gap between accepted `ClientRequest::Resync` requests.
 /// Browsers fire `visibilitychange` + `pageshow` in quick succession on wake;
@@ -69,6 +113,8 @@ const GAME_RESPONSE_CACHE_MAX_AGE: Duration = Duration::from_secs(300);
 /// also debounces, but a misbehaving or modified client must not be able to
 /// drain the pool by spamming Resync.
 const RESYNC_COOLDOWN: Duration = Duration::from_millis(500);
+const AUTH_WINDOW: Duration = Duration::from_secs(10);
+const AUTH_ATTEMPTS_PER_WINDOW: u32 = 3;
 /// WsHub — concurrent, non-actor replacement for `WsServer`.
 ///
 /// Shutdown: there is currently no graceful-shutdown signal; sessions are dropped
@@ -77,7 +123,7 @@ pub struct WsHub {
     /// `user_id → (socket_id → Sender)`. Outer DashMap shards on user_id;
     /// inner DashMap shards on socket_id. We never hold outer write while holding
     /// any inner lock, which keeps the two-level locking deadlock-free.
-    pub(in crate::websocket) sessions: DashMap<Uuid, DashMap<Uuid, mpsc::Sender<Bytes>>>,
+    pub(in crate::websocket) sessions: DashMap<Uuid, DashMap<Uuid, SocketHandle>>,
     membership: RwLock<Membership>,
     pub(crate) data: Arc<WebsocketData>,
     pub(in crate::websocket) pool: DbPool,
@@ -101,6 +147,13 @@ pub struct WsHub {
     /// Per-socket timestamp of the last accepted Resync. Used to enforce
     /// `RESYNC_COOLDOWN`. Entries are evicted on `on_disconnect`.
     last_resync: DashMap<Uuid, Instant>,
+    /// Per-socket `Auth` attempts in the current window: (window start, attempts).
+    auth_attempts: DashMap<Uuid, (Instant, u32)>,
+    last_tv_snapshot: DashMap<Uuid, Instant>,
+    /// One in-flight lobby snapshot lease per socket. The connect path reserves
+    /// its lease before spawning the loader so an early Resync cannot overtake
+    /// the initial snapshot.
+    lobby_snapshot_leases: Arc<DashMap<Uuid, Uuid>>,
     chat_limits: ChatRateLimits,
     /// Users whose accounts were deleted while websocket sessions were already
     /// open. Authentication is cached on each socket, so central auth checks
@@ -119,6 +172,24 @@ struct Membership {
     /// Sockets explicitly watching a persisted chat thread outside the normal
     /// game/tournament membership fanout.
     chat: ChatMembershipIndex,
+    /// The Tournament route currently watched by each socket. Public
+    /// Tournament updates follow this route-local audience, not participation.
+    tournament_watches: TournamentWatchIndex,
+    tv_all: HashSet<(Uuid, Uuid)>,
+    tv_games: GameMembershipIndex,
+}
+
+pub(in crate::websocket) struct LobbySnapshotGuard {
+    leases: Arc<DashMap<Uuid, Uuid>>,
+    socket_id: Uuid,
+    lease_id: Uuid,
+}
+
+impl Drop for LobbySnapshotGuard {
+    fn drop(&mut self) {
+        self.leases
+            .remove_if(&self.socket_id, |_, lease_id| *lease_id == self.lease_id);
+    }
 }
 
 #[derive(Default)]
@@ -278,11 +349,79 @@ impl ChatMembershipIndex {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Default)]
+struct TournamentWatchIndex {
+    /// Tournament → sockets whose current route displays that Tournament.
+    tournaments_sockets: HashMap<TournamentId, HashSet<(Uuid, Uuid)>>,
+    /// A browser socket can display at most one current Tournament route.
+    sockets_tournament: HashMap<(Uuid, Uuid), TournamentId>,
+}
+
+impl TournamentWatchIndex {
+    fn detach_from_tournament(&mut self, socket_pair: (Uuid, Uuid), tournament_id: &TournamentId) {
+        let prune_tournament =
+            self.tournaments_sockets
+                .get_mut(tournament_id)
+                .is_some_and(|sockets| {
+                    sockets.remove(&socket_pair);
+                    sockets.is_empty()
+                });
+        if prune_tournament {
+            self.tournaments_sockets.remove(tournament_id);
+        }
+    }
+
+    fn watch(&mut self, user_id: Uuid, socket_id: Uuid, tournament_id: &TournamentId) {
+        let socket_pair = (user_id, socket_id);
+        let replaced = self
+            .sockets_tournament
+            .insert(socket_pair, tournament_id.clone());
+        if replaced.as_ref() == Some(tournament_id) {
+            return;
+        }
+        if let Some(replaced_id) = replaced.as_ref() {
+            self.detach_from_tournament(socket_pair, replaced_id);
+        }
+        self.tournaments_sockets
+            .entry(tournament_id.clone())
+            .or_default()
+            .insert(socket_pair);
+    }
+
+    fn unwatch(&mut self, user_id: Uuid, socket_id: Uuid, tournament_id: &TournamentId) {
+        let socket_pair = (user_id, socket_id);
+        if self.sockets_tournament.get(&socket_pair) != Some(tournament_id) {
+            return;
+        }
+        self.sockets_tournament.remove(&socket_pair);
+        self.detach_from_tournament(socket_pair, tournament_id);
+    }
+
+    fn unwatch_socket(&mut self, socket_pair: (Uuid, Uuid)) {
+        if let Some(tournament_id) = self.sockets_tournament.remove(&socket_pair) {
+            self.detach_from_tournament(socket_pair, &tournament_id);
+        }
+    }
+
+    fn contains(&self, user_id: Uuid, socket_id: Uuid, tournament_id: &TournamentId) -> bool {
+        self.sockets_tournament.get(&(user_id, socket_id)) == Some(tournament_id)
+    }
+
+    fn sockets_watching(&self, tournament_id: &TournamentId) -> Vec<(Uuid, Uuid)> {
+        self.tournaments_sockets
+            .get(tournament_id)
+            .map(|sockets| sockets.iter().copied().collect())
+            .unwrap_or_default()
+    }
+}
+
+#[derive(Clone)]
 struct PendingDeletedGame {
     marked_at: Instant,
+    retry_at: Instant,
     white_id: Uuid,
     black_id: Uuid,
+    retry: Option<TerminalGameRetry>,
 }
 
 /// RAII scope guard for `mark_deleted_game_pending`. Constructing the guard
@@ -290,7 +429,7 @@ struct PendingDeletedGame {
 /// `delete` commits so `finalize_game` becomes the one to clear the marker.
 /// Panic safety: a panic between `mark_deleted_game_pending` and the commit
 /// would otherwise leave the marker hanging until the heartbeat sweeps it
-/// `GAME_RESPONSE_CACHE_MAX_AGE` later — this guard collapses that window to
+/// `PENDING_DELETED_GAME_MAX_AGE` later — this guard collapses that window to
 /// the stack-unwind path.
 pub(crate) struct PendingDeletedGuard {
     hub: Arc<WsHub>,
@@ -326,6 +465,9 @@ impl WsHub {
             tournament_members: DashMap::new(),
             pending_deleted_games: DashMap::new(),
             last_resync: DashMap::new(),
+            auth_attempts: DashMap::new(),
+            last_tv_snapshot: DashMap::new(),
+            lobby_snapshot_leases: Arc::new(DashMap::new()),
             chat_limits: ChatRateLimits::default(),
             revoked_users: DashSet::new(),
         })
@@ -354,6 +496,40 @@ impl WsHub {
         }
     }
 
+    /// Every `Auth` costs a token decode and, for a real bot token, a user lookup, so each
+    /// socket gets `AUTH_ATTEMPTS_PER_WINDOW` tries per `AUTH_WINDOW`.
+    pub(in crate::websocket) fn allow_auth_attempt(&self, socket_id: Uuid) -> bool {
+        let now = Instant::now();
+        let mut entry = self.auth_attempts.entry(socket_id).or_insert((now, 0));
+        let (window_start, attempts) = entry.value_mut();
+        if now.duration_since(*window_start) >= AUTH_WINDOW {
+            *window_start = now;
+            *attempts = 0;
+        }
+        *attempts += 1;
+        *attempts <= AUTH_ATTEMPTS_PER_WINDOW
+    }
+
+    pub(in crate::websocket) fn try_begin_lobby_snapshot(
+        &self,
+        socket_id: Uuid,
+    ) -> Option<LobbySnapshotGuard> {
+        use dashmap::mapref::entry::Entry;
+
+        let lease_id = Uuid::new_v4();
+        match self.lobby_snapshot_leases.entry(socket_id) {
+            Entry::Vacant(entry) => {
+                entry.insert(lease_id);
+                Some(LobbySnapshotGuard {
+                    leases: Arc::clone(&self.lobby_snapshot_leases),
+                    socket_id,
+                    lease_id,
+                })
+            }
+            Entry::Occupied(_) => None,
+        }
+    }
+
     fn lobby() -> GameId {
         GameId(LOBBY_GAME_ID.to_string())
     }
@@ -366,11 +542,77 @@ impl WsHub {
         self.revoked_users.contains(&user_id)
     }
 
+    /// Returning to the Arena makes an enabled entrant available for pairing.
+    /// A game or chat subscription alone must not requeue a finished player.
+    /// Authenticated bot accounts remain available while connected in either wire format.
+    pub(crate) fn arena_presence_for(
+        &self,
+        tournament_id: &TournamentId,
+        candidates: &[Uuid],
+    ) -> HashSet<Uuid> {
+        let membership = self.membership.read().unwrap_or_else(|p| p.into_inner());
+        candidates
+            .iter()
+            .copied()
+            .filter(|user_id| {
+                !self.is_user_revoked(*user_id)
+                    && self.sessions.get(user_id).is_some_and(|sockets| {
+                        sockets.iter().any(|socket| {
+                            socket.bot
+                                || membership.tournament_watches.contains(
+                                    *user_id,
+                                    *socket.key(),
+                                    tournament_id,
+                                )
+                        })
+                    })
+            })
+            .collect()
+    }
+
     // ─── connect / disconnect ─────────────────────────────────────────────────
 
     /// Synchronously register a new socket and trigger the async user-state load.
     /// Consumes a clone of the Arc so the spawned load task can keep `self` alive.
-    pub fn on_connect(self: Arc<Self>, socket_id: Uuid, tx: mpsc::Sender<Bytes>, user: SimpleUser) {
+    pub fn on_connect(
+        self: Arc<Self>,
+        socket_id: Uuid,
+        tx: mpsc::Sender<Bytes>,
+        format: SocketFormat,
+        user: SimpleUser,
+    ) {
+        // JSON clients request their own games or Resync after authentication.
+        // The browser expects an initial lobby snapshot when its socket connects.
+        let send_snapshot = format == SocketFormat::Msgpack;
+        self.connect(socket_id, tx, format, user, send_snapshot);
+    }
+
+    /// Re-binds an open socket to the user an in-band `Auth` proved, keeping its socket id
+    /// and channel. No lobby snapshot: the bot asks for the state it wants.
+    pub(in crate::websocket) fn on_authenticate(
+        self: Arc<Self>,
+        socket: &SocketTx,
+        previous: SimpleUser,
+        user: SimpleUser,
+    ) {
+        self.on_disconnect(socket.socket_id, previous);
+        self.connect(
+            socket.socket_id,
+            socket.tx.clone(),
+            socket.format,
+            user,
+            false,
+        );
+    }
+
+    fn connect(
+        self: Arc<Self>,
+        socket_id: Uuid,
+        tx: mpsc::Sender<Bytes>,
+        format: SocketFormat,
+        user: SimpleUser,
+        send_snapshot: bool,
+    ) {
         let user_id = user.user_id;
         let lobby = Self::lobby();
         // Lock order: membership write → outer DashMap shard. on_disconnect uses
@@ -381,7 +623,14 @@ impl WsHub {
             let was_empty = {
                 let user_entry = self.sessions.entry(user_id).or_default();
                 let empty = user_entry.is_empty();
-                user_entry.insert(socket_id, tx);
+                user_entry.insert(
+                    socket_id,
+                    SocketHandle {
+                        tx,
+                        format,
+                        bot: user.authed && user.bot,
+                    },
+                );
                 empty
             };
             m.fanout
@@ -404,13 +653,23 @@ impl WsHub {
         let broadcast_online = user.authed && is_first_socket;
         self.refresh_membership_gauges();
 
+        let snapshot_guard = if send_snapshot {
+            let Some(guard) = self.try_begin_lobby_snapshot(socket_id) else {
+                return;
+            };
+            Some(guard)
+        } else {
+            None
+        };
+
         // Async state load spawned independently so readers and dispatches
         // proceed immediately while state loads in the background.
         //
         // `loader_permits` caps concurrency. Tasks that can't get a permit
         // immediately are counted in `load_user_state_queued` until they do.
-        // The sender is looked up from `sessions` after the permit is acquired
-        // so disconnected sockets don't hold a channel open while tasks wait.
+        // The socket is looked up from `sessions` after the permit is acquired so
+        // disconnected sockets do not hold a channel open while tasks wait, and so
+        // the loader inherits the format the connection negotiated.
         let permits = self.loader_permits.clone();
         actix_rt::spawn(async move {
             let _queued = QueuedGuard::new(self.data.telemetry.clone());
@@ -422,24 +681,18 @@ impl WsHub {
                 },
             };
             drop(_queued);
-            if !self.is_socket_connected(user_id, socket_id) {
-                return;
-            }
-            let Some(tx) = self
-                .sessions
-                .get(&user_id)
-                .and_then(|socks| socks.get(&socket_id).map(|t| t.clone()))
-            else {
+            let Some(socket) = self.socket_tx(user_id, socket_id) else {
                 return;
             };
             let _guard = InFlightGuard::new(self.data.telemetry.clone());
-            self.load_user_state(socket_id, user, tx, broadcast_online)
+            self.load_user_state(socket, user, broadcast_online, snapshot_guard)
                 .await;
             drop(permit);
         });
     }
 
-    /// Drops a socket, cleaning up its per-socket game and chat memberships immediately.
+    /// Drops a socket, cleaning up its per-socket game, chat, and Tournament
+    /// watch memberships immediately.
     /// If it was the user's last socket, also cleans up user-level state and
     /// broadcasts Offline to the lobby.
     pub fn on_disconnect(&self, socket_id: Uuid, user: SimpleUser) {
@@ -466,12 +719,18 @@ impl WsHub {
             }
 
             self.last_resync.remove(&socket_id);
+            self.auth_attempts.remove(&socket_id);
+            self.last_tv_snapshot.remove(&socket_id);
+            self.lobby_snapshot_leases.remove(&socket_id);
             self.chat_limits.remove_socket(socket_id);
 
             let socket_pair = (user_id, socket_id);
             m.fanout.unsubscribe_socket(socket_pair);
             m.heartbeat.unsubscribe_socket(socket_pair);
             m.chat.unsubscribe_socket(socket_pair);
+            m.tournament_watches.unwatch_socket(socket_pair);
+            m.tv_all.remove(&socket_pair);
+            m.tv_games.unsubscribe_socket(socket_pair);
 
             if inner_now_empty {
                 let removed = self.sessions.remove_if(&user_id, |_, s| s.is_empty());
@@ -503,9 +762,7 @@ impl WsHub {
                 user: None,
                 username: user.username,
             })));
-            if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                self.fanout_lobby(&Bytes::from(serialized), DestKind::Global);
-            }
+            self.fanout_lobby(&mut Outbound::typed(&message), DestKind::Global);
         }
     }
 
@@ -574,23 +831,44 @@ impl WsHub {
     // ─── dispatch ─────────────────────────────────────────────────────────────
 
     pub async fn dispatch(&self, dest: &MessageDestination, bytes: Bytes) {
+        self.dispatch_out(dest, &mut Outbound::encoded(bytes)).await;
+    }
+
+    pub(in crate::websocket) async fn dispatch_out(
+        &self,
+        dest: &MessageDestination,
+        out: &mut Outbound<'_>,
+    ) {
         let dest_kind = DestKind::from(dest);
         self.data.telemetry.record_dispatch(dest_kind);
 
         match dest {
             MessageDestination::Direct(socket) => {
-                self.send_via_tx(&socket.tx, DestKind::Direct, &bytes);
+                self.send_via_tx(&socket.tx, socket.format, DestKind::Direct, out);
             }
             MessageDestination::User(user_id) => {
-                self.send_to_user(user_id, DestKind::User, &bytes);
+                self.send_to_user(user_id, DestKind::User, out);
+            }
+            MessageDestination::TvSubscribers(game_id) => {
+                let sockets = {
+                    let membership = self.membership.read().unwrap_or_else(|p| p.into_inner());
+                    let mut sockets = membership.tv_all.clone();
+                    if let Some(featured) = membership.tv_games.games_sockets.get(game_id) {
+                        sockets.extend(featured.iter().copied());
+                    }
+                    sockets
+                };
+                for (user_id, socket_id) in sockets {
+                    self.send_to_socket(&user_id, &socket_id, DestKind::Global, out);
+                }
             }
             MessageDestination::Global => {
-                self.fanout_lobby(&bytes, DestKind::Global);
+                self.fanout_lobby(out, DestKind::Global);
             }
             MessageDestination::Game(game_id) => {
                 let socket_pairs = self.sockets_in_game(game_id);
                 for (uid, sid) in socket_pairs {
-                    self.send_to_socket(&uid, &sid, DestKind::Game, &bytes);
+                    self.send_to_socket(&uid, &sid, DestKind::Game, out);
                 }
             }
             MessageDestination::GameSpectators {
@@ -634,49 +912,123 @@ impl WsHub {
                     socket_pairs.retain(|(user_id, _)| user_id != white_id && user_id != black_id);
                 }
                 for (uid, sid) in socket_pairs {
-                    self.send_to_socket(&uid, &sid, DestKind::GameSpectators, &bytes);
+                    self.send_to_socket(&uid, &sid, DestKind::GameSpectators, out);
                 }
             }
             MessageDestination::Tournament {
                 tournament_id,
                 audience,
-            } => {
-                let user_ids = self
-                    .tournament_members_cached(tournament_id)
-                    .await
-                    .unwrap_or_else(|| Arc::from([]));
-                let mut socket_pairs = HashSet::new();
-                let mut extra_sender = None;
-                if let TournamentAudience::Chat { sender_id } = audience {
+            } => match audience {
+                TournamentAudience::Updates => {
+                    let socket_pairs = {
+                        let membership = self
+                            .membership
+                            .read()
+                            .unwrap_or_else(|poisoned| poisoned.into_inner());
+                        membership
+                            .tournament_watches
+                            .sockets_watching(tournament_id)
+                    };
+                    for (user_id, socket_id) in socket_pairs {
+                        self.send_to_socket(&user_id, &socket_id, DestKind::Tournament, out);
+                    }
+                }
+                TournamentAudience::ScheduleViewers => {
+                    self.send_to_schedule_viewers(tournament_id, out).await;
+                }
+                TournamentAudience::Chat { sender_id } => {
+                    let user_ids = self
+                        .tournament_members_cached(tournament_id)
+                        .await
+                        .unwrap_or_else(|| Arc::from([]));
+                    let mut socket_pairs = HashSet::new();
                     let key = ConversationKey::Tournament(tournament_id.clone());
-                    let membership = self
-                        .membership
-                        .read()
-                        .unwrap_or_else(|poisoned| poisoned.into_inner());
-                    if let Some(subscribers) = membership.chat.channels_sockets.get(&key) {
-                        socket_pairs.extend(subscribers.iter().copied());
+                    {
+                        let membership = self
+                            .membership
+                            .read()
+                            .unwrap_or_else(|poisoned| poisoned.into_inner());
+                        if let Some(subscribers) = membership.chat.channels_sockets.get(&key) {
+                            socket_pairs.extend(subscribers.iter().copied());
+                        }
                     }
-                    if !user_ids.contains(sender_id) {
-                        extra_sender = Some(*sender_id);
+                    let extra_sender = if user_ids.contains(sender_id) {
+                        None
+                    } else {
+                        Some(*sender_id)
+                    };
+                    for user_id in user_ids.iter().copied().chain(extra_sender) {
+                        if let Some(sessions) = self.sessions.get(&user_id) {
+                            socket_pairs
+                                .extend(sessions.iter().map(|socket| (user_id, *socket.key())));
+                        }
+                    }
+                    for (user_id, socket_id) in socket_pairs {
+                        self.send_to_socket(&user_id, &socket_id, DestKind::Tournament, out);
                     }
                 }
-                for user_id in user_ids.iter().copied().chain(extra_sender) {
-                    if let Some(sessions) = self.sessions.get(&user_id) {
-                        socket_pairs.extend(sessions.iter().map(|socket| (user_id, *socket.key())));
-                    }
-                }
-                for (user_id, socket_id) in socket_pairs {
-                    self.send_to_socket(&user_id, &socket_id, DestKind::Tournament, &bytes);
-                }
+            },
+        }
+    }
+
+    async fn send_to_schedule_viewers(&self, tournament_id: &TournamentId, out: &mut Outbound<'_>) {
+        let viewer_ids: HashSet<_> = {
+            let membership = self.membership.read().unwrap_or_else(|p| p.into_inner());
+            membership
+                .tournament_watches
+                .sockets_watching(tournament_id)
+                .into_iter()
+                .map(|(user_id, _)| user_id)
+                .collect()
+        };
+        if viewer_ids.is_empty() {
+            return;
+        }
+        let Ok(mut conn) = get_conn(&self.pool).await else {
+            log::error!("schedule viewer pool acquisition failed");
+            return;
+        };
+        let Ok(tournament) = Tournament::find_by_tournament_id(tournament_id, &mut conn).await
+        else {
+            log::error!("schedule viewer tournament lookup failed");
+            return;
+        };
+        let viewer_ids = viewer_ids.into_iter().collect::<Vec<_>>();
+        let authorized_ids = match tournament
+            .active_organizer_or_admin_ids(&viewer_ids, &mut conn)
+            .await
+        {
+            Ok(ids) => ids,
+            Err(error) => {
+                log::error!("schedule viewer authorization lookup failed: {error}");
+                return;
+            }
+        };
+        for user_id in authorized_ids {
+            self.send_to_tournament_viewer(tournament_id, user_id, out);
+        }
+    }
+
+    fn send_to_tournament_viewer(
+        &self,
+        tournament_id: &TournamentId,
+        user_id: Uuid,
+        out: &mut Outbound<'_>,
+    ) {
+        // Authorization awaits the database; the socket may have changed routes meanwhile.
+        let membership = self.membership.read().unwrap_or_else(|p| p.into_inner());
+        for (viewer_id, socket_id) in membership
+            .tournament_watches
+            .sockets_watching(tournament_id)
+        {
+            if viewer_id == user_id {
+                self.send_to_socket(&viewer_id, &socket_id, DestKind::Tournament, out);
             }
         }
     }
 
-    /// Dispatch a `Reaction` to both players plus all spectators with a
-    /// single msgpack serialization. `Bytes::clone` on the three fanouts is
-    /// a refcount bump, so the wire payload is allocated exactly once per
-    /// reaction — vs. three full clones + three serializations under the
-    /// old `reaction_messages` path.
+    /// Dispatch a `Reaction` to both players plus all spectators. One `Outbound` spans the
+    /// three fanouts, so each wire format is serialized at most once per reaction.
     pub async fn dispatch_reaction(&self, reaction: super::messages::Reaction) {
         let super::messages::Reaction {
             game_id,
@@ -686,66 +1038,301 @@ impl WsHub {
         } = reaction;
         let payload = ServerMessage::Game(Box::new(GameUpdate::Reaction(gar)));
         let result = ServerResult::Ok(Box::new(payload));
-        let Ok(serialized) = MsgpackSerdeCodec::encode(&result) else {
-            return;
-        };
-        let bytes = Bytes::from(serialized);
-        // Send to both players (every tab gets the update) and to anyone
-        // spectating who isn't a player. Bytes::clone is O(1).
-        self.dispatch(&MessageDestination::User(white_id), bytes.clone())
+        let mut out = Outbound::typed(&result);
+        self.dispatch_out(&MessageDestination::User(white_id), &mut out)
             .await;
-        self.dispatch(&MessageDestination::User(black_id), bytes.clone())
+        self.dispatch_out(&MessageDestination::User(black_id), &mut out)
             .await;
-        self.dispatch(
+        self.dispatch_out(
             &MessageDestination::GameSpectators {
                 game_id,
                 white_id,
                 black_id,
                 audience: GameSpectatorAudience::GameViewers,
             },
-            bytes,
+            &mut out,
         )
         .await;
     }
 
-    /// Broadcasts TimedOut and finalizes a timed-out game. Shared by the sweeper
-    /// (no-viewer) and heartbeat (active-viewer) paths so neither duplicates it.
-    /// Loser is `current_player_id` — the side whose clock ran out.
-    pub async fn broadcast_timeout_finalize(
-        &self,
-        conn: &mut DbConn<'_>,
-        finalized: &Game,
-    ) -> anyhow::Result<()> {
-        let game_id = GameId(finalized.nanoid.clone());
-        let game_response = self.data.get_or_build_response(finalized, conn).await?;
-        let loser = User::find_by_uuid(&finalized.current_player_id, conn).await?;
-        let reaction = super::messages::Reaction {
-            game_id: game_id.clone(),
-            white_id: finalized.white_id,
-            black_id: finalized.black_id,
-            gar: crate::common::GameActionResponse {
-                game_action: crate::common::GameReaction::TimedOut,
-                game: (*game_response).clone(),
-                game_id: game_id.clone(),
-                user_id: finalized.current_player_id,
-                username: loser.username,
+    pub(crate) async fn dispatch_message(&self, message: InternalServerMessage) {
+        if let (
+            MessageDestination::Tournament {
+                tournament_id,
+                audience: TournamentAudience::Updates,
             },
-        };
-        self.dispatch_reaction(reaction).await;
-        if game_response.time_mode == TimeMode::RealTime && self.should_send_tv(&game_id, true) {
-            self.data.telemetry.inc_tv_broadcast();
-            let payload = ServerMessage::Game(Box::new(GameUpdate::Tv((*game_response).clone())));
-            let result = ServerResult::Ok(Box::new(payload));
-            if let Ok(serialized) = MsgpackSerdeCodec::encode(&result) {
-                self.dispatch(&MessageDestination::Global, Bytes::from(serialized))
+            ServerMessage::Tournament(TournamentUpdate::Patch { patch, .. }),
+        ) = (&message.destination, &message.message)
+        {
+            if let TournamentPatch::MembershipsReplace(memberships) = patch.as_ref() {
+                self.dispatch_tournament_memberships(tournament_id, memberships)
                     .await;
+                return;
             }
         }
-        if let Err(e) = notify_game_ended(finalized, GameEndReason::Timeout, conn).await {
-            error!("notify game ended (timeout) {}: {e}", finalized.nanoid);
+        let result = ServerResult::Ok(Box::new(message.message));
+        self.dispatch_out(&message.destination, &mut Outbound::typed(&result))
+            .await;
+    }
+
+    async fn dispatch_tournament_memberships(
+        &self,
+        tournament_id: &TournamentId,
+        memberships: &TournamentMemberships,
+    ) {
+        let viewer_ids: HashSet<_> = {
+            let membership = self
+                .membership
+                .read()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            membership
+                .tournament_watches
+                .sockets_watching(tournament_id)
+                .into_iter()
+                .map(|(user_id, _)| user_id)
+                .collect()
+        };
+        if viewer_ids.is_empty() {
+            return;
         }
-        self.finalize_game(&game_id, finalized.white_id, finalized.black_id);
-        Ok(())
+        let administrators: HashSet<_> = match get_conn(&self.pool).await {
+            Ok(mut conn) => match User::find_by_uuids(
+                &viewer_ids.iter().copied().collect::<Vec<_>>(),
+                &mut conn,
+            )
+            .await
+            {
+                Ok(users) => users
+                    .into_iter()
+                    .filter(|user| user.admin && !user.deleted)
+                    .map(|user| user.id)
+                    .collect(),
+                Err(error) => {
+                    log::error!("Tournament {tournament_id} administrator lookup failed: {error}");
+                    HashSet::new()
+                }
+            },
+            Err(error) => {
+                log::error!("Tournament {tournament_id} administrator connection failed: {error}");
+                HashSet::new()
+            }
+        };
+        for user_id in viewer_ids {
+            let filtered = memberships
+                .clone()
+                .for_viewer(Some(user_id), administrators.contains(&user_id));
+            let message = ServerResult::Ok(Box::new(ServerMessage::Tournament(
+                TournamentUpdate::Patch {
+                    tournament_id: tournament_id.clone(),
+                    patch: Box::new(TournamentPatch::MembershipsReplace(filtered)),
+                },
+            )));
+            self.send_to_tournament_viewer(tournament_id, user_id, &mut Outbound::typed(&message));
+        }
+    }
+
+    async fn watched_game_tournaments(
+        &self,
+        recipients: &HashSet<Uuid>,
+    ) -> HashSet<(Uuid, TournamentId)> {
+        use diesel_async::RunQueryDsl;
+        if recipients.is_empty() {
+            return HashSet::new();
+        }
+        let watched: Vec<_> = {
+            let membership = self
+                .membership
+                .read()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            membership
+                .fanout
+                .sockets_games
+                .iter()
+                .filter(|((user_id, _), _)| recipients.contains(user_id))
+                .flat_map(|((user_id, _), games)| {
+                    games
+                        .iter()
+                        .filter(|game_id| game_id.0 != LOBBY_GAME_ID)
+                        .map(|game_id| (*user_id, game_id.clone()))
+                })
+                .collect()
+        };
+        if watched.is_empty() {
+            return HashSet::new();
+        }
+        let ids: HashSet<_> = watched
+            .iter()
+            .map(|(_, game_id)| game_id.0.clone())
+            .collect();
+        let result = async {
+            let mut conn = get_conn(&self.pool).await?;
+            games::table
+                .inner_join(
+                    tournaments::table.on(games::tournament_id.eq(tournaments::id.nullable())),
+                )
+                .filter(games::nanoid.eq_any(ids))
+                .select((games::nanoid, tournaments::nanoid))
+                .load::<(String, String)>(&mut conn)
+                .await
+                .map_err(DbError::from)
+        }
+        .await;
+        let tournaments = match result {
+            Ok(tournaments) => tournaments.into_iter().collect::<HashMap<_, _>>(),
+            Err(error) => {
+                log::error!("Pairing notification game-presence lookup failed: {error}");
+                return HashSet::new();
+            }
+        };
+        watched
+            .into_iter()
+            .filter_map(|(user_id, game_id)| {
+                tournaments
+                    .get(&game_id.0)
+                    .map(|tournament| (user_id, TournamentId(tournament.clone())))
+            })
+            .collect()
+    }
+
+    fn user_watching_tournament(&self, user_id: Uuid, tournament_id: &TournamentId) -> bool {
+        let membership = self.membership.read().unwrap_or_else(|p| p.into_inner());
+        self.sessions.get(&user_id).is_some_and(|sockets| {
+            sockets.iter().any(|socket| {
+                membership
+                    .tournament_watches
+                    .contains(user_id, *socket.key(), tournament_id)
+            })
+        })
+    }
+
+    async fn notify_released_tournament_games(&self, messages: &[InternalServerMessage]) {
+        let arena_recipients = {
+            messages
+                .iter()
+                .filter_map(|message| {
+                    let (MessageDestination::User(recipient), ServerMessage::Game(update)) =
+                        (&message.destination, &message.message)
+                    else {
+                        return None;
+                    };
+                    let GameUpdate::Reaction(response) = update.as_ref() else {
+                        return None;
+                    };
+                    let tournament = response.game.tournament.as_ref()?;
+                    (matches!(response.game_action, GameReaction::New { .. })
+                        && tournament.format == Format::Arena
+                        && !self.user_watching_tournament(*recipient, &tournament.tournament_id))
+                    .then_some(*recipient)
+                })
+                .collect::<HashSet<_>>()
+        };
+        let at_game = self.watched_game_tournaments(&arena_recipients).await;
+
+        let mut groups = HashMap::<
+            (Uuid, TournamentId),
+            (String, Vec<(GameId, TournamentPairingLabel, String)>),
+        >::new();
+        for message in messages {
+            let (MessageDestination::User(recipient), ServerMessage::Game(update)) =
+                (&message.destination, &message.message)
+            else {
+                continue;
+            };
+            let GameUpdate::Reaction(response) = update.as_ref() else {
+                continue;
+            };
+            let GameReaction::New { pairing_label } = &response.game_action else {
+                continue;
+            };
+            let Some(tournament) = &response.game.tournament else {
+                continue;
+            };
+            if tournament.format == Format::Arena {
+                // The player can return to the Arena during the game-presence lookup.
+                let at_arena = self.user_watching_tournament(*recipient, &tournament.tournament_id);
+                if at_arena || at_game.contains(&(*recipient, tournament.tournament_id.clone())) {
+                    continue;
+                }
+            }
+            let opponent = if response.game.white_player.uid == *recipient {
+                &response.game.black_player
+            } else {
+                &response.game.white_player
+            };
+            let group = groups
+                .entry((*recipient, tournament.tournament_id.clone()))
+                .or_insert_with(|| (tournament.name.clone(), Vec::new()));
+            if group
+                .1
+                .iter()
+                .any(|(game_id, _, _)| game_id == &response.game_id)
+            {
+                continue;
+            }
+            group.1.push((
+                response.game_id.clone(),
+                pairing_label
+                    .clone()
+                    .unwrap_or(TournamentPairingLabel::NewGame),
+                opponent.username.clone(),
+            ));
+        }
+        for ((recipient, tournament_id), (tournament_name, games)) in groups {
+            if games.len() == 1 {
+                notify(Event::TournamentPairing {
+                    recipient,
+                    tournament_name,
+                    game_nanoid: games[0].0 .0.clone(),
+                    pairing_label: games[0].1.clone(),
+                    opponent: games[0].2.clone(),
+                });
+            } else {
+                notify(Event::TournamentNotice {
+                    recipient,
+                    tournament_name,
+                    tournament_nanoid: tournament_id.0,
+                    description: TournamentNotice::GamesReady(games.len()),
+                    category: NotificationCategory::Tournament,
+                });
+            }
+        }
+    }
+
+    pub async fn dispatch_handler_output(&self, output: HandlerOutput) {
+        self.notify_released_tournament_games(&output.messages)
+            .await;
+        // Publish the authoritative Game change before projections derived from
+        // that commit, such as fixed-field Slot or Arena standings patches.
+        for reaction in output.reactions {
+            self.dispatch_reaction(reaction).await;
+        }
+        for update in output.tv_updates {
+            if update.game.time_mode == TimeMode::RealTime
+                && self.should_send_tv(&update.game_id, update.final_state)
+            {
+                if !self.has_tv_subscribers(&update.game_id) {
+                    continue;
+                }
+                self.data.telemetry.inc_tv_broadcast();
+                self.dispatch_message(InternalServerMessage {
+                    destination: MessageDestination::TvSubscribers(update.game_id),
+                    message: ServerMessage::Game(Box::new(GameUpdate::Tv(update.game))),
+                })
+                .await;
+            }
+        }
+        for message in output.messages {
+            self.dispatch_message(message).await;
+        }
+        for retry in output.terminal_game_retries {
+            self.record_deleted_game_retry(retry);
+        }
+        for (user_id, tournament_id) in output.tournament_chat_revocations {
+            self.unsubscribe_user_from_tournament_chat(user_id, &tournament_id);
+        }
+        for finalize in output.finalize_games {
+            self.finalize_game(&finalize.game_id, finalize.white_id, finalize.black_id);
+        }
     }
 
     /// Drop a cached tournament-members entry after a membership mutation.
@@ -769,7 +1356,7 @@ impl WsHub {
                 return None;
             }
         };
-        let tournament = Tournament::from_nanoid(&tournament_id.to_string(), &mut conn)
+        let tournament = Tournament::find_by_tournament_id(tournament_id, &mut conn)
             .await
             .ok()?;
         let mut user_ids = HashSet::new();
@@ -799,9 +1386,7 @@ impl WsHub {
                 nonce,
                 value: self.data.pings.value(user_id),
             }));
-            if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                self.send_to_user(&user_id, DestKind::User, &Bytes::from(serialized));
-            }
+            self.send_to_user(&user_id, DestKind::User, &mut Outbound::typed(&message));
         }
     }
 
@@ -840,14 +1425,37 @@ impl WsHub {
             return;
         };
         let game_ids: Vec<GameId> = games.iter().map(|(gid, _)| gid.clone()).collect();
-        let fetched = match Game::find_by_nanoids(&game_ids, &mut conn).await {
+        let fetched = match GameHeartbeat::find_by_nanoids(&game_ids, &mut conn).await {
             Ok(v) => v,
             Err(_) => return,
         };
-        let mut by_nanoid: HashMap<GameId, Game> = fetched
-            .into_iter()
-            .map(|g| (GameId(g.nanoid.clone()), g))
-            .collect();
+        let mut by_nanoid = HashMap::with_capacity(fetched.len());
+        let observed_at = Utc::now();
+        for observed in fetched {
+            let deadline_due = !observed.finished
+                && (observed
+                    .arena_move_due_at
+                    .is_some_and(|deadline| observed_at >= deadline)
+                    || observed
+                        .timeout_at
+                        .is_some_and(|deadline| observed_at >= deadline));
+            let game = if deadline_due {
+                match settle_deadline(observed.id, self.data.as_ref(), &mut conn).await {
+                    Ok(projected) => {
+                        let game = GameHeartbeat::from(&projected.game);
+                        self.dispatch_handler_output(projected.output).await;
+                        game
+                    }
+                    Err(error) => {
+                        error!("game_heartbeat deadline check {}: {error}", observed.nanoid);
+                        observed
+                    }
+                }
+            } else {
+                observed
+            };
+            by_nanoid.insert(GameId(game.nanoid.clone()), game);
+        }
 
         for (game_id, socket_pairs) in games {
             let Some(game) = by_nanoid.remove(&game_id) else {
@@ -856,7 +1464,23 @@ impl WsHub {
                 // give the dispatcher the same grace normal finished rows get
                 // before evicting membership.
                 if let Some(pending) = self.pending_deleted_game(&game_id) {
-                    if pending.marked_at.elapsed() < FINISHED_GAME_GRACE {
+                    if pending.marked_at.elapsed() >= PENDING_DELETED_GAME_MAX_AGE {
+                        if self.is_game_in_heartbeat(&game_id) {
+                            self.finalize_game(&game_id, pending.white_id, pending.black_id);
+                        }
+                        continue;
+                    }
+                    if pending.retry_at.elapsed() < FINISHED_GAME_GRACE {
+                        continue;
+                    }
+                    if let Some(retry) = pending.retry {
+                        let output = retry_deleted_terminal_game_projection(
+                            self.data.as_ref(),
+                            &retry,
+                            &mut conn,
+                        )
+                        .await;
+                        self.dispatch_handler_output(output).await;
                         continue;
                     }
                     // Re-check membership: dispatcher's post-dispatch hook may
@@ -894,17 +1518,26 @@ impl WsHub {
                     // where the dispatcher's hook ran between our snapshot
                     // and this iteration's `finalize_game` call.
                     //
-                    // If the heartbeat itself finalized this timeout, no
-                    // dispatcher hook will broadcast it — players and spectators
-                    // would see a frozen clock. Broadcast it here instead.
-                    if game.conclusion == Conclusion::Timeout.to_string() {
-                        if let Err(e) = self.broadcast_timeout_finalize(&mut conn, &game).await {
-                            error!("game_heartbeat timeout broadcast {}: {e}", game.nanoid);
-                        }
-                        // Already finalized above; skip the finalize_game below.
+                    // A handler may commit the terminal row but fail to build
+                    // its response. Re-project before finalization so players
+                    // and spectators cannot lose the only terminal update.
+                    let Ok(game) = Game::find_by_game_id(&game_id, &mut conn).await else {
                         continue;
-                    }
-                    self.finalize_game(&game_id, game.white_id, game.black_id);
+                    };
+                    let projected = project_committed_game(
+                        GameProjectionInput::Committed {
+                            game: game.clone(),
+                            newly_terminal: true,
+                        },
+                        GameCommandContext::websocket_actor(
+                            GameReaction::Finished,
+                            game.current_player_id,
+                        ),
+                        self.data.as_ref(),
+                        &mut conn,
+                    )
+                    .await;
+                    self.dispatch_handler_output(projected.output).await;
                 }
                 continue;
             }
@@ -913,10 +1546,14 @@ impl WsHub {
                 // finished-row safety net can still finalize orphan paths.
                 continue;
             }
-            if game.game_status == GameStatus::NotStarted.to_string() {
-                // Timer hasn't started yet (real-time: waiting for black's first
-                // move). Keep heartbeat membership so this game is picked up
-                // once it starts or if it is finalized by another path.
+            if game.game_status == GameStatus::NotStarted.to_string()
+                || (game.game_start == GameStart::Arena.to_string()
+                    && game.arena_move_due_at.is_some())
+            {
+                // The ordinary timer has not started. Arena's first two moves
+                // use their separate opening deadline while both clocks stay
+                // held. Keep heartbeat membership so deadlines are still
+                // settled and post-opening clocks begin reporting normally.
                 continue;
             }
             let Ok((id, white, black)) = game.get_heartbeat() else {
@@ -930,12 +1567,9 @@ impl WsHub {
             let message = ServerResult::Ok(Box::new(ServerMessage::Game(Box::new(
                 GameUpdate::Heartbeat(hb),
             ))));
-            let Ok(serialized) = MsgpackSerdeCodec::encode(&message) else {
-                continue;
-            };
-            let bytes = Bytes::from(serialized);
+            let mut out = Outbound::typed(&message);
             for (user_id, socket_id) in socket_pairs {
-                self.send_to_socket(&user_id, &socket_id, DestKind::Game, &bytes);
+                self.send_to_socket(&user_id, &socket_id, DestKind::Game, &mut out);
             }
         }
     }
@@ -947,7 +1581,16 @@ impl WsHub {
     /// of cleanup, and reaping here would orphan a still-live socket whose
     /// queue is just temporarily full. The bounded queue prevents OOM;
     /// the message itself is dropped on Full/Closed.
-    fn send_via_tx(&self, tx: &mpsc::Sender<Bytes>, dest: DestKind, bytes: &Bytes) -> SendOutcome {
+    fn send_via_tx(
+        &self,
+        tx: &mpsc::Sender<Bytes>,
+        format: SocketFormat,
+        dest: DestKind,
+        out: &mut Outbound<'_>,
+    ) -> SendOutcome {
+        let Some(bytes) = out.bytes(format) else {
+            return SendOutcome::Closed;
+        };
         let outcome = match tx.try_send(bytes.clone()) {
             Ok(_) => SendOutcome::Ok,
             Err(mpsc::error::TrySendError::Full(_)) => SendOutcome::Full,
@@ -969,14 +1612,18 @@ impl WsHub {
     pub(in crate::websocket) fn send_own_state_via_tx(
         &self,
         tx: &mpsc::Sender<Bytes>,
-        bytes: &Bytes,
+        format: SocketFormat,
+        out: &mut Outbound<'_>,
     ) {
-        if !matches!(self.send_via_tx(tx, DestKind::User, bytes), SendOutcome::Ok) {
+        if !matches!(
+            self.send_via_tx(tx, format, DestKind::User, out),
+            SendOutcome::Ok
+        ) {
             self.data.telemetry.inc_own_state_drop();
         }
     }
 
-    fn send_to_user(&self, user_id: &Uuid, dest: DestKind, bytes: &Bytes) {
+    fn send_to_user(&self, user_id: &Uuid, dest: DestKind, out: &mut Outbound<'_>) {
         if self.is_user_revoked(*user_id) {
             return;
         }
@@ -984,29 +1631,36 @@ impl WsHub {
             return;
         };
         for entry in sockets.iter() {
-            self.send_via_tx(entry.value(), dest, bytes);
+            let handle = entry.value();
+            self.send_via_tx(&handle.tx, handle.format, dest, out);
         }
     }
 
     /// Send to one specific socket. Used for game-scoped dispatch where only the
     /// subscribed socket (not all of the user's tabs) should receive the message.
-    fn send_to_socket(&self, user_id: &Uuid, socket_id: &Uuid, dest: DestKind, bytes: &Bytes) {
+    fn send_to_socket(
+        &self,
+        user_id: &Uuid,
+        socket_id: &Uuid,
+        dest: DestKind,
+        out: &mut Outbound<'_>,
+    ) {
         if self.is_user_revoked(*user_id) {
             return;
         }
         let Some(sockets) = self.sessions.get(user_id) else {
             return;
         };
-        let Some(tx) = sockets.get(socket_id) else {
+        let Some(handle) = sockets.get(socket_id) else {
             return;
         };
-        self.send_via_tx(&tx, dest, bytes);
+        self.send_via_tx(&handle.tx, handle.format, dest, out);
     }
 
-    fn fanout_lobby(&self, bytes: &Bytes, dest: DestKind) {
+    fn fanout_lobby(&self, out: &mut Outbound<'_>, dest: DestKind) {
         let socket_pairs = self.sockets_in_game(&Self::lobby());
         for (uid, sid) in socket_pairs {
-            self.send_to_socket(&uid, &sid, dest, bytes);
+            self.send_to_socket(&uid, &sid, dest, out);
         }
     }
 
@@ -1048,6 +1702,30 @@ impl WsHub {
         self.refresh_membership_gauges();
     }
 
+    /// A cleared tournament adjudication reopens the same game row.
+    /// Restore heartbeat membership for sockets that still have its game view
+    /// open; ordinary finalization intentionally retained their fanout entry.
+    pub(crate) fn restore_game_heartbeat_for_viewers(&self, game_id: &GameId) {
+        let changed = {
+            let mut membership = self.membership.write().unwrap_or_else(|p| p.into_inner());
+            let sockets = membership.fanout.sockets_in_game(game_id);
+            let mut changed = false;
+            for (user_id, socket_id) in sockets {
+                if !membership
+                    .heartbeat
+                    .contains_socket(user_id, socket_id, game_id)
+                {
+                    membership.heartbeat.subscribe(user_id, socket_id, game_id);
+                    changed = true;
+                }
+            }
+            changed
+        };
+        if changed {
+            self.refresh_membership_gauges();
+        }
+    }
+
     /// Remove the specific socket from both fanout and heartbeat membership.
     pub fn unsubscribe_game(&self, user_id: Uuid, socket_id: Uuid, game_id: &GameId) {
         if game_id.0.as_str() == LOBBY_GAME_ID {
@@ -1061,6 +1739,100 @@ impl WsHub {
         self.refresh_membership_gauges();
     }
 
+    pub fn subscribe_tv(&self, user_id: Uuid, socket_id: Uuid, interest: &TvInterest) -> bool {
+        let mut membership = self.membership.write().unwrap_or_else(|p| p.into_inner());
+        if !self.is_socket_connected(user_id, socket_id) {
+            return false;
+        }
+        match interest {
+            TvInterest::None => return false,
+            TvInterest::Game(game_id) => {
+                if game_id.0.is_empty() || game_id.0.len() > MAX_TV_GAME_ID_BYTES {
+                    return false;
+                }
+                if membership
+                    .tv_games
+                    .sockets_games
+                    .get(&(user_id, socket_id))
+                    .is_some_and(|games| {
+                        games.len() >= MAX_TV_GAMES_PER_SOCKET && !games.contains(game_id)
+                    })
+                {
+                    return false;
+                }
+                membership.tv_games.subscribe(user_id, socket_id, game_id);
+            }
+            TvInterest::Lobby => {
+                membership.tv_all.insert((user_id, socket_id));
+            }
+        }
+        true
+    }
+
+    pub(in crate::websocket) fn allow_tv_snapshot(&self, socket_id: Uuid) -> bool {
+        use dashmap::mapref::entry::Entry;
+        let now = Instant::now();
+        match self.last_tv_snapshot.entry(socket_id) {
+            Entry::Vacant(entry) => {
+                entry.insert(now);
+                true
+            }
+            Entry::Occupied(mut entry) => {
+                if now.duration_since(*entry.get()) < TV_SNAPSHOT_COOLDOWN {
+                    return false;
+                }
+                entry.insert(now);
+                true
+            }
+        }
+    }
+
+    pub(in crate::websocket) fn try_tv_snapshot_permit(&self) -> Option<OwnedSemaphorePermit> {
+        // Optional previews share the loader budget without queuing behind a connect burst.
+        Arc::clone(&self.loader_permits).try_acquire_owned().ok()
+    }
+
+    fn has_tv_subscribers(&self, game_id: &GameId) -> bool {
+        let membership = self.membership.read().unwrap_or_else(|p| p.into_inner());
+        !membership.tv_all.is_empty() || membership.tv_games.games_sockets.contains_key(game_id)
+    }
+
+    pub fn unsubscribe_tv(&self, user_id: Uuid, socket_id: Uuid, interest: &TvInterest) {
+        let mut membership = self.membership.write().unwrap_or_else(|p| p.into_inner());
+        match interest {
+            TvInterest::None => {}
+            TvInterest::Game(game_id) => {
+                membership.tv_games.unsubscribe(user_id, socket_id, game_id)
+            }
+            TvInterest::Lobby => {
+                membership.tv_all.remove(&(user_id, socket_id));
+            }
+        }
+    }
+
+    pub(in crate::websocket) fn tv_snapshot_ids(
+        &self,
+        user_id: Uuid,
+        socket_id: Uuid,
+    ) -> Vec<GameId> {
+        let membership = self.membership.read().unwrap_or_else(|p| p.into_inner());
+        let socket = (user_id, socket_id);
+        let mut ids = membership
+            .tv_games
+            .sockets_games
+            .get(&socket)
+            .cloned()
+            .unwrap_or_default();
+        if membership.tv_all.contains(&socket) {
+            ids.extend(
+                self.last_tv_broadcast
+                    .iter()
+                    .map(|entry| entry.key().clone()),
+            );
+        }
+        ids.into_iter().collect()
+    }
+
     pub fn subscribe_chat(&self, user_id: Uuid, socket_id: Uuid, key: &ConversationKey) {
         let mut m = self.membership.write().unwrap_or_else(|p| p.into_inner());
         m.chat.subscribe(user_id, socket_id, key);
@@ -1069,6 +1841,36 @@ impl WsHub {
     pub fn unsubscribe_chat(&self, user_id: Uuid, socket_id: Uuid, key: &ConversationKey) {
         let mut m = self.membership.write().unwrap_or_else(|p| p.into_inner());
         m.chat.unsubscribe(user_id, socket_id, key);
+    }
+
+    pub(in crate::websocket) fn watch_tournament(
+        &self,
+        user_id: Uuid,
+        socket_id: Uuid,
+        tournament_id: &TournamentId,
+    ) {
+        let mut membership = self
+            .membership
+            .write()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        membership
+            .tournament_watches
+            .watch(user_id, socket_id, tournament_id);
+    }
+
+    pub(in crate::websocket) fn unwatch_tournament(
+        &self,
+        user_id: Uuid,
+        socket_id: Uuid,
+        tournament_id: &TournamentId,
+    ) {
+        let mut membership = self
+            .membership
+            .write()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        membership
+            .tournament_watches
+            .unwatch(user_id, socket_id, tournament_id);
     }
 
     pub fn unsubscribe_user_from_tournament_chat(
@@ -1134,10 +1936,20 @@ impl WsHub {
             game_id,
             PendingDeletedGame {
                 marked_at: Instant::now(),
+                retry_at: Instant::now(),
                 white_id,
                 black_id,
+                retry: None,
             },
         );
+    }
+
+    fn record_deleted_game_retry(&self, retry: TerminalGameRetry) {
+        let game_id = GameId(retry.game.nanoid.clone());
+        if let Some(mut pending) = self.pending_deleted_games.get_mut(&game_id) {
+            pending.retry_at = Instant::now();
+            pending.retry = Some(retry);
+        }
     }
 
     pub(crate) fn clear_deleted_game_pending(&self, game_id: &GameId) {
@@ -1164,16 +1976,11 @@ impl WsHub {
     fn pending_deleted_game(&self, game_id: &GameId) -> Option<PendingDeletedGame> {
         self.pending_deleted_games
             .get(game_id)
-            .map(|pending| *pending.value())
+            .map(|pending| pending.value().clone())
     }
 
-    /// Clean up all per-game state keyed on `GameId` except membership.
-    ///
-    /// Handlers return `GameFinalize` values alongside their message list;
-    /// `ws_connection` dispatches first, then calls `finalize_game`.
-    /// Membership eviction must NOT happen here because dispatch(Game) reads
-    /// fanout membership to find subscribers. `finalize_game` is the wrapper
-    /// that runs this + heartbeat eviction + counter.
+    /// Keep game fanout membership after the final update so spectators can
+    /// continue chatting in already-open finished-game tabs.
     pub fn on_game_finished(&self, game_id: &GameId, white_id: Uuid, black_id: Uuid) {
         self.data
             .lags
@@ -1183,8 +1990,13 @@ impl WsHub {
             games_date.remove(game_id);
         }
 
-        self.data.game_response_cache.remove(game_id);
+        self.data.invalidate_game_response(game_id);
         self.last_tv_broadcast.remove(game_id);
+        self.membership
+            .write()
+            .unwrap_or_else(|p| p.into_inner())
+            .tv_games
+            .evict_game(game_id);
 
         // games_finalized_total is bumped by `finalize_game`, not here, so
         // tests that exercise on_game_finished standalone don't double-count.
@@ -1195,7 +2007,7 @@ impl WsHub {
     /// membership stays in place so already-open finished-game tabs keep
     /// receiving spectator chat and other game-surface messages.
     pub fn finalize_game(&self, game_id: &GameId, white_id: Uuid, black_id: Uuid) {
-        if self.pending_deleted_game(game_id).is_some() {
+        if self.pending_deleted_games.contains_key(game_id) {
             self.finalize_deleted_game(game_id, white_id, black_id);
             return;
         }
@@ -1251,19 +2063,44 @@ impl WsHub {
             .is_some_and(|sockets| sockets.contains_key(&socket_id))
     }
 
+    /// The registered socket, carrying the format negotiated at connect.
+    fn socket_tx(&self, user_id: Uuid, socket_id: Uuid) -> Option<SocketTx> {
+        self.sessions.get(&user_id).and_then(|sockets| {
+            sockets.get(&socket_id).map(|handle| SocketTx {
+                socket_id,
+                format: handle.format,
+                tx: handle.tx.clone(),
+            })
+        })
+    }
+
     // ─── test helpers ─────────────────────────────────────────────────────────
 
     /// Register a socket directly without triggering the async state load.
     /// Returns the receiver for the socket's outbound channel.
     #[cfg(test)]
     fn register_socket(&self, user_id: Uuid, socket_id: Uuid) -> mpsc::Receiver<Bytes> {
+        self.register_socket_as(user_id, socket_id, SocketFormat::Msgpack)
+    }
+
+    #[cfg(test)]
+    fn register_socket_as(
+        &self,
+        user_id: Uuid,
+        socket_id: Uuid,
+        format: SocketFormat,
+    ) -> mpsc::Receiver<Bytes> {
         let (tx, rx) = mpsc::channel(SOCKET_BUFFER_CAPACITY);
         let lobby = Self::lobby();
         let mut m = self.membership.write().unwrap_or_else(|p| p.into_inner());
-        self.sessions
-            .entry(user_id)
-            .or_default()
-            .insert(socket_id, tx);
+        self.sessions.entry(user_id).or_default().insert(
+            socket_id,
+            SocketHandle {
+                tx,
+                format,
+                bot: false,
+            },
+        );
         m.fanout
             .games_sockets
             .entry(lobby.clone())
@@ -1275,6 +2112,22 @@ impl WsHub {
             .or_default()
             .insert(lobby);
         rx
+    }
+
+    #[cfg(test)]
+    pub(in crate::websocket) fn has_tournament_watch(
+        &self,
+        user_id: Uuid,
+        socket_id: Uuid,
+        tournament_id: &TournamentId,
+    ) -> bool {
+        let membership = self
+            .membership
+            .read()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        membership
+            .tournament_watches
+            .contains(user_id, socket_id, tournament_id)
     }
 
     /// Subscribe an already-registered socket to game fanout.
@@ -1320,12 +2173,13 @@ impl WsHub {
 
     async fn load_user_state(
         &self,
-        socket_id: Uuid,
+        socket: SocketTx,
         user: SimpleUser,
-        tx: mpsc::Sender<Bytes>,
         broadcast_online: bool,
+        snapshot_guard: Option<LobbySnapshotGuard>,
     ) {
         let user_id = user.user_id;
+        let socket_id = socket.socket_id;
         let Ok(mut conn) = get_conn(&self.pool).await else {
             return;
         };
@@ -1369,9 +2223,7 @@ impl WsHub {
                                     user: Some(user_response),
                                     username: user.username.clone(),
                                 })));
-                            if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                                self.fanout_lobby(&Bytes::from(serialized), DestKind::Global);
-                            }
+                            self.fanout_lobby(&mut Outbound::typed(&message), DestKind::Global);
                         }
                     }
                     Some(user_model)
@@ -1385,9 +2237,10 @@ impl WsHub {
             None
         };
 
-        let socket = SocketTx { socket_id, tx };
-        self.send_lobby_snapshot(&mut conn, user_id, &socket, user_model.as_ref())
-            .await;
+        if snapshot_guard.is_some() {
+            self.send_lobby_snapshot(&mut conn, user_id, &socket, user_model.as_ref())
+                .await;
+        }
     }
 }
 
@@ -1397,7 +2250,8 @@ mod tests {
         super::messages::{GameFinalize, SocketTx},
         *,
     };
-    use crate::websocket::WsTelemetry;
+    use crate::websocket::{test_db::test_db, WsTelemetry};
+    use codee::{binary::MsgpackSerdeCodec, Encoder};
 
     async fn make_hub() -> Arc<WsHub> {
         // bb8 builds the pool struct without making DB connections (min_idle = 0 by default).
@@ -1425,6 +2279,137 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn tv_delivery_is_per_socket_and_deduplicates_overlapping_interest() {
+        let hub = make_hub().await;
+        let user = Uuid::new_v4();
+        let lobby_socket = Uuid::new_v4();
+        let featured_socket = Uuid::new_v4();
+        let other_socket = Uuid::new_v4();
+        let mut lobby = hub.register_socket(user, lobby_socket);
+        let mut featured = hub.register_socket_as(user, featured_socket, SocketFormat::Json);
+        let mut other = hub.register_socket(user, other_socket);
+        let game = GameId("featured".to_string());
+        hub.subscribe_tv(user, lobby_socket, &TvInterest::Lobby);
+        hub.subscribe_tv(user, lobby_socket, &TvInterest::Game(game.clone()));
+        hub.subscribe_tv(user, featured_socket, &TvInterest::Game(game.clone()));
+        hub.subscribe_tv(
+            user,
+            other_socket,
+            &TvInterest::Game(GameId("other".to_string())),
+        );
+
+        let message = ServerMessage::Error("tv".to_string());
+        let expected = ServerResult::Ok(Box::new(message.clone()));
+        hub.dispatch_message(InternalServerMessage {
+            destination: MessageDestination::TvSubscribers(game.clone()),
+            message,
+        })
+        .await;
+        assert_eq!(
+            lobby.try_recv().unwrap().as_ref(),
+            MsgpackSerdeCodec::encode(&expected).unwrap()
+        );
+        assert_eq!(
+            featured.try_recv().unwrap().as_ref(),
+            serde_json::to_vec(&expected).unwrap()
+        );
+        assert!(lobby.try_recv().is_err());
+        assert!(featured.try_recv().is_err());
+        assert!(other.try_recv().is_err());
+
+        hub.unsubscribe_tv(user, lobby_socket, &TvInterest::Lobby);
+        hub.unsubscribe_tv(user, lobby_socket, &TvInterest::Game(game.clone()));
+        hub.dispatch_message(InternalServerMessage {
+            destination: MessageDestination::TvSubscribers(game),
+            message: ServerMessage::Error("next".to_string()),
+        })
+        .await;
+        assert!(lobby.try_recv().is_err());
+        assert_eq!(
+            featured.try_recv().unwrap().as_ref(),
+            serde_json::to_vec(&ServerResult::Ok(Box::new(ServerMessage::Error(
+                "next".to_string()
+            ))))
+            .unwrap()
+        );
+        assert!(other.try_recv().is_err());
+    }
+
+    #[tokio::test]
+    async fn tv_subscription_memory_is_bounded_and_released() {
+        let hub = make_hub().await;
+        let user = Uuid::new_v4();
+        let socket = Uuid::new_v4();
+        let _receiver = hub.register_socket(user, socket);
+        for index in 0..MAX_TV_GAMES_PER_SOCKET {
+            assert!(hub.subscribe_tv(user, socket, &TvInterest::Game(GameId(index.to_string()))));
+        }
+        assert!(!hub.subscribe_tv(
+            user,
+            socket,
+            &TvInterest::Game(GameId("overflow".to_string()))
+        ));
+        assert!(!hub.subscribe_tv(
+            user,
+            socket,
+            &TvInterest::Game(GameId("x".repeat(MAX_TV_GAME_ID_BYTES + 1)))
+        ));
+        let first = GameId("0".to_string());
+        assert!(hub.subscribe_tv(user, socket, &TvInterest::Game(first.clone())));
+        assert_eq!(
+            hub.tv_snapshot_ids(user, socket).len(),
+            MAX_TV_GAMES_PER_SOCKET
+        );
+        hub.on_game_finished(&first, Uuid::new_v4(), Uuid::new_v4());
+        assert!(!hub.tv_snapshot_ids(user, socket).contains(&first));
+        assert!(!hub.has_tv_subscribers(&first));
+        assert!(hub.subscribe_tv(
+            user,
+            socket,
+            &TvInterest::Game(GameId("replacement".to_string()))
+        ));
+        hub.on_disconnect(
+            socket,
+            SimpleUser {
+                user_id: user,
+                username: "reader".to_string(),
+                authed: false,
+                admin: false,
+                bot: false,
+            },
+        );
+        let membership = hub.membership.read().unwrap();
+        assert!(membership.tv_games.games_sockets.is_empty());
+        assert!(membership.tv_games.sockets_games.is_empty());
+    }
+
+    #[tokio::test]
+    async fn tv_snapshots_are_rate_limited_per_socket_and_share_the_loader_budget() {
+        let hub = make_hub().await;
+        let socket = Uuid::new_v4();
+        assert!(hub.allow_tv_snapshot(socket));
+        assert!(!hub.allow_tv_snapshot(socket));
+        assert!(hub.allow_tv_snapshot(Uuid::new_v4()));
+        let budget = Arc::clone(&hub.loader_permits)
+            .try_acquire_many_owned(LOAD_USER_STATE_CONCURRENCY as u32)
+            .unwrap();
+        assert!(hub.try_tv_snapshot_permit().is_none());
+        drop(budget);
+        assert!(hub.try_tv_snapshot_permit().is_some());
+        hub.on_disconnect(
+            socket,
+            SimpleUser {
+                user_id: Uuid::new_v4(),
+                username: "reader".to_string(),
+                authed: false,
+                admin: false,
+                bot: false,
+            },
+        );
+        assert!(!hub.last_tv_snapshot.contains_key(&socket));
+    }
+
+    #[tokio::test]
     async fn dispatch_user_unknown_is_noop() {
         let hub = make_hub().await;
         hub.dispatch(
@@ -1443,10 +2428,7 @@ mod tests {
         let tournament_id = TournamentId("revoked-tournament".to_string());
         let mut rx = hub.register_socket(user_id, socket_id);
         hub.join_game_fanout(user_id, socket_id, &game_id);
-        hub.tournament_members.insert(
-            tournament_id.clone(),
-            (Instant::now(), Arc::from([user_id])),
-        );
+        hub.watch_tournament(user_id, socket_id, &tournament_id);
 
         hub.revoke_user(user_id);
         hub.dispatch(
@@ -1472,6 +2454,129 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn arena_pairing_requires_a_live_socket_on_the_matching_tournament_page() {
+        let hub = make_hub().await;
+        let first = Uuid::new_v4();
+        let second = Uuid::new_v4();
+        let offline = Uuid::new_v4();
+        let outside_candidates = Uuid::new_v4();
+        let first_socket = Uuid::new_v4();
+        let second_socket = Uuid::new_v4();
+        let only_second_socket = Uuid::new_v4();
+        let outside_socket = Uuid::new_v4();
+        let arena = TournamentId("arena".to_string());
+        let other_arena = TournamentId("other-arena".to_string());
+
+        let _first_rx = hub.register_socket(first, first_socket);
+        let _second_rx = hub.register_socket(first, second_socket);
+        let _only_second_rx = hub.register_socket(second, only_second_socket);
+        let _outside_rx = hub.register_socket(outside_candidates, outside_socket);
+        let candidates = [first, second, offline, first];
+        assert!(hub.arena_presence_for(&arena, &candidates).is_empty());
+
+        hub.watch_tournament(first, first_socket, &arena);
+        hub.watch_tournament(first, second_socket, &arena);
+        hub.watch_tournament(second, only_second_socket, &other_arena);
+        hub.watch_tournament(outside_candidates, outside_socket, &arena);
+        hub.watch_tournament(offline, Uuid::new_v4(), &arena);
+        assert_eq!(
+            hub.arena_presence_for(&arena, &candidates),
+            HashSet::from([first])
+        );
+
+        // Leaving one tab does not remove the other tab's readiness.
+        hub.unwatch_tournament(first, first_socket, &arena);
+        assert!(hub.arena_presence_for(&arena, &candidates).contains(&first));
+        hub.unwatch_tournament(first, second_socket, &arena);
+        hub.join_game_fanout(first, first_socket, &GameId("finished".to_string()));
+        assert!(hub.arena_presence_for(&arena, &candidates).is_empty());
+
+        hub.watch_tournament(first, first_socket, &arena);
+        hub.watch_tournament(second, only_second_socket, &arena);
+        assert_eq!(
+            hub.arena_presence_for(&arena, &candidates),
+            HashSet::from([first, second])
+        );
+        hub.on_disconnect(
+            first_socket,
+            SimpleUser {
+                user_id: first,
+                username: "first".to_string(),
+                authed: true,
+                admin: false,
+                bot: false,
+            },
+        );
+        assert_eq!(
+            hub.arena_presence_for(&arena, &candidates),
+            HashSet::from([second])
+        );
+        hub.revoke_user(second);
+        assert!(hub.arena_presence_for(&arena, &candidates).is_empty());
+    }
+
+    #[actix_rt::test]
+    async fn arena_presence_uses_account_type_in_either_wire_format() {
+        for format in [SocketFormat::Json, SocketFormat::Msgpack] {
+            let hub = make_hub().await;
+            let bot = Uuid::new_v4();
+            let human = Uuid::new_v4();
+            let bot_socket = Uuid::new_v4();
+            let human_socket = Uuid::new_v4();
+            let (bot_tx, _bot_rx) = mpsc::channel(SOCKET_BUFFER_CAPACITY);
+            let (human_tx, _human_rx) = mpsc::channel(SOCKET_BUFFER_CAPACITY);
+            let bot_user = SimpleUser {
+                user_id: bot,
+                username: "bot".to_string(),
+                authed: true,
+                admin: false,
+                bot: true,
+            };
+            let human_user = SimpleUser {
+                user_id: human,
+                username: "human".to_string(),
+                authed: true,
+                admin: false,
+                bot: false,
+            };
+            Arc::clone(&hub).on_connect(bot_socket, bot_tx, format, bot_user.clone());
+            Arc::clone(&hub).on_connect(human_socket, human_tx.clone(), format, human_user.clone());
+            let arena = TournamentId("account-presence".to_string());
+            assert_eq!(
+                hub.arena_presence_for(&arena, &[bot, human]),
+                HashSet::from([bot])
+            );
+            hub.watch_tournament(human, human_socket, &arena);
+            assert_eq!(
+                hub.arena_presence_for(&arena, &[bot, human]),
+                HashSet::from([bot, human])
+            );
+            hub.unwatch_tournament(human, human_socket, &arena);
+            Arc::clone(&hub).on_authenticate(
+                &SocketTx {
+                    socket_id: human_socket,
+                    format,
+                    tx: human_tx,
+                },
+                human_user,
+                bot_user.clone(),
+            );
+            assert_eq!(
+                hub.arena_presence_for(&arena, &[bot, human]),
+                HashSet::from([bot])
+            );
+            hub.on_disconnect(bot_socket, bot_user.clone());
+            assert_eq!(
+                hub.arena_presence_for(&arena, &[bot, human]),
+                HashSet::from([bot])
+            );
+            hub.revoke_user(bot);
+            assert!(hub.arena_presence_for(&arena, &[bot, human]).is_empty());
+            hub.on_disconnect(human_socket, bot_user);
+        }
+    }
+
+    #[tokio::test]
     async fn dispatch_direct_routes_only_to_target_socket() {
         let hub = make_hub().await;
         let uid = Uuid::new_v4();
@@ -1481,6 +2586,7 @@ mod tests {
         let (target_tx, mut target_rx) = mpsc::channel(8);
         let socket_tx = SocketTx {
             socket_id: Uuid::new_v4(),
+            format: SocketFormat::Msgpack,
             tx: target_tx,
         };
 
@@ -1703,17 +2809,21 @@ mod tests {
         let subscribed_admin_socket = Uuid::new_v4();
         let sender_admin_id = Uuid::new_v4();
         let sender_admin_socket = Uuid::new_v4();
+        let watcher_id = Uuid::new_v4();
+        let watcher_socket = Uuid::new_v4();
         let mut member_first_rx = hub.register_socket(member_id, member_first_socket);
         let mut member_second_rx = hub.register_socket(member_id, member_second_socket);
         let mut subscribed_admin_rx =
             hub.register_socket(subscribed_admin_id, subscribed_admin_socket);
         let mut sender_admin_rx = hub.register_socket(sender_admin_id, sender_admin_socket);
+        let mut watcher_rx = hub.register_socket(watcher_id, watcher_socket);
         hub.tournament_members.insert(
             tournament_id.clone(),
             (Instant::now(), Arc::from([member_id])),
         );
         hub.subscribe_chat(member_id, member_first_socket, &key);
         hub.subscribe_chat(subscribed_admin_id, subscribed_admin_socket, &key);
+        hub.watch_tournament(watcher_id, watcher_socket, &tournament_id);
 
         hub.dispatch(
             &MessageDestination::Tournament {
@@ -1745,6 +2855,7 @@ mod tests {
             Bytes::from_static(b"tournament-chat"),
         );
         assert!(sender_admin_rx.try_recv().is_err());
+        assert!(watcher_rx.try_recv().is_err());
     }
 
     #[tokio::test]
@@ -1790,19 +2901,23 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn tournament_updates_target_members_without_chat_only_subscribers() {
+    async fn tournament_updates_target_only_watching_sockets() {
         let hub = make_hub().await;
         let tournament_id = TournamentId("updates-tournament".to_string());
         let member_id = Uuid::new_v4();
         let member_socket = Uuid::new_v4();
+        let anonymous_id = Uuid::new_v4();
+        let anonymous_socket = Uuid::new_v4();
         let subscriber_id = Uuid::new_v4();
         let subscriber_socket = Uuid::new_v4();
         let mut member_rx = hub.register_socket(member_id, member_socket);
+        let mut anonymous_rx = hub.register_socket(anonymous_id, anonymous_socket);
         let mut subscriber_rx = hub.register_socket(subscriber_id, subscriber_socket);
         hub.tournament_members.insert(
             tournament_id.clone(),
             (Instant::now(), Arc::from([member_id])),
         );
+        hub.watch_tournament(anonymous_id, anonymous_socket, &tournament_id);
         hub.subscribe_chat(
             subscriber_id,
             subscriber_socket,
@@ -1818,11 +2933,160 @@ mod tests {
         )
         .await;
 
+        assert!(member_rx.try_recv().is_err());
         assert_eq!(
-            member_rx.try_recv().unwrap(),
+            anonymous_rx.try_recv().unwrap(),
             Bytes::from_static(b"tournament-update"),
         );
         assert!(subscriber_rx.try_recv().is_err());
+    }
+
+    #[tokio::test]
+    async fn private_tournament_delivery_rechecks_each_authorized_users_current_tabs() {
+        let hub = make_hub().await;
+        let organizer = Uuid::new_v4();
+        let spectator = Uuid::new_v4();
+        let current_socket = Uuid::new_v4();
+        let second_current_socket = Uuid::new_v4();
+        let other_socket = Uuid::new_v4();
+        let spectator_socket = Uuid::new_v4();
+        let tournament_id = TournamentId(String::from("schedule-cup"));
+        let other_tournament = TournamentId(String::from("other-cup"));
+        let mut current_rx = hub.register_socket(organizer, current_socket);
+        let mut second_current_rx = hub.register_socket(organizer, second_current_socket);
+        let mut other_rx = hub.register_socket(organizer, other_socket);
+        let mut spectator_rx = hub.register_socket(spectator, spectator_socket);
+        hub.watch_tournament(organizer, current_socket, &tournament_id);
+        hub.watch_tournament(organizer, second_current_socket, &tournament_id);
+        hub.watch_tournament(organizer, other_socket, &other_tournament);
+        hub.watch_tournament(spectator, spectator_socket, &tournament_id);
+
+        hub.send_to_tournament_viewer(
+            &tournament_id,
+            organizer,
+            &mut Outbound::encoded(Bytes::from_static(b"offer")),
+        );
+        assert_eq!(current_rx.try_recv().unwrap(), Bytes::from_static(b"offer"));
+        assert_eq!(
+            second_current_rx.try_recv().unwrap(),
+            Bytes::from_static(b"offer"),
+        );
+        assert!(other_rx.try_recv().is_err());
+        assert!(spectator_rx.try_recv().is_err());
+
+        hub.watch_tournament(organizer, current_socket, &other_tournament);
+        hub.send_to_tournament_viewer(
+            &tournament_id,
+            organizer,
+            &mut Outbound::encoded(Bytes::from_static(b"late-offer")),
+        );
+        assert!(current_rx.try_recv().is_err());
+        assert_eq!(
+            second_current_rx.try_recv().unwrap(),
+            Bytes::from_static(b"late-offer"),
+        );
+        assert!(other_rx.try_recv().is_err());
+        assert!(spectator_rx.try_recv().is_err());
+    }
+
+    #[tokio::test]
+    async fn tournament_watch_is_per_socket_and_stale_unwatch_cannot_clear_new_route() {
+        let hub = make_hub().await;
+        let user_id = Uuid::new_v4();
+        let first_socket = Uuid::new_v4();
+        let second_socket = Uuid::new_v4();
+        let first_tournament = TournamentId("first-route".to_string());
+        let second_tournament = TournamentId("second-route".to_string());
+        let mut first_rx = hub.register_socket(user_id, first_socket);
+        let mut second_rx = hub.register_socket(user_id, second_socket);
+
+        hub.watch_tournament(user_id, first_socket, &first_tournament);
+        hub.watch_tournament(user_id, second_socket, &second_tournament);
+        hub.dispatch(
+            &MessageDestination::Tournament {
+                tournament_id: first_tournament.clone(),
+                audience: TournamentAudience::Updates,
+            },
+            Bytes::from_static(b"first-route-update"),
+        )
+        .await;
+
+        assert_eq!(
+            first_rx.try_recv().unwrap(),
+            Bytes::from_static(b"first-route-update"),
+        );
+        assert!(second_rx.try_recv().is_err());
+
+        hub.watch_tournament(user_id, first_socket, &second_tournament);
+        hub.unwatch_tournament(user_id, first_socket, &first_tournament);
+        assert!(hub.has_tournament_watch(user_id, first_socket, &second_tournament));
+
+        hub.dispatch(
+            &MessageDestination::Tournament {
+                tournament_id: first_tournament,
+                audience: TournamentAudience::Updates,
+            },
+            Bytes::from_static(b"obsolete-route-update"),
+        )
+        .await;
+        assert!(first_rx.try_recv().is_err());
+        assert!(second_rx.try_recv().is_err());
+
+        hub.dispatch(
+            &MessageDestination::Tournament {
+                tournament_id: second_tournament,
+                audience: TournamentAudience::Updates,
+            },
+            Bytes::from_static(b"second-route-update"),
+        )
+        .await;
+        assert_eq!(
+            first_rx.try_recv().unwrap(),
+            Bytes::from_static(b"second-route-update"),
+        );
+        assert_eq!(
+            second_rx.try_recv().unwrap(),
+            Bytes::from_static(b"second-route-update"),
+        );
+    }
+
+    #[tokio::test]
+    async fn disconnect_removes_tournament_watch_for_only_that_socket() {
+        let hub = make_hub().await;
+        let user_id = Uuid::new_v4();
+        let disconnected_socket = Uuid::new_v4();
+        let remaining_socket = Uuid::new_v4();
+        let tournament_id = TournamentId("disconnect-watch".to_string());
+        let _disconnected_rx = hub.register_socket(user_id, disconnected_socket);
+        let mut remaining_rx = hub.register_socket(user_id, remaining_socket);
+        hub.watch_tournament(user_id, disconnected_socket, &tournament_id);
+        hub.watch_tournament(user_id, remaining_socket, &tournament_id);
+
+        hub.on_disconnect(
+            disconnected_socket,
+            SimpleUser {
+                user_id,
+                username: "spectator".to_string(),
+                authed: false,
+                admin: false,
+                bot: false,
+            },
+        );
+
+        assert!(!hub.has_tournament_watch(user_id, disconnected_socket, &tournament_id));
+        assert!(hub.has_tournament_watch(user_id, remaining_socket, &tournament_id));
+        hub.dispatch(
+            &MessageDestination::Tournament {
+                tournament_id,
+                audience: TournamentAudience::Updates,
+            },
+            Bytes::from_static(b"still-watching"),
+        )
+        .await;
+        assert_eq!(
+            remaining_rx.try_recv().unwrap(),
+            Bytes::from_static(b"still-watching"),
+        );
     }
 
     #[tokio::test]
@@ -2092,6 +3356,85 @@ mod tests {
         assert!(!hub.should_send_tv(&game_id, false));
     }
 
+    #[tokio::test]
+    async fn lobby_snapshot_gate_excludes_the_same_socket() {
+        let hub = make_hub().await;
+        let socket_id = Uuid::new_v4();
+
+        let _guard = hub
+            .try_begin_lobby_snapshot(socket_id)
+            .expect("first snapshot acquires the socket lease");
+
+        assert!(
+            hub.try_begin_lobby_snapshot(socket_id).is_none(),
+            "a second snapshot for the same socket must be coalesced"
+        );
+    }
+
+    #[tokio::test]
+    async fn lobby_snapshot_gate_releases_when_the_snapshot_finishes() {
+        let hub = make_hub().await;
+        let socket_id = Uuid::new_v4();
+
+        let guard = hub
+            .try_begin_lobby_snapshot(socket_id)
+            .expect("first snapshot acquires the socket lease");
+        drop(guard);
+
+        assert!(
+            hub.try_begin_lobby_snapshot(socket_id).is_some(),
+            "a later snapshot must run after the first finishes"
+        );
+    }
+
+    #[tokio::test]
+    async fn lobby_snapshot_gate_is_cleaned_on_disconnect() {
+        let hub = make_hub().await;
+        let user_id = Uuid::new_v4();
+        let socket_id = Uuid::new_v4();
+        let _rx = hub.register_socket(user_id, socket_id);
+        let stale_guard = hub
+            .try_begin_lobby_snapshot(socket_id)
+            .expect("connected socket acquires the snapshot lease");
+
+        hub.on_disconnect(
+            socket_id,
+            SimpleUser {
+                user_id,
+                username: "anon".to_string(),
+                authed: false,
+                admin: false,
+                bot: false,
+            },
+        );
+
+        let replacement_guard = hub
+            .try_begin_lobby_snapshot(socket_id)
+            .expect("disconnect removes the stale socket lease");
+        drop(stale_guard);
+        assert!(
+            hub.try_begin_lobby_snapshot(socket_id).is_none(),
+            "dropping the stale guard must not release a replacement lease"
+        );
+        drop(replacement_guard);
+    }
+
+    #[tokio::test]
+    async fn lobby_snapshot_gate_is_independent_per_socket() {
+        let hub = make_hub().await;
+        let socket_a = Uuid::new_v4();
+        let socket_b = Uuid::new_v4();
+
+        let _guard_a = hub
+            .try_begin_lobby_snapshot(socket_a)
+            .expect("socket A acquires its lease");
+
+        assert!(
+            hub.try_begin_lobby_snapshot(socket_b).is_some(),
+            "socket A must not block a different socket"
+        );
+    }
+
     /// `visibilitychange` + `pageshow` fire in close succession on wake; the
     /// server-side cooldown stops a second snapshot from running for the same
     /// socket. Per-socket so multi-tab users still get fresh data for the tab
@@ -2110,6 +3453,22 @@ mod tests {
         assert!(
             hub.allow_resync(sid_b),
             "different socket not rate-limited by socket A"
+        );
+    }
+
+    #[tokio::test]
+    async fn auth_attempts_are_limited_per_socket_window() {
+        let hub = make_hub().await;
+        let sid_a = Uuid::new_v4();
+        let sid_b = Uuid::new_v4();
+
+        for _ in 0..AUTH_ATTEMPTS_PER_WINDOW {
+            assert!(hub.allow_auth_attempt(sid_a));
+        }
+        assert!(!hub.allow_auth_attempt(sid_a), "the window is spent");
+        assert!(
+            hub.allow_auth_attempt(sid_b),
+            "other sockets are unaffected"
         );
     }
 
@@ -2133,6 +3492,7 @@ mod tests {
                 username: "anon".to_string(),
                 authed: false,
                 admin: false,
+                bot: false,
             },
         );
 
@@ -2169,11 +3529,23 @@ mod tests {
         let user_dest = DestKind::User as usize;
 
         for _ in 0..SOCKET_BUFFER_CAPACITY {
-            hub.send_own_state_via_tx(&tx, &Bytes::from_static(b"a"));
+            hub.send_own_state_via_tx(
+                &tx,
+                SocketFormat::Msgpack,
+                &mut Outbound::encoded(Bytes::from_static(b"a")),
+            );
         }
-        hub.send_own_state_via_tx(&tx, &Bytes::from_static(b"b"));
+        hub.send_own_state_via_tx(
+            &tx,
+            SocketFormat::Msgpack,
+            &mut Outbound::encoded(Bytes::from_static(b"b")),
+        );
         drop(rx);
-        hub.send_own_state_via_tx(&tx, &Bytes::from_static(b"c"));
+        hub.send_own_state_via_tx(
+            &tx,
+            SocketFormat::Msgpack,
+            &mut Outbound::encoded(Bytes::from_static(b"c")),
+        );
 
         assert_eq!(
             hub.data.telemetry.recipient_sends_ok[user_dest].load(Ordering::Relaxed),
@@ -2225,6 +3597,113 @@ mod tests {
                 .load(Ordering::Relaxed),
             0,
             "on_game_finished must not increment games_finalized_total",
+        );
+    }
+
+    #[tokio::test]
+    async fn one_message_reaches_each_socket_in_its_own_language() {
+        let hub = make_hub().await;
+        let uid = Uuid::new_v4();
+        let mut browser = hub.register_socket_as(uid, Uuid::new_v4(), SocketFormat::Msgpack);
+        let mut bot = hub.register_socket_as(uid, Uuid::new_v4(), SocketFormat::Json);
+
+        let message = ServerResult::Ok(Box::new(ServerMessage::Error("boom".to_string())));
+        hub.dispatch_out(
+            &MessageDestination::User(uid),
+            &mut Outbound::typed(&message),
+        )
+        .await;
+
+        let to_browser = browser.recv().await.expect("browser is sent to");
+        let to_bot = bot.recv().await.expect("bot is sent to");
+
+        assert_ne!(to_browser, to_bot);
+        assert_eq!(
+            to_bot,
+            Bytes::from(serde_json::to_vec(&message).expect("encodes"))
+        );
+        assert!(
+            serde_json::from_slice::<serde_json::Value>(&to_browser).is_err(),
+            "the browser must still get msgpack, not JSON"
+        );
+    }
+
+    #[tokio::test]
+    async fn an_unmigrated_producer_still_reaches_a_json_socket() {
+        let hub = make_hub().await;
+        let uid = Uuid::new_v4();
+        let mut bot = hub.register_socket_as(uid, Uuid::new_v4(), SocketFormat::Json);
+
+        let message = ServerResult::Ok(Box::new(ServerMessage::Error("boom".to_string())));
+        let encoded = Bytes::from(MsgpackSerdeCodec::encode(&message).expect("encodes"));
+        hub.dispatch(&MessageDestination::User(uid), encoded).await;
+
+        assert_eq!(
+            bot.recv().await.expect("bot is sent to"),
+            Bytes::from(serde_json::to_vec(&message).expect("encodes"))
+        );
+    }
+
+    /// Against a live database, so the loader really runs: with an unreachable pool it would
+    /// bail before the snapshot and the assertion would prove nothing.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn a_json_socket_gets_no_snapshot_on_connect() {
+        let db = test_db().await;
+        let pool = db.pool.clone();
+        tokio::task::LocalSet::new()
+            .run_until(async move {
+                for (format, expect_snapshot) in
+                    [(SocketFormat::Msgpack, true), (SocketFormat::Json, false)]
+                {
+                    let hub = WsHub::new(Arc::new(WebsocketData::default()), pool.clone());
+                    let (tx, mut rx) = mpsc::channel(SOCKET_BUFFER_CAPACITY);
+                    let user_id = Uuid::new_v4();
+                    hub.on_connect(
+                        Uuid::new_v4(),
+                        tx,
+                        format,
+                        SimpleUser {
+                            user_id,
+                            username: user_id.to_string(),
+                            admin: false,
+                            authed: false,
+                            bot: false,
+                        },
+                    );
+
+                    let received = tokio::time::timeout(Duration::from_secs(2), rx.recv())
+                        .await
+                        .ok()
+                        .flatten();
+
+                    assert_eq!(received.is_some(), expect_snapshot, "{format:?}");
+                }
+            })
+            .await;
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn a_lobby_snapshot_reaches_a_json_socket_as_json() {
+        let db = test_db().await;
+        let pool = db.pool.clone();
+        let hub = WsHub::new(Arc::new(WebsocketData::default()), pool.clone());
+        let user_id = Uuid::new_v4();
+        let socket_id = Uuid::new_v4();
+        let mut rx = hub.register_socket_as(user_id, socket_id, SocketFormat::Json);
+        let socket = hub
+            .socket_tx(user_id, socket_id)
+            .expect("the socket is registered");
+        let mut conn = get_conn(&pool).await.expect("test database connection");
+
+        hub.send_lobby_snapshot(&mut conn, user_id, &socket, None)
+            .await;
+
+        let bytes = rx.try_recv().expect("the snapshot is sent");
+        let decoded: ServerResult = serde_json::from_slice(&bytes)
+            .expect("a ?format=json socket must be sent JSON, not msgpack");
+        assert!(
+            matches!(decoded, ServerResult::Ok(message) if matches!(*message, ServerMessage::LobbySnapshot(_))),
+            "the snapshot arrives as a LobbySnapshot",
         );
     }
 }

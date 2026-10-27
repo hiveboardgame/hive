@@ -1,4 +1,4 @@
-use crate::responses::UserResponse;
+use crate::{responses::UserResponse, security::csrf::CsrfClient};
 use leptos::prelude::*;
 use server_fn::codec;
 use shared_types::GameSpeed;
@@ -6,7 +6,7 @@ use shared_types::GameSpeed;
 use shared_types::LeaderboardKind;
 use uuid::Uuid;
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_user_by_uuid(uuid: Uuid) -> Result<UserResponse, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::get_conn;
@@ -17,7 +17,7 @@ pub async fn get_user_by_uuid(uuid: Uuid) -> Result<UserResponse, ServerFnError>
         .map_err(ServerFnError::new)
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn username_taken(username: String) -> Result<bool, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::{get_conn, models::User};
@@ -64,7 +64,7 @@ async fn leaderboard(
         .collect()
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_top_users(
     game_speed: GameSpeed,
     limit: i64,
@@ -72,7 +72,7 @@ pub async fn get_top_users(
     leaderboard(LeaderboardKind::Humans, game_speed, limit).await
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_top_bots(
     game_speed: GameSpeed,
     limit: i64,
@@ -80,7 +80,7 @@ pub async fn get_top_bots(
     leaderboard(LeaderboardKind::Bots, game_speed, limit).await
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_profile(username: String) -> Result<UserResponse, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::get_conn;
@@ -91,7 +91,7 @@ pub async fn get_profile(username: String) -> Result<UserResponse, ServerFnError
         .map_err(ServerFnError::new)
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn search_users(
     pattern: String,
     excluded: Vec<String>,

@@ -1,7 +1,11 @@
-use crate::responses::AccountResponse;
+#[cfg(feature = "ssr")]
+use crate::security::csrf::reset_session;
+use crate::{responses::AccountResponse, security::csrf::CsrfClient};
+#[cfg(feature = "ssr")]
+use actix_session::SessionExt;
 use leptos::prelude::*;
 
-#[server]
+#[server(client = CsrfClient)]
 pub async fn register(
     username: String,
     email: String,
@@ -9,9 +13,9 @@ pub async fn register(
     password_confirmation: String,
     pathname: String,
 ) -> Result<AccountResponse, ServerFnError> {
-    use crate::functions::{
-        auth::password::{hash_password, validate_password},
-        db::pool,
+    use crate::{
+        common::{safe_return_path, validate_password},
+        functions::{auth::password::hash_password, db::pool},
     };
     use actix_identity::Identity;
     use actix_web::HttpMessage;
@@ -22,12 +26,11 @@ pub async fn register(
     use diesel_async::AsyncConnection;
 
     validate_password(&password, &password_confirmation).map_err(ServerFnError::new)?;
+    let mut new_user = NewUser::new(&username, "", &email.to_lowercase())?;
+    new_user.password = hash_password(&password)?;
 
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
-    let password = hash_password(&password)?;
-    let email = email.to_lowercase();
-    let new_user = NewUser::new(&username, &password, &email)?;
 
     let (user, account) = conn
         .transaction::<_, ServerFnError, _>(async move |tc| {
@@ -39,8 +42,9 @@ pub async fn register(
 
     let req: actix_web::HttpRequest = leptos_actix::extract().await?;
 
+    reset_session(&req.get_session())?;
     Identity::login(&req.extensions(), user.id.to_string()).expect("To have logged in");
-    leptos_actix::redirect(&pathname);
+    leptos_actix::redirect(&safe_return_path(&pathname));
 
     Ok(account)
 }

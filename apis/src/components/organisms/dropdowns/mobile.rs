@@ -1,4 +1,4 @@
-use crate::{components::molecules::hamburger::Hamburger, i18n::*};
+use crate::{common::GEN42_URL, components::molecules::hamburger::Hamburger, i18n::*};
 use leptos::prelude::*;
 use leptos_icons::*;
 
@@ -18,7 +18,9 @@ pub fn MobileDropdown() -> impl IntoView {
             dropdown_style="ui-dropdown-menu ui-dropdown-menu-left ui-header-dropdown-menu ui-mobile-dropdown-menu"
             content=view! { <Icon icon=icondata_ch::ChMenuHamburger attr:class="size-6" /> }
             id="Mobile"
-            aria_label="Open navigation menu"
+            aria_label=Signal::derive(move || {
+                t_string!(i18n, game.open_navigation_menu).to_string()
+            })
         >
 
             <div class=div_style>
@@ -66,12 +68,12 @@ pub fn MobileDropdown() -> impl IntoView {
                     </a>
                 </div>
                 <div class=section_style>
-                    <span class=label_style>{t!(i18n, header.tournaments.title)}</span>
+                    <span class=label_style>{t!(i18n, common.tournaments)}</span>
                     <a class="ui-dropdown-link" on:click=onclick_close href="/tournaments">
-                        {t!(i18n, header.tournaments.view)}
+                        {t!(i18n, tournaments.view_list)}
                     </a>
                     <a class="ui-dropdown-link" on:click=onclick_close href="/tournaments/create">
-                        {t!(i18n, header.tournaments.create)}
+                        {t!(i18n, tournaments.create)}
                     </a>
                 </div>
                 <div class=section_style>
@@ -79,7 +81,7 @@ pub fn MobileDropdown() -> impl IntoView {
                     <a
                         class="ui-dropdown-link"
                         on:click=onclick_close
-                        href="https://www.gen42.com/"
+                        href=GEN42_URL
                         target="_blank"
                         rel="external"
                     >

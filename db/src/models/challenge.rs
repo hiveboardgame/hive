@@ -11,9 +11,17 @@ use crate::{
 use chrono::prelude::*;
 use diesel::{dsl::exists, prelude::*, select};
 use diesel_async::RunQueryDsl;
+use hive_lib::GameType;
 use nanoid::nanoid;
 use serde::Serialize;
-use shared_types::{ChallengeDetails, ChallengeError, ChallengeId, ChallengeVisibility, TimeMode};
+use shared_types::{
+    ChallengeDetails,
+    ChallengeError,
+    ChallengeId,
+    ChallengeVisibility,
+    Clock,
+    TimeMode,
+};
 use uuid::Uuid;
 
 fn validate_opponent_visibility(
@@ -44,6 +52,34 @@ fn validate_opponent_visibility(
     Ok(())
 }
 
+fn invalid(info: &str) -> DbError {
+    DbError::InvalidInput {
+        info: info.to_string(),
+        error: String::new(),
+    }
+}
+
+// The rules every way of creating a challenge shares: the browser form, the HTTP bot API and
+// the websocket. Time ranges are not among them: a rematch inherits a tournament game's clock,
+// which may be far outside what the challenge forms offer.
+fn validate_challenge_rules(d: &ChallengeDetails) -> Result<(), DbError> {
+    if d.game_type != GameType::Base && d.game_type != GameType::MLP {
+        return Err(invalid("Only Base and MLP games can be challenged."));
+    }
+    if d.rated && d.game_type == GameType::Base {
+        return Err(invalid("Base games cannot be rated."));
+    }
+    if d.rated && d.time_mode == TimeMode::Untimed {
+        return Err(invalid("Untimed games cannot be rated."));
+    }
+    if matches!((d.band_lower, d.band_upper), (Some(lower), Some(upper)) if lower > upper) {
+        return Err(invalid(
+            "The rating band's lower bound is above its upper bound.",
+        ));
+    }
+    Ok(())
+}
+
 #[derive(Insertable, Debug)]
 #[diesel(table_name = challenges)]
 pub struct NewChallenge {
@@ -70,46 +106,14 @@ impl NewChallenge {
         d: &ChallengeDetails,
         conn: &mut DbConn<'_>,
     ) -> Result<Self, DbError> {
-        match d.time_mode {
-            TimeMode::Untimed => {
-                if d.time_base.is_some() || d.time_increment.is_some() {
-                    return Err(DbError::InvalidInput {
-                        info: String::from("Untimed game has time_base or time_increment"),
-                        error: format!(
-                            "time_base: {:?}, time_increment: {:?}",
-                            d.time_base, d.time_increment
-                        ),
-                    });
-                }
+        Clock::from_time_parts(d.time_mode, d.time_base, d.time_increment).map_err(|error| {
+            DbError::InvalidInput {
+                info: "Invalid time control".to_string(),
+                error: error.to_string(),
             }
-            TimeMode::RealTime => {
-                if d.time_base.is_none() || d.time_increment.is_none() {
-                    return Err(DbError::InvalidInput {
-                        info: String::from("Realtime game is missing time_base or time_increment"),
-                        error: format!(
-                            "time_base: {:?}, time_increment: {:?}",
-                            d.time_base, d.time_increment
-                        ),
-                    });
-                }
-            }
-            TimeMode::Correspondence => {
-                if (d.time_base.is_some() && d.time_increment.is_some())
-                    || (d.time_base.is_none() && d.time_increment.is_none())
-                {
-                    return Err(DbError::InvalidInput {
-                        info: String::from(
-                            "Correspondence game has wrong time_base or time_increment",
-                        ),
-                        error: format!(
-                            "time_base: {:?}, time_increment: {:?}",
-                            d.time_base, d.time_increment
-                        ),
-                    });
-                }
-            }
-        }
+        })?;
         validate_opponent_visibility(challenger_id, opponent_id, &d.visibility)?;
+        validate_challenge_rules(d)?;
         let mut nanoid: String;
         loop {
             nanoid = nanoid!(12);
@@ -163,6 +167,16 @@ pub struct Challenge {
 }
 
 impl Challenge {
+    pub fn time_control(&self) -> Result<Option<Clock>, DbError> {
+        let mode = self.time_mode.parse::<TimeMode>()?;
+        Clock::from_time_parts(mode, self.time_base, self.time_increment).map_err(|error| {
+            DbError::InvalidInput {
+                info: "Invalid persisted challenge time control".to_string(),
+                error: error.to_string(),
+            }
+        })
+    }
+
     pub fn validate_accepting_user(&self, user_id: Uuid) -> Result<(), ChallengeError> {
         if self.challenger_id == user_id {
             return Err(ChallengeError::OwnChallenge);
@@ -260,5 +274,75 @@ impl Challenge {
         .execute(conn)
         .await?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hive_lib::ColorChoice;
+
+    fn details() -> ChallengeDetails {
+        ChallengeDetails {
+            rated: true,
+            game_type: GameType::MLP,
+            visibility: ChallengeVisibility::Public,
+            opponent: None,
+            color_choice: ColorChoice::Random,
+            time_mode: TimeMode::RealTime,
+            time_base: Some(300),
+            time_increment: Some(3),
+            band_upper: None,
+            band_lower: None,
+        }
+    }
+
+    #[test]
+    fn an_ordinary_rated_challenge_passes() {
+        assert!(validate_challenge_rules(&details()).is_ok());
+    }
+
+    #[test]
+    fn rated_base_is_refused() {
+        let d = ChallengeDetails {
+            game_type: GameType::Base,
+            ..details()
+        };
+        assert!(validate_challenge_rules(&d).is_err());
+        let unrated = ChallengeDetails { rated: false, ..d };
+        assert!(validate_challenge_rules(&unrated).is_ok());
+    }
+
+    #[test]
+    fn rated_untimed_is_refused() {
+        let d = ChallengeDetails {
+            time_mode: TimeMode::Untimed,
+            time_base: None,
+            time_increment: None,
+            ..details()
+        };
+        assert!(validate_challenge_rules(&d).is_err());
+        let unrated = ChallengeDetails { rated: false, ..d };
+        assert!(validate_challenge_rules(&unrated).is_ok());
+    }
+
+    #[test]
+    fn only_base_and_mlp_are_allowed() {
+        let d = ChallengeDetails {
+            rated: false,
+            game_type: GameType::ML,
+            ..details()
+        };
+        assert!(validate_challenge_rules(&d).is_err());
+    }
+
+    #[test]
+    fn an_inverted_rating_band_is_refused() {
+        let d = ChallengeDetails {
+            band_lower: Some(1600),
+            band_upper: Some(1400),
+            ..details()
+        };
+        assert!(validate_challenge_rules(&d).is_err());
     }
 }

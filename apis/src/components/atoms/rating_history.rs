@@ -1,6 +1,8 @@
 use crate::{
+    common::{game_speed_label, localized_error_message},
     components::{layouts::base_layout::OrientationSignal, molecules::empty_state::EmptyState},
     functions::games::get::get_rating_history_resource,
+    i18n::*,
     responses::RatingHistoryResponse,
 };
 use chrono::{DateTime, Duration, Utc};
@@ -32,6 +34,26 @@ fn build_x_ticks(data: ReadSignal<Vec<RatingHistoryResponse>>) -> TickLabels<Dat
 
 #[component]
 pub fn RatingGraph(user_id: Uuid, game_speed: GameSpeed) -> impl IntoView {
+    let i18n = use_i18n();
+    let chart_title = RotatedLabel::middle(
+        t_string!(
+            i18n,
+            game.rating_history_title,
+            speed = game_speed_label(i18n, game_speed)
+        )
+        .to_string(),
+    );
+    let chart_title_text = chart_title.text;
+    Effect::new(move |_| {
+        chart_title_text.set(
+            t_string!(
+                i18n,
+                game.rating_history_title,
+                speed = game_speed_label(i18n, game_speed)
+            )
+            .to_string(),
+        )
+    });
     let vertical = expect_context::<OrientationSignal>().orientation_vertical;
     let history = OnceResource::new(get_rating_history_resource(user_id, game_speed));
     let window_size = use_window_size();
@@ -59,7 +81,7 @@ pub fn RatingGraph(user_id: Uuid, game_speed: GameSpeed) -> impl IntoView {
             }
         >
             <Suspense fallback=move || {
-                view! { <p>"Loading..."</p> }
+                view! { <p>{t!(i18n, common.loading)}</p> }
             }>
                 {move || {
                     history
@@ -68,14 +90,21 @@ pub fn RatingGraph(user_id: Uuid, game_speed: GameSpeed) -> impl IntoView {
                             Ok(hist) => {
                                 if hist.is_empty() {
                                     view! {
-                                        <EmptyState title="No rating history yet" class="my-6" />
+                                        <EmptyState
+                                            title=move || t_string!(i18n, game.no_rating_history_yet)
+                                            class="my-6"
+                                        />
                                     }
                                         .into_any()
                                 } else if hist.len() < 5 {
                                     view! {
                                         <EmptyState
-                                            title="Not enough games to build a graph"
-                                            message="Play at least five rated games at this speed to show the chart."
+                                            title=move || {
+                                                t_string!(i18n, game.not_enough_games_to_build_a_graph)
+                                            }
+                                            message=move || {
+                                                t_string!(i18n, game.rating_history_minimum_games)
+                                            }
                                             class="my-6"
                                         />
                                     }
@@ -140,9 +169,7 @@ pub fn RatingGraph(user_id: Uuid, game_speed: GameSpeed) -> impl IntoView {
                                                     graph_width.get(),
                                                     graph_height.get(),
                                                 )
-                                                top=RotatedLabel::middle(
-                                                    format!("{game_speed} Rating History"),
-                                                )
+                                                top=chart_title.clone()
                                                 left=TickLabels::aligned_floats()
                                                 bottom=x_ticks.clone()
                                                 inner=[
@@ -171,11 +198,12 @@ pub fn RatingGraph(user_id: Uuid, game_speed: GameSpeed) -> impl IntoView {
                                 }
                             }
                             Err(e) => {
+                                let error = e.to_string();
 
                                 view! {
                                     <EmptyState
-                                        title="Error loading history"
-                                        message=format!("{e}")
+                                        title=move || t_string!(i18n, game.error_loading_history)
+                                        message=move || localized_error_message(i18n, &error)
                                         class="my-6"
                                     />
                                 }

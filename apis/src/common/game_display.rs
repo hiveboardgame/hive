@@ -1,31 +1,16 @@
 use crate::{
-    i18n::{t_string, I18nKeys, Locale},
+    i18n::{t_string, td_string, I18nKeys, Locale},
     responses::GameResponse,
 };
-use hive_lib::{Color, GameResult, GameStatus};
+use hive_lib::{Color, ColorChoice, GameResult, GameStatus};
 use leptos_i18n::I18nContext;
-use shared_types::{Conclusion, PrettyString, TimeInfo, TimeMode, TournamentGameResult};
+use shared_types::{Conclusion, GameSpeed, TimeMode, TournamentGameResult};
+use std::time::Duration;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TournamentLink {
     pub name: String,
     pub href: String,
-}
-
-pub fn untimed_time_info() -> TimeInfo {
-    TimeInfo {
-        mode: TimeMode::Untimed,
-        base: None,
-        increment: None,
-    }
-}
-
-pub fn game_time_info(game: &GameResponse) -> TimeInfo {
-    TimeInfo {
-        mode: game.time_mode,
-        base: game.time_base,
-        increment: game.time_increment,
-    }
 }
 
 pub fn game_tournament_link(game: &GameResponse) -> Option<TournamentLink> {
@@ -43,6 +28,30 @@ pub fn format_game_rating(i18n: I18nContext<Locale, I18nKeys>, rated: bool) -> S
     }
 }
 
+pub fn display_username(
+    i18n: I18nContext<Locale, I18nKeys>,
+    deleted: bool,
+    username: &str,
+) -> String {
+    if deleted {
+        t_string!(i18n, common.deleted_user).to_string()
+    } else {
+        username.to_string()
+    }
+}
+
+pub fn game_speed_label(i18n: I18nContext<Locale, I18nKeys>, speed: GameSpeed) -> &'static str {
+    match speed {
+        GameSpeed::Bullet => t_string!(i18n, game.speeds.bullet),
+        GameSpeed::Blitz => t_string!(i18n, game.speeds.blitz),
+        GameSpeed::Rapid => t_string!(i18n, game.speeds.rapid),
+        GameSpeed::Classic => t_string!(i18n, game.speeds.classic),
+        GameSpeed::Correspondence => t_string!(i18n, game.speeds.correspondence),
+        GameSpeed::Untimed => t_string!(i18n, game.speeds.untimed),
+        GameSpeed::Puzzle => t_string!(i18n, game.speeds.puzzle),
+    }
+}
+
 pub fn format_game_result(
     i18n: I18nContext<Locale, I18nKeys>,
     game: &GameResponse,
@@ -56,16 +65,16 @@ pub fn format_game_result(
         | (GameStatus::Adjudicated, TournamentGameResult::Winner(color)) => {
             ResultSummary::Winner(*color)
         }
-        (GameStatus::Adjudicated, TournamentGameResult::DoubeForfeit) => {
+        (GameStatus::Adjudicated, TournamentGameResult::DoubleForfeit) => {
             ResultSummary::DoubleForfeit
         }
         _ => return None,
     };
 
     Some(match result {
-        ResultSummary::Draw(result) => draw_str(result, &game.conclusion),
+        ResultSummary::Draw(result) => draw_str(i18n, result, &game.conclusion),
         ResultSummary::Winner(color) => winner_str(i18n, game, color, &game.conclusion),
-        ResultSummary::DoubleForfeit => "The game ended as a double forfeit".to_string(),
+        ResultSummary::DoubleForfeit => t_string!(i18n, game.result.double_forfeit).to_string(),
     })
 }
 
@@ -82,15 +91,22 @@ enum ResultSummary {
     DoubleForfeit,
 }
 
-fn draw_str(result: DrawResult, conclusion: &Conclusion) -> String {
-    match result {
-        DrawResult::Game => format!("{} {}", GameResult::Draw, conclusion.pretty_string()),
-        DrawResult::Tournament => format!(
-            "{} {}",
-            TournamentGameResult::Draw,
-            conclusion.pretty_string()
-        ),
-    }
+fn draw_str(
+    i18n: I18nContext<Locale, I18nKeys>,
+    result: DrawResult,
+    conclusion: &Conclusion,
+) -> String {
+    let result = match result {
+        DrawResult::Game => GameResult::Draw.to_string(),
+        DrawResult::Tournament => TournamentGameResult::Draw.to_string(),
+    };
+    t_string!(
+        i18n,
+        game.result.draw_summary,
+        result = result,
+        conclusion = conclusion_label(i18n, conclusion)
+    )
+    .to_string()
 }
 
 fn winner_str(
@@ -103,19 +119,121 @@ fn winner_str(
         Color::White => &game.white_player,
         Color::Black => &game.black_player,
     };
-    let winner_username = if winner.deleted {
-        t_string!(i18n, profile.deleted_user).to_string()
+    let winner = display_username(i18n, winner.deleted, &winner.username);
+    match conclusion {
+        Conclusion::Timeout => {
+            t_string!(i18n, game.result.winner_timeout, winner = winner).to_string()
+        }
+        Conclusion::Resigned => {
+            t_string!(i18n, game.result.winner_resignation, winner = winner).to_string()
+        }
+        Conclusion::Board => t_string!(i18n, game.result.winner_board, winner = winner).to_string(),
+        Conclusion::Committee => {
+            t_string!(i18n, game.result.winner_committee, winner = winner).to_string()
+        }
+        Conclusion::Withdrawal => {
+            t_string!(i18n, game.result.winner_withdrawal, winner = winner).to_string()
+        }
+        Conclusion::Forfeit => {
+            t_string!(i18n, game.result.winner_forfeit, winner = winner).to_string()
+        }
+        _ => t_string!(i18n, game.result.winner, winner = winner).to_string(),
+    }
+}
+
+pub fn conclusion_label(
+    i18n: I18nContext<Locale, I18nKeys>,
+    conclusion: &Conclusion,
+) -> &'static str {
+    match conclusion {
+        Conclusion::Board => t_string!(i18n, game.conclusion.board),
+        Conclusion::Committee => t_string!(i18n, game.conclusion.committee),
+        Conclusion::Draw => t_string!(i18n, game.conclusion.draw),
+        Conclusion::Forfeit => t_string!(i18n, game.conclusion.forfeit),
+        Conclusion::Withdrawal => t_string!(i18n, common.withdrawal),
+        Conclusion::Repetition => t_string!(i18n, game.conclusion.repetition),
+        Conclusion::Resigned => t_string!(i18n, game.conclusion.resigned),
+        Conclusion::Timeout => t_string!(i18n, game.conclusion.timeout),
+        Conclusion::Unknown => t_string!(i18n, common.unknown),
+    }
+}
+
+pub fn game_result_label(i18n: I18nContext<Locale, I18nKeys>, result: &GameResult) -> String {
+    match result {
+        GameResult::Unknown => t_string!(i18n, common.unknown).to_string(),
+        _ => result.to_string(),
+    }
+}
+
+pub fn tournament_game_result_label(
+    i18n: I18nContext<Locale, I18nKeys>,
+    result: &TournamentGameResult,
+) -> String {
+    match result {
+        TournamentGameResult::Unknown => t_string!(i18n, common.unknown).to_string(),
+        _ => result.to_string(),
+    }
+}
+
+pub fn color_choice_label(
+    i18n: I18nContext<Locale, I18nKeys>,
+    color: &ColorChoice,
+) -> &'static str {
+    match color {
+        ColorChoice::White => t_string!(i18n, common.white),
+        ColorChoice::Black => t_string!(i18n, common.black),
+        ColorChoice::Random => t_string!(i18n, common.random),
+    }
+}
+
+pub fn format_clock_time_remaining(
+    i18n: I18nContext<Locale, I18nKeys>,
+    mode: TimeMode,
+    left: Duration,
+) -> String {
+    let total = left.as_secs();
+    let days = total / 86400;
+    let hours = total / 3600;
+    let minutes = (total % 3600) / 60;
+    if mode == TimeMode::Untimed {
+        String::new()
+    } else if days > 0 {
+        if days > 1 || hours == 24 {
+            t_string!(i18n, game.clock.days, days = days).to_string()
+        } else {
+            t_string!(i18n, game.clock.days_hours, days = days, hours = hours % 24).to_string()
+        }
+    } else if hours > 0 {
+        t_string!(
+            i18n,
+            game.clock.hours_minutes,
+            hours = hours,
+            minutes = minutes
+        )
+        .to_string()
     } else {
-        winner.username.clone()
-    };
+        mode.time_remaining(left)
+    }
+}
 
-    let additional_info = match conclusion {
-        Conclusion::Timeout => "by timeout",
-        Conclusion::Resigned => "by resignation",
-        Conclusion::Board => "on the board",
-        Conclusion::Committee => "by committee decision",
-        _ => "",
-    };
+pub fn result_marker_label(i18n: I18nContext<Locale, I18nKeys>, marker: &str) -> &str {
+    match marker {
+        "W" => t_string!(i18n, common.short_win),
+        "D" => t_string!(i18n, common.short_draw),
+        "L" => t_string!(i18n, common.short_loss),
+        "B" => t_string!(i18n, common.short_bye),
+        _ => marker,
+    }
+}
 
-    format!("{winner_username} won {additional_info}")
+pub fn game_speed_label_for_locale(locale: Locale, speed: GameSpeed) -> &'static str {
+    match speed {
+        GameSpeed::Bullet => td_string!(locale, game.speeds.bullet),
+        GameSpeed::Blitz => td_string!(locale, game.speeds.blitz),
+        GameSpeed::Rapid => td_string!(locale, game.speeds.rapid),
+        GameSpeed::Classic => td_string!(locale, game.speeds.classic),
+        GameSpeed::Correspondence => td_string!(locale, game.speeds.correspondence),
+        GameSpeed::Untimed => td_string!(locale, game.speeds.untimed),
+        GameSpeed::Puzzle => td_string!(locale, game.speeds.puzzle),
+    }
 }

@@ -8,7 +8,15 @@ pub const CHAPTER: Chapter = Chapter {
     id: "online",
     title: "Playing online",
     summary: "Find a game, use the clock and controls, and make yourself at home.",
-    lessons: &[CREATE_JOIN, TIME_CONTROLS, CONTROLS, SETTINGS, CORRESPONDENCE, TOURNAMENTS, READY],
+    lessons: &[
+        CREATE_JOIN,
+        TIME_CONTROLS,
+        CONTROLS,
+        SETTINGS,
+        CORRESPONDENCE,
+        TOURNAMENTS,
+        READY,
+    ],
 };
 
 const CREATE_JOIN: Lesson = Lesson {

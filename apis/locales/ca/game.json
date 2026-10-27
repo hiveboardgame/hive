@@ -1,13 +1,13 @@
 {
     "time_mode": {
-        "untimed": "Sense límit de temps",
         "real_time": "Temps real",
         "correspondence": {
-            "title": "Correspondència",
             "days_move_one": "{{count}} Dia per moviment",
             "days_move_other": "{{count}} Dies per moviment",
             "days_side_one": "{{count}} Dia per jugador",
-            "days_side_other": "{{count}} Dies per jugador"
+            "days_side_other": "{{count}} Dies per jugador",
+            "duration_move": "{{duration}} per moviment",
+            "duration_side": "{{duration}} per jugador"
         }
     },
     "played_in": "Jugada a:",
@@ -39,14 +39,115 @@
         "both_ready": "Aquesta partida de torneig començarà quan els dos jugadors estiguin preparats",
         "both_click": "La partida començarà quan els dos jugadors cliqueu a \"Preparat\" amb menys de 30 segons de diferència"
     },
+    "arena": {
+        "berserk": "Berserk",
+        "berserk_title": "Renuncia a l'increment i, quan sigui aplicable, a la meitat del temps base per obtenir punts extra d'arena.",
+        "back_to_arena": "Torna a l’arena",
+        "return_for_pairing": "Torna per trobar el següent rival.",
+        "pairing_paused": "Emparellaments en pausa. Reprèn a l’arena quan vulguis."
+    },
+    "realtime_assignments": {
+        "title": "Partides en temps real preparades",
+        "challenge": "Repte en temps real",
+        "tournament": "Partida de torneig",
+        "arena": "Partida d'Arena",
+        "opening_due": "El moviment inicial venç en {{count}} s",
+        "opening_due_now": "El moviment inicial venç ara",
+        "open_new_tab": "Obre en una pestanya nova"
+    },
     "speeds": {
         "rapid": "Ràpida",
         "classic": "Clàssica",
         "untimed": "Sense temps",
         "correspondence": "Correspondència",
         "blitz": "Blitz",
-        "bullet": "Bullet"
+        "bullet": "Bullet",
+        "puzzle": "Problema"
     },
     "rated": "Puntuada",
-    "casual": "Casual"
+    "casual": "Casual",
+    "tournament_result": {
+        "white_won": "Les blanques han guanyat",
+        "draw": "Taules",
+        "black_won": "Les negres han guanyat",
+        "white_won_by_forfeit": "Les blanques han guanyat per incompareixença",
+        "black_won_by_forfeit": "Les negres han guanyat per incompareixença",
+        "adjudicated_draw": "Taules per decisió arbitral",
+        "white_draw_black_forfeit_loss": "Taules per a les blanques; derrota per incompareixença de les negres",
+        "white_forfeit_loss_black_draw": "Derrota per incompareixença de les blanques; taules per a les negres",
+        "double_forfeit": "Doble incompareixença"
+    },
+    "rating_range": "Marge de puntuació",
+    "speeds_label": "Ritmes",
+    "view": "Veure",
+    "quickplay_tooltip": "{{speed}}\n{{base}} min de temps inicial\n+{{increment}} s per moviment",
+    "rematch": "Revenja",
+    "rematch_sent": "Enviat",
+    "accept_challenge": "Accepta el repte",
+    "cancel_challenge": "Cancel·la el repte",
+    "decline_challenge": "Rebutja el repte",
+    "accepting": "Acceptant...",
+    "removing": "Eliminant...",
+    "challenge_to_a_game": "Repta a una partida",
+    "abort": "Avorta",
+    "accept_draw": "Accepta les taules",
+    "offer_draw": "Ofereix taules",
+    "reject_draw": "Rebutja les taules",
+    "resign": "Abandona",
+    "accept_takeback": "Accepta desfer",
+    "reject_takeback": "Rebutja desfer",
+    "request_takeback": "Demana desfer",
+    "invite_as_organizer": "Convida com a organitzador",
+    "no_rating_history_yet": "Encara no hi ha historial de puntuació",
+    "not_enough_games_to_build_a_graph": "No hi ha prou partides per crear un gràfic",
+    "error_loading_history": "Error en carregar l'historial",
+    "show_controls": "Mostra els controls",
+    "hide_controls": "Amaga els controls",
+    "opponent_wants_a_takeback": "L'oponent vol desfer una jugada",
+    "opponent_offers_a_draw": "L'oponent ofereix taules",
+    "playing_now": "Jugant ara",
+    "view_game_details": "Mostra els detalls de la partida",
+    "connected": "Connectat",
+    "disconnected": "Desconnectat",
+    "offline": "fora de línia",
+    "unknown_player": "Jugador desconegut",
+    "clear_selection": "Esborra la selecció",
+    "searching": "Cercant...",
+    "played_in_label": "Jugat a",
+    "open_navigation_menu": "Obre el menú de navegació",
+    "no_data": "Sense dades",
+    "analyze_here": "Analitza aquí",
+    "rating_history_title": "Historial de puntuació de {{speed}}",
+    "in_tournament": "a {{tournament}}",
+    "played_in_tournament": "jugat a {{tournament}}",
+    "site_description": "El millor lloc per jugar a Hive en línia: el joc d'estratègia sense tauler. Gratuït, sense anuncis, amb partides puntuades, tornejos i joc contra amics, oponents aleatoris o bots.",
+    "site_title": "HiveGame.com • Juga a Hive en línia",
+    "rating_history_minimum_games": "Juga almenys cinc partides puntuades a aquest ritme per mostrar el gràfic.",
+    "result": {
+        "winner_timeout": "{{winner}} ha guanyat per temps",
+        "winner_resignation": "{{winner}} ha guanyat per abandonament",
+        "winner_board": "{{winner}} ha guanyat al tauler",
+        "winner_committee": "{{winner}} ha guanyat per decisió del comitè",
+        "winner_withdrawal": "{{winner}} ha guanyat per retirada",
+        "winner_forfeit": "{{winner}} ha guanyat per incompareixença",
+        "double_forfeit": "La partida ha acabat amb doble incompareixença",
+        "draw_summary": "{{result}} {{conclusion}}",
+        "winner": "{{winner}} ha guanyat"
+    },
+    "conclusion": {
+        "board": "Finalitzada al tauler",
+        "committee": "Decisió del comitè",
+        "draw": "Taules acordades",
+        "forfeit": "Incompareixença",
+        "repetition": "Triple repetició de jugades",
+        "resigned": "Abandonament",
+        "timeout": "Temps esgotat"
+    },
+    "clock": {
+        "days": "{{days}}d",
+        "days_hours": "{{days}}d:{{hours}}h",
+        "hours_minutes": "{{hours}}h{{minutes}}",
+        "arena_hours_minutes": "{{hours}}h {{minutes}}m"
+    },
+    "aborted_by": "{{actor}} ha avortat la partida"
 }

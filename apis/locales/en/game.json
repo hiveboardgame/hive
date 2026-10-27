@@ -1,13 +1,13 @@
 {
     "time_mode": {
-        "untimed": "No time limit",
         "real_time": "Real time",
         "correspondence": {
-            "title": "Correspondence",
             "days_move_one": "{{count}} day per move",
             "days_move_other": "{{count}} days per move",
             "days_side_one": "{{count}} day per side",
-            "days_side_other": "{{count}} days per side"
+            "days_side_other": "{{count}} days per side",
+            "duration_move": "{{duration}} per move",
+            "duration_side": "{{duration}} per side"
         }
     },
     "played_in": "Played in:",
@@ -34,7 +34,6 @@
         "minutes_one": "Finished {{count}} minute ago",
         "minutes_other": "Finished {{count}} minutes ago",
         "less_than_minute": "Finished less than a minute ago"
-
     },
     "no_moves_played": "No moves played",
     "start_when": {
@@ -42,19 +41,117 @@
         "both_click": "The game will start when both of you click ready within 30s of each other",
         "both_ready": "This tournament game will start when both players are ready"
     },
+    "arena": {
+        "berserk": "Berserk",
+        "berserk_title": "Give up your increment and, when eligible, halve your base time for extra Arena points.",
+        "back_to_arena": "Back to arena",
+        "return_for_pairing": "Return to find your next opponent.",
+        "pairing_paused": "Pairing paused. Resume in the arena when you're ready."
+    },
+    "realtime_assignments": {
+        "title": "Realtime games ready",
+        "challenge": "Realtime challenge",
+        "tournament": "Tournament game",
+        "arena": "Arena game",
+        "opening_due": "Opening move due in {{count}}s",
+        "opening_due_now": "Opening move is due now",
+        "open_new_tab": "Open in new tab"
+    },
     "speeds": {
         "bullet": "Bullet",
         "blitz": "Blitz",
         "rapid": "Rapid",
         "classic": "Classic",
         "correspondence": "Correspondence",
-        "untimed": "Untimed"
+        "untimed": "Untimed",
+        "puzzle": "Puzzle"
     },
     "tournament_ready_title": "Tournament Game Ready!",
     "tournament_ready_opponent": "Your opponent",
     "tournament_ready_message": "is ready to start the tournament game. You have 30 seconds to accept and start the game.",
-    "tournament_ready_accept": "Accept Game",
-    "tournament_ready_view_game": "View Game",
-    "tournament_ready_close": "Close",
-    "tournament_ready_timeout": "This notification will auto-close in 30 seconds."
+    "tournament_ready_timeout": "This notification will auto-close in 30 seconds.",
+    "tournament_result": {
+        "white_won": "White won",
+        "draw": "Draw",
+        "black_won": "Black won",
+        "white_won_by_forfeit": "White won by forfeit",
+        "black_won_by_forfeit": "Black won by forfeit",
+        "adjudicated_draw": "Adjudicated draw",
+        "white_draw_black_forfeit_loss": "White draw; Black forfeit loss",
+        "white_forfeit_loss_black_draw": "White forfeit loss; Black draw",
+        "double_forfeit": "Double forfeit"
+    },
+    "rating_range": "Rating range",
+    "speeds_label": "Speeds",
+    "view": "View",
+    "quickplay_tooltip": "{{speed}}\n{{base}} min base time\n+{{increment}} sec per move",
+    "rematch": "Rematch",
+    "rematch_sent": "Sent",
+    "accept_challenge": "Accept Challenge",
+    "cancel_challenge": "Cancel Challenge",
+    "decline_challenge": "Decline Challenge",
+    "accepting": "Accepting...",
+    "removing": "Removing...",
+    "challenge_to_a_game": "Challenge to a game",
+    "abort": "Abort",
+    "accept_draw": "Accept Draw",
+    "offer_draw": "Offer Draw",
+    "reject_draw": "Reject Draw",
+    "resign": "Resign",
+    "accept_takeback": "Accept Takeback",
+    "reject_takeback": "Reject Takeback",
+    "request_takeback": "Request Takeback",
+    "invite_as_organizer": "Invite as organizer",
+    "no_rating_history_yet": "No rating history yet",
+    "not_enough_games_to_build_a_graph": "Not enough games to build a graph",
+    "error_loading_history": "Error loading history",
+    "show_controls": "Show controls",
+    "hide_controls": "Hide Controls",
+    "opponent_wants_a_takeback": "Opponent wants a takeback",
+    "opponent_offers_a_draw": "Opponent offers a draw",
+    "playing_now": "Playing now",
+    "view_game_details": "View game details",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "offline": "offline",
+    "unknown_player": "Unknown Player",
+    "clear_selection": "Clear selection",
+    "searching": "Searching...",
+    "played_in_label": "Played in",
+    "open_navigation_menu": "Open navigation menu",
+    "no_data": "No data",
+    "analyze_here": "Analyze here",
+    "rating_history_title": "{{speed}} Rating History",
+    "in_tournament": "in {{tournament}}",
+    "played_in_tournament": "played in {{tournament}}",
+    "site_description": "The best place to play Hive online — the strategy game with no board. Free, no ads, with rated games, tournaments, and play against friends, random opponents or bots.",
+    "site_title": "HiveGame.com • Play Hive Online",
+    "rating_history_minimum_games": "Play at least five rated games at this speed to show the chart.",
+    "result": {
+        "winner_timeout": "{{winner}} won by timeout",
+        "winner_resignation": "{{winner}} won by resignation",
+        "winner_board": "{{winner}} won on the board",
+        "winner_committee": "{{winner}} won by committee decision",
+        "winner_withdrawal": "{{winner}} won by withdrawal",
+        "winner_forfeit": "{{winner}} won by forfeit",
+        "double_forfeit": "The game ended as a double forfeit",
+        "draw_summary": "{{result}} {{conclusion}}",
+        "winner": "{{winner}} won"
+    },
+    "conclusion": {
+        "board": "Finished on board",
+        "committee": "Committee decision",
+        "draw": "Draw agreed",
+        "forfeit": "Forfeit",
+        "repetition": "3 move repetition",
+        "resigned": "Resigned",
+        "timeout": "Timeout"
+    },
+    "clock": {
+        "days": "{{days}}d",
+        "days_hours": "{{days}}d:{{hours}}h",
+        "hours_minutes": "{{hours}}h{{minutes}}",
+        "arena_hours_minutes": "{{hours}}h {{minutes}}m"
+    },
+    "aborted_by": "{{actor}} aborted the game"
 }

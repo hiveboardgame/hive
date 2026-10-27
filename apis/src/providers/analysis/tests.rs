@@ -4,6 +4,7 @@ use super::{
         arena_from_wire,
         wire_nodes,
         AnalysisDocument,
+        AnalysisDocumentError,
         LoadError,
         LoadedAnalysis,
         WireNode,
@@ -341,7 +342,7 @@ fn hash_equivalent_child_restores_the_existing_orientation() {
 }
 
 /// Convergence is tree-wide: equal depth and equal hash, not just a sibling.
-
+///
 /// From TbkRypoWaw ply 56, which supplies a real four-ply cycle. The two-ply `m` commutes with
 /// it, so `[m, cycle]` and `[cycle, m]` reach one position at one depth, having passed through
 /// it twice and once.
@@ -738,7 +739,7 @@ fn legacy_document_rejects_a_non_null_missing_parent() {
 
     assert!(matches!(
         LoadedAnalysis::from_json(&input.to_string()),
-        Err(LoadError::Invalid(message)) if message.contains("missing parent 99")
+        Err(LoadError::Invalid(AnalysisDocumentError::LegacyMissingParent { parent, .. })) if parent == "99"
     ));
 }
 
@@ -904,15 +905,10 @@ fn versioned_documents_require_every_move_hash() {
     ];
     let arena = arena_from_wire(NodeId::ROOT, nodes, true).unwrap();
     assert!(matches!(
-        LoadedAnalysis::validate(
-            arena,
-            NodeId(1),
-            GameType::MLP,
-            HashMap::new(),
-            true,
-            None
-        ),
-        Err(LoadError::Invalid(message)) if message.contains("missing its position hash")
+        LoadedAnalysis::validate(arena, NodeId(1), GameType::MLP, HashMap::new(), true, None),
+        Err(LoadError::Invalid(
+            AnalysisDocumentError::MissingPositionHash { .. }
+        ))
     ));
 }
 
@@ -940,7 +936,9 @@ fn duplicate_child_ownership_is_rejected() {
     ];
     assert!(matches!(
         arena_from_wire(NodeId::ROOT, nodes, true),
-        Err(LoadError::Invalid(message)) if message.contains("owned more than once")
+        Err(LoadError::Invalid(
+            AnalysisDocumentError::MultipleOwners { .. }
+        ))
     ));
 }
 

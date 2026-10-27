@@ -7,6 +7,7 @@ use crate::{
         molecules::{empty_state::EmptyState, panel::Panel},
     },
     functions::telemetry::read_telemetry,
+    i18n::{t, t_string, use_i18n},
     providers::AuthContext,
 };
 use chrono::{DateTime, Duration, Utc};
@@ -40,6 +41,7 @@ fn build_x_ticks(rows: &[TelemetryRow]) -> TickLabels<DateTime<Utc>> {
 
 #[component]
 pub fn AdminTelemetry() -> impl IntoView {
+    let i18n = use_i18n();
     let auth_context = expect_context::<AuthContext>();
     let range = RwSignal::new(TelemetryRange::LastHour);
     let refresh_token = RwSignal::new(0u32);
@@ -60,19 +62,25 @@ pub fn AdminTelemetry() -> impl IntoView {
                 when=move || {
                     auth_context.user.with(|a| a.as_ref().is_some_and(|v| v.user.admin))
                 }
-                fallback=|| {
+                fallback=move || {
                     view! {
                         <EmptyState
-                            title="Telemetry unavailable"
-                            message="This page is only available to administrators."
+                            title=move || {
+                                t_string!(i18n, common.admin.telemetry.telemetry_unavailable)
+                            }
+                            message=move || t_string!(i18n, common.admin.administrators_only)
                         />
                     }
                 }
             >
                 <div class="flex flex-col gap-4 w-full max-w-7xl">
                     <PageHeader
-                        title="WS Telemetry"
-                        subtitle="Connection, queue, and chat health over time."
+                        title=move || t_string!(i18n, common.admin.telemetry.ws_telemetry)
+                        subtitle=move || {
+                            t_string!(
+                                i18n, common.admin.telemetry.connection_queue_and_chat_health_over_time
+                            )
+                        }
                     />
                     <div class="flex flex-wrap gap-2 items-center">
                         <RangeButtons range=range />
@@ -80,15 +88,15 @@ pub fn AdminTelemetry() -> impl IntoView {
                             class="ui-button ui-button-secondary ui-button-sm"
                             on:click=move |_| refresh_token.update(|n| *n = n.wrapping_add(1))
                         >
-                            "Refresh"
+                            {t!(i18n, common.refresh)}
                         </button>
                         <span class="text-xs text-gray-600 dark:text-gray-400">
-                            "Auto-refresh every 30s"
+                            {t!(i18n, common.admin.telemetry.auto_refresh_every_30s)}
                         </span>
                     </div>
                     <ChartStyles />
                     <Suspense fallback=move || {
-                        view! { <EmptyState title="Loading telemetry..." /> }
+                        view! { <EmptyState title=move || t_string!(i18n, common.loading) /> }
                     }>
                         {move || {
                             data.get()
@@ -96,8 +104,14 @@ pub fn AdminTelemetry() -> impl IntoView {
                                     Ok(rows) if rows.is_empty() => {
                                         view! {
                                             <EmptyState
-                                                title="No telemetry rows"
-                                                message="The file is empty or the selected range is too short."
+                                                title=move || {
+                                                    t_string!(i18n, common.admin.telemetry.no_telemetry_rows)
+                                                }
+                                                message=move || {
+                                                    t_string!(
+                                                        i18n, common.admin.telemetry.the_file_is_empty_or_the_selected_range_is
+                                                    )
+                                                }
                                             />
                                         }
                                             .into_any()
@@ -106,7 +120,9 @@ pub fn AdminTelemetry() -> impl IntoView {
                                     Err(e) => {
                                         view! {
                                             <EmptyState
-                                                title="Telemetry error"
+                                                title=move || {
+                                                    t_string!(i18n, common.admin.telemetry.telemetry_error)
+                                                }
                                                 message=format!("{e}")
                                             />
                                         }
@@ -123,7 +139,8 @@ pub fn AdminTelemetry() -> impl IntoView {
 
 #[component]
 fn RangeButtons(range: RwSignal<TelemetryRange>) -> impl IntoView {
-    let btn = move |label: &'static str, value: TelemetryRange| {
+    let i18n = use_i18n();
+    let btn = move |label: TextProp, value: TelemetryRange| {
         let class = move || {
             let active = range.get() == value;
             if active {
@@ -134,51 +151,94 @@ fn RangeButtons(range: RwSignal<TelemetryRange>) -> impl IntoView {
         };
         view! {
             <button class=class on:click=move |_| range.set(value)>
-                {label}
+                {move || label.get()}
             </button>
         }
     };
     view! {
         <div>
-            {btn("Last hour", TelemetryRange::LastHour)} {btn("Last 24h", TelemetryRange::Last24h)}
-            {btn("Last 7d", TelemetryRange::Last7d)} {btn("All", TelemetryRange::All)}
+            {btn(
+                (move || t_string!(i18n, common.admin.telemetry.last_hour)).into(),
+                TelemetryRange::LastHour,
+            )}
+            {btn(
+                (move || t_string!(i18n, common.admin.telemetry.last_24h)).into(),
+                TelemetryRange::Last24h,
+            )}
+            {btn(
+                (move || t_string!(i18n, common.admin.telemetry.last_7d)).into(),
+                TelemetryRange::Last7d,
+            )} {btn((move || t_string!(i18n, common.all)).into(), TelemetryRange::All)}
         </div>
     }
 }
 
 #[component]
 fn AllPanels(rows: Vec<TelemetryRow>) -> impl IntoView {
+    let i18n = use_i18n();
     let (data, _) = signal(rows);
     view! {
         <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
-            <Panel title="Connections (gauges)" body_class="overflow-x-auto">
+            <Panel
+                title=move || t_string!(i18n, common.admin.telemetry.connections_gauges)
+                body_class="overflow-x-auto"
+            >
                 <ChartConnections data=data />
             </Panel>
-            <Panel title="Memory (MiB)" body_class="overflow-x-auto">
+            <Panel
+                title=move || t_string!(i18n, common.admin.telemetry.memory_mib)
+                body_class="overflow-x-auto"
+            >
                 <ChartMemory data=data />
             </Panel>
-            <Panel title="Drops - full (per interval)" body_class="overflow-x-auto">
+            <Panel
+                title=move || t_string!(i18n, common.admin.telemetry.drops_full_per_interval)
+                body_class="overflow-x-auto"
+            >
                 <ChartDropsFull data=data />
             </Panel>
-            <Panel title="Drops - closed (per interval)" body_class="overflow-x-auto">
+            <Panel
+                title=move || t_string!(i18n, common.admin.telemetry.drops_closed_per_interval)
+                body_class="overflow-x-auto"
+            >
                 <ChartDropsClosed data=data />
             </Panel>
-            <Panel title="Queue health" body_class="overflow-x-auto">
+            <Panel
+                title=move || t_string!(i18n, common.admin.telemetry.queue_health)
+                body_class="overflow-x-auto"
+            >
                 <ChartQueue data=data />
             </Panel>
-            <Panel title="Per-game activity (per interval)" body_class="overflow-x-auto">
+            <Panel
+                title=move || t_string!(i18n, common.admin.telemetry.per_game_activity_per_interval)
+                body_class="overflow-x-auto"
+            >
                 <ChartActivity data=data />
             </Panel>
-            <Panel title="Persistent chat health (per interval)" body_class="overflow-x-auto">
+            <Panel
+                title=move || {
+                    t_string!(i18n, common.admin.telemetry.persistent_chat_health_per_interval)
+                }
+                body_class="overflow-x-auto"
+            >
                 <ChartPersistentChatHealth data=data />
             </Panel>
-            <Panel title="Sessions" body_class="overflow-x-auto">
+            <Panel
+                title=move || t_string!(i18n, common.admin.telemetry.sessions)
+                body_class="overflow-x-auto"
+            >
                 <ChartSessions data=data />
             </Panel>
-            <Panel title="Membership" body_class="overflow-x-auto">
+            <Panel
+                title=move || t_string!(i18n, common.admin.telemetry.membership)
+                body_class="overflow-x-auto"
+            >
                 <ChartMembership data=data />
             </Panel>
-            <Panel title="Caches" body_class="overflow-x-auto">
+            <Panel
+                title=move || t_string!(i18n, common.admin.telemetry.caches)
+                body_class="overflow-x-auto"
+            >
                 <ChartCaches data=data />
             </Panel>
         </div>
@@ -234,105 +294,237 @@ fn base_chart(
 
 #[component]
 fn ChartConnections(data: ReadSignal<Vec<TelemetryRow>>) -> impl IntoView {
-    let series = Series::new(ts)
-        .line(tline!("sockets", active_sockets))
-        .line(tline!("users", active_users))
-        .line(tline!("games", active_games));
-    base_chart(series, data)
+    let i18n = use_i18n();
+    move || {
+        let series = Series::new(ts)
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.sockets).to_string(),
+                active_sockets
+            ))
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.users).to_string(),
+                active_users
+            ))
+            .line(tline!(
+                t_string!(i18n, common.games).to_string(),
+                active_games
+            ));
+        base_chart(series, data)
+    }
 }
 
 #[component]
 fn ChartMemory(data: ReadSignal<Vec<TelemetryRow>>) -> impl IntoView {
-    const MIB: f64 = 1024.0 * 1024.0;
-    let series = Series::new(ts)
-        .line(tline_f!(
-            "rss MiB",
-            |r: &TelemetryRow| r.process_vm_rss_bytes as f64 / MIB
-        ))
-        .line(tline_f!(
-            "hwm MiB",
-            |r: &TelemetryRow| r.process_vm_hwm_bytes as f64 / MIB
-        ));
-    base_chart(series, data)
+    let i18n = use_i18n();
+    move || {
+        const MIB: f64 = 1024.0 * 1024.0;
+        let series = Series::new(ts)
+            .line(tline_f!(
+                t_string!(i18n, common.admin.telemetry.rss_mib).to_string(),
+                |r: &TelemetryRow| r.process_vm_rss_bytes as f64 / MIB
+            ))
+            .line(tline_f!(
+                t_string!(i18n, common.admin.telemetry.hwm_mib).to_string(),
+                |r: &TelemetryRow| r.process_vm_hwm_bytes as f64 / MIB
+            ));
+        base_chart(series, data)
+    }
 }
 
 #[component]
 fn ChartDropsFull(data: ReadSignal<Vec<TelemetryRow>>) -> impl IntoView {
-    let series = Series::new(ts)
-        .line(tline!("user", drops_full_user))
-        .line(tline!("game", drops_full_game))
-        .line(tline!("gamespec", drops_full_gamespec))
-        .line(tline!("global", drops_full_global))
-        .line(tline!("tour", drops_full_tour))
-        .line(tline!("direct", drops_full_direct));
-    base_chart(series, data)
+    let i18n = use_i18n();
+    move || {
+        let series = Series::new(ts)
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.user).to_string(),
+                drops_full_user
+            ))
+            .line(tline!(
+                t_string!(i18n, common.game).to_string(),
+                drops_full_game
+            ))
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.gamespec).to_string(),
+                drops_full_gamespec
+            ))
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.global).to_string(),
+                drops_full_global
+            ))
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.tour).to_string(),
+                drops_full_tour
+            ))
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.direct).to_string(),
+                drops_full_direct
+            ));
+        base_chart(series, data)
+    }
 }
 
 #[component]
 fn ChartDropsClosed(data: ReadSignal<Vec<TelemetryRow>>) -> impl IntoView {
-    let series = Series::new(ts)
-        .line(tline!("user", drops_closed_user))
-        .line(tline!("game", drops_closed_game))
-        .line(tline!("gamespec", drops_closed_gamespec))
-        .line(tline!("global", drops_closed_global))
-        .line(tline!("tour", drops_closed_tour))
-        .line(tline!("direct", drops_closed_direct));
-    base_chart(series, data)
+    let i18n = use_i18n();
+    move || {
+        let series = Series::new(ts)
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.user).to_string(),
+                drops_closed_user
+            ))
+            .line(tline!(
+                t_string!(i18n, common.game).to_string(),
+                drops_closed_game
+            ))
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.gamespec).to_string(),
+                drops_closed_gamespec
+            ))
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.global).to_string(),
+                drops_closed_global
+            ))
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.tour).to_string(),
+                drops_closed_tour
+            ))
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.direct).to_string(),
+                drops_closed_direct
+            ));
+        base_chart(series, data)
+    }
 }
 
 #[component]
 fn ChartQueue(data: ReadSignal<Vec<TelemetryRow>>) -> impl IntoView {
-    let series = Series::new(ts)
-        .line(tline!("max queue depth", max_queue_depth))
-        .line(tline!("loader queued", load_user_state_queued))
-        .line(tline!("loader in_flight", load_user_state_in_flight))
-        .line(tline!("loader max", load_user_state_permit_max))
-        .line(tline!("db pool max", db_pool_max_size))
-        .line(tline!("own_state drops", own_state_drops));
-    base_chart(series, data)
+    let i18n = use_i18n();
+    move || {
+        let series = Series::new(ts)
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.max_queue_depth).to_string(),
+                max_queue_depth
+            ))
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.loader_queued).to_string(),
+                load_user_state_queued
+            ))
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.loader_in_flight).to_string(),
+                load_user_state_in_flight
+            ))
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.loader_max).to_string(),
+                load_user_state_permit_max
+            ))
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.db_pool_max).to_string(),
+                db_pool_max_size
+            ))
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.own_state_drops).to_string(),
+                own_state_drops
+            ));
+        base_chart(series, data)
+    }
 }
 
 #[component]
 fn ChartActivity(data: ReadSignal<Vec<TelemetryRow>>) -> impl IntoView {
-    let series = Series::new(ts)
-        .line(tline!("from_model", from_model_calls))
-        .line(tline!("tv broadcasts", tv_broadcasts))
-        .line(tline!("games finalized", games_finalized));
-    base_chart(series, data)
+    let i18n = use_i18n();
+    move || {
+        let series = Series::new(ts)
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.from_model).to_string(),
+                from_model_calls
+            ))
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.tv_broadcasts).to_string(),
+                tv_broadcasts
+            ))
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.games_finalized).to_string(),
+                games_finalized
+            ));
+        base_chart(series, data)
+    }
 }
 
 #[component]
 fn ChartPersistentChatHealth(data: ReadSignal<Vec<TelemetryRow>>) -> impl IntoView {
-    let series = Series::new(ts)
-        .line(tline!("failures", chat_persist_failures))
-        .line(tline!("rate-limit rejections", chat_rate_limit_rejections));
-    base_chart(series, data)
+    let i18n = use_i18n();
+    move || {
+        let series = Series::new(ts)
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.failures).to_string(),
+                chat_persist_failures
+            ))
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.rate_limit_rejections).to_string(),
+                chat_rate_limit_rejections
+            ));
+        base_chart(series, data)
+    }
 }
 
 #[component]
 fn ChartSessions(data: ReadSignal<Vec<TelemetryRow>>) -> impl IntoView {
-    let series = Series::new(ts)
-        .line(tline!("outer", sessions_outer))
-        .line(tline!("inner total", sessions_inner_total));
-    base_chart(series, data)
+    let i18n = use_i18n();
+    move || {
+        let series = Series::new(ts)
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.outer).to_string(),
+                sessions_outer
+            ))
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.inner_total).to_string(),
+                sessions_inner_total
+            ));
+        base_chart(series, data)
+    }
 }
 
 #[component]
 fn ChartMembership(data: ReadSignal<Vec<TelemetryRow>>) -> impl IntoView {
-    let series = Series::new(ts)
-        .line(tline!("games→sockets", membership_games_sockets))
-        .line(tline!("sockets→games", membership_sockets_games));
-    base_chart(series, data)
+    let i18n = use_i18n();
+    move || {
+        let series = Series::new(ts)
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.games_sockets).to_string(),
+                membership_games_sockets
+            ))
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.sockets_games).to_string(),
+                membership_sockets_games
+            ));
+        base_chart(series, data)
+    }
 }
 
 #[component]
 fn ChartCaches(data: ReadSignal<Vec<TelemetryRow>>) -> impl IntoView {
-    let series = Series::new(ts)
-        .line(tline!("game_response", game_response_cache))
-        .line(tline!("last_tv", last_tv_broadcast))
-        .line(tline!("lags trackers", lags_trackers))
-        .line(tline!("game_start dates", game_start_games_date));
-    base_chart(series, data)
+    let i18n = use_i18n();
+    move || {
+        let series = Series::new(ts)
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.game_response).to_string(),
+                game_response_cache
+            ))
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.last_tv).to_string(),
+                last_tv_broadcast
+            ))
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.lags_trackers).to_string(),
+                lags_trackers
+            ))
+            .line(tline!(
+                t_string!(i18n, common.admin.telemetry.game_start_dates).to_string(),
+                game_start_games_date
+            ));
+        base_chart(series, data)
+    }
 }
 
 #[component]

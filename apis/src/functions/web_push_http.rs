@@ -1,7 +1,7 @@
 use crate::{functions::devices::new_web_push_device, notifications::web_push};
 use actix_identity::Identity;
 use actix_web::{get, http::header, post, web, HttpResponse, Responder};
-use db_lib::{get_conn, models::PushDevice, DbPool};
+use db_lib::{db_error::DbError, get_conn, models::PushDevice, DbPool};
 use serde::Deserialize;
 use uuid::Uuid;
 
@@ -57,8 +57,9 @@ pub async fn web_subscription(
         Err(e) => return HttpResponse::BadRequest().body(e),
     };
 
-    match PushDevice::upsert_rotated(new_device, body.old_endpoint, &mut conn).await {
+    match PushDevice::rotate_endpoint(new_device, body.old_endpoint, &mut conn).await {
         Ok(()) => HttpResponse::NoContent().finish(),
+        Err(DbError::NotFound { .. } | DbError::Unauthorized) => HttpResponse::Forbidden().finish(),
         Err(_) => HttpResponse::InternalServerError().finish(),
     }
 }

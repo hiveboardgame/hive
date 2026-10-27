@@ -183,7 +183,7 @@ pub fn ArchiveGameList(
                                         />
                                         {move || {
                                             if copy_state.get() {
-                                                t_string!(i18n, archive.copied).to_string()
+                                                t_string!(i18n, common.copied).to_string()
                                             } else {
                                                 t_string!(i18n, archive.permalink).to_string()
                                             }
@@ -214,7 +214,7 @@ pub fn ArchiveGameList(
                                         class=PAGINATION_BTN_CLASS
                                         disabled=move || !has_prev.get()
                                         aria-label=move || {
-                                            t_string!(i18n, archive.prev_page).to_string()
+                                            t_string!(i18n, common.previous).to_string()
                                         }
                                         on:click=move |_| {
                                             if has_prev.get_untracked() {
@@ -232,7 +232,7 @@ pub fn ArchiveGameList(
                                         class=PAGINATION_BTN_CLASS
                                         disabled=move || !has_next.get()
                                         aria-label=move || {
-                                            t_string!(i18n, archive.next_page).to_string()
+                                            t_string!(i18n, common.next).to_string()
                                         }
                                         on:click=move |_| {
                                             if has_next.get_untracked() {
@@ -295,9 +295,7 @@ pub fn ArchiveGameList(
                                 type="button"
                                 class=COMPACT_PAGINATION_BTN_CLASS
                                 disabled=move || !has_prev.get()
-                                aria-label=move || {
-                                    t_string!(i18n, archive.prev_page).to_string()
-                                }
+                                aria-label=move || { t_string!(i18n, common.previous).to_string() }
                                 on:click=move |_| {
                                     if has_prev.get_untracked() {
                                         on_page_change.run(page.get_untracked() - 1);
@@ -310,9 +308,7 @@ pub fn ArchiveGameList(
                                 type="button"
                                 class=COMPACT_PAGINATION_BTN_CLASS
                                 disabled=move || !has_next.get()
-                                aria-label=move || {
-                                    t_string!(i18n, archive.next_page).to_string()
-                                }
+                                aria-label=move || { t_string!(i18n, common.next).to_string() }
                                 on:click=move |_| {
                                     if has_next.get_untracked() {
                                         on_page_change.run(page.get_untracked() + 1);

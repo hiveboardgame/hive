@@ -1,35 +1,28 @@
 {
-    "game_buttons": {
-        "pending": "Pending",
-        "playing": "Playing",
-        "finished": "Finished"
-    },
-    "deleted_user": "Deleted user",
-    "color_buttons": {
-        "both": "Both",
-        "white": "White",
-        "black": "Black"
-    },
     "result_buttons": {
         "win": "Win",
         "loss": "Loss",
-        "draw": "Draw",
-        "all": "All"
+        "draw": "Draw"
     },
-    "stats_box": {
-        "total": "Total",
-        "wins": "Wins",
-        "losses": "Losses",
-        "draws": "Draws"
-    },
-    "player_color": "Player color:",
     "game_result": "Game result:",
     "include_speeds": "Included speeds:",
-    "currently_applied": "Currently Applied",
-    "adjust_filters": "Adjust Filters",
-    "changes_pending": "Changes pending",
-    "apply_changes": "Apply Changes",
-    "reset_to_default": "Reset to Default",
-    "speeds": "Speeds",
-    "statistics": "Statistics"
+    "speed_statistics": "{{speed}} statistics",
+    "expansion_buttons": {
+        "basic": "Basic",
+        "full": "Full"
+    },
+    "player_color": "Player color",
+    "rating": "Rating",
+    "games_played_one": "{{count}} game",
+    "games_played_other": "{{count}} games",
+    "page": {
+        "redirecting": "Redirecting…",
+        "user_not_found": "User not found"
+    },
+    "leaderboards": {
+        "top_rated_players": "Top Rated Players",
+        "highest_rated_players_by_speed": "Highest rated players by speed.",
+        "top_rated_bots": "Top Rated Bots",
+        "highest_rated_bots_by_speed": "Highest rated bots by speed."
+    }
 }

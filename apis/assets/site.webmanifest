@@ -2,10 +2,11 @@
     "name": "HiveGame",
     "short_name": "HiveGame",
     "id": "/",
-    "description": "Play Hive online — the strategy board game with no dice and no luck.",
     "lang": "en",
     "dir": "ltr",
-    "categories": ["games"],
+    "categories": [
+        "games"
+    ],
     "start_url": "/",
     "scope": "/",
     "display": "standalone",
@@ -43,8 +44,14 @@
         }
     ],
     "shortcuts": [
-        { "name": "Profile", "url": "/@/me" },
-        { "name": "Archive", "url": "/archive" },
-        { "name": "Analysis", "url": "/analysis" }
+        {
+            "url": "/@/me"
+        },
+        {
+            "url": "/archive"
+        },
+        {
+            "url": "/analysis"
+        }
     ]
 }

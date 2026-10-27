@@ -4,11 +4,20 @@ use crate::responses::{
     GameResponse,
     HeartbeatResponse,
     ScheduleResponse,
+    TournamentPatch,
     UserResponse,
 };
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use shared_types::{ChallengeId, ChatMessageContainer, ConversationKey, GameId, TournamentId};
-use std::{collections::HashMap, fmt, time::Duration};
+use shared_types::{
+    tournament::Format,
+    ChallengeId,
+    ChatMessageContainer,
+    ConversationKey,
+    GameId,
+    TournamentId,
+};
+use std::{fmt, sync::Arc, time::Duration};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -32,6 +41,10 @@ pub enum ExternalServerError {
         error: SubscriptionError,
     },
     Request {
+        reason: String,
+    },
+    Game {
+        game_id: GameId,
         reason: String,
     },
 }
@@ -87,7 +100,9 @@ impl SubscriptionError {
 impl fmt::Display for ExternalServerError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let reason = match self {
-            Self::Unauthorized { reason } | Self::Request { reason } => reason,
+            Self::Unauthorized { reason }
+            | Self::Request { reason }
+            | Self::Game { reason, .. } => reason,
             Self::ChatSend { error, .. } => error.reason(),
             Self::ChatSubscribe { error, .. } => error.reason(),
         };
@@ -97,6 +112,10 @@ impl fmt::Display for ExternalServerError {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ServerMessage {
+    /// Sent when an `Auth` frame succeeds, before the snapshot that follows it.
+    /// A bot has no other way to tell a completed authentication apart from the
+    /// anonymous connect snapshot, which races it on the same socket.
+    Authenticated(UserResponse),
     Challenge(ChallengeUpdate),
     Chat(ChatMessageContainer),
     ChatRead {
@@ -111,6 +130,10 @@ pub enum ServerMessage {
     Join(Uuid),
     /// Authoritative lobby state sent on connect and Resync.
     LobbySnapshot(Box<LobbySnapshot>),
+    TvSnapshot(Vec<GameResponse>),
+    ResyncRetry {
+        retry_after_ms: u32,
+    },
     Ping {
         nonce: u64,
         value: f64,
@@ -119,32 +142,62 @@ pub enum ServerMessage {
     Tournament(TournamentUpdate),
     UserSettings(UserSettingsUpdate),
     UserStatus(UserUpdate),
-    RedirectLink(String),
+    UserProfile(UserResponse),
+    RealtimeGamesPaused(bool),
 }
 
 /// Authoritative best-effort lobby state sent on connect and Resync.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LobbySnapshot {
     pub tournament_invitations: Vec<TournamentId>,
+    pub tournament_organizer_invitations: Vec<TournamentId>,
     pub schedule_notifications: Vec<ScheduleResponse>,
     pub urgent_games: Vec<GameResponse>,
     pub challenges: Vec<ChallengeResponse>,
-    pub tv_games: Vec<GameResponse>,
     pub online_users: Vec<UserResponse>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TournamentUpdate {
-    Adjudicated(TournamentId),
-    Created(TournamentId),
+    Created {
+        tournament_id: TournamentId,
+        format: Format,
+        starts_at: Option<DateTime<Utc>>,
+    },
+    CreationSucceeded(TournamentId),
+    CreationFailed,
+    InvitationFailed {
+        tournament_id: TournamentId,
+        invitee_id: Uuid,
+    },
     Declined(TournamentId),
     Deleted(TournamentId),
     Finished(TournamentId),
     Invited(TournamentId),
+    OrganizerInvited(TournamentId),
+    OrganizerInvitationsClosed(TournamentId),
+    OrganizerUninvited(TournamentId),
+    OrganizerJoined(TournamentId),
+    OrganizerLeft(TournamentId, bool),
     Joined(TournamentId),
-    Left(TournamentId),
-    StateChanged(TournamentId),
+    Left {
+        tournament_id: TournamentId,
+        retained_chat_access: bool,
+    },
+    Patch {
+        tournament_id: TournamentId,
+        patch: Box<TournamentPatch>,
+    },
+    SlotsClosed {
+        tournament_id: TournamentId,
+        count: u32,
+    },
     Started(TournamentId),
+    StartDeferred(TournamentId),
+    StartNeedsEntrants {
+        tournament_id: TournamentId,
+        minimum: i32,
+    },
     Uninvited(TournamentId),
 }
 
@@ -167,14 +220,18 @@ pub enum GameUpdate {
     /// draw offered). Client merges into the local `own` map.
     Urgent(Vec<GameResponse>),
     OwnGameRemoved(GameId),
-    Tv(GameResponse),
+    Tv(Arc<GameResponse>),
     Heartbeat(HeartbeatResponse),
+    Fetched(Arc<GameResponse>),
+    Ongoing(Vec<GameResponse>),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameActionResponse {
     pub game_action: GameReaction,
-    pub game: GameResponse,
+    /// Shared, not owned: one response fans out to both players and every spectator, and
+    /// `get_or_build_response` already hands it over behind an `Arc`.
+    pub game: Arc<GameResponse>,
     pub game_id: GameId,
     pub user_id: Uuid,
     pub username: String,
@@ -182,9 +239,9 @@ pub struct GameActionResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ChallengeUpdate {
-    Created(ChallengeResponse), // A new challenge was created
-    Removed(ChallengeId),       // A challenge was removed
-    Direct(ChallengeResponse),  // Player got directly invited to a game
+    Created(Box<ChallengeResponse>), // A new challenge was created
+    Removed(ChallengeId),            // A challenge was removed
+    Direct(Box<ChallengeResponse>),  // Player got directly invited to a game
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -203,9 +260,6 @@ pub enum UserStatus {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ScheduleUpdate {
-    Proposed(ScheduleResponse),
-    Accepted(ScheduleResponse),
-    Deleted(ScheduleResponse),
-    TournamentSchedules(HashMap<GameId, HashMap<Uuid, ScheduleResponse>>),
-    OwnTournamentSchedules(HashMap<GameId, HashMap<Uuid, ScheduleResponse>>),
+    Changed(Vec<ScheduleResponse>),
+    TournamentPurged(TournamentId),
 }

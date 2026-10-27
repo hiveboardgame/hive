@@ -1,11 +1,14 @@
 mod common;
 
-use chrono::Utc;
+use chrono::{Duration as ChronoDuration, Utc};
 use db_lib::{
     db_error::DbError,
+    game_command::{execute, Command, Outcome},
     get_conn,
     models::{Game, NewGame, NewUser, Rating, User},
     schema::ratings,
+    DbConn,
+    DbPool,
 };
 use diesel::{
     prelude::*,
@@ -16,7 +19,12 @@ use diesel_async::{AsyncConnection, RunQueryDsl};
 use hive_lib::{Color, GameControl, GameStatus, GameType};
 use shared_types::{Conclusion, GameSpeed, GameStart, TimeMode, TournamentGameResult};
 use std::time::Duration;
-use tokio::{sync::oneshot, task::JoinHandle};
+use tokio::{
+    sync::oneshot,
+    task::JoinHandle,
+    time::{sleep, Instant},
+};
+use uuid::Uuid;
 
 const FINALIZER_APPLICATION_NAME: &str = "rating_update_lock_test_finalizer";
 const FIRST_GAME_FINALIZER_APPLICATION_NAME: &str = "game_finalization_lock_test_first";
@@ -121,8 +129,8 @@ async fn stale_game_finalization_does_not_apply_ratings_twice() {
 }
 
 async fn hold_bullet_rating_lock(
-    pool: db_lib::DbPool,
-    user_id: uuid::Uuid,
+    pool: DbPool,
+    user_id: Uuid,
 ) -> (oneshot::Sender<()>, JoinHandle<Result<(), DbError>>) {
     let (rating_locked_tx, rating_locked_rx) = oneshot::channel();
     let (release_rating_lock_tx, release_rating_lock_rx) = oneshot::channel();
@@ -151,21 +159,33 @@ async fn hold_bullet_rating_lock(
 }
 
 fn spawn_resign_finalizer(
-    pool: db_lib::DbPool,
+    pool: DbPool,
     application_name: &'static str,
     game: Game,
 ) -> JoinHandle<Result<Game, DbError>> {
     tokio::spawn(async move {
         let mut conn = get_conn(&pool).await.expect("get finalizer connection");
         set_application_name(application_name, &mut conn).await;
-        conn.transaction::<_, DbError, _>(async move |tc| {
-            game.resign(&GameControl::Resign(Color::Black), tc).await
-        })
-        .await
+        match execute(
+            game.id,
+            Command::Control {
+                user_id: game.black_id,
+                control: GameControl::Resign(Color::Black),
+            },
+            &mut conn,
+        )
+        .await?
+        {
+            Outcome::Applied { game, .. } => Ok(game),
+            Outcome::TimedOut { rejected, .. } => Err(rejected),
+            Outcome::Removed { .. } => Err(DbError::InternalError {
+                reason: String::from("resignation unexpectedly removed the game"),
+            }),
+        }
     })
 }
 
-async fn set_application_name(application_name: &str, conn: &mut db_lib::DbConn<'_>) {
+async fn set_application_name(application_name: &str, conn: &mut DbConn<'_>) {
     diesel::sql_query("SELECT set_config('application_name', $1, false)")
         .bind::<Text, _>(application_name)
         .execute(conn)
@@ -173,29 +193,26 @@ async fn set_application_name(application_name: &str, conn: &mut db_lib::DbConn<
         .expect("set application name");
 }
 
-async fn create_user(username: &str, conn: &mut db_lib::DbConn<'_>) -> User {
+async fn create_user(username: &str, conn: &mut DbConn<'_>) -> User {
     let new_user = NewUser::new(username, "password", &format!("{username}@example.com"))
         .expect("create new user fixture");
     User::create(new_user, conn).await.expect("insert user")
 }
 
-async fn create_bullet_game(
-    white_id: uuid::Uuid,
-    black_id: uuid::Uuid,
-    conn: &mut db_lib::DbConn<'_>,
-) -> Game {
+async fn create_bullet_game(white_id: Uuid, black_id: Uuid, conn: &mut DbConn<'_>) -> Game {
     let now = Utc::now();
     let time_left = Some(60 * 1_000_000_000_i64);
-    let timeout_at = time_left.map(|nanos| now + chrono::Duration::nanoseconds(nanos));
+    let timeout_at = time_left.map(|nanos| now + ChronoDuration::nanoseconds(nanos));
     Game::create(
         NewGame {
+            tournament_id: None,
             nanoid: nanoid::nanoid!(12),
             current_player_id: white_id,
             black_id,
             finished: false,
             game_status: GameStatus::InProgress.to_string(),
             game_type: GameType::MLP.to_string(),
-            history: String::from("wQ -;bQ /wQ;"),
+            history: String::from("wQ;bQ /wQ;"),
             game_control_history: String::new(),
             rated: true,
             tournament_queen_rule: false,
@@ -216,11 +233,15 @@ async fn create_bullet_game(
             speed: GameSpeed::Bullet.to_string(),
             hashes: Vec::new(),
             conclusion: Conclusion::Unknown.to_string(),
-            tournament_id: None,
             tournament_game_result: TournamentGameResult::Unknown.to_string(),
             game_start: GameStart::Moves.to_string(),
             move_times: Vec::new(),
+            white_berserked: false,
+            black_berserked: false,
+            arena_move_due_at: None,
             timeout_at,
+            tournament_slot_id: None,
+            arena_ordinal: None,
         },
         conn,
     )
@@ -228,8 +249,8 @@ async fn create_bullet_game(
     .expect("insert game")
 }
 
-async fn wait_for_backend_to_wait_on_lock(pool: &db_lib::DbPool, application_name: &str) {
-    let deadline = tokio::time::Instant::now() + Duration::from_secs(2);
+async fn wait_for_backend_to_wait_on_lock(pool: &DbPool, application_name: &str) {
+    let deadline = Instant::now() + Duration::from_secs(2);
     let mut conn = get_conn(pool)
         .await
         .expect("get pg_stat_activity connection");
@@ -254,9 +275,9 @@ async fn wait_for_backend_to_wait_on_lock(pool: &db_lib::DbPool, application_nam
         }
 
         assert!(
-            tokio::time::Instant::now() < deadline,
+            Instant::now() < deadline,
             "{application_name} did not wait on a database lock"
         );
-        tokio::time::sleep(Duration::from_millis(20)).await;
+        sleep(Duration::from_millis(20)).await;
     }
 }

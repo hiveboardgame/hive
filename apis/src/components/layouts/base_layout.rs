@@ -1,20 +1,23 @@
 use crate::{
     components::{
-        atoms::{og::OG, title::Title},
+        atoms::{og::OG, tile_definitions::TileDefinitions, title::Title},
         molecules::{
             alert::Alert,
             install_nudge::InstallNudge,
             tournament_ready_popup::TournamentReadyPopup,
             web_push_nudge::WebPushNudge,
         },
-        organisms::header::Header,
+        organisms::{footer::Footer, header::Header},
     },
     hooks::{
         install_nudge::use_install_nudge_active,
+        reload_on_new_release::use_reload_on_new_release,
+        site_footer::SiteFooter,
         sync_user_locale::use_sync_user_locale,
         web_push_nav_listener::use_web_push_nav_listener,
         web_push_reconcile::use_web_push_reconcile,
     },
+    i18n::{t, use_i18n},
     providers::{
         game_state::{GameStateStore, GameStateStoreFields},
         refocus::RefocusSignal,
@@ -55,6 +58,7 @@ pub struct OrientationSignal {
 
 #[component]
 pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
+    let i18n = use_i18n();
     let config = expect_context::<Config>().0;
     let ping = expect_context::<PingContext>();
     let ws = expect_context::<WebsocketContext>();
@@ -69,6 +73,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         height_lock: RwSignal::new(None),
     });
     use_sync_user_locale();
+    let update_available = use_reload_on_new_release();
     use_web_push_nav_listener();
     use_web_push_reconcile();
     let install_nudge_active = use_install_nudge_active();
@@ -113,8 +118,10 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
 
     provide_context(hide_controls);
 
-    let is_hidden = RwSignal::new("hidden");
-    Effect::new(move |_| is_hidden.set(""));
+    let site_footer = SiteFooter::provide();
+
+    let display = RwSignal::new("hidden");
+    Effect::new(move |_| display.set("flex"));
 
     let focused = use_window_focus();
     let _ = Effect::watch(
@@ -191,9 +198,22 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         },
         1000,
     );
+    let manifest_href = format!(
+        "/manifest.webmanifest?lang={}",
+        untrack(move || i18n.get_locale())
+    );
+    // Link's href is static in leptos_meta; update the existing head element on locale changes.
+    #[cfg(not(feature = "ssr"))]
+    Effect::new(move |_| {
+        let href = format!("/manifest.webmanifest?lang={}", i18n.get_locale());
+        if let Ok(Some(manifest)) = document().query_selector("link[rel=manifest]") {
+            let _ = manifest.set_attribute("href", &href);
+        }
+    });
     view! {
         <Title />
         <OG />
+        <Link rel="manifest" href=manifest_href />
         <Html attr:class=move || {
             config
                 .with(|cfg| match cfg.prefers_dark {
@@ -203,14 +223,15 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         } />
 
         <Body />
-        <main class=move || {
+        <TileDefinitions />
+        <div class=move || {
             format!(
-                "w-full min-h-screen standalone:min-h-[var(--app-height)] text-xs sm:text-sm touch-manipulation {} {}",
+                "flex-col w-full min-h-screen standalone:min-h-[var(--app-height)] text-xs sm:text-sm touch-manipulation {} {}",
                 "ui-app-background",
-                is_hidden(),
+                display(),
             )
         }>
-            <Header />
+            <Header update_available />
             <Alert />
             <InstallNudge active=install_nudge_active />
             <WebPushNudge install_nudge_active=install_nudge_active />
@@ -218,11 +239,17 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
             <Show when=move || ws_ready() != ConnectionReadyState::Open>
                 <div class="flex absolute top-1/2 left-1/2 gap-2 items-center -translate-x-1/2 -translate-y-1/2 z-[60]">
                     <div class="rounded-full border-t-2 border-b-2 border-blue-500 animate-spin size-10"></div>
-                    <div class="text-lg font-bold text-ladybug-red">Connecting..</div>
+                    <div class="text-lg font-bold text-ladybug-red">
+                        {t!(i18n, common.connecting)}
+                    </div>
                 </div>
             </Show>
-            {children()}
-
-        </main>
+            <main class=move || {
+                if site_footer.is_shown() { "flex flex-1 flex-col" } else { "" }
+            }>{children()}</main>
+            <Show when=move || site_footer.is_shown()>
+                <Footer />
+            </Show>
+        </div>
     }
 }

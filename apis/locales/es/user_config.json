@@ -1,60 +1,49 @@
 {
-    "style_buttons": {
-        "three_d": "3D",
-        "official": "Oficial",
-        "flat": "Plano"
-    },
     "rotation": "Rotación",
-    "rotation_buttons": {
-        "yes": "Sí",
-        "no": "No"
-    },
     "show_dots": "Mostrar puntos",
     "dots_buttons": {
-        "no": "No",
         "angled": "En ángulo",
         "vertical": "En vertical"
     },
     "background_color": "Color de Fondo",
+    "preselect": "Preselección",
+    "preselect_description": "Permite seleccionar una pieza durante el turno del oponente.",
+    "premove": "Movimiento anticipado",
+    "premove_description": "Programa un movimiento durante el turno del oponente. Los movimientos anticipados se juegan automáticamente sin confirmación si siguen siendo legales.",
+    "drag_and_drop": "Arrastrar y soltar",
+    "drag_and_drop_description": "Mueve las piezas arrastrándolas. Los movimientos durante tu turno siguen tu configuración de confirmación de movimientos.",
     "game_speed": "Velocidad de la partida:",
     "move_confirm": "Confirmación de movimientos:",
     "color_scheme": "Esquema de colores:",
     "preview": "Previsualización:",
     "edit_account": {
-        "new_password": "Nueva contraseña",
-        "confirm_password": "Confirmar contraseña",
-        "save_button": "Guardar",
-        "confirm_password_placeholder": "Nueva contraseña (otra vez)",
-        "current_password": "Contraseña actual"
+        "confirm_password_placeholder": "Nueva contraseña (otra vez)"
     },
     "create_account": {
         "username": {
-            "title": "Nombre de usuario",
             "error": {
                 "taken": "Nombre de usuario ocupado",
-                "invalid": "Carácter no válido en el nombre de usuario"
+                "invalid": "Carácter no válido en el nombre de usuario",
+                "reserved": "Este nombre de usuario está reservado.",
+                "length": "El nombre de usuario debe tener entre {{min}} y {{max}} caracteres."
             },
             "description": "Por favor, elige un nombre de usuario apropiado para la familia. ¡Las cuentas con nombres de usuario inapropiados se cerrarán!"
         },
         "email": {
-            "title": "Correo electrónico",
             "error": {
                 "invalid": "Correo electrónico no válido"
             },
             "description": "Necesitamos tu dirección de correo electrónico para enviarte un mensaje de confirmación cuando crees una cuenta."
         },
-        "password": "Contraseña",
-        "confirm_password": "Confirmar contraseña",
         "signup_button": "Registrarse",
         "be_nice_checkbox": "Acepto ser amable con los demás jugadores y denunciar los abusos en Discord",
+        "legal_notice": "Al crear una cuenta, aceptas nuestros <terms_link>Términos del servicio</terms_link>. Nuestra <privacy_link>Política de privacidad</privacy_link> explica cómo tratamos tus datos.",
         "registration_error": "Registro fallido",
         "existing_account_prompt": "¿Ya tienes una cuenta? <login_link>Iniciar sesión</login_link>",
-        "password_requirements": "Al menos 8 caracteres",
-        "password_error": "La contraseña es demasiado corta o no coincide"
+        "password_requirements": "Usa entre {{min}} y {{max}} caracteres."
     },
     "piece_style": "Estilo de la pieza",
     "login": {
-        "password": "Contraseña",
         "email": "Correo electrónico",
         "login_button": "Iniciar sesión",
         "no_account_prompt": "¿No tienes una cuenta? <register_link>Regístrate</register_link>",
@@ -65,5 +54,33 @@
         "casual_only": "A veces",
         "never": "Nunca"
     },
-    "allow_takeback": "Permitir retrocesos"
+    "allow_takeback": "Permitir retrocesos",
+    "click_on_your_clock": "Haz clic en tu reloj",
+    "double_click": "Doble clic",
+    "single_click": "Un clic",
+    "light_mode": "Modo claro",
+    "dark_mode": "Modo oscuro",
+    "white_background": "Fondo blanco",
+    "black_background": "Fondo negro",
+    "current_color": "Actual: {{color}}",
+    "ant_light_preview": "Hormiga {{design}} (modo claro)",
+    "ant_dark_preview": "Hormiga {{design}} (modo oscuro)",
+    "tile_design": {
+        "official": "Oficial",
+        "flat": "Plano",
+        "three_d": "3D",
+        "high_contrast": "Alto contraste",
+        "community": "Comunidad",
+        "pride": "Orgullo",
+        "carbon_three_d": "Carbono 3D",
+        "carbon": "Carbono"
+    },
+    "tile_design_browser_notice": "Algunos navegadores no admiten todos los diseños de fichas. Firefox ofrece la visualización más uniforme.",
+    "settings": {
+        "settings": "Configuración",
+        "tune_board_visuals_and_move_input_preferences": "Ajusta el aspecto del tablero y las preferencias de entrada de jugadas.",
+        "board_appearance": "Aspecto del tablero",
+        "play_preferences": "Preferencias de juego",
+        "if_either_player_has_takebacks_disabled_game_controls_will": "Si algún jugador tiene desactivada la opción de deshacer jugadas, los controles de la partida no permitirán solicitarlo."
+    }
 }

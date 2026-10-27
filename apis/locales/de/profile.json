@@ -1,27 +1,28 @@
 {
-    "game_buttons": {
-        "pending": "Wartend",
-        "playing": "Spielend",
-        "finished": "Beendet"
-    },
-    "color_buttons": {
-        "both": "Beide",
-        "white": "Weiß",
-        "black": "Schwarz"
-    },
     "result_buttons": {
         "win": "Sieg",
         "loss": "Niederlage",
-        "draw": "Unentschieden",
-        "all": "Alle"
+        "draw": "Unentschieden"
     },
-    "stats_box": {
-        "total": "Gesamt",
-        "wins": "Siege",
-        "losses": "Niederlagen",
-        "draws": "Unentschieden"
-    },
-    "player_color": "Spieler*innenfarbe:",
     "game_result": "Spielergebnis:",
-    "include_speeds": "Eingeschlossene Geschwindigkeiten:"
+    "include_speeds": "Eingeschlossene Geschwindigkeiten:",
+    "speed_statistics": "Statistik: {{speed}}",
+    "expansion_buttons": {
+        "basic": "Basis",
+        "full": "Komplett"
+    },
+    "player_color": "Spieler*innenfarbe",
+    "rating": "Bewertung",
+    "games_played_one": "{{count}} Spiel",
+    "games_played_other": "{{count}} Spiele",
+    "page": {
+        "redirecting": "Weiterleitung…",
+        "user_not_found": "Benutzer nicht gefunden"
+    },
+    "leaderboards": {
+        "top_rated_players": "Spieler mit der höchsten Wertung",
+        "highest_rated_players_by_speed": "Spieler mit der höchsten Wertung je Tempo.",
+        "top_rated_bots": "Bots mit der höchsten Wertung",
+        "highest_rated_bots_by_speed": "Bots mit der höchsten Wertung je Tempo."
+    }
 }

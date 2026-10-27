@@ -1,22 +1,28 @@
 use crate::{
     common::{
         challenge_action_flags,
+        challenge_displayed_color,
         challenge_displayed_player,
         challenge_viewer_role,
         with_class,
         ServerResult,
     },
     components::{
-        atoms::{profile_link::ProfileLink, status_indicator::StatusIndicator},
+        atoms::{
+            color_choice_hex::ColorChoiceHex,
+            profile_link::ProfileLink,
+            rating::Rating,
+            status_indicator::StatusIndicator,
+        },
         molecules::time_row::TimeRow,
     },
-    providers::{websocket::WebsocketContext, ApiRequestsProvider, AuthContext},
+    i18n::*,
+    providers::{websocket::WebsocketContext, ApiRequestsProvider, AuthContext, RealtimeGames},
     responses::ChallengeResponse,
 };
 use hive_lib::ColorChoice;
 use leptos::prelude::*;
 use leptos_icons::*;
-use shared_types::TimeInfo;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum PendingAction {
@@ -40,35 +46,35 @@ const CHALLENGE_ACTIONS_CLASS: &str = "relative z-20 flex shrink-0 gap-2";
 #[component]
 pub fn ChallengeDetails(
     challenge: ChallengeResponse,
-    #[prop(optional)] label: Option<&'static str>,
+    #[prop(optional, into)] label: Option<TextProp>,
     #[prop(optional, into)] class: Option<String>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let auth_context = expect_context::<AuthContext>();
     let user = auth_context.user;
     let admin = auth_context.admin;
     let api = expect_context::<ApiRequestsProvider>().0;
     let websocket = expect_context::<WebsocketContext>();
     let challenge = StoredValue::new(challenge);
+    let time_control = challenge.with_value(ChallengeResponse::time_control);
     let ChallengeResponse {
         challenge_id,
         game_type,
         rated,
-        color_choice,
-        time_mode,
-        time_base,
-        time_increment,
         ..
     } = challenge.get_value();
     let challenge_id = StoredValue::new(challenge_id);
-    let time_info = TimeInfo {
-        mode: time_mode,
-        base: time_base,
-        increment: time_increment,
-    };
-    let color_icon = match color_choice {
-        ColorChoice::Random => icondata_bs::BsHexagonHalf,
-        ColorChoice::White => icondata_bs::BsHexagon,
-        ColorChoice::Black => icondata_bs::BsHexagonFill,
+    let displayed_color = Memo::new(move |_| {
+        let viewer_id = user.with(|user| user.as_ref().map(|user| user.id));
+        challenge.with_value(|challenge| {
+            let role = challenge_viewer_role(challenge, viewer_id);
+            challenge_displayed_color(challenge, role)
+        })
+    });
+    let color_label = move || match displayed_color.get() {
+        ColorChoice::White => t_string!(i18n, common.white),
+        ColorChoice::Black => t_string!(i18n, common.black),
+        ColorChoice::Random => t_string!(i18n, common.random),
     };
     let pending_action = RwSignal::new(None::<PendingAction>);
     Effect::new(move |_| {
@@ -88,6 +94,10 @@ pub fn ChallengeDetails(
         })
     });
     let show_accept = Signal::derive(move || action_flags.with(|flags| flags.accept));
+    let realtime_games = expect_context::<RealtimeGames>();
+    let accept_blocked = Signal::derive(move || {
+        challenge.with_value(|challenge| realtime_games.blocks(challenge.time_mode))
+    });
     let show_decline_or_cancel = Signal::derive(move || {
         action_flags.with(|flags| flags.decline || flags.cancel || flags.admin_cancel)
     });
@@ -98,7 +108,10 @@ pub fn ChallengeDetails(
     view! {
         <div class=with_class(CHALLENGE_DETAILS_CLASS, class.unwrap_or_default())>
             <div class=CHALLENGE_DETAILS_BODY_CLASS>
-                {label.map(|label| view! { <div class="ui-notification-label">{label}</div> })}
+                {label
+                    .map(|label| {
+                        view! { <div class="ui-notification-label">{move || label.get()}</div> }
+                    })}
                 <div class=CHALLENGE_PLAYER_GRID_CLASS>
                     {move || {
                         challenge
@@ -122,16 +135,37 @@ pub fn ChallengeDetails(
                                             extend_tw_classes="truncate max-w-[9rem]"
                                             wrapper_tw_classes="min-w-0 shrink"
                                         />
-                                        <span class=CHALLENGE_RATING_CLASS>{rating}</span>
+                                        <span class=CHALLENGE_RATING_CLASS>
+                                            <Rating value=rating />
+                                        </span>
                                     </div>
                                 }
                             })
-                    }} <div class=CHALLENGE_LEADING_CELL_CLASS>
-                        <Icon icon=color_icon attr:class="size-3.5 shrink-0" />
+                    }}
+                    <div class=CHALLENGE_LEADING_CELL_CLASS>
+                        {move || {
+                            view! {
+                                <ColorChoiceHex
+                                    color_choice=displayed_color.get()
+                                    extend_tw_classes="size-3.5"
+                                />
+                            }
+                        }}
                     </div> <div class=CHALLENGE_META_CLASS>
+                        <span class="font-bold">
+                            {t!(i18n, home.challenge_details.plays.title)} " " {color_label}
+                        </span>
                         <span>{game_type}</span>
-                        <TimeRow time_info extend_tw_classes="text-xs leading-tight" />
-                        <span class="font-bold">{if rated { "Rated" } else { "Casual" }}</span>
+                        <TimeRow time_control extend_tw_classes="text-xs leading-tight" />
+                        <span class="font-bold">
+                            {move || {
+                                if rated {
+                                    t_string!(i18n, game.rated)
+                                } else {
+                                    t_string!(i18n, game.casual)
+                                }
+                            }}
+                        </span>
                     </div>
                 </div>
             </div>
@@ -143,7 +177,14 @@ pub fn ChallengeDetails(
                             view! {
                                 <Show when=show_accept>
                                     <button
-                                        title="Accept Challenge"
+                                        title=move || {
+                                            if accept_blocked.get() {
+                                                t_string!(i18n, messages.errors.realtime_games_paused)
+                                            } else {
+                                                t_string!(i18n, game.accept_challenge)
+                                            }
+                                        }
+                                        disabled=accept_blocked
                                         on:click=move |_| {
                                             pending_action.set(Some(PendingAction::Accept));
                                             api.get().challenge_accept(challenge_id.get_value());
@@ -162,9 +203,9 @@ pub fn ChallengeDetails(
                                             action_flags
                                                 .with(|flags| {
                                                     if flags.cancel || flags.admin_cancel {
-                                                        "Cancel Challenge"
+                                                        t_string!(i18n, game.cancel_challenge)
                                                     } else {
-                                                        "Decline Challenge"
+                                                        t_string!(i18n, game.decline_challenge)
                                                     }
                                                 })
                                         }
@@ -182,9 +223,13 @@ pub fn ChallengeDetails(
                     >
                         <span class="inline-flex items-center py-1 px-2 text-xs font-semibold text-gray-700 rounded-sm dark:text-gray-200 bg-surface-muted">
                             {move || match pending_action.get() {
-                                Some(PendingAction::Accept) => "Accepting...",
-                                Some(PendingAction::Remove) => "Removing...",
-                                None => "",
+                                Some(PendingAction::Accept) => {
+                                    t_string!(i18n, game.accepting).to_string()
+                                }
+                                Some(PendingAction::Remove) => {
+                                    t_string!(i18n, game.removing).to_string()
+                                }
+                                None => String::new(),
                             }}
                         </span>
                     </Show>

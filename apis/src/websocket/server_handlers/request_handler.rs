@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
 use super::{
+    bot_read::{BotRead, BotReadHandler},
     challenges::handler::ChallengeHandler,
     chat::{
         handler::{ChatHandler, ChatHandlerError},
         limits::ChatLimitError,
     },
     game::handler::GameActionHandler,
-    oauth::handler::OauthHandler,
     resync::ResyncHandler,
     schedules::ScheduleHandler,
     tournaments::handler::TournamentHandler,
@@ -20,15 +20,19 @@ use crate::{
         authorize_chat_send,
         ChatAccessError,
     },
-    common::{ClientRequest, GameAction, ServerMessage},
+    common::{ClientRequest, GameAction, ServerMessage, UiError},
+    responses::GameResponse,
     websocket::{
         messages::{AuthError, HandlerOutput, InternalServerMessage, MessageDestination, SocketTx},
+        RealtimeGamesPaused,
         WebsocketData,
         WsHub,
     },
 };
-use db_lib::{DbConn, DbPool};
-use shared_types::{normalize_chat_message, ConversationKey, SimpleUser};
+use anyhow::Context;
+use db_lib::{db_error::DbError, get_conn, models::Game, DbConn, DbPool};
+use hive_lib::GameError;
+use shared_types::{normalize_chat_message, ConversationKey, GameId, SimpleUser};
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -39,6 +43,7 @@ pub enum RequestHandlerError {
     AuthError(#[from] AuthError),
     Forbidden,
     RateLimited(ChatLimitError),
+    TournamentNameTaken,
 }
 
 impl std::fmt::Display for RequestHandlerError {
@@ -51,6 +56,9 @@ impl std::fmt::Display for RequestHandlerError {
             RequestHandlerError::AuthError(e) => write!(f, "{e}"),
             RequestHandlerError::Forbidden => write!(f, "Chat access denied"),
             RequestHandlerError::RateLimited(error) => write!(f, "{}", error.reason()),
+            RequestHandlerError::TournamentNameTaken => {
+                write!(f, "A tournament with that name already exists")
+            }
         }
     }
 }
@@ -58,15 +66,41 @@ impl std::fmt::Display for RequestHandlerError {
 impl RequestHandlerError {
     pub fn user_safe_reason(&self) -> String {
         match self {
-            Self::InternalError(_) => "Unable to complete request".to_string(),
-            Self::ChatClientIdConflict => {
-                "This message retry conflicts with the original delivery. Send it as a new message."
-                    .to_string()
+            Self::InternalError(_) if self.is_realtime_pause() => UiError::RealtimeGamesPaused,
+            Self::InternalError(_) => UiError::RequestUnavailable,
+            Self::ChatClientIdConflict => UiError::ChatRetryConflict,
+            Self::AuthError(_) => UiError::Unauthorized,
+            Self::Forbidden => UiError::ChatAccessDenied,
+            Self::RateLimited(ChatLimitError::SubscriptionAttempts { .. }) => {
+                UiError::ChatSubscriptionLimited
             }
-            Self::AuthError(error) => error.to_string(),
-            Self::Forbidden => "Chat access denied".to_string(),
-            Self::RateLimited(error) => error.reason().to_string(),
+            Self::RateLimited(ChatLimitError::Send { .. }) => UiError::ChatSendLimited,
+            Self::TournamentNameTaken => UiError::TournamentNameTaken,
         }
+        .encode()
+    }
+
+    pub fn is_realtime_pause(&self) -> bool {
+        matches!(self, Self::InternalError(error) if error.is::<RealtimeGamesPaused>())
+    }
+
+    /// Why an ordinary refusal happened (illegal move, not your turn, game over, bad
+    /// notation), or `None` when the failure is internal and its details must stay private.
+    pub fn rejection_reason(&self) -> Option<String> {
+        let Self::InternalError(error) = self else {
+            return None;
+        };
+        if let Some(error) = error.downcast_ref::<DbError>() {
+            return match error {
+                DbError::InternalError { .. }
+                | DbError::InvalidPersistedTournament { .. }
+                | DbError::SerializationConflict
+                | DbError::TimeNotFound { .. } => None,
+                DbError::InvalidInput { info, .. } => Some(info.clone()),
+                error => Some(error.to_string()),
+            };
+        }
+        error.downcast_ref::<GameError>().map(ToString::to_string)
     }
 }
 pub struct RequestHandler {
@@ -129,6 +163,36 @@ impl RequestHandler {
         }
     }
 
+    async fn bot_read(&self, read: BotRead) -> Result<HandlerOutput> {
+        Ok(Box::pin(
+            BotReadHandler::new(
+                read,
+                self.received_from.clone(),
+                self.user_id,
+                self.data.clone(),
+                &self.pool,
+            )
+            .handle(),
+        )
+        .await?)
+    }
+
+    /// The deepest chain the dispatcher can enter: a turn replays the whole board and
+    /// writes it back. Boxed at both steps so none of it lands in the future every other
+    /// request is dispatched through.
+    async fn game_action(&self, game_id: &GameId, action: GameAction) -> Result<HandlerOutput> {
+        let handler = Box::pin(GameActionHandler::new(
+            game_id,
+            action,
+            self.received_from.clone(),
+            (&self.username, self.user_id),
+            self.data.clone(),
+            self.hub.clone(),
+            &self.pool,
+        ))
+        .await?;
+        Ok(Box::pin(handler.handle()).await?)
+    }
     async fn chat_connection(&self, context: &'static str) -> Result<DbConn<'_>> {
         db_lib::get_conn(&self.pool).await.map_err(|error| {
             RequestHandlerError::InternalError(
@@ -138,12 +202,35 @@ impl RequestHandler {
         })
     }
 
+    async fn tv_snapshot(&self) -> anyhow::Result<Vec<GameResponse>> {
+        let game_ids = self
+            .hub
+            .tv_snapshot_ids(self.user_id, self.received_from.socket_id);
+        if game_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        let mut conn = get_conn(&self.pool)
+            .await
+            .context("TV snapshot connection")?;
+        let games = Game::find_tv_games(&game_ids, self.user_id, &mut conn)
+            .await
+            .context("load TV snapshot games")?;
+        let mut responses = Vec::with_capacity(games.len());
+        for game in games {
+            responses.push(
+                (*self
+                    .data
+                    .get_or_build_response(&game, &mut conn)
+                    .await
+                    .context("build TV snapshot response")?)
+                .clone(),
+            );
+        }
+        Ok(responses)
+    }
+
     pub async fn handle(&self) -> Result<HandlerOutput> {
         let output: HandlerOutput = match self.command.clone() {
-            ClientRequest::LinkDiscord => {
-                self.ensure_auth()?;
-                OauthHandler::new(self.user_id).handle().await?.into()
-            }
             ClientRequest::Chat(request) => {
                 self.ensure_auth()?;
                 self.hub
@@ -201,31 +288,88 @@ impl RequestHandler {
                     .unsubscribe_chat(self.user_id, self.received_from.socket_id, &channel_key);
                 HandlerOutput::empty()
             }
+            ClientRequest::TvSubscribe(interest) => {
+                if !self
+                    .hub
+                    .subscribe_tv(self.user_id, self.received_from.socket_id, &interest)
+                    || !self.hub.allow_tv_snapshot(self.received_from.socket_id)
+                {
+                    return Ok(HandlerOutput::empty());
+                }
+                let Some(_permit) = self.hub.try_tv_snapshot_permit() else {
+                    return Ok(HandlerOutput::empty());
+                };
+                let games = match self.tv_snapshot().await {
+                    Ok(games) => games,
+                    Err(error) => {
+                        log::error!("TV subscription snapshot failed: {error:#}");
+                        Vec::new()
+                    }
+                };
+                vec![InternalServerMessage {
+                    destination: MessageDestination::Direct(self.received_from.clone()),
+                    message: ServerMessage::TvSnapshot(games),
+                }]
+                .into()
+            }
+            ClientRequest::TvUnsubscribe(interest) => {
+                self.hub
+                    .unsubscribe_tv(self.user_id, self.received_from.socket_id, &interest);
+                HandlerOutput::empty()
+            }
+            ClientRequest::TournamentWatch(tournament_id) => {
+                self.hub.watch_tournament(
+                    self.user_id,
+                    self.received_from.socket_id,
+                    &tournament_id,
+                );
+                HandlerOutput::empty()
+            }
+            ClientRequest::TournamentUnwatch(tournament_id) => {
+                self.hub.unwatch_tournament(
+                    self.user_id,
+                    self.received_from.socket_id,
+                    &tournament_id,
+                );
+                HandlerOutput::empty()
+            }
             ClientRequest::Tournament(tournament_action) => {
                 self.ensure_auth()?;
-                TournamentHandler::new(
-                    tournament_action,
-                    &self.username,
-                    self.user_id,
-                    self.hub.clone(),
-                    &self.pool,
+                Box::pin(
+                    TournamentHandler::new(
+                        tournament_action,
+                        &self.username,
+                        self.user_id,
+                        self.received_from.clone(),
+                        self.hub.clone(),
+                        &self.pool,
+                    )
+                    .handle(),
                 )
-                .handle()
-                .await?
+                .await
+                .map_err(|error| match error.downcast_ref::<DbError>() {
+                    Some(DbError::TournamentNameTaken) => RequestHandlerError::TournamentNameTaken,
+                    _ => RequestHandlerError::InternalError(error),
+                })?
             }
             ClientRequest::Pong(nonce) => {
                 self.data.pings.update(self.user_id, nonce);
                 HandlerOutput::empty()
             }
             ClientRequest::Resync => {
-                ResyncHandler::new(
-                    self.hub.clone(),
-                    self.pool.clone(),
-                    self.received_from.clone(),
-                    self.user_id,
-                    self.authed,
+                // Carries the same lobby snapshot `handle_auth` does, and both frames are
+                // live at once on a move, so leaving this one inline would have fixed half
+                // the problem.
+                Box::pin(
+                    ResyncHandler::new(
+                        self.hub.clone(),
+                        self.pool.clone(),
+                        self.received_from.clone(),
+                        self.user_id,
+                        self.authed,
+                    )
+                    .handle(),
                 )
-                .handle()
                 .await?
             }
             ClientRequest::Game {
@@ -233,32 +377,25 @@ impl RequestHandler {
                 game_id,
             } => {
                 match game_action {
-                    GameAction::Turn(_) | GameAction::Control(_) => self.ensure_auth()?,
+                    GameAction::Turn(_)
+                    | GameAction::Play(_)
+                    | GameAction::PlayAt { .. }
+                    | GameAction::Control(_)
+                    | GameAction::Berserk
+                    | GameAction::Start => self.ensure_auth()?,
                     _ => {}
                 };
-                GameActionHandler::new(
-                    &game_id,
-                    game_action,
-                    self.received_from.clone(),
-                    (&self.username, self.user_id),
-                    self.data.clone(),
-                    self.hub.clone(),
-                    &self.pool,
-                )
-                .await?
-                .handle()
-                .await?
+                self.game_action(&game_id, game_action).await?
             }
             ClientRequest::Challenge(challenge_action) => {
                 self.ensure_auth()?;
                 ChallengeHandler::new(
                     challenge_action,
-                    &self.username,
                     self.user_id,
                     self.admin,
+                    self.data.clone(),
                     &self.pool,
                 )
-                .await?
                 .handle()
                 .await?
                 .into()
@@ -271,14 +408,31 @@ impl RequestHandler {
                 HandlerOutput::empty()
             }
             ClientRequest::Away => UserStatusHandler::new().await?.handle().await?.into(),
+            // Consumed by `handle_request` before dispatch; this arm is unreachable.
+            ClientRequest::Auth(_) => HandlerOutput::empty(),
+            ClientRequest::GetGame(game_id) => {
+                self.ensure_auth()?;
+                self.bot_read(BotRead::Game(game_id)).await?
+            }
+            ClientRequest::GetPendingGames => {
+                self.ensure_auth()?;
+                self.bot_read(BotRead::PendingGames).await?
+            }
+            ClientRequest::GetOngoingGames => {
+                self.ensure_auth()?;
+                self.bot_read(BotRead::OngoingGames).await?
+            }
+            ClientRequest::GetUser(id) => {
+                self.ensure_auth()?;
+                self.bot_read(BotRead::User(id)).await?
+            }
+            ClientRequest::GetUsername(name) => {
+                self.ensure_auth()?;
+                self.bot_read(BotRead::Username(name)).await?
+            }
             ClientRequest::Schedule(action) => {
-                match action {
-                    crate::common::ScheduleAction::TournamentPublic(_) => {}
-                    _ => self.ensure_auth()?,
-                }
-                ScheduleHandler::new(self.user_id, action, &self.pool)
-                    .await?
-                    .handle()
+                self.ensure_auth()?;
+                Box::pin(ScheduleHandler::new(self.user_id, action, &self.pool).handle())
                     .await?
                     .into()
             }
@@ -292,9 +446,12 @@ mod tests {
     use super::*;
     use crate::{
         common::{ChatSendRequest, ClientRequest, SubscriptionAttempt},
-        websocket::{messages::SocketTx, WebsocketData},
+        websocket::{
+            messages::{SocketFormat, SocketTx},
+            WebsocketData,
+        },
     };
-    use shared_types::ConversationKey;
+    use shared_types::{ConversationKey, GameId, TournamentId};
     use tokio::sync::mpsc;
 
     async fn test_handler(command: ClientRequest, user: SimpleUser) -> RequestHandler {
@@ -310,11 +467,41 @@ mod tests {
             hub,
             SocketTx {
                 socket_id: Uuid::new_v4(),
+                format: SocketFormat::Msgpack,
                 tx,
             },
             user,
             pool,
         )
+    }
+
+    #[tokio::test]
+    async fn anonymous_tournament_watch_requests_need_no_authentication_or_database() {
+        let user_id = Uuid::new_v4();
+        let tournament_id = TournamentId("watched-route".to_string());
+        let mut handler = test_handler(
+            ClientRequest::TournamentWatch(tournament_id.clone()),
+            SimpleUser {
+                user_id,
+                username: "anonymous".to_string(),
+                authed: false,
+                admin: false,
+                bot: false,
+            },
+        )
+        .await;
+        let socket_id = handler.received_from.socket_id;
+
+        handler.handle().await.unwrap();
+        assert!(handler
+            .hub
+            .has_tournament_watch(user_id, socket_id, &tournament_id));
+
+        handler.command = ClientRequest::TournamentUnwatch(tournament_id.clone());
+        handler.handle().await.unwrap();
+        assert!(!handler
+            .hub
+            .has_tournament_watch(user_id, socket_id, &tournament_id));
     }
 
     #[tokio::test]
@@ -333,6 +520,7 @@ mod tests {
                 username: "anonymous".to_string(),
                 authed: false,
                 admin: false,
+                bot: false,
             },
         )
         .await;
@@ -357,6 +545,7 @@ mod tests {
                 username: "anonymous".to_string(),
                 authed: false,
                 admin: false,
+                bot: false,
             },
         )
         .await;
@@ -386,5 +575,271 @@ mod tests {
 
         assert_eq!(request.body, "validbody");
         assert_eq!(request.turn, None);
+    }
+
+    fn anonymous() -> SimpleUser {
+        SimpleUser {
+            user_id: Uuid::nil(),
+            username: "anonymous".to_string(),
+            authed: false,
+            admin: false,
+            bot: false,
+        }
+    }
+
+    fn bot() -> SimpleUser {
+        SimpleUser {
+            user_id: Uuid::new_v4(),
+            username: "bot".to_string(),
+            authed: true,
+            admin: false,
+            bot: true,
+        }
+    }
+
+    #[tokio::test]
+    async fn bot_reads_are_denied_before_database_access() {
+        for command in [
+            ClientRequest::GetGame(GameId("somebody-elses".to_string())),
+            ClientRequest::GetPendingGames,
+            ClientRequest::GetOngoingGames,
+            ClientRequest::GetUser(Uuid::new_v4()),
+        ] {
+            let handler = test_handler(command, anonymous()).await;
+            assert!(matches!(
+                handler.handle().await,
+                Err(RequestHandlerError::AuthError(AuthError::Unauthorized))
+            ));
+        }
+    }
+
+    /// The pool never connects, so reaching the database is the assertion: nothing rejected
+    /// the caller for not being a player.
+    #[tokio::test]
+    async fn reading_a_game_does_not_require_being_a_player() {
+        let handler = test_handler(
+            ClientRequest::GetGame(GameId("somebody-elses".to_string())),
+            bot(),
+        )
+        .await;
+
+        assert!(!matches!(
+            handler.handle().await,
+            Err(RequestHandlerError::AuthError(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn reading_a_game_requires_authentication() {
+        let handler = test_handler(
+            ClientRequest::GetGame(GameId("somebody-elses".to_string())),
+            anonymous(),
+        )
+        .await;
+        assert!(matches!(
+            handler.handle().await,
+            Err(RequestHandlerError::AuthError(AuthError::Unauthorized))
+        ));
+    }
+
+    #[tokio::test]
+    async fn reading_pending_games_requires_authentication() {
+        let handler = test_handler(ClientRequest::GetPendingGames, anonymous()).await;
+        assert!(matches!(
+            handler.handle().await,
+            Err(RequestHandlerError::AuthError(AuthError::Unauthorized))
+        ));
+    }
+
+    #[tokio::test]
+    async fn reading_a_user_by_uuid_requires_authentication() {
+        let handler = test_handler(ClientRequest::GetUser(Uuid::new_v4()), anonymous()).await;
+        assert!(matches!(
+            handler.handle().await,
+            Err(RequestHandlerError::AuthError(AuthError::Unauthorized))
+        ));
+    }
+
+    #[tokio::test]
+    async fn reading_a_user_by_username_requires_authentication() {
+        let handler = test_handler(
+            ClientRequest::GetUsername("someone".to_string()),
+            anonymous(),
+        )
+        .await;
+        assert!(matches!(
+            handler.handle().await,
+            Err(RequestHandlerError::AuthError(AuthError::Unauthorized))
+        ));
+    }
+
+    #[tokio::test]
+    async fn reading_a_user_by_username_does_not_require_being_that_user() {
+        let handler = test_handler(
+            ClientRequest::GetUsername("someone-else".to_string()),
+            bot(),
+        )
+        .await;
+        assert!(!matches!(
+            handler.handle().await,
+            Err(RequestHandlerError::AuthError(_))
+        ));
+    }
+
+    /// A revoked user keeps a live socket, so every read has to re-check, not trust the
+    /// identity the connection was opened with.
+    #[tokio::test]
+    async fn reads_are_denied_to_a_revoked_user() {
+        let user = bot();
+        let handler = test_handler(ClientRequest::GetPendingGames, user.clone()).await;
+        handler.hub.revoke_user(user.user_id);
+        assert!(matches!(
+            handler.handle().await,
+            Err(RequestHandlerError::AuthError(AuthError::Unauthorized))
+        ));
+    }
+
+    /// `Play` and `PlayAt` are `Turn` for clients that cannot run the engine, so they need the
+    /// same gate.
+    #[tokio::test]
+    async fn playing_by_notation_requires_authentication() {
+        for action in [
+            crate::common::GameAction::Play("wA1 -bQ".to_string()),
+            crate::common::GameAction::PlayAt {
+                turn: 1,
+                notation: "wA1 -bQ".to_string(),
+            },
+        ] {
+            let handler = test_handler(
+                ClientRequest::Game {
+                    game_id: GameId("some-game".to_string()),
+                    action,
+                },
+                anonymous(),
+            )
+            .await;
+            assert!(matches!(
+                handler.handle().await,
+                Err(RequestHandlerError::AuthError(AuthError::Unauthorized))
+            ));
+        }
+    }
+
+    /// Every websocket frame is dispatched through this one future. Debug builds neither
+    /// pack async state machines nor elide the stack temporaries used to build them, so a
+    /// branch that inlines its handler's future widens the frame that *unrelated* requests
+    /// — an ordinary move included — are dispatched through, until the handler chain below
+    /// no longer fits an Actix worker stack. Box a branch's future rather than raising this.
+    const DISPATCH_FUTURE_BUDGET: usize = 16 * 1024;
+
+    #[tokio::test]
+    async fn the_dispatch_future_fits_a_worker_stack() {
+        let handler = test_handler(ClientRequest::GetPendingGames, bot()).await;
+
+        let size = std::mem::size_of_val(&handler.handle());
+
+        println!("RequestHandler::handle future: {size} bytes of {DISPATCH_FUTURE_BUDGET}");
+        assert!(
+            size <= DISPATCH_FUTURE_BUDGET,
+            "RequestHandler::handle is a {size} byte future, budget is \
+             {DISPATCH_FUTURE_BUDGET}; box the branch futures that grew it"
+        );
+    }
+
+    /// The bot reads were the arms added last, and each one inlines a whole
+    /// `BotReadHandler::handle` — connection checkout, game lookup, response build — into
+    /// the shared dispatcher. Boxing keeps the branch a pointer instead of a payload.
+    #[tokio::test]
+    async fn a_bot_read_does_not_inline_its_handler_future() {
+        let handler = test_handler(ClientRequest::GetPendingGames, bot()).await;
+
+        let size = std::mem::size_of_val(&handler.bot_read(BotRead::PendingGames));
+
+        assert!(
+            size <= 1024,
+            "the bot_read branch carries a {size} byte future inline"
+        );
+    }
+
+    /// An outlier detector, not the stack constraint — that is the aggregate budget above,
+    /// which measures what is actually inline after boxing. This measures each handler's
+    /// own future instead, because a handler this far over is one whose *body* wants
+    /// restructuring rather than one more `Box::pin` at its call site. The chat and game
+    /// arms cannot be sized here: both need a live `DbConn` to build their future.
+    const BRANCH_FUTURE_OUTLIER: usize = 256 * 1024;
+
+    /// Which arm to box is a measurement, not a guess: `handle`'s future is about as big
+    /// as its largest arm, so boxing anything smaller than that buys nothing.
+    #[tokio::test]
+    async fn no_branch_inlines_more_than_its_share() {
+        use crate::common::{ChallengeAction, ScheduleAction, TournamentAction};
+        use shared_types::{ChallengeId, TournamentId};
+        use std::mem::size_of_val;
+
+        let handler = test_handler(ClientRequest::GetPendingGames, bot()).await;
+        let user_id = handler.user_id;
+
+        let tournament = TournamentHandler::new(
+            TournamentAction::Join(TournamentId("a-tournament".to_string())),
+            &handler.username,
+            user_id,
+            handler.received_from.clone(),
+            handler.hub.clone(),
+            &handler.pool,
+        );
+        let challenge = ChallengeHandler::new(
+            ChallengeAction::Accept(ChallengeId("a-challenge".to_string())),
+            user_id,
+            false,
+            handler.data.clone(),
+            &handler.pool,
+        );
+        let schedule = ScheduleHandler::new(
+            user_id,
+            ScheduleAction::Accept {
+                offer_id: Uuid::new_v4(),
+                selected_time: chrono::Utc::now(),
+            },
+            &handler.pool,
+        );
+        let status = UserStatusHandler::new()
+            .await
+            .expect("the status handler builds without touching the database");
+
+        let branches = [
+            ("tournament", size_of_val(&tournament.handle())),
+            ("challenge", size_of_val(&challenge.handle())),
+            ("schedule", size_of_val(&schedule.handle())),
+            ("user_status", size_of_val(&status.handle())),
+            (
+                "resync",
+                size_of_val(
+                    &ResyncHandler::new(
+                        handler.hub.clone(),
+                        handler.pool.clone(),
+                        handler.received_from.clone(),
+                        user_id,
+                        true,
+                    )
+                    .handle(),
+                ),
+            ),
+            (
+                "bot_read",
+                size_of_val(&handler.bot_read(BotRead::PendingGames)),
+            ),
+        ];
+
+        println!("branch futures: {branches:?}");
+        let over: Vec<&(&str, usize)> = branches
+            .iter()
+            .filter(|(_, size)| *size > BRANCH_FUTURE_OUTLIER)
+            .collect();
+
+        assert!(
+            over.is_empty(),
+            "these branches carry more than {BRANCH_FUTURE_OUTLIER} bytes of future: \
+             {over:?} (all branches: {branches:?})"
+        );
     }
 }

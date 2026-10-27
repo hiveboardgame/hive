@@ -1,17 +1,22 @@
+use super::messages::Outbound;
 use crate::{
     common::{LobbySnapshot, ServerMessage, ServerResult},
     responses::{ChallengeResponse, GameResponse, ScheduleResponse, UserResponse},
     websocket::{messages::SocketTx, WsHub},
 };
-use bytes::Bytes;
-use codee::{binary::MsgpackSerdeCodec, Encoder};
 use db_lib::{
-    models::{Challenge, Game, Schedule, Tournament, TournamentInvitation, User},
+    models::{
+        Challenge,
+        ScheduleOffer,
+        Tournament,
+        TournamentInvitation,
+        TournamentOrganizerInvitation,
+        User,
+    },
     DbConn,
 };
-use hive_lib::GameStatus;
 use log::error;
-use shared_types::{GameId, TournamentId};
+use shared_types::TournamentId;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy)]
@@ -21,8 +26,8 @@ type SnapshotSection<T> = Result<T, SocketDisconnected>;
 
 impl WsHub {
     /// Authoritative lobby snapshot for one socket — tournament invitations,
-    /// schedule notifications, urgent games, challenges, TV set, and the
-    /// online roster.
+    /// schedule notifications, urgent games,
+    /// challenges, and the online roster.
     ///
     /// Sent on initial connect and in response to `ClientRequest::Resync`. The
     /// receiving client applies the best-effort snapshot through `snapshot_apply`
@@ -32,9 +37,9 @@ impl WsHub {
     /// applied the snapshot.
     ///
     /// The caller owns the DB connection so the connect path can reuse the
-    /// one it already holds without round-tripping the pool. Each `await`
-    /// re-checks `is_socket_connected` so a fast disconnect doesn't waste
-    /// the remaining DB work or fan out to a dead socket.
+    /// one it already holds without round-tripping the pool. Section loaders
+    /// re-check `is_socket_connected` around slow DB work so a fast disconnect
+    /// does not fan out to a dead socket.
     pub(in crate::websocket) async fn send_lobby_snapshot(
         &self,
         conn: &mut DbConn<'_>,
@@ -48,6 +53,9 @@ impl WsHub {
                 tournament_invitations: self
                     .invitation_notification_snapshot(conn, user_id, socket, user)
                     .await?,
+                tournament_organizer_invitations: self
+                    .organizer_invitation_snapshot(conn, user_id, socket, user)
+                    .await?,
                 schedule_notifications: self
                     .schedule_notification_snapshot(conn, user_id, socket, user)
                     .await?,
@@ -55,7 +63,6 @@ impl WsHub {
                     .urgent_games_snapshot(conn, user_id, socket, user)
                     .await?,
                 challenges: self.challenge_snapshot(conn, user_id, socket, user).await?,
-                tv_games: self.tv_snapshot(conn, user_id, socket).await?,
                 online_users: self.online_roster_snapshot(conn, user_id, socket).await?,
             };
             self.ensure_socket_connected(user_id, socket)?;
@@ -67,9 +74,11 @@ impl WsHub {
             Err(SocketDisconnected) => return,
         };
         let message = ServerResult::Ok(Box::new(ServerMessage::LobbySnapshot(Box::new(snapshot))));
-        if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-            self.send_own_state_via_tx(&socket.tx, &Bytes::from(serialized));
-        }
+        self.send_own_state_via_tx(&socket.tx, socket.format, &mut Outbound::typed(&message));
+        let paused = ServerResult::Ok(Box::new(ServerMessage::RealtimeGamesPaused(
+            self.data.realtime_gate.is_paused(),
+        )));
+        self.send_own_state_via_tx(&socket.tx, socket.format, &mut Outbound::typed(&paused));
     }
 
     fn ensure_socket_connected(
@@ -132,6 +141,42 @@ impl WsHub {
         }
     }
 
+    async fn organizer_invitation_snapshot(
+        &self,
+        conn: &mut DbConn<'_>,
+        user_id: Uuid,
+        socket: &SocketTx,
+        user: Option<&User>,
+    ) -> SnapshotSection<Vec<TournamentId>> {
+        let Some(user) = user else {
+            return Ok(Vec::new());
+        };
+        let invitations = TournamentOrganizerInvitation::find_by_user(user.id, conn).await;
+        self.ensure_socket_connected(user_id, socket)?;
+        let result = match invitations {
+            Ok(invitations) => {
+                let ids = invitations
+                    .into_iter()
+                    .map(|row| row.tournament_id)
+                    .collect::<Vec<_>>();
+                Tournament::find_by_uuids(&ids, conn)
+                    .await
+                    .map(|tournaments| {
+                        tournaments
+                            .into_iter()
+                            .map(|tournament| TournamentId(tournament.nanoid))
+                            .collect()
+                    })
+            }
+            Err(error) => Err(error),
+        };
+        self.ensure_socket_connected(user_id, socket)?;
+        Ok(result.unwrap_or_else(|error| {
+            error!("Failed to load organizer invitations for {user_id}: {error}");
+            Vec::new()
+        }))
+    }
+
     async fn schedule_notification_snapshot(
         &self,
         conn: &mut DbConn<'_>,
@@ -143,7 +188,7 @@ impl WsHub {
             return Ok(Vec::new());
         };
 
-        let schedules = Schedule::find_user_notifications(user.id, conn).await;
+        let schedules = ScheduleOffer::find_user_notifications(user.id, conn).await;
         self.ensure_socket_connected(user_id, socket)?;
         let schedules = match schedules {
             Ok(schedules) => schedules,
@@ -277,55 +322,6 @@ impl WsHub {
                     "Failed to build challenge snapshot for user {}: {e}",
                     user_id
                 );
-                Ok(Vec::new())
-            }
-        }
-    }
-
-    async fn tv_snapshot(
-        &self,
-        conn: &mut DbConn<'_>,
-        user_id: Uuid,
-        socket: &SocketTx,
-    ) -> SnapshotSection<Vec<GameResponse>> {
-        // `last_tv_broadcast` doubles as the "currently on TV" set. Empty
-        // payload still matters — the client REPLACEs, clearing stale entries.
-        // We filter out games where the requesting user is a player so the
-        // client doesn't have to (and we don't waste payload bytes).
-        self.ensure_socket_connected(user_id, socket)?;
-        let tv_ids: Vec<GameId> = self
-            .last_tv_broadcast
-            .iter()
-            .map(|entry| entry.key().clone())
-            .collect();
-        if tv_ids.is_empty() {
-            return Ok(Vec::new());
-        };
-
-        let games = Game::find_by_nanoids(&tv_ids, conn).await;
-        self.ensure_socket_connected(user_id, socket)?;
-        let games = match games {
-            Ok(games) => games,
-            Err(e) => {
-                error!("Failed to get TV game snapshot for user {}: {e}", user_id);
-                return Ok(Vec::new());
-            }
-        };
-        let in_progress_status = GameStatus::InProgress.to_string();
-        let in_progress: Vec<Game> = games
-            .into_iter()
-            .filter(|g| {
-                g.game_status == in_progress_status
-                    && g.white_id != user_id
-                    && g.black_id != user_id
-            })
-            .collect();
-        let tv_responses = GameResponse::from_games_batch(in_progress, conn).await;
-        self.ensure_socket_connected(user_id, socket)?;
-        match tv_responses {
-            Ok(tv_responses) => Ok(tv_responses),
-            Err(e) => {
-                error!("Failed to build TV game snapshot for user {}: {e}", user_id);
                 Ok(Vec::new())
             }
         }

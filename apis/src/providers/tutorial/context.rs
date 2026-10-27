@@ -55,9 +55,9 @@ impl TutorialContext {
     pub fn load(&self, lesson: &'static Lesson) {
         self.feedback.set(None);
         let starting = match lesson.setup {
-            crate::tutorial::Setup::AfterLesson { lesson: source, .. } => {
-                self.completed_positions.with_untracked(|positions| positions.get(source).cloned())
-            }
+            crate::tutorial::Setup::AfterLesson { lesson: source, .. } => self
+                .completed_positions
+                .with_untracked(|positions| positions.get(source).cloned()),
             _ => None,
         };
         match Session::with_starting_state(lesson, starting) {
@@ -84,7 +84,9 @@ impl TutorialContext {
             session.as_ref().is_some_and(|session| {
                 session.lesson().id == id
                     && session.is_finished()
-                    && session.current_step().is_some_and(|step| step.complete_on_load)
+                    && session
+                        .current_step()
+                        .is_some_and(|step| step.complete_on_load)
             })
         });
         if complete {
@@ -120,7 +122,8 @@ impl TutorialContext {
         if !allowed {
             return;
         }
-        let active = self.game_state
+        let active = self
+            .game_state
             .move_info()
             .with_untracked(|move_info| move_info.active.map(|(piece, _)| piece));
         if let Some(piece) = active {
@@ -154,9 +157,9 @@ impl TutorialContext {
         let Some(outcome) = outcome else {
             return;
         };
-        let hint = self.session.with_untracked(|session| {
-            session.as_ref().and_then(Session::hint).unwrap_or("")
-        });
+        let hint = self
+            .session
+            .with_untracked(|session| session.as_ref().and_then(Session::hint).unwrap_or(""));
         self.sync_board();
         self.feedback.set(match outcome {
             Outcome::Illegal => None,
@@ -177,7 +180,10 @@ impl TutorialContext {
     }
 
     pub fn timeout(&self, loser: hive_lib::Color) {
-        let outcome = self.session.try_update(|session| session.as_mut().map(|session| session.timeout(loser))).flatten();
+        let outcome = self
+            .session
+            .try_update(|session| session.as_mut().map(|session| session.timeout(loser)))
+            .flatten();
         self.sync_board();
         match outcome {
             Some(Outcome::LessonDone) => {
@@ -185,7 +191,9 @@ impl TutorialContext {
                 self.complete_lesson();
             }
             Some(Outcome::Wrong) => {
-                self.feedback.set(Some(Feedback::Hint("Your time ran out. Choose Try again to restart.")));
+                self.feedback.set(Some(Feedback::Hint(
+                    "Your time ran out. Choose Try again to restart.",
+                )));
             }
             _ => {}
         }
@@ -201,7 +209,9 @@ impl TutorialContext {
         self.sync_board();
         self.feedback.set(None);
         if self.session.with_untracked(|session| {
-            session.as_ref().is_some_and(|session| session.lesson().clock().is_some())
+            session
+                .as_ref()
+                .is_some_and(|session| session.lesson().clock().is_some())
         }) {
             self.generation.update(|generation| *generation += 1);
         }
@@ -251,12 +261,10 @@ impl TutorialContext {
                             position,
                             color: AnnotationColor::Green,
                         })
-                        .chain(
-                            session.forbidden().into_iter().map(|position| Highlight {
-                                position,
-                                color: AnnotationColor::Red,
-                            }),
-                        )
+                        .chain(session.forbidden().into_iter().map(|position| Highlight {
+                            position,
+                            color: AnnotationColor::Red,
+                        }))
                         .collect(),
                     markers: session
                         .grid()
@@ -268,24 +276,41 @@ impl TutorialContext {
                         })
                         .chain(marks.iter().map(|mark| Marker {
                             position: mark.position,
-                            shape: if session.current_step().is_some_and(|step| step.thin_frames) { MarkerShape::ThinRing } else { MarkerShape::Ring },
+                            shape: if session.current_step().is_some_and(|step| step.thin_frames) {
+                                MarkerShape::ThinRing
+                            } else {
+                                MarkerShape::Ring
+                            },
                             color: AnnotationColor::Orange,
                         }))
                         .chain(session.green_marks().into_iter().map(|mark| Marker {
                             position: mark.position,
-                            shape: if session.current_step().is_some_and(|step| step.thin_frames) { MarkerShape::ThinRing } else { MarkerShape::Ring },
+                            shape: if session.current_step().is_some_and(|step| step.thin_frames) {
+                                MarkerShape::ThinRing
+                            } else {
+                                MarkerShape::Ring
+                            },
                             color: AnnotationColor::Green,
                         }))
                         .chain(session.red_marks().into_iter().map(|mark| Marker {
                             position: mark.position,
-                            shape: if session.current_step().is_some_and(|step| step.thin_frames) { MarkerShape::ThinRing } else { MarkerShape::Ring },
+                            shape: if session.current_step().is_some_and(|step| step.thin_frames) {
+                                MarkerShape::ThinRing
+                            } else {
+                                MarkerShape::Ring
+                            },
                             color: AnnotationColor::Red,
                         }))
-                        .chain(session.placement_crosses().into_iter().map(|position| Marker {
-                            position,
-                            shape: MarkerShape::Cross,
-                            color: AnnotationColor::Red,
-                        }))
+                        .chain(
+                            session
+                                .placement_crosses()
+                                .into_iter()
+                                .map(|position| Marker {
+                                    position,
+                                    shape: MarkerShape::Cross,
+                                    color: AnnotationColor::Red,
+                                }),
+                        )
                         .collect(),
                     arrows: session
                         .arrows()
@@ -324,10 +349,13 @@ impl TutorialContext {
             .with_untracked(|session| session.as_ref().map(|session| session.lesson().id))
         {
             self.progress.complete(id);
-            if let Some(state) = self.session.with_untracked(|session| {
-                session.as_ref().map(|session| session.state().clone())
-            }) {
-                self.completed_positions.update(|positions| { positions.insert(id, state); });
+            if let Some(state) = self
+                .session
+                .with_untracked(|session| session.as_ref().map(|session| session.state().clone()))
+            {
+                self.completed_positions.update(|positions| {
+                    positions.insert(id, state);
+                });
             }
         }
     }

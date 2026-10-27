@@ -1,6 +1,5 @@
 use crate::{
     common::{ChallengeUpdate, ServerMessage},
-    responses::ChallengeResponse,
     websocket::messages::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
@@ -16,18 +15,13 @@ pub struct DeleteHandler {
 }
 
 impl DeleteHandler {
-    pub async fn new(
-        challenge_id: ChallengeId,
-        user_id: Uuid,
-        admin: bool,
-        pool: &DbPool,
-    ) -> Result<Self> {
-        Ok(Self {
+    pub fn new(challenge_id: ChallengeId, user_id: Uuid, admin: bool, pool: &DbPool) -> Self {
+        Self {
             challenge_id,
             user_id,
             admin,
             pool: pool.clone(),
-        })
+        }
     }
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
@@ -50,39 +44,36 @@ impl DeleteHandler {
         {
             return Err(ChallengeError::NotUserChallenge.into());
         }
-        let challenge_response = ChallengeResponse::from_model(&challenge, &mut conn).await?;
+        let visibility = challenge.visibility.parse::<ChallengeVisibility>()?;
+        let challenge_id = ChallengeId(challenge.nanoid.clone());
+        let challenger_id = challenge.challenger_id;
+        let opponent_id = challenge.opponent_id;
         challenge.delete(&mut conn).await?;
         let mut messages = Vec::new();
-        match challenge_response.visibility {
+        match visibility {
             ChallengeVisibility::Public => {
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::Global,
-                    message: ServerMessage::Challenge(ChallengeUpdate::Removed(
-                        challenge_response.challenge_id,
-                    )),
+                    message: ServerMessage::Challenge(ChallengeUpdate::Removed(challenge_id)),
                 });
             }
             ChallengeVisibility::Private => {
                 messages.push(InternalServerMessage {
-                    destination: MessageDestination::User(challenge_response.challenger.uid),
-                    message: ServerMessage::Challenge(ChallengeUpdate::Removed(
-                        challenge_response.challenge_id,
-                    )),
+                    destination: MessageDestination::User(challenger_id),
+                    message: ServerMessage::Challenge(ChallengeUpdate::Removed(challenge_id)),
                 });
             }
             ChallengeVisibility::Direct => {
-                if let Some(opponent) = challenge_response.opponent {
+                if let Some(opponent_id) = opponent_id {
                     messages.push(InternalServerMessage {
-                        destination: MessageDestination::User(opponent.uid),
+                        destination: MessageDestination::User(opponent_id),
                         message: ServerMessage::Challenge(ChallengeUpdate::Removed(
-                            challenge_response.challenge_id.clone(),
+                            challenge_id.clone(),
                         )),
                     });
                     messages.push(InternalServerMessage {
-                        destination: MessageDestination::User(challenge_response.challenger.uid),
-                        message: ServerMessage::Challenge(ChallengeUpdate::Removed(
-                            challenge_response.challenge_id,
-                        )),
+                        destination: MessageDestination::User(challenger_id),
+                        message: ServerMessage::Challenge(ChallengeUpdate::Removed(challenge_id)),
                     });
                 }
             }

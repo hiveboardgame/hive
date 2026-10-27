@@ -497,6 +497,7 @@ dependencies = [
  "lru",
  "markdown",
  "nanoid",
+ "percent-encoding",
  "rand 0.10.2",
  "reactive_stores",
  "reqwest",
@@ -508,9 +509,11 @@ dependencies = [
  "sha2 0.11.0",
  "shared_types",
  "simple_logger",
+ "subtle",
  "thiserror 2.0.18",
  "tokio",
  "tokio-util",
+ "tournamint",
  "url",
  "uuid",
  "walkdir",
@@ -1603,6 +1606,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "data-encoding"
+version = "2.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4583a4551df46e2792f82ceeac45e850d2e2d5debba0b91f102385cda5b11f06"
+
+[[package]]
 name = "data-url"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1642,10 +1651,9 @@ dependencies = [
  "diesel_migrations",
  "dotenvy",
  "hive",
- "itertools 0.15.0",
  "lazy_static",
+ "log",
  "nanoid",
- "rand 0.10.2",
  "regex",
  "serde",
  "serde_json",
@@ -1653,6 +1661,7 @@ dependencies = [
  "skillratings",
  "thiserror 2.0.18",
  "tokio",
+ "tournamint",
  "uuid",
 ]
 
@@ -2621,13 +2630,16 @@ dependencies = [
  "async-trait",
  "clap",
  "config",
+ "futures-util",
  "reqwest",
+ "rustls",
  "serde",
  "serde_json",
  "tempfile",
  "thiserror 2.0.18",
  "time",
  "tokio",
+ "tokio-tungstenite",
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
@@ -4075,6 +4087,7 @@ dependencies = [
  "icu_provider_source",
  "leptos_i18n_codegen",
  "leptos_i18n_parser",
+ "prettyplease",
  "proc-macro2",
  "syn 2.0.119",
 ]
@@ -5566,6 +5579,7 @@ dependencies = [
  "rustls-platform-verifier",
  "serde",
  "serde_json",
+ "serde_urlencoded",
  "sync_wrapper",
  "tokio",
  "tokio-rustls",
@@ -5877,6 +5891,29 @@ name = "scopeguard"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
+
+[[package]]
+name = "script"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "argon2",
+ "chrono",
+ "clap",
+ "db",
+ "diesel",
+ "diesel-async",
+ "diesel_migrations",
+ "dotenvy",
+ "hive",
+ "rand 0.10.2",
+ "shared_types",
+ "tokio",
+ "tournamint",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
 
 [[package]]
 name = "sec1"
@@ -6244,10 +6281,13 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "chrono",
+ "codee",
  "hive",
- "itertools 0.15.0",
+ "reactive_stores",
  "serde",
+ "serde_json",
  "thiserror 2.0.18",
+ "tournamint",
  "uuid",
 ]
 
@@ -6857,6 +6897,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "tokio-tungstenite"
+version = "0.30.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "17a073bfed563fa236697a068031408a93cd9522e08abf9933ead3e73411bd71"
+dependencies = [
+ "futures-util",
+ "log",
+ "rustls",
+ "rustls-pki-types",
+ "tokio",
+ "tokio-rustls",
+ "tungstenite",
+ "webpki-roots 0.26.11",
+]
+
+[[package]]
 name = "tokio-util"
 version = "0.7.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6964,6 +7020,16 @@ name = "toml_writer"
 version = "1.1.2+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7d56353a2a665ad0f41a421187180aab746c8c325620617ad883a99a1cbe66d2"
+
+[[package]]
+name = "tournamint"
+version = "0.1.0"
+source = "git+https://github.com/hiveboardgame/tournamint.git?rev=75122e7bc74c00bbba1adf04bd1b9931085acd36#75122e7bc74c00bbba1adf04bd1b9931085acd36"
+dependencies = [
+ "serde",
+ "smallvec",
+ "thiserror 2.0.18",
+]
 
 [[package]]
 name = "tower"
@@ -7091,6 +7157,24 @@ name = "try-lock"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
+
+[[package]]
+name = "tungstenite"
+version = "0.30.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e48ac77174b19c110a50ab2128b24215ac9cb40e0e12e093fb602d175c569d22"
+dependencies = [
+ "bytes",
+ "data-encoding",
+ "http 1.4.0",
+ "httparse",
+ "log",
+ "rand 0.10.2",
+ "rustls",
+ "rustls-pki-types",
+ "sha1",
+ "thiserror 2.0.18",
+]
 
 [[package]]
 name = "twox-hash"
@@ -7247,7 +7331,7 @@ dependencies = [
  "rustls-pki-types",
  "ureq-proto",
  "utf-8",
- "webpki-roots",
+ "webpki-roots 1.0.5",
 ]
 
 [[package]]
@@ -7678,6 +7762,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "36a29fc0408b113f68cf32637857ab740edfafdf460c326cd2afaa2d84cc05dc"
 dependencies = [
  "rustls-pki-types",
+]
+
+[[package]]
+name = "webpki-roots"
+version = "0.26.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "521bc38abb08001b01866da9f51eb7c5d647a19260e00054a8c7fd5f9e57f7a9"
+dependencies = [
+ "webpki-roots 1.0.5",
 ]
 
 [[package]]

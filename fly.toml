@@ -4,6 +4,9 @@ primary_region = "otp"
 
 [build]
 
+[env]
+  APP_ORIGIN = "https://hivegame.fly.dev"
+
 [http_service]
   internal_port = 8080
   force_https = true

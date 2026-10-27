@@ -19,12 +19,22 @@ pub struct Lesson {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum GuidePage { Home, Controls, Settings, Correspondence, Tournaments, Ready }
+pub enum GuidePage {
+    Home,
+    Controls,
+    Settings,
+    Correspondence,
+    Tournaments,
+    Ready,
+}
 
 pub enum Setup {
     Guide(GuidePage),
     Position(&'static str),
-    ForcedPass { position: &'static str, color: hive_lib::Color },
+    ForcedPass {
+        position: &'static str,
+        color: hive_lib::Color,
+    },
     BlankPosition(&'static str),
     BlankExercise {
         position: &'static str,
@@ -59,7 +69,8 @@ pub struct Step {
     pub marks: &'static [&'static str],
     pub number_marks: bool,
     pub refutations: &'static [(&'static str, &'static str)],
-    pub conditional_refutation: Option<(&'static super::goal::Condition, &'static str, &'static str)>,
+    pub conditional_refutation:
+        Option<(&'static super::goal::Condition, &'static str, &'static str)>,
     pub highlights: &'static [&'static str],
     pub arrows: &'static [(&'static str, &'static str)],
     pub hint: &'static str,
@@ -103,7 +114,9 @@ pub struct Step {
 
 pub enum Reply {
     InitialPosition,
-    RandomPlacementNear { near: &'static str },
+    RandomPlacementNear {
+        near: &'static str,
+    },
     RandomPreservingWin {
         piece: &'static str,
         to: &'static str,
@@ -339,13 +352,19 @@ impl Step {
         self
     }
 
-    pub const fn with_initial_red_arrows(mut self, arrows: &'static [(&'static str, &'static str)]) -> Self {
+    pub const fn with_initial_red_arrows(
+        mut self,
+        arrows: &'static [(&'static str, &'static str)],
+    ) -> Self {
         self.red_arrows = arrows;
         self.initial_red_arrows = true;
         self
     }
 
-    pub const fn with_hint_arrows(mut self, arrows: &'static [(&'static str, &'static str)]) -> Self {
+    pub const fn with_hint_arrows(
+        mut self,
+        arrows: &'static [(&'static str, &'static str)],
+    ) -> Self {
         self.hint_arrows = arrows;
         self
     }
@@ -360,7 +379,10 @@ impl Step {
         self
     }
 
-    pub const fn with_red_arrows(mut self, arrows: &'static [(&'static str, &'static str)]) -> Self {
+    pub const fn with_red_arrows(
+        mut self,
+        arrows: &'static [(&'static str, &'static str)],
+    ) -> Self {
         self.red_arrows = arrows;
         self
     }
@@ -370,7 +392,11 @@ impl Step {
         self
     }
 
-    pub const fn random_reply_preserving_win(mut self, piece: &'static str, to: &'static str) -> Self {
+    pub const fn random_reply_preserving_win(
+        mut self,
+        piece: &'static str,
+        to: &'static str,
+    ) -> Self {
         self.then = Reply::RandomPreservingWin { piece, to };
         self
     }
@@ -402,7 +428,11 @@ impl Step {
         self
     }
 
-    pub const fn prompt_when(mut self, condition: &'static super::goal::Condition, prompt: &'static str) -> Self {
+    pub const fn prompt_when(
+        mut self,
+        condition: &'static super::goal::Condition,
+        prompt: &'static str,
+    ) -> Self {
         self.conditional_prompt = Some((condition, prompt));
         self
     }
@@ -469,7 +499,10 @@ impl Step {
         self
     }
 
-    pub const fn with_small_arrows(mut self, arrows: &'static [(&'static str, &'static str)]) -> Self {
+    pub const fn with_small_arrows(
+        mut self,
+        arrows: &'static [(&'static str, &'static str)],
+    ) -> Self {
         self.arrows = arrows;
         self.small_arrows = true;
         self
@@ -515,11 +548,23 @@ impl Lesson {
     }
 
     pub fn has_board(&self) -> bool {
-        matches!(self.setup, Setup::ForcedPass { .. } | Setup::Position(_) | Setup::BlankPosition(_) | Setup::BlankExercise { .. } | Setup::AfterLesson { .. } | Setup::SwapPieces { .. } | Setup::Clocked { .. })
+        matches!(
+            self.setup,
+            Setup::ForcedPass { .. }
+                | Setup::Position(_)
+                | Setup::BlankPosition(_)
+                | Setup::BlankExercise { .. }
+                | Setup::AfterLesson { .. }
+                | Setup::SwapPieces { .. }
+                | Setup::Clocked { .. }
+        )
     }
 
     pub fn uses_blank_tiles(&self) -> bool {
-        matches!(self.setup, Setup::BlankPosition(_) | Setup::BlankExercise { .. })
+        matches!(
+            self.setup,
+            Setup::BlankPosition(_) | Setup::BlankExercise { .. }
+        )
     }
 
     pub fn blank_movers(&self) -> Option<&'static [&'static str]> {
@@ -538,7 +583,10 @@ impl Lesson {
     }
 
     pub fn guide(&self) -> Option<GuidePage> {
-        match self.setup { Setup::Guide(page) => Some(page), _ => None }
+        match self.setup {
+            Setup::Guide(page) => Some(page),
+            _ => None,
+        }
     }
 
     pub fn clock(&self) -> Option<(u64, u64)> {

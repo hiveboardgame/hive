@@ -1,12 +1,15 @@
-use crate::{functions::games::get::get_game_from_nanoid, responses::GameResponse};
+use crate::{
+    common::{display_username, format_game_rating, format_time_control, game_speed_label},
+    functions::games::get::get_game_from_nanoid,
+    i18n::*,
+    responses::GameResponse,
+};
 use hive_lib::{Color, GameResult, GameStatus};
 use leptos::prelude::*;
+use leptos_i18n::I18nContext;
 use leptos_meta::Meta;
 use leptos_router::hooks::use_location;
-use shared_types::GameId;
-
-const SITE_TITLE: &str = "HiveGame.com • Play Hive Online";
-const SITE_DESCRIPTION: &str = "The best place to play Hive online — the strategy game with no board. Free, no ads, with rated games, tournaments, and play against friends, random opponents or bots.";
+use shared_types::{rounded_rating, GameId};
 
 /// Real positions keep generic link previews specific without another image
 /// pipeline.
@@ -56,32 +59,38 @@ pub fn OG() -> impl IntoView {
     }
 }
 
-fn meta_tags(title: String, description: String, url: String, image: String) -> impl IntoView {
+fn meta_tags(
+    title: Signal<String>,
+    description: Signal<String>,
+    url: String,
+    image: String,
+) -> impl IntoView {
     view! {
-        <Meta name="description" content=description.clone() />
+        <Meta name="description" content=move || description.get() />
         <Meta property="og:url" content=url.clone() />
         <Meta property="og:type" content="website" />
-        <Meta property="og:title" content=title.clone() />
-        <Meta property="og:description" content=description.clone() />
+        <Meta property="og:title" content=move || title.get() />
+        <Meta property="og:description" content=move || description.get() />
         <Meta property="og:image" content=image.clone() />
         <Meta name="twitter:card" content="summary_large_image" />
         <Meta property="twitter:domain" content="hivegame.com" />
         <Meta property="twitter:url" content=url />
-        <Meta name="twitter:title" content=title />
-        <Meta name="twitter:description" content=description />
+        <Meta name="twitter:title" content=move || title.get() />
+        <Meta name="twitter:description" content=move || description.get() />
         <Meta name="twitter:image" content=image />
     }
 }
 
 fn default_meta() -> impl IntoView {
+    let i18n = use_i18n();
     let (nanoid, turn) = pick_iconic_game();
     let image = match turn {
         Some(turn) => format!("https://hivegame.com/og/game/{nanoid}.png?turn={turn}"),
         None => format!("https://hivegame.com/og/game/{nanoid}.png"),
     };
     meta_tags(
-        SITE_TITLE.to_string(),
-        SITE_DESCRIPTION.to_string(),
+        Signal::derive(move || t_string!(i18n, game.site_title).to_string()),
+        Signal::derive(move || t_string!(i18n, game.site_description).to_string()),
         "https://hivegame.com".to_string(),
         image,
     )
@@ -99,17 +108,35 @@ fn pick_iconic_game() -> (&'static str, Option<usize>) {
 }
 
 fn game_meta(game: GameResponse) -> impl IntoView {
-    let nanoid = &game.game_id.0;
-    let title = format!(
-        "{}{} vs {}{}",
-        game.white_player.username,
+    let i18n = use_i18n();
+    let nanoid = game.game_id.0.clone();
+    let (white_deleted, white_username, white_rating) = (
+        game.white_player.deleted,
+        game.white_player.username.clone(),
         rating(game.white_rating),
-        game.black_player.username,
+    );
+    let (black_deleted, black_username, black_rating) = (
+        game.black_player.deleted,
+        game.black_player.username.clone(),
         rating(game.black_rating),
     );
+    let title = Signal::derive(move || {
+        let white = format!(
+            "{}{}",
+            display_username(i18n, white_deleted, &white_username),
+            white_rating
+        );
+        let black = format!(
+            "{}{}",
+            display_username(i18n, black_deleted, &black_username),
+            black_rating
+        );
+        t_string!(i18n, common.versus_players, white = white, black = black).to_string()
+    });
+    let description = Signal::derive(move || game_description(i18n, &game));
     meta_tags(
         title,
-        game_description(&game),
+        description,
         format!("https://hivegame.com/game/{nanoid}"),
         format!("https://hivegame.com/og/game/{nanoid}.png"),
     )
@@ -117,29 +144,35 @@ fn game_meta(game: GameResponse) -> impl IntoView {
 
 fn rating(rating: Option<f64>) -> String {
     match rating {
-        Some(rating) => format!(" ({})", rating.round() as i64),
+        Some(rating) => rounded_rating(rating)
+            .map(|rating| format!(" ({rating})"))
+            .unwrap_or_default(),
         None => String::new(),
     }
 }
 
-fn game_description(game: &GameResponse) -> String {
+fn game_description(i18n: I18nContext<Locale, I18nKeys>, game: &GameResponse) -> String {
     let mut parts = Vec::new();
-    if let (Some(base), Some(increment)) = (game.time_base, game.time_increment) {
-        parts.push(format!("{}+{}", base / 60, increment));
+    if let Some(clock) = game.time_control() {
+        parts.push(format_time_control(i18n, Some(clock)));
     }
-    parts.push(game.speed.to_string());
-    parts.push(if game.rated { "Rated" } else { "Casual" }.to_string());
-    parts.push(status_text(game));
+    parts.push(game_speed_label(i18n, game.speed).to_string());
+    parts.push(format_game_rating(i18n, game.rated));
+    parts.push(status_text(i18n, game));
     parts.join(" · ")
 }
 
-fn status_text(game: &GameResponse) -> String {
+fn status_text(i18n: I18nContext<Locale, I18nKeys>, game: &GameResponse) -> String {
     match &game.game_status {
-        GameStatus::Finished(GameResult::Winner(Color::White)) => "White won",
-        GameStatus::Finished(GameResult::Winner(Color::Black)) => "Black won",
-        GameStatus::Finished(GameResult::Draw) => "Draw",
-        GameStatus::Finished(_) | GameStatus::Adjudicated => "Finished",
-        _ => "In progress",
+        GameStatus::Finished(GameResult::Winner(Color::White)) => {
+            t_string!(i18n, game.tournament_result.white_won)
+        }
+        GameStatus::Finished(GameResult::Winner(Color::Black)) => {
+            t_string!(i18n, game.tournament_result.black_won)
+        }
+        GameStatus::Finished(GameResult::Draw) => t_string!(i18n, game.tournament_result.draw),
+        GameStatus::Finished(_) | GameStatus::Adjudicated => t_string!(i18n, common.finished),
+        _ => t_string!(i18n, common.in_progress),
     }
     .to_string()
 }

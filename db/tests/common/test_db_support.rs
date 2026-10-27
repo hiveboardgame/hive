@@ -1,0 +1,122 @@
+use db_lib::{get_conn, get_pool, DbPool};
+use diesel::{
+    sql_types::{BigInt, Text},
+    QueryableByName,
+};
+use diesel_async::{AsyncConnection, AsyncMigrationHarness, AsyncPgConnection, RunQueryDsl};
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+use std::sync::OnceLock;
+use tokio::sync::{Mutex, MutexGuard};
+
+const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../db/migrations");
+
+// The in-process mutex cannot order the TRUNCATE across parallel test binaries.
+const ADVISORY_LOCK_KEY: i64 = 0x4849_5645_5445_5354;
+
+static DB_LOCK: Mutex<()> = Mutex::const_new(());
+static MIGRATED: OnceLock<()> = OnceLock::new();
+
+#[derive(QueryableByName)]
+struct CurrentDatabase {
+    #[diesel(sql_type = Text)]
+    name: String,
+}
+
+pub struct TestDb {
+    pub pool: DbPool,
+    _session: AsyncPgConnection,
+    _lock: MutexGuard<'static, ()>,
+}
+
+pub async fn test_db() -> TestDb {
+    let lock = DB_LOCK.lock().await;
+    let database_url = test_database_url();
+
+    let mut session = AsyncPgConnection::establish(&database_url)
+        .await
+        .expect("connect to test database for advisory lock");
+    assert_test_database(&mut session).await;
+    diesel::sql_query("SELECT pg_advisory_lock($1)")
+        .bind::<BigInt, _>(ADVISORY_LOCK_KEY)
+        .execute(&mut session)
+        .await
+        .expect("take test database advisory lock");
+
+    if MIGRATED.get().is_none() {
+        let mut conn = AsyncPgConnection::establish(&database_url)
+            .await
+            .expect("connect to test database for migration");
+        assert_test_database(&mut conn).await;
+        let mut harness = AsyncMigrationHarness::new(conn);
+        harness
+            .run_pending_migrations(MIGRATIONS)
+            .expect("run test database migrations");
+        MIGRATED.set(()).ok();
+    }
+
+    let pool = get_pool(&database_url)
+        .await
+        .expect("create test database pool");
+    truncate(&pool).await;
+
+    TestDb {
+        pool,
+        _session: session,
+        _lock: lock,
+    }
+}
+
+fn test_database_url() -> String {
+    dotenvy::dotenv().ok();
+
+    std::env::var("TEST_DATABASE_URL")
+        .expect("TEST_DATABASE_URL must be set")
+        .replace("@localhost:/", "@localhost/")
+}
+
+pub async fn truncate(pool: &DbPool) {
+    let mut conn = get_conn(pool)
+        .await
+        .expect("get test database connection for truncate");
+    assert_test_database(&mut conn).await;
+    diesel::sql_query(
+        r#"
+        DO $$
+        DECLARE
+            stmt text;
+        BEGIN
+            SELECT 'TRUNCATE TABLE ' ||
+                string_agg(format('%I.%I', schemaname, tablename), ', ') ||
+                ' RESTART IDENTITY CASCADE'
+            INTO stmt
+            FROM pg_tables
+            WHERE schemaname = 'public'
+                AND tablename <> '__diesel_schema_migrations';
+
+            IF stmt IS NOT NULL THEN
+                EXECUTE stmt;
+            END IF;
+        END $$;
+        "#,
+    )
+    .execute(&mut conn)
+    .await
+    .expect("truncate test database");
+}
+
+async fn assert_test_database(conn: &mut AsyncPgConnection) {
+    let CurrentDatabase { name } = diesel::sql_query("SELECT current_database() AS name")
+        .get_result(conn)
+        .await
+        .expect("query current database before destructive test operation");
+
+    assert!(
+        is_test_database_name(&name),
+        "refusing destructive DB test operation against non-test database: {name}"
+    );
+}
+
+fn is_test_database_name(name: &str) -> bool {
+    name.split(['_', '-']).any(|part| part == "test")
+}
+

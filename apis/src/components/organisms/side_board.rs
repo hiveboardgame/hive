@@ -12,6 +12,7 @@ use crate::{
     },
     hiveground::HivegroundInteraction,
     hooks::history_nav::sync_play_move_query,
+    i18n::*,
     providers::{
         chat::Chat,
         game_state::{BoardView, GameStateStore, GameStateStoreFields},
@@ -34,6 +35,7 @@ pub enum TabView {
 }
 #[component]
 fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
+    let i18n = use_i18n();
     let chat = expect_context::<Chat>();
     let params = use_params_map();
     let (_move, set_move) = move_query_signal();
@@ -44,10 +46,10 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
             .map(|s| GameId(s.to_owned()))
             .unwrap_or_default()
     };
-    let string = match name {
-        TabView::Reserve => "Game".to_string(),
-        TabView::History => "History".to_string(),
-        TabView::Chat => "Chat".to_string(),
+    let string = move || match name {
+        TabView::Reserve => t_string!(i18n, common.game).to_string(),
+        TabView::History => t_string!(i18n, common.history).to_string(),
+        TabView::Chat => t_string!(i18n, common.chat).to_string(),
     };
     let unread = Memo::new(move |_| chat.unread_count_for_game(&game_id()));
     let game_state = expect_context::<GameStateStore>();
@@ -86,7 +88,7 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
                 )
             }
         >
-            {string.clone()}
+            {string}
         </div>
     }
 }

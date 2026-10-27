@@ -1,5 +1,11 @@
+use super::PushError;
 use crate::functions::{
-    devices::{get_vapid_public_key, register_device, unregister_current_device},
+    devices::{
+        get_vapid_public_key,
+        register_device,
+        unregister_current_device,
+        DeviceRegistration,
+    },
     notification_preferences::send_test_push,
 };
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
@@ -89,11 +95,11 @@ pub fn ios_needs_install() -> bool {
     !standalone
 }
 
-pub async fn send_test() -> Result<(), String> {
+pub async fn send_test() -> Result<(), PushError> {
     if Notification::permission() != NotificationPermission::Granted {
-        return Err("enable notifications first".into());
+        return Err(PushError::EnableFirst);
     }
-    send_test_push().await.map_err(|e| e.to_string())
+    send_test_push().await.map_err(|_| PushError::TestFailed)
 }
 
 pub async fn current_endpoint() -> Option<String> {
@@ -201,21 +207,21 @@ pub fn listen_for_navigation(navigate: impl Fn(String) + 'static) {
     });
 }
 
-async fn registration() -> Result<ServiceWorkerRegistration, String> {
-    let window = web_sys::window().ok_or("no window")?;
+async fn registration() -> Result<ServiceWorkerRegistration, PushError> {
+    let window = web_sys::window().ok_or(PushError::Unavailable)?;
     let navigator = window.navigator();
     if !Reflect::has(&navigator, &JsValue::from_str("serviceWorker")).unwrap_or(false) {
-        return Err("service workers are not supported in this browser".to_string());
+        return Err(PushError::ServiceWorkersUnsupported);
     }
     let lookup = navigator
         .service_worker()
         .get_registration_with_document_url("/");
     let registration = JsFuture::from(lookup)
         .await
-        .map_err(|e| format!("getRegistration rejected: {e:?}"))?;
+        .map_err(|_| PushError::RegistrationLookupFailed)?;
     registration
         .dyn_into::<ServiceWorkerRegistration>()
-        .map_err(|_| "no service worker registered yet — reload the page and try again".to_string())
+        .map_err(|_| PushError::ServiceWorkerMissing)
 }
 
 async fn current_subscription() -> Option<PushSubscription> {
@@ -232,31 +238,31 @@ pub async fn is_subscribed() -> bool {
     current_subscription().await.is_some()
 }
 
-pub async fn subscribe() -> Result<(), String> {
+pub async fn subscribe() -> Result<(), PushError> {
     if Notification::permission() == NotificationPermission::Denied {
-        return Err("notifications are blocked for this site in the browser settings".into());
+        return Err(PushError::PermissionBlocked);
     }
     let permission = JsFuture::from(
-        Notification::request_permission().map_err(|e| format!("permission request: {e:?}"))?,
+        Notification::request_permission().map_err(|_| PushError::PermissionRequestFailed)?,
     )
     .await
-    .map_err(|e| format!("permission request rejected: {e:?}"))?;
+    .map_err(|_| PushError::PermissionRequestFailed)?;
     if permission.as_string().as_deref() != Some("granted") {
-        return Err("notification permission was not granted".into());
+        return Err(PushError::PermissionNotGranted);
     }
 
     let vapid_key = cached_vapid_key()
         .await
-        .ok_or("the server has no Web Push key configured")?;
+        .ok_or(PushError::ServerKeyMissing)?;
 
     let reg = registration().await?;
     let push_manager = reg
         .push_manager()
-        .map_err(|e| format!("pushManager: {e:?}"))?;
+        .map_err(|_| PushError::PushManagerFailed)?;
 
     let key_bytes = URL_SAFE_NO_PAD
         .decode(vapid_key.trim())
-        .map_err(|_| "server returned a malformed VAPID key".to_string())?;
+        .map_err(|_| PushError::ServerKeyInvalid)?;
     let key_array = Uint8Array::from(key_bytes.as_slice());
     let options = PushSubscriptionOptionsInit::new();
     options.set_user_visible_only(true);
@@ -265,12 +271,12 @@ pub async fn subscribe() -> Result<(), String> {
     let subscription: PushSubscription = JsFuture::from(
         push_manager
             .subscribe_with_options(&options)
-            .map_err(|e| format!("subscribe: {e:?}"))?,
+            .map_err(|_| PushError::SubscribeFailed)?,
     )
     .await
-    .map_err(|e| format!("subscribe rejected: {e:?}"))?
+    .map_err(|_| PushError::SubscribeFailed)?
     .dyn_into()
-    .map_err(|_| "subscribe resolved to a non-subscription".to_string())?;
+    .map_err(|_| PushError::SubscriptionInvalid)?;
 
     register_subscription(&subscription, true).await
 }
@@ -278,27 +284,26 @@ pub async fn subscribe() -> Result<(), String> {
 async fn register_subscription(
     subscription: &PushSubscription,
     explicit: bool,
-) -> Result<(), String> {
-    let json = js_sys::JSON::stringify(subscription)
-        .map_err(|e| format!("subscription stringify: {e:?}"))?;
-    let parsed: SubscriptionJson = serde_json::from_str(&String::from(json))
-        .map_err(|e| format!("subscription parse: {e}"))?;
+) -> Result<(), PushError> {
+    let json = js_sys::JSON::stringify(subscription).map_err(|_| PushError::SubscriptionInvalid)?;
+    let parsed: SubscriptionJson =
+        serde_json::from_str(&String::from(json)).map_err(|_| PushError::SubscriptionInvalid)?;
 
     let locale = web_sys::window()
         .and_then(|w| w.navigator().language())
         .unwrap_or_else(|| "en".to_string());
-    register_device(
-        "web".to_string(),
-        parsed.endpoint,
-        env!("CARGO_PKG_VERSION").to_string(),
+    register_device(DeviceRegistration {
+        platform: "web".to_string(),
+        device_token: parsed.endpoint,
+        app_version: env!("CARGO_PKG_VERSION").to_string(),
         locale,
-        Some(parsed.keys.p256dh),
-        Some(parsed.keys.auth),
+        p256dh: Some(parsed.keys.p256dh),
+        auth: Some(parsed.keys.auth),
         explicit,
-    )
+    })
     .await
     .map(|_| ())
-    .map_err(|e| format!("registration failed: {e}"))
+    .map_err(|_| PushError::RegistrationFailed)
 }
 
 pub async fn reconcile_subscription() {
@@ -307,21 +312,21 @@ pub async fn reconcile_subscription() {
     }
 }
 
-pub async fn unsubscribe() -> Result<(), String> {
+pub async fn unsubscribe() -> Result<(), PushError> {
     let Some(sub) = current_subscription().await else {
         return Ok(());
     };
     let endpoint = sub.endpoint();
     let released = JsFuture::from(
         sub.unsubscribe()
-            .map_err(|e| format!("unsubscribe: {e:?}"))?,
+            .map_err(|_| PushError::UnsubscribeFailed)?,
     )
     .await
-    .map_err(|e| format!("unsubscribe rejected: {e:?}"))?
+    .map_err(|_| PushError::UnsubscribeFailed)?
     .as_bool()
     .unwrap_or(false);
     if !released {
-        return Err("the browser did not release the push subscription".into());
+        return Err(PushError::SubscriptionNotReleased);
     }
     let _ = unregister_current_device(endpoint).await;
     Ok(())

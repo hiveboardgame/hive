@@ -1,5 +1,11 @@
 use crate::{
-    common::render_text_prop,
+    common::{
+        render_text_prop,
+        GEN42_URL,
+        GITHUB_URL,
+        HIVEGAME_DISCORD_URL,
+        WORLD_HIVE_DISCORD_URL,
+    },
     components::{
         layouts::{page_header::PageHeader, page_shell::PageShell},
         molecules::panel::Panel,
@@ -57,7 +63,7 @@ pub fn Faq() -> impl IntoView {
                             {t!(
                                 i18n, faq.what_is_hive.answer,
                                             < gen42_link > =
-                                            <a href="https://www.gen42.com/" rel=rel target=target class=link_class/>
+                                            <a href=GEN42_URL rel=rel target=target class=link_class/>
                             )}
                         </p>
 
@@ -199,7 +205,7 @@ pub fn Faq() -> impl IntoView {
                     </FaqItem>
                 </FaqSection>
 
-                <FaqSection title=move || { t_string!(i18n, faq.sections.tournaments) }>
+                <FaqSection title=move || { t_string!(i18n, common.tournaments) }>
                     <FaqItem question=move || {
                         t_string!(i18n, faq.can_i_set_up_a_tournament.question)
                     }>
@@ -282,7 +288,7 @@ pub fn Faq() -> impl IntoView {
                             {t!(
                                 i18n, faq.community_forum.answer,
                                             < discord_link > =
-                                            <a href="https://discord.gg/djdQZPFa7E" rel=rel target=target class=link_class/>
+                                            <a href=WORLD_HIVE_DISCORD_URL rel=rel target=target class=link_class/>
                             )}
                         </p>
 
@@ -300,7 +306,7 @@ pub fn Faq() -> impl IntoView {
                             {t!(
                                 i18n, faq.report_bugs.answer,
                                             < discord_link > =
-                                            <a href="https://discord.gg/jNTjr5vj9Z" rel=rel target=target class=link_class/>
+                                            <a href=HIVEGAME_DISCORD_URL rel=rel target=target class=link_class/>
                             )}
                         </p>
 
@@ -314,7 +320,7 @@ pub fn Faq() -> impl IntoView {
                                     {t!(
                                         i18n, faq.how_to_help.answers.item2,
                                                     < github_link > =
-                                                    <a href="https://github.com/hiveboardgame/hive" rel=rel target=target class=link_class/>
+                                                    <a href=GITHUB_URL rel=rel target=target class=link_class/>
                                     )}
                                 </li>
                                 <li>{t!(i18n, faq.how_to_help.answers.item3)}</li>

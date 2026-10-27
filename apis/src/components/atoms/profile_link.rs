@@ -31,7 +31,7 @@ pub fn ProfileLink(
                     view! {
                         <span class="z-20 font-bold no-link-style">
                             <span class=name_classes
-                                .get_value()>{t!(i18n, profile.deleted_user)}</span>
+                                .get_value()>{t!(i18n, common.deleted_user)}</span>
                         </span>
                     }
                 }
@@ -56,7 +56,9 @@ pub fn ProfileLink(
                                 attr:class="size-2 shrink-0 self-start"
                             />
                         </Show> <Show when=bot>
-                            <span class="ml-1 text-[80%]">BOT</span>
+                            <span class="ml-1 text-[80%]">
+                                {move || t_string!(i18n, common.bot)}
+                            </span>
                         </Show>
                     </span>
                 </a>

@@ -280,7 +280,7 @@ pub fn Challenges() -> impl IntoView {
     };
 
     view! {
-        <div class="overflow-hidden mx-auto w-full max-w-screen-md ui-panel">
+        <div class="overflow-hidden mx-auto w-full ui-panel">
             <div
                 class=CHALLENGE_SEGMENTED_CLASS
                 on:pointerdown=move |event| mark_tab_press.run(event)
@@ -338,11 +338,15 @@ pub fn Challenges() -> impl IntoView {
                 <table class=CHALLENGE_TABLE_CLASS>
                     <thead class="sticky top-0 z-10 border-b border-black/10 bg-even-light dark:border-white/10 dark:bg-surface-panel">
                         <tr>
-                            <th class=format!("{} w-24 sm:w-16 min-w-0", th_class)></th>
+                            <th class=format!("{} w-20 sm:w-12 min-w-0", th_class)></th>
                             <th class=format!(
                                 "{} w-16 xs:w-20 sm:w-24 md:w-32 lg:w-40 min-w-0 text-xs sm:text-sm",
                                 th_class,
-                            )>{t!(i18n, home.challenge_details.player)}</th>
+                            )>{t!(i18n, common.player)}</th>
+                            <th class=format!(
+                                "{} w-8 xs:w-10 sm:w-12 md:w-20 lg:w-24 min-w-0 text-xs sm:text-sm",
+                                th_class,
+                            )>{t!(i18n, home.challenge_details.plays.title)}</th>
                             <th class=format!(
                                 "{} w-12 xs:w-14 sm:w-16 md:w-16 lg:w-20 min-w-0 text-xs sm:text-sm",
                                 th_class,
@@ -358,7 +362,7 @@ pub fn Challenges() -> impl IntoView {
                             <th class=format!(
                                 "{} w-8 xs:w-10 sm:w-12 md:w-14 lg:w-16 min-w-0 text-xs sm:text-sm",
                                 th_class,
-                            )>{t!(i18n, home.challenge_details.rated.title)}</th>
+                            )>{t!(i18n, game.rated)}</th>
                             <th class=format!(
                                 "{} hidden sm:table-cell w-20 md:w-24 min-w-0",
                                 th_class,
@@ -375,7 +379,7 @@ pub fn Challenges() -> impl IntoView {
                             }
                         }>
                             <tr>
-                                <td colspan="7" class="p-3">
+                                <td colspan="8" class="p-3">
                                     <div class=with_class(
                                         "flex flex-col items-center justify-center rounded-lg border border-dashed border-black/15 bg-odd-light/80 px-4 py-8 text-center text-gray-600 dark:border-white/15 dark:bg-surface-field dark:text-gray-300",
                                         "border-0 py-6",

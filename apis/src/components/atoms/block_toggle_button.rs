@@ -21,7 +21,7 @@ pub fn BlockToggleButton(blocked_user_id: Uuid) -> impl IntoView {
     let chat = expect_context::<Chat>();
     let is_blocked = Signal::derive(move || chat.is_blocked_user(&blocked_user_id));
     let i18n = use_i18n();
-    let error = RwSignal::new(None::<String>);
+    let error = RwSignal::new(false);
     let dialog_ref = NodeRef::<Dialog>::new();
     let action = Action::new(move |request: &BlockRequest| {
         let request = *request;
@@ -35,10 +35,9 @@ pub fn BlockToggleButton(blocked_user_id: Uuid) -> impl IntoView {
 
     let pending = action.pending();
     let logged_in_and_not_self = move || {
-        matches!(
-            chat.identity(),
-            Some(AuthIdentity::User(current_user_id)) if current_user_id != blocked_user_id
-        )
+        chat.identity()
+            .and_then(AuthIdentity::user_id)
+            .is_some_and(|current_user_id| current_user_id != blocked_user_id)
     };
 
     Effect::watch(
@@ -52,10 +51,10 @@ pub fn BlockToggleButton(blocked_user_id: Uuid) -> impl IntoView {
             }
             match result {
                 Ok(is_now_blocked) => {
-                    error.set(None);
+                    error.set(false);
                     chat.apply_blocked_user_update(blocked_user_id, is_now_blocked);
                 }
-                Err(err) => error.set(Some(err)),
+                Err(_) => error.set(true),
             }
         },
         false,
@@ -70,7 +69,7 @@ pub fn BlockToggleButton(blocked_user_id: Uuid) -> impl IntoView {
             let Some(session) = chat.current_session_token() else {
                 return;
             };
-            error.set(None);
+            error.set(false);
             action.dispatch(BlockRequest {
                 blocked: false,
                 session,
@@ -89,7 +88,7 @@ pub fn BlockToggleButton(blocked_user_id: Uuid) -> impl IntoView {
         if let Some(dialog) = dialog_ref.get_untracked() {
             dialog.close();
         }
-        error.set(None);
+        error.set(false);
         action.dispatch(BlockRequest {
             blocked: true,
             session,
@@ -97,7 +96,7 @@ pub fn BlockToggleButton(blocked_user_id: Uuid) -> impl IntoView {
     };
     let button_label = Signal::derive(move || {
         if pending.get() {
-            t_string!(i18n, messages.page.loading)
+            t_string!(i18n, common.loading)
         } else if is_blocked.get() {
             t_string!(i18n, messages.block_dialog.unblock)
         } else {
@@ -117,7 +116,7 @@ pub fn BlockToggleButton(blocked_user_id: Uuid) -> impl IntoView {
                             aria-busy="true"
                             class="ui-button ui-button-secondary ui-button-sm"
                         >
-                            {t!(i18n, messages.page.loading)}
+                            {t!(i18n, common.loading)}
                         </button>
                     }
                 }
@@ -141,9 +140,11 @@ pub fn BlockToggleButton(blocked_user_id: Uuid) -> impl IntoView {
                 >
                     {button_label}
                 </button>
-                <ShowLet some=move || error.get() let:error>
-                    <span class="ui-field-error">{error}</span>
-                </ShowLet>
+                <Show when=move || error.get()>
+                    <span class="ui-field-error">
+                        {move || t_string!(i18n, messages.errors.block_mute_failed)}
+                    </span>
+                </Show>
                 <Modal dialog_el=dialog_ref aria_labelledby="block-dialog-title">
                     <div class="px-5 pb-5 space-y-4 max-w-md w-[90vw]">
                         <div>
@@ -163,7 +164,7 @@ pub fn BlockToggleButton(blocked_user_id: Uuid) -> impl IntoView {
                                     type="submit"
                                     class="ui-button ui-button-secondary ui-button-sm"
                                 >
-                                    {t!(i18n, messages.block_dialog.cancel)}
+                                    {t!(i18n, common.cancel)}
                                 </button>
                             </form>
                             <button

@@ -9,8 +9,8 @@ use crate::{
             tutorial::{
                 ChapterList,
                 LessonPanel,
-                OnlinePreview,
                 MobileLessonAbout,
+                OnlinePreview,
                 TutorialGameControls,
                 TutorialOverview,
                 TutorialSideboard,
@@ -55,9 +55,7 @@ pub fn Tutorial() -> impl IntoView {
     });
     let lesson_id = Signal::derive(move || chosen.get().unwrap_or_default());
     // Keep small exercises near reserve-tile size, while still fitting larger hives.
-    let fit_options = Signal::derive(move || {
-        if vertical() { (0.9, 20.0) } else { (1.1, 24.0) }
-    });
+    let fit_options = Signal::derive(move || if vertical() { (0.9, 20.0) } else { (1.1, 24.0) });
 
     // Loading during setup lets the server render the lesson exactly as the browser will.
     if let Some(lesson) = chosen.get_untracked().and_then(find_lesson) {
@@ -86,7 +84,10 @@ pub fn Tutorial() -> impl IntoView {
         move || find_lesson(lesson_id.get()).is_some_and(|lesson| lesson.clock().is_some());
 
     let show_game_panel = move || clocked() || lesson_id.get() == "online.controls";
-    let blank_tiles = move || find_lesson(lesson_id.get()).is_some_and(|lesson| lesson.uses_blank_tiles() || lesson.guide().is_some());
+    let blank_tiles = move || {
+        find_lesson(lesson_id.get())
+            .is_some_and(|lesson| lesson.uses_blank_tiles() || lesson.guide().is_some())
+    };
     let has_board = move || {
         tutorial.session.with(Option::is_some)
             && find_lesson(lesson_id.get()).is_some_and(|lesson| lesson.has_board())
@@ -104,13 +105,22 @@ pub fn Tutorial() -> impl IntoView {
             Setup::Pending => Some("The board for this lesson is still being built."),
             Setup::Guide(_) => None,
             Setup::TextOnly => Some("No board needed for this one: just read along."),
-            Setup::ForcedPass { .. } | Setup::Position(_) | Setup::BlankPosition(_) | Setup::BlankExercise { .. } | Setup::AfterLesson { .. } | Setup::SwapPieces { .. } | Setup::Clocked { .. } => None,
+            Setup::ForcedPass { .. }
+            | Setup::Position(_)
+            | Setup::BlankPosition(_)
+            | Setup::BlankExercise { .. }
+            | Setup::AfterLesson { .. }
+            | Setup::SwapPieces { .. }
+            | Setup::Clocked { .. } => None,
         })
     };
     let board_placeholder = move || {
         view! {
-            <div class="flex col-span-full row-span-full justify-center items-center min-h-0 w-full h-full">
-                <ShowLet some=move || find_lesson(lesson_id.get()).and_then(|lesson| lesson.guide()) let:page>
+            <div class="flex col-span-full row-span-full justify-center items-center w-full h-full min-h-0">
+                <ShowLet
+                    some=move || find_lesson(lesson_id.get()).and_then(|lesson| lesson.guide())
+                    let:page
+                >
                     <OnlinePreview page />
                 </ShowLet>
                 <ShowLet some=placeholder_text let:text>
@@ -142,69 +152,81 @@ pub fn Tutorial() -> impl IntoView {
                                 <LessonPanel lesson_id />
                                 <ChapterList progress current=lesson_id />
                             </div>
-                            <div class=move || if blank_tiles() {
-                                "grid relative grid-cols-8 col-span-8 col-start-3 grid-rows-6 row-span-6 row-start-1 min-w-0 min-h-0 xl:col-span-7 xl:col-start-4"
-                            } else {
-                                "grid relative grid-cols-8 col-span-6 col-start-3 grid-rows-6 row-span-6 row-start-1 min-w-0 min-h-0 xl:col-span-5 xl:col-start-4"
+                            <div class=move || {
+                                if blank_tiles() {
+                                    "grid relative grid-cols-8 col-span-8 col-start-3 grid-rows-6 row-span-6 row-start-1 min-w-0 min-h-0 xl:col-span-7 xl:col-start-4"
+                                } else {
+                                    "grid relative grid-cols-8 col-span-6 col-start-3 grid-rows-6 row-span-6 row-start-1 min-w-0 min-h-0 xl:col-span-5 xl:col-start-4"
+                                }
                             }>
                                 <Show when=has_board fallback=board_placeholder>
-                                    <Board interaction history_board fit_on=tutorial.generation fit_options />
+                                    <Board
+                                        interaction
+                                        history_board
+                                        fit_on=tutorial.generation
+                                        fit_options
+                                    />
                                 </Show>
                             </div>
                             <Show when=move || !blank_tiles()>
-                            <Show
-                                when=show_game_panel
-                                fallback=move || {
-                                    view! {
-                                        <div class="flex flex-col col-span-2 col-start-9 row-span-6 row-start-1 justify-between p-1 my-1 mr-1 min-h-0 ui-board-side-panel">
-                                            <Reserve
-                                                color=opponent
-                                                alignment=Alignment::DoubleRow
-                                                interaction
-                                                history_board
-                                            />
-                                            <Reserve
-                                                color=learner
-                                                alignment=Alignment::DoubleRow
-                                                interaction
-                                                history_board
-                                            />
-                                        </div>
+                                <Show
+                                    when=show_game_panel
+                                    fallback=move || {
+                                        view! {
+                                            <div class="flex flex-col col-span-2 col-start-9 row-span-6 row-start-1 justify-between p-1 my-1 mr-1 min-h-0 ui-board-side-panel">
+                                                <Reserve
+                                                    color=opponent
+                                                    alignment=Alignment::DoubleRow
+                                                    interaction
+                                                    history_board
+                                                />
+                                                <Reserve
+                                                    color=learner
+                                                    alignment=Alignment::DoubleRow
+                                                    interaction
+                                                    history_board
+                                                />
+                                            </div>
+                                        }
                                     }
-                                }
-                            >
-                                <TutorialSideboard learner opponent interaction history_board />
-                            </Show>
+                                >
+                                    <TutorialSideboard learner opponent interaction history_board />
+                                </Show>
                             </Show>
                         }
                     }
                 >
                     <For
-                        each=move || {
-                            chosen.get().into_iter().collect::<Vec<_>>()
-                        }
+                        each=move || { chosen.get().into_iter().collect::<Vec<_>>() }
                         key=|id| *id
                         children=move |id| {
                             view! {
-                                <LessonPanel lesson_id=Signal::derive(move || id) compact=true header_only=true />
+                                <LessonPanel
+                                    lesson_id=Signal::derive(move || id)
+                                    compact=true
+                                    header_only=true
+                                />
                             }
                         }
                     />
                     <div class=move || {
-                        if find_lesson(lesson_id.get()).is_some_and(|lesson| !lesson.intro.is_empty()) {
+                        if find_lesson(lesson_id.get())
+                            .is_some_and(|lesson| !lesson.intro.is_empty())
+                        {
                             "flex relative flex-col pb-11 min-h-0 overflow-hidden"
                         } else {
                             "flex relative flex-col min-h-0 overflow-hidden"
                         }
                     }>
                         <For
-                            each=move || {
-                                chosen.get().into_iter().collect::<Vec<_>>()
-                            }
+                            each=move || { chosen.get().into_iter().collect::<Vec<_>>() }
                             key=|id| *id
                             children=move |id| {
                                 view! {
-                                    <Show when=move || find_lesson(id).is_some_and(|lesson| !lesson.intro.is_empty())>
+                                    <Show when=move || {
+                                        find_lesson(id)
+                                            .is_some_and(|lesson| !lesson.intro.is_empty())
+                                    }>
                                         <MobileLessonAbout lesson_id=Signal::derive(move || id) />
                                     </Show>
                                 }
@@ -216,41 +238,46 @@ pub fn Tutorial() -> impl IntoView {
                             </div>
                         </Show>
                         <Show when=move || !blank_tiles()>
-                        <div class="flex justify-between ml-1 h-12 max-h-12 shrink-0 ui-board-reserve">
-                            <Reserve
-                                color=opponent
-                                alignment=Alignment::SingleRow
-                                viewbox_str=MOBILE_RESERVE_VIEWBOX
-                                interaction
-                                history_board
-                            />
-                            <Show when=show_game_panel>
-                                <div class="flex w-16 min-h-0 shrink-0">
-                                    <DisplayTimer vertical=true placement=Placement::Top />
-                                </div>
-                            </Show>
-                        </div>
+                            <div class="flex justify-between ml-1 h-12 max-h-12 shrink-0 ui-board-reserve">
+                                <Reserve
+                                    color=opponent
+                                    alignment=Alignment::SingleRow
+                                    viewbox_str=MOBILE_RESERVE_VIEWBOX
+                                    interaction
+                                    history_board
+                                />
+                                <Show when=show_game_panel>
+                                    <div class="flex w-16 min-h-0 shrink-0">
+                                        <DisplayTimer vertical=true placement=Placement::Top />
+                                    </div>
+                                </Show>
+                            </div>
                         </Show>
                         <div class="flex relative min-h-0 grow">
                             <Show when=has_board fallback=board_placeholder>
-                                <Board interaction history_board fit_on=tutorial.generation fit_options />
+                                <Board
+                                    interaction
+                                    history_board
+                                    fit_on=tutorial.generation
+                                    fit_options
+                                />
                             </Show>
                         </div>
                         <Show when=move || !blank_tiles()>
-                        <div class="flex justify-between ml-1 h-16 max-h-16 shrink-0 ui-board-reserve">
-                            <Reserve
-                                color=learner
-                                alignment=Alignment::SingleRow
-                                viewbox_str=MOBILE_RESERVE_VIEWBOX
-                                interaction
-                                history_board
-                            />
-                            <Show when=show_game_panel>
-                                <div class="flex w-16 min-h-0 shrink-0">
-                                    <DisplayTimer vertical=true placement=Placement::Bottom />
-                                </div>
-                            </Show>
-                        </div>
+                            <div class="flex justify-between ml-1 h-16 max-h-16 shrink-0 ui-board-reserve">
+                                <Reserve
+                                    color=learner
+                                    alignment=Alignment::SingleRow
+                                    viewbox_str=MOBILE_RESERVE_VIEWBOX
+                                    interaction
+                                    history_board
+                                />
+                                <Show when=show_game_panel>
+                                    <div class="flex w-16 min-h-0 shrink-0">
+                                        <DisplayTimer vertical=true placement=Placement::Bottom />
+                                    </div>
+                                </Show>
+                            </div>
                         </Show>
                     </div>
                     <For
@@ -258,7 +285,11 @@ pub fn Tutorial() -> impl IntoView {
                         key=|id| *id
                         children=move |id| {
                             view! {
-                                <LessonPanel lesson_id=Signal::derive(move || id) compact=true body_only=true />
+                                <LessonPanel
+                                    lesson_id=Signal::derive(move || id)
+                                    compact=true
+                                    body_only=true
+                                />
                             }
                         }
                     />

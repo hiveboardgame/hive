@@ -1,11 +1,16 @@
 use std::collections::HashMap;
 
 use crate::{
-    components::layouts::base_layout::OrientationSignal,
+    common::display_username,
+    components::{
+        atoms::realtime_paused_notice::RealtimePausedNotice,
+        layouts::base_layout::OrientationSignal,
+    },
     i18n::*,
     providers::{
         game_state::{GameStateStore, GameStateStoreFields},
         ApiRequestsProvider,
+        RealtimeGames,
     },
 };
 use leptos::prelude::*;
@@ -28,22 +33,14 @@ pub fn Unstarted(
     let white = Memo::new(move |_| {
         (game_response.with(|game_response| {
             game_response.as_ref().map(|gr| {
-                if gr.white_player.deleted {
-                    t_string!(i18n, profile.deleted_user).to_string()
-                } else {
-                    gr.white_player.username.clone()
-                }
+                display_username(i18n, gr.white_player.deleted, &gr.white_player.username)
             })
         }),)
     });
     let black = Memo::new(move |_| {
         (game_response.with(|game_response| {
             game_response.as_ref().map(|gr| {
-                if gr.black_player.deleted {
-                    t_string!(i18n, profile.deleted_user).to_string()
-                } else {
-                    gr.black_player.username.clone()
-                }
+                display_username(i18n, gr.black_player.deleted, &gr.black_player.username)
             })
         }),)
     });
@@ -72,10 +69,21 @@ pub fn Unstarted(
         view! { <Icon icon attr:class="size-6" /> }
     };
 
+    let realtime_games = expect_context::<RealtimeGames>();
+    let start_blocked = Signal::derive(move || {
+        game_response.with(|game| {
+            game.as_ref()
+                .is_some_and(|game| realtime_games.blocks_start(game))
+        })
+    });
     let start = move |_| {
+        if start_blocked.get_untracked() {
+            return;
+        }
         let api = api.get();
         api.tournament_game_start(game_id());
     };
+
     let style = move || {
         if orientation_signal.orientation_vertical.get() {
             "flex grow min-h-0 justify-center items-center h-full w-full"
@@ -105,13 +113,14 @@ pub fn Unstarted(
                     {t!(i18n, game.start_when.both_click)}
                     <button
                         on:click=start
-
+                        disabled=start_blocked
                         class="ui-button ui-button-primary ui-button-md"
                     >
                         Ready
                     </button>
 
                 </Show>
+                <RealtimePausedNotice applies=start_blocked />
             </div>
         </div>
     }

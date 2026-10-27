@@ -1,6 +1,7 @@
 use leptos::prelude::*;
 
 use crate::{
+    common::{KOFI_URL, PATREON_URL},
     components::{
         layouts::{page_header::PageHeader, page_shell::PageShell},
         molecules::panel::Panel,
@@ -23,13 +24,13 @@ pub fn Donate() -> impl IntoView {
                     i18n,
                         donate.kofi_button,
                         < kofi_button > =
-                        <a href="https://ko-fi.com/hivedevs" class="ui-button ui-button-primary ui-button-md no-link-style"/>
+                        <a href=KOFI_URL class="ui-button ui-button-primary ui-button-md no-link-style"/>
                 )}
                 {t!(
                     i18n,
                         donate.patreon_button,
                         < patreon_button > =
-                        <a href="https://www.patreon.com/HiveDevs" class="ui-button ui-button-secondary ui-button-md no-link-style"/>
+                        <a href=PATREON_URL class="ui-button ui-button-secondary ui-button-md no-link-style"/>
                 )}
             </div>
 

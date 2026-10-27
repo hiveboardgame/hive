@@ -1,13 +1,13 @@
 {
     "time_mode": {
-        "untimed": "Sin límite de tiempo",
         "real_time": "Tiempo real",
         "correspondence": {
             "days_move_one": "{{count}} día por turno",
             "days_side_one": "{{count}} día por jugador",
             "days_side_other": "{{count}} días por jugador",
             "days_move_other": "{{count}} días por turno",
-            "title": "Correspondencia"
+            "duration_move": "{{duration}} por turno",
+            "duration_side": "{{duration}} por jugador"
         }
     },
     "rated": "Puntuada",
@@ -41,12 +41,113 @@
         "both_agree": "El juego comenzará cuando ambos acuerden una hora",
         "both_click": "El juego comenzará cuando ambos pulsen \"Preparado\" con 30 segundos de diferencia"
     },
+    "arena": {
+        "berserk": "Berserk",
+        "berserk_title": "Renuncia al incremento y, cuando corresponda, a la mitad del tiempo base para obtener puntos extra de arena.",
+        "back_to_arena": "Volver a la arena",
+        "return_for_pairing": "Vuelve para encontrar tu próximo rival.",
+        "pairing_paused": "Emparejamientos en pausa. Reanuda en la arena cuando quieras."
+    },
+    "realtime_assignments": {
+        "title": "Partidas en tiempo real listas",
+        "challenge": "Desafío en tiempo real",
+        "tournament": "Partida de torneo",
+        "arena": "Partida de Arena",
+        "opening_due": "La jugada inicial vence en {{count}} s",
+        "opening_due_now": "La jugada inicial vence ahora",
+        "open_new_tab": "Abrir en una pestaña nueva"
+    },
     "speeds": {
         "bullet": "Bala",
         "blitz": "Bombardeo",
         "classic": "Clásico",
         "untimed": "Sin tiempo",
         "rapid": "Rápido",
-        "correspondence": "Correspondencia"
-    }
+        "correspondence": "Correspondencia",
+        "puzzle": "Problema"
+    },
+    "tournament_result": {
+        "white_won": "Ganaron las blancas",
+        "draw": "Tablas",
+        "black_won": "Ganaron las negras",
+        "white_won_by_forfeit": "Las blancas ganaron por incomparecencia",
+        "black_won_by_forfeit": "Las negras ganaron por incomparecencia",
+        "adjudicated_draw": "Tablas por decisión arbitral",
+        "white_draw_black_forfeit_loss": "Tablas para las blancas; derrota de las negras por incomparecencia",
+        "white_forfeit_loss_black_draw": "Derrota de las blancas por incomparecencia; tablas para las negras",
+        "double_forfeit": "Doble incomparecencia"
+    },
+    "rating_range": "Rango de puntos",
+    "speeds_label": "Ritmos",
+    "view": "Ver",
+    "quickplay_tooltip": "{{speed}}\n{{base}} min de tiempo inicial\n+{{increment}} s por movimiento",
+    "rematch": "Revancha",
+    "rematch_sent": "Enviado",
+    "accept_challenge": "Aceptar reto",
+    "cancel_challenge": "Cancelar reto",
+    "decline_challenge": "Rechazar reto",
+    "accepting": "Aceptando...",
+    "removing": "Eliminando...",
+    "challenge_to_a_game": "Retar a una partida",
+    "abort": "Abortar",
+    "accept_draw": "Aceptar tablas",
+    "offer_draw": "Ofrecer tablas",
+    "reject_draw": "Rechazar tablas",
+    "resign": "Rendirse",
+    "accept_takeback": "Aceptar deshacer",
+    "reject_takeback": "Rechazar deshacer",
+    "request_takeback": "Pedir deshacer",
+    "invite_as_organizer": "Invitar como organizador",
+    "no_rating_history_yet": "Todavía no hay historial de puntuación",
+    "not_enough_games_to_build_a_graph": "No hay suficientes partidas para crear un gráfico",
+    "error_loading_history": "Error al cargar el historial",
+    "show_controls": "Mostrar controles",
+    "hide_controls": "Ocultar controles",
+    "opponent_wants_a_takeback": "El oponente quiere deshacer una jugada",
+    "opponent_offers_a_draw": "El oponente ofrece tablas",
+    "playing_now": "Jugando ahora",
+    "view_game_details": "Ver detalles de la partida",
+    "connected": "Conectado",
+    "disconnected": "Desconectado",
+    "offline": "sin conexión",
+    "unknown_player": "Jugador desconocido",
+    "clear_selection": "Borrar selección",
+    "searching": "Buscando...",
+    "played_in_label": "Jugado en",
+    "open_navigation_menu": "Abrir menú de navegación",
+    "no_data": "Sin datos",
+    "analyze_here": "Analizar aquí",
+    "rating_history_title": "Historial de puntuación de {{speed}}",
+    "in_tournament": "en {{tournament}}",
+    "played_in_tournament": "jugado en {{tournament}}",
+    "site_description": "El mejor lugar para jugar a Hive en línea: el juego de estrategia sin tablero. Gratis, sin anuncios, con partidas puntuadas, torneos y juego contra amigos, oponentes aleatorios o bots.",
+    "site_title": "HiveGame.com • Juega a Hive en línea",
+    "rating_history_minimum_games": "Juega al menos cinco partidas puntuadas a este ritmo para mostrar el gráfico.",
+    "result": {
+        "winner_timeout": "{{winner}} ganó por tiempo",
+        "winner_resignation": "{{winner}} ganó por rendición",
+        "winner_board": "{{winner}} ganó en el tablero",
+        "winner_committee": "{{winner}} ganó por decisión del comité",
+        "winner_withdrawal": "{{winner}} ganó por retirada",
+        "winner_forfeit": "{{winner}} ganó por incomparecencia",
+        "double_forfeit": "La partida terminó con doble incomparecencia",
+        "draw_summary": "{{result}} {{conclusion}}",
+        "winner": "{{winner}} ganó"
+    },
+    "conclusion": {
+        "board": "Finalizada en el tablero",
+        "committee": "Decisión del comité",
+        "draw": "Tablas acordadas",
+        "forfeit": "Incomparecencia",
+        "repetition": "Triple repetición de jugadas",
+        "resigned": "Rendición",
+        "timeout": "Tiempo agotado"
+    },
+    "clock": {
+        "days": "{{days}}d",
+        "days_hours": "{{days}}d:{{hours}}h",
+        "hours_minutes": "{{hours}}h{{minutes}}",
+        "arena_hours_minutes": "{{hours}}h {{minutes}}m"
+    },
+    "aborted_by": "{{actor}} abortó la partida"
 }

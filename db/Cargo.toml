@@ -23,17 +23,17 @@ diesel = { workspace = true }
 diesel-async = { workspace = true }
 dotenvy = { workspace = true }
 hive = { path = "../engine/" }
-itertools = { workspace = true }
 lazy_static = { workspace = true }
+log = { workspace = true }
 nanoid = { workspace = true }
 regex = { workspace = true }
-rand = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 shared_types = { path = "../shared_types/" }
 skillratings = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true }
+tournamint = { workspace = true }
 uuid = { workspace = true }
 
 [dev-dependencies]

@@ -16,32 +16,15 @@ pub struct RatingResponse {
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 use db_lib::{
-    models::{Rating, User},
-    DbConn,
+    models::Rating,
 };
 use std::str::FromStr;
-use anyhow::Result;
+use shared_types::rounded_rating;
 impl RatingResponse {
-    pub async fn from_uuid(id: &Uuid, game_speed: &GameSpeed, conn: &mut DbConn<'_>) -> Result<Self> {
-        let rating = Rating::for_uuid(id, game_speed, conn).await?;
-        Ok(Self::from_rating(&rating))
-    }
-
-    pub async fn from_user(user: &User, game_speed: &GameSpeed, conn: &mut DbConn<'_>) -> Result<Self> {
-        let rating = Rating::for_uuid(&user.id, game_speed, conn).await?;
-        Ok(Self::from_rating(&rating))
-    }
-
-    pub async fn from_username(username: &str, game_speed: &GameSpeed, conn: &mut DbConn<'_>) -> Result<Self> {
-        let user = User::find_by_username(username, conn).await?;
-        let rating = Rating::for_uuid(&user.id, game_speed, conn).await?;
-        Ok(Self::from_rating(&rating))
-    }
-
     pub fn from_rating(rating: &Rating) -> Self {
         Self {
             speed: GameSpeed::from_str(&rating.speed).expect("Rating to have a valid GameSpeed"),
-            rating: rating.rating.floor() as u64,
+            rating: rounded_rating(rating.rating).map(u64::from).unwrap_or_default(),
             played: rating.played,
             win: rating.won,
             loss: rating.lost,

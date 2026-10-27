@@ -1,0 +1,10 @@
+Cmnd_Alias HIVE_SLOTS   = /usr/bin/systemctl start hive@blue, /usr/bin/systemctl start hive@green, \
+                          /usr/bin/systemctl stop hive@blue, /usr/bin/systemctl stop hive@green, \
+                          /usr/bin/systemctl enable hive@blue, /usr/bin/systemctl enable hive@green, \
+                          /usr/bin/systemctl disable hive@blue, /usr/bin/systemctl disable hive@green
+Cmnd_Alias HIVE_JOURNAL = /usr/bin/journalctl -u hive@blue -n 50 --no-pager, \
+                          /usr/bin/journalctl -u hive@green -n 50 --no-pager
+Cmnd_Alias HIVE_NGINX   = /usr/local/sbin/hive-upstream blue, /usr/local/sbin/hive-upstream green, \
+                          /usr/sbin/nginx -t
+
+drone ALL=(root) NOPASSWD: HIVE_SLOTS, HIVE_JOURNAL, HIVE_NGINX

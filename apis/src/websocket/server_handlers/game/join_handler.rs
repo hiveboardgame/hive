@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use super::projection::{finish_post_commit_projection, settle_deadline};
 use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
     websocket::{
@@ -9,6 +10,7 @@ use crate::{
     },
 };
 use anyhow::Result;
+use chrono::Utc;
 use db_lib::{get_conn, models::Game, DbPool};
 use shared_types::GameId;
 use uuid::Uuid;
@@ -35,7 +37,7 @@ impl JoinHandler {
     ) -> Self {
         Self {
             received_from,
-            game: game.to_owned(),
+            game: game.clone(),
             user_id,
             username: username.to_owned(),
             data,
@@ -46,38 +48,54 @@ impl JoinHandler {
 
     pub async fn handle(&self) -> Result<HandlerOutput> {
         let mut conn = get_conn(&self.pool).await?;
-        let mut messages = Vec::new();
-        let game_id = GameId(self.game.nanoid.clone());
-        messages.push(InternalServerMessage {
-            destination: MessageDestination::Game(game_id.clone()),
-            message: ServerMessage::Join(self.user_id),
-        });
-        let game_response = self
-            .data
-            .get_or_build_response(&self.game, &mut conn)
-            .await?;
-        install_join_membership(
-            &self.hub,
-            self.user_id,
-            self.received_from.socket_id,
-            &game_id,
-            self.game.finished,
-        );
-        messages.push(InternalServerMessage {
-            destination: MessageDestination::Direct(self.received_from.clone()),
-            message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
-                game_id: GameId(self.game.nanoid.to_owned()),
-                game: (*game_response).clone(),
-                game_action: GameReaction::Join,
-                user_id: self.user_id.to_owned(),
-                username: self.username.to_owned(),
-            }))),
-        });
-        Ok(HandlerOutput {
-            messages,
-            reactions: Vec::new(),
-            finalize_games: Vec::new(),
-        })
+        let now = Utc::now();
+        let due = !self.game.finished
+            && (self.game.timeout_at.is_some_and(|deadline| deadline <= now)
+                || self
+                    .game
+                    .arena_move_due_at
+                    .is_some_and(|deadline| deadline <= now));
+        let (game, committed) = if due {
+            let projected = settle_deadline(self.game.id, self.data.as_ref(), &mut conn).await?;
+            (projected.game, projected.output)
+        } else {
+            (self.game.clone(), HandlerOutput::empty())
+        };
+        let game_id = GameId(game.nanoid.clone());
+        let projection = async {
+            let game_response = self.data.get_or_build_response(&game, &mut conn).await?;
+            install_join_membership(
+                &self.hub,
+                self.user_id,
+                self.received_from.socket_id,
+                &game_id,
+                game.finished,
+            );
+            Ok(HandlerOutput::from(vec![
+                InternalServerMessage {
+                    destination: MessageDestination::Game(game_id.clone()),
+                    message: ServerMessage::Join(self.user_id),
+                },
+                InternalServerMessage {
+                    destination: MessageDestination::Direct(self.received_from.clone()),
+                    message: ServerMessage::Game(Box::new(GameUpdate::Reaction(
+                        GameActionResponse {
+                            game_id: game_id.clone(),
+                            game: game_response.clone(),
+                            game_action: GameReaction::Join,
+                            user_id: self.user_id,
+                            username: self.username.clone(),
+                        },
+                    ))),
+                },
+            ]))
+        }
+        .await;
+        Ok(finish_post_commit_projection(
+            &game.nanoid,
+            committed,
+            projection,
+        ))
     }
 }
 

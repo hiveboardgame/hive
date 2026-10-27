@@ -1,26 +1,30 @@
 use crate::{
-    common::with_class,
+    common::{format_local_datetime, with_class},
     components::{atoms::profile_link::ProfileLink, molecules::time_row::TimeRow},
+    i18n::*,
     providers::AuthContext,
     responses::GameResponse,
 };
 use chrono::{DateTime, Duration, Local, Utc};
 use leptos::prelude::*;
 use leptos_icons::*;
-use shared_types::TimeInfo;
+use shared_types::SCHEDULED_GAME_GRACE;
 
 #[component]
 pub fn UpcomingGameRow(
     game_data: (DateTime<Utc>, GameResponse),
     current_time: RwSignal<DateTime<Local>>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let auth_context = expect_context::<AuthContext>();
     let (start_time, game) = game_data;
+    let time_control = game.time_control();
+    let game_href = StoredValue::new(format!("/game/{}", game.game_id));
     let local_time = RwSignal::new(None::<DateTime<Local>>);
     let formatted_time = Signal::derive(move || {
         local_time
             .get()
-            .map(|t| t.format("%Y-%m-%d %H:%M UTC%z").to_string())
+            .map(|_| format_local_datetime(i18n.get_locale(), start_time))
     });
     Effect::watch(
         move || (),
@@ -36,7 +40,9 @@ pub fn UpcomingGameRow(
         game.tournament
             .as_ref()
             .map(|t| t.name.clone())
-            .unwrap_or_else(|| "Unknown Tournament".to_string()),
+            .unwrap_or_else(|| {
+                t_string!(i18n, tournaments.calendar.unknown_tournament).to_string()
+            }),
     );
     let tournament_id = game
         .tournament
@@ -44,16 +50,16 @@ pub fn UpcomingGameRow(
         .map(|t| t.tournament_id.0.clone())
         .unwrap_or_else(|| "unknown".to_string());
 
-    let time_info = TimeInfo {
-        mode: game.time_mode,
-        base: game.time_base,
-        increment: game.time_increment,
-    };
-
     let show_button = move || {
         local_time.get().is_some_and(|start| {
             start.signed_duration_since(current_time.get()) <= Duration::minutes(10)
         })
+    };
+
+    let expired = move || {
+        local_time
+            .get()
+            .is_some_and(|start| current_time.get() >= start + SCHEDULED_GAME_GRACE)
     };
 
     let user_is_player = move || {
@@ -65,65 +71,69 @@ pub fn UpcomingGameRow(
     };
 
     view! {
-        <div class="flex flex-col p-4 w-full ui-card-row">
-            <div class="flex mb-3 w-full text-center">
-                <a
-                    class=with_class(
-                        "ui-text-link",
-                        "overflow-hidden w-full text-lg no-link-style break-words hyphens-auto",
-                    )
-                    href=format!("/tournament/{}", tournament_id)
-                    title=tournament_name.get_value()
-                >
-                    {tournament_name.get_value()}
-                </a>
-            </div>
-
-            <div class="flex flex-col gap-3 items-center">
-                <div class="flex gap-2 items-center">
-                    <ProfileLink
-                        username=white_username.get_value()
-                        patreon=game.white_player.patreon
-                        bot=game.white_player.bot
-                        deleted=white_deleted
-                        extend_tw_classes="font-semibold"
-                    />
-                    <span class="text-sm opacity-75">vs</span>
-                    <ProfileLink
-                        username=black_username.get_value()
-                        patreon=game.black_player.patreon
-                        bot=game.black_player.bot
-                        deleted=black_deleted
-                        extend_tw_classes="font-semibold"
-                    />
+        <Show when=move || !expired()>
+            <div class="flex flex-col p-4 w-full ui-card-row">
+                <div class="flex mb-3 w-full text-center">
+                    <a
+                        class=with_class(
+                            "ui-text-link",
+                            "overflow-hidden w-full text-lg no-link-style break-words hyphens-auto",
+                        )
+                        href=format!("/tournament/{}", tournament_id)
+                        title=tournament_name.get_value()
+                    >
+                        {tournament_name.get_value()}
+                    </a>
                 </div>
 
-                <TimeRow time_info extend_tw_classes="text-sm" />
+                <div class="flex flex-col gap-3 items-center">
+                    <div class="flex gap-2 items-center">
+                        <ProfileLink
+                            username=white_username.get_value()
+                            patreon=game.white_player.patreon
+                            bot=game.white_player.bot
+                            deleted=white_deleted
+                            extend_tw_classes="font-semibold"
+                        />
+                        <span class="text-sm opacity-75">
+                            {t!(i18n, tournaments.view.common.versus)}
+                        </span>
+                        <ProfileLink
+                            username=black_username.get_value()
+                            patreon=game.black_player.patreon
+                            bot=game.black_player.bot
+                            deleted=black_deleted
+                            extend_tw_classes="font-semibold"
+                        />
+                    </div>
 
-                <Show when=show_button>
-                    <a
-                        class="py-1 px-3 text-sm font-medium ui-button ui-button-primary ui-button-md no-link-style min-w-[5rem]"
-                        href=format!("/game/{}", game.game_id)
-                    >
-                        {move || {
-                            if user_is_player() {
-                                view! { "Join Game" }.into_any()
-                            } else {
-                                view! {
-                                    <Icon
-                                        icon=icondata_ai::AiEyeOutlined
-                                        attr:class="mr-1 size-4"
-                                    />
-                                    "Watch"
+                    <TimeRow time_control extend_tw_classes="text-sm" />
+
+                    <Show when=show_button>
+                        <a
+                            class="py-1 px-3 text-sm font-medium ui-button ui-button-primary ui-button-md no-link-style min-w-[5rem]"
+                            href=game_href.get_value()
+                        >
+                            {move || {
+                                if user_is_player() {
+                                    view! { {t!(i18n, tournaments.calendar.join_game)} }.into_any()
+                                } else {
+                                    view! {
+                                        <Icon
+                                            icon=icondata_ai::AiEyeOutlined
+                                            attr:class="mr-1 size-4"
+                                        />
+                                        {t!(i18n, tournaments.calendar.watch)}
+                                    }
+                                        .into_any()
                                 }
-                                    .into_any()
-                            }
-                        }}
-                    </a>
-                </Show>
+                            }}
+                        </a>
+                    </Show>
 
-                <div class="text-sm opacity-75">{formatted_time}</div>
+                    <div class="text-sm opacity-75">{formatted_time}</div>
+                </div>
             </div>
-        </div>
+        </Show>
     }
 }

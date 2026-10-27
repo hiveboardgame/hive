@@ -2,7 +2,6 @@ use super::{
     challenge::handler::{handle_challenge, handle_challenge_snapshot},
     chat::handle::handle_chat,
     game::{handle_game, handle_tv_snapshot, handle_urgent_games_snapshot},
-    oauth::handle::handle_oauth,
     ping::handle::handle_ping,
     schedule::handler::{handle_schedule, handle_schedule_notification_snapshot},
     tournament::handler::{handle_tournament, handle_tournament_invitation_snapshot},
@@ -10,6 +9,7 @@ use super::{
 };
 use crate::{
     common::{
+        login_redirect_url,
         ExternalServerError,
         LobbySnapshot as LobbySnapshotPayload,
         ServerMessage::*,
@@ -17,18 +17,22 @@ use crate::{
         SubscriptionAttempt,
         UserSettingsUpdate,
     },
-    providers::chat::Chat,
+    providers::{chat::Chat, AlertType, AlertsContext, NotificationContext, RealtimeGames},
 };
-use leptos::{logging::log, prelude::use_context};
+use leptos::{
+    logging::log,
+    prelude::{expect_context, untrack, use_context, Set},
+};
 use leptos_router::hooks::use_navigate;
 use shared_types::ConversationKey;
 
 fn handle_lobby_snapshot(snapshot: LobbySnapshotPayload) {
     handle_tournament_invitation_snapshot(snapshot.tournament_invitations);
+    expect_context::<NotificationContext>()
+        .organizer_invitations_snapshot_apply(snapshot.tournament_organizer_invitations);
     handle_schedule_notification_snapshot(snapshot.schedule_notifications);
     handle_urgent_games_snapshot(snapshot.urgent_games);
     handle_challenge_snapshot(snapshot.challenges);
-    handle_tv_snapshot(snapshot.tv_games);
     handle_user_status_snapshot(snapshot.online_users);
 }
 
@@ -67,6 +71,8 @@ pub fn handle_response(m: ServerResult) {
             Ping { value, nonce } => handle_ping(nonce, value),
             UserStatus(user_update) => handle_user_status(user_update),
             LobbySnapshot(snapshot) => handle_lobby_snapshot(*snapshot),
+            TvSnapshot(games) => handle_tv_snapshot(games),
+            ResyncRetry { .. } => {}
             Game(game_update) => handle_game(*game_update),
             Join(_uuid) => {
                 //TODO: Do we do want here
@@ -78,10 +84,19 @@ pub fn handle_response(m: ServerResult) {
                 last_read_message_id,
             } => handle_chat_read(key, last_read_message_id),
             ChatSubscribed(acknowledgement) => handle_chat_subscription_ready(acknowledgement),
-            RedirectLink(link) => handle_oauth(link),
             Tournament(tournament_update) => handle_tournament(tournament_update),
             UserSettings(update) => handle_user_settings(update),
             Schedule(schedule_update) => handle_schedule(schedule_update),
+            RealtimeGamesPaused(paused) => {
+                if let Some(realtime_games) = use_context::<RealtimeGames>() {
+                    realtime_games.apply(paused);
+                }
+            }
+            Error(reason) => {
+                if let Some(alerts) = use_context::<AlertsContext>() {
+                    alerts.last_alert.set(Some(AlertType::Error(reason)));
+                }
+            }
             todo => {
                 log!("Got {todo:?} which is currently still unimplemented");
             }
@@ -91,7 +106,7 @@ pub fn handle_response(m: ServerResult) {
             match e {
                 ExternalServerError::Unauthorized { .. } => {
                     let navigate = use_navigate();
-                    navigate("/login", Default::default());
+                    navigate(&untrack(login_redirect_url), Default::default());
                 }
                 ExternalServerError::ChatSubscribe { attempt, error } => {
                     if let Some(chat) = use_context::<Chat>() {
@@ -107,8 +122,42 @@ pub fn handle_response(m: ServerResult) {
                         chat.handle_failed_chat_send(key, client_id, error.into());
                     }
                 }
-                ExternalServerError::Request { .. } => {}
+                ExternalServerError::Request { reason }
+                | ExternalServerError::Game { reason, .. } => {
+                    if let Some(alerts) = use_context::<AlertsContext>() {
+                        alerts.last_alert.set(Some(AlertType::Error(reason)));
+                    }
+                }
             }
         }
     };
+}
+
+#[cfg(test)]
+mod tests {
+    use super::handle_response;
+    use crate::{
+        common::{ServerMessage, ServerResult},
+        providers::{AlertType, AlertsContext},
+    };
+    use leptos::prelude::*;
+
+    #[test]
+    fn committed_command_error_message_reaches_the_alert_display() {
+        let owner = Owner::new();
+        owner.with(|| {
+            let alerts = AlertsContext {
+                last_alert: RwSignal::new(None),
+            };
+            provide_context(alerts.clone());
+            let reason = String::from("command feedback");
+            handle_response(ServerResult::Ok(Box::new(ServerMessage::Error(
+                reason.clone(),
+            ))));
+            assert!(matches!(
+                alerts.last_alert.get_untracked(),
+                Some(AlertType::Error(actual)) if actual == reason
+            ));
+        });
+    }
 }

@@ -4,7 +4,7 @@ use crate::{
         molecules::panel::Panel,
     },
     providers::tutorial::TutorialProgress,
-    tutorial::{group_of, find_lesson, Chapter, Lesson, CHAPTERS},
+    tutorial::{find_lesson, group_of, Chapter, Lesson, CHAPTERS},
 };
 use leptos::prelude::*;
 use leptos_router::components::A;
@@ -134,18 +134,29 @@ fn LessonLinks(
             let children: Vec<_> = group.lessons.iter()
                 .filter_map(|id| find_lesson(id)).collect();
             Some(view! {
-                <details
-                    class="group py-1"
-                    open=move || group.lessons.contains(&current.get())
-                >
+                <details class="py-1 group" open=move || group.lessons.contains(&current.get())>
                     <summary class="flex gap-2 justify-between items-center py-1 text-sm font-normal text-gray-800 cursor-pointer xl:text-base dark:text-gray-100">
                         <span class="flex gap-1 items-center">
-                            <span class="inline-block transition-transform group-open:rotate-90" aria-hidden="true">"›"</span>
+                            <span
+                                class="inline-block transition-transform group-open:rotate-90"
+                                aria-hidden="true"
+                            >
+                                "›"
+                            </span>
                             {group.title}
                         </span>
                         <span class="text-xs text-gray-500">
-                            {move || format!("{}/{}", group.lessons.iter()
-                                .filter(|id| progress.is_complete(id)).count(), group.lessons.len())}
+                            {move || {
+                                format!(
+                                    "{}/{}",
+                                    group
+                                        .lessons
+                                        .iter()
+                                        .filter(|id| progress.is_complete(id))
+                                        .count(),
+                                    group.lessons.len(),
+                                )
+                            }}
                         </span>
                     </summary>
                     <div class="pl-3 ml-1 border-l border-black/10 dark:border-white/10">

@@ -1,20 +1,23 @@
-use crate::responses::AccountResponse;
+use crate::{responses::AccountResponse, security::csrf::CsrfClient};
 use leptos::prelude::*;
 use shared_types::Takeback;
 
-#[server]
+#[server(client = CsrfClient)]
 pub async fn edit_account(
     new_password: String,
     new_password_confirmation: String,
     password: String,
     pathname: String,
 ) -> Result<AccountResponse, ServerFnError> {
-    use crate::functions::{
-        auth::{
-            identity::uuid,
-            password::{hash_password, validate_password, verify_password},
+    use crate::{
+        common::{safe_return_path, validate_password},
+        functions::{
+            auth::{
+                identity::uuid,
+                password::{hash_password, verify_password},
+            },
+            db::pool,
         },
-        db::pool,
     };
     use db_lib::{get_conn, models::User};
 
@@ -27,11 +30,11 @@ pub async fn edit_account(
     let hashed_password = hash_password(&new_password)?;
 
     user.edit(&hashed_password, "", &mut conn).await?;
-    leptos_actix::redirect(&pathname);
+    leptos_actix::redirect(&safe_return_path(&pathname));
     AccountResponse::from_uuid(&user.id, &mut conn).await
 }
 
-#[server]
+#[server(client = CsrfClient)]
 pub async fn edit_takeback(takeback: Takeback) -> Result<(), ServerFnError> {
     use crate::functions::{auth::identity::uuid, db::pool};
     use db_lib::{get_conn, models::User};
@@ -42,7 +45,7 @@ pub async fn edit_takeback(takeback: Takeback) -> Result<(), ServerFnError> {
     Ok(())
 }
 
-#[server]
+#[server(client = CsrfClient)]
 pub async fn edit_lang(lang: String) -> Result<(), ServerFnError> {
     use crate::functions::{auth::identity::uuid, db::pool};
     use db_lib::{get_conn, models::User};

@@ -2,6 +2,7 @@ use crate::{
     components::molecules::{
         analysis_and_download::AnalysisAndDownload,
         annotation_toolbar::AnnotationToggle,
+        arena_berserk_button::ArenaBerserkButton,
         control_buttons::ControlButtons,
         hiveground_stacks::HivegroundStacks,
     },
@@ -34,6 +35,7 @@ pub fn Reserve(
     interaction: HivegroundInteraction,
     history_board: Memo<Board>,
     #[prop(optional)] viewbox_str: Option<&'static str>,
+    #[prop(optional)] collapse_empty: bool,
 ) -> impl IntoView {
     let interaction = interaction.disable_stack_inspection();
     let analysis = use_context::<AnalysisContext>().is_some();
@@ -120,15 +122,20 @@ pub fn Reserve(
     });
 
     view! {
-        <svg
-            width="100%"
-            height="100%"
-            class=move || { format!("transition-none {viewbox_styles} {}", reserve_sepia_class()) }
-            viewBox=viewbox_str
-            xmlns="http://www.w3.org/2000/svg"
-        >
-            <HivegroundStacks model=stacked_pieces paint interaction />
-        </svg>
+        <Show when=move || !collapse_empty || stacked_pieces.with(|model| !model.stacks.is_empty())>
+            <svg
+                width="100%"
+                height="100%"
+                class=move || {
+                    format!("transition-none {viewbox_styles} {}", reserve_sepia_class())
+                }
+                class:touch-none=move || interaction.can_drag_any()
+                viewBox=viewbox_str
+                xmlns="http://www.w3.org/2000/svg"
+            >
+                <HivegroundStacks model=stacked_pieces paint interaction />
+            </svg>
+        </Show>
     }
 }
 
@@ -146,7 +153,10 @@ pub fn ReserveContent(
         <Reserve color=top_color alignment=Alignment::DoubleRow interaction history_board />
         <div class="flex justify-center items-start">
             <Show when=show_buttons>
-                <ControlButtons />
+                <div class="flex items-start w-full">
+                    <ArenaBerserkButton />
+                    <ControlButtons />
+                </div>
             </Show>
             <AnalysisAndDownload />
             <AnnotationToggle />

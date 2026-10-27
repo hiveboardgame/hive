@@ -1,13 +1,13 @@
 {
     "time_mode": {
         "real_time": "Partita a tempo",
-        "untimed": "Senza limiti di tempo",
         "correspondence": {
-            "title": "Corrispondenza",
             "days_move_one": "{{count}} giorni per mossa",
             "days_move_other": "{{count}} giorni per mossa",
             "days_side_one": "{{count}} giorno per giocatore",
-            "days_side_other": "{{count}} giorni per giocatore"
+            "days_side_other": "{{count}} giorni per giocatore",
+            "duration_move": "{{duration}} per mossa",
+            "duration_side": "{{duration}} per giocatore"
         }
     },
     "casual": "Amichevole",
@@ -41,12 +41,113 @@
         "both_ready": "Questa partita di torneo inizierà quando entrambi i giocatori sono pronti",
         "both_agree": "La partita incomincerà quando i giocatori si saranno accordati sull'orario di inizio"
     },
+    "arena": {
+        "berserk": "Berserk",
+        "berserk_title": "Rinuncia all'incremento e, quando previsto, a metà del tempo base per ottenere punti Arena extra.",
+        "back_to_arena": "Torna all’arena",
+        "return_for_pairing": "Torna per trovare il prossimo avversario.",
+        "pairing_paused": "Abbinamenti in pausa. Riprendi nell’arena quando vuoi."
+    },
+    "realtime_assignments": {
+        "title": "Partite in tempo reale pronte",
+        "challenge": "Sfida in tempo reale",
+        "tournament": "Partita di torneo",
+        "arena": "Partita Arena",
+        "opening_due": "La mossa iniziale scade tra {{count}} s",
+        "opening_due_now": "La mossa iniziale scade ora",
+        "open_new_tab": "Apri in una nuova scheda"
+    },
     "speeds": {
         "blitz": "Lampo",
         "rapid": "Semi-lampo",
         "classic": "Classica",
-        "correspondence": "Corrsipondenza",
+        "correspondence": "Corrispondenza",
         "untimed": "Tempo Illimitato",
-        "bullet": "Bullet"
-    }
+        "bullet": "Bullet",
+        "puzzle": "Problema"
+    },
+    "tournament_result": {
+        "white_won": "Ha vinto il Bianco",
+        "draw": "Patta",
+        "black_won": "Ha vinto il Nero",
+        "white_won_by_forfeit": "Il Bianco ha vinto a forfait",
+        "black_won_by_forfeit": "Il Nero ha vinto a forfait",
+        "adjudicated_draw": "Patta assegnata",
+        "white_draw_black_forfeit_loss": "Patta per il Bianco; sconfitta a forfait per il Nero",
+        "white_forfeit_loss_black_draw": "Sconfitta a forfait per il Bianco; patta per il Nero",
+        "double_forfeit": "Doppio forfait"
+    },
+    "rating_range": "intervallo di rating",
+    "speeds_label": "Cadenze",
+    "view": "Vedi",
+    "quickplay_tooltip": "{{speed}}\n{{base}} min di tempo iniziale\n+{{increment}} s per mossa",
+    "rematch": "Rivincita",
+    "rematch_sent": "Inviato",
+    "accept_challenge": "Accetta sfida",
+    "cancel_challenge": "Annulla sfida",
+    "decline_challenge": "Rifiuta sfida",
+    "accepting": "Accettazione…",
+    "removing": "Rimozione…",
+    "challenge_to_a_game": "Sfida a una partita",
+    "abort": "Annulla",
+    "accept_draw": "Accetta patta",
+    "offer_draw": "Offri patta",
+    "reject_draw": "Rifiuta patta",
+    "resign": "Abbandona",
+    "accept_takeback": "Accetta ritiro",
+    "reject_takeback": "Rifiuta ritiro",
+    "request_takeback": "Chiedi ritiro",
+    "invite_as_organizer": "Invita come organizzatore",
+    "no_rating_history_yet": "Nessuna cronologia punteggio",
+    "not_enough_games_to_build_a_graph": "Partite insufficienti per il grafico",
+    "error_loading_history": "Errore nel caricamento della cronologia",
+    "show_controls": "Mostra comandi",
+    "hide_controls": "Nascondi comandi",
+    "opponent_wants_a_takeback": "L'avversario chiede di ritirare una mossa",
+    "opponent_offers_a_draw": "L'avversario offre patta",
+    "playing_now": "In corso",
+    "view_game_details": "Mostra dettagli partita",
+    "connected": "Connesso",
+    "disconnected": "Disconnesso",
+    "offline": "non in linea",
+    "unknown_player": "Giocatore sconosciuto",
+    "clear_selection": "Cancella selezione",
+    "searching": "Ricerca…",
+    "played_in_label": "Giocata in",
+    "open_navigation_menu": "Apri menu di navigazione",
+    "no_data": "Nessun dato",
+    "analyze_here": "Analizza qui",
+    "rating_history_title": "Cronologia punteggio {{speed}}",
+    "in_tournament": "in {{tournament}}",
+    "played_in_tournament": "giocata in {{tournament}}",
+    "site_description": "Il posto migliore per giocare a Hive online, il gioco di strategia senza tavoliere. Gratis, senza pubblicità, con partite classificate, tornei e sfide contro amici, avversari casuali o bot.",
+    "site_title": "HiveGame.com • Gioca a Hive online",
+    "rating_history_minimum_games": "Gioca almeno cinque partite classificate a questa cadenza per visualizzare il grafico.",
+    "result": {
+        "winner_timeout": "{{winner}} vince per tempo scaduto",
+        "winner_resignation": "{{winner}} vince per abbandono",
+        "winner_board": "{{winner}} vince sul tavoliere",
+        "winner_committee": "{{winner}} vince per decisione del comitato",
+        "winner_withdrawal": "{{winner}} vince per ritiro",
+        "winner_forfeit": "{{winner}} vince a tavolino",
+        "double_forfeit": "La partita termina con una doppia sconfitta a tavolino",
+        "draw_summary": "{{result}} {{conclusion}}",
+        "winner": "{{winner}} vince"
+    },
+    "conclusion": {
+        "board": "Conclusa sul tavoliere",
+        "committee": "Decisione del comitato",
+        "draw": "Patta concordata",
+        "forfeit": "Sconfitta a tavolino",
+        "repetition": "Tripla ripetizione",
+        "resigned": "Abbandono",
+        "timeout": "Tempo scaduto"
+    },
+    "clock": {
+        "days": "{{days}}g",
+        "days_hours": "{{days}}g:{{hours}}h",
+        "hours_minutes": "{{hours}}h{{minutes}}",
+        "arena_hours_minutes": "{{hours}}h {{minutes}}min"
+    },
+    "aborted_by": "{{actor}} ha annullato la partita"
 }

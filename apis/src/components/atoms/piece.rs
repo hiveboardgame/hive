@@ -74,7 +74,11 @@ pub fn Piece(
     interaction: HivegroundInteraction,
 ) -> impl IntoView {
     view! {
-        <g on:click=move |evt| interaction.click_piece(evt, piece, position, piece_type)>
+        <g
+            class:opacity-50=piece_type == PieceType::Premove
+            on:click=move |evt| interaction.click_piece(evt, piece, position, piece_type)
+            on:pointerdown=move |evt| interaction.press_piece(evt, piece, position, piece_type)
+        >
             <PieceGlyph position level paint />
         </g>
     }

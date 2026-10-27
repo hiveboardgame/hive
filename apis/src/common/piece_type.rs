@@ -13,6 +13,8 @@ pub enum PieceType {
     Inactive,
     // a not yet moved piece on the board
     Move,
+    // a queued premove, played once the opponent has moved
+    Premove,
     // piece in reserve
     Reserve,
     // a not yet spawned piece on a spawn point
@@ -29,6 +31,7 @@ impl fmt::Display for PieceType {
             PieceType::Reserve => "reserve",
             PieceType::Spawn => "spawn",
             PieceType::Move => "move",
+            PieceType::Premove => "premove",
         };
         write!(f, "{name}")
     }

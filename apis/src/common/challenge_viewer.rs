@@ -1,4 +1,5 @@
 use crate::responses::{ChallengeResponse, UserResponse};
+use hive_lib::ColorChoice;
 use shared_types::ChallengeVisibility;
 use uuid::Uuid;
 
@@ -57,6 +58,21 @@ pub fn challenge_displayed_player(
     }
 
     (&challenge.challenger, challenge.challenger_rating)
+}
+
+pub fn challenge_displayed_color(
+    challenge: &ChallengeResponse,
+    role: ChallengeViewerRole,
+) -> ColorChoice {
+    if role == ChallengeViewerRole::Challenger && challenge.opponent.is_some() {
+        return match challenge.color_choice {
+            ColorChoice::White => ColorChoice::Black,
+            ColorChoice::Black => ColorChoice::White,
+            ColorChoice::Random => ColorChoice::Random,
+        };
+    }
+
+    challenge.color_choice.clone()
 }
 
 pub fn challenge_is_viewable(challenge: &ChallengeResponse, role: ChallengeViewerRole) -> bool {

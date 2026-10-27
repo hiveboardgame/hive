@@ -1,9 +1,11 @@
 use super::{
     composer::SendErrorMessage,
     history::LoadPreviousMessages,
+    message_body::ChatMessageBody,
     read_eligibility::is_scrolled_near_bottom,
 };
 use crate::{
+    common::localized_error_message,
     i18n::*,
     providers::chat::{
         Chat,
@@ -270,7 +272,8 @@ fn MessageRowView(
                                 </div>
                             </Show>
                             <div class=bubble_class>
-                                {message.with_value(|message| message.message.clone())}
+                                <ChatMessageBody body=message
+                                    .with_value(|message| message.message.clone()) />
                             </div>
                         },
                     )
@@ -291,7 +294,9 @@ fn OutgoingMessageRow(outgoing: OutgoingChat, conversation: ConversationHandle) 
 
     view! {
         <div class="flex flex-col items-end mb-1 w-full">
-            <div class="border-dashed shadow-none ui-chat-bubble ui-chat-bubble-own">{body}</div>
+            <div class="border-dashed shadow-none ui-chat-bubble ui-chat-bubble-own">
+                <ChatMessageBody body />
+            </div>
             {match state {
                 OutgoingState::Pending => {
                     EitherOf3::A(
@@ -323,7 +328,7 @@ fn OutgoingMessageRow(outgoing: OutgoingChat, conversation: ConversationHandle) 
                                         chat.retry_outgoing(&conversation.get_value(), client_id);
                                     }
                                 >
-                                    {t!(i18n, messages.chat.retry)}
+                                    {t!(i18n, common.retry)}
                                 </button>
                                 <button
                                     type="button"
@@ -332,7 +337,7 @@ fn OutgoingMessageRow(outgoing: OutgoingChat, conversation: ConversationHandle) 
                                         chat.dismiss_outgoing(&conversation.get_value(), client_id);
                                     }
                                 >
-                                    {t!(i18n, messages.chat.dismiss)}
+                                    {t!(i18n, common.dismiss)}
                                 </button>
                             </div>
                         },
@@ -353,7 +358,7 @@ fn OutgoingMessageRow(outgoing: OutgoingChat, conversation: ConversationHandle) 
                                         chat.dismiss_outgoing(&conversation.get_value(), client_id);
                                     }
                                 >
-                                    {t!(i18n, messages.chat.dismiss)}
+                                    {t!(i18n, common.dismiss)}
                                 </button>
                             </div>
                         },
@@ -448,7 +453,9 @@ pub(super) fn MessageList(
                                 view! {
                                     <div class="flex justify-center items-center h-full min-h-[8rem]">
                                         <div class="max-w-sm ui-empty-state" role="alert">
-                                            <p class="text-sm font-medium">{error}</p>
+                                            <p class="text-sm font-medium">
+                                                {move || localized_error_message(i18n, &error)}
+                                            </p>
                                             <Show when=retryable_thread_error>
                                                 <button
                                                     type="button"
@@ -456,7 +463,7 @@ pub(super) fn MessageList(
                                                     prop:disabled=retry_thread_error_disabled
                                                     on:click=move |event| retry_thread_error.run(event)
                                                 >
-                                                    {t!(i18n, messages.chat.retry)}
+                                                    {t!(i18n, common.retry)}
                                                 </button>
                                             </Show>
                                         </div>
@@ -488,7 +495,13 @@ pub(super) fn MessageList(
                     <div class=conversation_column_class>
                         <Show when=move || banner_error.get().is_some()>
                             <div class="mb-4 ui-warning-notice" role="alert">
-                                <span>{move || banner_error.get().unwrap_or_default()}</span>
+                                <span>
+                                    {move || {
+                                        banner_error
+                                            .get()
+                                            .map(|error| localized_error_message(i18n, &error))
+                                    }}
+                                </span>
                                 <Show when=retryable_thread_error>
                                     <button
                                         type="button"
@@ -496,7 +509,7 @@ pub(super) fn MessageList(
                                         prop:disabled=retry_thread_error_disabled
                                         on:click=move |event| retry_thread_error.run(event)
                                     >
-                                        {t!(i18n, messages.chat.retry)}
+                                        {t!(i18n, common.retry)}
                                     </button>
                                 </Show>
                             </div>

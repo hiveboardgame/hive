@@ -13,7 +13,7 @@ use db_lib::{
     models::{Game},
     DbConn,
 };
-use shared_types::GameSpeed;
+use shared_types::{rounded_rating, GameSpeed};
 use uuid::Uuid;
 use anyhow::Result;
 impl RatingHistoryResponse {
@@ -26,24 +26,9 @@ impl RatingHistoryResponse {
         Ok(
             games
                 .into_iter()
-                .map(|g| {
-                    let (r, ts) = if g.white_id == *id {
-                        (
-                            g.white_rating.expect("missing white_rating"),
-                            g.updated_at,
-                        )
-                    } else if g.black_id == *id {
-                        (
-                            g.black_rating.expect("missing black_rating"),
-                            g.updated_at,
-                        )
-                    } else {
-                        unreachable!("Game does not match the given player ID");
-                    };
-                    RatingHistoryResponse {
-                        rating: r.floor() as u64,
-                        updated_at: ts,
-                    }
+                .map(|game| RatingHistoryResponse {
+                    rating: rounded_rating(game.rating).map(u64::from).unwrap_or_default(),
+                    updated_at: game.updated_at,
                 })
                 .collect::<Vec<_>>(),
         )

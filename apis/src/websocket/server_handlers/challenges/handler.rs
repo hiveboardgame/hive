@@ -1,7 +1,14 @@
 use super::{accept::AcceptHandler, create::CreateHandler, delete::DeleteHandler};
-use crate::{common::ChallengeAction, websocket::messages::InternalServerMessage};
+use crate::{
+    common::{ChallengeAction, ServerMessage},
+    websocket::{
+        messages::{InternalServerMessage, MessageDestination},
+        WebsocketData,
+    },
+};
 use anyhow::Result;
 use db_lib::DbPool;
+use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct ChallengeHandler {
@@ -9,55 +16,74 @@ pub struct ChallengeHandler {
     pool: DbPool,
     user_id: Uuid,
     admin: bool,
-    username: String,
+    data: Arc<WebsocketData>,
 }
 
 impl ChallengeHandler {
-    pub async fn new(
+    pub fn new(
         action: ChallengeAction,
-        username: &str,
         user_id: Uuid,
         admin: bool,
+        data: Arc<WebsocketData>,
         pool: &DbPool,
-    ) -> Result<Self> {
-        Ok(Self {
+    ) -> Self {
+        Self {
             pool: pool.clone(),
             challenge_action: action,
             user_id,
             admin,
-            username: username.to_owned(),
-        })
+            data,
+        }
     }
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let messages = match self.challenge_action.clone() {
             ChallengeAction::Create(details) => {
+                self.data.realtime_gate.admit(details.time_mode)?;
                 CreateHandler::new(details, self.user_id, &self.pool)
-                    .await?
                     .handle()
                     .await?
             }
             ChallengeAction::Accept(challenge_id) => {
-                AcceptHandler::new(challenge_id, &self.username, self.user_id, &self.pool)
-                    .await?
-                    .handle()
+                AcceptHandler::new(challenge_id, self.user_id, &self.pool)
+                    .handle(&self.data.realtime_gate)
                     .await?
             }
             ChallengeAction::Delete(challenge_id) => {
                 DeleteHandler::new(challenge_id, self.user_id, self.admin, &self.pool)
-                    .await?
                     .handle()
                     .await?
             }
             ChallengeAction::DeleteMany(ids) => {
+                // Each delete commits on its own, so one failure must not swallow the
+                // removals already made: their broadcasts still go out.
                 let mut messages = Vec::new();
+                let mut failed = Vec::new();
                 for challenge_id in ids {
-                    let mut msgs =
-                        DeleteHandler::new(challenge_id, self.user_id, self.admin, &self.pool)
-                            .await?
-                            .handle()
-                            .await?;
-                    messages.append(&mut msgs);
+                    match DeleteHandler::new(
+                        challenge_id.clone(),
+                        self.user_id,
+                        self.admin,
+                        &self.pool,
+                    )
+                    .handle()
+                    .await
+                    {
+                        Ok(mut removed) => messages.append(&mut removed),
+                        Err(error) => {
+                            log::warn!("Deleting challenge {challenge_id} failed: {error}");
+                            failed.push(challenge_id.0);
+                        }
+                    }
+                }
+                if !failed.is_empty() {
+                    messages.push(InternalServerMessage {
+                        destination: MessageDestination::User(self.user_id),
+                        message: ServerMessage::Error(format!(
+                            "Could not delete challenges: {}",
+                            failed.join(", ")
+                        )),
+                    });
                 }
                 messages
             }

@@ -145,13 +145,21 @@ pub fn TutorialGameControls() -> impl IntoView {
         .into_iter()
         .enumerate()
         .map(|(index, (game_control, _))| {
-            let highlighted = move || tutorial.session.with(|session| {
-                session.as_ref().is_some_and(|session| session.lesson().id == "online.controls"
-                    && !session.is_finished() && session.step_index() == index)
-            });
+            let highlighted = move || {
+                tutorial.session.with(|session| {
+                    session.as_ref().is_some_and(|session| {
+                        session.lesson().id == "online.controls"
+                            && !session.is_finished()
+                            && session.step_index() == index
+                    })
+                })
+            };
             view! {
-                <div class="flex justify-center rounded-md grow"
-                    class:ring-2=highlighted class:ring-green-600=highlighted>
+                <div
+                    class="flex justify-center rounded-md grow"
+                    class:ring-2=highlighted
+                    class:ring-green-600=highlighted
+                >
                     <GameControlButton game_control on_confirm />
                 </div>
             }

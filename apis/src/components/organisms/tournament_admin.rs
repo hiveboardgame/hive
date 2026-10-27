@@ -1,62 +1,420 @@
 use crate::{
-    common::UserAction,
-    components::molecules::{invite_user::InviteUser, user_row::UserRow},
-    responses::TournamentResponse,
+    common::{tournament_path_matches, TournamentAction},
+    components::{
+        molecules::{
+            invite_user::InviteUser,
+            pagination_controls::PaginationControls,
+            user_identity::UserIdentity,
+        },
+        organisms::tournament_withdrawal::TournamentWithdrawal,
+    },
+    i18n::*,
+    providers::{
+        ApiRequestsProvider,
+        AuthContext,
+        AuthIdentity,
+        EliminationStateStoreFields,
+        RoundRobinStateStoreFields,
+        SwissStateStoreFields,
+        TournamentCommonStoreFields,
+        TournamentFormatState,
+        TournamentState,
+    },
 };
 use leptos::prelude::*;
+use leptos_router::hooks::use_location;
+use shared_types::{tournament::Format, TournamentStatus};
+use std::collections::HashSet;
+
+const ROSTER_PAGE_SIZE: usize = 12;
+// Fixed maximum tracks keep a single invitation as compact as a populated roster.
+pub(super) const MEMBERSHIP_GRID_CLASS: &str =
+    "grid gap-x-4 gap-y-2 grid-cols-[repeat(auto-fill,minmax(min(100%,24rem),24rem))]";
+pub(super) const MEMBERSHIP_ROW_CLASS: &str = "flex gap-3 items-center justify-between p-2 min-w-0 min-h-12 rounded border border-black/10 bg-black/[0.02] dark:border-white/10 dark:bg-white/[0.02]";
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum RosterView {
+    Accepted,
+    Pending,
+    Declined,
+    Eliminated,
+    Withdrawn,
+}
 
 #[component]
 pub fn TournamentAdminControls(
-    user_is_organizer: bool,
-    tournament: StoredValue<TournamentResponse>,
+    user_is_organizer_or_admin: Signal<bool>,
+    tournament: TournamentState,
+    editable: Signal<bool>,
 ) -> impl IntoView {
-    let user_kick = move || {
-        if user_is_organizer {
-            vec![UserAction::Kick(Box::new(tournament.get_value()))]
-        } else {
-            vec![]
+    let i18n = use_i18n();
+    let api = expect_context::<ApiRequestsProvider>().0;
+    let auth = expect_context::<AuthContext>();
+    let viewer = Signal::derive(move || auth.identity.get().and_then(AuthIdentity::user_id));
+    let tournament_id = StoredValue::new(tournament.tournament_id());
+    let pathname = use_location().pathname;
+    let route_active = Signal::derive(move || {
+        let id = tournament_id.get_value();
+        tournament_path_matches(&pathname.get(), &id)
+            && tournament.common.lifecycle().get().tournament_id == id
+    });
+    let pre_start = Signal::derive(move || {
+        tournament.common.lifecycle().get().status == TournamentStatus::NotStarted
+    });
+    let fixed_field = tournament.format.format() != Format::Arena;
+    let field_full = Signal::derive(move || {
+        tournament
+            .common
+            .lifecycle()
+            .get()
+            .seats
+            .and_then(|capacity| usize::try_from(capacity).ok())
+            .is_some_and(|capacity| tournament.common.memberships().get().players.len() >= capacity)
+    });
+    let allowed = Signal::derive(move || {
+        fixed_field && route_active.get() && user_is_organizer_or_admin.get() && editable.get()
+    });
+    let selected = RwSignal::new(RosterView::Accepted);
+    let active = Signal::derive(move || match (pre_start.get(), selected.get()) {
+        (false, RosterView::Pending | RosterView::Declined)
+        | (true, RosterView::Eliminated | RosterView::Withdrawn) => RosterView::Accepted,
+        (_, selected) => selected,
+    });
+    let query = RwSignal::new(String::new());
+    let page = RwSignal::new(1usize);
+    let eliminated = Signal::derive(move || match tournament.format {
+        TournamentFormatState::Elimination(state) => state.player_results().with(|results| {
+            results
+                .iter()
+                .filter(|result| !result.in_contention && result.placement != Some(1))
+                .map(|result| result.player)
+                .collect::<HashSet<_>>()
+        }),
+        _ => HashSet::new(),
+    });
+    let users_for = move |section| {
+        let memberships = tournament.common.memberships().get();
+        let eliminated = eliminated.get();
+        match section {
+            RosterView::Accepted => memberships
+                .players
+                .into_values()
+                .filter(|user| {
+                    !memberships.withdrawn.contains(&user.uid) && !eliminated.contains(&user.uid)
+                })
+                .collect::<Vec<_>>(),
+            RosterView::Pending => memberships.invitees,
+            RosterView::Declined => memberships.declined_invitees,
+            RosterView::Eliminated => memberships
+                .players
+                .into_values()
+                .filter(|user| {
+                    eliminated.contains(&user.uid) && !memberships.withdrawn.contains(&user.uid)
+                })
+                .collect(),
+            RosterView::Withdrawn => memberships
+                .players
+                .into_values()
+                .filter(|user| memberships.withdrawn.contains(&user.uid))
+                .collect(),
         }
     };
-    let user_uninvite = move || {
-        if user_is_organizer {
-            vec![UserAction::Uninvite(
-                tournament.with_value(|t| t.tournament_id.clone()),
-            )]
-        } else {
-            vec![]
+    let users = Signal::derive(move || users_for(active.get()));
+    let filtered = Memo::new(move |_| {
+        let query = query.get().trim().to_lowercase();
+        let mut users = users.get();
+        users.retain(|user| user.username.to_lowercase().contains(&query));
+        let withdrawable = match tournament.format {
+            TournamentFormatState::RoundRobin(state) => state.withdrawable_entrants().get(),
+            TournamentFormatState::Swiss(state) => state.withdrawable_entrants().get(),
+            TournamentFormatState::Elimination(state) => state.withdrawable_entrants().get(),
+            TournamentFormatState::Arena(_) => Default::default(),
+        };
+        users.sort_by_cached_key(|user| {
+            (
+                !withdrawable.contains(&user.uid),
+                user.username.to_lowercase(),
+                user.uid,
+            )
+        });
+        users
+    });
+    Effect::new(move |_| {
+        let last = filtered.with(Vec::len).div_ceil(ROSTER_PAGE_SIZE).max(1);
+        if page.get_untracked() > last {
+            page.set(last);
         }
-    };
+    });
     view! {
-        <div class="grid gap-3 md:grid-cols-2">
-            <div class="space-y-2 ui-setting-group">
-                <Show when=move || tournament.with_value(|t| !t.players.is_empty())>
-                    <p class="font-bold">"Players"</p>
-                    <For
-                        each=move || { tournament.with_value(|t| t.players.clone()) }
+        <section class="space-y-4">
+            <div class="flex flex-wrap gap-3 justify-between items-center">
 
-                        key=|(id, _)| *id
-                        let:user
+                <div
+                    class="flex flex-wrap gap-1"
+                    role="group"
+                    aria-label=move || { t_string!(i18n, tournaments.ui.player_status).to_string() }
+                >
+                    {[
+                        RosterView::Accepted,
+                        RosterView::Pending,
+                        RosterView::Declined,
+                        RosterView::Eliminated,
+                        RosterView::Withdrawn,
+                    ]
+                        .into_iter()
+                        .map(|section| {
+                            view! {
+                                <Show when=move || match section {
+                                    RosterView::Accepted => true,
+                                    RosterView::Pending | RosterView::Declined => {
+                                        fixed_field && pre_start.get()
+                                    }
+                                    RosterView::Withdrawn => fixed_field && !pre_start.get(),
+                                    RosterView::Eliminated => {
+                                        !pre_start.get()
+                                            && matches!(
+                                                tournament.format,
+                                                TournamentFormatState::Elimination(_)
+                                            )
+                                    }
+                                }>
+                                    <button
+                                        type="button"
+                                        class=move || {
+                                            if active.get() == section {
+                                                "ui-button ui-button-secondary ui-button-sm"
+                                            } else {
+                                                "ui-button ui-button-ghost ui-button-sm"
+                                            }
+                                        }
+                                        aria-pressed=move || (active.get() == section).to_string()
+                                        on:click=move |_| {
+                                            selected.set(section);
+                                            query.set(String::new());
+                                            page.set(1);
+                                        }
+                                    >
+
+                                        {move || {
+                                            let label = match section {
+                                                RosterView::Accepted => {
+                                                    t_string!(i18n, common.accepted).to_string()
+                                                }
+                                                RosterView::Pending => {
+                                                    t_string!(i18n, common.pending).to_string()
+                                                }
+                                                RosterView::Declined => {
+                                                    t_string!(i18n, common.declined).to_string()
+                                                }
+                                                RosterView::Eliminated => {
+                                                    t_string!(i18n, common.eliminated).to_string()
+                                                }
+                                                RosterView::Withdrawn => {
+                                                    t_string!(i18n, common.withdrawn).to_string()
+                                                }
+                                            };
+                                            let label = if section == RosterView::Accepted {
+                                                if !fixed_field {
+                                                    t_string!(i18n, common.joined).to_string()
+                                                } else if !pre_start.get() {
+                                                    t_string!(i18n, common.playing).to_string()
+                                                } else {
+                                                    label
+                                                }
+                                            } else {
+                                                label
+                                            };
+                                            format!("{label} ({})", users_for(section).len())
+                                        }}
+                                    </button>
+                                </Show>
+                            }
+                        })
+                        .collect_view()}
+                </div>
+                <Show when=move || allowed.get()>
+                    <Show
+                        when=move || !field_full.get()
+                        fallback=move || {
+                            view! {
+                                <p class="text-sm text-gray-600 dark:text-gray-300">
+                                    {move || {
+                                        t_string!(i18n, tournaments.ui.the_field_is_full)
+                                            .to_string()
+                                    }}
+                                </p>
+                            }
+                        }
                     >
-                        <UserRow actions=user_kick() user=user.1 />
-                    </For>
+                        <div class="w-full min-w-0 sm:w-72">
+                            <InviteUser tournament />
+                        </div>
+                    </Show>
                 </Show>
             </div>
-            <div class="space-y-2 ui-setting-group">
-                <Show when=move || tournament.with_value(|t| !t.invitees.is_empty())>
-                    <p class="font-bold">"Invitees"</p>
+            <Show when=move || {
+                users.with(Vec::len) > ROSTER_PAGE_SIZE || !query.get().is_empty()
+            }>
+
+                <input
+                    type="search"
+                    class="w-full sm:max-w-xs ui-field-input"
+                    placeholder=move || t_string!(i18n, common.search_players).to_string()
+                    aria-label=move || t_string!(i18n, common.search_players).to_string()
+                    prop:value=move || query.get()
+                    on:input=move |event| {
+                        query.set(event_target_value(&event));
+                        page.set(1);
+                    }
+                />
+            </Show>
+            <Show when=move || filtered.with(Vec::is_empty)>
+                <p class="py-4 text-sm text-gray-600 dark:text-gray-300" role="status">
+
+                    {move || {
+                        if !query.get().trim().is_empty() {
+                            t_string!(i18n, common.no_players_match_your_search).to_string()
+                        } else {
+                            match active.get() {
+                                RosterView::Accepted if !fixed_field => {
+                                    t_string!(
+                                        i18n, tournaments.ui.no_players_yet_players_can_join_from_overview
+                                    )
+                                        .to_string()
+                                }
+                                RosterView::Accepted if pre_start.get() => {
+                                    t_string!(
+                                        i18n, tournaments.ui.no_accepted_players_yet_invite_a_player_to_get_started
+                                    )
+                                        .to_string()
+                                }
+                                RosterView::Accepted => {
+                                    t_string!(i18n, tournaments.ui.no_active_players).to_string()
+                                }
+                                RosterView::Pending => {
+                                    t_string!(i18n, tournaments.ui.no_pending_invitations)
+                                        .to_string()
+                                }
+                                RosterView::Declined => {
+                                    t_string!(i18n, tournaments.ui.no_declined_invitations)
+                                        .to_string()
+                                }
+                                RosterView::Eliminated => {
+                                    t_string!(i18n, tournaments.ui.no_eliminated_players)
+                                        .to_string()
+                                }
+                                RosterView::Withdrawn => {
+                                    t_string!(i18n, tournaments.ui.no_withdrawn_players).to_string()
+                                }
+                            }
+                        }
+                    }}
+                </p>
+            </Show>
+            <Show when=move || !filtered.with(Vec::is_empty)>
+                <div class=MEMBERSHIP_GRID_CLASS>
                     <For
-                        each=move || { tournament.with_value(|t| t.invitees.clone()) }
-                        key=|users| users.uid
+                        each=move || {
+                            filtered
+                                .with(|users| {
+                                    users
+                                        .iter()
+                                        .skip((page.get() - 1) * ROSTER_PAGE_SIZE)
+                                        .take(ROSTER_PAGE_SIZE)
+                                        .cloned()
+                                        .collect::<Vec<_>>()
+                                })
+                        }
+                        key=move |user| (user.uid, active.get() as u8)
                         let:user
                     >
-                        <UserRow actions=user_uninvite() user />
+                        {
+                            let uid = user.uid;
+                            view! {
+                                <div class=MEMBERSHIP_ROW_CLASS>
+                                    <div class="min-w-0">
+                                        <UserIdentity user link_class="truncate" />
+                                    </div>
+                                    <Show when=move || {
+                                        allowed.get()
+                                            && matches!(
+                                                active.get(),
+                                                RosterView::Accepted
+                                                | RosterView::Pending
+                                                | RosterView::Declined
+                                            ) && viewer.get().is_some_and(|id| id != uid)
+                                    }>
+                                        <button
+                                            type="button"
+                                            class="shrink-0 ui-button ui-button-ghost ui-button-sm"
+                                            prop:disabled=move || {
+                                                active.get() == RosterView::Declined && field_full.get()
+                                            }
+                                            on:click=move |_| {
+                                                if !allowed.get_untracked()
+                                                    || viewer.get_untracked() == Some(uid)
+                                                {
+                                                    return;
+                                                }
+                                                let id = tournament_id.get_value();
+                                                let action = match active.get_untracked() {
+                                                    RosterView::Accepted => TournamentAction::Kick(id, uid),
+                                                    RosterView::Pending => {
+                                                        TournamentAction::InvitationRetract(id, uid)
+                                                    }
+                                                    RosterView::Declined if !field_full.get_untracked() => {
+                                                        TournamentAction::InvitationCreate(id, uid)
+                                                    }
+                                                    _ => return,
+                                                };
+                                                api.get().tournament(action);
+                                            }
+                                        >
+
+                                            {move || match active.get() {
+                                                RosterView::Accepted => {
+                                                    t_string!(i18n, common.remove).to_string()
+                                                }
+                                                RosterView::Pending => {
+                                                    t_string!(i18n, tournaments.ui.cancel_invite).to_string()
+                                                }
+                                                RosterView::Declined => {
+                                                    t_string!(i18n, tournaments.ui.re_invite).to_string()
+                                                }
+                                                RosterView::Eliminated | RosterView::Withdrawn => {
+                                                    String::new()
+                                                }
+                                            }}
+                                        </button>
+                                    </Show>
+                                    <Show when=move || !pre_start.get()>
+                                        <TournamentWithdrawal
+                                            common=tournament.common
+                                            format=tournament.format
+                                            organizer=user_is_organizer_or_admin
+                                            player_id=uid
+                                        />
+                                    </Show>
+                                </div>
+                            }
+                        }
                     </For>
-                </Show>
-                <Show when=move || user_is_organizer>
-                    <p class="font-bold">"Invite players"</p>
-                    <InviteUser tournament />
-                </Show>
-            </div>
-        </div>
+                </div>
+            </Show>
+            <Show when=move || { filtered.with(Vec::len) > ROSTER_PAGE_SIZE }>
+                <PaginationControls
+                    page=page.into()
+                    total=Signal::derive(move || filtered.with(Vec::len))
+                    page_size=ROSTER_PAGE_SIZE
+                    on_page_change=Callback::new(move |next| page.set(next))
+                />
+            </Show>
+            <Show when=move || fixed_field && pre_start.get()>
+
+                <p class="text-xs text-gray-600 dark:text-gray-300">
+                    {t!(i18n, tournaments.ui.only_accepted_players_count_toward_the_field)}
+                </p>
+            </Show>
+        </section>
     }
 }

@@ -1,8 +1,11 @@
 use crate::{
-    common::{ChallengeUpdate, GameActionResponse, GameReaction, GameUpdate, ServerMessage},
-    notifications::{notify, time_control_label, Event},
+    common::{ChallengeUpdate, ServerMessage, UiError},
     responses::GameResponse,
-    websocket::messages::{InternalServerMessage, MessageDestination},
+    websocket::{
+        messages::{InternalServerMessage, MessageDestination},
+        server_handlers::game::new_game_messages,
+        RealtimeGate,
+    },
 };
 use anyhow::Result;
 use db_lib::{
@@ -12,32 +15,26 @@ use db_lib::{
     DbPool,
 };
 use diesel_async::AsyncConnection;
-use shared_types::{ChallengeId, GameSpeed};
+use shared_types::{rounded_rating, ChallengeId, GameSpeed};
+use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct AcceptHandler {
     challenge_id: ChallengeId,
     user_id: Uuid,
-    username: String,
     pool: DbPool,
 }
 
 impl AcceptHandler {
-    pub async fn new(
-        challenge_id: ChallengeId,
-        username: &str,
-        user_id: Uuid,
-        pool: &DbPool,
-    ) -> Result<Self> {
-        Ok(Self {
+    pub fn new(challenge_id: ChallengeId, user_id: Uuid, pool: &DbPool) -> Self {
+        Self {
             challenge_id,
             user_id,
-            username: username.to_owned(),
             pool: pool.clone(),
-        })
+        }
     }
 
-    pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
+    pub async fn handle(&self, gate: &RealtimeGate) -> Result<Vec<InternalServerMessage>> {
         let mut conn = get_conn(&self.pool).await?;
         let mut messages = Vec::new();
         let challenge = match Challenge::find_by_challenge_id(&self.challenge_id, &mut conn).await {
@@ -53,33 +50,46 @@ impl AcceptHandler {
             Err(err) => return Err(err.into()),
         };
         challenge.validate_accepting_user(self.user_id)?;
-        let speed = GameSpeed::from_base_increment(challenge.time_base, challenge.time_increment);
-        let rating = Rating::for_uuid(&self.user_id, &speed, &mut conn)
-            .await?
-            .rating;
+        gate.admit_challenge(&challenge)?;
+        let speed = challenge
+            .time_control()?
+            .map_or(GameSpeed::Untimed, GameSpeed::from);
+        let rating = rounded_rating(
+            Rating::for_uuid(&self.user_id, &speed, &mut conn)
+                .await?
+                .rating,
+        )
+        .unwrap_or_default();
         if let Some(band_upper) = challenge.band_upper {
-            if rating > band_upper as f64 {
+            if i64::from(rating) > i64::from(band_upper) {
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::User(self.user_id),
-                    message: ServerMessage::Error(format!(
-                        "{rating} is above the rating band of {band_upper}"
-                    )),
+                    message: ServerMessage::Error(
+                        UiError::RatingAboveBand {
+                            rating: rating.to_string(),
+                            limit: band_upper.to_string(),
+                        }
+                        .encode(),
+                    ),
                 });
                 return Ok(messages);
             }
         }
         if let Some(band_lower) = challenge.band_lower {
-            if rating < band_lower as f64 {
+            if i64::from(rating) < i64::from(band_lower) {
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::User(self.user_id),
-                    message: ServerMessage::Error(format!(
-                        "{rating} is below the rating band of {band_lower}"
-                    )),
+                    message: ServerMessage::Error(
+                        UiError::RatingBelowBand {
+                            rating: rating.to_string(),
+                            limit: band_lower.to_string(),
+                        }
+                        .encode(),
+                    ),
                 });
                 return Ok(messages);
             }
         }
-        let challenger_id = challenge.challenger_id;
         let (white_id, black_id) = match challenge.color_choice.to_lowercase().as_str() {
             "black" => (self.user_id, challenge.challenger_id),
             "white" => (challenge.challenger_id, self.user_id),
@@ -92,45 +102,17 @@ impl AcceptHandler {
             }
         };
 
-        let (game, deleted_challenges, game_response) = conn
+        let (deleted_challenges, game_response) = conn
             .transaction::<_, anyhow::Error, _>(async move |tc| {
                 let new_game = NewGame::new(white_id, black_id, &challenge)?;
                 let (game, deleted_challenges) =
                     Game::create_and_delete_challenges(new_game, tc).await?;
-                let game_response = GameResponse::from_model(&game, tc).await?;
-                Ok((game, deleted_challenges, game_response))
+                let game_response = Arc::new(GameResponse::from_model(&game, tc).await?);
+                Ok((deleted_challenges, game_response))
             })
             .await?;
 
-        notify(Event::GameStarted {
-            recipient: challenger_id,
-            opponent: self.username.clone(),
-            game_nanoid: game.nanoid.clone(),
-            time_control: time_control_label(speed, game.time_base, game.time_increment),
-            speed,
-        });
-
-        messages.push(InternalServerMessage {
-            destination: MessageDestination::User(game.white_id),
-            message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
-                game_action: GameReaction::New,
-                game: game_response.clone(),
-                game_id: game_response.game_id.clone(),
-                user_id: self.user_id,
-                username: self.username.to_owned(),
-            }))),
-        });
-
-        messages.push(InternalServerMessage {
-            destination: MessageDestination::User(game.black_id),
-            message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
-                game_action: GameReaction::New,
-                game: game_response.clone(),
-                game_id: game_response.game_id.clone(),
-                user_id: self.user_id,
-                username: self.username.to_owned(),
-            }))),
-        });
+        messages.extend(new_game_messages(game_response, Some(self.user_id), None));
 
         for challenge_nanoid in deleted_challenges {
             messages.push(InternalServerMessage {

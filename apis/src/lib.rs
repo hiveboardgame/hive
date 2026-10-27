@@ -1,3 +1,5 @@
+#[cfg(feature = "ssr")]
+pub mod active_instance;
 pub mod api;
 pub mod app;
 #[cfg(feature = "ssr")]
@@ -17,6 +19,7 @@ pub mod pages;
 pub mod providers;
 pub mod pwa;
 pub mod responses;
+pub mod security;
 pub mod tutorial;
 pub mod websocket;
 // leptos_i18n::load_locales!();
@@ -48,7 +51,7 @@ mod locale_tests {
     /// directories but are commented out there as too incomplete, so they are not checked.
     const ACTIVE_LOCALES: [&str; 9] = ["ca", "de", "es", "fr", "hu", "it", "pt", "ro", "ru"];
 
-    const NAMESPACES: [&str; 12] = [
+    const NAMESPACES: [&str; 13] = [
         "header",
         "home",
         "faq",
@@ -58,6 +61,7 @@ mod locale_tests {
         "game",
         "tournaments",
         "donate",
+        "footer",
         "archive",
         "notifications",
         "messages",
@@ -70,12 +74,26 @@ mod locale_tests {
         );
         let text = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{path}: {e}"));
         let value: serde_json::Value = serde_json::from_str(&text).expect("valid JSON");
-        value
-            .as_object()
-            .expect("flat object")
-            .keys()
-            .cloned()
-            .collect()
+        let mut keys = BTreeSet::new();
+        collect_key_paths(&value, "", &mut keys);
+        keys
+    }
+
+    fn collect_key_paths(value: &serde_json::Value, path: &str, keys: &mut BTreeSet<String>) {
+        match value.as_object() {
+            Some(object) => {
+                for (key, child) in object {
+                    let child_path = match path {
+                        "" => key.clone(),
+                        _ => format!("{path}.{key}"),
+                    };
+                    collect_key_paths(child, &child_path, keys);
+                }
+            }
+            None => {
+                keys.insert(path.to_string());
+            }
+        }
     }
 
     /// `suppress_key_warnings(true)` makes a missing key silently fall back to English - this

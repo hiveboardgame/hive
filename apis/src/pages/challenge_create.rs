@@ -1,17 +1,27 @@
 use crate::{
     common::{ChallengeAction, TimeParamsStoreFields},
     components::{
-        atoms::{input_slider::InputSliderWithCallback, simple_switch::SimpleSwitchWithCallback},
+        atoms::{
+            input_slider::InputSliderWithCallback,
+            realtime_paused_notice::RealtimePausedNotice,
+            simple_switch::SimpleSwitchWithCallback,
+        },
         molecules::challenge_buttons_trio::ChallengeButtonsTrio,
         organisms::time_select::TimeSelect,
     },
     i18n::*,
-    providers::{ApiRequestsProvider, AuthContext, ChallengeParams, ChallengeParamsStoreFields},
+    providers::{
+        ApiRequestsProvider,
+        AuthContext,
+        ChallengeParams,
+        ChallengeParamsStoreFields,
+        RealtimeGames,
+    },
 };
 use hive_lib::GameType;
 use leptos::prelude::*;
 use reactive_stores::Store;
-use shared_types::{ChallengeDetails, ChallengeVisibility, GameSpeed, TimeMode};
+use shared_types::{ChallengeDetails, ChallengeVisibility, Clock, GameSpeed, TimeMode};
 
 #[component]
 pub fn ChallengeCreate(#[prop(optional, into)] opponent: Signal<Option<String>>) -> impl IntoView {
@@ -19,7 +29,15 @@ pub fn ChallengeCreate(#[prop(optional, into)] opponent: Signal<Option<String>>)
     let params = expect_context::<Store<ChallengeParams>>();
     let api = expect_context::<ApiRequestsProvider>().0;
     let auth_context = expect_context::<AuthContext>();
+    let realtime_games = expect_context::<RealtimeGames>();
+    let realtime_selected =
+        Signal::derive(move || params.time_signals().time_mode().get() == TimeMode::RealTime);
+    let realtime_blocked =
+        Signal::derive(move || realtime_games.blocks(params.time_signals().time_mode().get()));
     let create_challenge = Callback::new(move |color_choice| {
+        if realtime_blocked.get_untracked() {
+            return;
+        }
         let api = api.get();
         let direct_opponent = opponent.get_untracked();
         let opponent_exists = direct_opponent.is_some();
@@ -27,8 +45,13 @@ pub fn ChallengeCreate(#[prop(optional, into)] opponent: Signal<Option<String>>)
         let (upper_rating, lower_rating) = auth_context.user.with(|acc_opt| {
             if let Some(account) = acc_opt {
                 let time_data = params.time_signals().get();
-                let game_speed =
-                    GameSpeed::from_base_increment(time_data.base(), time_data.increment());
+                let game_speed = Clock::from_time_parts(
+                    time_data.time_mode,
+                    time_data.base(),
+                    time_data.increment(),
+                )
+                .expect("challenge time controls are constrained by the selector")
+                .map_or(GameSpeed::Untimed, GameSpeed::from);
                 let rating = account.user.rating_for_speed(&game_speed);
 
                 let upper_slider = params.upper_slider().get();
@@ -103,7 +126,6 @@ pub fn ChallengeCreate(#[prop(optional, into)] opponent: Signal<Option<String>>)
         if t == TimeMode::Untimed {
             params.rated().set(false);
         }
-        params.time_signals().time_mode().update(|v| *v = t);
     });
     let allowed_values = vec![
         TimeMode::RealTime,
@@ -136,25 +158,27 @@ pub fn ChallengeCreate(#[prop(optional, into)] opponent: Signal<Option<String>>)
     view! {
         <div class="flex flex-col items-center w-72 sm:w-96 xs:m-2 xs:w-80">
             <Show when=move || opponent.get().is_some()>
-                <div class="block">"Opponent: " {move || opponent.get().unwrap_or_default()}</div>
+                <div class="block">
+                    {t!(i18n, common.opponent_label)} {move || opponent.get().unwrap_or_default()}
+                </div>
             </Show>
             <div class="flex flex-col items-center">
                 <TimeSelect is_tournament=false params on_value_change=time_change allowed_values />
             </div>
             <div class="flex gap-1 p-1">
-                {t!(i18n, home.custom_game.casual)}
+                {t!(i18n, game.casual)}
                 <SimpleSwitchWithCallback
                     checked=params.rated().into()
                     action=rated_callback
                     disabled=untimed_no_rated
-                /> {t!(i18n, home.custom_game.rated)}
+                /> {t!(i18n, game.rated)}
             </div>
             <div class="flex gap-1 p-1">
-                Basic
+                {t!(i18n, profile.expansion_buttons.basic)}
                 <SimpleSwitchWithCallback
                     checked=params.with_expansions().into()
                     action=with_expansions_callback
-                />Full
+                />{t!(i18n, common.full)}
             </div>
 
             <Show when=move || opponent.get().is_none()>
@@ -165,7 +189,7 @@ pub fn ChallengeCreate(#[prop(optional, into)] opponent: Signal<Option<String>>)
                         action=is_public_callback
                     /> {t!(i18n, home.custom_game.public)}
                 </div>
-                <p class="flex justify-center">{t!(i18n, home.custom_game.rating_range)}</p>
+                <p class="flex justify-center">{t!(i18n, game.rating_range)}</p>
                 <div class="flex justify-center w-24">{rating_string}</div>
                 <div class="flex">
                     <div class="flex gap-1 mx-1">
@@ -192,7 +216,8 @@ pub fn ChallengeCreate(#[prop(optional, into)] opponent: Signal<Option<String>>)
                     </div>
                 </div>
             </Show>
-            <ChallengeButtonsTrio create_challenge />
+            <RealtimePausedNotice applies=realtime_selected />
+            <ChallengeButtonsTrio create_challenge disabled=realtime_blocked />
         </div>
     }
 }

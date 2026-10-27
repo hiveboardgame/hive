@@ -1,4 +1,9 @@
-use crate::{functions::accounts::edit::EditTakeback, i18n::*, providers::AuthContext};
+use crate::{
+    functions::accounts::edit::EditTakeback,
+    i18n::*,
+    providers::AuthContext,
+    security::csrf::ActionForm,
+};
 use leptos::prelude::*;
 use shared_types::Takeback;
 
@@ -22,6 +27,7 @@ pub fn TakebackConf() -> impl IntoView {
     );
     view! {
         <ActionForm action=action attr:class="flex flex-col gap-2">
+
             <p class="ui-field-label">{t!(i18n, user_config. allow_takeback)}</p>
             <div class="ui-choice-group">
                 <Button takeback=Takeback::Always />

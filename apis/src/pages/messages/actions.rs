@@ -1,4 +1,5 @@
 use crate::{
+    common::localized_error_message,
     components::{
         atoms::block_toggle_button::BlockToggleButton,
         molecules::game_thread_toggle::{GameThreadToggle, GameThreadToggleSize},
@@ -99,7 +100,7 @@ pub(super) fn TournamentActions(tournament_id: TournamentId) -> impl IntoView {
     );
     let button_label = Signal::derive(move || {
         if toggle.pending().get() {
-            t_string!(i18n, messages.page.loading)
+            t_string!(i18n, common.loading)
         } else if muted.get() {
             t_string!(i18n, messages.page.unmute_tournament_chat)
         } else {
@@ -142,7 +143,9 @@ pub(super) fn TournamentActions(tournament_id: TournamentId) -> impl IntoView {
                     {button_label}
                 </button>
                 <ShowLet some=move || error.get() let:error>
-                    <span class="ui-field-error">{error}</span>
+                    <span class="ui-field-error">
+                        {move || localized_error_message(i18n, &error)}
+                    </span>
                 </ShowLet>
             </div>
         </div>

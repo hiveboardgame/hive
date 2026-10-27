@@ -1,13 +1,13 @@
 {
     "time_mode": {
-        "untimed": "Fără timp",
         "real_time": "Timp real",
         "correspondence": {
-            "title": "Corespondență",
             "days_move_one": "{{count}} zi per mutare",
             "days_move_other": "{{count}} zile per mutare",
             "days_side_one": "{{count}} zi per jucător",
-            "days_side_other": "{{count}} zile per jucător"
+            "days_side_other": "{{count}} zile per jucător",
+            "duration_move": "{{duration}} per mutare",
+            "duration_side": "{{duration}} per jucător"
         }
     },
     "played_in": "Jucat în:",
@@ -41,12 +41,113 @@
         "both_click": "Jocul va începe când amândoi jucătorii apasă pregătit în decurs de 30s unul de celălalt",
         "both_ready": "Acest joc de turneu va începe când ambii jucători sunt pregătiți"
     },
+    "arena": {
+        "berserk": "Berserk",
+        "berserk_title": "Renunță la increment și, când se aplică, la jumătate din timpul de bază pentru puncte Arena suplimentare.",
+        "back_to_arena": "Înapoi la arenă",
+        "return_for_pairing": "Revino pentru următorul adversar.",
+        "pairing_paused": "Pauză la împerecheri. Reia din arenă când ești gata."
+    },
+    "realtime_assignments": {
+        "title": "Partide în timp real pregătite",
+        "challenge": "Provocare în timp real",
+        "tournament": "Partidă de turneu",
+        "arena": "Partidă Arena",
+        "opening_due": "Mutarea de deschidere expiră în {{count}} s",
+        "opening_due_now": "Mutarea de deschidere expiră acum",
+        "open_new_tab": "Deschide într-o filă nouă"
+    },
     "speeds": {
         "bullet": "Bullet",
         "blitz": "Blitz",
         "rapid": "Rapid",
         "classic": "Clasic",
         "correspondence": "Corespondență",
-        "untimed": "Fără timp"
-    }
+        "untimed": "Fără timp",
+        "puzzle": "Problemă"
+    },
+    "tournament_result": {
+        "white_won": "Albul a câștigat",
+        "draw": "Remiză",
+        "black_won": "Negrul a câștigat",
+        "white_won_by_forfeit": "Albul a câștigat prin neprezentare",
+        "black_won_by_forfeit": "Negrul a câștigat prin neprezentare",
+        "adjudicated_draw": "Remiză decisă de arbitru",
+        "white_draw_black_forfeit_loss": "Remiză pentru Alb; înfrângere prin neprezentare pentru Negru",
+        "white_forfeit_loss_black_draw": "Înfrângere prin neprezentare pentru Alb; remiză pentru Negru",
+        "double_forfeit": "Dublă neprezentare"
+    },
+    "rating_range": "Interval elo",
+    "speeds_label": "Ritmuri",
+    "view": "Vezi",
+    "quickplay_tooltip": "{{speed}}\n{{base}} min timp inițial\n+{{increment}} sec pe mutare",
+    "rematch": "Revanșă",
+    "rematch_sent": "Trimis",
+    "accept_challenge": "Acceptă provocarea",
+    "cancel_challenge": "Anulează provocarea",
+    "decline_challenge": "Refuză provocarea",
+    "accepting": "Se acceptă…",
+    "removing": "Se elimină…",
+    "challenge_to_a_game": "Provoacă la o partidă",
+    "abort": "Anulează",
+    "accept_draw": "Acceptă remiza",
+    "offer_draw": "Propune remiză",
+    "reject_draw": "Refuză remiza",
+    "resign": "Abandonează",
+    "accept_takeback": "Acceptă anularea",
+    "reject_takeback": "Refuză anularea",
+    "request_takeback": "Cere anularea",
+    "invite_as_organizer": "Invită ca organizator",
+    "no_rating_history_yet": "Încă nu există istoric de rating",
+    "not_enough_games_to_build_a_graph": "Nu sunt suficiente partide pentru grafic",
+    "error_loading_history": "Eroare la încărcarea istoricului",
+    "show_controls": "Arată comenzile",
+    "hide_controls": "Ascunde comenzile",
+    "opponent_wants_a_takeback": "Adversarul cere anularea mutării",
+    "opponent_offers_a_draw": "Adversarul propune remiză",
+    "playing_now": "Se joacă acum",
+    "view_game_details": "Vezi detaliile partidei",
+    "connected": "Conectat",
+    "disconnected": "Deconectat",
+    "offline": "offline",
+    "unknown_player": "Jucător necunoscut",
+    "clear_selection": "Șterge selecția",
+    "searching": "Se caută…",
+    "played_in_label": "Jucată în",
+    "open_navigation_menu": "Deschide meniul de navigare",
+    "no_data": "Nu există date",
+    "analyze_here": "Analizează aici",
+    "rating_history_title": "Istoric rating {{speed}}",
+    "in_tournament": "în {{tournament}}",
+    "played_in_tournament": "jucată în {{tournament}}",
+    "site_description": "Cel mai bun loc pentru Hive online — jocul de strategie fără tablă. Gratuit, fără reclame, cu partide cotate, turnee și joc împotriva prietenilor, adversarilor aleatorii sau boților.",
+    "site_title": "HiveGame.com • Joacă Hive online",
+    "rating_history_minimum_games": "Joacă cel puțin cinci partide cotate la acest ritm pentru a vedea graficul.",
+    "result": {
+        "winner_timeout": "{{winner}} a câștigat la timp",
+        "winner_resignation": "{{winner}} a câștigat prin abandon",
+        "winner_board": "{{winner}} a câștigat pe tablă",
+        "winner_committee": "{{winner}} a câștigat prin decizia comisiei",
+        "winner_withdrawal": "{{winner}} a câștigat prin retragerea adversarului",
+        "winner_forfeit": "{{winner}} a câștigat prin forfait",
+        "double_forfeit": "Partida s-a încheiat cu forfait dublu",
+        "draw_summary": "{{result}} {{conclusion}}",
+        "winner": "{{winner}} a câștigat"
+    },
+    "conclusion": {
+        "board": "Încheiată pe tablă",
+        "committee": "Decizia comisiei",
+        "draw": "Remiză prin acord",
+        "forfeit": "Forfait",
+        "repetition": "Repetarea de 3 ori a mutărilor",
+        "resigned": "Abandon",
+        "timeout": "Timp expirat"
+    },
+    "clock": {
+        "days": "{{days}}z",
+        "days_hours": "{{days}}z:{{hours}}h",
+        "hours_minutes": "{{hours}}h{{minutes}}",
+        "arena_hours_minutes": "{{hours}}h {{minutes}}m"
+    },
+    "aborted_by": "{{actor}} a anulat partida"
 }

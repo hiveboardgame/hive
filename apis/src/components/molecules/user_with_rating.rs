@@ -1,5 +1,7 @@
+use crate::i18n::*;
 use hive_lib::Color;
 use leptos::{either::Either, prelude::*};
+use leptos_icons::Icon;
 use shared_types::GameSpeed;
 
 use crate::{
@@ -21,6 +23,7 @@ pub fn UserWithRating(
     #[prop(optional)] text_color: &'static str,
     #[prop(optional)] vertical: bool,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let game_state = expect_context::<GameStateStore>();
     let game_response = game_state.game_response();
     let player = Memo::new(move |_| match side() {
@@ -41,11 +44,19 @@ pub fn UserWithRating(
     let patreon = move || player.with(|p| p.as_ref().is_some_and(|p| p.patreon));
     let bot = move || player.with(|p| p.as_ref().is_some_and(|p| p.bot));
     let deleted = move || player.with(|p| p.as_ref().is_some_and(|p| p.deleted));
+    let berserked = Signal::derive(move || {
+        game_response.with(|response| {
+            response.as_ref().is_some_and(|game| match side.get() {
+                Color::White => game.white_berserked,
+                Color::Black => game.black_berserked,
+            })
+        })
+    });
     let rating = move || {
         player.with(|p| {
             p.as_ref().and_then(|player| {
                 speed().map(|speed| {
-                    Either::Left(view! { <Rating rating=player.ratings.get(&speed).expect("Valid rating from speed").clone() /> })
+                    Either::Left({ let rating = player.ratings.get(&speed).expect("Valid rating from speed"); view! { <Rating value=rating.rating certainty=rating.certainty.clone() /> } })
                 })
             }).unwrap_or_else(|| Either::Right(view! { "" }))
         })
@@ -69,6 +80,25 @@ pub fn UserWithRating(
                             deleted=deleted()
                             extend_tw_classes=text_color
                         />
+                        <Show when=berserked>
+
+                            <span
+                                class="inline-flex justify-center items-center ml-1 text-amber-800 bg-amber-100 rounded size-5 shrink-0"
+                                role="img"
+                                aria-label=move || {
+                                    t_string!(i18n, tournaments.ui.berserked).to_string()
+                                }
+                                title=move || {
+                                    t_string!(i18n, tournaments.ui.berserked).to_string()
+                                }
+                            >
+                                <Icon
+                                    icon=icondata_bs::BsLightningFill
+                                    attr:class="size-3.5"
+                                    attr:aria-hidden="true"
+                                />
+                            </span>
+                        </Show>
                     </div>
                 }
             }}

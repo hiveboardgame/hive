@@ -4,6 +4,7 @@ use crate::{
         atoms::simple_switch::SimpleSwitch,
         molecules::challenge_buttons_trio::ChallengeButtonsTrio,
     },
+    i18n::{t, use_i18n},
     providers::ApiRequestsProvider,
 };
 use hive_lib::GameType;
@@ -30,6 +31,7 @@ impl BotDifficulty {
 
 #[component]
 pub fn ChallengeBot() -> impl IntoView {
+    let i18n = use_i18n();
     let expansions = RwSignal::new(true);
     let difficulty = RwSignal::new(BotDifficulty::Medium);
     let api = expect_context::<ApiRequestsProvider>().0;
@@ -67,11 +69,11 @@ pub fn ChallengeBot() -> impl IntoView {
     view! {
         <div class="flex flex-col gap-4 items-center max-w-sm box-border w-[calc(100vw_-_3rem)] xs:m-2">
             <div class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Play an unrated game vs our bot
+                {t!(i18n, home.challenge.bot.play_an_unrated_game_vs_our_bot)}
             </div>
             <div class="ui-setting-group">
                 <div class="flex gap-2 items-center text-sm font-medium text-gray-700 dark:text-gray-300">
-                    <span>Base</span>
+                    <span>{t!(i18n, common.base)}</span>
                     <SimpleSwitch checked=expansions />
                     <span>MLP</span>
                 </div>
@@ -84,21 +86,21 @@ pub fn ChallengeBot() -> impl IntoView {
                         class=move || radio_style(matches!(difficulty.get(), BotDifficulty::Easy))
                         on:click=move |_| difficulty.set(BotDifficulty::Easy)
                     >
-                        Easy
+                        {t!(i18n, home.challenge.bot.easy)}
                     </button>
                     <button
                         type="button"
                         class=move || radio_style(matches!(difficulty.get(), BotDifficulty::Medium))
                         on:click=move |_| difficulty.set(BotDifficulty::Medium)
                     >
-                        Medium
+                        {t!(i18n, home.challenge.bot.medium)}
                     </button>
                     <button
                         type="button"
                         class=move || radio_style(matches!(difficulty.get(), BotDifficulty::Hard))
                         on:click=move |_| difficulty.set(BotDifficulty::Hard)
                     >
-                        Hard
+                        {t!(i18n, home.challenge.bot.hard)}
                     </button>
                 </div>
             </div>

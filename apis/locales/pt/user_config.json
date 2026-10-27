@@ -1,59 +1,78 @@
 {
-    "style_buttons": {
-        "three_d": "3D",
-        "flat": "Plano",
-        "official": "Oficial"
-    },
     "rotation": "Rotação",
-    "rotation_buttons": {
-        "no": "Não",
-        "yes": "Sim"
-    },
     "show_dots": "Mostrar pontos",
     "dots_buttons": {
         "angled": "Angulado",
-        "no": "Não",
         "vertical": "Vertical"
     },
+    "preselect": "Pré-seleção",
+    "preselect_description": "Permite selecionar uma peça durante o turno do adversário.",
+    "premove": "Pré-jogada",
+    "premove_description": "Programa uma jogada durante o turno do adversário. As pré-jogadas são executadas automaticamente sem confirmação se continuarem a ser legais.",
+    "drag_and_drop": "Arrastar e largar",
+    "drag_and_drop_description": "Move as peças arrastando-as. As jogadas durante o teu turno seguem a tua definição de confirmação de jogadas.",
     "game_speed": "Velocidade de jogo:",
     "move_confirm": "Confirmação da jogada:",
     "color_scheme": "Esquema de cores:",
     "preview": "Previsualizar:",
     "edit_account": {
-        "current_password": "Password atual",
-        "save_button": "Guardar",
-        "confirm_password": "Confirma password",
-        "new_password": "Nova password",
         "confirm_password_placeholder": "Nova password (novamente)"
     },
     "create_account": {
         "username": {
-            "title": "Nome de utilizador",
             "error": {
                 "taken": "Nome de utilizador já existe",
-                "invalid": "Caracter invalido no nome de utilizador"
+                "invalid": "Caracter invalido no nome de utilizador",
+                "reserved": "Este nome de utilizador está reservado.",
+                "length": "O nome de utilizador deve ter entre {{min}} e {{max}} caracteres."
             },
             "description": "Por favor, escolha um nome adequado. Qualquer conta com nomes inapropriados será eliminada!"
         },
         "email": {
-            "title": "Email",
             "error": {
                 "invalid": "Email invalido"
             },
             "description": "Precisamos do teu email para te enviar um email de confirmação quando criares a tua conta."
         },
-        "password": "Password",
-        "confirm_password": "Confirmação password",
         "be_nice_checkbox": "Eu aceito não perturbar outros jogadores e reportar abusos no Discord",
+        "legal_notice": "Ao criar uma conta, aceitas os nossos <terms_link>Termos de Serviço</terms_link>. A nossa <privacy_link>Política de Privacidade</privacy_link> explica como tratamos os teus dados.",
         "signup_button": "Registar",
         "registration_error": "Falhou o registo",
-        "existing_account_prompt": "Já tens uma conta? <login_link>Faz login</login_link>"
+        "existing_account_prompt": "Já tens uma conta? <login_link>Faz login</login_link>",
+        "password_requirements": "Usa entre {{min}} e {{max}} caracteres."
     },
     "login": {
         "email": "Email",
-        "password": "Password",
         "login_button": "Login",
         "no_account_prompt": "Não tens uma conta? <register_link>Inscreve-te</register_link>"
     },
-    "piece_style": "Estilo das peças"
+    "piece_style": "Estilo das peças",
+    "click_on_your_clock": "Clica no teu relógio",
+    "double_click": "Duplo clique",
+    "single_click": "Um clique",
+    "light_mode": "Modo claro",
+    "dark_mode": "Modo escuro",
+    "white_background": "Fundo branco",
+    "black_background": "Fundo preto",
+    "current_color": "Atual: {{color}}",
+    "ant_light_preview": "Formiga {{design}} (modo claro)",
+    "ant_dark_preview": "Formiga {{design}} (modo escuro)",
+    "tile_design": {
+        "official": "Oficial",
+        "flat": "Plano",
+        "three_d": "3D",
+        "high_contrast": "Alto contraste",
+        "community": "Comunidade",
+        "pride": "Orgulho",
+        "carbon_three_d": "Carbono 3D",
+        "carbon": "Carbono"
+    },
+    "tile_design_browser_notice": "Alguns navegadores não suportam todos os desenhos de peças. O Firefox apresenta os resultados mais consistentes.",
+    "settings": {
+        "settings": "Definições",
+        "tune_board_visuals_and_move_input_preferences": "Ajusta o aspeto do tabuleiro e as preferências de introdução de jogadas.",
+        "board_appearance": "Aspeto do tabuleiro",
+        "play_preferences": "Preferências de jogo",
+        "if_either_player_has_takebacks_disabled_game_controls_will": "Se algum jogador tiver o recuo de jogadas desativado, os controlos da partida não permitirão pedi-lo."
+    }
 }

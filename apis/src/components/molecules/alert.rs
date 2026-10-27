@@ -22,17 +22,31 @@ pub fn Alert() -> impl IntoView {
         alerts.last_alert.update(|v| *v = None);
     };
     let color = move || match (alerts.last_alert)() {
-        Some(AlertType::Error(_)) => "bg-red-100 border-ladybug-red",
-        Some(AlertType::Warn(_)) => "bg-yellow-100 border-orange-twilight",
-        Some(AlertType::Notification(_)) => "bg-blue-100 border-pillbug-teal",
+        Some(AlertType::Error(_) | AlertType::TournamentStartNeedsEntrants(_)) => {
+            "bg-red-100 border-ladybug-red"
+        }
+        Some(AlertType::Warn(_) | AlertType::GameAborted(_)) => {
+            "bg-yellow-100 border-orange-twilight"
+        }
+        Some(
+            AlertType::Notification(_)
+            | AlertType::TournamentSlotsClosed(_)
+            | AlertType::TournamentStartDeferred,
+        ) => "bg-blue-100 border-pillbug-teal",
         None => "",
     };
     let label = move || match (alerts.last_alert)() {
-        Some(AlertType::Error(_)) => t_string!(i18n, messages.chat.alert_error).to_string(),
-        Some(AlertType::Warn(_)) => t_string!(i18n, messages.chat.alert_warning).to_string(),
-        Some(AlertType::Notification(_)) => {
-            t_string!(i18n, messages.chat.alert_notification).to_string()
+        Some(AlertType::Error(_) | AlertType::TournamentStartNeedsEntrants(_)) => {
+            t_string!(i18n, messages.chat.alert_error).to_string()
         }
+        Some(AlertType::Warn(_) | AlertType::GameAborted(_)) => {
+            t_string!(i18n, messages.chat.alert_warning).to_string()
+        }
+        Some(
+            AlertType::Notification(_)
+            | AlertType::TournamentSlotsClosed(_)
+            | AlertType::TournamentStartDeferred,
+        ) => t_string!(i18n, messages.chat.alert_notification).to_string(),
         None => String::new(),
     };
 

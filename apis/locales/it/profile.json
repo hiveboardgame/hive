@@ -1,27 +1,28 @@
 {
-    "game_buttons": {
-        "playing": "Giocare",
-        "pending": "In attesa",
-        "finished": "Completato"
-    },
-    "color_buttons": {
-        "both": "Entrambi",
-        "white": "Bianco",
-        "black": "Nero"
-    },
     "result_buttons": {
         "draw": "Patta",
-        "all": "Tutto",
         "loss": "Sconfitte",
         "win": "Vittorie"
     },
-    "stats_box": {
-        "total": "Total",
-        "wins": "Vittorie",
-        "losses": "Sconfitte",
-        "draws": "Patte"
-    },
-    "player_color": "Colore giocatore:",
     "game_result": "Risultato della partita:",
-    "include_speeds": "Velocitá incluse:"
+    "include_speeds": "Velocitá incluse:",
+    "speed_statistics": "Statistiche: {{speed}}",
+    "expansion_buttons": {
+        "basic": "Base",
+        "full": "Completo"
+    },
+    "player_color": "Colore giocatore",
+    "rating": "Rating",
+    "games_played_one": "{{count}} partita",
+    "games_played_other": "{{count}} partite",
+    "page": {
+        "redirecting": "Reindirizzamento…",
+        "user_not_found": "Utente non trovato"
+    },
+    "leaderboards": {
+        "top_rated_players": "Giocatori con punteggio più alto",
+        "highest_rated_players_by_speed": "Giocatori con punteggio più alto per cadenza.",
+        "top_rated_bots": "Bot con punteggio più alto",
+        "highest_rated_bots_by_speed": "Bot con punteggio più alto per cadenza."
+    }
 }

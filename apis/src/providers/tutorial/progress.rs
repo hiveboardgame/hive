@@ -48,7 +48,12 @@ impl TutorialProgress {
     }
 
     pub fn completed_count(&self) -> usize {
-        self.completed.with(|completed| completed.iter().filter(|id| find_lesson(id).is_some()).count())
+        self.completed.with(|completed| {
+            completed
+                .iter()
+                .filter(|id| find_lesson(id).is_some())
+                .count()
+        })
     }
 
     pub fn total(&self) -> usize {
@@ -97,7 +102,11 @@ impl TutorialProgress {
                 }
             };
             let local = progress.completed.get_untracked();
-            let missing_on_server: Vec<String> = local.difference(&server).filter(|id| find_lesson(id).is_some()).cloned().collect();
+            let missing_on_server: Vec<String> = local
+                .difference(&server)
+                .filter(|id| find_lesson(id).is_some())
+                .cloned()
+                .collect();
             if !missing_on_server.is_empty() {
                 if let Err(error) = complete_tutorial_lessons(missing_on_server).await {
                     log::warn!("could not save tutorial progress: {error}");

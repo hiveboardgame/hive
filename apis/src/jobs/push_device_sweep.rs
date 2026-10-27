@@ -11,6 +11,7 @@ pub fn run(pool: DbPool) {
         let mut interval = actix_rt::time::interval(Duration::from_secs(SWEEP_INTERVAL_SECS));
         loop {
             interval.tick().await;
+            crate::active_instance::wait_until_active().await;
             let threshold = Utc::now() - ChronoDuration::days(STALE_THRESHOLD_DAYS);
             match get_conn(&pool).await {
                 Ok(mut conn) => match PushDevice::delete_stale(threshold, &mut conn).await {

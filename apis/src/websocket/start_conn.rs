@@ -1,24 +1,34 @@
 use std::sync::Arc;
 
-use crate::websocket::{
-    messages::SocketTx,
-    ws_connection::reader_task,
-    ws_hub::{WsHub, SOCKET_BUFFER_CAPACITY},
-    WebsocketData,
+use crate::{
+    api::v1::auth::jwt_secret::JwtSecret,
+    security::origin::validate_request_origin,
+    websocket::{
+        messages::{SocketFormat, SocketTx},
+        ws_connection::{reader_task, Deps},
+        ws_hub::{WsHub, SOCKET_BUFFER_CAPACITY},
+        WebsocketData,
+    },
 };
 use actix_identity::Identity;
 use actix_web::{
     get,
-    web::{Data, Payload},
+    web::{Data, Payload, Query},
     Error,
     HttpRequest,
     HttpResponse,
 };
 use bytes::Bytes;
 use db_lib::{get_conn, models::User, DbPool};
+use serde::Deserialize;
 use shared_types::SimpleUser;
 use tokio::sync::mpsc;
 use uuid::Uuid;
+
+#[derive(Deserialize)]
+struct SocketOptions {
+    format: Option<String>,
+}
 
 #[get("/ws/")]
 pub async fn start_connection(
@@ -28,7 +38,25 @@ pub async fn start_connection(
     pool: Data<DbPool>,
     identity: Option<Identity>,
     data: Data<WebsocketData>,
+    jwt_secret: Data<JwtSecret>,
 ) -> Result<HttpResponse, Error> {
+    // Only a cookie-carrying handshake can be hijacked cross-site. Bots connect without a
+    // cookie and without the Origin header browsers always send, then authenticate in-band.
+    if let Err(error) = validate_request_origin(&req, identity.is_some()) {
+        data.telemetry.record_handshake_fail();
+        return Err(error);
+    }
+    let options = Query::<SocketOptions>::from_query(req.query_string())?;
+    let format = if options.format.as_deref() == Some("json") {
+        SocketFormat::Json
+    } else {
+        SocketFormat::Msgpack
+    };
+    // Until the previous instance has stopped, its sockets may still be raising events this
+    // hub never sees; clients retry and connect once the handoff is complete.
+    if !crate::active_instance::is_active_instance() {
+        return Ok(HttpResponse::ServiceUnavailable().finish());
+    }
     let user = resolve_identity(identity, &pool).await;
 
     let ws_result = actix_ws::handle(&req, body);
@@ -45,12 +73,26 @@ pub async fn start_connection(
 
     let socket_id = Uuid::new_v4();
     let (tx, mut out_rx) = mpsc::channel::<Bytes>(SOCKET_BUFFER_CAPACITY);
-    let socket = SocketTx { socket_id, tx };
+    let socket = SocketTx {
+        socket_id,
+        format,
+        tx,
+    };
 
     let mut write_session = session.clone();
     actix_web::rt::spawn(async move {
         while let Some(bytes) = out_rx.recv().await {
-            if write_session.binary(bytes).await.is_err() {
+            // The hub already encoded for this socket's format; the writer only picks the frame
+            // type that carries it.
+            let written = match format {
+                SocketFormat::Msgpack => write_session.binary(bytes).await,
+                SocketFormat::Json => {
+                    write_session
+                        .text(String::from_utf8_lossy(&bytes).into_owned())
+                        .await
+                }
+            };
+            if written.is_err() {
                 // The transport is broken. Close the session from this side
                 // so the reader's MessageStream wakes up immediately and
                 // calls on_disconnect — otherwise every subsequent dispatch
@@ -65,8 +107,18 @@ pub async fn start_connection(
     let hub = hub.get_ref().clone();
     let data = Arc::clone(&data);
     let pool = pool.get_ref().clone();
+    let jwt_secret = jwt_secret.into_inner();
     actix_web::rt::spawn(reader_task(
-        session, msg_stream, socket, hub, data, pool, user,
+        session,
+        msg_stream,
+        socket,
+        Deps {
+            hub,
+            data,
+            pool,
+            jwt_secret,
+        },
+        user,
     ));
 
     Ok(response)
@@ -80,6 +132,7 @@ async fn resolve_identity(identity: Option<Identity>, pool: &DbPool) -> SimpleUs
             username: id.to_string(),
             admin: false,
             authed: false,
+            bot: false,
         }
     };
 
@@ -107,6 +160,7 @@ async fn resolve_identity(identity: Option<Identity>, pool: &DbPool) -> SimpleUs
                     username: user.username,
                     admin: user.admin,
                     authed: true,
+                    bot: user.bot,
                 }
             }
             Err(_) => anonymous(),
@@ -114,6 +168,54 @@ async fn resolve_identity(identity: Option<Identity>, pool: &DbPool) -> SimpleUs
         Err(err) => {
             log::warn!("WS connect: DB pool unavailable, falling back to anonymous: {err}");
             anonymous()
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::security::origin::ApplicationOrigin;
+    use actix_identity::IdentityMiddleware;
+    use actix_session::{storage::CookieSessionStore, SessionMiddleware};
+    use actix_web::{cookie::Key, http::StatusCode, test, App};
+    use db_lib::get_pool;
+
+    #[actix_web::test]
+    async fn browser_and_json_clients_upgrade_without_a_protocol_version() {
+        let pool = get_pool("postgresql://test:test@127.0.0.1:9/test")
+            .await
+            .expect("lazy pool");
+        let data = Arc::new(WebsocketData::default());
+        let hub = WsHub::new(Arc::clone(&data), pool.clone());
+        let app = test::init_service(
+            App::new()
+                .wrap(IdentityMiddleware::default())
+                .wrap(SessionMiddleware::new(
+                    CookieSessionStore::default(),
+                    Key::from(&[0; 64]),
+                ))
+                .app_data(Data::new(pool))
+                .app_data(Data::new(JwtSecret::new("test-secret".to_string())))
+                .app_data(Data::new(hub))
+                .app_data(Data::from(data))
+                .app_data(Data::new(
+                    ApplicationOrigin::parse("https://hivegame.com").unwrap(),
+                ))
+                .service(start_connection),
+        )
+        .await;
+        for uri in ["/ws/", "/ws/?format=json"] {
+            let request = test::TestRequest::get()
+                .uri(uri)
+                .insert_header(("origin", "https://hivegame.com"))
+                .insert_header(("upgrade", "websocket"))
+                .insert_header(("connection", "upgrade"))
+                .insert_header(("sec-websocket-version", "13"))
+                .insert_header(("sec-websocket-key", "dGhlIHNhbXBsZSBub25jZQ=="))
+                .to_request();
+            let response = test::call_service(&app, request).await;
+            assert_eq!(response.status(), StatusCode::SWITCHING_PROTOCOLS, "{uri}");
         }
     }
 }

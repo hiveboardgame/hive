@@ -242,10 +242,10 @@ impl Board {
         // A connected MLP hive spans at most 28 cells per axis. Reject larger imports
         // before reframing could discard pieces outside the window.
         assert!(
-            q_width.max(r_width) <= BOARD_SIZE - 2 * MARGIN - 1,
+            q_width.max(r_width) < BOARD_SIZE - 2 * MARGIN,
             "hive spans {q_width}x{r_width}, wider than any window"
         );
-        let small = q_width.max(r_width) <= SMALL_SIZE - 2 * MARGIN - 1;
+        let small = q_width.max(r_width) < SMALL_SIZE - 2 * MARGIN;
         let size = if small { SMALL_SIZE } else { BOARD_SIZE };
         let start = |min: i32, width: i32| min - MARGIN - (size - 2 * MARGIN - 1 - width) / 2;
         (
@@ -278,7 +278,7 @@ impl Board {
         };
         let centre = Position::initial_spawn_position();
         let (q_width, r_width) = (q_max - q_min, r_max - r_min);
-        let small = q_width.max(r_width) <= SMALL_SIZE - 2 * MARGIN - 1;
+        let small = q_width.max(r_width) < SMALL_SIZE - 2 * MARGIN;
         let low = INITIAL_ORIGIN.q + MARGIN;
         let high = INITIAL_ORIGIN.q + SMALL_SIZE - MARGIN - 1;
         let start = |mid: i32, width: i32| {
@@ -902,6 +902,30 @@ impl Board {
         })
     }
 
+    /// Destinations for one piece, including friendly abilities that can throw it.
+    pub fn moves_for_piece(&self, color: Color, piece: Piece) -> Vec<Position> {
+        let mut moves = Vec::new();
+        if self.game_result() != GameResult::Unknown || !self.queen_played(color) {
+            return moves;
+        }
+        let Some(position) = self.position_of_piece(piece) else {
+            return moves;
+        };
+        if self.top_piece(position) != Some(piece) || self.last_moved == Some((piece, position)) {
+            return moves;
+        }
+
+        if piece.is_color(color) && !self.is_pinned(piece) {
+            moves = Bug::normal_moves(position, self);
+        }
+        for (_, ability_position) in self.ability_pieces_around(color, position) {
+            moves.extend(ability_position.positions_around().filter(|target| {
+                Bug::can_throw_piece_to(ability_position, position, *target, self)
+            }));
+        }
+        moves
+    }
+
     pub fn moves(&self, color: Color) -> HashMap<(Piece, Position), Vec<Position>> {
         let mut moves: HashMap<(Piece, Position), Vec<Position>> = HashMap::default();
         match self.game_result() {
@@ -1315,7 +1339,7 @@ impl fmt::Display for Board {
 mod tests {
     use super::*;
     use crate::{game_status::GameStatus, history::History, state::State};
-    use std::collections::HashSet;
+    use std::{collections::HashSet, fs};
 
     fn queens_under_siege(surrounded: &[Color]) -> Board {
         let mut board = Board::new();
@@ -1737,6 +1761,58 @@ mod tests {
                 state
                     .play_turn_from_history(piece, position)
                     .unwrap_or_else(|err| panic!("{file} turn {}: {err}", state.turn));
+            }
+        }
+    }
+
+    #[test]
+    fn piece_move_generation_matches_full_generation() {
+        let pieces: Vec<Piece> = [Color::White, Color::Black]
+            .into_iter()
+            .flat_map(|color| {
+                Bug::all().into_iter().flat_map(move |bug| {
+                    (0..bug.count(GameType::MLP)).map(move |index| {
+                        Piece::new_from(bug, color, if bug.has_order() { index + 1 } else { 0 })
+                    })
+                })
+            })
+            .collect();
+
+        for entry in fs::read_dir("./test_pgns/valid").expect("valid fixture directory") {
+            let path = entry.expect("fixture entry").path();
+            let history = History::from_filepath(path.clone()).expect("valid history");
+            let tournament = !history.moves.iter().take(2).any(|(piece, _)| {
+                piece
+                    .parse::<Piece>()
+                    .is_ok_and(|piece| piece.bug() == Bug::Queen)
+            });
+            let mut state = State::new(history.game_type, tournament);
+            state.set_replaying(true);
+            for turn in 0..=history.moves.len() {
+                for color in [Color::White, Color::Black] {
+                    let full = state.board.moves(color);
+                    for &piece in &pieces {
+                        let expected: HashSet<Position> = state
+                            .board
+                            .position_of_piece(piece)
+                            .and_then(|position| full.get(&(piece, position)))
+                            .into_iter()
+                            .flatten()
+                            .copied()
+                            .collect();
+                        let actual: HashSet<Position> = state
+                            .board
+                            .moves_for_piece(color, piece)
+                            .into_iter()
+                            .collect();
+                        assert_eq!(actual, expected, "{path:?} ply {turn}, {color}, {piece}");
+                    }
+                }
+                if let Some((piece, position)) = history.moves.get(turn) {
+                    state
+                        .play_turn_from_history(piece, position)
+                        .unwrap_or_else(|err| panic!("{path:?} ply {turn}: {err}"));
+                }
             }
         }
     }

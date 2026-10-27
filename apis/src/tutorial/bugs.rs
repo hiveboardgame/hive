@@ -159,11 +159,17 @@ const ANT_FIRST_MOVES: Lesson = Lesson {
     steps: &[
         Step::play(
             "You play as White.\nMove your Ant [[wA1]] beside the black Queen [[bQ]].",
-            MovePiece { piece: "wA1", touching: Some("bQ") },
+            MovePiece {
+                piece: "wA1",
+                touching: Some("bQ"),
+            },
             "Move your Ant into any hex touching the black Queen.",
         )
         .hint_after(2),
-        Step::read("Well done! Your Ant [[wA1]] is beside the black Queen [[bQ]].", &[]),
+        Step::read(
+            "Well done! Your Ant [[wA1]] is beside the black Queen [[bQ]].",
+            &[],
+        ),
     ],
     outro: "",
 };

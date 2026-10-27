@@ -14,9 +14,9 @@ use crate::{
     },
     DbConn,
 };
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable};
-use diesel_async::RunQueryDsl;
+use diesel_async::{AsyncConnection, RunQueryDsl};
 use uuid::Uuid;
 
 #[derive(Insertable, Debug)]
@@ -55,16 +55,33 @@ impl EmailQueueItem {
 
     pub async fn claim_batch(
         limit: i64,
+        lease: Duration,
         conn: &mut DbConn<'_>,
     ) -> Result<Vec<EmailQueueItem>, DbError> {
-        Ok(email_queue_table
-            .filter(sent_at.is_null())
-            .filter(attempts_field.lt(3))
-            .filter(scheduled_at.le(Utc::now()))
-            .order(created_at.asc())
-            .limit(limit)
-            .load(conn)
-            .await?)
+        let lease = Utc::now() + lease;
+        conn.transaction::<_, DbError, _>(async move |tc| {
+            let ids: Vec<Uuid> = email_queue_table
+                .select(id_field)
+                .filter(sent_at.is_null())
+                .filter(attempts_field.lt(3))
+                .filter(scheduled_at.le(Utc::now()))
+                .order(created_at.asc())
+                .limit(limit)
+                .for_update()
+                .skip_locked()
+                .load(tc)
+                .await?;
+            if ids.is_empty() {
+                return Ok(Vec::new());
+            }
+            Ok(
+                diesel::update(email_queue_table.filter(id_field.eq_any(ids)))
+                    .set(scheduled_at.eq(lease))
+                    .get_results(tc)
+                    .await?,
+            )
+        })
+        .await
     }
 
     pub async fn mark_sent(id: Uuid, conn: &mut DbConn<'_>) -> Result<(), DbError> {

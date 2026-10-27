@@ -23,14 +23,22 @@ impl HivegroundPaint {
 
     pub fn with_blank_movers(mut self, movers: Option<&[&str]>) -> Self {
         self.blank_movers = movers.map(|movers| {
-            movers.iter().filter_map(|piece| piece.parse().ok()).collect()
+            movers
+                .iter()
+                .filter_map(|piece| piece.parse().ok())
+                .collect()
         });
         self
     }
 
     pub fn with_visible_pieces(mut self, visible: Option<&[&str]>) -> Self {
         if let Some(visible) = visible {
-            self.blank_movers = Some(visible.iter().filter_map(|piece| piece.parse().ok()).collect());
+            self.blank_movers = Some(
+                visible
+                    .iter()
+                    .filter_map(|piece| piece.parse().ok())
+                    .collect(),
+            );
             self.show_queens = false;
         }
         self
@@ -39,7 +47,9 @@ impl HivegroundPaint {
     pub fn with_revealed_pieces(mut self, revealed: &[Piece]) -> Self {
         if let Some(visible) = self.blank_movers.as_mut() {
             for piece in revealed {
-                if !visible.contains(piece) { visible.push(*piece); }
+                if !visible.contains(piece) {
+                    visible.push(*piece);
+                }
             }
         }
         self
@@ -51,12 +61,14 @@ impl HivegroundPaint {
             PieceShadow::None => ShadowHref::None,
         };
         let mut paint = resolve_piece_paint(piece, &self.tile_options, shadow_href);
-        if self.blank_movers.as_ref().is_some_and(|movers| !movers.contains(&piece))
+        if self
+            .blank_movers
+            .as_ref()
+            .is_some_and(|movers| !movers.contains(&piece))
             && !(self.show_queens && piece.bug() == Bug::Queen)
         {
-            paint.bug_href = crate::common::BugHref(
-                "/assets/tiles/tutorial/blank.svg#blank".to_string()
-            );
+            paint.bug_href =
+                crate::common::BugHref("/assets/tiles/tutorial/blank.svg#blank".to_string());
             paint.dots_href = None;
             paint.rotation = None;
         }
@@ -69,6 +81,14 @@ impl HivegroundPaint {
 
     pub fn target(&self) -> OverlayPaint {
         OverlayPaint::target(&self.tile_options)
+    }
+
+    pub fn vacate_target(&self) -> OverlayPaint {
+        OverlayPaint::vacate_target(&self.tile_options)
+    }
+
+    pub fn premove(&self, direction: LastMoveDirection) -> OverlayPaint {
+        OverlayPaint::premove(&self.tile_options, direction)
     }
 
     pub fn last_move(&self, direction: LastMoveDirection) -> OverlayPaint {

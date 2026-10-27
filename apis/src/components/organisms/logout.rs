@@ -2,8 +2,9 @@ use crate::{
     i18n::*,
     providers::{online_users::OnlineUsersSignal, AuthContext},
     pwa,
+    security::csrf::ActionForm,
 };
-use leptos::{form::ActionForm, prelude::*, task::spawn_local};
+use leptos::{prelude::*, task::spawn_local};
 
 #[component]
 pub fn Logout() -> impl IntoView {
@@ -15,6 +16,7 @@ pub fn Logout() -> impl IntoView {
 
     view! {
         <ActionForm action=auth_context.logout attr:class="w-full">
+
             <Show when=move || push_endpoint.get().flatten().is_some()>
                 <input
                     type="hidden"

@@ -1,5 +1,5 @@
 use crate::{
-    common::{CurrentConfirm, MoveConfirm},
+    common::{localized_error_message, CurrentConfirm, MoveConfirm},
     components::{
         layouts::base_layout::OrientationSignal,
         molecules::{game_info::GameInfo, user_with_rating::UserWithRating},
@@ -18,8 +18,9 @@ use crate::{
     functions::games::get::get_game_from_nanoid,
     hiveground::{analysis_hiveground_interaction, selected_history_board},
     hooks::history_nav::use_analysis_history_keyboard_navigation,
+    i18n::{t, t_string, use_i18n},
     providers::{
-        analysis::{AnalysisContext, AnalysisStore},
+        analysis::{AnalysisContext, AnalysisStore, LoadError},
         annotations::AnnotationsSignal,
         game_state::{GameStateStore, GameStateStoreFields},
         AuthContext,
@@ -34,7 +35,7 @@ use leptos::{
 };
 use leptos_router::hooks::{use_params_map, use_query_map};
 use shared_types::{GameId, TimeMode};
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 const MOBILE_RESERVE_SYNC_DELAY: Duration = Duration::from_millis(500);
 
@@ -45,13 +46,21 @@ enum AnalysisSource {
     Game(GameId),
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug)]
+enum AnalysisLoadError {
+    Uhp(Arc<LoadError>),
+    Game(Arc<LoadError>),
+    Fetch(String),
+    Requested,
+}
+
+#[derive(Clone, Debug)]
 enum AnalysisLoadState {
     Loading(AnalysisSource),
     Ready(AnalysisSource),
     Failed {
         source: AnalysisSource,
-        message: String,
+        message: AnalysisLoadError,
     },
 }
 
@@ -70,7 +79,7 @@ impl AnalysisLoadState {
         self.source() != source || matches!(self, Self::Loading(loading) if loading == source)
     }
 
-    fn error(&self, source: &AnalysisSource) -> Option<String> {
+    fn error(&self, source: &AnalysisSource) -> Option<AnalysisLoadError> {
         match self {
             Self::Failed {
                 source: failed,
@@ -88,6 +97,7 @@ impl AnalysisLoadState {
 
 #[component]
 pub fn Analysis() -> impl IntoView {
+    let i18n = use_i18n();
     // Play can reset the app's store while this page is still unmounting. Keep
     // analysis state local so that reset cannot queue work on its departing board.
     let game_state = GameStateStore::new();
@@ -262,7 +272,7 @@ pub fn Analysis() -> impl IntoView {
     });
     let load_state = RwSignal::new(AnalysisLoadState::Ready(AnalysisSource::Blank));
     let complete_load = Callback::new(
-        move |(source, result): (AnalysisSource, Result<(), String>)| match result {
+        move |(source, result): (AnalysisSource, Result<(), AnalysisLoadError>)| match result {
             Ok(()) => {
                 analysis.preview.set(None);
                 analysis.sync_reserve_from_game_state(game_state);
@@ -312,8 +322,35 @@ pub fn Analysis() -> impl IntoView {
         auth_pending.get()
             || requested_source.with(|source| load_state.with(|state| state.is_loading(source)))
     };
-    let load_error =
-        move || requested_source.with(|source| load_state.with(|state| state.error(source)));
+    let load_error = move || {
+        let locale = i18n.get_locale();
+        requested_source
+            .with(|source| load_state.with(|state| state.error(source)))
+            .map(|error| match error {
+                AnalysisLoadError::Uhp(error) => t_string!(
+                    i18n,
+                    common.analysis.could_not_load_uhp_analysis_with_error,
+                    error = error.localized(locale)
+                )
+                .to_string(),
+                AnalysisLoadError::Game(error) => t_string!(
+                    i18n,
+                    common.analysis.could_not_load_analysis_with_error,
+                    error = error.localized(locale)
+                )
+                .to_string(),
+                AnalysisLoadError::Fetch(error) => t_string!(
+                    i18n,
+                    common.analysis.could_not_load_analysis_with_error,
+                    error = localized_error_message(i18n, &error)
+                )
+                .to_string(),
+                AnalysisLoadError::Requested => {
+                    t_string!(i18n, common.analysis.could_not_load_the_requested_analysis)
+                        .to_string()
+                }
+            })
+    };
     let can_retry = move || {
         !auth_pending.get()
             && !blocked.get()
@@ -342,7 +379,7 @@ pub fn Analysis() -> impl IntoView {
                 }
                 AnalysisSource::Uhp(uhp) => analysis_store
                     .load_uhp(game_state, uhp, requested_ply.get_untracked())
-                    .map_err(|error| format!("Could not load UHP analysis: {error}")),
+                    .map_err(|error| AnalysisLoadError::Uhp(Arc::new(error))),
                 AnalysisSource::Game(requested_game_id) => {
                     let resource = game_resource.by_ref().await;
                     if requested_source.with_untracked(|requested| requested != &source) {
@@ -355,9 +392,9 @@ pub fn Analysis() -> impl IntoView {
                         return;
                     }
                     match result {
-                        Err(error) => Err(format!("Could not load analysis: {error}")),
+                        Err(error) => Err(AnalysisLoadError::Fetch(error.to_string())),
                         Ok(game_response) if game_response.game_id != *requested_game_id => {
-                            Err("Could not load the requested analysis.".to_string())
+                            Err(AnalysisLoadError::Requested)
                         }
                         Ok(game_response) => analysis_store
                             .load_game_response(
@@ -365,7 +402,7 @@ pub fn Analysis() -> impl IntoView {
                                 game_response,
                                 requested_ply.get_untracked(),
                             )
-                            .map_err(|error| format!("Could not load analysis: {error}")),
+                            .map_err(|error| AnalysisLoadError::Game(Arc::new(error))),
                     }
                 }
             };
@@ -392,7 +429,7 @@ pub fn Analysis() -> impl IntoView {
                     <div class="flex col-span-full row-span-full justify-center items-center p-4 min-h-[calc(100dvh-2.5rem)]">
                         <div class="max-w-md ui-empty-state" role="status">
                             <div class="text-sm font-bold text-gray-800 dark:text-gray-100">
-                                "Loading analysis..."
+                                {t!(i18n, common.loading)}
                             </div>
                         </div>
                     </div>
@@ -402,12 +439,17 @@ pub fn Analysis() -> impl IntoView {
                 <Show
                     when=analysis_available
                     fallback=move || {
-                        let title = if blocked.get() {
-                            "Analysis is unavailable during this game."
-                        } else if loading() {
-                            "Loading analysis..."
-                        } else {
-                            "Could not load analysis."
+                        let title = move || {
+                            if blocked.get() {
+                                t_string!(
+                                    i18n, common.analysis.analysis_is_unavailable_during_this_game
+                                )
+                                    .to_string()
+                            } else if loading() {
+                                t_string!(i18n, common.loading).to_string()
+                            } else {
+                                t_string!(i18n, common.analysis.could_not_load_analysis).to_string()
+                            }
                         };
                         view! {
                             <div class="flex col-span-full row-span-full justify-center items-center p-4 min-h-[calc(100dvh-2.5rem)]">
@@ -424,7 +466,7 @@ pub fn Analysis() -> impl IntoView {
                                             class="mt-3 ui-button ui-button-primary ui-button-sm"
                                             on:click=retry
                                         >
-                                            "Retry"
+                                            {t!(i18n, common.retry)}
                                         </button>
                                     </Show>
                                 </div>
@@ -482,7 +524,7 @@ pub fn Analysis() -> impl IntoView {
 }
 
 fn should_block_analysis(identity: AuthIdentity, game_response: &GameResponse) -> bool {
-    let AuthIdentity::User(user_id) = identity else {
+    let Some(user_id) = identity.user_id() else {
         return false;
     };
     game_response.rated

@@ -1,7 +1,7 @@
 use crate::{
-    common::with_class,
+    common::{with_class, GEN42_URL},
     components::{
-        atoms::next_game_button::NextGameButton,
+        atoms::{login_button::LoginButton, next_game_button::NextGameButton},
         molecules::chat_and_controls::ChatAndControls,
         organisms::{
             darkmode_toggle::{DarkModeToggle, DarkModeToggleVariant},
@@ -18,7 +18,7 @@ use crate::{
         },
     },
     i18n::*,
-    providers::{games::GamesSignal, AuthContext, RefererContext},
+    providers::{games::GamesSignal, AuthContext},
     responses::AccountResponse,
 };
 use leptos::{either::Either, prelude::*};
@@ -29,7 +29,7 @@ const HEADER_NAV_ITEM_CLASS: &str =
     "flex h-full items-center px-2 py-0 font-bold whitespace-nowrap transition-colors duration-200 active:scale-100 no-link-style hover:bg-black/5 hover:text-pillbug-teal dark:hover:bg-white/10";
 
 #[component]
-pub fn Header() -> impl IntoView {
+pub fn Header(update_available: Signal<bool>) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     let i18n = use_i18n();
     let location = use_location();
@@ -52,12 +52,7 @@ pub fn Header() -> impl IntoView {
                     <CommunityDropdown />
                     <LearnDropdown />
                     <TournamentDropdown />
-                    <a
-                        class=HEADER_NAV_ITEM_CLASS
-                        href="https://www.gen42.com/"
-                        rel="external"
-                        target="_blank"
-                    >
+                    <a class=HEADER_NAV_ITEM_CLASS href=GEN42_URL rel="external" target="_blank">
                         {t!(i18n, header.buy_game)}
                     </a>
                     <a
@@ -68,27 +63,20 @@ pub fn Header() -> impl IntoView {
                     </a>
                 </div>
             </div>
-            <Controls user=auth_context.user current_game_id />
+            <Controls user=auth_context.user current_game_id update_available />
         </header>
     }
 }
 
 #[component]
 fn GuestActions(current_game_id: Signal<Option<GameId>>) -> impl IntoView {
-    let referrer = expect_context::<RefererContext>().pathname;
     view! {
         <div class="flex items-center mr-1 h-full">
             <ChatAndControls current_game_id />
             <SoundToggle />
             <LocaleDropdown />
             <DarkModeToggle variant=DarkModeToggleVariant::Header />
-            <a
-                class="ui-header-login-button no-link-style"
-                href="/login"
-                on:focus=move |_| set_redirect(referrer)
-            >
-                Login
-            </a>
+            <LoginButton class="ui-header-login-button no-link-style" />
         </div>
     }
 }
@@ -97,6 +85,7 @@ fn GuestActions(current_game_id: Signal<Option<GameId>>) -> impl IntoView {
 fn Controls(
     user: Signal<Option<AccountResponse>>,
     current_game_id: Signal<Option<GameId>>,
+    update_available: Signal<bool>,
 ) -> impl IntoView {
     move || match user() {
         Some(user) => {
@@ -112,14 +101,10 @@ fn Controls(
                     <SoundToggle />
                     <LocaleDropdown />
                     <NotificationDropdown current_game_id />
-                    <UserDropdown username=user.username.clone() current_game_id />
+                    <UserDropdown username=user.username.clone() current_game_id update_available />
                 </div>
             })
         }
         None => Either::Right(view! { <GuestActions current_game_id /> }),
     }
-}
-
-pub fn set_redirect(referrer: StoredValue<String>) {
-    referrer.set_value(use_location().pathname.get_untracked());
 }

@@ -1,10 +1,11 @@
 use crate::{
-    common::UserAction,
+    common::{game_speed_label, UserAction},
     components::{
         atoms::rating::icon_for_speed,
         molecules::{empty_state::EmptyState, user_row::UserRow},
     },
     functions::users::{get_top_bots, get_top_users},
+    i18n::*,
     providers::AuthContext,
 };
 use leptos::{either::Either, logging::log, prelude::*};
@@ -13,6 +14,7 @@ use shared_types::{GameSpeed, LeaderboardKind};
 
 #[component]
 pub fn Leaderboard(speed: GameSpeed, kind: LeaderboardKind) -> impl IntoView {
+    let i18n = use_i18n();
     let speed = Signal::derive(move || speed);
     let auth_context = expect_context::<AuthContext>();
     let viewer = Memo::new(move |_| {
@@ -43,7 +45,10 @@ pub fn Leaderboard(speed: GameSpeed, kind: LeaderboardKind) -> impl IntoView {
                             Either::Left(
                                 view! {
                                     <section class="w-full max-w-xs ui-panel">
-                                        <EmptyState title="Couldn't fetch top users" class="m-2" />
+                                        <EmptyState
+                                            title=move || t_string!(i18n, home.couldn_t_fetch_top_users)
+                                            class="m-2"
+                                        />
                                     </section>
                                 },
                             )
@@ -67,17 +72,17 @@ pub fn Leaderboard(speed: GameSpeed, kind: LeaderboardKind) -> impl IntoView {
                                                     attr:class="size-4 flex-shrink-0 text-pillbug-teal"
                                                 />
                                                 <h2 class="truncate text-sm font-bold text-gray-900 dark:text-gray-100">
-                                                    {speed().to_string()}
+                                                    {move || game_speed_label(i18n, speed())}
                                                 </h2>
                                             </div>
                                         </div>
                                         <div class="ui-panel-body p-2">
                                             <Show
                                                 when=move || !is_empty || show_unranked_placeholder
-                                                fallback=|| {
+                                                fallback=move || {
                                                     view! {
                                                         <EmptyState
-                                                            title="No one yet"
+                                                            title=move || t_string!(i18n, home.no_one_yet)
                                                             class="py-4"
                                                         />
                                                     }
@@ -107,7 +112,7 @@ pub fn Leaderboard(speed: GameSpeed, kind: LeaderboardKind) -> impl IntoView {
                                                         <div class="flex items-center gap-2">
                                                             <span class="w-6 text-right text-xs font-semibold text-gray-500 dark:text-gray-400"></span>
                                                             <div class="flex h-10 min-w-0 flex-1 items-center rounded px-3 py-1 text-xs font-semibold text-gray-500 ui-dense-table-row dark:text-gray-400">
-                                                                "Not ranked yet"
+                                                                {move || t_string!(i18n, home.not_ranked_yet)}
                                                             </div>
                                                         </div>
                                                     </Show>

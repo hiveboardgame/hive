@@ -18,7 +18,7 @@ pub fn FeaturedVideo() -> impl IntoView {
         <Show when=show>
             <div class=with_class(
                 "ui-panel",
-                "overflow-hidden mx-auto w-full max-w-screen-md transition-colors hover:border-pillbug-teal/40",
+                "overflow-hidden mx-auto w-full transition-colors hover:border-pillbug-teal/40",
             )>
                 <div class="ui-panel-header">
                     <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">
@@ -34,7 +34,7 @@ pub fn FeaturedVideo() -> impl IntoView {
                                 });
                         }
                         class="ui-button ui-button-danger ui-button-icon shrink-0"
-                        aria-label="Dismiss"
+                        aria-label=move || t_string!(i18n, common.dismiss)
                     >
                         <Icon icon=icondata_io::IoCloseSharp attr:class="size-5" />
                     </button>
@@ -44,12 +44,12 @@ pub fn FeaturedVideo() -> impl IntoView {
                     target="_blank"
                     rel="noopener noreferrer"
                     class="block pt-3 w-full no-underline ui-panel-body group"
-                    title="An introduction to Hive"
+                    title=move || t_string!(i18n, home.an_introduction_to_hive)
                 >
                     <div class="overflow-hidden relative w-full bg-black rounded aspect-video">
                         <img
                             src=THUMBNAIL_URL
-                            alt="Learn to play Hive - video thumbnail"
+                            alt=move || t_string!(i18n, home.learn_to_play_hive_video_thumbnail)
                             class="object-cover w-full h-full"
                             loading="lazy"
                         />

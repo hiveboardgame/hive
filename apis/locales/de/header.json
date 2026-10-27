@@ -14,21 +14,15 @@
         "analysis": "Analyse",
         "archive": "Archiv"
     },
-    "tournaments": {
-        "title": "Turniere",
-        "create": "Turnier erstellen",
-        "view": "Turniere ansehen"
-    },
     "buy_game": "Spiel kaufen",
     "donate": "Spenden",
     "support": "Unterstützen",
-    "login": "Anmelden",
     "user_menu": {
-        "profile": "Profil",
-        "messages": "Nachrichten",
+        "update_available": "Update verfügbar",
+        "refresh_when_ready": "Lade die Seite neu, wenn du bereit bist.",
+        "save_analysis_before_refresh": "Speichere deine Analyse vor dem Neuladen.",
         "edit_account": "Konto bearbeiten",
         "config": "Einstellungen",
-        "logout": "Abmelden",
-        "login": "Anmelden"
+        "logout": "Abmelden"
     }
 }

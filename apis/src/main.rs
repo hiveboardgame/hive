@@ -6,9 +6,12 @@ use std::sync::Arc;
 use actix_session::config::PersistentSession;
 use actix_web::{
     cookie::{time::Duration, SameSite},
-    middleware::Compress,
+    http::header::ContentEncoding,
+    middleware::{from_fn, Compress, Condition, DefaultHeaders},
+    web,
 };
 use apis::{api, email, functions, jobs, notifications};
+use apis::security::{csrf, origin::ApplicationOrigin};
 use apis::websocket::{self, WebsocketData};
 
 #[actix_web::main]
@@ -19,6 +22,7 @@ async fn main() -> std::io::Result<()> {
     use api::v1::auth::get_identity_handler::get_identity;
     use api::v1::auth::jwt_secret::JwtSecret;
     use api::v1::bot::users::api_get_user;
+    use api::v1::health::{health, health_ready};
     use actix_files::Files;
     use actix_identity::IdentityMiddleware;
     use actix_session::{storage::CookieSessionStore, SessionMiddleware};
@@ -38,8 +42,46 @@ async fn main() -> std::io::Result<()> {
         .install_default()
         .expect("failed to install rustls aws-lc-rs crypto provider");
 
+    pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../db/migrations");
+    let migration_flag = std::env::args().nth(1);
+    if let Some(flag @ ("--migrate-only" | "--pending-migrations")) = migration_flag.as_deref() {
+        use diesel::migration::Migration;
+        let database_url = std::env::var("DATABASE_URL").map_err(std::io::Error::other)?;
+        let mut conn = PgConnection::establish(&database_url).map_err(std::io::Error::other)?;
+        if flag == "--pending-migrations" {
+            let pending = conn
+                .pending_migrations(MIGRATIONS)
+                .map_err(std::io::Error::other)?;
+            for migration in &pending {
+                println!("pending migration {}", migration.name());
+            }
+            println!("{} migration(s) pending", pending.len());
+        } else {
+            let applied = conn
+                .run_pending_migrations(MIGRATIONS)
+                .map_err(std::io::Error::other)?;
+            for version in &applied {
+                println!("applied migration {version}");
+            }
+            println!("{} migration(s) applied", applied.len());
+        }
+        return Ok(());
+    }
+
     let conf = get_configuration(None).expect("Got configuration");
     let addr = conf.leptos_options.site_addr;
+    let mut public_origin = match std::env::var("APP_ORIGIN") {
+        Ok(origin) => ApplicationOrigin::parse(&origin)
+            .expect("APP_ORIGIN must be an HTTP(S) origin"),
+        Err(_) if cfg!(debug_assertions) => ApplicationOrigin::Development { port: addr.port() },
+        Err(_) => ApplicationOrigin::parse("https://hivegame.com")
+            .expect("the production origin is valid"),
+    };
+    if let Ok(additional) = std::env::var("APP_DEV_ORIGINS") {
+        public_origin = public_origin.with_development_origins(&additional)
+            .expect("APP_DEV_ORIGINS requires a development build and explicit HTTP(S) origins");
+    }
+    let public_origin = Data::new(public_origin);
     let routes = generate_route_list(App);
 
     // The backfill's info-level lifecycle lines are how a hash migration is supervised.
@@ -50,7 +92,6 @@ async fn main() -> std::io::Result<()> {
         .expect("couldn't initialize logging");
 
     let config = DbConfig::from_env().expect("Failed to load config from env");
-    pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../db/migrations");
     let database_url = &config.database_url;
     let mut conn = PgConnection::establish(database_url)
         .unwrap_or_else(|e| panic!("Error connecting to {database_url}: {e}"));
@@ -126,17 +167,20 @@ async fn main() -> std::io::Result<()> {
     }
 
     jobs::hash_backfill(pool.clone());
-    jobs::tournament_start(pool.clone(), Data::clone(&hub));
     jobs::heartbeat(Data::clone(&hub));
     jobs::ping(Data::clone(&hub));
     jobs::game_cleanup(pool.clone());
     jobs::challenge_cleanup(pool.clone());
     jobs::tournament_cleanup(pool.clone(), Data::clone(&hub));
+    jobs::tournament_runtime(pool.clone(), Data::clone(&hub));
     jobs::timeout_sweeper(pool.clone(), Data::clone(&hub));
     jobs::push_device_sweep(pool.clone());
     jobs::email_drain(pool.clone(), email::EmailConfig::from_env());
     jobs::email_cleanup(pool.clone());
-    let pwa_manifest = PwaManifest::from_site_root(&conf.leptos_options.site_root);
+    let pwa_manifest = PwaManifest::from_site_root(
+        &conf.leptos_options.site_root,
+        conf.leptos_options.hash_files,
+    );
 
     println!("listening on http://{}", addr);
 
@@ -147,6 +191,8 @@ async fn main() -> std::io::Result<()> {
         let pwa_assets = pwa_manifest.document_assets();
 
         App::new()
+            .app_data(Data::clone(&public_origin))
+            .app_data(Data::new(functions::oauth::DiscordLinkKey(cookie_key.clone())))
             .app_data(Data::new(pool.clone()))
             .app_data(Data::clone(&hub))
             .app_data(Data::clone(&data))
@@ -154,16 +200,29 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::from(push_telemetry.clone()))
             .app_data(Data::new(pwa_manifest.clone()))
             // serve JS/WASM/CSS from `pkg`
-            .service(Files::new("/pkg", format!("{site_root}/pkg")))
+            .service(
+                web::scope("/pkg")
+                    // Unhashed builds are fetched again after every rebuild, and gzipping the debug wasm takes minutes.
+                    .wrap(Condition::new(
+                        !leptos_options.hash_files,
+                        DefaultHeaders::new().add(ContentEncoding::Identity),
+                    ))
+                    .service(Files::new("", format!("{site_root}/pkg"))),
+            )
             .service(functions::pwa::worker)
+            .service(functions::pwa::localized_manifest)
+            .service(functions::pwa::manifest_redirect)
             // serve other assets from the `assets` directory
             .service(Files::new("/assets", site_root.as_ref()))
             // serve the favicon from /favicon.ico
             .service(favicon)
+            .service(health)
+            .service(health_ready)
             .service(start_connection)
             .service(functions::pwa::cache)
             .service(functions::web_push_http::vapid_public_key)
             .service(functions::web_push_http::web_subscription)
+            .service(csrf::token_endpoint)
             .service(functions::oauth::callback)
             .service(functions::og::og_game_image)
             .service(get_token)
@@ -188,7 +247,6 @@ async fn main() -> std::io::Result<()> {
                     view! {
                         <DocumentShell
                             leptos_options=leptos_options.clone()
-                            manifest_href=pwa_assets.manifest_href.clone()
                             apple_touch_icon_href=pwa_assets.apple_touch_icon_href.clone()
                             pwa_script_src=pwa_assets.pwa_script_src.clone()
                         >
@@ -197,6 +255,8 @@ async fn main() -> std::io::Result<()> {
                     }
             }})
             .app_data(Data::new(leptos_options.to_owned()))
+            .wrap(from_fn(csrf::protection))
+            .wrap(from_fn(csrf::token_cookie))
             // IdentityMiddleware needs to be first
             .wrap(IdentityMiddleware::default())
             // Now SessionMiddleware, this is a bit confusing but actix invokes middlesware in
@@ -220,6 +280,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(Compress::default())
     })
     .bind(&addr)?
+    .shutdown_timeout(2)
     .run()
     .await
 }

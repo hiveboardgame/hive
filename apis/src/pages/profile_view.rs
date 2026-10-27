@@ -1,5 +1,5 @@
 use crate::{
-    common::with_class,
+    common::{login_redirect_url, with_class},
     components::{
         atoms::{
             block_toggle_button::BlockToggleButton,
@@ -46,6 +46,7 @@ struct UsernameParams {
 
 #[component]
 pub fn ProfileMe() -> impl IntoView {
+    let i18n = use_i18n();
     let auth = expect_context::<AuthContext>();
     let navigate = use_navigate();
     Effect::new(move |_| {
@@ -57,11 +58,11 @@ pub fn ProfileMe() -> impl IntoView {
             (Some(AuthIdentity::User(_)), Some(account)) => {
                 navigate(&format!("/@/{}", account.username), opts)
             }
-            (Some(AuthIdentity::Anonymous), _) => navigate("/login", opts),
+            (Some(AuthIdentity::Anonymous), _) => navigate(&untrack(login_redirect_url), opts),
             _ => {}
         }
     });
-    view! { <p class="p-4 dark:text-white">"Redirecting…"</p> }
+    view! { <p class="p-4 dark:text-white">{t!(i18n, profile.page.redirecting)}</p> }
 }
 
 #[component]
@@ -137,7 +138,10 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
             <Transition fallback=move || {
                 view! {
                     <div class="flex flex-1 justify-center items-center">
-                        <EmptyState title="Loading Profile..." class="max-w-sm" />
+                        <EmptyState
+                            title=move || t_string!(i18n, common.loading)
+                            class="max-w-sm"
+                        />
                     </div>
                 }
             }>
@@ -194,7 +198,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                                                                     current_tab() == GameProgress::Unstarted,
                                                                 )
                                                             >
-                                                                {t!(i18n, profile.game_buttons.pending)}
+                                                                {t!(i18n, common.pending)}
                                                             </a>
                                                             <a
                                                                 href=format!("/@/{}/playing", username.get_value())
@@ -202,7 +206,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                                                                     current_tab() == GameProgress::Playing,
                                                                 )
                                                             >
-                                                                {t!(i18n, profile.game_buttons.playing)}
+                                                                {t!(i18n, common.playing)}
                                                             </a>
                                                             <a
                                                                 href=format!("/@/{}/finished", username.get_value())
@@ -210,7 +214,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                                                                     current_tab() == GameProgress::Finished,
                                                                 )
                                                             >
-                                                                {t!(i18n, profile.game_buttons.finished)}
+                                                                {t!(i18n, common.finished)}
                                                             </a>
                                                         </div>
 
@@ -232,7 +236,10 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                                     Either::Right(
                                         view! {
                                             <div class="flex flex-1 justify-center items-center">
-                                                <EmptyState title="User not found" class="max-w-sm" />
+                                                <EmptyState
+                                                    title=move || t_string!(i18n, profile.page.user_not_found)
+                                                    class="max-w-sm"
+                                                />
                                             </div>
                                         },
                                     )

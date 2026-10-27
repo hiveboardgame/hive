@@ -1,17 +1,42 @@
 use crate::{
     i18n::*,
-    providers::{AuthContext, AuthIdentity},
+    providers::{
+        game_state::{GameStateStore, GameStateStoreFields},
+        AuthContext,
+        AuthIdentity,
+    },
     pwa,
 };
 use leptos::{prelude::*, task::spawn_local};
+use leptos_router::hooks::use_location;
 
 #[component]
 pub fn WebPushNudge(install_nudge_active: RwSignal<bool>) -> impl IntoView {
     let auth = expect_context::<AuthContext>();
+    let game_response = expect_context::<GameStateStore>().game_response();
+    let pathname = use_location().pathname;
+    let hide_during_game = Signal::derive(move || {
+        pathname.with(|pathname| {
+            let Some(game_id) = pathname
+                .strip_prefix("/game/")
+                .filter(|id| !id.is_empty() && !id.contains('/'))
+            else {
+                return false;
+            };
+            // Wait for this route's response; retained state can belong to the
+            // previous game while the new game is still loading.
+            game_response.with(|response| {
+                response
+                    .as_ref()
+                    .filter(|game| game.game_id.0 == game_id)
+                    .is_none_or(|game| !game.finished)
+            })
+        })
+    });
     let i18n = use_i18n();
     let dismissed = RwSignal::new(false);
     let busy = RwSignal::new(false);
-    let error = RwSignal::new(None::<String>);
+    let error = RwSignal::new(None::<pwa::PushError>);
 
     let should_show = LocalResource::new(move || {
         let logged_in = matches!(auth.identity.get(), Some(AuthIdentity::User(_)));
@@ -30,7 +55,10 @@ pub fn WebPushNudge(install_nudge_active: RwSignal<bool>) -> impl IntoView {
         }
     });
     let show = Signal::derive(move || {
-        !dismissed.get() && !install_nudge_active.get() && should_show.get().unwrap_or(false)
+        !dismissed.get()
+            && !install_nudge_active.get()
+            && !hide_during_game.get()
+            && should_show.get().unwrap_or(false)
     });
 
     let enable = move |_| {
@@ -67,7 +95,11 @@ pub fn WebPushNudge(install_nudge_active: RwSignal<bool>) -> impl IntoView {
                         </a> {t!(i18n, notifications.nudge.body_after_link)}
                     </p>
                     <Show when=move || error.with(Option::is_some)>
-                        <p class="mt-1 ui-field-error">{move || error.get().unwrap_or_default()}</p>
+                        <p class="mt-1 ui-field-error">
+                            {move || {
+                                error.with(|error| error.as_ref().map(|error| error.message(i18n)))
+                            }}
+                        </p>
                     </Show>
                 </div>
                 <button
@@ -79,13 +111,13 @@ pub fn WebPushNudge(install_nudge_active: RwSignal<bool>) -> impl IntoView {
                         if busy.get() {
                             t_string!(i18n, notifications.nudge.enabling)
                         } else {
-                            t_string!(i18n, notifications.nudge.enable)
+                            t_string!(i18n, common.enable)
                         }
                     }}
                 </button>
                 <button
                     class="ui-button ui-button-ghost ui-button-icon-sm"
-                    aria-label=move || t_string!(i18n, notifications.nudge.dismiss).to_string()
+                    aria-label=move || t_string!(i18n, common.dismiss).to_string()
                     on:click=dismiss
                 >
                     "×"

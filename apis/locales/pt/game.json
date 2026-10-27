@@ -2,13 +2,13 @@
     "time_mode": {
         "real_time": "Tempo real",
         "correspondence": {
-            "title": "Por correspondência",
             "days_move_other": "{{count}} dias por jogada",
             "days_side_one": "{{count}} dia para cada lado",
             "days_side_other": "{{count}} dias para cada lado",
-            "days_move_one": "{{count}} dia por jogada"
-        },
-        "untimed": "Sem limite de tempo"
+            "days_move_one": "{{count}} dia por jogada",
+            "duration_move": "{{duration}} por jogada",
+            "duration_side": "{{duration}} para cada lado"
+        }
     },
     "played_in": "Jogado em:",
     "rated": "Classificado",
@@ -41,12 +41,113 @@
         "both_click": "O jogo irá começar quando ambos jogadores clicarem 'pronto' dentro de 30s de um do outro",
         "both_ready": "Este jogo do torneio começará quando ambos jogadores estiverem prontos"
     },
+    "arena": {
+        "berserk": "Berserk",
+        "berserk_title": "Abdique do incremento e, quando aplicável, de metade do tempo base para obter pontos extra de Arena.",
+        "back_to_arena": "Voltar à arena",
+        "return_for_pairing": "Volte para encontrar o próximo adversário.",
+        "pairing_paused": "Emparelhamentos em pausa. Retome na arena quando quiser."
+    },
+    "realtime_assignments": {
+        "title": "Partidas em tempo real prontas",
+        "challenge": "Desafio em tempo real",
+        "tournament": "Partida de torneio",
+        "arena": "Partida de Arena",
+        "opening_due": "A jogada inicial vence em {{count}} s",
+        "opening_due_now": "A jogada inicial vence agora",
+        "open_new_tab": "Abrir num novo separador"
+    },
     "speeds": {
         "bullet": "Bullet",
         "blitz": "Blitz",
         "rapid": "Rapid",
         "classic": "Clássico",
         "correspondence": "Correspondência",
-        "untimed": "Sem tempo"
-    }
+        "untimed": "Sem tempo",
+        "puzzle": "Problema"
+    },
+    "tournament_result": {
+        "white_won": "As brancas venceram",
+        "draw": "Empate",
+        "black_won": "As pretas venceram",
+        "white_won_by_forfeit": "As brancas venceram por falta de comparência",
+        "black_won_by_forfeit": "As pretas venceram por falta de comparência",
+        "adjudicated_draw": "Empate por decisão arbitral",
+        "white_draw_black_forfeit_loss": "Empate para as brancas; derrota das pretas por falta de comparência",
+        "white_forfeit_loss_black_draw": "Derrota das brancas por falta de comparência; empate para as pretas",
+        "double_forfeit": "Dupla falta de comparência"
+    },
+    "rating_range": "Intervalo de ELO",
+    "speeds_label": "Ritmos",
+    "view": "Ver",
+    "quickplay_tooltip": "{{speed}}\n{{base}} min de tempo inicial\n+{{increment}} s por jogada",
+    "rematch": "Revanche",
+    "rematch_sent": "Enviado",
+    "accept_challenge": "Aceitar desafio",
+    "cancel_challenge": "Cancelar desafio",
+    "decline_challenge": "Recusar desafio",
+    "accepting": "A aceitar...",
+    "removing": "A remover...",
+    "challenge_to_a_game": "Desafiar para uma partida",
+    "abort": "Abortar",
+    "accept_draw": "Aceitar empate",
+    "offer_draw": "Oferecer empate",
+    "reject_draw": "Recusar empate",
+    "resign": "Desistir",
+    "accept_takeback": "Aceitar recuo",
+    "reject_takeback": "Recusar recuo",
+    "request_takeback": "Pedir recuo",
+    "invite_as_organizer": "Convidar como organizador",
+    "no_rating_history_yet": "Ainda não há histórico de classificação",
+    "not_enough_games_to_build_a_graph": "Não há partidas suficientes para criar um gráfico",
+    "error_loading_history": "Erro ao carregar o histórico",
+    "show_controls": "Mostrar controlos",
+    "hide_controls": "Ocultar controlos",
+    "opponent_wants_a_takeback": "O adversário quer recuar uma jogada",
+    "opponent_offers_a_draw": "O adversário oferece empate",
+    "playing_now": "A jogar agora",
+    "view_game_details": "Ver detalhes da partida",
+    "connected": "Ligado",
+    "disconnected": "Desligado",
+    "offline": "offline",
+    "unknown_player": "Jogador desconhecido",
+    "clear_selection": "Limpar seleção",
+    "searching": "A procurar...",
+    "played_in_label": "Jogado em",
+    "open_navigation_menu": "Abrir menu de navegação",
+    "no_data": "Sem dados",
+    "analyze_here": "Analisar aqui",
+    "rating_history_title": "Histórico de classificação de {{speed}}",
+    "in_tournament": "em {{tournament}}",
+    "played_in_tournament": "jogado em {{tournament}}",
+    "site_description": "O melhor lugar para jogar Hive online: o jogo de estratégia sem tabuleiro. Grátis, sem anúncios, com partidas classificadas, torneios e jogos contra amigos, adversários aleatórios ou bots.",
+    "site_title": "HiveGame.com • Joga Hive online",
+    "rating_history_minimum_games": "Joga pelo menos cinco partidas classificadas a este ritmo para mostrar o gráfico.",
+    "result": {
+        "winner_timeout": "{{winner}} ganhou por tempo",
+        "winner_resignation": "{{winner}} ganhou por desistência",
+        "winner_board": "{{winner}} ganhou no tabuleiro",
+        "winner_committee": "{{winner}} ganhou por decisão da comissão",
+        "winner_withdrawal": "{{winner}} ganhou por retirada",
+        "winner_forfeit": "{{winner}} ganhou por falta de comparência",
+        "double_forfeit": "A partida terminou com dupla falta de comparência",
+        "draw_summary": "{{result}} {{conclusion}}",
+        "winner": "{{winner}} ganhou"
+    },
+    "conclusion": {
+        "board": "Terminada no tabuleiro",
+        "committee": "Decisão da comissão",
+        "draw": "Empate acordado",
+        "forfeit": "Falta de comparência",
+        "repetition": "Tripla repetição de jogadas",
+        "resigned": "Desistência",
+        "timeout": "Tempo esgotado"
+    },
+    "clock": {
+        "days": "{{days}}d",
+        "days_hours": "{{days}}d:{{hours}}h",
+        "hours_minutes": "{{hours}}h{{minutes}}",
+        "arena_hours_minutes": "{{hours}}h {{minutes}}m"
+    },
+    "aborted_by": "{{actor}} abortou a partida"
 }

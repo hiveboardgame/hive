@@ -1,7 +1,8 @@
+use crate::security::csrf::CsrfClient;
 use leptos::prelude::*;
 use shared_types::PushMetrics;
 
-#[server]
+#[server(client = CsrfClient)]
 pub async fn read_push_metrics() -> Result<PushMetrics, ServerFnError> {
     use crate::{
         functions::{auth::identity::ensure_admin, db::pool},

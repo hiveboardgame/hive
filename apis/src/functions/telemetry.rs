@@ -1,3 +1,4 @@
+use crate::security::csrf::CsrfClient;
 use leptos::prelude::*;
 use shared_types::{TelemetryRange, TelemetryRow};
 
@@ -14,7 +15,7 @@ pub fn resolve_csv_path() -> Option<String> {
     }
 }
 
-#[server]
+#[server(client = CsrfClient)]
 pub async fn read_telemetry(range: TelemetryRange) -> Result<Vec<TelemetryRow>, ServerFnError> {
     use crate::functions::{auth::identity::ensure_admin, db::pool};
     use db_lib::get_conn;

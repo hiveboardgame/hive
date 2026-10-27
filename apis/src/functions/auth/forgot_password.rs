@@ -1,6 +1,7 @@
+use crate::security::csrf::CsrfClient;
 use leptos::prelude::*;
 
-#[server]
+#[server(client = CsrfClient)]
 pub async fn forgot_password(email: String) -> Result<(), ServerFnError> {
     use crate::{
         email::{enqueue_password_reset, generate_token},

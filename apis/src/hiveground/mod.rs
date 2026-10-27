@@ -1,6 +1,7 @@
 mod app_interaction;
 mod build;
 mod config;
+mod drag;
 mod grid;
 mod history;
 mod interaction;
@@ -21,6 +22,7 @@ pub use build::{
     ReserveRenderOptions,
 };
 pub use config::ReserveLayout;
+pub use drag::PieceDrag;
 pub use grid::grid_positions;
 pub use history::selected_history_board;
 pub use interaction::{HivegroundAction, HivegroundActions, HivegroundInteraction};

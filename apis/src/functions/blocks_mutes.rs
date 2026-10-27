@@ -1,4 +1,7 @@
 #[cfg(feature = "ssr")]
+use crate::common::UiError;
+use crate::security::csrf::CsrfClient;
+#[cfg(feature = "ssr")]
 use db_lib::db_error::DbError;
 use leptos::prelude::*;
 #[cfg(feature = "ssr")]
@@ -14,7 +17,7 @@ fn blocks_mutes_unexpected_error(
     err: impl std::fmt::Display,
 ) -> ServerFnError {
     error!("blocks/mutes server function failed while {context}: {err}");
-    ServerFnError::new("Unable to update block or mute settings")
+    ServerFnError::new(UiError::BlockMuteFailed.encode())
 }
 
 #[cfg(feature = "ssr")]
@@ -25,7 +28,7 @@ fn blocks_mutes_user_action_error(context: &'static str, err: DbError) -> Server
     ) {
         error!("blocks/mutes server function failed while {context}: {err}");
     }
-    ServerFnError::new("Unable to update block or mute settings")
+    ServerFnError::new(UiError::BlockMuteFailed.encode())
 }
 
 #[cfg(feature = "ssr")]
@@ -113,12 +116,12 @@ async fn set_tournament_mute_setting(
     Ok(muted)
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn set_user_blocked(blocked_id: Uuid, blocked: bool) -> Result<bool, ServerFnError> {
     set_block_setting(blocked_id, blocked).await
 }
 
-#[server(input = codec::Cbor, output = codec::Cbor)]
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
 pub async fn set_tournament_chat_muted(
     tournament_id: String,
     muted: bool,

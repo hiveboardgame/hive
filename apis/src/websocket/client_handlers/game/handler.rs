@@ -1,4 +1,4 @@
-use super::reaction::{handle_control, handle_new_game};
+use super::reaction::{handle_control, handle_new_game, navigate_to_actionable_game};
 use crate::{
     common::{ClientRequest, GameActionResponse, GameReaction, GameUpdate},
     providers::{
@@ -8,6 +8,7 @@ use crate::{
         websocket::WebsocketContext,
         AuthContext,
         AuthIdentity,
+        NotificationContext,
         UpdateNotifier,
     },
     responses::GameResponse,
@@ -23,10 +24,12 @@ pub fn handle_game(game_update: GameUpdate) {
     match game_update {
         GameUpdate::Reaction(game) => handle_reaction(game),
         GameUpdate::Tv(game) => {
-            games_signal.live_games_add(game);
+            games_signal.live_games_add((*game).clone());
         }
         GameUpdate::Urgent(games) => {
-            games_signal.own_games_set(games);
+            for game in games {
+                games_signal.own_games_add(game);
+            }
         }
         GameUpdate::OwnGameRemoved(game_id) => {
             games_signal.own_games_remove(&game_id);
@@ -35,6 +38,8 @@ pub fn handle_game(game_update: GameUpdate) {
         GameUpdate::Heartbeat(hb) => {
             game_updater.heartbeat.set(hb);
         }
+        // `GetGame` is a bot request, and bots do not run this client.
+        GameUpdate::Fetched(_) | GameUpdate::Ongoing(_) => {}
     }
 }
 
@@ -51,20 +56,37 @@ pub fn handle_urgent_games_snapshot(games: Vec<GameResponse>) {
 fn handle_reaction(gar: GameActionResponse) {
     let mut games = expect_context::<GamesSignal>();
     let update_notifier = expect_context::<UpdateNotifier>();
+    if gar.game.finished {
+        expect_context::<NotificationContext>()
+            .tournament_pairings
+            .update(|pairings| {
+                pairings.remove(&gar.game.game_id);
+            });
+    }
     match gar.game_action.clone() {
-        GameReaction::New => {
-            handle_new_game(gar.game.clone());
+        GameReaction::New { pairing_label } => {
+            handle_new_game((*gar.game).clone(), pairing_label);
         }
         GameReaction::Tv => {
-            games.live_games_add(gar.game);
+            games.live_games_add((*gar.game).clone());
         }
-        GameReaction::TimedOut => {
+        GameReaction::Adjudicated | GameReaction::TimedOut | GameReaction::Finished => {
             let game_id = &gar.game.game_id;
+            clear_ready_proposals(&update_notifier, game_id);
             games.own_games_remove(game_id);
             games.live_games_remove(game_id);
             update_notifier.game_response.set(Some(gar.clone()));
             let chat = expect_context::<Chat>();
             chat.request_catalog_refresh();
+        }
+        GameReaction::Berserk => {
+            games.own_games_add((*gar.game).clone());
+            update_notifier.game_response.set(Some(gar));
+        }
+        GameReaction::Reopened => {
+            clear_ready_proposals(&update_notifier, &gar.game.game_id);
+            games.own_games_add((*gar.game).clone());
+            update_notifier.game_response.set(Some(gar.clone()));
         }
         GameReaction::Turn(_) => {
             update_notifier.game_response.set(Some(gar.clone()));
@@ -74,7 +96,7 @@ fn handle_reaction(gar: GameActionResponse) {
                 let chat = expect_context::<Chat>();
                 chat.request_catalog_refresh();
             } else {
-                games.own_games_add(gar.game.clone());
+                games.own_games_add((*gar.game).clone());
             }
             ack_seen_if_watching(&gar.game.game_id, gar.game.current_player_id);
         }
@@ -88,6 +110,9 @@ fn handle_reaction(gar: GameActionResponse) {
             handle_control(*game_control, gar.clone());
         }
         GameReaction::Started => {
+            clear_ready_proposals(&update_notifier, &gar.game.game_id);
+            games.own_games_add((*gar.game).clone());
+            navigate_to_actionable_game(&gar.game, true);
             update_notifier.game_response.set(Some(gar.clone()));
         }
         GameReaction::Ready => {
@@ -128,6 +153,12 @@ fn handle_reaction(gar: GameActionResponse) {
             });
         }
     };
+}
+
+fn clear_ready_proposals(update_notifier: &UpdateNotifier, game_id: &GameId) {
+    update_notifier.tournament_ready.update(|ready_map| {
+        ready_map.remove(game_id);
+    });
 }
 
 fn ack_seen_if_watching(game_id: &GameId, recipient_id: Uuid) {

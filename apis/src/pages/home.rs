@@ -7,6 +7,7 @@ use crate::{
             calendar::Calendar,
             challenges::Challenges,
             featured_video::FeaturedVideo,
+            live_arenas::LiveArenas,
             quickplay::QuickPlay,
             tv::Tv,
         },
@@ -30,7 +31,7 @@ pub fn Home() -> impl IntoView {
                         .map(|banner| {
                             view! {
                                 <div class="w-full lg:px-4">
-                                    <div class="mx-auto w-full max-w-screen-md">
+                                    <div class="mx-auto w-full max-w-4xl">
                                         <RlBanner title=banner.title content=banner.content />
                                     </div>
                                 </div>
@@ -38,22 +39,25 @@ pub fn Home() -> impl IntoView {
                         })
                 }}
             </Transition>
-            <div class="grid grid-cols-1 gap-6 items-start mx-auto w-full max-w-screen-xl lg:px-4 2xl:max-w-screen-2xl lg:grid-cols-[minmax(18rem,20rem)_minmax(0,1fr)] 2xl:grid-cols-[minmax(18rem,20rem)_minmax(0,1fr)_minmax(18rem,20rem)]">
+            <div class="ui-home-grid">
                 <div class="contents lg:flex lg:flex-col lg:col-start-1 lg:row-start-1 lg:items-center lg:space-y-4 lg:min-w-0">
-                    <div class="flex flex-col order-1 gap-4 items-center min-w-0 lg:order-none">
-                        <Logo tw_class="flex w-48 lg:w-72" />
+                    <div class="flex flex-col order-1 gap-4 items-center w-full min-w-0 lg:order-none">
+                        <Logo tw_class="flex w-48 lg:w-[90%]" />
                         <TutorialCard />
                     </div>
-                    <div class="order-4 mx-auto mt-4 w-full min-w-0 max-w-md lg:overflow-y-auto lg:order-none lg:mt-0 lg:max-h-[50rem]">
+                    <div class="order-4 mx-auto w-full min-w-0 max-w-md lg:overflow-y-auto lg:order-none lg:mt-0 lg:max-h-[50rem]">
                         <Calendar />
                     </div>
                 </div>
-                <div class="flex flex-col order-2 gap-6 items-center min-w-0 lg:order-none lg:col-start-2 lg:row-start-1">
-                    <div class="order-2 w-full lg:order-1">
+                <div class="flex flex-col order-2 gap-3 items-center min-w-0 sm:gap-6 lg:order-none lg:col-start-2 lg:row-start-1">
+                    <div class="contents [&>*]:order-2 lg:[&>*]:order-1">
                         <FeaturedVideo />
                     </div>
                     <div id="tutorial-quickplay" class="order-1 w-full lg:order-2">
                         <QuickPlay />
+                    </div>
+                    <div class="contents [&>*]:order-2">
+                        <LiveArenas />
                     </div>
                     <div id="tutorial-open-challenges" class="flex flex-col order-3 gap-3 w-full">
                         <h2 class="text-lg font-bold text-center text-gray-900 dark:text-gray-100">
@@ -62,7 +66,7 @@ pub fn Home() -> impl IntoView {
                         <Challenges />
                     </div>
                     <div class="order-4 w-full">
-                        <div class="mx-auto w-full max-w-screen-md">
+                        <div class="mx-auto w-full">
                             <div class="w-full lg:flow-root">
                                 <div class="hidden float-right w-64 lg:block lg:ml-6 2xl:hidden">
                                     <OnlineUsers />
@@ -76,11 +80,6 @@ pub fn Home() -> impl IntoView {
                     <OnlineUsers />
                 </div>
             </div>
-            <footer id="home-feedback" class="flex flex-wrap gap-3 justify-center items-center py-5 mt-6 text-sm border-t border-black/10 dark:border-white/10">
-                <span>"Have feedback?"</span>
-                <a class="underline" href="https://github.com/hiveboardgame/hive/issues" target="_blank" rel="noopener noreferrer">"Feedback and bugs"</a>
-                <a class="underline" href="https://discord.gg/jNTjr5vj9Z" target="_blank" rel="noopener noreferrer">"Community Discord"</a>
-            </footer>
         </PageShell>
     }
 }

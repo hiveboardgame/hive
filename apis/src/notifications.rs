@@ -11,6 +11,7 @@ pub use dispatch::{
     game_end_reason_from,
     init,
     notify,
+    notify_adjudicated_slots,
     notify_game_control,
     notify_game_ended,
     notify_game_ended_excluding,
@@ -25,3 +26,6 @@ pub use pending::PendingNotifications;
 pub use service::Notifier;
 pub use telemetry::PushTelemetry;
 pub use web_push::WebPushNotifier;
+
+mod tournament_notice;
+pub use tournament_notice::{RecordedOutcome, TournamentNotice};

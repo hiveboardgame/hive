@@ -5,7 +5,10 @@ pub enum Goal {
     WaitForTimeout(Color),
     MoveAny,
     PlayAny,
-    LiftAnyOf { pieces: &'static [&'static str], by: &'static str },
+    LiftAnyOf {
+        pieces: &'static [&'static str],
+        by: &'static str,
+    },
     Lift {
         piece: &'static str,
         by: &'static str,
@@ -52,7 +55,10 @@ pub enum Goal {
 /// piece of that bug, so lessons survive a HOP renumbering their pieces.
 pub enum Condition {
     AnyPlaced(Color),
-    CanMoveTo { piece: &'static str, to: &'static str },
+    CanMoveTo {
+        piece: &'static str,
+        to: &'static str,
+    },
     Placed(&'static str),
     Touching(&'static str, &'static str),
     OnTop(&'static str, &'static str),
@@ -60,9 +66,18 @@ pub enum Condition {
     Stuck(&'static str),
     Surrounded(&'static str),
     Won(Color),
-    KillSpotsFilled { queen: Color, at_least: usize },
-    DirectDrops { by: Color, at_least: usize },
-    SpawnBlocked { around: &'static str, color: Color },
+    KillSpotsFilled {
+        queen: Color,
+        at_least: usize,
+    },
+    DirectDrops {
+        by: Color,
+        at_least: usize,
+    },
+    SpawnBlocked {
+        around: &'static str,
+        color: Color,
+    },
     Sandwiched(Color),
     ShutOut(Color),
     All(&'static [Condition]),
@@ -79,16 +94,22 @@ impl Condition {
     pub fn holds(&self, state: &State) -> bool {
         let board = &state.board;
         match self {
-            Condition::CanMoveTo { piece, to } => {
-                hex(board, to).is_some_and(|target| {
-                    spec_pieces(piece).is_some_and(|pieces| pieces.into_iter().any(|piece| {
-                        board.moves(piece.color()).iter().any(|((mover, _), targets)| {
-                            *mover == piece && targets.contains(&target)
-                        })
-                    }))
+            Condition::CanMoveTo { piece, to } => hex(board, to).is_some_and(|target| {
+                spec_pieces(piece).is_some_and(|pieces| {
+                    pieces.into_iter().any(|piece| {
+                        board
+                            .moves(piece.color())
+                            .iter()
+                            .any(|((mover, _), targets)| {
+                                *mover == piece && targets.contains(&target)
+                            })
+                    })
                 })
+            }),
+            Condition::Won(color) => {
+                state.game_status
+                    == hive_lib::GameStatus::Finished(hive_lib::GameResult::Winner(*color))
             }
-            Condition::Won(color) => state.game_status == hive_lib::GameStatus::Finished(hive_lib::GameResult::Winner(*color)),
             Condition::AnyPlaced(color) => board.played_by(*color) > 0,
             Condition::Placed(spec) => placed(board, spec).next().is_some(),
             Condition::Touching(a, b) => placed(board, a)

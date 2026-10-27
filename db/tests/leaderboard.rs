@@ -96,7 +96,7 @@ async fn ties_break_by_games_played_then_id() {
     let first = ranked_user("bot_tie_one", true, 1500.0, RANKABLE, 5, &mut conn).await;
     let second = ranked_user("bot_tie_two", true, 1500.0, RANKABLE, 5, &mut conn).await;
 
-    let mut fully_tied = vec![first.id, second.id];
+    let mut fully_tied = [first.id, second.id];
     fully_tied.sort();
 
     let bots = top(LeaderboardKind::Bots, None, 10, &mut conn).await;
@@ -151,6 +151,18 @@ async fn tied_viewer_at_limit_boundary_gets_its_rank() {
     } else {
         tied_one
     };
+
+    // Higher ratings outside this board's eligibility must not inflate the viewer rank.
+    ranked_user("rank_other_kind", true, 2000.0, RANKABLE, 10, &mut conn).await;
+    ranked_user(
+        "rank_provisional",
+        false,
+        2000.0,
+        PROVISIONAL,
+        10,
+        &mut conn,
+    )
+    .await;
 
     let rows = top(LeaderboardKind::Humans, Some(excluded.id), 10, &mut conn).await;
     assert_eq!(rows.len(), 11);

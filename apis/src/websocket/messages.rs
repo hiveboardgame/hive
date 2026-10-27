@@ -1,10 +1,25 @@
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use shared_types::{GameId, TournamentId};
+use std::sync::Arc;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
-use crate::common::{GameActionResponse, GameUpdate, ServerMessage};
+use crate::{
+    common::{
+        localized_error_message_for_locale,
+        ExternalServerError,
+        GameActionResponse,
+        GameReaction,
+        GameUpdate,
+        ServerMessage,
+        ServerResult,
+    },
+    i18n::Locale,
+    responses::GameResponse,
+};
+use codee::{binary::MsgpackSerdeCodec, Decoder, Encoder};
+use db_lib::models::Game;
 
 #[derive(thiserror::Error, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum AuthError {
@@ -27,6 +42,7 @@ pub enum GameSpectatorAudience {
 #[derive(Debug, Clone, Copy)]
 pub enum TournamentAudience {
     Updates,
+    ScheduleViewers,
     Chat { sender_id: Uuid },
 }
 
@@ -40,71 +56,29 @@ pub struct GameFinalize {
     pub black_id: Uuid,
 }
 
+#[derive(Debug, Clone)]
+pub(crate) struct TerminalGameRetry {
+    pub(crate) game: Game,
+    pub(crate) reaction: GameReaction,
+    pub(crate) actor_id: Uuid,
+    pub(crate) actor_username: Option<String>,
+    pub(crate) publish_tv: bool,
+}
+
 /// A `GameUpdate::Reaction` event that needs to fan out to both players and
 /// every spectator. Carrying the unserialized payload lets the dispatcher
 /// (`WsHub::dispatch_reaction`) msgpack-encode it **once** and `Bytes::clone`
 /// the result across the three destinations — saving two redundant
 /// serializations of a non-trivial payload per turn/control.
 ///
-/// Use this in handlers that return a `HandlerOutput`. Paths that
-/// build a flat `Vec<InternalServerMessage>` (bot API, periodic jobs) can
-/// still call `Reaction::into_messages` to get the legacy three-message
-/// expansion.
+/// Use this in handlers that return a `HandlerOutput` so every committed Game
+/// publication shares the same outer dispatch path.
 #[derive(Debug, Clone)]
 pub struct Reaction {
     pub game_id: GameId,
     pub white_id: Uuid,
     pub black_id: Uuid,
     pub gar: GameActionResponse,
-}
-
-impl Reaction {
-    /// Expand into three `InternalServerMessage`s for callers that don't
-    /// go through `HandlerOutput.reactions` and so can't take advantage of
-    /// the single serialization in `WsHub::dispatch_reaction`. Each call
-    /// site here pays for two payload clones plus two extra msgpack
-    /// serializations — fine for low-volume HTTP/cron paths.
-    pub fn into_messages(self) -> Vec<InternalServerMessage> {
-        let payload = ServerMessage::Game(Box::new(GameUpdate::Reaction(self.gar)));
-        vec![
-            InternalServerMessage {
-                destination: MessageDestination::User(self.white_id),
-                message: payload.clone(),
-            },
-            InternalServerMessage {
-                destination: MessageDestination::User(self.black_id),
-                message: payload.clone(),
-            },
-            InternalServerMessage {
-                destination: MessageDestination::GameSpectators {
-                    game_id: self.game_id,
-                    white_id: self.white_id,
-                    black_id: self.black_id,
-                    audience: GameSpectatorAudience::GameViewers,
-                },
-                message: payload,
-            },
-        ]
-    }
-}
-
-/// Legacy entry point: build the three-message expansion of a reaction.
-/// Hot WS handlers should push to `HandlerOutput.reactions` instead and
-/// rely on `WsHub::dispatch_reaction` to serialize once. Retained for the
-/// bot API + tournament_start dispatch paths.
-pub fn reaction_messages(
-    game_id: GameId,
-    white_id: Uuid,
-    black_id: Uuid,
-    gar: GameActionResponse,
-) -> Vec<InternalServerMessage> {
-    Reaction {
-        game_id,
-        white_id,
-        black_id,
-        gar,
-    }
-    .into_messages()
 }
 
 impl GameFinalize {
@@ -130,12 +104,30 @@ impl GameFinalize {
 pub struct HandlerOutput {
     pub messages: Vec<InternalServerMessage>,
     pub reactions: Vec<Reaction>,
+    pub tv_updates: Vec<TvUpdate>,
     pub finalize_games: Vec<GameFinalize>,
+    pub tournament_chat_revocations: Vec<(Uuid, TournamentId)>,
+    pub(crate) terminal_game_retries: Vec<TerminalGameRetry>,
+    pub request_error: Option<anyhow::Error>,
 }
 
 impl HandlerOutput {
     pub fn empty() -> Self {
         Self::default()
+    }
+
+    pub fn append(&mut self, mut other: Self) {
+        self.messages.append(&mut other.messages);
+        self.reactions.append(&mut other.reactions);
+        self.tv_updates.append(&mut other.tv_updates);
+        self.finalize_games.append(&mut other.finalize_games);
+        self.tournament_chat_revocations
+            .append(&mut other.tournament_chat_revocations);
+        self.terminal_game_retries
+            .append(&mut other.terminal_game_retries);
+        if self.request_error.is_none() {
+            self.request_error = other.request_error;
+        }
     }
 }
 
@@ -144,14 +136,34 @@ impl From<Vec<InternalServerMessage>> for HandlerOutput {
         Self {
             messages,
             reactions: Vec::new(),
+            tv_updates: Vec::new(),
             finalize_games: Vec::new(),
+            tournament_chat_revocations: Vec::new(),
+            terminal_game_retries: Vec::new(),
+            request_error: None,
         }
     }
+}
+
+#[derive(Debug)]
+pub struct TvUpdate {
+    pub game_id: GameId,
+    pub game: Arc<GameResponse>,
+    pub final_state: bool,
+}
+
+/// Bots ask for JSON with `/ws/?format=json` so they never have to reproduce rmp-serde's
+/// representation by hand.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SocketFormat {
+    Msgpack,
+    Json,
 }
 
 #[derive(Clone, Debug)]
 pub struct SocketTx {
     pub socket_id: Uuid,
+    pub format: SocketFormat,
     pub tx: mpsc::Sender<Bytes>,
 }
 
@@ -167,8 +179,216 @@ pub enum MessageDestination {
         audience: GameSpectatorAudience,
     },
     Global,
+    TvSubscribers(GameId),
     Tournament {
         tournament_id: TournamentId,
         audience: TournamentAudience,
     },
+}
+
+enum Source<'a> {
+    Typed(&'a ServerResult),
+    Encoded(Bytes),
+}
+
+/// Both fields are lazy and live for a single dispatch, so a fanout of browsers encodes
+/// msgpack once and never touches `serde_json`. `Encoded` is the fallback for producers that
+/// still hand over bytes: those are the only ones that pay a decode, and only when a JSON
+/// socket is in the fanout.
+pub struct Outbound<'a> {
+    source: Source<'a>,
+    msgpack: Option<Bytes>,
+    json: Option<Bytes>,
+}
+
+impl<'a> Outbound<'a> {
+    pub fn typed(message: &'a ServerResult) -> Self {
+        Self {
+            source: Source::Typed(message),
+            msgpack: None,
+            json: None,
+        }
+    }
+
+    pub fn encoded(bytes: Bytes) -> Self {
+        Self {
+            source: Source::Encoded(bytes),
+            msgpack: None,
+            json: None,
+        }
+    }
+
+    pub fn bytes(&mut self, format: SocketFormat) -> Option<&Bytes> {
+        match format {
+            SocketFormat::Msgpack => {
+                if self.msgpack.is_none() {
+                    self.msgpack = match &self.source {
+                        Source::Typed(message) => {
+                            MsgpackSerdeCodec::encode(*message).ok().map(Bytes::from)
+                        }
+                        Source::Encoded(bytes) => Some(bytes.clone()),
+                    };
+                }
+                self.msgpack.as_ref()
+            }
+            SocketFormat::Json => {
+                if self.json.is_none() {
+                    self.json = match &self.source {
+                        Source::Typed(message) => json_bytes(message),
+                        Source::Encoded(bytes) => MsgpackSerdeCodec::decode(bytes)
+                            .ok()
+                            .and_then(|message: ServerResult| json_bytes(&message)),
+                    };
+                }
+                self.json.as_ref()
+            }
+        }
+    }
+}
+
+// JSON clients do not run the browser's i18n renderer. Keep their documented readable
+// errors while msgpack clients retain the codes needed to render in their own locale.
+fn json_bytes(message: &ServerResult) -> Option<Bytes> {
+    let translated;
+    let message = match message {
+        ServerResult::Err(error) => {
+            let mut error = error.clone();
+            match &mut error {
+                ExternalServerError::Unauthorized { reason }
+                | ExternalServerError::Request { reason }
+                | ExternalServerError::Game { reason, .. } => {
+                    *reason = localized_error_message_for_locale(Locale::default(), reason);
+                }
+                _ => {}
+            }
+            translated = ServerResult::Err(error);
+            &translated
+        }
+        ServerResult::Ok(ok) => match ok.as_ref() {
+            ServerMessage::Error(reason) => {
+                translated = ServerResult::Ok(Box::new(ServerMessage::Error(
+                    localized_error_message_for_locale(Locale::default(), reason),
+                )));
+                &translated
+            }
+            _ => message,
+        },
+    };
+    serde_json::to_vec(message).ok().map(Bytes::from)
+}
+
+#[cfg(test)]
+mod outbound_tests {
+    use super::*;
+    use crate::common::UiError;
+
+    #[test]
+    fn json_errors_are_readable_while_msgpack_preserves_localization_codes() {
+        let error = UiError::RequestUnavailable;
+        let encoded = error.encode();
+        let readable = error.message(Locale::default());
+        let game_id = GameId("bot-game".into());
+        for (message, expected) in [
+            (
+                ServerResult::Err(ExternalServerError::Game {
+                    game_id: game_id.clone(),
+                    reason: encoded.clone(),
+                }),
+                ServerResult::Err(ExternalServerError::Game {
+                    game_id,
+                    reason: readable.clone(),
+                }),
+            ),
+            (
+                ServerResult::Err(ExternalServerError::Request {
+                    reason: encoded.clone(),
+                }),
+                ServerResult::Err(ExternalServerError::Request {
+                    reason: readable.clone(),
+                }),
+            ),
+            (
+                ServerResult::Err(ExternalServerError::Unauthorized {
+                    reason: encoded.clone(),
+                }),
+                ServerResult::Err(ExternalServerError::Unauthorized {
+                    reason: readable.clone(),
+                }),
+            ),
+            (
+                ServerResult::Ok(Box::new(ServerMessage::Error(encoded.clone()))),
+                ServerResult::Ok(Box::new(ServerMessage::Error(readable.clone()))),
+            ),
+        ] {
+            let msgpack = Bytes::from(MsgpackSerdeCodec::encode(&message).unwrap());
+            for mut outbound in [
+                Outbound::typed(&message),
+                Outbound::encoded(msgpack.clone()),
+            ] {
+                assert_eq!(outbound.bytes(SocketFormat::Msgpack), Some(&msgpack));
+                let json = outbound.bytes(SocketFormat::Json).unwrap();
+                assert_eq!(json.as_ref(), serde_json::to_vec(&expected).unwrap());
+            }
+        }
+    }
+
+    fn message() -> ServerResult {
+        ServerResult::Ok(Box::new(ServerMessage::Error("boom".to_string())))
+    }
+
+    #[test]
+    fn a_msgpack_socket_gets_exactly_what_it_got_before() {
+        let message = message();
+        let expected = Bytes::from(MsgpackSerdeCodec::encode(&message).expect("encodes"));
+
+        assert_eq!(
+            Outbound::typed(&message).bytes(SocketFormat::Msgpack),
+            Some(&expected)
+        );
+    }
+
+    #[test]
+    fn each_format_is_encoded_once_and_reused() {
+        let message = message();
+        let mut outbound = Outbound::typed(&message);
+
+        let first = outbound.bytes(SocketFormat::Json).cloned();
+        let second = outbound.bytes(SocketFormat::Json).cloned();
+
+        assert_eq!(first, second);
+        assert_ne!(first, outbound.bytes(SocketFormat::Msgpack).cloned());
+    }
+
+    #[test]
+    fn an_unmigrated_producers_bytes_pass_through_untouched() {
+        let encoded = Bytes::from(MsgpackSerdeCodec::encode(&message()).expect("encodes"));
+
+        assert_eq!(
+            Outbound::encoded(encoded.clone()).bytes(SocketFormat::Msgpack),
+            Some(&encoded)
+        );
+    }
+
+    #[test]
+    fn an_unmigrated_producers_bytes_still_reach_a_json_socket() {
+        let encoded = Bytes::from(MsgpackSerdeCodec::encode(&message()).expect("encodes"));
+        let mut outbound = Outbound::encoded(encoded);
+
+        let json = outbound
+            .bytes(SocketFormat::Json)
+            .expect("transcodes")
+            .clone();
+
+        assert_eq!(
+            json,
+            Bytes::from(serde_json::to_vec(&message()).expect("encodes"))
+        );
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct SocketHandle {
+    pub bot: bool,
+    pub tx: mpsc::Sender<Bytes>,
+    pub format: SocketFormat,
 }

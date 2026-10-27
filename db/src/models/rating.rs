@@ -1,6 +1,6 @@
 use crate::{
     db_error::DbError,
-    models::User,
+    models::{Game, User},
     schema::ratings::{self, dsl::ratings as ratings_table, *},
     DbConn,
 };
@@ -74,6 +74,7 @@ impl NewRating {
     AsChangeset,
     Selectable,
     PartialEq,
+    Clone,
 )]
 #[serde(rename_all = "camelCase")]
 #[diesel(belongs_to(User, foreign_key = user_uid))]
@@ -141,6 +142,18 @@ impl Rating {
             .await?)
     }
 
+    pub async fn for_uuids_at_speed(
+        uuids: &[Uuid],
+        game_speed: &GameSpeed,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Self>, DbError> {
+        let game_speed = Self::normalized_game_speed(*game_speed);
+        Ok(ratings_table
+            .filter(user_uid.eq_any(uuids).and(speed.eq(game_speed)))
+            .load(conn)
+            .await?)
+    }
+
     pub async fn for_uuids(uuids: &[Uuid], conn: &mut DbConn<'_>) -> Result<Vec<Self>, DbError> {
         Ok(ratings_table
             .filter(user_uid.eq_any(uuids))
@@ -148,17 +161,50 @@ impl Rating {
             .await?)
     }
 
-    // Must run inside the game-finalization transaction to hold these row locks.
+    /// Prelocks every rating row a batch of game finalizations can touch.
+    /// Individual finalizers reacquire their own rows harmlessly; the batch
+    /// order prevents a multi-game transaction from deadlocking with another
+    /// game after retaining a rating lock from an earlier finalization.
+    pub(crate) async fn lock_for_game_updates(
+        games: &[Game],
+        conn: &mut DbConn<'_>,
+    ) -> Result<(), DbError> {
+        let mut keys = Vec::with_capacity(games.len().saturating_mul(2));
+        for game in games {
+            let game_speed = GameSpeed::from_str(&game.speed).map_err(|error| {
+                DbError::InvalidPersistedTournament {
+                    reason: format!("game has invalid rating speed: {error}"),
+                }
+            })?;
+            let rating_speed = Self::normalized_game_speed(game_speed);
+            keys.push((rating_speed.clone(), game.white_id));
+            keys.push((rating_speed, game.black_id));
+        }
+        keys.sort_unstable();
+        keys.dedup();
+        for (game_speed, player_id) in keys {
+            Self::lock_for_update(player_id, &game_speed, conn).await?;
+        }
+        Ok(())
+    }
+
+    // Must be called inside the game-finalization transaction so these row locks
+    // are held until the derived rating writes are complete.
     pub(crate) async fn update(
         rated: bool,
         game_speed: String,
         white_id: Uuid,
         black_id: Uuid,
         game_result: GameResult,
+        effective_at: DateTime<Utc>,
         conn: &mut DbConn<'_>,
     ) -> Result<(f64, f64, Option<f64>, Option<f64>), DbError> {
         let game_speed =
-            Self::normalized_game_speed(GameSpeed::from_str(&game_speed).expect("Valid GameSpeed"));
+            Self::normalized_game_speed(GameSpeed::from_str(&game_speed).map_err(|error| {
+                DbError::InvalidPersistedTournament {
+                    reason: format!("game has invalid rating speed: {error}"),
+                }
+            })?);
         if white_id == black_id {
             return Err(DbError::InvalidAction {
                 info: "Cannot update ratings for self-play".to_string(),
@@ -177,8 +223,15 @@ impl Rating {
             (second_rating, first_rating)
         };
 
-        let (white_change, black_change) =
-            Rating::apply_result(rated, game_result, &white_rating, &black_rating, conn).await?;
+        let (white_change, black_change) = Rating::apply_result(
+            rated,
+            game_result,
+            &white_rating,
+            &black_rating,
+            effective_at,
+            conn,
+        )
+        .await?;
         Ok((
             white_rating.rating,
             black_rating.rating,
@@ -246,6 +299,7 @@ impl Rating {
         side: &Rating,
         glicko: Option<Glicko2Rating>,
         deltas: CounterDeltas,
+        effective_at: DateTime<Utc>,
         conn: &mut PooledConnection<'_, AsyncDieselConnectionManager<AsyncPgConnection>>,
     ) -> Result<(), DbError> {
         let counters = (
@@ -259,7 +313,7 @@ impl Rating {
                 diesel::update(ratings::table.find(side.id))
                     .set((
                         counters,
-                        updated_at.eq(Utc::now()),
+                        updated_at.eq(effective_at),
                         rating.eq(glicko.rating),
                         deviation.eq(glicko.deviation),
                         volatility.eq(glicko.volatility),
@@ -282,6 +336,7 @@ impl Rating {
         game_result: GameResult,
         white_rating: &Rating,
         black_rating: &Rating,
+        effective_at: DateTime<Utc>,
         conn: &mut PooledConnection<'_, AsyncDieselConnectionManager<AsyncPgConnection>>,
     ) -> Result<(Option<f64>, Option<f64>), DbError> {
         let (white_deltas, black_deltas) = match game_result {
@@ -305,8 +360,8 @@ impl Rating {
             None => (None, None, None, None),
         };
 
-        Self::apply_side(white_rating, white_glicko, white_deltas, conn).await?;
-        Self::apply_side(black_rating, black_glicko, black_deltas, conn).await?;
+        Self::apply_side(white_rating, white_glicko, white_deltas, effective_at, conn).await?;
+        Self::apply_side(black_rating, black_glicko, black_deltas, effective_at, conn).await?;
 
         Ok((white_change, black_change))
     }

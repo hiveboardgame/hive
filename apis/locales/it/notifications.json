@@ -1,21 +1,35 @@
 {
     "page": {
-        "heading": "Notifiche",
         "intro_before_link": "Scegli come vuoi essere avvisato per ogni tipo di evento. Le notifiche push arrivano ai browser che attivi qui sotto. La configurazione di Discord è nella ",
         "account_link": "sezione Discord",
         "intro_after_link": " qui sotto.",
         "col_push": "Push",
         "col_discord": "Discord",
-        "email_coming_soon": "L'invio via e-mail arriverà presto.",
         "saving": "Salvataggio…",
         "saved": "Salvato.",
         "save_failed": "Salvataggio non riuscito:",
-        "loading": "Caricamento…"
+        "push_discord_and_device_delivery_settings": "Impostazioni di invio push, Discord e dispositivi.",
+        "notification_preferences": "Preferenze notifiche",
+        "enable_browser_notifications_before_choosing_push_delivery": "Attiva le notifiche del browser prima di scegliere l'invio push.",
+        "discord_link_instructions": "Entra nel server Discord di HiveGame e collega il tuo account Discord qui sotto per attivare le impostazioni delle notifiche Discord.",
+        "discord_integration": "Integrazione Discord",
+        "step_1": "Passo 1",
+        "join_the_hivegame_discord_server": "Entra nel server Discord di HiveGame.",
+        "join_discord": "Entra in Discord",
+        "step_2": "Passo 2",
+        "link_this_hivegame_account_to_discord": "Collega questo account HiveGame a Discord.",
+        "no_discord_account_linked": "Nessun account Discord collegato",
+        "sign_in_to_link_discord": "Accedi per collegare Discord",
+        "discord_status_temporarily_unavailable": "Stato Discord temporaneamente non disponibile",
+        "error_loading_discord_name": "Errore nel caricamento del nome Discord",
+        "link_discord_account": "Collega Discord",
+        "push_delivery_is_enabled_for_this_browser": "L'invio push è attivo per questo browser.",
+        "push_delivery_is_enabled_on_another_browser": "L'invio push è attivo in un altro browser.",
+        "browser_notifications_are_not_available_in_this_browser": "Le notifiche non sono disponibili in questo browser."
     },
     "events": {
         "your_turn": "Tocca a te",
         "challenges": "Sfida ricevuta",
-        "game_ended": "Partita terminata",
         "tournament": "Invito a un torneo",
         "schedules": "Proposta di orario",
         "dms": "Messaggio diretto"
@@ -23,21 +37,19 @@
     "browser": {
         "heading": "Questo browser",
         "body": "Ricevi in questo browser le notifiche push selezionate sopra, anche quando nessuna scheda di HiveGame è aperta. Attivale separatamente su ogni dispositivo che vuoi notificare.",
+        "working": "Elaborazione…",
         "enable": "Attiva le notifiche del browser",
         "disable": "Disattiva le notifiche del browser",
-        "working": "Elaborazione…",
         "send_test": "Invia una prova",
         "test_sent": "Notifica di prova inviata: controlla le tue notifiche.",
         "test_failed": "Prova non riuscita:"
     },
     "ios": {
-        "heading": "Sul tuo iPhone o iPad",
         "body": "Per ricevere notifiche su iOS, aggiungi HiveGame alla schermata Home: tocca il pulsante Condividi, poi «Aggiungi a Home» e aprilo da lì."
     },
     "devices": {
         "heading": "I tuoi dispositivi",
         "body": "Tutti i dispositivi attualmente configurati per ricevere notifiche push. Rimuovi quelli che non usi più.",
-        "remove": "Rimuovi",
         "this_browser": "(questo browser)",
         "last_active": "ultima attività",
         "platform_web": "Browser"
@@ -47,14 +59,32 @@
         "body_before_link": "Attiva le notifiche del browser per questo dispositivo. Gestiscile in qualsiasi momento nella ",
         "link": "pagina delle notifiche",
         "body_after_link": ".",
-        "enable": "Attiva",
-        "enabling": "Attivazione…",
-        "dismiss": "Chiudi"
+        "enabling": "Attivazione…"
     },
     "install": {
         "title": "Installa HiveGame come app",
         "button": "Installa",
         "ios_hint": "Installa HiveGame: tocca Condividi, poi «Aggiungi a Home»."
+    },
+    "actions": {
+        "dismiss": "Chiudi",
+        "accept": "Accetta",
+        "decline": "Rifiuta",
+        "view_tournament": "Vedi torneo",
+        "view_named_tournament": "Vedi torneo: {{name}}"
+    },
+    "schedule": {
+        "proposed": "{{proposer}} ha proposto di giocare il {{time}}",
+        "accepted": "{{player}} ha accettato di giocare il {{time}}"
+    },
+    "tournament_status": {
+        "label": "Torneo"
+    },
+    "tournament_invitation": {
+        "label": "Invito al torneo",
+        "players": "Giocatori: {{count}}",
+        "accept": "Accetta l’invito",
+        "decline": "Rifiuta l’invito"
     },
     "push": {
         "your_turn_title": "Tocca a te",
@@ -65,7 +95,6 @@
         "challenge_casual": "{{challenger}} · {{time_control}} · amichevole",
         "game_started_title": "Partita iniziata",
         "game_started_body": "contro {{opponent}} · {{time_control}}",
-        "game_ended_title": "Partita terminata",
         "game_ended_won_resignation": "{{opponent}} ha abbandonato",
         "game_ended_won_timeout": "{{opponent}} ha esaurito il tempo",
         "game_ended_won": "Hai battuto {{opponent}}",
@@ -94,5 +123,94 @@
         "takeback_rejected_body": "{{actor}} ha rifiutato il ritiro della mossa",
         "test_title": "HiveGame",
         "test_body": "Notifica di prova — le notifiche funzionano"
+    },
+    "tournament_notice": {
+        "start_deferred": "All'orario previsto non c'erano abbastanza iscritti. Avvia il torneo manualmente quando si saranno iscritti abbastanza partecipanti.",
+        "games_ready": "{{count}} partite sono pronte. Apri il torneo per vedere gli abbinamenti.",
+        "recorded_one": "Un organizzatore ha registrato un risultato di {{outcome}} per la tua partita.",
+        "recorded_many": "Un organizzatore ha registrato i risultati di {{count}} tue partite: {{outcomes}}.",
+        "schedule_cancelled": "{{actor}} ha annullato l'orario concordato per la tua partita ({{time}})",
+        "outcome": {
+            "double_forfeit": "doppio forfait",
+            "draw": "patta",
+            "win": "vittoria",
+            "loss": "sconfitta"
+        }
+    },
+    "external": {
+        "open_description": "{{description}}. Apri: {{link}}",
+        "organizer_title": "Invito a organizzare un torneo",
+        "organizer_body": "Sei stato invitato a organizzare {{tournament_name}}.",
+        "schedule_many": "{{proposer}} ha proposto {{count}} orari per il tuo incontro. Apri per scegliere.",
+        "organizer_discord": "Invito a organizzare il [torneo {{tournament_name}}](<https://hivegame.com/tournament/{{tournament_nanoid}}>).",
+        "schedule_many_discord": "[Orario proposto](<{{link}}>) — {{proposer}} ha proposto {{count}} orari per la tua partita. Apri per scegliere.",
+        "organizer_subject": "Invito come organizzatore: {{tournament_name}}",
+        "organizer_email": "Sei stato invitato a organizzare {{tournament_name}}. Apri: {{link}}",
+        "schedule_many_subject": "{{proposer}} ha proposto degli orari di gioco",
+        "schedule_many_email": "{{proposer}} ha proposto {{count}} orari per la tua partita. Apri per scegliere: {{link}}",
+        "your_turn_discord": "[Tocca a te](<https://hivegame.com/game/{{game_nanoid}}>) nella partita contro {{opponent}}.",
+        "challenge_discord": "[Nuova sfida](<https://hivegame.com/challenge/{{challenge_nanoid}}>) da {{challenger}} · {{time_control}} · {{rated}}.",
+        "game_started_discord": "[La tua partita](<https://hivegame.com/game/{{game_nanoid}}>) contro {{opponent}} è iniziata · {{time_control}}.",
+        "game_ended_won_discord": "hai battuto {{opponent}}",
+        "game_ended_draw_agreement_discord": "hai concordato la patta con {{opponent}}",
+        "game_ended_draw_discord": "hai pareggiato con {{opponent}}",
+        "game_ended_discord": "La tua [partita](<https://hivegame.com/game/{{game_nanoid}}>) è terminata — {{detail}}{{change}}.",
+        "tournament_invite_discord": "Sei invitato al [torneo {{tournament_name}}](<https://hivegame.com/tournament/{{tournament_nanoid}}>).",
+        "tournament_started_discord": "Il [torneo {{tournament_name}}](<https://hivegame.com/tournament/{{tournament_nanoid}}>) è iniziato! Le tue partite sono pronte.",
+        "schedule_propose_discord": "[Orario proposto](<{{link}}>) — {{proposer}} ha proposto {{when}} per la vostra partita.",
+        "schedule_accept_discord": "[Orario accettato](<{{link}}>) — {{opponent}} ha accettato {{when}} per la vostra partita.",
+        "direct_message_discord": "Messaggio privato da {{sender}}: {{preview}}",
+        "game_control_discord": "[La tua partita](<https://hivegame.com/game/{{game_nanoid}}>) — {{actor}} {{action}}.",
+        "your_turn_subject": "Tocca a te contro {{opponent}}",
+        "your_turn_email": "{{opponent}} ha appena mosso nella vostra partita. Continua su https://hivegame.com/game/{{game_nanoid}}",
+        "challenge_subject": "{{challenger}} ti ha sfidato su HiveGame",
+        "challenge_email": "{{challenger}} ti ha inviato una sfida: {{time_control}}, {{rated}}. Apri: {{link}}",
+        "game_started_subject": "Partita contro {{opponent}} iniziata",
+        "game_started_email": "La tua sfida con {{time_control}} è stata accettata. Apri: {{link}}",
+        "game_ended_email": "Rivedi la partita: {{link}}",
+        "tournament_invite_subject": "Invito al torneo: {{tournament_name}}",
+        "tournament_invite_email": "Sei stato invitato a {{tournament_name}}. Apri: {{link}}",
+        "tournament_started_subject": "Torneo {{tournament_name}} iniziato",
+        "tournament_started_email": "{{tournament_name}} è iniziato e le tue partite sono pronte. Apri: {{link}}",
+        "schedule_propose_subject": "{{proposer}} ha proposto un orario",
+        "schedule_propose_email": "{{proposer}} ha proposto {{when}} per la vostra partita. Apri: {{link}}",
+        "schedule_accept_subject": "{{opponent}} ha accettato l'orario proposto",
+        "schedule_accept_email": "{{opponent}} ha accettato {{when}} per la vostra partita. Apri: {{link}}",
+        "game_control_subject": "{{actor}} {{action}}",
+        "game_control_email": "{{title}} nella tua partita. Apri: {{link}}",
+        "test_subject": "Notifica di prova HiveGame",
+        "test_email": "Le notifiche push funzionano.",
+        "direct_message_subject": "Nuovo messaggio da {{sender}}"
+    },
+    "push_errors": {
+        "enable_first": "Attiva prima le notifiche.",
+        "test_failed": "Impossibile inviare la notifica di prova.",
+        "unavailable": "Le notifiche non sono disponibili in questo browser.",
+        "service_workers_unsupported": "Questo browser non supporta i service worker.",
+        "registration_lookup_failed": "Impossibile trovare il servizio notifiche del browser.",
+        "service_worker_missing": "Ricarica la pagina e riprova; il servizio notifiche non è pronto.",
+        "permission_blocked": "Le notifiche per questo sito sono bloccate nelle impostazioni del browser.",
+        "permission_request_failed": "Impossibile richiedere il permesso per le notifiche.",
+        "permission_not_granted": "Il permesso per le notifiche non è stato concesso.",
+        "server_key_missing": "Web Push non è configurato sul server.",
+        "push_manager_failed": "Impossibile accedere alle notifiche del browser.",
+        "server_key_invalid": "Il server ha restituito una chiave notifiche non valida.",
+        "subscribe_failed": "Impossibile iscriversi alle notifiche.",
+        "subscription_invalid": "Il browser ha restituito un'iscrizione non valida.",
+        "registration_failed": "Impossibile registrare le notifiche del browser.",
+        "unsubscribe_failed": "Impossibile annullare l'iscrizione alle notifiche.",
+        "subscription_not_released": "Il browser non ha rilasciato l'iscrizione alle notifiche."
+    },
+    "discord": {},
+    "email": {
+        "password_reset_body": "Ciao {{username}},\n\nAbbiamo ricevuto una richiesta per reimpostare la tua password. Il link scade tra 1 ora.\nSe non hai inviato questa richiesta, ignora questa email: la tua password non è stata modificata.\n\n{{link}}\n\n--\nQuesta email è stata inviata da hivegame.com. Se non ti sei registrato, puoi ignorare questo messaggio.\n\nVuoi parlare con una persona? Entra nel nostro Discord e cerca Ion o leex:\nhttps://discord.gg/7EwNTJnfab\n",
+        "recipient_fallback": "a te"
+    },
+    "control": {
+        "offered_draw": "ha offerto patta",
+        "requested_takeback": "ha chiesto di ritirare una mossa",
+        "declined_draw": "ha rifiutato la patta",
+        "accepted_takeback": "ha accettato il ritiro della mossa",
+        "declined_takeback": "ha rifiutato il ritiro della mossa"
     }
 }

@@ -1,18 +1,20 @@
 use crate::{
+    common::{auth_page_url, use_return_path},
     components::{
         layouts::page_shell::{PageShell, PageShellVariant},
         molecules::page_card::PageCard,
     },
     functions::auth::login::Login,
     i18n::*,
-    providers::{AuthContext, RefererContext},
+    providers::AuthContext,
+    security::csrf::ActionForm,
 };
-use leptos::{form::ActionForm, html, prelude::*};
+use leptos::{html, prelude::*};
 
 #[component]
 pub fn Login() -> impl IntoView {
     let i18n = use_i18n();
-    let pathname = expect_context::<RefererContext>().pathname;
+    let pathname = use_return_path();
     let my_input = NodeRef::<html::Input>::new();
     Effect::new(move |_| {
         let _ = my_input.get_untracked().map(|el| el.focus());
@@ -33,9 +35,12 @@ pub fn Login() -> impl IntoView {
         <PageShell variant=PageShellVariant::Form>
             <PageCard class="p-6 sm:p-8">
                 <ActionForm action=login attr:class="space-y-4">
+
                     <div class="flex flex-col gap-1">
                         <h1 class="ui-page-title">{t!(i18n, user_config.login.login_button)}</h1>
-                        <p class="ui-page-subtitle">"Sign in to continue playing."</p>
+                        <p class="ui-page-subtitle">
+                            {t!(i18n, common.auth.sign_in_to_continue_playing)}
+                        </p>
                     </div>
 
                     <label class="flex flex-col gap-1.5" for="email">
@@ -51,7 +56,7 @@ pub fn Login() -> impl IntoView {
                         />
                     </label>
                     <label class="flex flex-col gap-1.5" for="password">
-                        <span class="ui-field-label">{t!(i18n, user_config.login.password)}</span>
+                        <span class="ui-field-label">{t!(i18n, common.password)}</span>
                         <input
                             class="ui-field-input"
                             name="password"
@@ -61,7 +66,7 @@ pub fn Login() -> impl IntoView {
                             placeholder="********"
                         />
                     </label>
-                    <input type="hidden" name="pathname" value=pathname.get_value() />
+                    <input type="hidden" name="pathname" value=pathname />
                     <p class="min-h-5">
                         <Show when=move || { login.value().get().is_some_and(|v| v.is_err()) }>
                             <small class="ui-field-error">
@@ -75,15 +80,18 @@ pub fn Login() -> impl IntoView {
                 </ActionForm>
             </PageCard>
             <p class="text-xs text-center">
-                <a class="ui-text-link" href="/forgot-password">
-                    "Forgot your password?"
+                <a
+                    class="ui-text-link"
+                    href=move || auth_page_url("/forgot-password", &pathname.get())
+                >
+                    {t!(i18n, common.auth.forgot_your_password)}
                 </a>
             </p>
             <p class="text-xs text-center text-gray-500 dark:text-gray-400">
                 {t!(
                     i18n, user_config.login.no_account_prompt,
                     < register_link > =
-                    <a class="ui-text-link" href="/register"/>
+                    <a class="ui-text-link" href=move || auth_page_url("/register", &pathname.get())/>
                 )}
             </p>
         </PageShell>

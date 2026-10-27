@@ -12,17 +12,10 @@ use shared_types::{CorrespondenceMode, GameSpeed, TimeMode};
 pub fn TimeSelect(
     is_tournament: bool,
     params: Store<ChallengeParams>,
-    on_value_change: Callback<TimeMode>,
+    #[prop(optional)] on_value_change: Option<Callback<TimeMode>>,
     allowed_values: Vec<TimeMode>,
 ) -> impl IntoView {
     let i18n = use_i18n();
-    let title = move || {
-        if is_tournament {
-            "Match settings:"
-        } else {
-            t_string!(i18n, home.custom_game.title)
-        }
-    };
     let time_mode = move || params.time_signals().time_mode().get();
     let corr_mode = move || params.time_signals().corr_mode().get();
     let gamespeed_icon = move || {
@@ -51,7 +44,9 @@ pub fn TimeSelect(
     let allow_untimed = allowed_values.contains(&TimeMode::Untimed);
     let toggle_time_mode = move |t: TimeMode| {
         params.time_signals().time_mode().update(|v| *v = t);
-        on_value_change.run(t);
+        if let Some(on_value_change) = on_value_change {
+            on_value_change.run(t);
+        }
     };
     let toggle_corr_mode = move |t: CorrespondenceMode| {
         params.time_signals().corr_mode().update(|v| *v = t);
@@ -67,10 +62,14 @@ pub fn TimeSelect(
     });
     view! {
         <div class="flex flex-col items-center p-2 w-full">
-            <div class="flex gap-2 justify-center items-center w-full">
-                {gamespeed_icon}
-                <p class="text-lg font-bold text-gray-900 dark:text-gray-100">{title}</p>
-            </div>
+            <Show when=move || !is_tournament>
+                <div class="flex gap-2 justify-center items-center w-full">
+                    {gamespeed_icon}
+                    <p class="text-lg font-bold text-gray-900 dark:text-gray-100">
+                        {t!(i18n, home.custom_game.title)}
+                    </p>
+                </div>
+            </Show>
 
             <div class="flex flex-row flex-wrap gap-2 justify-center w-full">
                 <Show when=move || allow_realtime>
@@ -79,7 +78,7 @@ pub fn TimeSelect(
                         on:click=move |_| toggle_time_mode(TimeMode::RealTime)
                         class=move || radio_style(time_mode() == TimeMode::RealTime)
                     >
-                        {t!(i18n, home.custom_game.mode.real_time.title)}
+                        {t!(i18n, game.time_mode.real_time)}
                     </button>
                 </Show>
                 <Show when=move || allow_correspondence>
@@ -88,7 +87,7 @@ pub fn TimeSelect(
                         on:click=move |_| toggle_time_mode(TimeMode::Correspondence)
                         class=move || radio_style(time_mode() == TimeMode::Correspondence)
                     >
-                        {t!(i18n, home.custom_game.mode.correspondence.title)}
+                        {t!(i18n, game.speeds.correspondence)}
                     </button>
                 </Show>
                 <Show when=move || allow_untimed>
@@ -97,7 +96,7 @@ pub fn TimeSelect(
                         on:click=move |_| toggle_time_mode(TimeMode::Untimed)
                         class=move || radio_style(time_mode() == TimeMode::Untimed)
                     >
-                        {t!(i18n, home.custom_game.mode.untimed)}
+                        {t!(i18n, game.speeds.untimed)}
                     </button>
                 </Show>
             </div>

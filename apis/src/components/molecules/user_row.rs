@@ -1,22 +1,21 @@
 use crate::{
-    common::{with_class, UserAction},
+    common::{display_username, with_class, UserAction},
     components::{
         atoms::{
             direct_challenge_button::DirectChallengeButton,
             invite_button::InviteButton,
-            kick_button::KickButton,
             message_button::MessageButton,
             rating::Rating,
             status_indicator::StatusIndicator,
-            uninvite_button::UninviteButton,
         },
         molecules::user_identity::UserIdentity,
     },
+    i18n::*,
     providers::AuthContext,
     responses::UserResponse,
 };
 use leptos::{
-    either::{Either, EitherOf5},
+    either::{Either, EitherOf3},
     prelude::*,
 };
 use shared_types::GameSpeed;
@@ -27,6 +26,7 @@ pub fn UserRow(
     actions: Vec<UserAction>,
     #[prop(optional)] game_speed: Option<StoredValue<GameSpeed>>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let username = StoredValue::new(user.username.clone());
     let user_id = StoredValue::new(user.uid);
     let rating = StoredValue::new(if let Some(speed) = game_speed {
@@ -46,21 +46,18 @@ pub fn UserRow(
                 UserAction::Challenge if user.bot => None,
                 UserAction::Challenge => {
                     let opponent = username.get_value();
-                    Some(EitherOf5::A(
+                    Some(EitherOf3::A(
                         view! { <DirectChallengeButton user_id opponent /> },
                     ))
                 }
-                UserAction::Invite(tournament_id) => Some(EitherOf5::B(
+                UserAction::Invite(tournament_id) => Some(EitherOf3::B(
                     view! { <InviteButton user_id tournament_id /> },
                 )),
-                UserAction::Uninvite(tournament_id) => Some(EitherOf5::C(
-                    view! { <UninviteButton user_id tournament_id /> },
-                )),
-                UserAction::Kick(tournament) => Some(EitherOf5::D(
-                    view! { <KickButton user_id tournament=*tournament /> },
+                UserAction::InviteOrganizer(tournament_id) => Some(EitherOf3::B(
+                    view! { <InviteButton user_id tournament_id organizer=true /> },
                 )),
                 UserAction::Message if user.bot => None,
-                UserAction::Message => Some(EitherOf5::E(view! {
+                UserAction::Message => Some(EitherOf3::C(view! {
                     <Show when=move || {
                         auth_user.with(|me| me.as_ref().is_some_and(|me| me.user.uid != user_id))
                     }>
@@ -98,13 +95,24 @@ pub fn UserRow(
                 <div class="flex items-center min-w-0">
                     <StatusIndicator username=username.get_value() deleted=user_deleted />
                     <span class="text-xs font-bold truncate max-w-[120px]">
-                        {user.username.clone()} <Show when=move || user_bot>
-                            <span class="ml-1 text-[80%]">"BOT"</span>
+                        {move || display_username(i18n, user_deleted, &username.get_value())}
+                        <Show when=move || user_bot>
+                            <span class="ml-1 text-[80%]">
+                                {move || t_string!(i18n, common.bot)}
+                            </span>
                         </Show>
                     </span>
                 </div>
-                <Show when=move || { rating.with_value(|r| r.is_some()) }>
-                    <Rating rating=rating.get_value().expect("Rating is some") />
+                <Show when=move || {
+                    rating.with_value(|r| r.is_some())
+                }>
+                    {rating
+                        .with_value(|rating| {
+                            let rating = rating.as_ref().expect("Rating is some");
+                            view! {
+                                <Rating value=rating.rating certainty=rating.certainty.clone() />
+                            }
+                        })}
                 </Show>
             </button>
         })
@@ -113,8 +121,19 @@ pub fn UserRow(
             <div class=row_class>
                 <div class="flex flex-1 justify-between mr-2 min-w-0">
                     <UserIdentity user=user link_class="truncate max-w-[120px]" />
-                    <Show when=move || { rating.with_value(|r| r.is_some()) }>
-                        <Rating rating=rating.get_value().expect("Rating is some") />
+                    <Show when=move || {
+                        rating.with_value(|r| r.is_some())
+                    }>
+                        {rating
+                            .with_value(|rating| {
+                                let rating = rating.as_ref().expect("Rating is some");
+                                view! {
+                                    <Rating
+                                        value=rating.rating
+                                        certainty=rating.certainty.clone()
+                                    />
+                                }
+                            })}
                     </Show>
                 </div>
                 <div class="flex gap-1 items-center shrink-0 [&_.ui-button]:mx-0">

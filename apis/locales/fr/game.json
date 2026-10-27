@@ -2,12 +2,12 @@
     "time_mode": {
         "correspondence": {
             "days_move_one": "{{count}} jour par déplacement",
-            "title": "Correspondance",
             "days_side_other": "{{count}} jours par face",
             "days_side_one": "{{count}} jour par face",
-            "days_move_other": "{{count}} jours par déplacement"
+            "days_move_other": "{{count}} jours par déplacement",
+            "duration_move": "{{duration}} par déplacement",
+            "duration_side": "{{duration}} par face"
         },
-        "untimed": "Pas de limite de temps",
         "real_time": "Temps réel"
     },
     "created_ago": {
@@ -38,15 +38,116 @@
         "both_click": "La partie commencera lorsque vous aurez tous les deux cliqué sur « prêt » à moins de 30 secondes d'intervalle",
         "both_ready": "Ce tournoi commencera lorsque les deux joueurs seront prêts"
     },
+    "arena": {
+        "berserk": "Berserk",
+        "berserk_title": "Renoncez à l'incrément et, si possible, à la moitié du temps de base pour gagner des points d'arène supplémentaires.",
+        "back_to_arena": "Retour à l’arène",
+        "return_for_pairing": "Revenez pour trouver le prochain adversaire.",
+        "pairing_paused": "Appariements en pause. Reprenez dans l’arène quand vous voulez."
+    },
+    "realtime_assignments": {
+        "title": "Parties en temps réel prêtes",
+        "challenge": "Défi en temps réel",
+        "tournament": "Partie de tournoi",
+        "arena": "Partie d'Arène",
+        "opening_due": "Le coup d'ouverture doit être joué dans {{count}} s",
+        "opening_due_now": "Le coup d'ouverture doit être joué maintenant",
+        "open_new_tab": "Ouvrir dans un nouvel onglet"
+    },
     "speeds": {
         "untimed": "Non chronométré",
         "classic": "Classique",
         "bullet": "Balle",
         "blitz": "Éclair",
         "rapid": "Rapide",
-        "correspondence": "Correspondance"
+        "correspondence": "Correspondance",
+        "puzzle": "Problème"
     },
     "rated": "Évalué",
     "played_in": "Joué dans :",
-    "casual": "Libre"
+    "casual": "Libre",
+    "tournament_result": {
+        "white_won": "Les Blancs ont gagné",
+        "draw": "Partie nulle",
+        "black_won": "Les Noirs ont gagné",
+        "white_won_by_forfeit": "Les Blancs ont gagné par forfait",
+        "black_won_by_forfeit": "Les Noirs ont gagné par forfait",
+        "adjudicated_draw": "Partie nulle par décision arbitrale",
+        "white_draw_black_forfeit_loss": "Nulle pour les Blancs ; défaite par forfait pour les Noirs",
+        "white_forfeit_loss_black_draw": "Défaite par forfait pour les Blancs ; nulle pour les Noirs",
+        "double_forfeit": "Double forfait"
+    },
+    "rating_range": "Plage de classement",
+    "speeds_label": "Cadences",
+    "view": "Voir",
+    "quickplay_tooltip": "{{speed}}\n{{base}} min de temps initial\n+{{increment}} s par coup",
+    "rematch": "Revanche",
+    "rematch_sent": "Envoyé",
+    "accept_challenge": "Accepter le défi",
+    "cancel_challenge": "Annuler le défi",
+    "decline_challenge": "Refuser le défi",
+    "accepting": "Acceptation…",
+    "removing": "Suppression…",
+    "challenge_to_a_game": "Défier pour une partie",
+    "abort": "Annuler",
+    "accept_draw": "Accepter la nulle",
+    "offer_draw": "Proposer la nulle",
+    "reject_draw": "Refuser la nulle",
+    "resign": "Abandonner",
+    "accept_takeback": "Accepter la reprise",
+    "reject_takeback": "Refuser la reprise",
+    "request_takeback": "Demander une reprise",
+    "invite_as_organizer": "Inviter comme organisateur",
+    "no_rating_history_yet": "Aucun historique de classement",
+    "not_enough_games_to_build_a_graph": "Pas assez de parties pour un graphique",
+    "error_loading_history": "Impossible de charger l'historique",
+    "show_controls": "Afficher les commandes",
+    "hide_controls": "Masquer les commandes",
+    "opponent_wants_a_takeback": "L'adversaire demande une reprise",
+    "opponent_offers_a_draw": "L'adversaire propose la nulle",
+    "playing_now": "En cours",
+    "view_game_details": "Voir les détails de la partie",
+    "connected": "Connecté",
+    "disconnected": "Déconnecté",
+    "offline": "hors ligne",
+    "unknown_player": "Joueur inconnu",
+    "clear_selection": "Effacer la sélection",
+    "searching": "Recherche…",
+    "played_in_label": "Jouée dans",
+    "open_navigation_menu": "Ouvrir le menu de navigation",
+    "no_data": "Aucune donnée",
+    "analyze_here": "Analyser ici",
+    "rating_history_title": "Historique du classement {{speed}}",
+    "in_tournament": "dans {{tournament}}",
+    "played_in_tournament": "jouée dans {{tournament}}",
+    "site_description": "Le meilleur endroit pour jouer à Hive en ligne, le jeu de stratégie sans plateau. Gratuit, sans publicité, avec des parties classées, des tournois et des parties entre amis, contre des adversaires aléatoires ou des bots.",
+    "site_title": "HiveGame.com • Jouez à Hive en ligne",
+    "rating_history_minimum_games": "Jouez au moins cinq parties classées à cette cadence pour afficher le graphique.",
+    "result": {
+        "winner_timeout": "{{winner}} gagne au temps",
+        "winner_resignation": "{{winner}} gagne par abandon",
+        "winner_board": "{{winner}} gagne sur le plateau",
+        "winner_committee": "{{winner}} gagne sur décision du comité",
+        "winner_withdrawal": "{{winner}} gagne par retrait",
+        "winner_forfeit": "{{winner}} gagne par forfait",
+        "double_forfeit": "La partie se termine par un double forfait",
+        "draw_summary": "{{result}} {{conclusion}}",
+        "winner": "{{winner}} gagne"
+    },
+    "conclusion": {
+        "board": "Terminée sur le plateau",
+        "committee": "Décision du comité",
+        "draw": "Nulle convenue",
+        "forfeit": "Forfait",
+        "repetition": "Triple répétition",
+        "resigned": "Abandon",
+        "timeout": "Temps écoulé"
+    },
+    "clock": {
+        "days": "{{days}}j",
+        "days_hours": "{{days}}j:{{hours}}h",
+        "hours_minutes": "{{hours}}h{{minutes}}",
+        "arena_hours_minutes": "{{hours}}h {{minutes}}min"
+    },
+    "aborted_by": "{{actor}} a annulé la partie"
 }

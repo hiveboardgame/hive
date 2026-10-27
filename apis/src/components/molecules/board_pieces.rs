@@ -20,20 +20,27 @@ pub fn BoardPieces(
     let paint = Memo::new(move |_| {
         let movers = tutorial.and_then(|tutorial| {
             tutorial.session.with(|session| {
-                session.as_ref().and_then(|session| session.lesson().blank_movers())
+                session
+                    .as_ref()
+                    .and_then(|session| session.lesson().blank_movers())
             })
         });
         let visible = tutorial.and_then(|tutorial| {
             tutorial.session.with(|session| {
-                session.as_ref().and_then(|session| session.lesson().blank_visible())
+                session
+                    .as_ref()
+                    .and_then(|session| session.lesson().blank_visible())
             })
         });
         let revealed = tutorial.map_or_else(Vec::new, |tutorial| {
             tutorial.session.with(|session| {
-                session.as_ref().map_or_else(Vec::new, |session| session.revealed_neighbours())
+                session
+                    .as_ref()
+                    .map_or_else(Vec::new, |session| session.revealed_neighbours())
             })
         });
-        tile_opts.with(HivegroundPaint::new)
+        tile_opts
+            .with(HivegroundPaint::new)
             .with_blank_movers(movers)
             .with_visible_pieces(visible)
             .with_revealed_pieces(&revealed)

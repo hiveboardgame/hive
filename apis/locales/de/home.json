@@ -1,42 +1,28 @@
 {
     "learn_to_play": "Spielen lernen",
     "create_game": "Ein Spiel erstellen",
-    "search_players": "Spieler*innen suchen",
     "found_players": "Gefunden:",
     "online_players_one": "{{count}} Online-Spieler*in",
     "online_players_other": "{{count}} Online-Spieler*innen",
     "custom_game": {
-        "button": "Benutzerdefiniert",
         "title": "Ein Spiel erstellen:",
-        "casual": "Ungezwungen",
-        "rated": "Bewertet",
         "private": "Privat",
         "public": "Öffentlich",
-        "rating_range": "Bewertungsbereich",
         "mode": {
             "real_time": {
-                "title": "Echtzeit",
                 "minutes_per_side": "Minuten pro Seite: {{count}}",
                 "increment_in_seconds": "Zugabe in Sekunden: {{count}}"
             },
             "correspondence": {
-                "title": "Korrespondenz",
                 "days_per_move": "Tage pro Zug",
                 "total_time_each": "Gesamtzeit für jede*n",
                 "time_one": "{{count}} Tag",
                 "time_other": "{{count}} Tage"
-            },
-            "untimed": "Unbegrenzt"
+            }
         }
     },
     "challenge_details": {
-        "player": "Spieler*in",
-        "time": "Zeit",
-        "rated": {
-            "title": "Bewertet",
-            "yes": "Ja",
-            "no": "Nein"
-        }
+        "time": "Zeit"
     },
     "challenge_tabs": {
         "humans": "Menschen",
@@ -45,5 +31,56 @@
             "humans": "Es gibt keine offenen Herausforderungen von Menschen. Erstelle oben eine, um eine Partie zu starten.",
             "bots": "Zurzeit gibt es keine offenen Bot-Herausforderungen."
         }
+    },
+    "calendar": {
+        "title": "Partien",
+        "last_updated": "Zuletzt aktualisiert: {{time}}",
+        "loading_title": "Kommende Partien werden geladen...",
+        "loading_message": "Bitte warten, die geplanten Partien werden abgerufen",
+        "error_title": "Fehler beim Laden der kommenden Partien",
+        "empty_title": "Keine kommenden Turnierpartien",
+        "empty_message": "Schau später wieder vorbei"
+    },
+    "pick_your_color_and_create_a_challenge": "Wähle deine Farbe und erstelle eine Herausforderung:",
+    "an_introduction_to_hive": "Eine Einführung in Hive",
+    "learn_to_play_hive_video_thumbnail": "Hive spielen lernen – Videovorschau",
+    "couldn_t_fetch_top_users": "Bestenliste konnte nicht geladen werden",
+    "no_one_yet": "Noch niemand",
+    "not_ranked_yet": "Noch nicht platziert",
+    "quick_play": "Schnellstart",
+    "play_vs_bot": "Gegen Bot spielen",
+    "play_bot": "Gegen Bot",
+    "challenge": {
+        "bot": {
+            "play_an_unrated_game_vs_our_bot": "Spiele eine ungewertete Partie gegen unseren Bot",
+            "easy": "Leicht",
+            "medium": "Mittel",
+            "hard": "Schwer"
+        },
+        "direct_challenge_to": "Direkte Herausforderung an {{display_username}}",
+        "waiting_for_to_respond": "Warte auf die Antwort von {{display_username}}.",
+        "private_challenge": "Private Herausforderung",
+        "share_the_private_link_with_the_player_you_want": "Teile den privaten Link mit dem Spieler, den du einladen möchtest.",
+        "public_challenge": "Öffentliche Herausforderung",
+        "this_challenge_is_listed_publicly_while_it_is_open": "Diese Herausforderung wird öffentlich angezeigt, solange sie offen ist.",
+        "direct_challenge_from": "Direkte Herausforderung von {{display_username}}",
+        "review_the_settings_below_then_accept_or_decline": "Prüfe die Einstellungen unten und nimm an oder lehne ab.",
+        "private_challenge_from": "Private Herausforderung von {{display_username}}",
+        "log_in_to_accept_this_challenge": "Melde dich an, um diese Herausforderung anzunehmen.",
+        "challenge_from": "Herausforderung von {{display_username}}",
+        "review_the_settings_below_then_accept_when_you_re": "Prüfe die Einstellungen unten und nimm an, wenn du spielbereit bist.",
+        "challenger": "Herausforderer:",
+        "challenge_not_found": "Herausforderung nicht gefunden",
+        "the_challenge_you_re_looking_for_doesn_t_exist": "Die gesuchte Herausforderung existiert nicht",
+        "this_challenge_has_been_accepted_and_the_game_is": "Diese Herausforderung wurde angenommen und die Partie ist bereit.",
+        "please_wait_while_we_fetch_the_challenge_details": "Bitte warte, während wir die Herausforderungsdetails laden",
+        "error_loading_challenge": "Herausforderung konnte nicht geladen werden",
+        "challenge_doesn_t_seem_to_exist": "Die Herausforderung scheint nicht zu existieren",
+        "please_wait_while_we_check_your_account": "Bitte warte, während wir dein Konto prüfen",
+        "challenge_no_longer_available": "Herausforderung nicht mehr verfügbar",
+        "share_private_link": "Privaten Link teilen",
+        "only_players_with_this_url_can_accept_this_private": "Nur Spieler mit dieser URL können diese private Herausforderung annehmen.",
+        "copy_link": "Link kopieren",
+        "challenge_details": "Herausforderungsdetails"
     }
 }

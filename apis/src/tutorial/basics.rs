@@ -8,7 +8,16 @@ pub const CHAPTER: Chapter = Chapter {
     id: "basics",
     title: "The basics",
     summary: "How the game starts, how pieces enter the game, how to win and the One Hive Rule.",
-    lessons: &[WELCOME, PLACING, QUEEN_RULE, MOVE_PIECES, ONE_HIVE, SURROUND, DRAW, PASS],
+    lessons: &[
+        WELCOME,
+        PLACING,
+        QUEEN_RULE,
+        MOVE_PIECES,
+        ONE_HIVE,
+        SURROUND,
+        DRAW,
+        PASS,
+    ],
 };
 
 const WELCOME: Lesson = Lesson {
@@ -209,7 +218,6 @@ const DRAW: Lesson = Lesson {
     ],
     outro: "",
 };
-
 
 const PASS: Lesson = Lesson {
     id: "basics.pass",
