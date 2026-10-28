@@ -1137,13 +1137,9 @@ impl Session {
                     self.wrong()
                 }
             }
-            Goal::PlayAny => {
-                if piece.is_color(self.learner) {
-                    self.complete_step(step)
-                } else {
-                    self.wrong()
-                }
-            }
+            // The engine has already validated the learner's turn. A Pillbug
+            // may legally move an opponent's piece, so its colour is irrelevant.
+            Goal::PlayAny => self.complete_step(step),
             Goal::LiftAny { piece: spec, by } => {
                 let lifted = spec_matches(spec, piece)
                     && hex(&before.board, by).is_some_and(|ability| {

@@ -213,8 +213,11 @@ const ANT: Lesson = Lesson {
 
 const ANT_ATTACK: Lesson = Lesson {
     id: "bugs.ant_attack",
-    title: "Ant (attack!)",
-    intro: &[],
+    title: "Ant (pin)",
+    intro: &[
+        "A **pinned** piece cannot move because doing so would break the hive.",
+        "Pinning is a basic Hive tactic. The Ant [[wA1]] often has several options for pinning an opponent's piece.",
+    ],
     brief: "Supplied HOP ALlm-q!1+Q,w. Move the existing wA1 next to bQ and pin bQ so she has no legal move on Black's following turn. Exactly /bQ, bQ\\ and bQ- succeed. A failed pin is followed by a legal bQ move when one is available.",
     setup: Setup::Position("ALlm-q!1+Q,w"),
     steps: &[
@@ -274,7 +277,7 @@ const SPIDER: Lesson = Lesson {
 
 const SPIDER_DEAD_END: Lesson = Lesson {
     id: "bugs.spider_dead_end",
-    title: "Spider (2)",
+    title: "Spider dead end",
     intro: &[
         "A Spider [[wS1]] cannot revisit a hex during a move. Here the Spider cannot move, as it would go back to the hex where it is now.",
     ],
@@ -282,7 +285,7 @@ const SPIDER_DEAD_END: Lesson = Lesson {
     setup: Setup::Position("G+Aq-m+a4-(pL+QM-A+a!1-(Sl1+a)3-P),w"),
     steps: &[
         Step::read(
-            "This Spider [[wS1]] has no 3-step route without **backtracking**.\nThere is no move to play; choose Next lesson.",
+            "The red arrows return to the Spider's [[wS1]] starting hex. A move cannot end where it began.\nThere is no move to play; choose Next lesson.",
             &["wS1"],
         )
         .with_backtracking_arrows("wS1")
@@ -297,7 +300,7 @@ const SPIDER_DOOR: Lesson = Lesson {
     intro: &[
         "A **door** is an opening that gives the Spider [[wS1]] a choice of paths.\nEach move still takes exactly 3 steps.",
     ],
-    brief: "Supplied HOP A+P+QM+Llb+a3+S4-m6+p+qA6-g!,w. Only wS1 can move; all pieces except wQ, bQ and wS1 are blank. The shortest route to bA1\\ uses two moves, via wA2\\. Small arrows follow the Spider's current legal options.",
+    brief: "Supplied HOP A+P+QM+Llb+a3+S4-m6+p+qA6-g!,w. Only wS1 can move; all pieces except wQ, bQ and wS1 are blank. The shortest route to bA1\\ uses two moves, via wA2\\. Arrows follow the Spider's current legal options.",
     setup: Setup::BlankExercise {
         position: "A+P+QM+Llb+a3+S4-m6+p+qA6-g!,w",
         movable: &["wS1"],
@@ -317,7 +320,6 @@ const SPIDER_DOOR: Lesson = Lesson {
         .highlighted(&["bA1\\"])
         .with_legal_arrows("wS1")
         .with_movement_paths(hive_lib::Bug::Spider)
-        .with_small_arrows(&[])
         .your_turn(),
         Step::read(
             "Well done! Your Spider [[wS1]] reached the green hex beside the black Queen [[bQ]]",
@@ -514,9 +516,7 @@ It can crawl on the ground or climb onto other pieces.",
     },
     steps: &[
         Step::play(
-            "You play as White.
-
-Move your Beetle [[wB1]] around the hive and cover the black Queen [[bQ]]",
+            "You play as White.\nMove your Beetle [[wB1]] around the hive and cover the black Queen [[bQ]]",
             Explore { pieces: &["wB1"], condition: OnTop("wB1", "bQ") },
             "Keep moving your Beetle toward the black Queen.",
         )
@@ -527,8 +527,7 @@ Move your Beetle [[wB1]] around the hive and cover the black Queen [[bQ]]",
         .your_turn()
         .reply("bB1", "wB1"),
         Step::read(
-            "Well done! Black covered your Beetle [[wB1]] with their Beetle [[bB1]]
-Only the piece on top can move.",
+            "Well done! You covered the enemy Queen [[bQ]], and Black covered your Beetle [[wB1]] with their own Beetle [[bB1]]\nRemember: only the piece on top of a stack can move.",
             &[],
         ),
     ],
@@ -782,7 +781,7 @@ const MOSQUITO_OTHER: Lesson = Lesson {
         .reply("bM", "bB1")
         .your_turn(),
         Step::play(
-            "Black replied with a Mosquito [[bM]], which yours cannot copy.\nMove your Ant [[wA1]] beside your Mosquito [[wM]] to free it.",
+            "Black replied by climbing up with their Mosquito [[bM]]. Now your Mosquito [[wM]] has no adjacent piece to copy!\nMove your Ant [[wA1]] next to your Mosquito [[wM]] to give it movement options.",
             MoveSatisfying {
                 piece: "wA1",
                 condition: All(&[Touching("wA1", "wM"), Not(&Stuck("wM"))]),

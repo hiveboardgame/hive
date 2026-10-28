@@ -62,7 +62,7 @@ const PLACING: Lesson = Lesson {
     setup: Setup::Position("L+l!,w"),
     steps: &[
         Step::play(
-            "You play as White. New pieces cannot touch Black's pieces.\nChoose any piece from the reserve, then a highlighted hex.\nThe hexes available for placement are called **spawn points**.",
+            "You play as White. New pieces cannot touch Black's pieces.\nChoose any piece from the reserve, then a highlighted hex.\nThe hexes available for placement are called **spawn points**. These hexes appear when you click on a piece in the reserve to show you legal placements.",
             PlaceAny,
             "Choose any piece from the reserve, then a highlighted hex.",
         )
@@ -117,7 +117,7 @@ const MOVE_PIECES: Lesson = Lesson {
     },
     steps: &[
         Step::play(
-            "You play as White.\nClick a piece already in play to see how it moves, then make any move.",
+            "You play as White.\nClick a piece already in play to see how it moves, then make any move.\nhivegame.com always highlights legal moves with hexes when you click on a piece in play.",
             MoveAny,
             "That placement would be allowed in a real game, but for this lesson, move a piece already in play.",
         ),
@@ -162,16 +162,15 @@ const FREEDOM_TO_MOVE: Lesson = Lesson {
     id: "basics.freedom_to_move",
     title: "Freedom to Move rule",
     intro: &[
-        "A crawling piece must have enough room to slide between its neighbours.",
-        "Here, your Ant [[wA1]] cannot squeeze through the gate shown by the [red]red arrow[/red]. Moving your Spider [[wS1]] opens the gate.",
+        "Crawling pieces must have enough room to slide.",
+        "A **gate** is a narrow gap between two pieces that a crawling piece cannot squeeze through.",
+        "Here, your Ant [[wA1]] is blocked by the gate shown by the [red]red arrow[/red]. Moving your Spider [[wS1]] opens it.",
     ],
     brief: "Supplied HOP GAG-gmp1+M-Q1-S4+a-q5-s!,w. wA1 is trapped by wG2 and wS1 at the exit wS1-. Move wS1 by any legal normal crawl; Black places bB1. Then move wA1 by any legal normal crawl.",
     setup: Setup::Position("GAG-gmp1+M-Q1-S4+a-q5-s!,w"),
     steps: &[
         Step::play(
-            "You play as White. Your Ant [[wA1]] cannot slide through this gate.
-
-Move your Spider [[wS1]] to open it.",
+            "You play as White. Your Ant [[wA1]] cannot slide through this gate.\nMove your Spider [[wS1]] to open the gate, then move the Ant [[wA1]] anywhere.",
             MovePiece { piece: "wS1", touching: None },
             "Move your Spider to make room for the Ant.",
         )
@@ -181,9 +180,7 @@ Move your Spider [[wS1]] to open it.",
         .reply_placement("bB1")
         .your_turn(),
         Step::play(
-            "Black placed a Beetle [[bB1]] and the gate is open.
-
-Move your Ant [[wA1]] to any available hex.",
+            "You play as White. Your Ant [[wA1]] cannot slide through this gate.\nMove your Spider [[wS1]] to open the gate, then move the Ant [[wA1]] anywhere.",
             MovePiece { piece: "wA1", touching: None },
             "Move your Ant through the open gate.",
         )

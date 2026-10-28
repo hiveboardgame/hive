@@ -356,7 +356,7 @@ fn placing_is_second_and_black_replies_with_a_legal_queen() {
     assert_eq!(CHAPTERS[0].lessons[7].id, "basics.draw");
     assert_eq!(CHAPTERS[1].lessons[0].id, "bugs.queen");
     assert_eq!(CHAPTERS[1].lessons[1].id, "bugs.freedom_to_move");
-    assert_eq!(CHAPTERS[2].lessons[0].id, "online.create_join");
+    assert_eq!(CHAPTERS[2].lessons[0].id, "online.interface");
 
     let lesson = find_lesson("basics.placing").expect("placing lesson exists");
     let mut session = Session::new(lesson).expect("placing lesson loads");
@@ -839,7 +839,7 @@ fn every_real_game_lesson_links_its_game() {
     for lesson in lessons().filter(|lesson| {
         lesson.has_board()
             && !lesson.id.starts_with("openings.")
-            && lesson.id != "online.controls"
+            && !["online.controls", "online.interface"].contains(&lesson.id)
             && !matches!(
                 lesson.id,
                 "basics.pass"
@@ -1035,7 +1035,7 @@ fn queen_and_ant_groups_have_the_requested_order() {
     );
     assert_eq!(find_lesson("bugs.ant").unwrap().title, "Gate");
     assert!(find_lesson("bugs.ant_pin").is_none());
-    assert_eq!(lessons().count(), 44);
+    assert_eq!(lessons().count(), 45);
     let queen = super::group_of("bugs.queen").unwrap();
     assert_eq!(queen.title, "The Queen Bee");
     for id in [
@@ -1672,7 +1672,7 @@ fn corrected_door_position_has_a_two_move_route_and_arrows_follow_the_spider() {
     assert!(!session.state().board.occupied(goal));
     assert!(!session.destinations(spider).contains(&goal));
     assert_eq!(session.highlights(), vec![goal]);
-    assert!(session.current_step().unwrap().small_arrows);
+    assert!(!session.current_step().unwrap().small_arrows);
     assert_spider_step_arrows(&session);
     for at in session.state().board.all_taken_positions() {
         let piece = session.state().board.top_piece(at).unwrap();
@@ -2870,7 +2870,7 @@ fn released_curriculum_keeps_online_after_pieces_and_hides_future_chapters() {
             .collect::<Vec<_>>(),
         vec!["basics", "bugs", "online"]
     );
-    assert_eq!(lessons().count(), 44);
+    assert_eq!(lessons().count(), 45);
     for chapter in super::curriculum::UNRELEASED_CHAPTERS {
         for lesson in chapter.lessons {
             assert!(super::curriculum::find_lesson(lesson.id).is_none());
@@ -2885,6 +2885,7 @@ fn released_curriculum_keeps_online_after_pieces_and_hides_future_chapters() {
             .map(|lesson| lesson.id)
             .collect::<Vec<_>>(),
         vec![
+            "online.interface",
             "online.create_join",
             "online.time_controls",
             "online.controls",
@@ -3225,8 +3226,18 @@ fn spider_arrows_explain_both_three_step_routes_and_backtracking() {
     assert_eq!(red[0].1, red[1].0);
     assert_eq!(red[1].1, red[2].0);
     assert!(red.iter().all(|(a, b)| a.is_neighbor(*b)));
-    let visited = [red[0].0, red[0].1, red[1].1, red[2].1];
-    assert!(visited.iter().collect::<HashSet<_>>().len() < 4);
+    assert_eq!(red[0].0, hex(&dead_end.state().board, "wS1").unwrap());
+    assert_eq!(
+        red[2].1, red[0].0,
+        "the red triangle must return to the Spider"
+    );
+    assert_eq!(
+        [red[0].0, red[0].1, red[1].1]
+            .into_iter()
+            .collect::<HashSet<_>>()
+            .len(),
+        3
+    );
 }
 
 #[test]
@@ -3255,6 +3266,12 @@ fn basics_gate_requires_spider_then_ant_and_black_only_places_once() {
         let mut next = initial.clone();
         assert_eq!(next.play(spider, first), Outcome::StepDone);
         assert!(!next.is_finished());
+        assert_eq!(
+            next.prompt(),
+            initial.prompt(),
+            "keep the complete two-move instruction visible"
+        );
+        assert!(!next.prompt().unwrap().contains("\n\n"));
         let black: Piece = "bB1".parse().unwrap();
         assert!(initial.state().board.position_of_piece(black).is_none());
         assert!(next.state().board.position_of_piece(black).is_some());
@@ -3275,5 +3292,62 @@ fn basics_gate_requires_spider_then_ant_and_black_only_places_once() {
                 1
             );
         }
+    }
+}
+
+#[test]
+fn online_interface_precedes_the_tour_and_accepts_every_legal_white_turn() {
+    let lesson = find_lesson("online.interface").unwrap();
+    assert_eq!(CHAPTERS[2].lessons[0].id, lesson.id);
+    assert_eq!(neighbours(lesson.id).1.unwrap().id, "online.create_join");
+    let initial = Session::new(lesson).unwrap();
+    let mut placements = 0;
+    let mut moves = 0;
+    for (piece, to) in legal_moves(initial.state()) {
+        let mut attempt = initial.clone();
+        if initial.state().board.position_of_piece(piece).is_some() {
+            moves += 1;
+        } else {
+            placements += 1;
+        }
+        assert_eq!(attempt.play(piece, to), Outcome::LessonDone);
+        assert!(attempt.is_finished());
+    }
+    assert!(placements > 0 && moves > 0);
+    let mut illegal = initial.clone();
+    assert_eq!(
+        illegal.play("wQ".parse().unwrap(), Position::new(0, 0)),
+        Outcome::Illegal
+    );
+    assert!(illegal.state().board == initial.state().board);
+}
+
+#[test]
+fn any_legal_turn_also_accepts_lifting_an_enemy_piece() {
+    const LESSON: Lesson = Lesson {
+        id: "test.any_turn",
+        title: "Any legal turn",
+        intro: &["test"],
+        brief: "An enemy Ant can be moved by the white Pillbug.",
+        setup: Setup::Position("A+qA2+(l+Lg-a!-P-a2+M2-Q)2-p,w"),
+        steps: &[
+            Step::play(
+                "Make a legal turn.",
+                Goal::PlayAny,
+                "Try another legal turn.",
+            ),
+            Step::read("Done.", &[]),
+        ],
+        outro: "",
+    };
+    let initial = Session::new(&LESSON).unwrap();
+    let enemy_lifts: Vec<_> = legal_moves(initial.state())
+        .into_iter()
+        .filter(|(piece, _)| piece.color() == Color::Black)
+        .collect();
+    assert!(!enemy_lifts.is_empty());
+    for (piece, to) in enemy_lifts {
+        let mut attempt = initial.clone();
+        assert_eq!(attempt.play(piece, to), Outcome::LessonDone);
     }
 }

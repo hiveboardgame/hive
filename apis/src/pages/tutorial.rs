@@ -83,7 +83,8 @@ pub fn Tutorial() -> impl IntoView {
     let clocked =
         move || find_lesson(lesson_id.get()).is_some_and(|lesson| lesson.clock().is_some());
 
-    let show_game_panel = move || clocked() || lesson_id.get() == "online.controls";
+    let show_game_panel =
+        move || clocked() || matches!(lesson_id.get(), "online.controls" | "online.interface");
     let blank_tiles = move || {
         find_lesson(lesson_id.get())
             .is_some_and(|lesson| lesson.uses_blank_tiles() || lesson.guide().is_some())
@@ -183,7 +184,13 @@ pub fn Tutorial() -> impl IntoView {
                                         view! {
                                             <div class="flex flex-col col-span-2 col-start-9 row-span-6 row-start-1 justify-between p-1 my-1 mr-1 min-h-0 ui-board-side-panel">
                                                 <div>
-                                                    <p class="px-2 pt-1 text-sm">
+                                                    <p class=move || {
+                                                        if lesson_id.get() == "basics.welcome" {
+                                                            "px-2 pt-1 text-base font-bold"
+                                                        } else {
+                                                            "px-2 pt-1 text-sm"
+                                                        }
+                                                    }>
                                                         {move || {
                                                             if desktop_top.get() == Color::White {
                                                                 "White's reserve"
@@ -200,7 +207,13 @@ pub fn Tutorial() -> impl IntoView {
                                                     />
                                                 </div>
                                                 <div>
-                                                    <p class="px-2 pt-1 text-sm">
+                                                    <p class=move || {
+                                                        if lesson_id.get() == "basics.welcome" {
+                                                            "px-2 pt-1 text-base font-bold"
+                                                        } else {
+                                                            "px-2 pt-1 text-sm"
+                                                        }
+                                                    }>
                                                         {move || {
                                                             if desktop_bottom.get() == Color::White {
                                                                 "White's reserve"
@@ -269,7 +282,13 @@ pub fn Tutorial() -> impl IntoView {
                         </Show>
                         <Show when=move || !blank_tiles()>
                             <div class="flex flex-col ml-1 h-16 max-h-16 shrink-0 ui-board-reserve">
-                                <p class="px-2 text-xs">
+                                <p class=move || {
+                                    if lesson_id.get() == "basics.welcome" {
+                                        "px-2 text-sm font-bold"
+                                    } else {
+                                        "px-2 text-xs"
+                                    }
+                                }>
                                     {move || {
                                         if opponent.get() == Color::White {
                                             "White's reserve"
@@ -306,7 +325,13 @@ pub fn Tutorial() -> impl IntoView {
                         </div>
                         <Show when=move || !blank_tiles()>
                             <div class="flex flex-col ml-1 h-20 max-h-20 shrink-0 ui-board-reserve">
-                                <p class="px-2 text-xs">
+                                <p class=move || {
+                                    if lesson_id.get() == "basics.welcome" {
+                                        "px-2 text-sm font-bold"
+                                    } else {
+                                        "px-2 text-xs"
+                                    }
+                                }>
                                     {move || {
                                         if learner.get() == Color::White {
                                             "White's reserve"

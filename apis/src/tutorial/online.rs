@@ -9,6 +9,7 @@ pub const CHAPTER: Chapter = Chapter {
     title: "Playing online",
     summary: "Find a game, use the clock and controls, and make yourself at home.",
     lessons: &[
+        INTERFACE,
         CREATE_JOIN,
         TIME_CONTROLS,
         CONTROLS,
@@ -17,6 +18,27 @@ pub const CHAPTER: Chapter = Chapter {
         TOURNAMENTS,
         READY,
     ],
+};
+
+const INTERFACE: Lesson = Lesson {
+    id: "online.interface",
+    title: "Using the play interface",
+    intro: &[
+        "Click a piece in your reserve to see legal placements, or a piece in play to see its legal moves. The site does not allow illegal moves.",
+        "To look under a Beetle [[wB1]] stack, right-click on desktop. On mobile, hold the stack, then slide your finger away.",
+        "To use the Pillbug's [[wP]] ability, click the piece you want to move, then its destination. You do not need to select the Pillbug [[wP]] first.",
+    ],
+    brief: "Supplied HOP GPM1+(QL+lm-p+s!1-A3+a3-q),w. Show the real board, reserves and controls. Any legal White turn, including a Pillbug move of an enemy piece, completes the lesson.",
+    setup: Setup::Position("GPM1+(QL+lm-p+s!1-A3+a3-q),w"),
+    steps: &[
+        Step::play(
+            "You play as White. Click a piece in play or in your reserve to see its legal options.\nMake any legal move to try the interface.",
+            PlayAny,
+            "Click a piece, then one of its highlighted hexes.",
+        ),
+        Step::read("Well done! You are ready to use the play interface.", &[]),
+    ],
+    outro: "",
 };
 
 const CREATE_JOIN: Lesson = Lesson {
