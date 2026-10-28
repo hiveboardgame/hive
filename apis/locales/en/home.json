@@ -89,5 +89,6 @@
         "only_players_with_this_url_can_accept_this_private": "Only players with this URL can accept this private challenge.",
         "copy_link": "Copy link",
         "challenge_details": "Challenge details"
-    }
+    },
+    "join_game": "Join a game"
 }

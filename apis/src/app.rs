@@ -50,6 +50,7 @@ use crate::{
             Tournaments,
         },
         tutorial::Tutorial,
+        tutorial_site::TutorialSitePage,
     },
     providers::{
         challenges::provide_challenges,
@@ -400,6 +401,11 @@ pub fn App() -> impl IntoView {
                         <Route path=path!("/strategy") view=|| view! { <Strategy /> } />
                         <Route path=path!("/resources") view=|| view! { <Resources /> } />
                         <Route path=path!("/tutorial") view=|| view! { <Tutorial /> } />
+                        <Route
+                            path=path!("/tutorial/page-preview")
+                            ssr=leptos_router::SsrMode::Async
+                            view=|| view! { <TutorialSitePage /> }
+                        />
                         <Route path=path!("/rules_summary") view=|| view! { <RulesSummary /> } />
                         <Route path=path!("/game/:nanoid") view=|| view! { <Play /> } />
                         <ProtectedRoute

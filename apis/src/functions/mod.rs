@@ -20,6 +20,7 @@ pub mod realtime_games;
 pub mod schedules;
 pub mod telemetry;
 pub mod tournaments;
+pub mod tutorial;
 pub mod users;
 #[cfg(feature = "ssr")]
 pub mod web_push_http;

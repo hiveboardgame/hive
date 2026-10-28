@@ -1,0 +1,569 @@
+use crate::{
+    providers::tutorial::{Feedback, TutorialContext},
+    tutorial::{
+        chapter_of,
+        find_lesson,
+        group_of,
+        lesson_count,
+        lessons,
+        neighbours,
+        Lesson,
+        Session,
+    },
+};
+use hive_lib::Piece;
+use leptos::{html, prelude::*};
+use leptos_router::{components::A, hooks::use_navigate};
+
+use crate::{
+    providers::annotations::AnnotationColor,
+    tutorial::text::{inline_parts, InlineContent, TextColor},
+};
+
+fn piece_icon(piece: Piece) -> impl IntoView {
+    let label = format!("{} {} piece", piece.color().name(), piece.bug().name());
+    let tile = format!(
+        "/assets/tiles/official/official.svg#{}",
+        piece.color().name()
+    );
+    let bug = format!("/assets/tiles/official/official.svg#{}", piece.bug().name());
+    view! {
+        <svg
+            role="img"
+            aria-label=label
+            viewBox="0 0 90 100"
+            class="inline-block mx-1 align-text-bottom size-5"
+        >
+            <use_ href=tile />
+            <use_ href=bug />
+        </svg>
+    }
+}
+
+fn rich_text(text: &str, links: bool) -> impl IntoView {
+    inline_parts(text)
+        .into_iter()
+        .map(|part| {
+            let content = match part.content {
+                InlineContent::Text(text) if links => {
+                    view! { <span>{linked_text(text)}</span> }.into_any()
+                }
+                InlineContent::Text(text) => view! { <span>{text.to_string()}</span> }.into_any(),
+                InlineContent::Piece(piece) => piece_icon(piece).into_any(),
+            };
+            let content = if part.bold {
+                view! { <strong>{content}</strong> }.into_any()
+            } else {
+                content
+            };
+            if let Some(color) = part.color {
+                let annotation = match color {
+                    TextColor::Green => AnnotationColor::Green,
+                    TextColor::Red => AnnotationColor::Red,
+                };
+                let style = format!(
+                    "--lesson-color:{};--lesson-color-dark:{}",
+                    annotation.stroke(false),
+                    annotation.stroke(true)
+                );
+                view! {
+                    <span
+                        class="[color:var(--lesson-color)] dark:[color:var(--lesson-color-dark)]"
+                        style=style
+                    >
+                        {content}
+                    </span>
+                }
+                .into_any()
+            } else {
+                content
+            }
+        })
+        .collect_view()
+}
+
+fn prompt_line(text: &str) -> impl IntoView {
+    rich_text(text, false)
+}
+
+fn tutorial_prompt(prompt: &str) -> impl IntoView {
+    if prompt.lines().any(|line| line.starts_with("- ")) {
+        let mut blocks = Vec::new();
+        let mut items = Vec::new();
+        for line in prompt.lines() {
+            if let Some(item) = line.strip_prefix("- ") {
+                items.push(item);
+            } else {
+                if !items.is_empty() {
+                    let entries = std::mem::take(&mut items)
+                        .into_iter()
+                        .map(|item| view! { <li>{prompt_line(item)}</li> })
+                        .collect_view();
+                    blocks.push(
+                        view! { <ul class="pl-5 my-1 space-y-1 list-disc">{entries}</ul> }
+                            .into_any(),
+                    );
+                }
+                blocks.push(view! { <p>{prompt_line(line)}</p> }.into_any());
+            }
+        }
+        if !items.is_empty() {
+            let entries = items
+                .into_iter()
+                .map(|item| view! { <li>{prompt_line(item)}</li> })
+                .collect_view();
+            blocks.push(
+                view! { <ul class="pl-5 my-1 space-y-1 list-disc">{entries}</ul> }.into_any(),
+            );
+        }
+        return blocks.collect_view().into_any();
+    }
+    prompt
+        .split('\n')
+        .enumerate()
+        .map(|(line_index, line)| {
+            let line = prompt_line(line);
+            if line_index == 0 {
+                view! { {line} }.into_any()
+            } else {
+                view! {
+                    <br />
+                    {line}
+                }
+                .into_any()
+            }
+        })
+        .collect_view()
+        .into_any()
+}
+
+#[component]
+pub fn LessonPanel(
+    #[prop(into)] lesson_id: Signal<&'static str>,
+    #[prop(optional)] compact: bool,
+    #[prop(optional)] header_only: bool,
+    #[prop(optional)] body_only: bool,
+) -> impl IntoView {
+    let tutorial = expect_context::<TutorialContext>();
+    let lesson = move || find_lesson(lesson_id.get());
+    let mobile_layout = move || compact;
+    let chapter_title = move || chapter_of(lesson_id.get()).map_or("", |chapter| chapter.title);
+    let title = move || lesson().map_or("", |lesson| lesson.title);
+    let group_title = move || group_of(lesson_id.get()).map(|group| group.title);
+    let position = move || {
+        let id = lesson_id.get();
+        let index = lessons().position(|lesson| lesson.id == id).unwrap_or(0);
+        format!("Lesson {} of {}", index + 1, lesson_count())
+    };
+    let intro = move || {
+        lesson()
+            .map(|lesson| lesson.intro)
+            .unwrap_or_default()
+            .iter()
+            .copied()
+            .map(paragraph)
+            .collect_view()
+    };
+    let finished = move || {
+        tutorial
+            .session
+            .with(|session| session.as_ref().is_some_and(Session::is_finished))
+    };
+    let prompt = move || {
+        tutorial
+            .session
+            .with(|session| session.as_ref().and_then(Session::prompt))
+    };
+    let instruction_content = NodeRef::<html::Div>::new();
+    Effect::watch(
+        move || (lesson_id.get(), prompt()),
+        move |_, _, _| {
+            if compact {
+                if let Some(content) = instruction_content.get() {
+                    content.set_scroll_top(0);
+                }
+            }
+        },
+        false,
+    );
+    let waits_for_continue = move || {
+        tutorial
+            .session
+            .with(|session| session.as_ref().is_some_and(Session::awaits_continue))
+    };
+    let feedback = move || {
+        tutorial.feedback.get().and_then(|feedback| match feedback {
+            Feedback::Note(_) => None,
+            Feedback::Hint(hint) => Some((
+                "text-red-600 dark:text-red-400",
+                format!("Not quite. {hint}"),
+            )),
+            Feedback::Refuted(hint) => Some((
+                "text-red-600 dark:text-red-400",
+                format!("Not quite. {hint}"),
+            )),
+            Feedback::KeepGoing => Some((
+                "text-green-700 dark:text-green-400",
+                "Back at the start. Try the next destination.".to_string(),
+            )),
+            Feedback::YourTurn => {
+                Some(("text-gray-700 dark:text-gray-200", "Your turn.".to_string()))
+            }
+            Feedback::WellDone => Some((
+                "text-green-700 dark:text-green-400",
+                "Well done!".to_string(),
+            )),
+            Feedback::LessonComplete => Some((
+                "text-lg font-bold text-green-700 xl:text-xl dark:text-green-400",
+                tutorial.session.with(|session| {
+                    session
+                        .as_ref()
+                        .and_then(Session::completion_result)
+                        .map_or_else(
+                            || "Lesson complete!".to_string(),
+                            |result| format!("Lesson complete! {result}"),
+                        )
+                }),
+            )),
+            Feedback::ContinueFirst => Some((
+                "text-gray-600 dark:text-gray-300",
+                "Press Continue before making a move.".to_string(),
+            )),
+        })
+    };
+    let outro = move || lesson().map_or("", |lesson| lesson.outro);
+    let completion_tip = move || {
+        tutorial.session.with(|session| {
+            session
+                .as_ref()
+                .and_then(Session::current_step)
+                .map_or("", |step| step.completion_tip)
+        })
+    };
+    let written_moves = move || {
+        tutorial
+            .session
+            .with(|session| session.as_ref().and_then(Session::written_moves))
+    };
+    let previous = move || neighbours(lesson_id.get()).0.map(|lesson| lesson.id);
+    let next = move || neighbours(lesson_id.get()).1.map(|lesson| lesson.id);
+    let restart = move |_| {
+        if let Some(lesson) = lesson() {
+            tutorial.load(lesson);
+        }
+    };
+    let text_only = move || lesson().is_some_and(Lesson::is_text_only);
+    let navigate = StoredValue::new_local(use_navigate());
+    let mark_read = move |_| {
+        let id = lesson_id.get_untracked();
+        tutorial.progress.complete(id);
+        let destination = neighbours(id).1.map_or_else(
+            || "/tutorial".to_string(),
+            |next| format!("/tutorial?lesson={}", next.id),
+        );
+        navigate.with_value(|navigate| navigate(&destination, Default::default()));
+    };
+
+    view! {
+        <div class=move || {
+            if mobile_layout() {
+                "flex overflow-hidden flex-col gap-2 p-3 min-h-0 h-full text-sm leading-5 text-gray-700 dark:text-gray-200 ui-panel"
+            } else {
+                "flex flex-col gap-3 p-3 text-sm leading-6 text-gray-700 xl:gap-4 xl:p-5 xl:text-base xl:leading-7 dark:text-gray-200 ui-panel"
+            }
+        }>
+            <Show when=move || !body_only>
+                <div class:shrink-0=mobile_layout>
+                    <div class=move || {
+                        if mobile_layout() {
+                            "flex gap-2 justify-between items-baseline pb-1 mb-1 border-b border-black/10 dark:border-white/10"
+                        } else {
+                            "flex gap-2 justify-between items-baseline"
+                        }
+                    }>
+                        <div class="text-xs font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+                            {move || {
+                                let mut heading = format!("{} · {}", chapter_title(), position());
+                                if let Some(group) = group_title() {
+                                    heading.push_str(" · ");
+                                    heading.push_str(group);
+                                }
+                                heading
+                            }}
+                        </div>
+                        <A
+                            href="/tutorial"
+                            attr:class=move || {
+                                if compact {
+                                    "text-xs whitespace-nowrap ui-text-link"
+                                } else {
+                                    "hidden"
+                                }
+                            }
+                        >
+                            "All lessons"
+                        </A>
+                    </div>
+                    <h1 class="text-lg font-bold text-gray-900 xl:text-2xl dark:text-gray-100">
+                        {title}
+                    </h1>
+                </div>
+            </Show>
+            <Show when=move || !header_only>
+                <div
+                    node_ref=instruction_content
+                    role=move || compact.then_some("region")
+                    aria-label=move || compact.then_some("Lesson instructions")
+                    tabindex=move || compact.then_some(0)
+                    class=move || {
+                        if mobile_layout() {
+                            "flex overflow-y-auto flex-col gap-2 min-h-0 grow overscroll-contain"
+                        } else {
+                            "contents"
+                        }
+                    }
+                >
+                    <div class="flex flex-col gap-2" class:hidden=move || compact>
+                        {intro}
+                    </div>
+                    <ShowLet some=move || tutorial.load_error.get() let:error>
+                        <div class="ui-empty-state" role="status">
+                            {if lesson().is_some_and(|lesson| lesson.is_pending()) {
+                                "This board is still being set up. Check back soon!".to_string()
+                            } else {
+                                error
+                            }}
+                        </div>
+                    </ShowLet>
+                    <Show when=move || {
+                        finished() && !outro().is_empty()
+                    }>{move || paragraph(outro())}</Show>
+                    <ShowLet some=prompt let:prompt>
+                        <div class="p-2 font-medium rounded-lg border xl:p-3 border-orange-dawn/40 bg-orange-dawn/10">
+                            {tutorial_prompt(prompt)}
+                        </div>
+                    </ShowLet>
+                    <ShowLet some=feedback let:feedback>
+                        <div class=format!("font-medium {}", feedback.0) role="status">
+                            {tutorial_prompt(&feedback.1)}
+                        </div>
+                    </ShowLet>
+                    <Show when=move || finished() && !completion_tip().is_empty()>
+                        <div class="font-medium text-gray-700 dark:text-gray-200">
+                            {move || tutorial_prompt(completion_tip())}
+                        </div>
+                    </Show>
+                    <ShowLet some=written_moves let:moves>
+                        <div class="flex flex-col gap-1">
+                            <div class="text-xs font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+                                "Moves"
+                            </div>
+                            <ol class="pl-6 font-mono text-xs list-decimal">
+                                {if moves.is_empty() {
+                                    view! { <li class="list-none">"No moves yet."</li> }.into_any()
+                                } else {
+                                    moves
+                                        .into_iter()
+                                        .map(|written| view! { <li>{written}</li> })
+                                        .collect_view()
+                                        .into_any()
+                                }}
+                            </ol>
+                        </div>
+                    </ShowLet>
+                </div>
+                <div class=move || {
+                    if mobile_layout() {
+                        "flex flex-col gap-2 pt-2 border-t border-black/10 shrink-0 dark:border-white/10"
+                    } else {
+                        "contents"
+                    }
+                }>
+                    <div class="flex flex-wrap gap-2">
+                        <Show when=move || waits_for_continue() && !text_only()>
+                            <button
+                                type="button"
+                                class=move || {
+                                    if tutorial
+                                        .session
+                                        .with(|session| {
+                                            session
+                                                .as_ref()
+                                                .is_some_and(|session| session.continue_label() == "Next")
+                                        })
+                                    {
+                                        "ui-button ui-button-sm bg-blue-600 text-white hover:bg-blue-700"
+                                    } else {
+                                        "ui-button ui-button-primary ui-button-sm"
+                                    }
+                                }
+                                on:click=move |_| tutorial.advance()
+                            >
+                                {move || {
+                                    tutorial
+                                        .session
+                                        .with(|session| {
+                                            session.as_ref().map_or("Continue", Session::continue_label)
+                                        })
+                                }}
+                            </button>
+                        </Show>
+                        <Show when=move || tutorial.session.with(Option::is_some) && !text_only()>
+                            <button
+                                type="button"
+                                class="ui-button ui-button-secondary ui-button-sm"
+                                on:click=restart
+                            >
+                                "Restart lesson"
+                            </button>
+                        </Show>
+                        <Show when=move || {
+                            tutorial
+                                .session
+                                .with(|session| session.as_ref().is_some_and(Session::needs_retry))
+                        }>
+                            <button
+                                type="button"
+                                class="ui-button ui-button-primary ui-button-sm"
+                                on:click=move |_| tutorial.try_again()
+                            >
+                                "Try again"
+                            </button>
+                        </Show>
+                        <Show when=text_only>
+                            <button
+                                type="button"
+                                class="ui-button ui-button-primary ui-button-sm"
+                                on:click=mark_read
+                            >
+                                "Mark as read"
+                            </button>
+                        </Show>
+                    </div>
+                    <div class=move || {
+                        if mobile_layout() {
+                            "flex gap-3 justify-between items-center w-full"
+                        } else {
+                            "flex justify-between"
+                        }
+                    }>
+                        <ShowLet some=previous let:id>
+                            <A href=format!("/tutorial?lesson={id}") attr:class="ui-text-link">
+                                "← Previous"
+                            </A>
+                        </ShowLet>
+                        <span class:hidden=mobile_layout></span>
+                        <ShowLet some=next let:id>
+                            <A
+                                href=format!("/tutorial?lesson={id}")
+                                attr:class=move || {
+                                    if finished() {
+                                        "ui-button ui-button-primary ui-button-sm"
+                                    } else {
+                                        "ui-text-link"
+                                    }
+                                }
+                            >
+                                "Next lesson →"
+                            </A>
+                        </ShowLet>
+                    </div>
+                </div>
+
+            </Show>
+        </div>
+    }
+}
+
+/// Mobile reading drawer anchored below the diagram, opening upward over it.
+#[component]
+pub fn MobileLessonAbout(#[prop(into)] lesson_id: Signal<&'static str>) -> impl IntoView {
+    let expanded = RwSignal::new(false);
+    let panel_id = format!("tutorial-lesson-text-{}", lesson_id.get_untracked());
+    let content_id = panel_id.clone();
+    let intro = move || {
+        find_lesson(lesson_id.get())
+            .map(|lesson| lesson.intro)
+            .unwrap_or_default()
+            .iter()
+            .copied()
+            .map(paragraph)
+            .collect_view()
+    };
+
+    view! {
+        <div class="flex absolute inset-x-0 bottom-0 z-30 flex-col max-h-full text-sm leading-5 text-gray-700 shadow-md dark:text-gray-200 bg-even-light dark:bg-surface-panel">
+            <Show when=move || expanded.get()>
+                <div
+                    id=content_id.clone()
+                    role="region"
+                    aria-label="Lesson text"
+                    class="flex overflow-y-auto overscroll-contain flex-col gap-2 px-3 pt-3 pb-1 min-h-0"
+                >
+                    {intro}
+                </div>
+            </Show>
+            <button
+                type="button"
+                aria-controls=panel_id
+                aria-expanded=move || expanded.get()
+                class="flex justify-between items-center px-3 w-full h-11 text-left bg-even-light shrink-0 dark:bg-surface-panel"
+                on:click=move |_| expanded.update(|open| *open = !*open)
+            >
+                <span>{move || if expanded.get() { "Read less" } else { "Read more" }}</span>
+                <svg
+                    class="transition-transform size-5 shrink-0"
+                    class:rotate-180=move || !expanded.get()
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    aria-hidden="true"
+                >
+                    <path
+                        fill-rule="evenodd"
+                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                        clip-rule="evenodd"
+                    />
+                </svg>
+            </button>
+        </div>
+    }
+}
+
+fn linked_text(text: &str) -> impl IntoView {
+    let mut parts = Vec::new();
+    let mut plain = String::new();
+    for word in text.split_inclusive(' ') {
+        match word.trim_end().strip_prefix("https://") {
+            Some(shown) => {
+                if !plain.is_empty() {
+                    let text = std::mem::take(&mut plain);
+                    parts.push(view! { <span>{text}</span> }.into_any());
+                }
+                parts.push(
+                    view! {
+                        <a
+                            href=word.trim_end().to_string()
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            {shown.to_string()}
+                        </a>
+                    }
+                    .into_any(),
+                );
+                if word.ends_with(' ') {
+                    plain.push(' ');
+                }
+            }
+            None => plain.push_str(word),
+        }
+    }
+    if !plain.is_empty() {
+        parts.push(view! { <span>{plain}</span> }.into_any());
+    }
+    parts
+}
+
+fn paragraph(text: &'static str) -> impl IntoView {
+    view! { <p class="whitespace-pre-line">{rich_text(text, true)}</p> }
+}

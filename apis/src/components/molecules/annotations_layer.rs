@@ -2,7 +2,7 @@ use crate::{
     common::SvgPos,
     providers::{
         analysis::AnalysisContext,
-        annotations::{AnnotationTool, AnnotationsSignal, MarkerShape},
+        annotations::{AnnotationColor, AnnotationTool, AnnotationsSignal, MarkerShape},
         game_state::{GameStateStore, GameStateStoreFields},
         Config,
     },
@@ -15,15 +15,18 @@ const SHAPE_OPACITY: &str = "0.8";
 
 /// Draws the current position's annotations as inline SVG inside the board's
 /// transform `<g>`. `pointer-events: none` so it never eats the board's handlers
-/// (arrows are hit-tested by the board instead).
+/// (arrows are hit-tested by the board instead). Tutorial red hexes can opt into
+/// clicks so forbidden-move attempts give feedback without moving a piece.
 #[component]
 pub fn AnnotationsLayer(
     annotations: AnnotationsSignal,
     history_board: Memo<Board>,
+    #[prop(optional_no_strip)] on_red_hex: Option<Callback<Position>>,
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateStore>();
     let config = expect_context::<Config>().0;
     let in_analysis = use_context::<AnalysisContext>().is_some();
+    let tutorial = use_context::<crate::providers::tutorial::TutorialContext>();
     let board_view = game_state.board_view();
     let state = game_state.state();
     let last_turn = game_state.is_last_turn_as_signal();
@@ -53,6 +56,14 @@ pub fn AnnotationsLayer(
             let path = rounded_hex_path(cx, cy, HIGHLIGHT_SIZE);
             let fill = highlight.color.fill();
             let stroke = highlight.color.stroke(prefers_dark);
+            let occupied = if show_history {
+                history_board.with(|board| board.occupied(highlight.position))
+            } else {
+                state.with(|state| state.board.occupied(highlight.position))
+            };
+            let interactive =
+                highlight.color == AnnotationColor::Red && on_red_hex.is_some() && !occupied;
+            let position = highlight.position;
             views.push(
                 view! {
                     <path
@@ -63,6 +74,15 @@ pub fn AnnotationsLayer(
                         stroke-width="2"
                         stroke-opacity="0.95"
                         stroke-linejoin="round"
+                        pointer-events=if interactive { "all" } else { "none" }
+                        on:click=move |event| {
+                            if interactive {
+                                event.stop_propagation();
+                                if let Some(callback) = on_red_hex {
+                                    callback.run(position);
+                                }
+                            }
+                        }
                     />
                 }
                 .into_any(),
@@ -80,6 +100,45 @@ pub fn AnnotationsLayer(
             ));
         }
 
+        for label in &set.labels {
+            let (cx, cy) = center(label.position);
+            let (bx, by) = (cx + LABEL_OFFSET, cy - LABEL_OFFSET);
+            views.push(
+                view! {
+                    <g>
+                        <circle
+                            cx=bx
+                            cy=by
+                            r="10"
+                            fill=label.color.fill()
+                            stroke="#ffffff"
+                            stroke-width="1.5"
+                        />
+                        <text
+                            x=bx
+                            y=by
+                            text-anchor="middle"
+                            dominant-baseline="central"
+                            font-size="13"
+                            font-weight="700"
+                            fill="#ffffff"
+                        >
+                            {label.number}
+                        </text>
+                    </g>
+                }
+                .into_any(),
+            );
+        }
+
+        let small_arrows = tutorial.is_some_and(|tutorial| {
+            tutorial.session.with(|session| {
+                session
+                    .as_ref()
+                    .and_then(|session| session.current_step())
+                    .is_some_and(|step| step.small_arrows)
+            })
+        });
         for arrow in &set.arrows {
             let (ax, ay) = center(arrow.from);
             let (bx, by) = center(arrow.to);
@@ -91,6 +150,7 @@ pub fn AnnotationsLayer(
                 arrow.color.stroke(prefers_dark),
                 SHAPE_OPACITY,
                 false,
+                small_arrows,
             ) {
                 views.push(view);
             }
@@ -103,7 +163,7 @@ pub fn AnnotationsLayer(
             if from != to {
                 let (ax, ay) = center(from);
                 let (bx, by) = center(to);
-                if let Some(view) = arrow_view(ax, ay, bx, by, stroke, "0.5", true) {
+                if let Some(view) = arrow_view(ax, ay, bx, by, stroke, "0.5", true, false) {
                     views.push(view);
                 }
             } else {
@@ -121,11 +181,13 @@ pub fn AnnotationsLayer(
 }
 
 /// Inset from the full 30 so the highlight sits inside the tile border.
-const HIGHLIGHT_SIZE: f32 = 26.0;
+pub(crate) const HIGHLIGHT_SIZE: f32 = 26.0;
+/// Puts number badges in the hex corner so they never cover the piece.
+const LABEL_OFFSET: f32 = 17.0;
 
 /// Pointy-top hexagon path centered at `(cx, cy)` with slightly rounded corners
 /// to match the piece tiles' rounding.
-fn rounded_hex_path(cx: f32, cy: f32, size: f32) -> String {
+pub(crate) fn rounded_hex_path(cx: f32, cy: f32, size: f32) -> String {
     let dx = 0.866_025_4 * size; // √3/2 · size
     let corners = [
         (cx + dx, cy - 0.5 * size),
@@ -193,6 +255,28 @@ fn marker_view(
             }
             .into_any()
         }
+        MarkerShape::Ring | MarkerShape::ThinRing => view! {
+            <path
+                d=rounded_hex_path(cx, cy, HIGHLIGHT_SIZE)
+                fill="none"
+                stroke=fill
+                stroke-width=if shape == MarkerShape::ThinRing { "1.5" } else { "4" }
+                stroke-opacity="0.95"
+                stroke-linejoin="round"
+            />
+        }
+        .into_any(),
+        MarkerShape::Grid => view! {
+            <path
+                d=rounded_hex_path(cx, cy, HIGHLIGHT_SIZE)
+                fill="none"
+                stroke=stroke
+                stroke-width="1.5"
+                stroke-opacity="0.45"
+                stroke-linejoin="round"
+            />
+        }
+        .into_any(),
     }
 }
 
@@ -250,6 +334,30 @@ fn mark_preview_view(
             }
             .into_any()
         }
+        AnnotationTool::Marker(MarkerShape::Grid) => view! {
+            <path
+                d=rounded_hex_path(cx, cy, HIGHLIGHT_SIZE)
+                fill="none"
+                stroke=stroke
+                stroke-width="1.5"
+                stroke-dasharray="4 4"
+                opacity="0.4"
+                stroke-linejoin="round"
+            />
+        }
+        .into_any(),
+        AnnotationTool::Marker(MarkerShape::Ring | MarkerShape::ThinRing) => view! {
+            <path
+                d=rounded_hex_path(cx, cy, HIGHLIGHT_SIZE)
+                fill="none"
+                stroke=fill
+                stroke-width="4"
+                stroke-dasharray="6 5"
+                opacity="0.5"
+                stroke-linejoin="round"
+            />
+        }
+        .into_any(),
     }
 }
 
@@ -263,6 +371,7 @@ fn arrow_view(
     stroke: &'static str,
     opacity: &'static str,
     dashed: bool,
+    compact: bool,
 ) -> Option<AnyView> {
     let dx = bx - ax;
     let dy = by - ay;
@@ -271,8 +380,8 @@ fn arrow_view(
         return None;
     }
     let (ux, uy) = (dx / len, dy / len);
-    let head_len = 22.0;
-    let head_w = 16.0;
+    let head_len = if compact { 10.0 } else { 22.0 };
+    let head_w = if compact { 7.0 } else { 16.0 };
     let tip = (bx, by);
     let base = (tip.0 - ux * head_len, tip.1 - uy * head_len);
     // Perpendicular unit vector for the head's base corners.
@@ -294,7 +403,7 @@ fn arrow_view(
                     x2=base.0
                     y2=base.1
                     stroke=stroke
-                    stroke-width="7"
+                    stroke-width=if compact { "2.5" } else { "7" }
                     stroke-linecap="round"
                     stroke-dasharray=dash
                 />

@@ -12,7 +12,8 @@
         "rules": "Rules",
         "rules_summary": "Rules Summary",
         "analysis": "Analysis",
-        "archive": "Archive"
+        "archive": "Archive",
+        "tutorial": "Tutorial"
     },
     "buy_game": "Buy Game",
     "donate": "Donate",

@@ -46,6 +46,9 @@ pub fn MobileDropdown() -> impl IntoView {
                 </div>
                 <div class=section_style>
                     <span class=label_style>{t!(i18n, header.learn.title)}</span>
+                    <a class="ui-dropdown-link" on:click=onclick_close href="/tutorial">
+                        {t!(i18n, header.learn.tutorial)}
+                    </a>
                     <a class="ui-dropdown-link" on:click=onclick_close href="/analysis">
                         {t!(i18n, header.learn.analysis)}
                     </a>

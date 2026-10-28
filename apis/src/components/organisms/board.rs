@@ -5,6 +5,7 @@ use crate::{
         molecules::{
             annotation_toolbar::AnnotationToolbar,
             annotations_layer::AnnotationsLayer,
+            board_grid::BoardGrid,
             board_pieces::BoardPieces,
             drag_ghost::DragGhost,
             history_pieces::HistoryPieces,
@@ -77,6 +78,7 @@ const ZOOM_IN_LIMIT: f32 = 150.0;
 const ZOOM_OUT_LIMIT_MIN: f32 = 2500.0;
 const ZOOM_OUT_LIMIT_FACTOR: f32 = 2.5;
 const BOARD_FIT_PADDING: f32 = 24.0;
+const FIT_MAX_ZOOM: f32 = 2.0;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct ViewportSelection {
@@ -109,6 +111,7 @@ struct TileBounds {
 #[derive(Debug, Clone)]
 enum ViewBoxUpdateType {
     HistoryNavigation(ViewportSelection),
+    Fit,
     Resize {
         width: f32,
         height: f32,
@@ -189,12 +192,6 @@ impl ViewBoxControls {
     }
 
     fn recover_offscreen(&mut self, tiles: &[TileBounds], width: f32, height: f32) -> bool {
-        let Some(first) = tiles.first() else {
-            return false;
-        };
-        if width <= 0.0 || height <= 0.0 {
-            return false;
-        }
         if tiles.iter().any(|tile| {
             tile.right + self.x_transform > self.x
                 && tile.left + self.x_transform < self.x + self.width
@@ -203,16 +200,38 @@ impl ViewBoxControls {
         }) {
             return false;
         }
+        // Restore normal tile size, zooming out only as far as the whole position needs.
+        self.fit(tiles, width, height, 1.0)
+    }
+
+    /// `max_zoom` caps how far a small position is blown up; 1.0 keeps the normal tile size.
+    fn fit(&mut self, tiles: &[TileBounds], width: f32, height: f32, max_zoom: f32) -> bool {
+        self.fit_with_padding(tiles, width, height, max_zoom, BOARD_FIT_PADDING)
+    }
+
+    fn fit_with_padding(
+        &mut self,
+        tiles: &[TileBounds],
+        width: f32,
+        height: f32,
+        max_zoom: f32,
+        padding: f32,
+    ) -> bool {
+        let Some(first) = tiles.first() else {
+            return false;
+        };
+        if width <= 0.0 || height <= 0.0 {
+            return false;
+        }
         let bounds = tiles.iter().fold(*first, |bounds, tile| TileBounds {
             left: bounds.left.min(tile.left),
             top: bounds.top.min(tile.top),
             right: bounds.right.max(tile.right),
             bottom: bounds.bottom.max(tile.bottom),
         });
-        // Restore normal tile size, zooming out only as far as the whole position needs.
-        let scale = ((bounds.right - bounds.left + 2.0 * BOARD_FIT_PADDING) / width)
-            .max((bounds.bottom - bounds.top + 2.0 * BOARD_FIT_PADDING) / height)
-            .max(1.0);
+        let scale = ((bounds.right - bounds.left + 2.0 * padding) / width)
+            .max((bounds.bottom - bounds.top + 2.0 * padding) / height)
+            .max(1.0 / max_zoom);
         self.x = 0.0;
         self.y = 0.0;
         self.width = width * scale;
@@ -253,11 +272,17 @@ enum StackExpansionResetKey {
 pub fn Board(
     interaction: HivegroundInteraction,
     history_board: Memo<HiveBoard>,
+    #[prop(optional, into)] fit_on: Option<Signal<u64>>,
+    #[prop(optional, into)] fit_options: Option<Signal<(f32, f32)>>,
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateStore>();
     let analysis = use_context::<AnalysisContext>();
     let annotations = use_context::<AnnotationsSignal>();
+    let tutorial = use_context::<crate::providers::tutorial::TutorialContext>();
+    let on_red_hex =
+        tutorial.map(|tutorial| Callback::new(move |position| tutorial.try_forbidden(position)));
+
     // Hex where the current draw gesture started (set on the draw-button press).
     let annotation_start = RwSignal::new(None::<Position>);
     // Left-press client point, so a click (no drag) while drawing can clear all.
@@ -353,6 +378,62 @@ pub fn Board(
         });
     };
 
+    let apply_fit = move || {
+        let fitted = displayed_board.with_untracked(|board| {
+            adjusted_viewbox(
+                viewbox_ref,
+                g_ref,
+                board,
+                viewbox_signal.get_untracked(),
+                |viewbox, tiles, width, height| {
+                    let (max_zoom, padding) = fit_options
+                        .map_or((FIT_MAX_ZOOM, BOARD_FIT_PADDING), |options| {
+                            options.get_untracked()
+                        });
+                    let mut fitted_tiles = tiles.to_vec();
+                    if fit_on.is_some() {
+                        if let Some(tutorial) = tutorial {
+                            let targets = tutorial.session.with_untracked(|session| {
+                                session
+                                    .as_ref()
+                                    .map(|session| session.fit_targets())
+                                    .unwrap_or_default()
+                            });
+                            for position in targets {
+                                let (x, y) = SvgPos::center_for_level(position, 0, straight);
+                                fitted_tiles.push(TileBounds {
+                                    left: x - 32.0,
+                                    right: x + 32.0,
+                                    top: y - 34.0,
+                                    bottom: y + 34.0,
+                                });
+                            }
+                        }
+                        if let Some(annotations) = annotations {
+                            for highlight in annotations.current().get_untracked().highlights {
+                                let (x, y) =
+                                    SvgPos::center_for_level(highlight.position, 0, straight);
+                                // Tutorial destinations can sit outside the occupied hive.
+                                fitted_tiles.push(TileBounds {
+                                    left: x - 32.0,
+                                    right: x + 32.0,
+                                    top: y - 34.0,
+                                    bottom: y + 34.0,
+                                });
+                            }
+                        }
+                    }
+                    viewbox.fit_with_padding(&fitted_tiles, width, height, max_zoom, padding)
+                },
+            )
+        });
+        if let Some(next) = fitted {
+            viewbox_signal.set(next);
+            viewbox_state.is_panning.set(false);
+            pinch_base.set(None);
+        }
+    };
+
     let raf_controller = use_raf_fn(move |_| {
         let update = pending_update.get_untracked();
         if let Some(update) = update {
@@ -363,11 +444,12 @@ pub fn Board(
                         return;
                     }
                     let recovered = displayed_board.with_untracked(|board| {
-                        recover_offscreen_viewbox(
+                        adjusted_viewbox(
                             viewbox_ref,
                             g_ref,
                             board,
                             viewbox_signal.get_untracked(),
+                            ViewBoxControls::recover_offscreen,
                         )
                     });
                     if let Some(next) = recovered {
@@ -376,18 +458,27 @@ pub fn Board(
                         pinch_base.set(None);
                     }
                 }
+                ViewBoxUpdateType::Fit => apply_fit(),
                 ViewBoxUpdateType::Resize { width, height } => {
-                    if width <= 0.0 || height <= 0.0 {
-                        return;
-                    }
-                    let previous_width = board_width.get_value();
-                    if previous_width > 0.0 {
-                        board_width.set_value(width);
-                        viewbox_signal.update(|viewbox_controls| {
-                            viewbox_controls.resize_around_center(previous_width, width, height);
-                        });
+                    if fit_on.is_some() {
+                        apply_fit();
                     } else {
-                        center_on_hive(width, height);
+                        if width <= 0.0 || height <= 0.0 {
+                            return;
+                        }
+                        let previous_width = board_width.get_value();
+                        if previous_width > 0.0 {
+                            board_width.set_value(width);
+                            viewbox_signal.update(|viewbox_controls| {
+                                viewbox_controls.resize_around_center(
+                                    previous_width,
+                                    width,
+                                    height,
+                                );
+                            });
+                        } else {
+                            center_on_hive(width, height);
+                        }
                     }
                 }
                 ViewBoxUpdateType::Pan { delta_x, delta_y } => {
@@ -449,12 +540,29 @@ pub fn Board(
     });
 
     let queue_update = StoredValue::new(move |update_type: ViewBoxUpdateType| {
-        let was_empty = pending_update.get_untracked().is_none();
+        let pending = pending_update.get_untracked();
+        let was_empty = pending.is_none();
+        // A fit measures the board when it runs, so a resize queued behind it adds nothing.
+        if matches!(pending, Some(ViewBoxUpdateType::Fit))
+            && matches!(update_type, ViewBoxUpdateType::Resize { .. })
+        {
+            return;
+        }
         pending_update.set(Some(update_type));
         if was_empty {
             (raf_controller.resume)();
         }
     });
+    if let Some(fit_on) = fit_on {
+        Effect::watch(
+            move || fit_on.get(),
+            move |_, _, _| {
+                // Wait for the new position's tiles to render before measuring them.
+                queue_update.with_value(|queue| queue(ViewBoxUpdateType::Fit));
+            },
+            true,
+        );
+    }
     Effect::watch(
         move || viewport_selection.get(),
         move |selection, previous, _| {
@@ -784,6 +892,11 @@ pub fn Board(
                 />
                 <g transform=transform node_ref=g_ref>
                     {move || {
+                        tile_opts
+                            .with(|tile| tile.grid)
+                            .then(|| view! { <BoardGrid board=displayed_board /> })
+                    }}
+                    {move || {
                         if board_view.get().is_history() && !last_turn() && !in_analysis {
                             Either::Left(
                                 view! { <HistoryPieces tile_opts interaction history_board /> },
@@ -794,7 +907,7 @@ pub fn Board(
                     }}
                     {annotations
                         .map(|annotations| {
-                            view! { <AnnotationsLayer annotations history_board /> }
+                            view! { <AnnotationsLayer annotations history_board on_red_hex /> }
                         })}
                 </g>
             </svg>
@@ -1193,11 +1306,12 @@ fn will_svg_be_visible(g_ref: NodeRef<svg::G>, viewbox: &ViewBoxControls) -> boo
         && (bbox_mid_y < viewbox_bottom)
 }
 
-fn recover_offscreen_viewbox(
+fn adjusted_viewbox(
     viewbox_ref: NodeRef<svg::Svg>,
     g_ref: NodeRef<svg::G>,
     board: &HiveBoard,
     mut viewbox: ViewBoxControls,
+    adjust: impl FnOnce(&mut ViewBoxControls, &[TileBounds], f32, f32) -> bool,
 ) -> Option<ViewBoxControls> {
     let svg = viewbox_ref.get_untracked()?;
     let g = g_ref.get_untracked()?;
@@ -1222,13 +1336,13 @@ fn recover_offscreen_viewbox(
             })
         })
         .collect::<Option<Vec<_>>>()?;
-    viewbox
-        .recover_offscreen(
-            &tiles,
-            svg.client_width() as f32,
-            svg.client_height() as f32,
-        )
-        .then_some(viewbox)
+    adjust(
+        &mut viewbox,
+        &tiles,
+        svg.client_width() as f32,
+        svg.client_height() as f32,
+    )
+    .then_some(viewbox)
 }
 
 #[cfg(test)]
@@ -1236,6 +1350,44 @@ mod tests {
     use super::{board_history_style, TileBounds, ViewBoxControls, ViewportSelection};
     use crate::providers::game_state::BoardView;
     use hive_lib::{Color, GameResult, GameStatus};
+
+    #[test]
+    fn tutorial_fit_padding_keeps_the_position_centered_and_visible() {
+        let tiles = [
+            TileBounds {
+                left: -180.0,
+                right: -120.0,
+                top: -80.0,
+                bottom: -20.0,
+            },
+            TileBounds {
+                left: 120.0,
+                right: 180.0,
+                top: 20.0,
+                bottom: 80.0,
+            },
+        ];
+        for (width, height) in [(390.0, 300.0), (700.0, 800.0)] {
+            let mut normal = ViewBoxControls::new();
+            let mut mobile = ViewBoxControls::new();
+            let mut desktop = ViewBoxControls::new();
+            assert!(normal.fit(&tiles, width, height, 2.0));
+            assert!(mobile.fit_with_padding(&tiles, width, height, 1.6, 42.0));
+            assert!(desktop.fit_with_padding(&tiles, width, height, 2.3, 12.0));
+            assert!(desktop.width < normal.width);
+            assert!(mobile.width > normal.width);
+            for viewbox in [desktop, mobile] {
+                assert!((viewbox.x_transform - viewbox.width / 2.0).abs() < 0.001);
+                assert!((viewbox.y_transform - viewbox.height / 2.0).abs() < 0.001);
+                for tile in tiles {
+                    assert!(tile.left + viewbox.x_transform > 0.0);
+                    assert!(tile.right + viewbox.x_transform < viewbox.width);
+                    assert!(tile.top + viewbox.y_transform > 0.0);
+                    assert!(tile.bottom + viewbox.y_transform < viewbox.height);
+                }
+            }
+        }
+    }
 
     #[test]
     fn history_recovery_preserves_a_partially_visible_tile_and_zoom() {

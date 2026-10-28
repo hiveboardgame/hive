@@ -6,6 +6,11 @@
         "angled": "Angled",
         "vertical": "Vertical"
     },
+    "show_grid": "Show hex grid",
+    "grid_buttons": {
+        "off": "Off",
+        "on": "On"
+    },
     "background_color": "Background Color",
     "preselect": "Preselect",
     "preselect_description": "Allow selecting a piece during the opponent's turn.",

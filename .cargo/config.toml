@@ -12,3 +12,7 @@ rustflags = ["--cfg=erase_components"]
 [build]
 rustflags = ["-Z", "threads=8"]
 target-dir = ".cargo/target"
+
+# Keep the large SSR app within development-container memory limits.
+[profile.dev.package.apis]
+debug = 0

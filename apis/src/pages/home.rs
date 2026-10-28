@@ -2,7 +2,7 @@ use crate::{
     components::{
         atoms::logo::Logo,
         layouts::page_shell::{PageShell, PageShellVariant},
-        molecules::{online_users::OnlineUsers, rl_banner::RlBanner},
+        molecules::{online_users::OnlineUsers, rl_banner::RlBanner, tutorial_card::TutorialCard},
         organisms::{
             calendar::Calendar,
             challenges::Challenges,
@@ -13,11 +13,13 @@ use crate::{
         },
     },
     functions::home_banner,
+    i18n::*,
 };
 use leptos::prelude::*;
 
 #[component]
 pub fn Home() -> impl IntoView {
+    let i18n = use_i18n();
     let banner = OnceResource::new(async move { home_banner::get().await.ok().flatten() });
     view! {
         <PageShell variant=PageShellVariant::Dashboard class="overflow-x-hidden">
@@ -39,8 +41,9 @@ pub fn Home() -> impl IntoView {
             </Transition>
             <div class="ui-home-grid">
                 <div class="contents lg:flex lg:flex-col lg:col-start-1 lg:row-start-1 lg:items-center lg:space-y-4 lg:min-w-0">
-                    <div class="flex flex-col order-1 items-center w-full min-w-0 lg:order-none">
+                    <div class="flex flex-col order-1 gap-4 items-center w-full min-w-0 lg:order-none">
                         <Logo tw_class="flex w-48 lg:w-[90%]" />
+                        <TutorialCard />
                     </div>
                     <div class="order-4 mx-auto w-full min-w-0 max-w-md lg:overflow-y-auto lg:order-none lg:mt-0 lg:max-h-[50rem]">
                         <Calendar />
@@ -50,13 +53,16 @@ pub fn Home() -> impl IntoView {
                     <div class="contents [&>*]:order-2 lg:[&>*]:order-1">
                         <FeaturedVideo />
                     </div>
-                    <div class="order-1 w-full lg:order-2">
+                    <div id="tutorial-quickplay" class="order-1 w-full lg:order-2">
                         <QuickPlay />
                     </div>
                     <div class="contents [&>*]:order-2">
                         <LiveArenas />
                     </div>
-                    <div class="order-3 w-full">
+                    <div id="tutorial-open-challenges" class="flex flex-col order-3 gap-3 w-full">
+                        <h2 class="text-lg font-bold text-center text-gray-900 dark:text-gray-100">
+                            {t!(i18n, home.join_game)}
+                        </h2>
                         <Challenges />
                     </div>
                     <div class="order-4 w-full">

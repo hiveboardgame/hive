@@ -31,7 +31,10 @@ pub fn Footer() -> impl IntoView {
     let on_donate_page = move || pathname.with(|path| path == "/donate");
 
     view! {
-        <footer class="w-full text-sm border-t border-black/10 bg-odd-light/80 dark:border-white/10 dark:bg-surface-muted">
+        <footer
+            id="site-footer"
+            class="w-full text-sm border-t border-black/10 bg-odd-light/80 dark:border-white/10 dark:bg-surface-muted"
+        >
             <div class=move || {
                 format!("flex flex-col gap-8 py-8 mx-auto w-full {}", site_footer.container_class())
             }>

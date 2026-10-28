@@ -107,6 +107,8 @@ fn color_hint(i18n: I18nContext<Locale, I18nKeys>, color: AnnotationColor) -> St
         AnnotationColor::Black => t_string!(i18n, analysis.black_alt).to_string(),
         AnnotationColor::Red => t_string!(i18n, analysis.red_ctrl_alt).to_string(),
         AnnotationColor::Green => t_string!(i18n, analysis.green_meta).to_string(),
+        AnnotationColor::Orange => "Orange".to_string(),
+        AnnotationColor::Grey => "Grey".to_string(),
     }
 }
 
@@ -166,6 +168,8 @@ fn shape_glyph(shape: MarkerShape) -> &'static str {
     match shape {
         MarkerShape::Circle => "●",
         MarkerShape::Cross => "✕",
+        MarkerShape::Ring | MarkerShape::ThinRing => "⬡",
+        MarkerShape::Grid => "⬡",
     }
 }
 
@@ -173,5 +177,7 @@ fn shape_title(i18n: I18nContext<Locale, I18nKeys>, shape: MarkerShape) -> Strin
     match shape {
         MarkerShape::Circle => t_string!(i18n, analysis.circle_w).to_string(),
         MarkerShape::Cross => t_string!(i18n, analysis.cross_e).to_string(),
+        MarkerShape::Ring | MarkerShape::ThinRing => "Ring".to_string(),
+        MarkerShape::Grid => "Grid".to_string(),
     }
 }

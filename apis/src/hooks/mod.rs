@@ -8,6 +8,7 @@ pub mod reload_on_new_release;
 pub mod site_footer;
 pub mod sync_user_locale;
 pub mod tap_feedback;
+pub mod tutorial_clock;
 pub mod web_push_nav_listener;
 pub mod web_push_reconcile;
 pub mod websocket_refresh;

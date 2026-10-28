@@ -139,7 +139,7 @@ pub fn QuickPlay() -> impl IntoView {
                     <div class="quickplay-hex-cell quickplay-hex-blitz-bottom">
                         <GridButton time_control=Blitz5p4 />
                     </div>
-                    <div class="quickplay-hex-cell quickplay-hex-center">
+                    <div id="tutorial-custom-game" class="quickplay-hex-cell quickplay-hex-center">
                         <button
                             type="button"
                             class="quickplay-hex-button quickplay-hex-button-center ui-button"

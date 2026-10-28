@@ -384,6 +384,12 @@ impl State {
         unreachable!()
     }
 
+    /// Drills hand the move straight back to the learner. Not a game action: live play must only
+    /// pass through `play_turn_from_history("pass", ..)`, which checks the side is shut out.
+    pub fn pass_out_of_turn(&mut self) {
+        self.pass();
+    }
+
     fn pass(&mut self) {
         self.history.record_move("pass", "");
         self.turn_color = self.turn_color.opposite_color();
@@ -662,6 +668,27 @@ mod tests {
                 if reason == "Position is off the board"),
             "rejected for the wrong reason: {error}"
         );
+    }
+
+    #[test]
+    fn a_pass_out_of_turn_lets_the_mover_move_the_same_piece_again() {
+        let mut state = State::new(GameType::MLP, false);
+        for (piece, position) in [("wQ", ""), ("bQ", "-wQ"), ("wA1", "wQ-"), ("bA1", "-bQ")] {
+            state.play_turn_from_history(piece, position).unwrap();
+        }
+        state.play_turn_from_history("wA1", "\\bQ").unwrap();
+        assert_eq!(state.turn_color, Color::Black);
+
+        state.pass_out_of_turn();
+
+        assert_eq!(state.turn_color, Color::White);
+        let wa1: Piece = "wA1".parse().expect("test piece");
+        let ant_moves = state
+            .board
+            .moves(Color::White)
+            .into_iter()
+            .find(|((piece, _), _)| *piece == wa1);
+        assert!(ant_moves.is_some_and(|(_, targets)| !targets.is_empty()));
     }
 
     /// UHP headers and tree replay read it; two call sites hand-patched the Base default.
