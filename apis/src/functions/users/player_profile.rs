@@ -7,7 +7,6 @@ use server_fn::codec;
 pub struct ProfileDetails {
     pub flag: Option<String>,
     pub bio: String,
-    pub member_since: Option<chrono::NaiveDate>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -49,17 +48,12 @@ pub async fn get_player_details(username: String) -> Result<ProfileDetails, Serv
     if user.deleted {
         return Ok(ProfileDetails::default());
     }
-    let member_since = Some(user.created_at.date_naive());
     let Some(profile) = PlayerProfile::find(user.id, &mut conn).await? else {
-        return Ok(ProfileDetails {
-            member_since,
-            ..Default::default()
-        });
+        return Ok(ProfileDetails::default());
     };
     Ok(ProfileDetails {
         flag: profile.flag,
         bio: profile.bio,
-        member_since,
     })
 }
 

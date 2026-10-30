@@ -26,15 +26,20 @@ pub fn ProfileAbout(
                     .get()
                     .map(|result| match result {
                         Ok(data) => {
-                            let has_details = !data.bio.is_empty() || data.member_since.is_some();
+                            let has_details = !data.bio.is_empty();
                             view! {
                                 <Show when=move || owner() || has_details>
                                     <details
                                         open
-                                        class="rounded-xl border border-gray-300 dark:border-gray-600"
+                                        class="rounded-xl border border-gray-300 dark:border-gray-600 group/profile-about"
                                     >
-                                        <summary class="py-2 px-3 font-semibold cursor-pointer">
-                                            {t!(i18n, profile.about.title)}
+                                        <summary
+                                            class="py-2 px-3 font-semibold cursor-pointer"
+                                            aria-label=move || t_string!(i18n, profile.about.title)
+                                        >
+                                            <span class="group-open/profile-about:hidden">
+                                                {t!(i18n, profile.about.title)}
+                                            </span>
                                         </summary>
                                         <div class="overflow-y-auto px-3 pb-3 max-h-[50vh]">
                                             <Show when=move || saved.get()>
@@ -109,7 +114,6 @@ fn ProfileDetailsPanel(
         false,
     );
     let about_html = bio_to_html(&data.bio);
-    let member_since = data.member_since;
     view! {
         <Show
             when=move || !editing.get()
@@ -212,16 +216,6 @@ fn ProfileDetailsPanel(
                 class="whitespace-pre-wrap break-words [&_a]:underline"
                 inner_html=about_html.clone()
             />
-            {member_since
-                .map(|date| {
-                    view! {
-                        <p class="mt-3 text-xs opacity-75">
-                            {t!(i18n, profile.about.member_since)}" "
-                            <time datetime=date
-                                .to_string()>{date.format("%-d %B %Y").to_string()}</time>
-                        </p>
-                    }
-                })}
             <Show when=move || owner.get()>
                 <button
                     class="mt-2 underline"
