@@ -16,9 +16,6 @@ async fn profile_updates_clear_nullable_fields_and_keep_users_separate() {
     let mut profile = PlayerProfile {
         user_id: alice.id,
         flag: Some("GB".into()),
-        location: Some("London, United Kingdom".into()),
-        birth_year: Some(1990),
-        gender: Some("X".into()),
         bio: "Hello 🐝".into(),
     };
     profile.save(&mut conn).await.unwrap();
@@ -35,22 +32,13 @@ async fn profile_updates_clear_nullable_fields_and_keep_users_separate() {
         "Hello 🐝"
     );
     profile.flag = None;
-    profile.location = None;
-    profile.birth_year = None;
-    profile.gender = None;
     profile.bio.clear();
     profile.save(&mut conn).await.unwrap();
     let saved = PlayerProfile::find(alice.id, &mut conn)
         .await
         .unwrap()
         .unwrap();
-    assert!(
-        saved.flag.is_none()
-            && saved.location.is_none()
-            && saved.birth_year.is_none()
-            && saved.gender.is_none()
-            && saved.bio.is_empty()
-    );
+    assert!(saved.flag.is_none() && saved.bio.is_empty());
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -61,9 +49,6 @@ async fn deleting_account_erases_personal_profile() {
     PlayerProfile {
         user_id: user.id,
         flag: None,
-        location: None,
-        birth_year: Some(1980),
-        gender: None,
         bio: "Erase me".into(),
     }
     .save(&mut conn)
@@ -76,4 +61,20 @@ async fn deleting_account_erases_personal_profile() {
         .await
         .unwrap()
         .is_none());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn profile_schema_does_not_store_demographics() {
+    use diesel::{sql_types::Text, QueryableByName};
+    use diesel_async::RunQueryDsl;
+    #[derive(QueryableByName)]
+    struct Column {
+        #[diesel(sql_type = Text)]
+        column_name: String,
+    }
+    let db = common::db::test_db().await;
+    let mut conn = get_conn(&db.pool).await.unwrap();
+    let columns = diesel::sql_query("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='player_profiles' ORDER BY ordinal_position")
+        .load::<Column>(&mut conn).await.unwrap().into_iter().map(|row| row.column_name).collect::<Vec<_>>();
+    assert_eq!(columns, vec!["user_id", "flag", "bio"]);
 }

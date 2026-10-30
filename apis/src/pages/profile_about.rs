@@ -1,6 +1,7 @@
 use crate::{
     functions::users::player_profile::{ProfileDetails, SavePlayerDetails},
     i18n::*,
+    profile_bio::bio_to_html,
     profile_catalog::{catalog, flag_emoji},
     providers::AuthContext,
     security::csrf::ActionForm,
@@ -25,9 +26,7 @@ pub fn ProfileAbout(
                     .get()
                     .map(|result| match result {
                         Ok(data) => {
-                            let has_details = data.location.is_some() || data.age.is_some()
-                                || data.gender.is_some() || !data.bio.is_empty()
-                                || data.member_since.is_some();
+                            let has_details = !data.bio.is_empty() || data.member_since.is_some();
                             view! {
                                 <Show when=move || owner() || has_details>
                                     <details
@@ -87,25 +86,11 @@ fn ProfileDetailsPanel(
     let editing = RwSignal::new(false);
     let action = ServerAction::<SavePlayerDetails>::new();
     let flag = RwSignal::new(data.flag.clone().unwrap_or_default());
-    let location = RwSignal::new(data.location.clone().unwrap_or_default());
-    let year = RwSignal::new(
-        data.owner_birth_year
-            .map(|year| year.to_string())
-            .unwrap_or_default(),
-    );
-    let gender = RwSignal::new(data.gender.clone().unwrap_or_default());
     let bio = RwSignal::new(data.bio.clone());
     let original = StoredValue::new(data.clone());
     let reset = move || {
         let data = original.get_value();
         flag.set(data.flag.unwrap_or_default());
-        location.set(data.location.unwrap_or_default());
-        year.set(
-            data.owner_birth_year
-                .map(|year| year.to_string())
-                .unwrap_or_default(),
-        );
-        gender.set(data.gender.unwrap_or_default());
         bio.set(data.bio);
         action.clear();
     };
@@ -123,24 +108,7 @@ fn ProfileDetailsPanel(
         },
         false,
     );
-    let mut facts = Vec::new();
-    if let Some(location) = &data.location {
-        facts.push(
-            location
-                .rsplit_once(", ")
-                .map(|(city, _)| city)
-                .unwrap_or(location)
-                .to_string(),
-        );
-    }
-    if let Some(age) = data.age {
-        facts.push(age.to_string());
-    }
-    if let Some(gender) = &data.gender {
-        facts.push(gender.clone());
-    }
-    let facts = facts.join(", ");
-    let biography = data.bio.clone();
+    let about_html = bio_to_html(&data.bio);
     let member_since = data.member_since;
     view! {
         <Show
@@ -148,126 +116,40 @@ fn ProfileDetailsPanel(
             fallback=move || {
                 view! {
                     <ActionForm action=action attr:class="space-y-3">
-                        <p class="text-sm opacity-75">{t!(i18n, profile.about.optional_hint)}</p>
+                        <p class="text-sm opacity-75">
+                            {t!(i18n, profile.about.optional_hint)}" "
+                            <a href="/privacy" class="underline">
+                                {t!(i18n, profile.about.privacy)}
+                            </a>
+                        </p>
                         <fieldset disabled=move || action.pending().get() class="space-y-3">
-                            <div class="grid gap-3 sm:grid-cols-2">
-                                <label class="flex flex-col gap-1" for="profile-flag">
-                                    <span class="ui-field-label">
-                                        {t!(i18n, profile.about.flag)}
-                                    </span>
-                                    <select
-                                        id="profile-flag"
-                                        name="flag"
-                                        class="ui-field-input"
-                                        prop:value=flag
-                                        on:change=move |ev| flag.set(event_target_value(&ev))
-                                    >
-                                        <option value="">{t!(i18n, profile.about.unset)}</option>
-                                        {catalog()
-                                            .countries
-                                            .iter()
-                                            .map(|(code, country)| {
-                                                view! {
-                                                    <option
-                                                        value=code.clone()
-                                                        selected=flag.get_untracked() == *code
-                                                    >
-                                                        {format!("{} {}", flag_emoji(code), country)}
-                                                    </option>
-                                                }
-                                            })
-                                            .collect_view()}
-                                    </select>
-                                </label>
-                                <label class="flex flex-col gap-1" for="profile-location">
-                                    <span class="ui-field-label">
-                                        {t!(i18n, profile.about.location)}
-                                    </span>
-                                    <input
-                                        id="profile-location"
-                                        name="location"
-                                        class="ui-field-input"
-                                        list="profile-locations"
-                                        autocomplete="off"
-                                        maxlength="150"
-                                        prop:value=location
-                                        on:input=move |ev| location.set(event_target_value(&ev))
-                                        placeholder=move || {
-                                            t_string!(i18n, profile.about.location_placeholder)
-                                        }
-                                    />
-                                    <datalist id="profile-locations">
-                                        {move || {
-                                            let query = location.get().to_lowercase();
-                                            catalog()
-                                                .locations
-                                                .iter()
-                                                .filter(|city| {
-                                                    query.len() >= 2 && city.to_lowercase().contains(&query)
-                                                })
-                                                .take(30)
-                                                .map(|city| view! { <option value=city.clone() /> })
-                                                .collect_view()
-                                        }}
-                                    </datalist>
-                                </label>
-                                <label class="flex flex-col gap-1" for="profile-year">
-                                    <span class="ui-field-label">
-                                        {t!(i18n, profile.about.birth_year)}
-                                    </span>
-                                    <input
-                                        id="profile-year"
-                                        name="birth_year"
-                                        class="ui-field-input"
-                                        type="number"
-                                        min="1900"
-                                        step="1"
-                                        prop:value=year
-                                        on:input=move |ev| year.set(event_target_value(&ev))
-                                        aria-describedby="profile-age-help"
-                                    />
-                                </label>
-                                <label class="flex flex-col gap-1" for="profile-gender">
-                                    <span class="ui-field-label">
-                                        {t!(i18n, profile.about.gender)}
-                                    </span>
-                                    <select
-                                        id="profile-gender"
-                                        name="gender"
-                                        class="ui-field-input"
-                                        prop:value=gender
-                                        on:change=move |ev| gender.set(event_target_value(&ev))
-                                    >
-                                        <option value="">{t!(i18n, profile.about.unset)}</option>
-                                        <option value="M" selected=gender.get_untracked() == "M">
-                                            {t!(i18n, profile.about.male)}
-                                        </option>
-                                        <option value="F" selected=gender.get_untracked() == "F">
-                                            {t!(i18n, profile.about.female)}
-                                        </option>
-                                        <option value="X" selected=gender.get_untracked() == "X">
-                                            {t!(i18n, profile.about.other)}
-                                        </option>
-                                        <option value="?" selected=gender.get_untracked() == "?">
-                                            {t!(i18n, profile.about.unspecified)}
-                                        </option>
-                                    </select>
-                                </label>
-                            </div>
-                            <p class="text-xs opacity-75">
-                                {t!(i18n, profile.about.city_data)}" "
-                                <a
-                                    href="https://www.geonames.org/"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    class="underline"
+                            <label class="flex flex-col gap-1 max-w-sm" for="profile-flag">
+                                <span class="ui-field-label">{t!(i18n, profile.about.flag)}</span>
+                                <select
+                                    id="profile-flag"
+                                    name="flag"
+                                    class="ui-field-input"
+                                    prop:value=flag
+                                    on:change=move |ev| flag.set(event_target_value(&ev))
                                 >
-                                    "GeoNames"
-                                </a> " (CC BY 4.0)"
-                            </p>
-                            <p id="profile-age-help" class="text-xs opacity-75">
-                                {t!(i18n, profile.about.age_help)}
-                            </p>
+                                    <option value="">{t!(i18n, profile.about.unset)}</option>
+                                    {catalog()
+                                        .countries
+                                        .iter()
+                                        .map(|(code, country)| {
+                                            view! {
+                                                <option
+                                                    value=code.clone()
+                                                    selected=flag.get_untracked() == *code
+                                                >
+                                                    {format!("{} {}", flag_emoji(code), country)}
+                                                </option>
+                                            }
+                                        })
+                                        .collect_view()}
+                                </select>
+                            </label>
+                            <p class="text-xs opacity-75">{t!(i18n, profile.about.flag_help)}</p>
                             <label class="flex flex-col gap-1" for="profile-bio">
                                 <span class="ui-field-label">{t!(i18n, profile.about.bio)}</span>
                                 <textarea
@@ -277,15 +159,12 @@ fn ProfileDetailsPanel(
                                     rows="3"
                                     prop:value=bio
                                     on:input=move |ev| bio.set(event_target_value(&ev))
-                                    aria-describedby="profile-bio-count"
+                                    aria-describedby="profile-bio-count profile-links-help"
                                 />
                             </label>
-                            <p class="text-xs opacity-75">{t!(i18n, profile.about.no_links)}</p>
-                            <Show when=move || crate::profile_bio::bio_contains_link(&bio.get())>
-                                <p role="alert" class="text-red-600 dark:text-red-400">
-                                    {t!(i18n, profile.about.no_links)}
-                                </p>
-                            </Show>
+                            <p id="profile-links-help" class="text-xs opacity-75">
+                                {t!(i18n, profile.about.links_hint)}
+                            </p>
                             <p id="profile-bio-count" class="text-xs text-right" aria-live="polite">
                                 {move || format!("{}/300", bio.with(|text| text.chars().count()))}
                             </p>
@@ -308,11 +187,7 @@ fn ProfileDetailsPanel(
                                     class="ui-button ui-button-primary"
                                     disabled=move || {
                                         action.pending().get()
-                                            || bio
-                                                .with(|text| {
-                                                    text.chars().count() > 300
-                                                        || crate::profile_bio::bio_contains_link(text)
-                                                })
+                                            || bio.with(|text| text.chars().count() > 300)
                                     }
                                 >
                                     {t!(i18n, profile.about.save)}
@@ -333,8 +208,10 @@ fn ProfileDetailsPanel(
                 }
             }
         >
-            <p class="whitespace-pre-wrap break-words">{biography.clone()}</p>
-            <p class="mt-2">{facts.clone()}</p>
+            <div
+                class="whitespace-pre-wrap break-words [&_a]:underline"
+                inner_html=about_html.clone()
+            />
             {member_since
                 .map(|date| {
                     view! {

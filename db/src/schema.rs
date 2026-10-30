@@ -479,9 +479,6 @@ diesel::table! {
     player_profiles (user_id) {
         user_id -> Uuid,
         flag -> Nullable<Text>,
-        location -> Nullable<Text>,
-        birth_year -> Nullable<Int4>,
-        gender -> Nullable<Text>,
         bio -> Text,
     }
 }

@@ -17,9 +17,6 @@ use uuid::Uuid;
 pub struct PlayerProfile {
     pub user_id: Uuid,
     pub flag: Option<String>,
-    pub location: Option<String>,
-    pub birth_year: Option<i32>,
-    pub gender: Option<String>,
     pub bio: String,
 }
 

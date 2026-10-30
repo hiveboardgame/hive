@@ -4,7 +4,6 @@ use std::sync::OnceLock;
 #[derive(Deserialize)]
 pub struct ProfileCatalog {
     pub countries: Vec<(String, String)>,
-    pub locations: Vec<String>,
 }
 
 pub fn catalog() -> &'static ProfileCatalog {
