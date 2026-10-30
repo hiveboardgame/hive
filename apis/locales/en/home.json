@@ -40,7 +40,7 @@
         }
     },
     "calendar": {
-        "title": "Matches",
+        "title": "Scheduled Matches",
         "last_updated": "Last updated: {{time}}",
         "loading_title": "Loading upcoming games...",
         "loading_message": "Please wait while we fetch the scheduled games",

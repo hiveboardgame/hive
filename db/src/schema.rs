@@ -474,3 +474,14 @@ diesel::allow_tables_to_appear_in_same_query!(
     user_tournament_chat_mutes,
     users,
 );
+
+diesel::table! {
+    player_profiles (user_id) {
+        user_id -> Uuid,
+        flag -> Nullable<Text>,
+        location -> Nullable<Text>,
+        birth_year -> Nullable<Int4>,
+        gender -> Nullable<Text>,
+        bio -> Text,
+    }
+}

@@ -28,7 +28,7 @@ pub fn Calendar() -> impl IntoView {
         <div class="overflow-hidden w-full ui-panel">
             <div class=with_class(
                 "ui-panel-header",
-                "sticky top-0 z-10 flex-col justify-center text-center",
+                "sticky top-0 z-10 flex-col justify-center text-center !gap-0.5 !py-2",
             )>
                 <h2 class="text-xl font-bold">{t!(i18n, tournaments.calendar.title)}</h2>
                 <div class="text-xs opacity-75">
@@ -50,11 +50,12 @@ pub fn Calendar() -> impl IntoView {
                     }}
                 </div>
             </div>
-            <div class="pt-3 ui-panel-body">
+            <div class="ui-panel-body !p-2 sm:!p-3">
 
                 <Suspense fallback=move || {
                     view! {
                         <EmptyState
+                            class="!py-4"
                             title=move || {
                                 t_string!(i18n, tournaments.calendar.loading_games).to_string()
                             }
@@ -66,9 +67,12 @@ pub fn Calendar() -> impl IntoView {
                 }>
                     <ErrorBoundary fallback=move |_errors| {
                         view! {
-                            <EmptyState title=move || {
-                                t_string!(i18n, tournaments.calendar.error).to_string()
-                            } />
+                            <EmptyState
+                                class="!py-4"
+                                title=move || {
+                                    t_string!(i18n, tournaments.calendar.error).to_string()
+                                }
+                            />
                         }
                     }>
                         {move || {
@@ -80,6 +84,7 @@ pub fn Calendar() -> impl IntoView {
                                             if games.is_empty() {
                                                 view! {
                                                     <EmptyState
+                                                        class="!py-4"
                                                         title=t_string!(
                                                             i18n,
                                                             tournaments.calendar.empty

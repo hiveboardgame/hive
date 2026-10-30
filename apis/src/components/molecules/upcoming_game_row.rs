@@ -72,12 +72,12 @@ pub fn UpcomingGameRow(
 
     view! {
         <Show when=move || !expired()>
-            <div class="flex flex-col p-4 w-full ui-card-row">
-                <div class="flex mb-3 w-full text-center">
+            <div class="flex flex-col p-3 w-full ui-card-row">
+                <div class="flex mb-1 w-full text-center">
                     <a
                         class=with_class(
                             "ui-text-link",
-                            "overflow-hidden w-full text-lg no-link-style break-words hyphens-auto",
+                            "overflow-hidden w-full text-lg leading-snug no-link-style break-words hyphens-auto",
                         )
                         href=format!("/tournament/{}", tournament_id)
                         title=tournament_name.get_value()
@@ -86,7 +86,7 @@ pub fn UpcomingGameRow(
                     </a>
                 </div>
 
-                <div class="flex flex-col gap-3 items-center">
+                <div class="flex flex-col gap-1 items-center">
                     <div class="flex gap-2 items-center">
                         <ProfileLink
                             username=white_username.get_value()
@@ -109,7 +109,7 @@ pub fn UpcomingGameRow(
                         />
                     </div>
 
-                    <TimeRow time_control extend_tw_classes="text-sm" />
+                    <TimeRow time_control extend_tw_classes="text-sm leading-snug" />
 
                     <Show when=show_button>
                         <a
@@ -133,7 +133,7 @@ pub fn UpcomingGameRow(
                         </a>
                     </Show>
 
-                    <div class="text-sm opacity-75">{formatted_time}</div>
+                    <div class="text-sm leading-snug opacity-75">{formatted_time}</div>
                 </div>
             </div>
         </Show>

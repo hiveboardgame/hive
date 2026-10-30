@@ -61,3 +61,6 @@ pub(crate) use tournament_slot::TournamentSlotInsert;
 pub use tournament_swiss_round::TournamentSwissRound;
 pub use tournament_user::TournamentUser;
 pub use user::{NewUser, SoftDeleteReport, User};
+
+mod player_profile;
+pub use player_profile::PlayerProfile;

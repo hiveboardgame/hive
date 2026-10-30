@@ -613,7 +613,7 @@
         "uninvite_action": "Withdraw tournament invitation"
     },
     "calendar": {
-        "title": "Matches",
+        "title": "Scheduled Matches",
         "last_updated": "Last updated: {{time}}",
         "loading": "Loading…",
         "loading_games": "Loading upcoming games…",

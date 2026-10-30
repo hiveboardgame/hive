@@ -24,5 +24,32 @@
         "highest_rated_players_by_speed": "Highest rated players by speed.",
         "top_rated_bots": "Top Rated Bots",
         "highest_rated_bots_by_speed": "Highest rated bots by speed."
+    },
+    "about": {
+        "title": "About",
+        "saved": "Profile saved.",
+        "load_error": "Could not load profile details.",
+        "retry": "Retry",
+        "optional_hint": "All fields are optional and public when filled in. Clear a field to hide it.",
+        "flag": "Flag",
+        "unset": "Not set",
+        "location": "Location",
+        "location_placeholder": "Type a city name, then select a suggestion",
+        "birth_year": "Birth year (private)",
+        "age": "Age",
+        "gender": "Gender",
+        "male": "M — Male",
+        "female": "F — Female",
+        "other": "X — Other",
+        "unspecified": "? — Prefer not to say",
+        "age_help": "Only your age is shown publicly: the age you turn this year. Your birth year stays private.",
+        "bio": "Bio",
+        "save": "Save profile",
+        "cancel": "Cancel",
+        "edit": "Edit profile",
+        "city_data": "City data:",
+        "challenge": "Challenge",
+        "member_since": "Member since",
+        "no_links": "Links and email addresses are not allowed in bios."
     }
 }

@@ -104,3 +104,5 @@ pub async fn search_users(
         .await
         .map_err(ServerFnError::new)
 }
+
+pub mod player_profile;
