@@ -1,6 +1,7 @@
 // Service Worker
 const CACHE_PREFIX = 'hivegame-cache-';
 const CACHE_NAME = __HIVE_CACHE_NAME__;
+// Canonical URLs only; the server negotiates compression for each request.
 const ASSETS_TO_CACHE = __HIVE_ASSETS__;
 const CACHE_FIRST = __HIVE_CACHE_FIRST__;
 

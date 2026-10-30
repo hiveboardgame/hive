@@ -11,6 +11,7 @@ use actix_web::{
     web,
 };
 use apis::{api, email, functions, jobs, notifications};
+use apis::common::serve_precompressed;
 use apis::security::{csrf, origin::ApplicationOrigin};
 use apis::websocket::{self, WebsocketData};
 
@@ -202,6 +203,7 @@ async fn main() -> std::io::Result<()> {
             // serve JS/WASM/CSS from `pkg`
             .service(
                 web::scope("/pkg")
+                    .wrap(from_fn(serve_precompressed))
                     // Unhashed builds are fetched again after every rebuild, and gzipping the debug wasm takes minutes.
                     .wrap(Condition::new(
                         !leptos_options.hash_files,
@@ -213,7 +215,11 @@ async fn main() -> std::io::Result<()> {
             .service(functions::pwa::localized_manifest)
             .service(functions::pwa::manifest_redirect)
             // serve other assets from the `assets` directory
-            .service(Files::new("/assets", site_root.as_ref()))
+            .service(
+                web::scope("/assets")
+                    .wrap(from_fn(serve_precompressed))
+                    .service(Files::new("", site_root.as_ref())),
+            )
             // serve the favicon from /favicon.ico
             .service(favicon)
             .service(health)
