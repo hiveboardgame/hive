@@ -26,6 +26,8 @@ mod schedule_action;
 mod server_result;
 mod standings_criterion;
 mod standings_score;
+#[cfg(feature = "ssr")]
+mod static_assets;
 mod svg_assets;
 mod svg_pos;
 mod time_control;
@@ -182,3 +184,6 @@ pub use svg_assets::{
     THREE_D_SHADOW_PATH,
     THREE_D_SHADOW_PREFIX,
 };
+
+#[cfg(feature = "ssr")]
+pub use static_assets::serve_precompressed;

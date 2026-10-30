@@ -167,6 +167,13 @@ fn collect_assets(site_root: &str) -> Vec<(String, PathBuf)> {
                 path,
             )
         })
+        // Compression is negotiated for the canonical URL. Sidecars and build
+        // metadata must not become independent service-worker downloads.
+        .filter(|(uri, path)| {
+            let extension = path.extension().and_then(|extension| extension.to_str());
+            !matches!(extension, Some("br" | "gz"))
+                && (!uri.starts_with("/pkg/") || matches!(extension, Some("js" | "css" | "wasm")))
+        })
         .collect::<Vec<_>>();
 
     assets.sort_by(|left, right| left.0.cmp(&right.0));
@@ -175,6 +182,8 @@ fn collect_assets(site_root: &str) -> Vec<(String, PathBuf)> {
 
 fn cache_version(asset_entries: &[(String, PathBuf)]) -> String {
     let mut hasher = Sha256::new();
+    // A worker policy change must also retire caches made under the old policy.
+    hasher.update(SERVICE_WORKER_TEMPLATE.as_bytes());
 
     for (asset, path) in asset_entries {
         hasher.update(asset.as_bytes());
@@ -201,13 +210,52 @@ fn path_to_uri(site_root: &str, path: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+    use uuid::Uuid;
+
     use super::{
         render_worker_script,
         PwaDocumentAssets,
+        PwaManifest,
         ASSETS_PLACEHOLDER,
         CACHE_FIRST_PLACEHOLDER,
         CACHE_NAME_PLACEHOLDER,
     };
+
+    #[test]
+    fn precache_manifest_contains_only_canonical_package_assets() {
+        let root = std::env::temp_dir().join(format!("hive-pwa-{}", Uuid::new_v4()));
+        fs::create_dir_all(root.join("pkg/snippets")).unwrap();
+        for file in [
+            "HiveGame.js",
+            "HiveGame.css",
+            "HiveGame.wasm",
+            "HiveGame.wasm.br",
+            "HiveGame.wasm.gz",
+            "HiveGame.d.ts",
+            "HiveGame_bg.wasm.d.ts",
+            "HiveGame.js.map",
+            "snippets/helper.js",
+        ] {
+            fs::write(root.join("pkg").join(file), b"fixture").unwrap();
+        }
+        for file in ["tile.svg", "tile.svg.br", "tile.svg.gz"] {
+            fs::write(root.join(file), b"fixture").unwrap();
+        }
+        let manifest = PwaManifest::from_site_root(root.to_str().unwrap(), true);
+        fs::remove_dir_all(root).unwrap();
+
+        assert_eq!(
+            manifest.assets(),
+            [
+                "/assets/tile.svg",
+                "/pkg/HiveGame.css",
+                "/pkg/HiveGame.js",
+                "/pkg/HiveGame.wasm",
+                "/pkg/snippets/helper.js",
+            ]
+        );
+    }
 
     #[test]
     fn document_assets_are_versioned_from_cache_version() {
