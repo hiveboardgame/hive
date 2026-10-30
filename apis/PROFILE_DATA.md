@@ -9,3 +9,14 @@ The simplification migration drops the former location, birth_year, and gender c
 About text is HTML-escaped. Web URLs reuse `validated_link_url` and `chat_link_href`, including the existing external-site confirmation screen. This is destination validation and a confirmation flow, not a malware scanner. Images and user-supplied HTML are not rendered.
 
 Flag SVGs: flag-icons 7.6.0, https://github.com/lipis/flag-icons, MIT license (bundled in `apis/assets/profile-flags/LICENSE.txt`).
+
+Admins can replace or clear a bio and optionally block it. `bio_blocked` is an
+administrative control, not another editable personal field. Blocked text is
+redacted from the public profile endpoint (including for the owner). Only the
+admin-only moderation endpoint returns that text. Blocking hides the text and
+locks owner edits; flags remain editable. Unblocking publishes the saved text.
+Moderation checks the actor's current active admin status in the database; actor
+identity comes from the session. Owner writes use an atomic conditional UPSERT
+and never write `bio_blocked`, preventing stale forms from undoing a block.
+Moderation writes preserve the flag. Logs record admin/target IDs and block
+state, without copying the bio content. Account deletion still erases the row.

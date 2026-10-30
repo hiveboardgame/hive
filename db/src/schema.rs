@@ -480,5 +480,6 @@ diesel::table! {
         user_id -> Uuid,
         flag -> Nullable<Text>,
         bio -> Text,
+        bio_blocked -> Bool,
     }
 }

@@ -40,6 +40,11 @@
         "challenge": "Challenge",
         "flag_help": "Choose a flag to represent yourself. It does not have to indicate where you live.",
         "privacy": "Privacy policy",
-        "links_hint": "Links are supported. External sites open a confirmation page."
+        "links_hint": "Links are supported. External sites open a confirmation page.",
+        "moderate_bio": "Moderate bio",
+        "block_bio": "Block this bio",
+        "block_bio_help": "Hide this bio and prevent the player from changing it until an administrator unblocks it. Leave unchecked to publish your changes.",
+        "save_moderation": "Save moderation",
+        "bio_blocked": "An administrator has blocked your About text. You can still change your flag."
     }
 }

@@ -7,6 +7,31 @@ use server_fn::codec;
 pub struct ProfileDetails {
     pub flag: Option<String>,
     pub bio: String,
+    pub bio_blocked: bool,
+}
+
+#[cfg(any(feature = "ssr", test))]
+impl ProfileDetails {
+    fn public(flag: Option<String>, bio: String, bio_blocked: bool) -> Self {
+        Self {
+            flag,
+            bio: if bio_blocked { String::new() } else { bio },
+            bio_blocked,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct BioModerationDetails {
+    pub bio: String,
+    pub blocked: bool,
+}
+
+fn validate_bio(bio: String) -> Result<String, String> {
+    if bio.chars().count() > 300 {
+        return Err("Your About text must be 300 characters or fewer.".into());
+    }
+    Ok(bio.trim().to_string())
 }
 
 #[derive(Debug, PartialEq)]
@@ -26,12 +51,9 @@ pub fn validate_profile(flag: String, bio: String) -> Result<ValidatedProfile, S
     }) {
         return Err("Select a flag from the list.".into());
     }
-    if bio.chars().count() > 300 {
-        return Err("Your About text must be 300 characters or fewer.".into());
-    }
     Ok(ValidatedProfile {
         flag,
-        bio: bio.trim().to_string(),
+        bio: validate_bio(bio)?,
     })
 }
 
@@ -51,10 +73,12 @@ pub async fn get_player_details(username: String) -> Result<ProfileDetails, Serv
     let Some(profile) = PlayerProfile::find(user.id, &mut conn).await? else {
         return Ok(ProfileDetails::default());
     };
-    Ok(ProfileDetails {
-        flag: profile.flag,
-        bio: profile.bio,
-    })
+    // Blocked text is never sent through this public endpoint, even to its owner.
+    Ok(ProfileDetails::public(
+        profile.flag,
+        profile.bio,
+        profile.bio_blocked,
+    ))
 }
 
 #[server(client = CsrfClient)]
@@ -74,15 +98,70 @@ pub async fn save_player_details(flag: String, bio: String) -> Result<(), Server
         user_id,
         flag: data.flag,
         bio: data.bio,
+        bio_blocked: false,
     }
-    .save(&mut conn)
+    .save_owner(&mut conn)
     .await?;
+    Ok(())
+}
+
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
+pub async fn get_bio_moderation(
+    user_id: uuid::Uuid,
+) -> Result<BioModerationDetails, ServerFnError> {
+    use crate::functions::{auth::identity::ensure_admin, db::pool};
+    use db_lib::{
+        get_conn,
+        models::{PlayerProfile, User},
+    };
+    let pool = pool().await?;
+    let mut conn = get_conn(&pool).await?;
+    ensure_admin(&mut conn).await?;
+    User::find_active_by_uuid(&user_id, &mut conn).await?;
+    Ok(PlayerProfile::find(user_id, &mut conn)
+        .await?
+        .map(|profile| BioModerationDetails {
+            bio: profile.bio,
+            blocked: profile.bio_blocked,
+        })
+        .unwrap_or_default())
+}
+
+#[server(client = CsrfClient)]
+pub async fn save_bio_moderation(
+    user_id: uuid::Uuid,
+    bio: String,
+    blocked: bool,
+) -> Result<(), ServerFnError> {
+    use crate::functions::{auth::identity::uuid, db::pool};
+    use db_lib::{get_conn, models::PlayerProfile};
+    let actor_id = uuid().await?;
+    let pool = pool().await?;
+    let mut conn = get_conn(&pool).await?;
+    PlayerProfile::moderate_bio(
+        actor_id,
+        user_id,
+        validate_bio(bio).map_err(ServerFnError::new)?,
+        blocked,
+        &mut conn,
+    )
+    .await?;
+    log::warn!("Profile bio moderated by admin {actor_id}: target={user_id}, blocked={blocked}");
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn blocked_bio_is_redacted_from_public_response() {
+        let hidden = ProfileDetails::public(Some("GB".into()), "Hidden text".into(), true);
+        assert_eq!(hidden.bio, "");
+        assert!(hidden.bio_blocked);
+        assert_eq!(hidden.flag.as_deref(), Some("GB"));
+        let visible = ProfileDetails::public(None, "Visible text".into(), false);
+        assert_eq!(visible.bio, "Visible text");
+    }
     #[test]
     fn optional_fields_can_be_cleared() {
         let profile = validate_profile("  ".into(), "  ".into()).unwrap();

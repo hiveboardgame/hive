@@ -1,0 +1,1 @@
+ALTER TABLE player_profiles ADD COLUMN bio_blocked BOOLEAN NOT NULL DEFAULT FALSE;
