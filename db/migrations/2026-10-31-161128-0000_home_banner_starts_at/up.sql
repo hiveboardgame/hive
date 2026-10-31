@@ -1,0 +1,1 @@
+ALTER TABLE home_banner ADD COLUMN starts_at TIMESTAMPTZ;

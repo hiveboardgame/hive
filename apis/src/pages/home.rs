@@ -30,7 +30,11 @@ pub fn Home() -> impl IntoView {
                             view! {
                                 <div class="w-full lg:px-4">
                                     <div class="mx-auto w-full max-w-4xl">
-                                        <RlBanner title=banner.title content=banner.content />
+                                        <RlBanner
+                                            title=banner.title
+                                            content=banner.content
+                                            starts_at=banner.starts_at
+                                        />
                                     </div>
                                 </div>
                             }

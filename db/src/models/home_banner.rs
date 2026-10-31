@@ -1,4 +1,5 @@
 use crate::{db_error::DbError, schema::home_banner, DbConn};
+use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 
@@ -10,6 +11,8 @@ pub struct HomeBanner {
     pub title: String,
     pub content: String,
     pub display: bool,
+    #[diesel(treat_none_as_null = true)]
+    pub starts_at: Option<DateTime<Utc>>,
 }
 
 impl HomeBanner {

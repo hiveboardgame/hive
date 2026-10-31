@@ -1,9 +1,11 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct HomeBanner {
     pub title: String,
     pub content: String,
+    pub starts_at: Option<DateTime<Utc>>,
 }
 
 impl HomeBanner {
@@ -13,6 +15,7 @@ impl HomeBanner {
             Some(Self {
                 title: model.title,
                 content: model.content,
+                starts_at: model.starts_at,
             })
         } else {
             None
@@ -23,6 +26,7 @@ impl HomeBanner {
         Self {
             title: model.title,
             content: model.content,
+            starts_at: model.starts_at,
         }
     }
 }

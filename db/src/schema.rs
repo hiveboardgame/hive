@@ -180,6 +180,7 @@ diesel::table! {
         title -> Text,
         content -> Text,
         display -> Bool,
+        starts_at -> Nullable<Timestamptz>,
     }
 }
 

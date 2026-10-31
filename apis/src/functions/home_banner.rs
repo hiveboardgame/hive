@@ -26,16 +26,31 @@ pub async fn get_with_display() -> Result<(HomeBanner, bool), ServerFnError> {
 }
 
 #[server(client = CsrfClient)]
-pub async fn update(title: String, content: String, display: bool) -> Result<(), ServerFnError> {
+pub async fn update(
+    title: String,
+    content: String,
+    display: bool,
+    starts_at: String,
+) -> Result<(), ServerFnError> {
     use crate::functions::{auth::identity::ensure_admin, db::pool};
+    use chrono::{DateTime, Utc};
     use db_lib::{get_conn, models};
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
     ensure_admin(&mut conn).await?;
+    let starts_at = match starts_at.trim() {
+        "" => None,
+        value => Some(
+            DateTime::parse_from_rfc3339(value)
+                .map_err(|e| ServerFnError::new(format!("invalid event time: {e}")))?
+                .with_timezone(&Utc),
+        ),
+    };
     let mut banner = models::HomeBanner::get(&mut conn).await?;
     banner.title = title;
     banner.content = content;
     banner.display = display;
+    banner.starts_at = starts_at;
     banner.update(&mut conn).await?;
     leptos_actix::redirect("/");
     Ok(())

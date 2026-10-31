@@ -1,13 +1,12 @@
 use crate::{
-    common::{
-        display_username,
-        format_game_result,
-        format_tournament_datetime,
-        with_class,
-        RatingChangeInfo,
-    },
+    common::{display_username, format_game_result, with_class, RatingChangeInfo},
     components::{
-        atoms::{color_hex::ColorHex, rating::Rating, user_badges::UserBadges},
+        atoms::{
+            color_hex::ColorHex,
+            local_date_time::LocalDateTime,
+            rating::Rating,
+            user_badges::UserBadges,
+        },
         molecules::{
             rating_and_change::RatingAndChange,
             thumbnail_pieces::ThumbnailPieces,
@@ -34,8 +33,6 @@ pub fn GamePreview(
     let finished = game.finished;
     let rated = game.rated;
     let game_id = game.game_id.clone();
-    let local_time_ready = RwSignal::new(false);
-    Effect::new(move |_| local_time_ready.set(true));
     let tournament_date = show_tournament_date.then_some(
         game.finished_at
             .or(game.last_interaction)
@@ -140,22 +137,12 @@ pub fn GamePreview(
                         </span>
                         <TimeRow time_control extend_tw_classes="text-xs" />
                     </Show>
-                    {move || {
-                        tournament_date
-                            .map(|date| {
-                                view! {
-                                    <time class="text-gray-500 dark:text-gray-400">
-                                        {move || {
-                                            if local_time_ready.get() {
-                                                format_tournament_datetime(date)
-                                            } else {
-                                                String::new()
-                                            }
-                                        }}
-                                    </time>
-                                }
-                            })
-                    }}
+                    {tournament_date
+                        .map(|date_time| {
+                            view! {
+                                <LocalDateTime date_time class="text-gray-500 dark:text-gray-400" />
+                            }
+                        })}
                 </div>
             </Show>
             <a
