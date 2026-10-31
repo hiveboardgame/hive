@@ -11,7 +11,7 @@ pub fn Privacy() -> impl IntoView {
     view! {
         <LegalPage
             title="Privacy Policy"
-            last_updated="19 October 2026"
+            last_updated="30 October 2026"
             summary="hivegame.com is a free, open-source Hive server run by volunteers. We collect as little as we can, we never sell your data, and we don't use ads, analytics or tracking."
         >
             <LegalSection title="Who is responsible">
@@ -26,6 +26,10 @@ pub fn Privacy() -> impl IntoView {
                     <li>
                         <strong>"Your account. "</strong>
                         "When you sign up we store your username, email address and password. Passwords are stored only as an Argon2 hash, never in plain text. We also store your settings, such as language, takeback and notification preferences, and the players you have blocked."
+                    </li>
+                    <li>
+                        <strong>"Profile details (optional). "</strong>
+                        "If you choose to add a flag or About text, we store it to display on your public profile. Your flag is self-selected and does not have to indicate where you live. You can change or clear these details at any time. We do not ask for a city, birth year, age or gender in profile settings."
                     </li>
                     <li>
                         <strong>"Games and ratings. "</strong>
@@ -70,7 +74,7 @@ pub fn Privacy() -> impl IntoView {
                     </li>
                     <li>
                         <strong>"Your consent"</strong>
-                        " (Art. 6(1)(a) GDPR): browser notifications and Discord linking. You can withdraw it at any time by turning notifications off or by asking us to unlink Discord."
+                        " (Art. 6(1)(a) GDPR): optional public profile details, browser notifications and Discord linking. You can withdraw it at any time by clearing your profile details, turning notifications off or asking us to unlink Discord."
                     </li>
                 </LegalList>
             </LegalSection>
@@ -135,7 +139,7 @@ pub fn Privacy() -> impl IntoView {
             <LegalSection title="How long we keep data">
                 <LegalList>
                     <li>
-                        "Account data, settings, games and messages: as long as your account exists (see below for what happens when you delete it)."
+                        "Account data, settings, games and messages: as long as your account exists (see below for what happens when you delete it). Optional profile details are removed when you clear them or delete your account."
                     </li>
                     <li>"Email request records (email and IP address): 24 hours."</li>
                     <li>"Records of sent emails: 30 days."</li>
@@ -151,7 +155,7 @@ pub fn Privacy() -> impl IntoView {
 
             <LegalSection title="Deleting your account">
                 <p>
-                    "You can delete your account at any time on your account page. We then replace your username and email address with an anonymous placeholder, invalidate your password and switch off your notification subscriptions, which are deleted 90 days later."
+                    "You can delete your account at any time on your account page. We then delete your optional profile details, replace your username and email address with an anonymous placeholder, invalidate your password and switch off your notification subscriptions, which are deleted 90 days later."
                 </p>
                 <p>
                     "Your past games, rating history and chat messages remain, attributed to the anonymous placeholder, because they are part of other players' games and history. If you linked Discord, contact us to remove that link as well."

@@ -9,8 +9,10 @@ use crate::{
         molecules::{empty_state::EmptyState, user_identity::UserIdentity},
         organisms::{games_filter::GamesFilter, stats::Stats},
     },
-    functions::users::get_profile,
+    functions::users::{get_profile, player_profile::get_player_details},
     i18n::*,
+    pages::profile_about::ProfileAbout,
+    profile_catalog::catalog,
     providers::{
         calculate_initial_batch_size,
         provide_games_search_context,
@@ -71,6 +73,13 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     let username =
         move || params.with(|p| p.as_ref().map(|p| p.username.clone()).unwrap_or_default());
     let user = LocalResource::new(move || get_profile(username()));
+    let viewer = expect_context::<AuthContext>().user;
+    let viewer_id = Memo::new(move |_| viewer.with(|user| user.as_ref().map(|user| user.user.uid)));
+    let details = LocalResource::new(move || {
+        // Re-fetch private editor values when the signed-in account changes.
+        let _ = viewer_id.get();
+        get_player_details(username())
+    });
 
     let games_container_ref = NodeRef::<html::Div>::new();
     let bounding = use_element_bounding(games_container_ref);
@@ -157,37 +166,76 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                                     Either::Left(
                                         view! {
                                             <div class="flex-shrink-0">
-                                                <div class="flex flex-row flex-wrap justify-center mx-1 w-full text-lg sm:text-xl">
+                                                <div class="flex flex-col gap-2 items-center mx-1 w-full">
                                                     <div class="flex flex-wrap gap-2 justify-center items-center min-w-0">
                                                         <UserIdentity
                                                             user=profile_user
                                                             show_hover_ratings=false
-                                                            link_class="truncate max-w-[125px]"
+                                                            link_class="truncate max-w-[75vw] !text-lg"
                                                         />
 
-                                                        <DirectChallengeButton
-                                                            user_id=user.uid
-                                                            opponent=username.get_value()
-                                                        />
+                                                        {move || {
+                                                            details
+                                                                .get()
+                                                                .and_then(Result::ok)
+                                                                .and_then(|data| data.flag)
+                                                                .map(|code| {
+                                                                    let country = catalog()
+                                                                        .countries
+                                                                        .iter()
+                                                                        .find(|(key, _)| key == &code)
+                                                                        .map(|(_, name)| name.clone())
+                                                                        .unwrap_or_else(|| code.clone());
+                                                                    view! {
+                                                                        <img
+                                                                            class="inline-block object-cover w-6 h-4 rounded-sm"
+                                                                            src=format!(
+                                                                                "/assets/profile-flags/{}.svg",
+                                                                                code.to_lowercase(),
+                                                                            )
+                                                                            alt=country.clone()
+                                                                            title=country
+                                                                        />
+                                                                    }
+                                                                })
+                                                        }}
 
-                                                        <Show when=move || {
-                                                            !profile_is_bot
-                                                                && auth_user
-                                                                    .with(|viewer| {
-                                                                        viewer
-                                                                            .as_ref()
-                                                                            .is_some_and(|viewer| {
-                                                                                viewer.user.uid != profile_user_id
-                                                                            })
-                                                                    })
-                                                        }>
-                                                            <MessageButton username=username.get_value() />
-                                                            <BlockToggleButton blocked_user_id=profile_user_id />
-                                                        </Show>
                                                     </div>
+                                                    <Show when=move || {
+                                                        auth_user
+                                                            .with(|viewer| {
+                                                                viewer
+                                                                    .as_ref()
+                                                                    .is_some_and(|viewer| viewer.user.uid != profile_user_id)
+                                                            })
+                                                    }>
+                                                        <div class="flex flex-wrap gap-2 justify-center items-center">
+                                                            <DirectChallengeButton
+                                                                user_id=user.uid
+                                                                opponent=username.get_value()
+                                                                show_label=true
+                                                            />
+
+                                                            <Show when=move || {
+                                                                !profile_is_bot
+                                                                    && auth_user
+                                                                        .with(|viewer| {
+                                                                            viewer
+                                                                                .as_ref()
+                                                                                .is_some_and(|viewer| {
+                                                                                    viewer.user.uid != profile_user_id
+                                                                                })
+                                                                        })
+                                                            }>
+                                                                <MessageButton username=username.get_value() />
+                                                                <BlockToggleButton blocked_user_id=profile_user_id />
+                                                            </Show>
+                                                        </div>
+                                                    </Show>
                                                 </div>
 
                                                 <div class="lg:flex lg:flex-col lg:items-center lg:mx-auto lg:max-w-4xl">
+                                                    <ProfileAbout details user_id=profile_user_id />
                                                     <Stats user />
 
                                                     <div class="grid gap-1 items-start m-1 lg:flex lg:gap-4 lg:items-center lg:mt-4 grid-cols-[1fr_auto]">

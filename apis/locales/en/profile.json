@@ -24,5 +24,27 @@
         "highest_rated_players_by_speed": "Highest rated players by speed.",
         "top_rated_bots": "Top Rated Bots",
         "highest_rated_bots_by_speed": "Highest rated bots by speed."
+    },
+    "about": {
+        "title": "About",
+        "saved": "Profile saved.",
+        "load_error": "Could not load profile details.",
+        "retry": "Retry",
+        "optional_hint": "Your flag and About text are optional and public. Clear either to hide it.",
+        "flag": "Flag",
+        "unset": "Not set",
+        "bio": "About you",
+        "save": "Save profile",
+        "cancel": "Cancel",
+        "edit": "Edit profile",
+        "challenge": "Challenge",
+        "flag_help": "Choose a flag to represent yourself. It does not have to indicate where you live.",
+        "privacy": "Privacy policy",
+        "links_hint": "Links are supported. External sites open a confirmation page.",
+        "moderate_bio": "Moderate bio",
+        "block_bio": "Block this bio",
+        "block_bio_help": "Hide this bio and prevent the player from changing it until an administrator unblocks it. Leave unchecked to publish your changes.",
+        "save_moderation": "Save moderation",
+        "bio_blocked": "An administrator has blocked your About text. You can still change your flag."
     }
 }
