@@ -957,6 +957,9 @@ impl User {
                     }
                 }
 
+                diesel::delete(crate::schema::player_profiles::table.find(user_id))
+                    .execute(tc)
+                    .await?;
                 let (deleted_username, deleted_email) = Self::deleted_identity(user_id);
                 diesel::update(users_table.find(user_id))
                     .set((

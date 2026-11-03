@@ -24,5 +24,26 @@
         "highest_rated_players_by_speed": "Legmagasabb értékszámú játékosok tempónként.",
         "top_rated_bots": "Legjobb értékelt botok",
         "highest_rated_bots_by_speed": "Legmagasabb értékszámú botok tempónként."
+    },
+    "about": {
+        "title": "Bemutatkozás",
+        "edit": "Bemutatkozás szerkesztése",
+        "restricted": "Egy adminisztrátor korlátozta a bemutatkozás szerkesztését. A zászlódat továbbra is módosíthatod.",
+        "links_hint": "Nem kötelező, legfeljebb 300 karakter. Elnevezett hivatkozások ([szöveg](https://…)) és webcímek használhatók.",
+        "load_error": "A profil nem tölthető be.",
+        "too_long": "A bemutatkozás legfeljebb 300 karakter lehet.",
+        "moderate": "Bemutatkozás moderálása",
+        "moderation_help": "A korlátozás törli a jelenlegi szöveget, és a feloldásig letiltja a tulajdonos szerkesztési jogát. A mentett helyettesítő szöveg nyilvános marad.",
+        "replacement": "Helyettesítő bemutatkozás",
+        "clear": "Bemutatkozás törlése",
+        "reinstate": "Szerkesztés engedélyezése",
+        "restrict": "Törlés és korlátozás"
+    },
+    "flag": {
+        "choose": "Zászló választása",
+        "search": "Zászlók keresése",
+        "none": "Nincs zászló",
+        "save_failed": "A zászló mentése nem sikerült. Próbáld újra.",
+        "invalid": "Válassz egy támogatott zászlót."
     }
 }

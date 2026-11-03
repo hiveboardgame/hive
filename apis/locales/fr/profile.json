@@ -23,5 +23,26 @@
         "highest_rated_players_by_speed": "Meilleurs joueurs par cadence.",
         "top_rated_bots": "Meilleurs bots classés",
         "highest_rated_bots_by_speed": "Meilleurs bots par cadence."
+    },
+    "about": {
+        "title": "À propos",
+        "edit": "Modifier la bio",
+        "restricted": "Un administrateur a restreint la modification de la bio. Vous pouvez toujours changer votre drapeau.",
+        "links_hint": "Facultatif, jusqu’à 300 caractères. Les liens nommés ([texte](https://…)) et les adresses web sont pris en charge.",
+        "load_error": "Impossible de charger le profil.",
+        "too_long": "La bio doit contenir au maximum 300 caractères.",
+        "moderate": "Modérer la bio",
+        "moderation_help": "Restreindre efface la bio actuelle et empêche son propriétaire de la modifier jusqu’au rétablissement du droit. Le texte de remplacement enregistré reste public.",
+        "replacement": "Bio de remplacement",
+        "clear": "Effacer la bio",
+        "reinstate": "Rétablir la modification",
+        "restrict": "Effacer et restreindre"
+    },
+    "flag": {
+        "choose": "Choisir un drapeau",
+        "search": "Rechercher des drapeaux",
+        "none": "Aucun drapeau",
+        "save_failed": "Impossible d’enregistrer votre drapeau. Réessayez.",
+        "invalid": "Choisissez un drapeau pris en charge."
     }
 }

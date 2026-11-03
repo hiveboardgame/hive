@@ -12,6 +12,7 @@ mod focus;
 mod game_action;
 mod game_display;
 mod game_reaction;
+mod linked_text;
 mod locale;
 mod markdown;
 mod move_info;
@@ -19,6 +20,7 @@ mod overlay_paint;
 mod password;
 mod piece_paint;
 mod piece_type;
+mod profile_flags;
 mod project_links;
 mod rating_change_info;
 mod route_path;
@@ -86,6 +88,7 @@ pub use game_display::{
     TournamentLink,
 };
 pub use game_reaction::GameReaction;
+pub use linked_text::LinkedText;
 pub use locale::parse_locale;
 #[cfg(feature = "ssr")]
 pub(crate) use locale::request_locale;
@@ -99,6 +102,7 @@ pub(crate) use password::{
 };
 pub use piece_paint::{resolve_piece_paint, BugHref, DotsHref, PiecePaint, ShadowHref, TileHref};
 pub use piece_type::PieceType;
+pub(crate) use profile_flags::{flag_emoji, flag_name, FLAGS};
 pub use project_links::{
     CONTRIBUTING_URL,
     GEN42_URL,

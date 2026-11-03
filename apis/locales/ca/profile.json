@@ -24,5 +24,26 @@
         "highest_rated_players_by_speed": "Jugadors amb més puntuació per ritme de joc.",
         "top_rated_bots": "Bots amb més puntuació",
         "highest_rated_bots_by_speed": "Bots amb més puntuació per ritme de joc."
+    },
+    "about": {
+        "title": "Sobre mi",
+        "edit": "Edita la biografia",
+        "restricted": "Un administrador ha restringit l’edició de la biografia. Encara pots canviar la bandera.",
+        "links_hint": "Opcional, fins a 300 caràcters. S’admeten enllaços amb nom ([text](https://…)) i adreces web.",
+        "load_error": "No s’ha pogut carregar el perfil.",
+        "too_long": "La biografia ha de tenir com a màxim 300 caràcters.",
+        "moderate": "Modera la biografia",
+        "moderation_help": "Restringir esborra la biografia actual i impedeix que el propietari l’editi fins que es restableixi el permís. El text de substitució desat continua sent públic.",
+        "replacement": "Biografia de substitució",
+        "clear": "Esborra la biografia",
+        "reinstate": "Restableix l’edició",
+        "restrict": "Esborra i restringeix"
+    },
+    "flag": {
+        "choose": "Tria una bandera",
+        "search": "Cerca banderes",
+        "none": "Cap bandera",
+        "save_failed": "No s’ha pogut desar la bandera. Torna-ho a provar.",
+        "invalid": "Tria una bandera admesa."
     }
 }

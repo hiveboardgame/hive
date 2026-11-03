@@ -10,6 +10,7 @@ use uuid::Uuid;
 pub fn DirectChallengeButton(
     user_id: Uuid,
     opponent: String,
+    #[prop(optional)] show_label: bool,
     #[prop(optional, into)] disabled: Signal<bool>,
 ) -> impl IntoView {
     let i18n = use_i18n();
@@ -30,9 +31,17 @@ pub fn DirectChallengeButton(
                 title=move || t_string!(i18n, game.challenge_to_a_game)
                 prop:disabled=disabled
                 on:click=move |_| direct_challenge.open(opponent.get_value())
-                class="mx-2 ui-button ui-button-primary ui-button-icon"
+                class=if show_label {
+                    "ui-button ui-button-primary ui-button-sm"
+                } else {
+                    "mx-2 ui-button ui-button-primary ui-button-icon"
+                }
             >
-                <Icon icon=icondata_ri::RiSwordOthersLine attr:class="size-6" />
+                <Icon
+                    icon=icondata_ri::RiSwordOthersLine
+                    attr:class=if show_label { "size-5 shrink-0" } else { "size-6" }
+                />
+                <Show when=move || show_label>{t!(i18n, game.challenge)}</Show>
             </button>
         </Show>
     }
