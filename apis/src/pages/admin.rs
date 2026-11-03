@@ -1,7 +1,7 @@
 use crate::{
     common::{localized_error_message, with_class, UserAction},
     components::{
-        atoms::simple_switch::SimpleSwitch,
+        atoms::{date_time_picker::DateTimePicker, simple_switch::SimpleSwitch},
         layouts::{page_header::PageHeader, page_shell::PageShell},
         molecules::{
             panel::Panel,
@@ -18,6 +18,7 @@ use crate::{
     responses::UserResponse,
     security::csrf::ActionForm,
 };
+use chrono::{Duration, Local, Utc};
 use leptos::{html, prelude::*};
 use leptos_use::use_interval_fn;
 use shared_types::ConversationKey;
@@ -252,6 +253,14 @@ fn EditBanner() -> impl IntoView {
                         let title = RwSignal::new(banner.title);
                         let show_preview = RwSignal::new(false);
                         let display = RwSignal::new(display);
+                        let has_event_time = RwSignal::new(banner.starts_at.is_some());
+                        let event_time = RwSignal::new(
+                            banner.starts_at.unwrap_or_else(|| Utc::now() + Duration::hours(1)),
+                        );
+                        let event_time_valid = RwSignal::new(true);
+                        let starts_at = Signal::derive(move || {
+                            has_event_time.get().then(|| event_time.get())
+                        });
                         let update = ServerAction::<home_banner::Update>::new();
                         view! {
                             <button
@@ -268,13 +277,13 @@ fn EditBanner() -> impl IntoView {
                             </button>
                             <ActionForm action=update>
 
-                                <div class=move || {
-                                    if show_preview() { "" } else { "hidden" }
-                                }>
-                                    {move || {
-                                        view! { <RlBanner title=title() content=content() /> }
-                                    }}
-                                </div>
+                                <Show when=move || show_preview.get()>
+                                    <RlBanner
+                                        title=title()
+                                        content=content()
+                                        starts_at=starts_at()
+                                    />
+                                </Show>
                                 <div class=move || if !show_preview() { "" } else { "hidden" }>
                                     <div class="flex flex-col gap-1.5">
                                         <label class="ui-field-label" for="title">
@@ -308,6 +317,24 @@ fn EditBanner() -> impl IntoView {
                                             {t!(i18n, common.admin.markdown_cheat_sheet)}
                                         </a>
                                     </div>
+                                    <div class="flex flex-wrap gap-3 items-center mt-3">
+                                        "Event time" <SimpleSwitch checked=has_event_time />
+                                    </div>
+                                    <Show when=move || has_event_time.get()>
+                                        <div class="mt-3 max-w-sm">
+                                            <DateTimePicker
+                                                input_id="banner-event-time".to_string()
+                                                text="Your local time".to_string()
+                                                min=Local::now() - Duration::weeks(52)
+                                                max=Local::now() + Duration::weeks(52)
+                                                value=event_time.get_untracked().with_timezone(&Local)
+                                                draft_valid=event_time_valid
+                                                success_callback=Callback::from(move |time| {
+                                                    event_time.set(time)
+                                                })
+                                            />
+                                        </div>
+                                    </Show>
                                 </div>
                                 <div class=with_class(
                                     "ui-setting-group",
@@ -316,6 +343,9 @@ fn EditBanner() -> impl IntoView {
                                     <button
                                         type="submit"
                                         class="ui-button ui-button-primary ui-button-md"
+                                        prop:disabled=move || {
+                                            has_event_time.get() && !event_time_valid.get()
+                                        }
                                     >
                                         {t!(i18n, common.submit)}
                                     </button>
@@ -332,6 +362,17 @@ fn EditBanner() -> impl IntoView {
                                         type="text"
                                         name="display"
                                         prop:value=display
+                                    />
+                                    <input
+                                        class="hidden"
+                                        type="text"
+                                        name="starts_at"
+                                        prop:value=move || {
+                                            starts_at
+                                                .get()
+                                                .map(|time| time.to_rfc3339())
+                                                .unwrap_or_default()
+                                        }
                                     />
                                 </div>
                             </ActionForm>

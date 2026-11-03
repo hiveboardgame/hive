@@ -14,6 +14,7 @@ pub mod gc_button;
 pub mod history_nav_button;
 pub mod input_slider;
 pub mod invite_button;
+pub mod local_date_time;
 pub mod login_button;
 pub mod logo;
 pub mod message_button;

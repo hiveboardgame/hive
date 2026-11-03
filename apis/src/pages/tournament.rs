@@ -1,6 +1,5 @@
 use crate::{
     common::{
-        format_tournament_datetime,
         markdown_to_html,
         tournament_format_label,
         tournament_path_matches,
@@ -10,7 +9,7 @@ use crate::{
         TournamentStartIntent,
     },
     components::{
-        atoms::realtime_paused_notice::RealtimePausedNotice,
+        atoms::{local_date_time::LocalDateTime, realtime_paused_notice::RealtimePausedNotice},
         layouts::page_shell::{PageShell, PageShellVariant},
         molecules::{modal::Modal, panel::Panel, time_row::TimeRow, user_identity::UserIdentity},
         organisms::{
@@ -1770,8 +1769,6 @@ pub fn TournamentInvalidRoute() -> impl IntoView {
 fn TournamentEntryFacts(tournament: TournamentState) -> impl IntoView {
     let i18n = use_i18n();
     let clock = tournament.format.display_clock();
-    let local_time_ready = RwSignal::new(false);
-    Effect::new(move |_| local_time_ready.set(true));
     view! {
         <div class="space-y-1 text-xs text-gray-600 dark:text-gray-300">
             <div class="flex flex-wrap gap-y-1 gap-x-2 items-center">
@@ -1786,24 +1783,20 @@ fn TournamentEntryFacts(tournament: TournamentState) -> impl IntoView {
                     .then(|| {
                         view! {
                             <p>
-                                {lifecycle
-                                    .starts_at
-                                    .map(|date| {
-                                        if local_time_ready.get() {
-                                            t_string!(
-                                                i18n, tournaments.detail.starts_value1, value1 = (format_tournament_datetime(date))
-                                            )
-                                                .to_string()
-                                        } else {
-                                            String::new()
-                                        }
-                                    })
-                                    .unwrap_or_else(|| {
-                                        t_string!(
+                                {match lifecycle.starts_at {
+                                    Some(date_time) => {
+                                        t!(
+                                            i18n, tournaments.detail.starts_value1, value1 = move || view! { <LocalDateTime date_time /> }
+                                        )
+                                            .into_any()
+                                    }
+                                    None => {
+                                        t!(
                                             i18n, tournaments.detail.starts_when_the_organizer_begins_the_tournament
                                         )
-                                            .to_string()
-                                    })}
+                                            .into_any()
+                                    }
+                                }}
                             </p>
                             <p>
                                 {entry_requirement(
@@ -1902,16 +1895,6 @@ fn TournamentInformation(
     chat_visible: RwSignal<bool>,
 ) -> impl IntoView {
     let i18n = use_i18n();
-    let local_time_ready = RwSignal::new(false);
-    Effect::new(move |_| local_time_ready.set(true));
-    // The server's timezone is not the viewer's. Fill dates after hydration.
-    let format_local_date = move |date| {
-        if local_time_ready.get() {
-            format_tournament_datetime(date)
-        } else {
-            String::new()
-        }
-    };
     let format = tournament.format.format();
     let clock = tournament.format.display_clock();
     let (format_configuration, arena_duration) = match tournament.format {
@@ -2007,8 +1990,7 @@ fn TournamentInformation(
                         <p class="text-sm text-gray-600 dark:text-gray-300">
                             {move || {
                                 primary_tournament_date(&tournament.common.lifecycle().get())
-                                    .map(format_local_date)
-                                    .unwrap_or_default()
+                                    .map(|date_time| view! { <LocalDateTime date_time /> })
                             }}
                         </p>
                         <Show when=move || {
@@ -2083,9 +2065,8 @@ fn TournamentInformation(
                             <dt class="font-semibold">{t!(i18n, common.created)}</dt>
                             <dd class="text-gray-600 dark:text-gray-300">
                                 {move || {
-                                    format_local_date(
-                                        tournament.common.lifecycle().get().created_at,
-                                    )
+                                    let date_time = tournament.common.lifecycle().get().created_at;
+                                    view! { <LocalDateTime date_time /> }
                                 }}
                             </dd>
                         </div>
@@ -2104,8 +2085,7 @@ fn TournamentInformation(
                                         .lifecycle()
                                         .get()
                                         .starts_at
-                                        .map(format_local_date)
-                                        .unwrap_or_default()
+                                        .map(|date_time| view! { <LocalDateTime date_time /> })
                                 }}
                             </dd>
                         </div>
@@ -2124,8 +2104,7 @@ fn TournamentInformation(
                                         .lifecycle()
                                         .get()
                                         .started_at
-                                        .map(format_local_date)
-                                        .unwrap_or_default()
+                                        .map(|date_time| view! { <LocalDateTime date_time /> })
                                 }}
                             </dd>
                         </div>
@@ -2144,8 +2123,7 @@ fn TournamentInformation(
                                         .lifecycle()
                                         .get()
                                         .finished_at
-                                        .map(format_local_date)
-                                        .unwrap_or_default()
+                                        .map(|date_time| view! { <LocalDateTime date_time /> })
                                 }}
                             </dd>
                         </div>
