@@ -8,6 +8,9 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "snake_case")]
 pub enum UiError {
     RequestUnavailable,
+    ProfileBioTooLong,
+    ProfileBioRestricted,
+    ProfileFlagInvalid,
     ChatRetryConflict,
     ChatMuted,
     Unauthorized,
@@ -45,6 +48,9 @@ impl UiError {
 
     pub fn message(&self, locale: Locale) -> String {
         match self {
+            Self::ProfileBioRestricted => td_string!(locale, profile.about.restricted).to_string(),
+            Self::ProfileBioTooLong => td_string!(locale, profile.about.too_long).to_string(),
+            Self::ProfileFlagInvalid => td_string!(locale, profile.flag.invalid).to_string(),
             Self::RequestUnavailable => {
                 td_string!(locale, messages.errors.request_unavailable).to_string()
             }
@@ -155,6 +161,8 @@ mod tests {
     fn error_codes_and_parameters_survive_server_function_envelopes() {
         let errors = [
             UiError::DiscordStateInvalid,
+            UiError::ProfileBioTooLong,
+            UiError::ProfileFlagInvalid,
             UiError::RatingAboveBand {
                 rating: "1500.5".into(),
                 limit: "1400".into(),
