@@ -19,6 +19,7 @@ pub mod footer;
 pub mod games_filter;
 pub mod header;
 pub mod history;
+pub mod honeytrap;
 pub mod leaderboard;
 pub mod live_arenas;
 pub mod logout;
