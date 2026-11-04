@@ -11,7 +11,7 @@ pub fn Privacy() -> impl IntoView {
     view! {
         <LegalPage
             title="Privacy Policy"
-            last_updated="19 October 2026"
+            last_updated="3 November 2026"
             summary="hivegame.com is a free, open-source Hive server run by volunteers. We collect as little as we can, we never sell your data, and we don't use ads, analytics or tracking."
         >
             <LegalSection title="Who is responsible">
@@ -77,7 +77,7 @@ pub fn Privacy() -> impl IntoView {
 
             <LegalSection title="What other people can see">
                 <p>
-                    "Your username, profile, ratings, games, tournament results and whether you are online are public. Chat messages are visible to the other people in that chat."
+                    "Your username, profile (including your optional flag and bio), ratings, games, tournament results and whether you are online are public. Administrators can clear or replace a bio and restrict owner editing until reinstated. Profile flags and bios are removed when an account is deleted. Chat messages are visible to the other people in that chat."
                 </p>
                 <p>
                     "Anyone can view and download games, and we may publish game records in bulk, for example for research or puzzles. Other websites may copy public game records; we have no control over them."
