@@ -224,6 +224,7 @@ async fn main() -> std::io::Result<()> {
             .service(favicon)
             .service(health)
             .service(health_ready)
+            .service(functions::honeytrap::server::trap)
             .service(start_connection)
             .service(functions::pwa::cache)
             .service(functions::web_push_http::vapid_public_key)
