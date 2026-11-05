@@ -12,7 +12,6 @@ use crate::{
             takeback_conf::TakebackConf,
             tile_design_toggle::TileDesignToggle,
             tile_dots_toggle::TileDotsToggle,
-            tile_grid_toggle::TileGridToggle,
             tile_rotation_toggle::TileRotationToggle,
         },
     },
@@ -61,7 +60,6 @@ pub fn Config() -> impl IntoView {
                                     <div class="grid gap-4 sm:grid-cols-2 sm:items-start">
                                         <TileRotationToggle />
                                         <TileDotsToggle />
-                                        <TileGridToggle />
                                     </div>
                                 </div>
                                 <div class="ui-setting-group">

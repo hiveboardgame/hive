@@ -5,7 +5,6 @@ use crate::{
         molecules::{
             annotation_toolbar::AnnotationToolbar,
             annotations_layer::AnnotationsLayer,
-            board_grid::BoardGrid,
             board_pieces::BoardPieces,
             drag_ghost::DragGhost,
             history_pieces::HistoryPieces,
@@ -891,11 +890,6 @@ pub fn Board(
                     pointer-events="all"
                 />
                 <g transform=transform node_ref=g_ref>
-                    {move || {
-                        tile_opts
-                            .with(|tile| tile.grid)
-                            .then(|| view! { <BoardGrid board=displayed_board /> })
-                    }}
                     {move || {
                         if board_view.get().is_history() && !last_turn() && !in_analysis {
                             Either::Left(

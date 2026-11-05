@@ -32,7 +32,6 @@ pub mod stats;
 pub mod takeback_conf;
 pub mod tile_design_toggle;
 pub mod tile_dots_toggle;
-pub mod tile_grid_toggle;
 pub mod tile_rotation_toggle;
 pub mod time_select;
 pub mod tournament_admin;
