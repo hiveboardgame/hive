@@ -126,6 +126,23 @@ impl TournamentFinalOutcome {
             .transpose()
     }
 
+    pub async fn load_many(
+        tournament_ids: &[Uuid],
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Self>, DbError> {
+        if tournament_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        tournament_final_outcomes::table
+            .filter(tournament_final_outcomes::tournament_id.eq_any(tournament_ids))
+            .select(TournamentFinalOutcomeRow::as_select())
+            .load::<TournamentFinalOutcomeRow>(conn)
+            .await?
+            .into_iter()
+            .map(Self::from_row)
+            .collect()
+    }
+
     fn from_row(row: TournamentFinalOutcomeRow) -> Result<Self, DbError> {
         let invalid = |reason: String| DbError::InvalidPersistedTournament {
             reason: format!(

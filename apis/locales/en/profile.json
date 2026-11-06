@@ -19,10 +19,31 @@
         "redirecting": "Redirecting…",
         "user_not_found": "User not found"
     },
+    "tournaments": {
+        "current": "Current",
+        "past": "Past",
+        "none": "No tournaments yet",
+        "no_current": "No current tournaments",
+        "no_past": "No past tournaments",
+        "manage_organizing": "Manage tournaments you organize",
+        "rank_of_total": "Rank {{rank}} of {{total}}",
+        "invited_to_name": "You are invited to {{name}}",
+        "pending_invitations_one": "You have {{count}} pending tournament invitation",
+        "pending_invitations_other": "You have {{count}} pending tournament invitations",
+        "played": "Played",
+        "organized": "Organized",
+        "show_all": "Show all {{total}}",
+        "show_fewer": "Show fewer"
+    },
     "leaderboards": {
         "top_rated_players": "Top Rated Players",
         "highest_rated_players_by_speed": "Highest rated players by speed.",
         "top_rated_bots": "Top Rated Bots",
         "highest_rated_bots_by_speed": "Highest rated bots by speed."
+    },
+    "games": {
+        "no_pending": "No pending games",
+        "no_playing": "No games in progress",
+        "no_finished": "No finished games"
     }
 }

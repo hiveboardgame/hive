@@ -42,6 +42,7 @@ pub mod tiebreaker_picker;
 pub mod time_row;
 pub mod tournament_entrant_suggestions;
 pub mod tournament_invitation_notification;
+pub mod tournament_pagination;
 pub mod tournament_ready_popup;
 pub mod tournament_row;
 pub mod tournament_standings_controls;

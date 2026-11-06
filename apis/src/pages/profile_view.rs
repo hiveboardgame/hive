@@ -39,13 +39,27 @@ pub fn tab_from_path(path: &str) -> GameProgress {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum ProfileTab {
+    Games(GameProgress),
+    Tournaments,
+}
+
+pub fn profile_tab_from_path(path: &str) -> ProfileTab {
+    if path.ends_with("/tournaments") {
+        ProfileTab::Tournaments
+    } else {
+        ProfileTab::Games(tab_from_path(path))
+    }
+}
+
 #[derive(Params, PartialEq, Eq)]
 struct UsernameParams {
     username: String,
 }
 
 #[component]
-pub fn ProfileMe() -> impl IntoView {
+pub fn ProfileMe(#[prop(optional)] tab: &'static str) -> impl IntoView {
     let i18n = use_i18n();
     let auth = expect_context::<AuthContext>();
     let navigate = use_navigate();
@@ -56,7 +70,7 @@ pub fn ProfileMe() -> impl IntoView {
         };
         match (auth.identity.get(), auth.user.get()) {
             (Some(AuthIdentity::User(_)), Some(account)) => {
-                navigate(&format!("/@/{}", account.username), opts)
+                navigate(&format!("/@/{}{tab}", account.username), opts)
             }
             (Some(AuthIdentity::Anonymous), _) => navigate(&untrack(login_redirect_url), opts),
             _ => {}
@@ -76,6 +90,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     let bounding = use_element_bounding(games_container_ref);
     let location = use_location();
     let current_tab = Signal::derive(move || tab_from_path(&location.pathname.get()));
+    let profile_tab = Signal::derive(move || profile_tab_from_path(&location.pathname.get()));
 
     let initial_batch_size = Signal::derive(move || {
         calculate_initial_batch_size(bounding.height.get(), bounding.width.get())
@@ -151,6 +166,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                             match user {
                                 Ok(user) => {
                                     let username = StoredValue::new(user.username.clone());
+                                    let ctx = ctx.clone();
                                     let profile_user = user.clone();
                                     let profile_user_id = user.uid;
                                     let profile_is_bot = user.bot;
@@ -191,11 +207,11 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                                                     <Stats user />
 
                                                     <div class="grid gap-1 items-start m-1 lg:flex lg:gap-4 lg:items-center lg:mt-4 grid-cols-[1fr_auto]">
-                                                        <div class="flex flex-wrap gap-1 min-w-0">
+                                                        <div class="grid grid-cols-2 gap-1 min-w-0 sm:flex sm:flex-wrap">
                                                             <a
                                                                 href=format!("/@/{}/unstarted", username.get_value())
                                                                 class=move || radio_classes(
-                                                                    current_tab() == GameProgress::Unstarted,
+                                                                    profile_tab() == ProfileTab::Games(GameProgress::Unstarted),
                                                                 )
                                                             >
                                                                 {t!(i18n, common.pending)}
@@ -203,7 +219,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                                                             <a
                                                                 href=format!("/@/{}/playing", username.get_value())
                                                                 class=move || radio_classes(
-                                                                    current_tab() == GameProgress::Playing,
+                                                                    profile_tab() == ProfileTab::Games(GameProgress::Playing),
                                                                 )
                                                             >
                                                                 {t!(i18n, common.playing)}
@@ -211,17 +227,36 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                                                             <a
                                                                 href=format!("/@/{}/finished", username.get_value())
                                                                 class=move || radio_classes(
-                                                                    current_tab() == GameProgress::Finished,
+                                                                    profile_tab() == ProfileTab::Games(GameProgress::Finished),
                                                                 )
                                                             >
                                                                 {t!(i18n, common.finished)}
                                                             </a>
+                                                            <a
+                                                                href=format!("/@/{}/tournaments", username.get_value())
+                                                                class=move || radio_classes(
+                                                                    profile_tab() == ProfileTab::Tournaments,
+                                                                )
+                                                            >
+                                                                {t!(i18n, common.tournaments)}
+                                                            </a>
                                                         </div>
 
-                                                        <GamesFilter
-                                                            username=username.get_value()
-                                                            ctx=ctx.clone()
-                                                        />
+                                                        <div
+                                                            class=move || {
+                                                                if profile_tab() == ProfileTab::Tournaments {
+                                                                    "invisible"
+                                                                } else {
+                                                                    ""
+                                                                }
+                                                            }
+                                                            inert=move || profile_tab() == ProfileTab::Tournaments
+                                                        >
+                                                            <GamesFilter
+                                                                username=username.get_value()
+                                                                ctx=ctx.clone()
+                                                            />
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>

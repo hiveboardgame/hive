@@ -593,7 +593,7 @@
         "search_placeholder": "Search tournaments by name",
         "loading": "Loading tournaments…",
         "error": "Error loading tournaments",
-        "mine": "Mine",
+        "organize": "Organize",
         "all_formats": "All formats",
         "both": "Both",
         "live": "Live",
@@ -920,6 +920,7 @@
         "players_capacity_players": "{{players}}/{{capacity}} players",
         "count_minimum_required": "{{count}} · {{minimum}} required",
         "starts_in_value1": "Starts in {{value1}}",
+        "starts_value1": "Starts {{value1}}",
         "value1_remaining": "{{value1}} remaining",
         "resolved_of_total_games": "{{resolved}} of {{total}} games",
         "round_value1_of_total_rounds": "Round {{value1}} of {{total_rounds}}",
@@ -927,7 +928,9 @@
         "decided_nodes_of_total_nodes_matches": "{{decided_nodes}} of {{total_nodes}} matches",
         "decline_invitation_to_value1": "Decline invitation to {{value1}}",
         "awaiting_start": "Awaiting start",
-        "organizer_starts": "Organizer starts",
+        "organizer_starts": "Starts when the organizer starts it",
+        "you_have_joined": "You have joined",
+        "you_are_invited": "You are invited",
         "between_rounds": "Between rounds",
         "completed": "Completed",
         "humans_only": "Humans only",
@@ -936,5 +939,10 @@
         "one_day": "1 day",
         "duration_per_move": "{{duration}}/move",
         "duration_per_side": "{{duration}}/side"
+    },
+    "menu": {
+        "browse": "Browse",
+        "mine": "Mine",
+        "create": "Create"
     }
 }

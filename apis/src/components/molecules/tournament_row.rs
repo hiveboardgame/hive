@@ -1,6 +1,7 @@
 use crate::{
     common::{
         format_tournament_clock,
+        login_redirect_url,
         tournament_format_label,
         TournamentAction,
         TournamentClockStyle,
@@ -17,7 +18,10 @@ use crate::{
     },
 };
 use chrono::{DateTime, Datelike, Duration, Local, Utc};
-use leptos::prelude::*;
+use leptos::{
+    either::{Either, EitherOf3},
+    prelude::*,
+};
 use shared_types::{tournament::BotAdmission, TournamentId};
 fn short_date(date: DateTime<Utc>, now: DateTime<Utc>) -> String {
     let i18n = use_i18n();
@@ -71,7 +75,10 @@ fn entrants_text(tournament: &TournamentCardResponse) -> String {
                     .to_string()
                 },
             );
-            if players < minimum {
+            let minimum_is_capacity = tournament
+                .seats
+                .is_some_and(|capacity| i64::from(capacity) == i64::from(minimum));
+            if players < minimum && !minimum_is_capacity {
                 t_string!(
                     i18n,
                     tournaments.row.count_minimum_required,
@@ -105,7 +112,15 @@ fn lifecycle_text(tournament: &TournamentCardResponse, now: DateTime<Utc>) -> (S
                 } else {
                     String::new()
                 };
-                (short_date(start, now), countdown)
+                (
+                    t_string!(
+                        i18n,
+                        tournaments.row.starts_value1,
+                        value1 = (short_date(start, now))
+                    )
+                    .to_string(),
+                    countdown,
+                )
             }
             _ => (
                 t_string!(i18n, tournaments.row.organizer_starts).to_string(),
@@ -228,6 +243,53 @@ fn public_entry_text(tournament: &TournamentCardResponse) -> String {
     conditions.join(" · ")
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Default)]
+pub enum ViewerStatusStyle {
+    #[default]
+    Browse,
+    Visitor,
+    Owner,
+}
+
+enum ViewerNote {
+    Text(String),
+    Login(String),
+    Invited(String),
+}
+
+fn viewer_note(
+    access: Option<TournamentAccessState>,
+    invite_only: bool,
+    full: bool,
+    style: ViewerStatusStyle,
+) -> Option<ViewerNote> {
+    use TournamentAccessState as Access;
+    let i18n = use_i18n();
+    let access = access?;
+    match (style, access) {
+        (ViewerStatusStyle::Owner, _) => None,
+        (_, Access::LoginRequired) => {
+            (!invite_only && !full).then(|| ViewerNote::Login(access.label()))
+        }
+        (ViewerStatusStyle::Visitor, Access::Joined) => Some(ViewerNote::Text(
+            t_string!(i18n, tournaments.row.you_have_joined).to_string(),
+        )),
+        (ViewerStatusStyle::Visitor, Access::PendingInvitation) => Some(ViewerNote::Invited(
+            t_string!(i18n, tournaments.row.you_are_invited).to_string(),
+        )),
+        (ViewerStatusStyle::Visitor, _) => None,
+        (
+            ViewerStatusStyle::Browse,
+            Access::Open
+            | Access::Full
+            | Access::EntryClosed
+            | Access::InvitationRequired
+            | Access::AuthPending,
+        ) => None,
+        (ViewerStatusStyle::Browse, access) => Some(ViewerNote::Text(access.label())),
+    }
+}
+
 #[component]
 pub fn TournamentRow(
     tournament: Signal<TournamentCardResponse>,
@@ -236,7 +298,12 @@ pub fn TournamentRow(
     invitation_pending: Signal<bool>,
     on_invitation: Callback<TournamentId>,
     category: TournamentCategory,
+    #[prop(optional)] viewer_status: ViewerStatusStyle,
+    #[prop(optional_no_strip)] role_label: Option<String>,
+    #[prop(optional_no_strip)] result_label: Option<String>,
 ) -> impl IntoView {
+    let role_label = StoredValue::new(role_label);
+    let result_label = StoredValue::new(result_label);
     let api = expect_context::<ApiRequestsProvider>().0;
     let auth = expect_context::<AuthContext>();
     let viewer = auth.identity.get_untracked();
@@ -245,21 +312,20 @@ pub fn TournamentRow(
     let href = StoredValue::new(format!("/tournament/{}", id.get_value()));
     let lifecycle = Memo::new(move |_| lifecycle_text(&tournament.get(), now.get()));
     let entry = Memo::new(move |_| public_entry_text(&tournament.get()));
-    let viewer_label = move || {
+    let viewer_note = move || {
         if auth.identity.get() != viewer {
-            return String::new();
+            return None;
         }
-        match tournament.get().summary.access {
-            Some(
-                TournamentAccessState::Open
-                | TournamentAccessState::Full
-                | TournamentAccessState::EntryClosed
-                | TournamentAccessState::InvitationRequired
-                | TournamentAccessState::AuthPending,
-            )
-            | None => String::new(),
-            Some(access) => access.label(),
-        }
+        let card = tournament.get();
+        let full = card
+            .seats
+            .is_some_and(|capacity| i64::from(card.players) >= i64::from(capacity));
+        viewer_note(
+            card.summary.access,
+            card.summary.restrictions.invite_only,
+            full,
+            viewer_status,
+        )
     };
     let invitation =
         move || category == TournamentCategory::Invitations && tournament.get().invited;
@@ -280,25 +346,38 @@ pub fn TournamentRow(
             on:pointerdown=move |event| mark_pressed.run(event)
         >
             <div class="col-span-2 min-w-0 md:col-span-1">
-                <h2 class="font-bold text-gray-900 break-words dark:text-gray-100">
+                <h3 class="font-bold text-gray-900 break-words dark:text-gray-100">
                     {move || tournament.get().name}
-                </h2>
-                <div class="mt-1 text-gray-600 dark:text-gray-300">
-                    {move || tournament_format_label(i18n, tournament.get().summary.format)}
+                </h3>
+                <div class="flex flex-wrap gap-y-1 gap-x-2 items-center mt-1 text-gray-600 dark:text-gray-300">
+                    <span>
+                        {move || tournament_format_label(i18n, tournament.get().summary.format)}
+                        {move || {
+                            tournament
+                                .get()
+                                .summary
+                                .primary_clock
+                                .map(|clock| {
+                                    format!(
+                                        " · {}",
+                                        format_tournament_clock(
+                                            i18n,
+                                            clock,
+                                            TournamentClockStyle::Compact,
+                                        ),
+                                    )
+                                })
+                        }}
+                    </span>
                     {move || {
-                        tournament
-                            .get()
-                            .summary
-                            .primary_clock
-                            .map(|clock| {
-                                format!(
-                                    " · {}",
-                                    format_tournament_clock(
-                                        i18n,
-                                        clock,
-                                        TournamentClockStyle::Compact,
-                                    ),
-                                )
+                        role_label
+                            .get_value()
+                            .map(|label| {
+                                view! {
+                                    <span class="inline-block py-0.5 px-2 text-xs font-medium text-teal-800 whitespace-nowrap rounded-full border dark:text-teal-200 border-pillbug-teal/40 bg-pillbug-teal/10">
+                                        {label}
+                                    </span>
+                                }
                             })
                     }}
                 </div>
@@ -310,12 +389,39 @@ pub fn TournamentRow(
                         view! { <span>{t!(i18n, common.unavailable)}</span> }
                     }
                 >
-                    <p class="tabular-nums">{move || lifecycle.get().0}</p>
-                    <Show when=move || !lifecycle.get().1.is_empty()>
-                        <p class="mt-1 text-xs text-gray-600 dark:text-gray-300">
-                            {move || lifecycle.get().1}
-                        </p>
-                    </Show>
+                    {move || {
+                        match result_label.get_value() {
+                            Some(result) => {
+                                Either::Left(
+                                    view! {
+                                        <p class="font-medium">{result}</p>
+                                        <p class="mt-1 text-xs text-gray-600 dark:text-gray-300">
+                                            {move || {
+                                                let (status, detail) = lifecycle.get();
+                                                if detail.is_empty() {
+                                                    status
+                                                } else {
+                                                    format!("{status} · {detail}")
+                                                }
+                                            }}
+                                        </p>
+                                    },
+                                )
+                            }
+                            None => {
+                                Either::Right(
+                                    view! {
+                                        <p class="tabular-nums">{move || lifecycle.get().0}</p>
+                                        <Show when=move || !lifecycle.get().1.is_empty()>
+                                            <p class="mt-1 text-xs text-gray-600 dark:text-gray-300">
+                                                {move || lifecycle.get().1}
+                                            </p>
+                                        </Show>
+                                    },
+                                )
+                            }
+                        }
+                    }}
                 </Show>
             </div>
             <div class="min-w-0 text-gray-700 dark:text-gray-200">
@@ -324,11 +430,47 @@ pub fn TournamentRow(
                     <Show when=move || !entry.get().is_empty()>
                         <p class="mt-1 text-xs text-gray-600 dark:text-gray-300">{entry}</p>
                     </Show>
-                    <Show when=move || !viewer_label().is_empty()>
-                        <p class="mt-1 text-xs font-medium text-teal-700 dark:text-teal-300">
-                            {viewer_label}
-                        </p>
-                    </Show>
+                    {move || {
+                        viewer_note()
+                            .map(|note| match note {
+                                ViewerNote::Text(label) => {
+                                    EitherOf3::A(
+                                        view! {
+                                            <p class="mt-1 text-xs font-medium text-gray-900 dark:text-gray-100">
+                                                {label}
+                                            </p>
+                                        },
+                                    )
+                                }
+                                ViewerNote::Login(label) => {
+                                    EitherOf3::B(
+                                        view! {
+                                            <a
+                                                class="block relative z-20 mt-1 text-xs font-medium text-teal-700 dark:text-teal-300 hover:underline"
+                                                href=login_redirect_url
+                                            >
+                                                {label}
+                                            </a>
+                                        },
+                                    )
+                                }
+                                ViewerNote::Invited(label) => {
+                                    EitherOf3::C(
+                                        view! {
+                                            <p class="mt-1 text-xs font-medium text-gray-900 dark:text-gray-100">
+                                                {label}
+                                            </p>
+                                            <a
+                                                class="relative z-20 mt-2 ui-button ui-button-primary ui-button-sm no-link-style"
+                                                href=move || href.get_value()
+                                            >
+                                                {t!(i18n, tournaments.row.review_invitation)}
+                                            </a>
+                                        },
+                                    )
+                                }
+                            })
+                    }}
                     <Show when=move || tournament.get().organizer_invited>
                         <a
                             class="relative z-20 mt-2 ui-button ui-button-secondary ui-button-sm no-link-style"
@@ -375,7 +517,7 @@ pub fn TournamentRow(
             </div>
             <Show when=move || !unavailable.get()>
                 <a
-                    class="absolute inset-0 z-10 rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pillbug-teal"
+                    class="absolute inset-0 z-10 rounded focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-pillbug-teal"
                     href=move || href.get_value()
                     aria-label=move || tournament.get().name
                 ></a>
