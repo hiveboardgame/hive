@@ -1,5 +1,12 @@
 {
     "title": "Frequently asked questions",
+    "search": {
+        "label": "Search frequently asked questions",
+        "placeholder": "What do you need help with?",
+        "clear": "Clear search",
+        "no_results": "No matching questions. Try a different keyword.",
+        "results": "Matching questions: {{count}}"
+    },
     "sections": {
         "getting_started": "Getting Started",
         "game_settings": "Game Settings",
@@ -13,7 +20,7 @@
         "answers": {
             "item1": "Spread the word to get more players here!",
             "item2": "Contribute to website development, enhancement, bug fixes, or maintenance via <github_link>GitHub</github_link>",
-            "item3": "Monetary donations - see the Donating to Hivegame.com section of the FAQ"
+            "item3": "Monetary donations - visit the <donate_link>Donate page</donate_link>"
         }
     },
     "how_to_get_crown": {
@@ -26,7 +33,7 @@
     },
     "hive_rules": {
         "question": "What are the rules of Hive?",
-        "answer": "Each player takes turns placing or moving tiles with the goal of surrounding the opponent's queen bee. The full rules are <rules_link>here in PDF form</rules_link> or if you prefer a video, you can check out a <video_link>short YouTube video here</video_link>."
+        "answer": "Each player takes turns placing or moving tiles with the goal of surrounding the opponent's queen bee.\nYou can learn to play with a <rules_link>rulesheet in PDF</rules_link>, or with a <video_link>short YouTube video</video_link>. Interactive tutorial is coming!"
     },
     "expansions_supported": {
         "question": "Which expansions are supported?",
@@ -38,7 +45,7 @@
     },
     "signup_required": {
         "question": "Can I play without signing up?",
-        "answer": "No. But creating an account is free and simple."
+        "answer": "No. But <register_link>creating an account</register_link> is free and simple."
     },
     "mobile_friendly": {
         "question": "Is it mobile friendly?",
@@ -46,11 +53,11 @@
     },
     "mobile_app": {
         "question": "Is there a mobile app?",
-        "answer": "Not yet. Hivegame.com is available as a progressive web app. just add it to your mobile home screen for an app-like experience."
+        "answer": "Not yet, but Hivegame.com is available as a progressive web app. Search in your browser settings \"Add to Home Screen\" and you will have an app-like experience."
     },
     "profile_navigation": {
         "question": "How do I navigate to my Profile Page?",
-        "answer": "When logged in, click on your username on the top right of the screen to go to the Profile Page."
+        "answer": "When logged in, click on your username on the top right of the screen to go to your <profile_link>Profile Page</profile_link>."
     },
     "game_types": {
         "question": "Are games correspondence or real-time?",
@@ -58,7 +65,7 @@
     },
     "start_game": {
         "question": "How do I start a game?",
-        "answer": "On the home page, click one of the six Time Control settings to start a game or the 'custom' button to choose different settings."
+        "answer": "On the <home_link>home page</home_link>, click one of the six Time Control settings to start a game or the 'custom' button to choose different settings."
     },
     "time_controls": {
         "question": "What do the Time Control settings on the home page mean?",
@@ -70,7 +77,7 @@
     },
     "casual_vs_rated": {
         "question": "What's Casual vs. Rated games?",
-        "answer": "You can choose to have your game rated (Glicko-2 system) and thereby get an estimate of your proficiency and track progression over time. Newcomers start with a rating of 1500. In general, winning increases your rating, losing a game decreases your rating. Higher rating implies higher proficiency. Winning games vs. much lower-ranked opponents does not increase your rating materially. But winning games vs. a higher-ranked opponent can bump up your rating significantly. Winning or losing Casual games has no effect on your rating. Reminder: Rated games are only available if all three expansions are used (MLP format)."
+        "answer": "You can choose to have your game rated (Glicko-2 system) and thereby get an estimate of your proficiency and track progression over time. Newcomers start with a rating of 1500. In general, winning increases your rating, losing a game decreases your rating. Higher rating implies higher proficiency. Winning games vs. much lower-ranked opponents does not increase your rating materially. But winning games vs. a higher-ranked opponent can bump up your rating significantly. Winning or losing Casual games has no effect on your rating. Reminder: Rated games are only available if all three expansions are used (full game)."
     },
     "base_vs_mlp": {
         "question": "What's Base vs. MLP format?",
@@ -78,7 +85,7 @@
     },
     "private_vs_public": {
         "question": "What's private vs. public?",
-        "answer": "A public game is available on the home page for any other player to join. A private game provides you a link that you can send another player."
+        "answer": "A public game is available on the <home_link>home page</home_link> for any other player to join. A private game provides you a link that you can send another player."
     },
     "rating_range": {
         "question": "What's the rating range?",
@@ -90,11 +97,11 @@
     },
     "spectate_games": {
         "question": "Can I spectate games?",
-        "answer": "Yes! Ongoing real-time games are visible on the home page. Click any to spectate."
+        "answer": "Yes! Ongoing real-time games are visible on the <home_link>home page</home_link>. Click any to spectate."
     },
     "turn_alerts": {
-        "question": "Will I get an alert when it's my turn (for turn-based games)?",
-        "answer": "Yes, you will see a red message icon at the top of the page with a number indicating how many games you are on turn. Alternatively, navigate to your Profile Page and you can filter for currently Playing, Pending, and Finished games."
+        "question": "How do I know when it's my turn?",
+        "answer": "Your games awaiting a move appear in the site notifications. You can also check your <profile_link>Profile Page</profile_link> for games in progress. For correspondence games, you can enable browser push or Discord notifications on the <notifications_link>Notifications page</notifications_link>. For Discord, join our server and link your Discord account there."
     },
     "correspondence_notifications": {
         "question": "Can I get notified when it's my turn to play in a correspondence game?",
@@ -102,7 +109,7 @@
     },
     "chat_basics": {
         "question": "How does the chat work?",
-        "answer": "Chat messages are stored in the database. Chat is available for direct messages, tournaments, and games, while player and spectator game threads remain separate. The Messages page brings your recent conversations and unread messages together."
+        "answer": "You can chat in games and tournaments, or send direct messages to other players. Players and spectators have separate game chats. Open <messages_link>Messages</messages_link> to find your conversations and unread messages."
     },
     "tournament_entry": {
         "question": "Can anyone join a tournament? Is there an entry fee? What about prizes?",
@@ -110,7 +117,7 @@
     },
     "tournament_duration": {
         "question": "What's the duration of a tournament? How many games? How do I coordinate schedules?",
-        "answer": "The tournament page should typically outline all these details. If you've any questions, please contact the tournament organizer. Currently, only Round-Robin tournaments are available, but more formats will be added soon."
+        "answer": "Duration, number of games, and scheduling depend on the tournament's format and settings. Browse <tournaments_link>tournaments</tournaments_link> and open the tournament page, or contact the organizer for details. Hivegame.com supports round-robin, Swiss, elimination, and Arena tournaments."
     },
     "tournament_stats": {
         "question": "In a tournament results table, what's H2H, WB, SB, Finished?",
@@ -118,7 +125,7 @@
     },
     "tournament_games": {
         "question": "Where do I see my in-progress / yet-to-be-started games?",
-        "answer": "Navigate to your profile page and you will see filters to your currently Playing and Pending."
+        "answer": "Open your <profile_link>Profile Page</profile_link> to view your Playing and Pending games."
     },
     "change_password": {
         "question": "How do I change my password?",
@@ -130,11 +137,11 @@
     },
     "game_analysis": {
         "question": "Can I review finished games with an analysis tool?",
-        "answer": "Yes, finished games have a microscope icon that will load the game into analysis mode but this feature is currently under development, so don't expect too much yet."
+        "answer": "Yes. Select the microscope icon on a finished game to open the <analysis_link>analysis tool</analysis_link>, review its moves, and explore alternative variations."
     },
     "play_bots": {
         "question": "Can I play against a bot?",
-        "answer": "Yes, click the button 'Play Bot' on the homepage and select the bot you want to play against. An untimed game will immediately start."
+        "answer": "Yes, click the button 'Play Bot' on the <home_link>home page</home_link> and select the bot you want to play against. An untimed game will immediately start."
     },
     "community_forum": {
         "question": "Is there a community forum?",
@@ -142,15 +149,15 @@
     },
     "report_bugs": {
         "question": "Where can I report bugs or suggest new features?",
-        "answer": "Join the Hivegame.com Discord server <discord_link>here</discord_link> and you can message the developers using the channels therein."
+        "answer": "Join the Hivegame.com Discord server <discord_link>here</discord_link> and you can message the developers using the channels therein. You can also <issues_link>report a bug through GitHub</issues_link> if you prefer."
     },
     "get_better": {
         "question": "How do I get better at Hive?",
         "answer": "Check out the <resources_link>Resources Section</resources_link> of the site for a curated list of resources to get started."
     },
     "play_specific_players": {
-        "question": "Can I play with a specific player?",
-        "answer": "Of course! You can use the crossed swords icon next to a player's name to challenge them directly. Alternatively create a private game (click the 'custom' button on the homepage) and share the link privately. Only a player with the link can join."
+        "question": "How do I play with a friend or challenge a specific player?",
+        "answer": "To play with a friend, create a private game using the 'custom' button on the <home_link>home page</home_link> and share the link with them. Only a player with the link can join.\n\nYou can also challenge a specific player directly using the crossed swords icon next to their name."
     },
     "donation_amount": {
         "question": "What's the recommended donation amount?",
@@ -166,11 +173,11 @@
     },
     "can_i_play_base_game": {
         "question": "Can I play without expansions?",
-        "answer": "Yes. You can toggle if expansions are used when creating a game, and playing without expansions is good for beginners! Rated games are only available if expansions are used, as it's the official competitive format."
+        "answer": "Yes. When you create a game, you can choose to play without expansions (base game) or with all three expansions (full game or Hive PLM).\n\nThe base game is good for beginners, but rated games are only available for the full game, as it's the official competitive format."
     },
     "opponent_is_abusive": {
         "question": "What can I do if my opponent is abusive or disruptive in game/chat or has an inappropriate username, what can I do?",
-        "answer": "Screenshot the behaviour and contact us via Discord @klautcomputing / @ionoi we will sort it out."
+        "answer": "If you want, you can go to their profile page and block them using the red Block button. They will no longer be able to send you direct messages, and their messages in game and tournament chats will be hidden by default. Then, please screenshot the behaviour and contact us via Discord @klautcomputing / @ionoi, and we will sort it out."
     },
     "why_elo_has_questionmark": {
         "question": "Why is there a ? next to my rating?",
@@ -182,10 +189,10 @@
     },
     "how_to_recover_password": {
         "question": "I forgot my password! What now?",
-        "answer": "Send a mail to leex@klautcomputing.de from the same email address that you use on Hivegame.com requesting for a password reset."
+        "answer": "Select <reset_link>Forgot your password?</reset_link> on the <login_link>login page</login_link>, enter the email address associated with your account, and follow the reset link sent by email."
     },
     "can_i_set_up_a_tournament": {
         "question": "Can I start my own tournament?",
-        "answer": "Yes! Just click on Create Tournament and the rest should be self-explanatory."
+        "answer": "Yes! Click <create_link>Create Tournament</create_link> to choose the format and settings for your tournament."
     }
 }

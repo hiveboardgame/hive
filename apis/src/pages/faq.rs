@@ -2,6 +2,7 @@ use crate::{
     common::{
         render_text_prop,
         GEN42_URL,
+        GITHUB_ISSUES_URL,
         GITHUB_URL,
         HIVEGAME_DISCORD_URL,
         WORLD_HIVE_DISCORD_URL,
@@ -12,21 +13,29 @@ use crate::{
     },
     i18n::*,
 };
-use leptos::prelude::*;
+use leptos::{html, leptos_dom::helpers::request_animation_frame, prelude::*};
+use leptos_icons::Icon;
+use wasm_bindgen::JsCast;
 
 #[component]
-fn FaqSection(children: Children, #[prop(into)] title: TextProp) -> impl IntoView {
+fn FaqSection(
+    children: Children,
+    #[prop(into)] title: TextProp,
+    icon: icondata_core::Icon,
+) -> impl IntoView {
     view! {
-        <Panel title=title body_class="space-y-3">
-            {children()}
-        </Panel>
+        <div data-faq-section>
+            <Panel title=title icon=icon body_class="space-y-3">
+                {children()}
+            </Panel>
+        </div>
     }
 }
 
 #[component]
 fn FaqItem(children: Children, #[prop(into)] question: TextProp) -> impl IntoView {
     view! {
-        <details class="group">
+        <details class="group" data-faq-item>
             <summary class="justify-between ui-disclosure-summary">
                 <span>{render_text_prop(question)}</span>
                 <span class="flex-shrink-0 ml-1.5 transition-transform group-open:rotate-180">
@@ -46,37 +55,146 @@ fn FaqItem(children: Children, #[prop(into)] question: TextProp) -> impl IntoVie
     }
 }
 
+// Search the rendered text so linked answers and the current locale stay in sync.
+fn filter_faq(root: &web_sys::Element, query: &str) -> usize {
+    let mut total = 0;
+    let sections = root
+        .query_selector_all("[data-faq-section]")
+        .expect("valid FAQ selector");
+    for index in 0..sections.length() {
+        let section = sections
+            .item(index)
+            .unwrap()
+            .unchecked_into::<web_sys::Element>();
+        let items = section
+            .query_selector_all("[data-faq-item]")
+            .expect("valid FAQ selector");
+        let mut section_matches = 0;
+        for index in 0..items.length() {
+            let item = items
+                .item(index)
+                .unwrap()
+                .unchecked_into::<web_sys::Element>();
+            let text = item.text_content().unwrap_or_default().to_lowercase();
+            let matches = query.split_whitespace().all(|word| text.contains(word));
+            if matches {
+                let _ = item.remove_attribute("hidden");
+                section_matches += 1;
+            } else {
+                let _ = item.set_attribute("hidden", "");
+            }
+            if !query.is_empty() && matches {
+                let _ = item.set_attribute("open", "");
+            } else {
+                let _ = item.remove_attribute("open");
+            }
+        }
+        if section_matches > 0 {
+            let _ = section.remove_attribute("hidden");
+        } else {
+            let _ = section.set_attribute("hidden", "");
+        }
+        total += section_matches;
+    }
+    total
+}
+
 #[component]
 pub fn Faq() -> impl IntoView {
     let i18n = use_i18n();
+    let query = RwSignal::new(String::new());
+    let results = RwSignal::new(0usize);
+    let faq_ref = NodeRef::<html::Div>::new();
+    let input_ref = NodeRef::<html::Input>::new();
+    let searching = move || !query.get().trim().is_empty();
+    Effect::new(move |_| {
+        let query = query.get().trim().to_lowercase();
+        let _ = i18n.get_locale();
+        if let Some(root) = faq_ref.get() {
+            // Wait for translated children to update before reading their text.
+            request_animation_frame(move || results.set(filter_faq(&root, &query)));
+        }
+    });
     let rel = "external";
     let target = "_blank";
     let link_class = "ui-text-link";
     view! {
         <PageShell>
             <PageHeader title=move || { t_string!(i18n, faq.title) } />
-            <div class="space-y-6">
+            <div class="space-y-2">
+                <label class="block relative">
+                    <span class="sr-only">{t!(i18n, faq.search.label)}</span>
+                    <Icon
+                        icon=icondata_lu::LuSearch
+                        attr:class="absolute left-3 top-1/2 -translate-y-1/2 size-5 pointer-events-none text-gray-500"
+                        attr:aria-hidden="true"
+                    />
+                    <input
+                        node_ref=input_ref
+                        type="search"
+                        class="pr-12 pl-10 ui-field-input"
+                        placeholder=move || t_string!(i18n, faq.search.placeholder)
+                        prop:value=query
+                        on:input=move |event| query.set(event_target_value(&event))
+                    />
+                </label>
+                <Show when=move || !query.get().is_empty()>
+                    <button
+                        type="button"
+                        class="text-sm ui-text-link"
+                        on:click=move |_| {
+                            query.set(String::new());
+                            if let Some(input) = input_ref.get() {
+                                let _ = input.focus();
+                            }
+                        }
+                    >
+                        {t!(i18n, faq.search.clear)}
+                    </button>
+                </Show>
+                <p
+                    class="text-sm text-gray-600 dark:text-gray-300"
+                    role="status"
+                    aria-live="polite"
+                >
+                    {move || {
+                        searching()
+                            .then(|| {
+                                if results.get() == 0 {
+                                    t_string!(i18n, faq.search.no_results).to_string()
+                                } else {
+                                    t_string!(i18n, faq.search.results, count = results.get())
+                                        .to_string()
+                                }
+                            })
+                    }}
+                </p>
+            </div>
+            <div node_ref=faq_ref class="space-y-6">
 
-                <FaqSection title=move || { t_string!(i18n, faq.sections.getting_started) }>
+                <FaqSection
+                    title=move || { t_string!(i18n, faq.sections.getting_started) }
+                    icon=icondata_lu::LuBookOpen
+                >
                     <FaqItem question=move || { t_string!(i18n, faq.what_is_hive.question) }>
                         <p>
                             {t!(
                                 i18n, faq.what_is_hive.answer,
-                                            < gen42_link > =
-                                            <a href=GEN42_URL rel=rel target=target class=link_class/>
+                                                < gen42_link > =
+                                                <a href=GEN42_URL rel=rel target=target class=link_class/>
                             )}
                         </p>
 
                     </FaqItem>
 
                     <FaqItem question=move || { t_string!(i18n, faq.hive_rules.question) }>
-                        <p>
+                        <p class="whitespace-pre-line">
                             {t!(
                                 i18n, faq.hive_rules.answer,
-                                            < rules_link > =
-                                            <a href="https://hivegame.com/download/rules.pdf" target=target class=link_class/>,
-                                            < video_link > =
-                                            <a href="https://www.youtube.com/watch?v=-_CT8cgOR5Q" rel=rel target=target class=link_class/>
+                                                < rules_link > =
+                                                <a href="https://hivegame.com/download/rules.pdf" target=target class=link_class/>,
+                                                < video_link > =
+                                                <a href="https://www.youtube.com/watch?v=-_CT8cgOR5Q" rel=rel target=target class=link_class/>
                             )}
                         </p>
 
@@ -92,7 +210,9 @@ pub fn Faq() -> impl IntoView {
                     <FaqItem question=move || {
                         t_string!(i18n, faq.can_i_play_base_game.question)
                     }>
-                        <p>{t!(i18n, faq.can_i_play_base_game.answer)}</p>
+                        <p class="whitespace-pre-line">
+                            {t!(i18n, faq.can_i_play_base_game.answer)}
+                        </p>
 
                     </FaqItem>
 
@@ -102,7 +222,11 @@ pub fn Faq() -> impl IntoView {
                     </FaqItem>
 
                     <FaqItem question=move || { t_string!(i18n, faq.signup_required.question) }>
-                        <p>{t!(i18n, faq.signup_required.answer)}</p>
+                        <p>
+                            {t!(
+                                i18n, faq.signup_required.answer, < register_link > = <a href="/register" class=link_class/>
+                            )}
+                        </p>
 
                     </FaqItem>
 
@@ -117,19 +241,41 @@ pub fn Faq() -> impl IntoView {
                     </FaqItem>
 
                     <FaqItem question=move || { t_string!(i18n, faq.profile_navigation.question) }>
-                        <p>{t!(i18n, faq.profile_navigation.answer)}</p>
+                        <p>
+                            {t!(
+                                i18n, faq.profile_navigation.answer, < profile_link > = <a href="/@/me" class=link_class/>
+                            )}
+                        </p>
 
                     </FaqItem>
                 </FaqSection>
 
-                <FaqSection title=move || { t_string!(i18n, faq.sections.game_settings) }>
-                    <FaqItem question=move || { t_string!(i18n, faq.game_types.question) }>
-                        <p>{t!(i18n, faq.game_types.answer)}</p>
+                <FaqSection
+                    title=move || { t_string!(i18n, faq.sections.game_settings) }
+                    icon=icondata_lu::LuSlidersHorizontal
+                >
+                    <FaqItem question=move || { t_string!(i18n, faq.start_game.question) }>
+                        <p>
+                            {t!(
+                                i18n, faq.start_game.answer, < home_link > = <a href="/" class=link_class/>
+                            )}
+                        </p>
 
                     </FaqItem>
 
-                    <FaqItem question=move || { t_string!(i18n, faq.start_game.question) }>
-                        <p>{t!(i18n, faq.start_game.answer)}</p>
+                    <FaqItem question=move || {
+                        t_string!(i18n, faq.play_specific_players.question)
+                    }>
+                        <p class="whitespace-pre-line">
+                            {t!(
+                                i18n, faq.play_specific_players.answer, < home_link > = <a href="/" class=link_class/>
+                            )}
+                            <Icon
+                                icon=icondata_ri::RiSwordOthersLine
+                                attr:class="inline-block align-text-bottom size-5"
+                                attr:aria-hidden="true"
+                            />
+                        </p>
 
                     </FaqItem>
 
@@ -157,13 +303,12 @@ pub fn Faq() -> impl IntoView {
 
                     </FaqItem>
 
-                    <FaqItem question=move || { t_string!(i18n, faq.base_vs_mlp.question) }>
-                        <p>{t!(i18n, faq.base_vs_mlp.answer)}</p>
-
-                    </FaqItem>
-
                     <FaqItem question=move || { t_string!(i18n, faq.private_vs_public.question) }>
-                        <p>{t!(i18n, faq.private_vs_public.answer)}</p>
+                        <p>
+                            {t!(
+                                i18n, faq.private_vs_public.answer, < home_link > = <a href="/" class=link_class/>
+                            )}
+                        </p>
 
                     </FaqItem>
 
@@ -183,33 +328,46 @@ pub fn Faq() -> impl IntoView {
                     </FaqItem>
 
                     <FaqItem question=move || { t_string!(i18n, faq.spectate_games.question) }>
-                        <p>{t!(i18n, faq.spectate_games.answer)}</p>
+                        <p>
+                            {t!(
+                                i18n, faq.spectate_games.answer, < home_link > = <a href="/" class=link_class/>
+                            )}
+                        </p>
 
                     </FaqItem>
 
                     <FaqItem question=move || { t_string!(i18n, faq.turn_alerts.question) }>
-                        <p>{t!(i18n, faq.turn_alerts.answer)}</p>
-
-                    </FaqItem>
-
-                    <FaqItem question=move || {
-                        t_string!(i18n, faq.correspondence_notifications.question)
-                    }>
-                        <p>{t!(i18n, faq.correspondence_notifications.answer)}</p>
+                        <p>
+                            {t!(
+                                i18n, faq.turn_alerts.answer, < profile_link > = <a href="/@/me" class=link_class/>,
+    < notifications_link > = <a href="/notifications" class=link_class/>
+                            )}
+                        </p>
 
                     </FaqItem>
 
                     <FaqItem question=move || { t_string!(i18n, faq.chat_basics.question) }>
-                        <p>{t!(i18n, faq.chat_basics.answer)}</p>
+                        <p>
+                            {t!(
+                                i18n, faq.chat_basics.answer, < messages_link > = <a href="/message" class=link_class/>
+                            )}
+                        </p>
 
                     </FaqItem>
                 </FaqSection>
 
-                <FaqSection title=move || { t_string!(i18n, common.tournaments) }>
+                <FaqSection
+                    title=move || { t_string!(i18n, common.tournaments) }
+                    icon=icondata_lu::LuTrophy
+                >
                     <FaqItem question=move || {
                         t_string!(i18n, faq.can_i_set_up_a_tournament.question)
                     }>
-                        <p>{t!(i18n, faq.can_i_set_up_a_tournament.answer)}</p>
+                        <p>
+                            {t!(
+                                i18n, faq.can_i_set_up_a_tournament.answer, < create_link > = <a href="/tournaments/create" class=link_class/>
+                            )}
+                        </p>
 
                     </FaqItem>
 
@@ -219,7 +377,11 @@ pub fn Faq() -> impl IntoView {
                     </FaqItem>
 
                     <FaqItem question=move || { t_string!(i18n, faq.tournament_duration.question) }>
-                        <p>{t!(i18n, faq.tournament_duration.answer)}</p>
+                        <p>
+                            {t!(
+                                i18n, faq.tournament_duration.answer, < tournaments_link > = <a href="/tournaments" class=link_class/>
+                            )}
+                        </p>
 
                     </FaqItem>
 
@@ -229,18 +391,25 @@ pub fn Faq() -> impl IntoView {
                     </FaqItem>
 
                     <FaqItem question=move || { t_string!(i18n, faq.tournament_games.question) }>
-                        <p>{t!(i18n, faq.tournament_games.answer)}</p>
+                        <p>
+                            {t!(
+                                i18n, faq.tournament_games.answer, < profile_link > = <a href="/@/me" class=link_class/>
+                            )}
+                        </p>
 
                     </FaqItem>
                 </FaqSection>
 
-                <FaqSection title=move || { t_string!(i18n, faq.sections.account_configuration) }>
+                <FaqSection
+                    title=move || { t_string!(i18n, faq.sections.account_configuration) }
+                    icon=icondata_lu::LuUserRound
+                >
                     <FaqItem question=move || { t_string!(i18n, faq.change_password.question) }>
                         <p>
                             {t!(
                                 i18n, faq.change_password.answer,
-                                            < edit_link > =
-                                            <a href="/account/edit" rel=rel target=target class=link_class/>
+                                                < edit_link > =
+                                                <a href="/account" class=link_class/>
                             )}
                         </p>
 
@@ -249,7 +418,12 @@ pub fn Faq() -> impl IntoView {
                     <FaqItem question=move || {
                         t_string!(i18n, faq.how_to_recover_password.question)
                     }>
-                        <p>{t!(i18n, faq.how_to_recover_password.answer)}</p>
+                        <p>
+                            {t!(
+                                i18n, faq.how_to_recover_password.answer, < reset_link > = <a href="/forgot-password" class=link_class/>,
+    < login_link > = <a href="/login" class=link_class/>
+                            )}
+                        </p>
 
                     </FaqItem>
 
@@ -259,25 +433,39 @@ pub fn Faq() -> impl IntoView {
                     </FaqItem>
                 </FaqSection>
 
-                <FaqSection title=move || { t_string!(i18n, faq.sections.more_features) }>
+                <FaqSection
+                    title=move || { t_string!(i18n, faq.sections.more_features) }
+                    icon=icondata_lu::LuWrench
+                >
                     <FaqItem question=move || { t_string!(i18n, faq.game_analysis.question) }>
-                        <p>{t!(i18n, faq.game_analysis.answer)}</p>
+                        <p>
+                            {t!(
+                                i18n, faq.game_analysis.answer, < analysis_link > = <a href="/analysis" class=link_class/>
+                            )}
+                        </p>
 
                     </FaqItem>
 
                     <FaqItem question=move || { t_string!(i18n, faq.play_bots.question) }>
-                        <p>{t!(i18n, faq.play_bots.answer)}</p>
+                        <p>
+                            {t!(
+                                i18n, faq.play_bots.answer, < home_link > = <a href="/" class=link_class/>
+                            )}
+                        </p>
 
                     </FaqItem>
                 </FaqSection>
 
-                <FaqSection title=move || { t_string!(i18n, faq.sections.community_support) }>
+                <FaqSection
+                    title=move || { t_string!(i18n, faq.sections.community_support) }
+                    icon=icondata_lu::LuUsers
+                >
                     <FaqItem question=move || { t_string!(i18n, faq.get_better.question) }>
                         <p>
                             {t!(
                                 i18n, faq.get_better.answer,
-                                            < resources_link > =
-                                            <a href="/resources" rel=rel target=target class=link_class/>
+                                                < resources_link > =
+                                                <a href="/resources" class=link_class/>
                             )}
                         </p>
 
@@ -287,17 +475,10 @@ pub fn Faq() -> impl IntoView {
                         <p>
                             {t!(
                                 i18n, faq.community_forum.answer,
-                                            < discord_link > =
-                                            <a href=WORLD_HIVE_DISCORD_URL rel=rel target=target class=link_class/>
+                                                < discord_link > =
+                                                <a href=WORLD_HIVE_DISCORD_URL rel=rel target=target class=link_class/>
                             )}
                         </p>
-
-                    </FaqItem>
-
-                    <FaqItem question=move || {
-                        t_string!(i18n, faq.play_specific_players.question)
-                    }>
-                        <p>{t!(i18n, faq.play_specific_players.answer)}</p>
 
                     </FaqItem>
 
@@ -305,8 +486,9 @@ pub fn Faq() -> impl IntoView {
                         <p>
                             {t!(
                                 i18n, faq.report_bugs.answer,
-                                            < discord_link > =
-                                            <a href=HIVEGAME_DISCORD_URL rel=rel target=target class=link_class/>
+                                                < discord_link > =
+                                                <a href=HIVEGAME_DISCORD_URL rel=rel target=target class=link_class/>,
+                                                < issues_link > = <a href=GITHUB_ISSUES_URL rel=rel target=target class=link_class/>
                             )}
                         </p>
 
@@ -319,11 +501,15 @@ pub fn Faq() -> impl IntoView {
                                 <li>
                                     {t!(
                                         i18n, faq.how_to_help.answers.item2,
-                                                    < github_link > =
-                                                    <a href=GITHUB_URL rel=rel target=target class=link_class/>
+                                                        < github_link > =
+                                                        <a href=GITHUB_URL rel=rel target=target class=link_class/>
                                     )}
                                 </li>
-                                <li>{t!(i18n, faq.how_to_help.answers.item3)}</li>
+                                <li>
+                                    {t!(
+                                        i18n, faq.how_to_help.answers.item3, < donate_link > = <a href="/donate" class=link_class/>
+                                    )}
+                                </li>
                             </ul>
                         </div>
 
@@ -342,7 +528,10 @@ pub fn Faq() -> impl IntoView {
                     </FaqItem>
                 </FaqSection>
 
-                <FaqSection title=move || { t_string!(i18n, faq.sections.donating) }>
+                <FaqSection
+                    title=move || { t_string!(i18n, faq.sections.donating) }
+                    icon=icondata_lu::LuHeart
+                >
                     <FaqItem question=move || { t_string!(i18n, faq.how_to_get_crown.question) }>
                         <p>{t!(i18n, faq.how_to_get_crown.answer)}</p>
 
@@ -357,8 +546,8 @@ pub fn Faq() -> impl IntoView {
                         <p>
                             {t!(
                                 i18n, faq.how_donate.answer,
-                                            < donate_link > =
-                                            <a href="/donate" rel=rel target=target class=link_class/>
+                                                < donate_link > =
+                                                <a href="/donate" class=link_class/>
                             )}
                         </p>
 
