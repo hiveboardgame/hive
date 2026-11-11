@@ -1,5 +1,6 @@
 {
     "title": "Frequently asked questions",
+    "subtitle": "Help with playing, ratings, tournaments, and your account.",
     "search": {
         "label": "Search frequently asked questions",
         "placeholder": "What do you need help with?",
@@ -8,12 +9,56 @@
         "results": "Matching questions: {{count}}"
     },
     "sections": {
-        "getting_started": "Getting Started",
-        "game_settings": "Game Settings",
-        "account_configuration": "Account Configuration",
-        "more_features": "More Features",
-        "community_support": "Community & Support",
-        "donating": "Donating to Hivegame.com"
+        "ratings": "Ratings & rankings",
+        "getting_started": "Getting started",
+        "game_settings": "Playing & game settings",
+        "account_configuration": "Account & notifications",
+        "more_features": "Learning & practice",
+        "community_support": "Community & support",
+        "donating": "Supporting Hivegame.com"
+    },
+    "rating_system": {
+        "question": "How does my rating work? Is it Elo?",
+        "answer": "Hivegame.com uses Glicko-2 to estimate your playing strength. Some parts of the site label your rating \"Elo,\" but the calculation uses Glicko-2. New ratings start at 1500.\n\nAfter a rated game, your rating changes according to the result, your opponent's strength, and how certain the system is about both players' ratings. A higher rating indicates a higher estimated playing strength. Winning against a stronger opponent generally gains more points than winning against a weaker opponent. Losing generally lowers your rating.\n\nThe size of rating changes can vary as the system learns more about each player. Casual games do not affect your rating."
+    },
+    "different_ratings": {
+        "question": "Why do I have different ratings?",
+        "answer": "Hivegame.com keeps separate ratings for Bullet, Blitz, Rapid, Classic, and Correspondence games. Your rating in each category reflects your rated results at that speed, so a result in one category does not change your ratings in the others."
+    },
+    "tournament_terms": {
+        "question": "What do the tournament standings terms mean?",
+        "answer": "The exact scoring and tie-break rules depend on the tournament format and settings. These are common terms you may see; not every tournament uses all of them.",
+        "cut_name": "Cut / Median variants",
+        "cut_answer": "Leave out specified lowest and/or highest opponent scores. The tournament details identify which variant is used.",
+        "koya_answer": "Points against opponents who reach the score threshold specified by the tournament rules.",
+        "finished_name": "Finished",
+        "finished_answer": "The number of completed games. This is a completion count, not a separate tie-break definition."
+    },
+    "game_controls": {
+        "question": "Can I offer a draw, resign, or request a takeback?",
+        "answer": "Yes. Use the controls during a game when they are available. Click a control once, then click it again to confirm.",
+        "draw": "Offer a draw using the handshake symbol. Your opponent can accept or decline; the game ends as a draw only if they accept.",
+        "resign": "Resign using the flag symbol. This concedes the game to your opponent and does not require their acceptance.",
+        "takeback": "Request a takeback using the undo arrow. Your opponent can accept or decline. Takeback availability depends on the game and the players' settings; takebacks are not available in tournament games."
+    },
+    "notification_events": {
+        "question": "What do I get notifications for?",
+        "answer": "The bell in the top-right corner turns red when you have notifications. Click it for updates such as:",
+        "messages": "New chat messages",
+        "challenges": "Direct game challenges",
+        "invitations": "Invitations to join or help organise a tournament",
+        "status": "Tournaments starting or finishing",
+        "pairings": "New tournament games ready to play",
+        "schedules": "Proposed or accepted game schedules",
+        "settings": "You can manage browser push and Discord notifications on the <notifications_link>Notifications page</notifications_link>."
+    },
+    "game_archive": {
+        "question": "How can I search games played on Hivegame.com?",
+        "answer": "Open <archive_link>Archive</archive_link>, set filters such as players, dates, or game speed, and click Search."
+    },
+    "opening_statistics": {
+        "question": "Where can I find opening statistics for Hivegame.com?",
+        "answer": "Open <analysis_link>Analysis</analysis_link> and select the Explorer tab to see how often moves have been played and their results. Play through moves to explore statistics for different opening positions."
     },
     "how_to_help": {
         "question": "How can I support the site?",
@@ -40,7 +85,7 @@
         "answer": "All three official ones: Mosquito: Copies abilities of adjacent bugs. Ladybug: Moves exactly 2 steps on top of the hive, 1 step down. Pillbug: Tosses adjacent pieces once per turn."
     },
     "resign_ok": {
-        "question": "Is it alright to resign a game I'm sure of losing?",
+        "question": "Can I resign a game?",
         "answer": "Yes. Just like in chess, it's totally okay to concede a match without playing it to conclusion on the board if you think you've no chance of victory."
     },
     "signup_required": {
@@ -56,7 +101,7 @@
         "answer": "Not yet, but Hivegame.com is available as a progressive web app. Search in your browser settings \"Add to Home Screen\" and you will have an app-like experience."
     },
     "profile_navigation": {
-        "question": "How do I navigate to my Profile Page?",
+        "question": "Where is my profile?",
         "answer": "When logged in, click on your username on the top right of the screen to go to your <profile_link>Profile Page</profile_link>."
     },
     "game_types": {
@@ -68,31 +113,31 @@
         "answer": "On the <home_link>home page</home_link>, click one of the six Time Control settings to start a game or the 'custom' button to choose different settings."
     },
     "time_controls": {
-        "question": "What do the Time Control settings on the home page mean?",
-        "answer": "The time control settings dictate the game speed. To illustrate, 3+3 means that when the game starts each person is allotted a total of 3 minutes. When on turn, time begins to countdown. When a turn is completed, 3 seconds are added to the time available as at end of turn. All other time formats work similarly."
+        "question": "What does a time control such as 3+3 mean?",
+        "answer": "In a real-time game, 3+3 gives each player 3 minutes at the start, plus 3 seconds added after each completed move. Your clock counts down while it is your turn.\n\nOther base-plus-increment controls use the same notation. Correspondence games use different settings, such as days per move or a total time allowance for each player."
     },
     "realtime_vs_correspondence": {
-        "question": "What's the difference between Real time, Correspondence, Untimed Games?",
+        "question": "What is the difference between real-time, correspondence, and untimed games?",
         "answer": "Real time games are to be finished within the time settings chosen so typically requires both players to be online simultaneously. Correspondence games are generally spread over several days or with at least 1 move every x days. If you do not play your move within the time, you will forfeit the game. Untimed games are self-explanatory."
     },
     "casual_vs_rated": {
-        "question": "What's Casual vs. Rated games?",
-        "answer": "You can choose to have your game rated (Glicko-2 system) and thereby get an estimate of your proficiency and track progression over time. Newcomers start with a rating of 1500. In general, winning increases your rating, losing a game decreases your rating. Higher rating implies higher proficiency. Winning games vs. much lower-ranked opponents does not increase your rating materially. But winning games vs. a higher-ranked opponent can bump up your rating significantly. Winning or losing Casual games has no effect on your rating. Reminder: Rated games are only available if all three expansions are used (full game)."
+        "question": "What is the difference between casual and rated games?",
+        "answer": "Casual games do not affect your rating. Rated games update your rating after the result and help you track your playing strength over time. Rated games are only available with all three expansions (the full game)."
     },
     "base_vs_mlp": {
         "question": "What's Base vs. MLP format?",
         "answer": "MLP is the default competitive setup and uses the Mosquito, Ladybug, and Pillbug (aka MLP) pieces. Base game does not have these 3 bugs."
     },
     "private_vs_public": {
-        "question": "What's private vs. public?",
+        "question": "What is the difference between public and private games?",
         "answer": "A public game is available on the <home_link>home page</home_link> for any other player to join. A private game provides you a link that you can send another player."
     },
     "rating_range": {
-        "question": "What's the rating range?",
+        "question": "How does the rating range work?",
         "answer": "This setting allows only opponents within a specific range variation of your rating to accept the match. This ensures that you can choose opponents who are as close (or not!) to your rating as per your preference."
     },
     "color_selection": {
-        "question": "What's the White, Random, Black hexagon?",
+        "question": "How do I choose White, Black, or Random?",
         "answer": "When you're setting up a game, you choose whether you want to start as White, Black, or as randomly determined by the system."
     },
     "spectate_games": {
@@ -101,7 +146,7 @@
     },
     "turn_alerts": {
         "question": "How do I know when it's my turn?",
-        "answer": "Your games awaiting a move appear in the site notifications. You can also check your <profile_link>Profile Page</profile_link> for games in progress. For correspondence games, you can enable browser push or Discord notifications on the <notifications_link>Notifications page</notifications_link>. For Discord, join our server and link your Discord account there."
+        "answer": "Your games awaiting a move appear as red symbols in the top bar, with a count of games waiting for your move. Click a symbol to open a game. You can also check your <profile_link>Profile Page</profile_link> for games in progress. For correspondence games, you can enable browser push or Discord notifications on the <notifications_link>Notifications page</notifications_link>. For Discord, join our server and link your Discord account there."
     },
     "correspondence_notifications": {
         "question": "Can I get notified when it's my turn to play in a correspondence game?",
@@ -109,43 +154,43 @@
     },
     "chat_basics": {
         "question": "How does the chat work?",
-        "answer": "You can chat in games and tournaments, or send direct messages to other players. Players and spectators have separate game chats. Open <messages_link>Messages</messages_link> to find your conversations and unread messages."
+        "answer": "You can chat in games and tournaments, or send <message_icon>direct messages</message_icon> to other players. Players and spectators have separate game chats. Open <messages_link>Messages</messages_link> to find your conversations and unread messages."
     },
     "tournament_entry": {
-        "question": "Can anyone join a tournament? Is there an entry fee? What about prizes?",
+        "question": "Who can join a tournament, and are there fees or prizes?",
         "answer": "Yes, you can join a tournament even if you're a beginner. However, some tournaments may be restricted by rating or could be invitation-only as decided by the tournament organizer. As of this writing, there are no entry fees and no prizes (apart from bragging rights and rating points increases!)"
     },
     "tournament_duration": {
-        "question": "What's the duration of a tournament? How many games? How do I coordinate schedules?",
+        "question": "How long do tournaments last, and how are games scheduled?",
         "answer": "Duration, number of games, and scheduling depend on the tournament's format and settings. Browse <tournaments_link>tournaments</tournaments_link> and open the tournament page, or contact the organizer for details. Hivegame.com supports round-robin, Swiss, elimination, and Arena tournaments."
     },
     "tournament_stats": {
-        "question": "In a tournament results table, what's H2H, WB, SB, Finished?",
-        "answer": "H2H - Head 2 Head record, which is the first tie-break criteria. WB - Win as Black, which is the second tie-break criteria. SB - Sonnebron-Berger Score, which is the third tie-break criteria. Finished - number of finished games."
+        "question": "How are tournament standings and ties decided?",
+        "answer": "Players are ranked using the tournament's scoring system. If players have equal scores, the selected tie-breaks are applied in the order shown in the tournament details. The available criteria depend on the tournament format and settings, so different tournaments can use different rules.\n\nOpen the tournament details from the <tournaments_link>tournament listing</tournaments_link> to see its scoring rules and selected tie-break order. The glossary below explains common standings terms, including H2H, WB, SB, and Finished."
     },
     "tournament_games": {
-        "question": "Where do I see my in-progress / yet-to-be-started games?",
-        "answer": "Open your <profile_link>Profile Page</profile_link> to view your Playing and Pending games."
+        "question": "Where can I find my current, pending, and finished games?",
+        "answer": "Open your <profile_link>Profile Page</profile_link> to view your Playing, Pending, and Finished games."
     },
     "change_password": {
         "question": "How do I change my password?",
         "answer": "Navigate to profile > Edit Account or <edit_link>use this link</edit_link>"
     },
     "move_confirmation": {
-        "question": "What do the different Move Confirmation modes mean?",
-        "answer": "When making a move there are 3 modes: 1. Single click - The fast one: if you do not want to lose time in fast games. Be careful not to misplace or wrongly move the piece as a single click immediately makes & confirms the move. 2. Double click - The default one: the first click to place / move the piece and the second click confirms the move. 3. Clock confirm - The secure one: first click to place / move and then to confirm the move, you click on your own timer. Double click or Clock confirm modes are recommended."
+        "question": "How do I confirm a move?",
+        "answer": "Single click: placing or moving a piece immediately confirms the move. This is the fastest option, but be careful not to make an accidental move.\n\nDouble click: click once to place or move a piece, then click again to confirm. This is the default option.\n\nClock confirm: place or move a piece, then click your own clock to confirm.\n\nDouble click or Clock confirm modes are recommended. You can choose your mode in <settings_link>game settings</settings_link>."
     },
     "game_analysis": {
         "question": "Can I review finished games with an analysis tool?",
-        "answer": "Yes. Select the microscope icon on a finished game to open the <analysis_link>analysis tool</analysis_link>, review its moves, and explore alternative variations."
+        "answer": "Yes. Select the <microscope_icon>microscope icon</microscope_icon> on a finished game to open the <analysis_link>analysis tool</analysis_link>, review its moves, and explore alternative variations. You can also open <analysis_link>Analysis</analysis_link> directly to start from an empty board and freely analyse your own moves."
     },
     "play_bots": {
         "question": "Can I play against a bot?",
-        "answer": "Yes, click the button 'Play Bot' on the <home_link>home page</home_link> and select the bot you want to play against. An untimed game will immediately start."
+        "answer": "Yes, click the button 'Play Bot' on the <home_link>home page</home_link> and select the bot you want to play against. An untimed game will immediately start. You can also find other bots offering rated games in the Bots tab on the home page."
     },
     "community_forum": {
-        "question": "Is there a community forum?",
-        "answer": "Yes! Join the World Hive Community Discord server <discord_link>here</discord_link> - full of friendly players and strategy talk."
+        "question": "Where can I find the Hive community and social media?",
+        "answer": "Join the World Hive Community Discord server <discord_link>here</discord_link> to meet other players and discuss Hive. Visit our <resources_link>Resources / Community Links page</resources_link> for community social media, videos, books, tools, and other useful Hive websites."
     },
     "report_bugs": {
         "question": "Where can I report bugs or suggest new features?",
@@ -164,7 +209,7 @@
         "answer": "All donations, big and small, help to keep Hivegame.com running and are gratefully received. Considering credit card and bank transaction charges, a donation of minimum EUR 5 is suggested."
     },
     "how_donate": {
-        "question": "How do I Donate?",
+        "question": "How do I donate?",
         "answer": "Click on Donate in the navigation bar or <donate_link>use this link</donate_link>"
     },
     "how_to_check_stack": {
@@ -176,23 +221,23 @@
         "answer": "Yes. When you create a game, you can choose to play without expansions (base game) or with all three expansions (full game or Hive PLM).\n\nThe base game is good for beginners, but rated games are only available for the full game, as it's the official competitive format."
     },
     "opponent_is_abusive": {
-        "question": "What can I do if my opponent is abusive or disruptive in game/chat or has an inappropriate username, what can I do?",
+        "question": "How do I report or block another player?",
         "answer": "If you want, you can go to their profile page and block them using the red Block button. They will no longer be able to send you direct messages, and their messages in game and tournament chats will be hidden by default. Then, please screenshot the behaviour and contact us via Discord @klautcomputing / @ionoi, and we will sort it out."
     },
     "why_elo_has_questionmark": {
-        "question": "Why is there a ? next to my rating?",
-        "answer": "A ? next to your rating indicates that your rating is provisional i.e., you should expect a higher volatility in ratings till you've played a statistically significant number of games for the system to determine your rating with higher accuracy."
+        "question": "What do ? and ~ next to my rating mean?",
+        "answer": "A ? means the system is still very uncertain about your rating. A ~ means your rating is provisional: it is becoming more established, but the system still needs more results.\n\nThese markers reflect how certain the rating estimate is, rather than a fixed number of games. Ratings without either marker are sufficiently established for ranking."
     },
     "why_not_in_top_players": {
-        "question": "Why do I not show up in the top ranked players?",
-        "answer": "You haven't played enough games yet for the system to be really sure how accurate your rating is. Just keep playing a couple games more, hopefully win them and you will show up."
+        "question": "Why am I not on the leaderboard?",
+        "answer": "To qualify for the leaderboard, your rating must be sufficiently established in that game-speed category. This depends on rating certainty, rather than winning a fixed number of games.\n\nOnce you qualify, your position depends on your rating compared with other eligible players. Check the <leaderboard_link>leaderboards</leaderboard_link> for each game speed."
     },
     "how_to_recover_password": {
         "question": "I forgot my password! What now?",
         "answer": "Select <reset_link>Forgot your password?</reset_link> on the <login_link>login page</login_link>, enter the email address associated with your account, and follow the reset link sent by email."
     },
     "can_i_set_up_a_tournament": {
-        "question": "Can I start my own tournament?",
+        "question": "Can I create a tournament?",
         "answer": "Yes! Click <create_link>Create Tournament</create_link> to choose the format and settings for your tournament."
     }
 }
