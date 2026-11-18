@@ -1,19 +1,20 @@
 {
-    "title": "Frequently asked questions",
+    "title": "Întrebări frecvente",
     "sections": {
-        "getting_started": "Să începem",
-        "game_settings": "Setări joc",
-        "account_configuration": "Configurare cont",
-        "more_features": "Mai multe funcții",
-        "community_support": "Comunitate & Suport",
-        "donating": "Donații pentru Hivegame.com"
+        "getting_started": "Primii pași",
+        "game_settings": "Partide și setări de joc",
+        "account_configuration": "Cont și notificări",
+        "more_features": "Învățare și antrenament",
+        "community_support": "Comunitate și asistență",
+        "donating": "Susține Hivegame.com",
+        "ratings": "Ratinguri și clasamente"
     },
     "how_to_help": {
         "question": "Cum pot susține site-ul?",
         "answers": {
             "item1": "Spune-le și altora despre joc, ca să vină mai mulți jucători!",
             "item2": "Contribuie la dezvoltarea site-ului, la îmbunătățiri sau la rezolvarea de bug-uri prin <github_link>GitHub</github_link>.",
-            "item3": "Donează - vezi secțiunea cu donații din această pagină."
+            "item3": "Donații: vizitează <donate_link>pagina de Donații</donate_link>"
         }
     },
     "how_to_get_crown": {
@@ -26,19 +27,19 @@
     },
     "hive_rules": {
         "question": "Cum se joacă Hive?",
-        "answer": "Fiecare jucător plasează sau mută piese, cu scopul de a înconjura regina adversarului. Poți citi regulile complete <rules_link>aici (PDF)</rules_link> sau să vezi un <video_link>scurt video pe YouTube</video_link>."
+        "answer": "Jucătorii plasează sau mută piese pe rând, cu scopul de a înconjura albina regină a adversarului.\nPoți învăța să joci cu <rules_link>regulamentul în PDF</rules_link> sau cu un <video_link>scurt videoclip pe YouTube</video_link>. Este planificat un tutorial interactiv!"
     },
     "expansions_supported": {
         "question": "Ce extensii sunt incluse?",
         "answer": "Toate cele 3 oficiale: Țânțarul - copiază abilitățile insectelor vecine; Buburuza - face 2 pași peste stup, apoi coboară; Aselul (Pillbug) - poate muta o piesă vecină o dată pe tură."
     },
     "resign_ok": {
-        "question": "Pot să renunț la un joc pe care știu că îl pierd?",
+        "question": "Pot abandona o partidă?",
         "answer": "Da, exact ca în șah. Dacă simți că nu mai ai șanse, poți concede fără să joci până la capăt."
     },
     "signup_required": {
         "question": "Pot juca fără cont?",
-        "answer": "Nu, e necesar un cont, dar înregistrarea e rapidă și gratuită."
+        "answer": "Nu. Dar <register_link>crearea unui cont</register_link> este gratuită și simplă."
     },
     "mobile_friendly": {
         "question": "Merge bine pe telefon?",
@@ -46,11 +47,11 @@
     },
     "mobile_app": {
         "question": "Este disponibilă o aplicație mobilă?",
-        "answer": "Nu încă, dar site-ul funcționează ca o aplicație web progresivă — o poți adăuga pe ecranul telefonului pentru o experiență similară cu o aplicație."
+        "answer": "Încă nu, dar Hivegame.com este disponibil ca aplicație web progresivă. Caută \"Adaugă pe ecranul de pornire\" în setările browserului pentru o experiență asemănătoare unei aplicații."
     },
     "profile_navigation": {
-        "question": "Cum ajung la pagina mea de profil?",
-        "answer": "După ce te conectezi, dă clic pe numele tău din colțul dreapta sus al ecranului."
+        "question": "Unde este pagina mea de profil?",
+        "answer": "După autentificare, apasă pe numele tău de utilizator din dreapta sus pentru a deschide <profile_link>pagina ta de profil</profile_link>."
     },
     "game_types": {
         "question": "Se joacă în timp real sau pe ture?",
@@ -58,43 +59,43 @@
     },
     "start_game": {
         "question": "Cum încep un joc nou?",
-        "answer": "Pe prima pagină, alege unul dintre cele 6 controale de timp sau apasă 'personalizat' pentru setări proprii."
+        "answer": "Pe <home_link>pagina principală</home_link>, apasă pe una dintre cele șase opțiuni de timp pentru a începe o partidă sau pe butonul \"Personalizat\" pentru a alege alte setări."
     },
     "time_controls": {
-        "question": "Ce înseamnă opțiunile de timp de pe prima pagină?",
-        "answer": "Controlează ritmul jocului. De exemplu, 3+3 înseamnă 3 minute la început și câte 3 secunde bonus după fiecare mutare. Celelalte funcționează la fel."
+        "question": "Ce înseamnă o cadență precum 3+3? Văd mai multe pe pagina principală",
+        "answer": "Într-o partidă în timp real, 3+3 oferă fiecărui jucător 3 minute la început și adaugă 3 secunde după fiecare mutare efectuată. Ceasul tău scade cât timp ești la mutare.\n\nCelelalte cadențe cu timp inițial și increment folosesc aceeași notație. Partidele prin corespondență folosesc alte setări, precum zile pe mutare sau un timp total pentru fiecare jucător."
     },
     "realtime_vs_correspondence": {
-        "question": "Care e diferența între Timp Real, Corespondență și Fără Timp?",
+        "question": "Care este diferența dintre partidele în timp real, prin corespondență și fără limită de timp?",
         "answer": "Jocurile în timp real se joacă pe loc. Cele prin corespondență pot dura mai multe zile. Jocurile fără timp nu au limită de durată. Dacă nu muți în timp, pierzi automat."
     },
     "casual_vs_rated": {
-        "question": "Ce diferență e între Necotat și Cotat?",
-        "answer": "Jocurile evaluate îți influențează ratingul (Glicko-2). Toți încep de la 1500. Câștigi = crește ratingul, pierzi = scade. Necotat nu afectează ratingul. Jocurile evaluate necesită toate cele 3 extensii (MLP)."
+        "question": "Care este diferența dintre partidele necotate și cotate?",
+        "answer": "Partidele necotate nu influențează ratingul. Partidele cotate îl actualizează în funcție de rezultat și te ajută să urmărești evoluția nivelului tău de joc. Sunt disponibile doar cu toate cele trei extensii (joc complet)."
     },
     "base_vs_mlp": {
         "question": "Ce e formatul Base vs. MLP?",
         "answer": "MLP (țânțar, buburuză, pillbug) este formatul competitiv. Jocul de bază nu include aceste piese."
     },
     "private_vs_public": {
-        "question": "Ce înseamnă joc privat vs. public?",
-        "answer": "Un joc public apare pe pagina principală și oricine îl poate accesa. Un joc privat îți dă un link pe care îl trimiți cui vrei tu."
+        "question": "Care este diferența dintre partidele publice și private?",
+        "answer": "O partidă publică apare pe <home_link>pagina principală</home_link> pentru ca orice alt jucător să se poată alătura. O partidă privată îți oferă un link pe care îl poți trimite altui jucător."
     },
     "rating_range": {
-        "question": "Ce face opțiunea de interval de rating?",
+        "question": "Cum funcționează intervalul de rating?",
         "answer": "Îți permite să alegi dacă accepți doar jucători dintr-un interval apropiat de ratingul tău."
     },
     "color_selection": {
-        "question": "Ce înseamnă opțiunile Alb, Negru, Aleator?",
+        "question": "Cum aleg Alb, Negru sau Aleatoriu?",
         "answer": "Poți alege să începi cu piesele albe, negre sau să se aleagă automat."
     },
     "spectate_games": {
         "question": "Pot să mă uit la alte jocuri?",
-        "answer": "Da! Meciurile live sunt pe pagina principală. Dă clic pe unul ca să-l urmărești."
+        "answer": "Da! Partidele în timp real aflate în desfășurare sunt vizibile pe <home_link>pagina principală</home_link>. Apasă pe una pentru a o urmări."
     },
     "turn_alerts": {
-        "question": "Primesc notificare când e rândul meu?",
-        "answer": "Da, apare o iconiță roșie sus, cu numărul jocurilor în care e rândul tău. Sau mergi în profil și filtrează jocurile."
+        "question": "Cum știu când este rândul meu?",
+        "answer": "Partidele care așteaptă mutarea ta apar ca simboluri roșii în bara de sus, împreună cu numărul lor. Apasă pe un simbol pentru a deschide o partidă. Poți verifica și <profile_link>pagina ta de profil</profile_link> pentru partidele în desfășurare. Pentru partidele prin corespondență, poți activa notificările push ale browserului sau cele Discord pe <notifications_link>pagina Notificări</notifications_link>. Pentru Discord, alătură-te serverului nostru și asociază-ți acolo contul Discord."
     },
     "correspondence_notifications": {
         "question": "Pot primi notificări pentru jocuri prin corespondență?",
@@ -102,23 +103,23 @@
     },
     "chat_basics": {
         "question": "Cum funcționează chat-ul?",
-        "answer": "Mesajele din chat sunt stocate în baza de date. Chatul este disponibil pentru mesaje directe, turnee și jocuri, iar conversațiile jucătorilor și spectatorilor dintr-un joc rămân separate. Pagina Mesaje reunește conversațiile recente și mesajele necitite."
+        "answer": "Poți discuta în partide și turnee sau trimite <message_icon>mesaje directe</message_icon> altor jucători. Jucătorii și spectatorii au chat-uri de partidă separate. Deschide <messages_link>Mesaje</messages_link> pentru a găsi conversațiile și mesajele necitite."
     },
     "tournament_entry": {
-        "question": "Poate oricine intra în turnee? Se plătește? Există premii?",
+        "question": "Cine poate participa la un turneu? Există taxe de înscriere sau premii?",
         "answer": "Da, chiar și începătorii. Unele turnee pot avea restricții. În general nu sunt taxe sau premii — doar faimă și rating."
     },
     "tournament_duration": {
-        "question": "Cât durează un turneu? Câte jocuri se joacă?",
-        "answer": "Detaliile sunt pe pagina turneului. Momentan, doar format Round-Robin este disponibil."
+        "question": "Cât durează turneele și cum sunt programate partidele?",
+        "answer": "Durata, numărul de partide și programarea lor depind de formatul și setările turneului. Consultă <tournaments_link>turneele</tournaments_link> și deschide pagina turneului sau contactează organizatorul pentru detalii. Hivegame.com acceptă turnee fiecare cu fiecare, elvețiene, eliminatorii și Arena."
     },
     "tournament_stats": {
-        "question": "Ce înseamnă H2H, WB, SB, Terminat în tabelele de turneu?",
-        "answer": "H2H: rezultate directe; WB: câștiguri ca negru; SB: punctaj Sonneborn-Berger; Terminat: câte jocuri s-au încheiat."
+        "question": "Cum sunt stabilite clasamentele și departajările turneelor?",
+        "answer": "Jucătorii sunt clasați după sistemul de punctaj al turneului. La egalitate de puncte, se aplică criteriile de departajare selectate în ordinea indicată în detaliile turneului. Criteriile disponibile depind de format și setări, astfel încât turnee diferite pot folosi reguli diferite.\n\nDeschide detaliile din <tournaments_link>lista de turnee</tournaments_link> pentru a vedea regulile de punctaj și ordinea criteriilor de departajare. Glosarul de mai jos explică termenii obișnuiți, inclusiv H2H, WB, SB și Încheiate."
     },
     "tournament_games": {
-        "question": "Unde văd jocurile de turneu în curs?",
-        "answer": "Mergi în profil și folosește filtrele pentru a vedea cele în desfășurare sau neîncepute."
+        "question": "Unde găsesc partidele mele în desfășurare, în așteptare și încheiate?",
+        "answer": "Deschide <profile_link>pagina ta de profil</profile_link> pentru a vedea partidele din filele „Joacă”, „În așteptare” și „Încheiat”."
     },
     "change_password": {
         "question": "Cum îmi schimb parola?",
@@ -126,39 +127,39 @@
     },
     "move_confirmation": {
         "question": "Ce înseamnă modurile de confirmare a mutării?",
-        "answer": "1. Clic simplu - rapid dar riscant. 2. Dublu clic - implicit și sigur. 3. Confirmare prin ceas - cel mai sigur, dar mai lent. Se recomandă modurile 2 sau 3."
+        "answer": "Un clic: plasarea sau mutarea unei piese confirmă imediat mutarea. Este opțiunea cea mai rapidă, dar ai grijă să nu muți din greșeală.\n\nDublu clic: apasă o dată pentru a plasa sau muta o piesă, apoi din nou pentru a confirma. Este opțiunea implicită.\n\nConfirmare pe ceas: plasează sau mută o piesă, apoi apasă pe propriul ceas pentru a confirma.\n\nSunt recomandate modurile Dublu clic sau Confirmare pe ceas. Poți alege modul din <settings_link>setările de joc</settings_link>."
     },
     "game_analysis": {
         "question": "Pot analiza jocurile terminate?",
-        "answer": "Da. Apare un icon cu microscop. Funcția e în lucru, așa că e destul de simplă momentan."
+        "answer": "Da. Selectează <microscope_icon>pictograma microscopului</microscope_icon> la o partidă încheiată pentru a deschide <analysis_link>instrumentul de analiză</analysis_link>, a revedea mutările și a explora variante alternative. Poți deschide direct <analysis_link>Analiză</analysis_link> pentru a începe cu tabla goală și a analiza liber propriile mutări."
     },
     "play_bots": {
         "question": "Pot juca împotriva unui bot?",
-        "answer": "Da! Apasă „Joacă Bot” pe pagina principală, alege unul și jocul începe imediat (fără timp)."
+        "answer": "Da, apasă pe butonul \"Cu un bot\" pe <home_link>pagina principală</home_link> și alege botul cu care vrei să joci. Începe imediat o partidă fără limită de timp. Găsești și alți boți care oferă partide cotate în fila Boți de pe pagina principală."
     },
     "community_forum": {
-        "question": "Există un loc unde pot discuta cu alți jucători?",
-        "answer": "Da! Intră pe serverul Discord <discord_link>aici</discord_link> — comunitatea e activă și prietenoasă."
+        "question": "Unde găsesc comunitatea Hive și rețelele sociale?",
+        "answer": "Alătură-te serverului Discord World Hive Community <discord_link>aici</discord_link> pentru a cunoaște alți jucători și a discuta despre Hive. Vizitează <resources_link>pagina Resurse / Linkuri ale comunității</resources_link> pentru rețelele sociale ale comunității, videoclipuri, cărți, instrumente și alte site-uri utile despre Hive."
     },
     "report_bugs": {
         "question": "Unde pot raporta buguri sau da sugestii?",
-        "answer": "Intră pe Discord-ul Hivegame.com <discord_link>aici</discord_link> și scrie-le dezvoltatorilor pe canalul potrivit."
+        "answer": "Alătură-te serverului Discord Hivegame.com <discord_link>aici</discord_link> și contactează dezvoltatorii pe canalele dedicate. Dacă preferi, poți și <issues_link>raporta o eroare pe GitHub</issues_link>."
     },
     "get_better": {
         "question": "Cum pot deveni mai bun la Hive?",
         "answer": "Verifică <resources_link>Secțiunea Resurse</resources_link> — conține ghiduri și sfaturi utile."
     },
     "play_specific_players": {
-        "question": "Pot juca cu un anumit jucător?",
-        "answer": "Sigur. Folosește simbolul cu săbii de lângă numele jucătorului sau creează un joc privat și trimite linkul."
+        "question": "Cum joc cu un prieten sau provoc un anumit jucător?",
+        "answer": "Pentru a juca cu un prieten, creează o partidă privată folosind butonul \"Personalizat\" de pe <home_link>pagina principală</home_link> și trimite-i linkul. Se poate alătura doar un jucător care are linkul.\n\nPoți provoca direct și un anumit jucător folosind pictograma cu săbiile încrucișate de lângă numele său."
     },
     "donation_amount": {
         "question": "Care este suma de donație recomandată?",
         "answer": "Toate donațiile, mari și mici, ajută la menținerea funcționării Hivegame.com și sunt primite cu recunoștință. Considerând taxele de card de credit și tranzacții bancare, se sugerează o donație minimă de 5 EUR."
     },
     "how_donate": {
-        "question": "Cum donez?",
-        "answer": "Click on Donate in the navigation bar or <donate_link>use this link</donate_link>"
+        "question": "Cum pot dona?",
+        "answer": "Apasă pe Donații în bara de navigare sau <donate_link>folosește acest link</donate_link>."
     },
     "how_to_check_stack": {
         "question": "Cum văd ce este sub o piesă?",
@@ -166,26 +167,77 @@
     },
     "can_i_play_base_game": {
         "question": "Pot juca fără expansiuni?",
-        "answer": "Da, poți juca fără extensii — mai ales dacă ești la început. Doar jocurile cu toate extensiile pot fi cotate (formatul MLP)."
+        "answer": "Da. Când creezi o partidă, poți alege să joci fără extensii (joc de bază) sau cu toate cele trei extensii (joc complet sau Hive PLM).\n\nJocul de bază este potrivit pentru începători, dar partidele cotate sunt disponibile doar cu jocul complet, care este formatul competițional oficial."
     },
     "opponent_is_abusive": {
-        "question": "Ce fac dacă un jucător e abuziv sau are un nume nepotrivit?",
-        "answer": "Fă o captură de ecran și contactează-ne pe Discord la @klautcomputing sau @ionoi. Ne ocupăm noi."
+        "question": "Dacă adversarul meu este abuziv sau deranjează în partidă/chat ori are un nume de utilizator nepotrivit, ce pot face? Îl pot raporta sau bloca?",
+        "answer": "Dacă vrei, poți deschide pagina sa de profil și îl poți bloca folosind butonul roșu Blochează. Nu îți va mai putea trimite mesaje directe, iar mesajele sale din chat-urile partidelor și turneelor vor fi ascunse implicit. Apoi fă o captură de ecran a comportamentului și contactează-ne pe Discord @klautcomputing / @ionoi; ne vom ocupa de situație."
     },
     "why_elo_has_questionmark": {
-        "question": "De ce este un ? langa rating-ul meu?",
-        "answer": "Semnul ? înseamnă că ratingul tău e încă provizoriu. Sistemul are nevoie de mai multe jocuri pentru a-l calcula cu acuratețe."
+        "question": "Ce înseamnă ? și ~ lângă ratingul meu?",
+        "answer": "Un ? înseamnă că sistemul este încă foarte nesigur de ratingul tău. Un ~ arată că ratingul este provizoriu: devine mai stabil, dar sistemul are nevoie de mai multe rezultate.\n\nAceste simboluri reflectă certitudinea estimării, nu un număr fix de partide. Ratingurile fără niciunul dintre simboluri sunt suficient de stabile pentru a fi incluse în clasament."
     },
     "why_not_in_top_players": {
-        "question": "De ce nu apar in topul jucatiorilor?",
-        "answer": "Probabil nu ai jucat destule partide pentru ca sistemul să-ți calculeze un rating de încredere. Joacă câteva în plus și o să apari."
+        "question": "De ce nu apar în clasament?",
+        "answer": "Pentru a apărea în clasament, ratingul tău trebuie să fie suficient de stabil în categoria respectivă de cadență. Acest lucru depinde de certitudinea ratingului, nu de câștigarea unui număr fix de partide.\n\nDupă ce îndeplinești condițiile, poziția ta depinde de ratingul tău în comparație cu al celorlalți jucători eligibili. Consultă <leaderboard_link>clasamentele</leaderboard_link> pentru fiecare cadență."
     },
     "how_to_recover_password": {
         "question": "Am uitat parola. Ce fac?",
-        "answer": "Trimite un email la leex@klautcomputing.de de pe adresa folosită la cont și cere o resetare."
+        "answer": "Selectează <reset_link>Ai uitat parola?</reset_link> pe <login_link>pagina de autentificare</login_link>, introdu adresa de email asociată contului și urmează linkul de resetare primit prin email."
     },
     "can_i_set_up_a_tournament": {
         "question": "Pot organiza un turneu?",
-        "answer": "Da! Apasă pe 'Creează Turneu' și urmează pașii. E destul de intuitiv."
+        "answer": "Da! Apasă pe <create_link>Creează turneu</create_link> pentru a alege formatul și setările turneului tău."
+    },
+    "subtitle": "Ajutor pentru partide, ratinguri, turnee și contul tău.",
+    "search": {
+        "label": "Caută în întrebările frecvente",
+        "placeholder": "Cu ce ai nevoie de ajutor?",
+        "clear": "Șterge căutarea",
+        "no_results": "Nu s-au găsit întrebări. Încearcă alt cuvânt-cheie.",
+        "results": "Întrebări găsite: {{count}}"
+    },
+    "rating_system": {
+        "question": "Cum funcționează ratingul meu? Este Elo?",
+        "answer": "Hivegame.com folosește Glicko-2 pentru a estima nivelul tău de joc. În unele locuri de pe site ratingul este numit \"Elo\", dar calculul folosește Glicko-2. Ratingurile noi pornesc de la 1500.\n\nDupă o partidă cotată, ratingul tău se schimbă în funcție de rezultat, de nivelul adversarului și de cât de sigur este sistemul de ratingurile ambilor jucători. Un rating mai mare indică un nivel estimat de joc mai ridicat. O victorie împotriva unui adversar mai puternic aduce, în general, mai multe puncte decât una împotriva unui adversar mai slab. O înfrângere scade, în general, ratingul.\n\nMărimea schimbărilor poate varia pe măsură ce sistemul află mai multe despre fiecare jucător. Partidele necotate nu influențează ratingul."
+    },
+    "different_ratings": {
+        "question": "De ce am ratinguri diferite?",
+        "answer": "Hivegame.com păstrează ratinguri separate pentru partidele Bullet, Blitz, Rapid, Classic și prin corespondență. Ratingul fiecărei categorii reflectă rezultatele tale cotate la acea cadență, așa că un rezultat dintr-o categorie nu modifică ratingurile din celelalte."
+    },
+    "tournament_terms": {
+        "question": "Ce înseamnă termenii din clasamentele turneelor?",
+        "answer": "Regulile exacte de punctaj și departajare depind de formatul și setările turneului. Aceștia sunt termeni obișnuiți pe care îi poți întâlni; nu toate turneele îi folosesc pe toți.",
+        "cut_name": "Variante Cut / Median",
+        "cut_answer": "Exclud anumite punctaje minime și/sau maxime ale adversarilor. Detaliile turneului precizează varianta folosită.",
+        "koya_answer": "Puncte obținute împotriva adversarilor care ating pragul de punctaj stabilit de regulamentul turneului.",
+        "finished_name": "Încheiate",
+        "finished_answer": "Numărul de partide încheiate. Este un total al partidelor terminate, nu un criteriu suplimentar de departajare."
+    },
+    "game_controls": {
+        "question": "Pot propune remiză, abandona sau cere anularea unei mutări?",
+        "answer": "Da. Folosește comenzile în timpul partidei atunci când sunt disponibile. Apasă o dată pe o comandă, apoi încă o dată pentru a confirma.",
+        "draw": "Propune remiză folosind simbolul strângerii de mână. Adversarul poate accepta sau refuza; partida se încheie remiză doar dacă acceptă.",
+        "resign": "Abandonează folosind simbolul steagului. Astfel îi cedezi victoria adversarului, fără să fie necesar acordul său.",
+        "takeback": "Cere anularea unei mutări folosind săgeata de anulare. Adversarul poate accepta sau refuza. Disponibilitatea depinde de partidă și de setările jucătorilor; anularea mutărilor nu este disponibilă în partidele de turneu."
+    },
+    "notification_events": {
+        "question": "Pentru ce primesc notificări?",
+        "answer": "Clopoțelul din colțul din dreapta sus devine roșu când ai notificări. Apasă pe el pentru actualizări precum:",
+        "messages": "Mesaje noi în chat",
+        "challenges": "Provocări directe la o partidă",
+        "invitations": "Invitații să participi la un turneu sau să ajuți la organizarea lui",
+        "status": "Turnee care încep sau se încheie",
+        "pairings": "Partide noi de turneu gata de jucat",
+        "schedules": "Ore de joc propuse sau acceptate",
+        "settings": "Poți gestiona notificările push ale browserului și cele Discord pe <notifications_link>pagina Notificări</notifications_link>."
+    },
+    "game_archive": {
+        "question": "Cum pot căuta printre partidele jucate pe Hivegame.com?",
+        "answer": "Deschide <archive_link>Arhiva</archive_link>, alege filtre precum jucători, date sau cadența de joc și apasă Căutare."
+    },
+    "opening_statistics": {
+        "question": "Unde găsesc statistici despre deschiderile jucate pe Hivegame.com?",
+        "answer": "Deschide <analysis_link>Analiză</analysis_link> și selectează fila Explorator pentru a vedea cât de des au fost jucate mutările și rezultatele lor. Joacă mutări pentru a explora statisticile diferitelor poziții de deschidere."
     }
 }
