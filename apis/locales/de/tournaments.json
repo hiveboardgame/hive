@@ -690,7 +690,16 @@
             "seed_descending": "Setzung ↓",
             "matches_won": "Gewonnene Matches",
             "game_points": "Partiepunkte",
-            "match_points": "Matchpunkte"
+            "match_points": "Matchpunkte",
+            "direct_encounter": "Direkter Vergleich",
+            "wins_as_black": "Siege mit Schwarz",
+            "sonneborn_berger": "Sonneborn-Berger",
+            "buchholz": "Buchholz",
+            "progressive": "Progressive Wertung",
+            "koya": "Koya",
+            "score_wins": "Siege nach Wertung",
+            "games_won": "Gewonnene Partien",
+            "round_wins": "Rundensiege"
         },
         "label": "Feinwertungen",
         "equal_scores": "Bei Punktgleichheit wird der Platz geteilt.",
@@ -717,7 +726,9 @@
         "cut_both": ", ohne die {{low}} niedrigsten und {{high}} höchsten Werte",
         "sonneborn_berger": "Gewichtet deine Ergebnisse nach den Punkten deiner Gegner{{cut}}.",
         "buchholz": "Addiert die Punkte deiner Gegner{{cut}}.",
-        "koya_threshold": "Punkte gegen Gegner mit mindestens {{numerator}}/{{denominator}} der möglichen Punkte."
+        "koya_threshold": "Punkte gegen Gegner mit mindestens {{numerator}}/{{denominator}} der möglichen Punkte.",
+        "game_points": "Punkte, bei denen jede Einzelpartie zählt",
+        "match_points": "Punkte, bei denen jedes Match als ein Ergebnis zählt"
     },
     "admission": {
         "invited": "Eingeladen",

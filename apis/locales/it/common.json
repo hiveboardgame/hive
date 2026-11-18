@@ -98,6 +98,7 @@
     "date_time": "{{day}}/{{month}}/{{year}}, {{time}}",
     "join": "Partecipa",
     "custom": "Personalizzato",
+    "play_bot": "Gioca col bot",
     "player": "Giocatore",
     "white": "Bianco",
     "black": "Nero",

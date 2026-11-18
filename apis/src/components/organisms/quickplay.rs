@@ -188,7 +188,7 @@ pub fn QuickPlay() -> impl IntoView {
                                 attr:class="quickplay-hex-icon"
                             />
                             <span class="quickplay-hex-label">
-                                {move || t_string!(i18n, home.play_bot)}
+                                {move || t_string!(i18n, common.play_bot)}
                             </span>
                         </button>
                     </div>

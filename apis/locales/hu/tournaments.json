@@ -690,7 +690,16 @@
             "seed_descending": "Kiemelés ↓",
             "matches_won": "Megnyert mérkőzések",
             "game_points": "Játszmapontok",
-            "match_points": "Mérkőzéspontok"
+            "match_points": "Mérkőzéspontok",
+            "direct_encounter": "Egymás elleni eredmény",
+            "wins_as_black": "Győzelmek feketével",
+            "sonneborn_berger": "Sonneborn-Berger",
+            "buchholz": "Buchholz",
+            "progressive": "Progresszív pontszám",
+            "koya": "Koya",
+            "score_wins": "Pontozás szerinti győzelmek",
+            "games_won": "Megnyert játszmák",
+            "round_wins": "Fordulógyőzelmek"
         },
         "label": "Holtversenybontók",
         "equal_scores": "Azonos pontszámmal közös a helyezés.",
@@ -717,7 +726,9 @@
         "cut_both": ", a {{low}} legalacsonyabb és {{high}} legmagasabb pontszám nélkül",
         "sonneborn_berger": "Az ellenfeleid pontszámával súlyozza az eredményeidet{{cut}}.",
         "buchholz": "Összeadja ellenfeleid pontszámát{{cut}}.",
-        "koya_threshold": "Olyan ellenfelek ellen szerzett pontok, akik az elérhető pontok legalább {{numerator}}/{{denominator}} részét megszerezték."
+        "koya_threshold": "Olyan ellenfelek ellen szerzett pontok, akik az elérhető pontok legalább {{numerator}}/{{denominator}} részét megszerezték.",
+        "game_points": "Minden egyes játszmát külön számító pontok",
+        "match_points": "Minden mérkőzést egyetlen eredményként számító pontok"
     },
     "admission": {
         "invited": "Meghívva",
