@@ -158,6 +158,7 @@
             ++ worktreeCommands;
           shellHook = ''
             export CARGO_TARGET_DIR="$PWD/.cargo/target"
+            export PATH="$PATH:''${CARGO_HOME:-$HOME/.cargo}/bin"
             # Install wasm-bindgen-cli at the version matching our Cargo.lock
             WASM_BINDGEN_VERSION="0.2.126"
             if ! command -v wasm-bindgen &> /dev/null || [[ "$(wasm-bindgen --version 2>/dev/null | cut -d' ' -f2)" != "$WASM_BINDGEN_VERSION" ]]; then
