@@ -2,18 +2,19 @@
     "title": "Perguntas frequentes",
     "sections": {
         "getting_started": "Primeiros passos",
-        "game_settings": "Configurações do jogo",
-        "account_configuration": "Configuração da conta",
-        "more_features": "Mais recursos",
-        "community_support": "Comunidade & Suporte",
-        "donating": "Doações para o Hivegame.com"
+        "game_settings": "Partidas e configurações do jogo",
+        "account_configuration": "Conta e notificações",
+        "more_features": "Aprender e praticar",
+        "community_support": "Comunidade e apoio",
+        "donating": "Apoiar o Hivegame.com",
+        "ratings": "Pontuações e classificações"
     },
     "how_to_help": {
         "question": "Como posso apoiar o site?",
         "answers": {
             "item1": "Espalha a palavra para trazer mais jogadores aqui!",
             "item2": "Contribui para o desenvolvimento do site, melhorias, correções de bugs ou manutenção através do <github_link>GitHub</github_link>",
-            "item3": "Doações monetárias - ver a secção Doações para o Hivegame.com no FAQ"
+            "item3": "Donativos: visita a <donate_link>página de Doações</donate_link>"
         }
     },
     "how_to_get_crown": {
@@ -26,19 +27,19 @@
     },
     "hive_rules": {
         "question": "Quais são as regras do Hive?",
-        "answer": "Cada jogador alterna entre colocar ou mover peças com o objetivo de cercar a abelha rainha do oponente. As regras completas estão <rules_link>aqui em formato PDF</rules_link> ou se preferires um vídeo, podes ver um <video_link>vídeo curto do YouTube aqui</video_link>."
+        "answer": "Os jogadores colocam ou movem peças à vez com o objetivo de rodear a abelha rainha do adversário.\nPodes aprender a jogar com o <rules_link>regulamento em PDF</rules_link> ou com um <video_link>vídeo curto no YouTube</video_link>. Está previsto um tutorial interativo!"
     },
     "expansions_supported": {
         "question": "Que expansões são suportadas?",
         "answer": "Todas as três oficiais: Mosquito: Copia as habilidades dos insetos adjacentes. Joaninha: Move-se exatamente 2 passos por cima da colmeia, 1 passo para baixo. Pillbug: Atira peças adjacentes uma vez por turno."
     },
     "resign_ok": {
-        "question": "É aceitável desistir num jogo que tenho a certeza que vou perder?",
+        "question": "Posso desistir de uma partida?",
         "answer": "Sim. Tal como no xadrez, é perfeitamente aceitável conceder um jogo sem jogá-lo até à conclusão no tabuleiro se pensas que não tens hipótese de vitória."
     },
     "signup_required": {
         "question": "Posso jogar sem me registar?",
-        "answer": "Não. Mas criar uma conta é gratuito e simples."
+        "answer": "Não. Mas <register_link>criar uma conta</register_link> é gratuito e simples."
     },
     "mobile_friendly": {
         "question": "É compatível com dispositivos móveis?",
@@ -46,11 +47,11 @@
     },
     "mobile_app": {
         "question": "Existe uma aplicação móvel?",
-        "answer": "Ainda não. O Hivegame.com está disponível como uma aplicação web progressiva. Apenas adiciona-o ao ecrã inicial do teu telemóvel para uma experiência semelhante a uma aplicação."
+        "answer": "Ainda não, mas o Hivegame.com está disponível como aplicação web progressiva. Procura \"Adicionar ao ecrã principal\" nas definições do navegador para teres uma experiência semelhante à de uma aplicação."
     },
     "profile_navigation": {
-        "question": "Como navego para a minha Página de Perfil?",
-        "answer": "Quando tiveres sessão iniciada, clica no teu nome de utilizador no canto superior direito do ecrã para ir para a Página de Perfil."
+        "question": "Onde está a minha página de perfil?",
+        "answer": "Depois de iniciares sessão, clica no teu nome de utilizador no canto superior direito do ecrã para acederes à tua <profile_link>página de perfil</profile_link>."
     },
     "game_types": {
         "question": "Os jogos são por correspondência ou em tempo real?",
@@ -58,38 +59,38 @@
     },
     "start_game": {
         "question": "Como inicio um jogo?",
-        "answer": "Na página inicial, clica numa das seis configurações de Controlo de Tempo para começar um jogo ou no botão 'personalizado' para escolher configurações diferentes."
+        "answer": "Na <home_link>página inicial</home_link>, clica numa das seis opções de controlo de tempo para começar uma partida ou no botão \"Personalizado\" para escolheres outras configurações."
     },
     "time_controls": {
-        "question": "O que significam as configurações de Controlo de Tempo na página inicial?",
-        "answer": "As configurações de controlo de tempo ditam a velocidade do jogo. Para ilustrar, 3+3 significa que quando o jogo começa cada pessoa tem um total de 3 minutos. Quando é a sua vez, o tempo começa a contar para trás. Quando um turno é completado, 3 segundos são adicionados ao tempo disponível no final do turno. Todos os outros formatos de tempo funcionam de forma similar."
+        "question": "O que significa um controlo de tempo como 3+3? Vejo vários na página inicial",
+        "answer": "Numa partida em tempo real, 3+3 dá a cada jogador 3 minutos iniciais e acrescenta 3 segundos após cada jogada concluída. O teu relógio conta decrescentemente durante a tua vez.\n\nOs outros controlos com tempo inicial e incremento usam a mesma notação. As partidas por correspondência usam outras configurações, como dias por jogada ou um tempo total para cada jogador."
     },
     "realtime_vs_correspondence": {
-        "question": "Qual é a diferença entre jogos em Tempo Real, Correspondência e Sem Tempo?",
+        "question": "Qual é a diferença entre partidas em tempo real, por correspondência e sem limite de tempo?",
         "answer": "Jogos em tempo real devem ser completados dentro das configurações de tempo escolhidas, portanto tipicamente requerem que ambos os jogadores estejam online simultaneamente. Jogos de correspondência geralmente estendem-se por vários dias ou com pelo menos 1 jogada a cada x dias. Se não jogares a tua jogada a tempo, perdes o jogo. Jogos sem tempo explicam-se por si."
     },
     "casual_vs_rated": {
-        "question": "Qual é a diferença entre jogos Casuais e Classificados?",
-        "answer": "Podes escolher que o teu jogo seja classificado (sistema Glicko-2) e assim obter uma estimativa da tua habilidade e acompanhar o progresso ao longo do tempo. Novatos começam com uma classificação de 1500. Geralmente, ganhar aumenta a tua classificação, perder um jogo diminui-a. Classificação mais alta implica maior habilidade. Ganhar jogos contra oponentes com classificação muito mais baixa não aumenta a tua classificação materialmente. Mas ganhar jogos contra um oponente com classificação mais alta pode aumentar a tua classificação significativamente. Ganhar ou perder jogos Casuais não tem efeito na tua classificação. Lembrete: Jogos classificados só estão disponíveis se as três expansões forem usadas (formato MLP)."
+        "question": "Qual é a diferença entre partidas casuais e classificadas?",
+        "answer": "As partidas casuais não afetam a tua pontuação. As partidas classificadas atualizam-na consoante o resultado e permitem acompanhar a tua força de jogo ao longo do tempo. Só estão disponíveis com as três expansões (jogo completo)."
     },
     "why_elo_has_questionmark": {
-        "question": "Porque há um ? ao lado da minha classificação?",
-        "answer": "Um ? ao lado da tua classificação indica que a tua classificação é provisória, ou seja, deves esperar uma maior volatilidade nas classificações até teres jogado um número estatisticamente significativo de jogos para o sistema determinar a tua classificação com maior precisão."
+        "question": "O que significam ? e ~ junto à minha pontuação?",
+        "answer": "Um ? significa que o sistema ainda tem muita incerteza sobre a tua pontuação. Um ~ indica que a pontuação é provisória: está a consolidar-se, mas o sistema ainda precisa de mais resultados.\n\nEstes símbolos refletem a certeza da estimativa, não um número fixo de partidas. As pontuações sem nenhum dos símbolos estão suficientemente consolidadas para aparecer na classificação."
     },
     "base_vs_mlp": {
         "question": "Qual é a diferença entre o formato Base e MLP?",
         "answer": "MLP é a configuração competitiva padrão e usa as peças Mosquito, Joaninha e Pillbug (aka MLP). O jogo base não tem estes 3 insetos."
     },
     "private_vs_public": {
-        "question": "Qual é a diferença entre privado e público?",
-        "answer": "Um jogo público está disponível na página inicial para qualquer outro jogador se juntar. Um jogo privado fornece-te um link que podes enviar para outro jogador."
+        "question": "Qual é a diferença entre partidas públicas e privadas?",
+        "answer": "Uma partida pública aparece na <home_link>página inicial</home_link> para que qualquer outro jogador possa participar. Uma partida privada fornece-te uma ligação que podes enviar a outro jogador."
     },
     "rating_range": {
-        "question": "O que é o intervalo de classificação?",
+        "question": "Como funciona o intervalo de pontuação?",
         "answer": "Esta configuração permite apenas que oponentes dentro de uma variação de intervalo específica da tua classificação aceitem o jogo. Isto assegura que possas escolher oponentes que estão tão próximos (ou não!) da tua classificação como preferires."
     },
     "color_selection": {
-        "question": "O que é o hexágono Branco, Aleatório, Preto?",
+        "question": "Como escolho Branco, Preto ou Aleatório?",
         "answer": "Quando configuras um jogo, escolhes se queres começar como Branco, Preto, ou como determinado aleatoriamente pelo sistema."
     },
     "how_to_check_stack": {
@@ -98,11 +99,11 @@
     },
     "spectate_games": {
         "question": "Posso assistir a jogos?",
-        "answer": "Sim! Jogos em tempo real em curso são visíveis na página inicial. Clica em qualquer um para assistir."
+        "answer": "Sim! As partidas em tempo real em curso aparecem na <home_link>página inicial</home_link>. Clica numa para a observar."
     },
     "turn_alerts": {
-        "question": "Vou receber um alerta quando for a minha vez (para jogos por turnos)?",
-        "answer": "Sim, verás um ícone de mensagem vermelho no topo da página com um número indicando quantos jogos tens em curso. Alternativamente, navega para a tua Página de Perfil e podes filtrar por jogos atualmente Em Curso, Torneios Não Iniciados e jogos Completados."
+        "question": "Como sei quando é a minha vez de jogar?",
+        "answer": "As partidas à espera da tua jogada aparecem como símbolos vermelhos na barra superior, com o número de partidas que aguardam uma jogada tua. Clica num símbolo para abrir uma partida. Também podes consultar a tua <profile_link>página de perfil</profile_link> para ver as partidas em curso. Nas partidas por correspondência, podes ativar as notificações push do navegador ou as do Discord na <notifications_link>página de Notificações</notifications_link>. Para o Discord, junta-te ao nosso servidor e associa lá a tua conta Discord."
     },
     "correspondence_notifications": {
         "question": "Posso ser notificado quando for a minha vez de jogar num jogo de correspondência?",
@@ -110,23 +111,23 @@
     },
     "chat_basics": {
         "question": "Como funciona o chat?",
-        "answer": "As mensagens de chat são guardadas na base de dados. O chat está disponível para mensagens diretas, torneios e jogos, enquanto as conversas de jogadores e espectadores permanecem separadas. A página Mensagens reúne as tuas conversas recentes e mensagens não lidas."
+        "answer": "Podes conversar nas partidas e nos torneios ou enviar <message_icon>mensagens diretas</message_icon> a outros jogadores. Os jogadores e os espectadores têm chats de partida separados. Abre <messages_link>Mensagens</messages_link> para encontrares as tuas conversas e mensagens não lidas."
     },
     "tournament_entry": {
-        "question": "Qualquer pessoa pode juntar-se a um torneio? Há taxa de inscrição? E quanto aos prémios?",
+        "question": "Quem pode participar num torneio? Há taxas de inscrição ou prémios?",
         "answer": "Sim, podes juntar-te a um torneio mesmo sendo principiante. No entanto, alguns torneios podem ser restringidos por classificação ou podem ser apenas por convite como decidido pelo organizador do torneio. No momento da escrita, não há taxas de inscrição e não há prémios (para além de direitos de se gabar e aumentos de pontos de classificação!)"
     },
     "tournament_duration": {
-        "question": "Qual é a duração de um torneio? Quantos jogos? Como coordeno horários?",
-        "answer": "A página do torneio deve tipicamente delinear todos estes detalhes. Se tiveres perguntas, contacta o organizador do torneio. Atualmente, apenas torneios Round-Robin estão disponíveis, mas mais formatos serão adicionados em breve."
+        "question": "Quanto duram os torneios e como se combinam os horários das partidas?",
+        "answer": "A duração, o número de partidas e os seus horários dependem do formato e das configurações do torneio. Consulta os <tournaments_link>torneios</tournaments_link> e abre a página do torneio, ou contacta o organizador para saber os detalhes. O Hivegame.com suporta torneios todos contra todos, suíços, de eliminação e Arena."
     },
     "tournament_stats": {
-        "question": "Numa tabela de resultados de torneio, o que é H2H, WB, SB, Completado?",
-        "answer": "H2H - Registo frente a frente, que é o primeiro critério de desempate. WB - Ganhar como Preto, que é o segundo critério de desempate. SB - Pontuação Sonnebron-Berger, que é o terceiro critério de desempate. Completado - número de jogos completados."
+        "question": "Como são decididas as classificações e os desempates dos torneios?",
+        "answer": "Os jogadores são classificados segundo o sistema de pontuação do torneio. Em caso de igualdade de pontos, aplicam-se os desempates selecionados pela ordem indicada nos detalhes do torneio. Os critérios disponíveis dependem do formato e das configurações, por isso os torneios podem usar regras diferentes.\n\nAbre os detalhes a partir da <tournaments_link>lista de torneios</tournaments_link> para ver as regras de pontuação e a ordem dos desempates. O glossário abaixo explica os termos comuns, incluindo H2H, WB, SB e Terminadas."
     },
     "tournament_games": {
-        "question": "Onde vejo os meus jogos em progresso / ainda não iniciados?",
-        "answer": "Navega para a tua página de perfil e verás filtros para os teus jogos atualmente Em Curso e Jogos de Torneio Não Iniciados."
+        "question": "Onde encontro as minhas partidas em curso, pendentes e terminadas?",
+        "answer": "Abre a tua <profile_link>página de perfil</profile_link> para veres as partidas nos separadores «A jogar», «Pendente» e «Terminado»."
     },
     "change_password": {
         "question": "Como mudo a minha palavra-passe?",
@@ -134,58 +135,109 @@
     },
     "move_confirmation": {
         "question": "O que significam os diferentes modos de Confirmação de Jogada?",
-        "answer": "Ao fazer uma jogada há 3 modos: 1. Clique único - O rápido: se não queres perder tempo em jogos rápidos. Cuidado para não colocares mal ou moveres mal a peça porque um único clique faz e confirma imediatamente a jogada. 2. Duplo clique - O padrão: o primeiro clique para colocar/mover a peça e o segundo clique confirma a jogada. 3. Confirmação de relógio - O seguro: primeiro clique para colocar/mover e depois para confirmar a jogada clicas no teu próprio cronómetro. Modos de duplo clique ou confirmação de relógio são recomendados."
+        "answer": "Um clique: colocar ou mover uma peça confirma imediatamente a jogada. É a opção mais rápida, mas tem cuidado para não jogares por engano.\n\nDuplo clique: clica uma vez para colocar ou mover uma peça e outra vez para confirmar. É a opção predefinida.\n\nConfirmação no relógio: coloca ou move uma peça e depois clica no teu próprio relógio para confirmar.\n\nSão recomendados os modos Duplo clique ou Confirmação no relógio. Podes escolher o modo nas <settings_link>configurações do jogo</settings_link>."
     },
     "game_analysis": {
         "question": "Posso rever jogos completados com uma ferramenta de análise?",
-        "answer": "Sim, jogos completados têm um ícone de microscópio que carregará o jogo em modo de análise, mas esta funcionalidade está atualmente em desenvolvimento, portanto não esperes muito ainda."
+        "answer": "Sim. Seleciona o <microscope_icon>ícone do microscópio</microscope_icon> numa partida terminada para abrir a <analysis_link>ferramenta de análise</analysis_link>, rever as jogadas e explorar variantes alternativas. Também podes abrir diretamente <analysis_link>Análise</analysis_link> para começar com um tabuleiro vazio e analisar livremente as tuas próprias jogadas."
     },
     "play_bots": {
         "question": "Posso jogar contra um bot?",
-        "answer": "Sim, clica no botão 'Jogar Bot' na página inicial e seleciona o bot contra o qual queres jogar. Um jogo sem tempo começará imediatamente."
+        "answer": "Sim, clica no botão \"Jogar com bot\" na <home_link>página inicial</home_link> e escolhe o bot que queres enfrentar. Começa imediatamente uma partida sem limite de tempo. Também encontras outros bots a oferecer partidas classificadas no separador Bots da página inicial."
     },
     "get_better": {
         "question": "Como posso melhorar no Hive?",
         "answer": "Confere a <resources_link>Secção de Recursos</resources_link> do site para uma lista selecionada de recursos para começar."
     },
     "community_forum": {
-        "question": "Existe um fórum da comunidade?",
-        "answer": "Sim! Junta-te ao servidor Discord da Comunidade Mundial de Hive <discord_link>aqui</discord_link> - cheio de jogadores amigáveis e conversas estratégicas."
+        "question": "Onde encontro a comunidade de Hive e as redes sociais?",
+        "answer": "Junta-te ao servidor Discord World Hive Community <discord_link>aqui</discord_link> para conheceres outros jogadores e conversares sobre Hive. Visita a nossa <resources_link>página de Recursos / Ligações da comunidade</resources_link> para encontrares redes sociais da comunidade, vídeos, livros, ferramentas e outros sites úteis sobre Hive."
     },
     "play_specific_players": {
-        "question": "Posso jogar apenas com jogadores específicos?",
-        "answer": "Claro! Podes usar o ícone de espadas cruzadas ao lado do nome de um jogador para desafiá-lo diretamente. Alternativamente, cria um jogo privado (clica no botão 'Personalizado' na página inicial) e partilha o link privadamente. Apenas um jogador com o link pode juntar-se."
+        "question": "Como jogo com um amigo ou desafio um jogador específico?",
+        "answer": "Para jogar com um amigo, cria uma partida privada com o botão \"Personalizado\" na <home_link>página inicial</home_link> e partilha a ligação. Só pode participar um jogador que tenha a ligação.\n\nTambém podes desafiar diretamente um jogador específico com o ícone das espadas cruzadas junto ao nome dele."
     },
     "report_bugs": {
         "question": "Onde posso reportar bugs ou sugerir novas funcionalidades?",
-        "answer": "Junta-te ao servidor Discord do Hivegame.com <discord_link>aqui</discord_link> e podes enviar mensagens aos developers usando os canais apropriados."
+        "answer": "Junta-te ao servidor Discord do Hivegame.com <discord_link>aqui</discord_link> e contacta os programadores nos canais apropriados. Se preferires, também podes <issues_link>comunicar um erro no GitHub</issues_link>."
     },
     "opponent_is_abusive": {
-        "question": "O que posso fazer se o meu oponente for abusivo ou disruptivo no jogo/chat ou tiver um nome de utilizador inapropriado?",
-        "answer": "Tira uma captura de ecrã do comportamento e contacta-nos via Discord @klautcomputing / @ionoi e resolveremos."
+        "question": "Se o meu adversário for ofensivo ou perturbador na partida/no chat, ou tiver um nome de utilizador inapropriado, o que posso fazer? Posso denunciá-lo ou bloqueá-lo?",
+        "answer": "Se quiseres, podes ir à página de perfil dele e bloqueá-lo com o botão vermelho Bloquear. Deixará de te poder enviar mensagens diretas e as mensagens dele nos chats das partidas e dos torneios ficarão ocultas por predefinição. Depois, faz uma captura de ecrã do comportamento e contacta-nos no Discord @klautcomputing / @ionoi; trataremos da situação."
     },
     "why_not_in_top_players": {
-        "question": "Porque não apareço nos jogadores com classificação mais alta?",
-        "answer": "Ainda não jogaste jogos suficientes para o sistema ter a certeza de quão precisa é a tua classificação. Continua a jogar mais alguns jogos, ganha-os esperançosamente e aparecerás."
+        "question": "Porque não apareço na classificação?",
+        "answer": "Para apareceres na classificação, a tua pontuação tem de estar suficientemente consolidada nessa categoria de ritmo. Isto depende da certeza da pontuação, não de ganhar um número fixo de partidas.\n\nQuando cumpres os requisitos, a tua posição depende da tua pontuação em comparação com a dos outros jogadores elegíveis. Consulta as <leaderboard_link>classificações</leaderboard_link> de cada ritmo de jogo."
     },
     "can_i_play_base_game": {
         "question": "Posso jogar sem expansões?",
-        "answer": "Sim. Podes alternar se as expansões são usadas ao criar um jogo, e jogar sem expansões é bom para principiantes! Jogos classificados só estão disponíveis se as expansões forem usadas, pois é o formato competitivo oficial."
+        "answer": "Sim. Ao criares uma partida podes escolher jogar sem expansões (jogo base) ou com as três expansões (jogo completo ou Hive PLM).\n\nO jogo base é adequado para principiantes, mas as partidas classificadas só estão disponíveis com o jogo completo, que é o formato competitivo oficial."
     },
     "how_to_recover_password": {
         "question": "Esqueci-me da minha palavra-passe! O que faço agora?",
-        "answer": "Envia um email para leex@klautcomputing.de do mesmo endereço de email que usas no Hivegame.com pedindo um reset de palavra-passe."
+        "answer": "Seleciona <reset_link>Esqueceste-te da palavra-passe?</reset_link> na <login_link>página de início de sessão</login_link>, introduz o endereço de email associado à tua conta e segue a ligação de reposição recebida por email."
     },
     "can_i_set_up_a_tournament": {
         "question": "Posso criar o meu próprio torneio?",
-        "answer": "Sim! Apenas clica em Criar Torneio e o resto deve ser auto-explicativo."
+        "answer": "Sim! Clica em <create_link>Criar torneio</create_link> para escolher o formato e as configurações do teu torneio."
     },
     "donation_amount": {
         "question": "Qual é o valor de doação recomendado?",
         "answer": "Todas as doações, grandes e pequenas, ajudam a manter o Hivegame.com a funcionar e são recebidas com gratidão. Considerando taxas de cartão de crédito e transações bancárias, uma doação mínima de 5 EUR é sugerida."
     },
     "how_donate": {
-        "question": "Como faço uma doação?",
+        "question": "Como posso fazer um donativo?",
         "answer": "Clica em Doar na barra de navegação ou <donate_link>usa este link</donate_link>"
+    },
+    "subtitle": "Ajuda sobre partidas, classificações, torneios e a tua conta.",
+    "search": {
+        "label": "Pesquisar nas perguntas frequentes",
+        "placeholder": "Em que precisas de ajuda?",
+        "clear": "Limpar pesquisa",
+        "no_results": "Não foram encontradas perguntas. Experimenta outra palavra-chave.",
+        "results": "Perguntas encontradas: {{count}}"
+    },
+    "rating_system": {
+        "question": "Como funciona a minha pontuação? É Elo?",
+        "answer": "O Hivegame.com utiliza o Glicko-2 para estimar a tua força de jogo. Em algumas partes do site a pontuação é chamada \"Elo\", mas o cálculo utiliza o Glicko-2. As novas pontuações começam em 1500.\n\nApós uma partida classificada, a tua pontuação muda conforme o resultado, a força do adversário e o grau de certeza do sistema sobre as pontuações de ambos. Uma pontuação mais alta indica uma força de jogo estimada maior. Ganhar a um adversário mais forte costuma dar mais pontos do que ganhar a um mais fraco. Perder costuma reduzir a pontuação.\n\nA dimensão das alterações pode variar à medida que o sistema obtém mais informação sobre cada jogador. As partidas casuais não afetam a tua pontuação."
+    },
+    "different_ratings": {
+        "question": "Porque tenho pontuações diferentes?",
+        "answer": "O Hivegame.com mantém pontuações separadas para partidas Bullet, Blitz, Rapid, Classic e por correspondência. A tua pontuação em cada categoria reflete os resultados nas partidas classificadas a esse ritmo, pelo que um resultado numa categoria não altera as pontuações nas outras."
+    },
+    "tournament_terms": {
+        "question": "O que significam os termos nas classificações dos torneios?",
+        "answer": "As regras exatas de pontuação e desempate dependem do formato e das configurações do torneio. Estes são termos comuns que podes encontrar; nem todos os torneios os utilizam todos.",
+        "cut_name": "Variantes Cut / Median",
+        "cut_answer": "Excluem determinadas pontuações mais baixas e/ou mais altas dos adversários. Os detalhes do torneio indicam a variante utilizada.",
+        "koya_answer": "Pontos obtidos contra adversários que atingem o limiar de pontuação definido pelas regras do torneio.",
+        "finished_name": "Terminadas",
+        "finished_answer": "O número de partidas terminadas. É uma contagem de partidas concluídas, não um critério de desempate adicional."
+    },
+    "game_controls": {
+        "question": "Posso propor um empate, desistir ou pedir para anular uma jogada?",
+        "answer": "Sim. Usa os controlos durante uma partida quando estiverem disponíveis. Clica uma vez num controlo e outra vez para confirmar.",
+        "draw": "Propõe um empate com o símbolo do aperto de mão. O adversário pode aceitar ou recusar; a partida só termina empatada se aceitar.",
+        "resign": "Desiste com o símbolo da bandeira. Assim concedes a vitória ao adversário, sem que este tenha de aceitar.",
+        "takeback": "Pede para anular uma jogada com a seta de anular. O adversário pode aceitar ou recusar. A disponibilidade depende da partida e das configurações dos jogadores; não é possível anular jogadas nas partidas de torneio."
+    },
+    "notification_events": {
+        "question": "Que acontecimentos geram notificações?",
+        "answer": "O sino no canto superior direito fica vermelho quando tens notificações. Clica para ver avisos como:",
+        "messages": "Novas mensagens no chat",
+        "challenges": "Desafios diretos para uma partida",
+        "invitations": "Convites para participar num torneio ou ajudar a organizá-lo",
+        "status": "Torneios a começar ou a terminar",
+        "pairings": "Novas partidas de torneio prontas a jogar",
+        "schedules": "Horários de partidas propostos ou aceites",
+        "settings": "Podes gerir as notificações push do navegador e as do Discord na <notifications_link>página de Notificações</notifications_link>."
+    },
+    "game_archive": {
+        "question": "Como posso pesquisar as partidas jogadas no Hivegame.com?",
+        "answer": "Abre o <archive_link>Arquivo</archive_link>, define filtros como jogadores, datas ou ritmo de jogo e clica em Pesquisar."
+    },
+    "opening_statistics": {
+        "question": "Onde posso encontrar estatísticas sobre as aberturas jogadas no Hivegame.com?",
+        "answer": "Abre <analysis_link>Análise</analysis_link> e seleciona o separador Explorador para ver a frequência com que as jogadas foram feitas e os seus resultados. Faz jogadas para explorar as estatísticas de diferentes posições de abertura."
     }
 }

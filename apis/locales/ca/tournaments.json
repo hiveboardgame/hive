@@ -702,7 +702,16 @@
             "seed_descending": "Cap de sèrie ↓",
             "matches_won": "Enfrontaments guanyats",
             "game_points": "Punts de partida",
-            "match_points": "Punts de matx"
+            "match_points": "Punts de matx",
+            "direct_encounter": "Enfrontament directe",
+            "wins_as_black": "Victòries amb negres",
+            "sonneborn_berger": "Sonneborn-Berger",
+            "buchholz": "Buchholz",
+            "progressive": "Puntuació progressiva",
+            "koya": "Koya",
+            "score_wins": "Victòries per puntuació",
+            "games_won": "Partides guanyades",
+            "round_wins": "Rondes guanyades"
         },
         "label": "Desempats",
         "equal_scores": "Les puntuacions iguals comparteixen lloc.",
@@ -729,7 +738,9 @@
         "cut_both": ", excloent les {{low}} puntuacions més baixes i les {{high}} més altes",
         "sonneborn_berger": "Pondera els teus resultats segons les puntuacions dels rivals{{cut}}.",
         "buchholz": "Suma les puntuacions dels rivals{{cut}}.",
-        "koya_threshold": "Punts contra rivals que han obtingut almenys {{numerator}}/{{denominator}} dels punts disponibles."
+        "koya_threshold": "Punts contra rivals que han obtingut almenys {{numerator}}/{{denominator}} dels punts disponibles.",
+        "game_points": "Punts comptant cada partida individual",
+        "match_points": "Punts comptant cada enfrontament com un únic resultat"
     },
     "admission": {
         "invited": "Convidat",

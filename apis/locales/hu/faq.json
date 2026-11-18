@@ -1,19 +1,20 @@
 {
     "title": "Gyakori kérdések",
     "sections": {
-        "getting_started": "Kezdés",
-        "game_settings": "Játék beállítások",
-        "account_configuration": "Fiók beállítás",
-        "more_features": "További funkciók",
-        "community_support": "Közösség & Támogatás",
-        "donating": "Adományozás a Hivegame.com-nak"
+        "getting_started": "Első lépések",
+        "game_settings": "Játék és játékbeállítások",
+        "account_configuration": "Fiók és értesítések",
+        "more_features": "Tanulás és gyakorlás",
+        "community_support": "Közösség és segítség",
+        "donating": "A Hivegame.com támogatása",
+        "ratings": "Értékszámok és ranglisták"
     },
     "how_to_help": {
         "question": "Hogyan támogathatom az oldalt?",
         "answers": {
             "item1": "Terjeszd a hírt, hogy több játékost hozzál ide!",
             "item2": "Járulj hozzá a weboldal fejlesztéséhez, javításokhoz, hibajavításokhoz vagy karbantartáshoz a <github_link>GitHub</github_link>-on keresztül",
-            "item3": "Pénzbeli adományok - lásd a Donációk a Hivegame.com-hoz szekciót a GYIK-ben"
+            "item3": "Pénzbeli adományok: látogass el az <donate_link>Adományozás oldalra</donate_link>"
         }
     },
     "how_to_get_crown": {
@@ -26,19 +27,19 @@
     },
     "hive_rules": {
         "question": "Mik a Hive szabályai?",
-        "answer": "Minden játékos felváltva helyez el vagy mozgat lapokat azzal a céllal, hogy körülvegye az ellenfél méhkirálynőjét. A teljes szabályok <rules_link>itt PDF formátumban</rules_link> találhatók, vagy ha jobban kedveled a videót, megnézhetsz egy <video_link>rövid YouTube videót itt</video_link>."
+        "answer": "A játékosok felváltva helyeznek le vagy mozgatnak lapkákat, hogy körbezárják az ellenfél méhkirálynőjét.\nA játékot megtanulhatod a <rules_link>PDF-szabályzatból</rules_link> vagy egy <video_link>rövid YouTube-videóból</video_link>. Interaktív oktatóanyag is készül!"
     },
     "expansions_supported": {
         "question": "Mely kiegészítők támogatottak?",
         "answer": "Mind a három hivatalos: Szúnyog: Másolja a szomszédos bogarak képességeit. Katicabogár: Pontosan 2 lépést mozog a kaptár tetején, 1 lépést lefelé. Pillbug: Körzőnként egyszer megdobja a szomszédos darabokat."
     },
     "resign_ok": {
-        "question": "Rendben van feladni egy játékot, amelyről biztos vagyok, hogy elveszítem?",
+        "question": "Feladhatok egy játszmát?",
         "answer": "Igen. Akárcsak a sakkban, teljesen rendben van feladni egy mérkőzést anélkül, hogy végig játszanád a táblán, ha úgy gondolod, hogy nincs esélyed a győzelemre."
     },
     "signup_required": {
         "question": "Játszhatok regisztráció nélkül?",
-        "answer": "Nem. De a fiók létrehozása ingyenes és egyszerű."
+        "answer": "Nem. De a <register_link>fiók létrehozása</register_link> ingyenes és egyszerű."
     },
     "mobile_friendly": {
         "question": "Mobilbarát-e?",
@@ -46,11 +47,11 @@
     },
     "mobile_app": {
         "question": "Van mobil alkalmazás?",
-        "answer": "Még nem. A Hivegame.com progresszív webalkalmazásként érhető el. Egyszerűen add hozzá a mobil kezdőképernyőjéhez egy alkalmazás-szerű élményért."
+        "answer": "Még nincs, de a Hivegame.com progresszív webalkalmazásként is elérhető. Keresd a böngésző beállításaiban a „Hozzáadás a kezdőképernyőhöz” lehetőséget az alkalmazásszerű használathoz."
     },
     "profile_navigation": {
-        "question": "Hogyan navigálok a Profil Oldalamra?",
-        "answer": "Amikor be vagy jelentkezve, kattints a felhasználónevedre a képernyő jobb felső sarkában, hogy a Profil Oldalra menj."
+        "question": "Hol van a profiloldalam?",
+        "answer": "Bejelentkezés után kattints a jobb felső sarokban a felhasználónevedre a <profile_link>profiloldalad</profile_link> megnyitásához."
     },
     "game_types": {
         "question": "A játékok levelezősek vagy valós idejűek?",
@@ -58,38 +59,38 @@
     },
     "start_game": {
         "question": "Hogyan indítok egy játékot?",
-        "answer": "A főoldalon kattints a hat Időkontroll beállítás egyikére a játék indításához vagy az 'egyéni' gombra különböző beállítások választásához."
+        "answer": "A <home_link>főoldalon</home_link> kattints a hat időbeosztás egyikére a játszma indításához, vagy az „Egyéni” gombra más beállítások kiválasztásához."
     },
     "time_controls": {
-        "question": "Mit jelentenek az Időkontroll beállítások a főoldalon?",
-        "answer": "Az időkontroll beállítások a játék sebességét határozzák meg. Példaként a 3+3 azt jelenti, hogy amikor a játék kezdődik, minden személynek összesen 3 perce van. Amikor soron van, az idő elkezdődik visszaszámlálni. Amikor egy kör befejeződik, 3 másodperc adódik a rendelkezésre álló időhöz a kör végén. Az összes többi időformátum hasonlóan működik."
+        "question": "Mit jelent egy olyan időbeosztás, mint a 3+3? Többet is látok a főoldalon",
+        "answer": "Valós idejű játszmában a 3+3 azt jelenti, hogy mindkét játékos 3 perccel kezd, és minden megtett lépés után 3 másodpercet kap. Az órád akkor jár, amikor te vagy soron.\n\nMás alapidővel és lépésenkénti bónuszidővel működő időbeosztások ugyanígy vannak jelölve. A levelező játszmák más beállításokat használnak, például lépésenkénti napokat vagy játékosonkénti teljes időkeretet."
     },
     "realtime_vs_correspondence": {
-        "question": "Mi a különbség a Valós idejű, Levelezős és Időtlen játékok között?",
+        "question": "Mi a különbség a valós idejű, a levelező és az időkorlát nélküli játszmák között?",
         "answer": "A valós idejű játékokat a kiválasztott időbeállításokon belül kell befejezni, így tipikusan mindkét játékosnak egyidejűleg online kell lennie. A levelezős játékok általában több napig tartanak vagy legalább 1 lépéssel minden x napban. Ha nem játszod le a lépésedet időben, elveszíted a játékot. Az időtlen játékok magukért beszélnek."
     },
     "casual_vs_rated": {
-        "question": "Mi a különbség a Casual és a Rangsorolt játékok között?",
-        "answer": "Választhatod, hogy a játékod rangsorolt legyen (Glicko-2 rendszer) és így becslést kapsz a képességeidről és követheted a fejlődést idővel. Az újoncok 1500-as értékeléssel kezdenek. Általában a győzelem növeli az értékelésedet, a játék elvesztése csökkenti. A magasabb értékelés magasabb képességet jelent. A sokkal alacsonyabb rangú ellenfelek elleni győzelem nem növeli lényegesen az értékelésedet. De a magasabb rangú ellenfél elleni győzelem jelentősen növelheti az értékelésedet. A Casual játékok nyerése vagy elvesztése nincs hatással az értékelésedre. Emlékeztető: A rangsorolt játékok csak akkor elérhetők, ha mind a három kiegészítő használatban van (MLP formátum)."
+        "question": "Mi a különbség a kötetlen és a rangsorolt játszmák között?",
+        "answer": "A kötetlen játszmák nem befolyásolják az értékszámodat. A rangsorolt játszmák az eredmény alapján módosítják, és segítenek követni a játékerőd alakulását. Csak mindhárom kiegészítővel érhetők el (teljes játék)."
     },
     "why_elo_has_questionmark": {
-        "question": "Miért van ? az értékelésem mellett?",
-        "answer": "Az értékelésed melletti ? azt jelzi, hogy az értékelésed ideiglenes, vagyis magasabb volatilitást kell várnod az értékelésekben, amíg statisztikailag jelentős számú játékot nem játszottál, hogy a rendszer nagyobb pontossággal meghatározza az értékelésedet."
+        "question": "Mit jelent a ? és a ~ az értékszámom mellett?",
+        "answer": "A ? azt jelenti, hogy a rendszer még nagyon bizonytalan az értékszámodban. A ~ azt jelzi, hogy az értékszámod ideiglenes: egyre megbízhatóbb, de a rendszernek még több eredményre van szüksége.\n\nEzek a jelek a becslés bizonyosságát tükrözik, nem egy rögzített játszmaszámot. A jel nélküli értékszámok elég megalapozottak a ranglistán való szerepléshez."
     },
     "base_vs_mlp": {
         "question": "Mi a különbség az Alap és MLP formátum között?",
         "answer": "Az MLP az alapértelmezett versenybeállítás és a Szúnyog, Katicabogár és Pillbug darabokat használja (aka MLP). Az alapjátékban nincs meg ez a 3 bogár."
     },
     "private_vs_public": {
-        "question": "Mi a különbség a privát és nyilvános között?",
-        "answer": "A nyilvános játék a főoldalon elérhető, hogy bármely másik játékos csatlakozhasson. A privát játék linket ad, amelyet elküldhetsz egy másik játékosnak."
+        "question": "Mi a különbség a nyilvános és a privát játszmák között?",
+        "answer": "Egy nyilvános játszma megjelenik a <home_link>főoldalon</home_link>, és bármely más játékos csatlakozhat hozzá. Egy privát játszmához kapsz egy hivatkozást, amelyet elküldhetsz egy másik játékosnak."
     },
     "rating_range": {
-        "question": "Mi az értékelési tartomány?",
+        "question": "Hogyan működik az értékszámtartomány?",
         "answer": "Ez a beállítás csak azokat az ellenfeleket engedi meg, akik az értékelésed egy meghatározott tartományváltozatán belül vannak, hogy elfogadják a meccset. Ez biztosítja, hogy olyan ellenfeleket választhass, akik olyan közel vannak (vagy nem!) az értékelésedhez, ahogy szeretnéd."
     },
     "color_selection": {
-        "question": "Mi a Fehér, Véletlen, Fekete hatszög?",
+        "question": "Hogyan választhatok Fehér, Fekete vagy Véletlen színt?",
         "answer": "Amikor beállítasz egy játékot, választod, hogy Fehérként, Feketként vagy a rendszer által véletlenszerűen meghatározva akarsz-e kezdeni."
     },
     "how_to_check_stack": {
@@ -98,11 +99,11 @@
     },
     "spectate_games": {
         "question": "Nézhetem a játékokat?",
-        "answer": "Igen! A folyamatban lévő valós idejű játékok láthatók a főoldalon. Kattints bármelyikre a nézéshez."
+        "answer": "Igen! A folyamatban lévő valós idejű játszmák láthatók a <home_link>főoldalon</home_link>. Kattints bármelyikre, ha nézni szeretnéd."
     },
     "turn_alerts": {
-        "question": "Kapok figyelmeztetést, amikor rajtam a sor (körökre osztott játékoknál)?",
-        "answer": "Igen, látni fogsz egy piros üzenet ikont az oldal tetején egy számmal, amely jelzi, hány játékban vagy soron. Alternatívaként navigálj a Profil Oldaladra és szűrhetsz a jelenleg Játszott, El nem kezdett Verseny és Befejezett játékokra."
+        "question": "Honnan tudom, hogy én következem?",
+        "answer": "A lépésedre váró játszmák piros jelekként jelennek meg a felső sávban, a rád váró játszmák számával együtt. Kattints egy jelre egy játszma megnyitásához. A folyamatban lévő játszmáidat a <profile_link>profiloldaladon</profile_link> is megnézheted. Levelező játszmákhoz az <notifications_link>Értesítések oldalon</notifications_link> kapcsolhatod be a böngészős push- vagy Discord-értesítéseket. A Discordhoz csatlakozz a szerverünkhöz, és kapcsold össze ott a Discord-fiókodat."
     },
     "correspondence_notifications": {
         "question": "Kaphatok értesítést, amikor rajtam a sor egy levelezős játékban?",
@@ -110,23 +111,23 @@
     },
     "chat_basics": {
         "question": "Hogyan működik a chat?",
-        "answer": "A chatüzeneteket az adatbázis tárolja. A chat közvetlen üzenetekhez, versenyekhez és játékokhoz érhető el, a játékosok és a nézők játékon belüli beszélgetései pedig elkülönülnek. Az Üzenetek oldal egy helyen mutatja a legutóbbi beszélgetéseidet és az olvasatlan üzeneteket."
+        "answer": "Cseveghetsz játszmákban és versenyeken, vagy <message_icon>közvetlen üzeneteket</message_icon> küldhetsz más játékosoknak. A játékosoknak és a nézőknek külön játszmacsevegésük van. Az <messages_link>Üzenetek</messages_link> oldalon találod a beszélgetéseidet és az olvasatlan üzeneteket."
     },
     "tournament_entry": {
-        "question": "Bárki csatlakozhat versenyhez? Van belépési díj? Mi a helyzet a díjakkal?",
+        "question": "Ki vehet részt egy versenyen? Van nevezési díj vagy nyeremény?",
         "answer": "Igen, csatlakozhatsz versenyhez, még ha kezdő is vagy. Azonban egyes versenyek korlátozottak lehetnek értékelés szerint vagy csak meghívásra lehetnek a verseny szervezőjének döntése szerint. Írás időpontjában nincsenek belépési díjak és díjak (kivéve a kérkedési jogokat és értékelési pont növekedéseket!)"
     },
     "tournament_duration": {
-        "question": "Mi a verseny időtartama? Hány játék? Hogyan koordináljam az ütemtervet?",
-        "answer": "A verseny oldalának tipikusan fel kellene vázolnia ezeket a részleteket. Ha kérdéseid vannak, lépj kapcsolatba a verseny szervezőjével. Jelenleg csak Round-Robin versenyek érhetők el, de hamarosan további formátumok lesznek hozzáadva."
+        "question": "Meddig tartanak a versenyek, és hogyan egyeztetik a játszmák időpontját?",
+        "answer": "Az időtartam, a játszmák száma és az időpontok egyeztetése a verseny formátumától és beállításaitól függ. Böngészd a <tournaments_link>versenyeket</tournaments_link>, és nyisd meg a verseny oldalát, vagy kérdezd a szervezőt a részletekről. A Hivegame.com körmérkőzéses, svájci rendszerű, kieséses és Arena versenyeket támogat."
     },
     "tournament_stats": {
-        "question": "Egy verseny eredmény táblázatban mi a H2H, WB, SB, Befejezett?",
-        "answer": "H2H - Közvetlen meccs, amely az első döntetlen bontó kritérium. WB - Győzelem Feketként, amely a második döntetlen bontó kritérium. SB - Sonnebron-Berger Pontszám, amely a harmadik döntetlen bontó kritérium. Befejezett - befejezett játékok száma."
+        "question": "Hogyan dől el a versenyek sorrendje és a holtversenyek feloldása?",
+        "answer": "A játékosokat a verseny pontozási rendszere szerint rangsorolják. Pontegyenlőségnél a kiválasztott holtversenykritériumokat a verseny részleteiben megadott sorrendben alkalmazzák. Az elérhető kritériumok a formátumtól és a beállításoktól függenek, így a versenyek szabályai eltérhetnek.\n\nA <tournaments_link>versenylistából</tournaments_link> nyisd meg a verseny részleteit a pontozás és a holtversenykritériumok sorrendjének megtekintéséhez. Az alábbi fogalomtár elmagyarázza a gyakori kifejezéseket, például a H2H, WB, SB és Befejezett jelentését."
     },
     "tournament_games": {
-        "question": "Hol láthatom a folyamatban lévő / még el nem kezdett játékaimat?",
-        "answer": "Navigálj a profil oldaladra és látni fogsz szűrőket a jelenleg Játszott és El nem kezdett Verseny Játékokhoz."
+        "question": "Hol találom a folyamatban lévő, függőben lévő és befejezett játszmáimat?",
+        "answer": "Nyisd meg a <profile_link>profiloldaladat</profile_link>, ahol a „Játszik”, „Függőben” és „Befejeződött” füleken találod a játszmáidat."
     },
     "change_password": {
         "question": "Hogyan változtatom meg a jelszavam?",
@@ -134,51 +135,51 @@
     },
     "move_confirmation": {
         "question": "Mit jelentenek a különböző Lépés Megerősítési módok?",
-        "answer": "Lépés végrehajtásakor 3 mód van: 1. Egy kattintás - A gyors: ha nem akarsz időt veszíteni gyors játékokban. Légy óvatos, nehogy rosszul helyezd el vagy mozgasd el a darabot, mert egy kattintás azonnal végrehajtja és megerősíti a lépést. 2. Dupla kattintás - Az alapértelmezett: az első kattintás a darab elhelyezéséhez/mozgatásához és a második kattintás megerősíti a lépést. 3. Óra megerősítés - A biztonságos: első kattintás az elhelyezéshez/mozgatáshoz és aztán a lépés megerősítéséhez a saját időmérődre kattintasz. A dupla kattintás vagy óra megerősítés módok ajánlottak."
+        "answer": "Egyszeres kattintás: egy lapka lerakása vagy mozgatása azonnal megerősíti a lépést. Ez a leggyorsabb lehetőség, de ügyelj a véletlen lépésekre.\n\nDupla kattintás: kattints egyszer a lapka lerakásához vagy mozgatásához, majd újra a megerősítéshez. Ez az alapértelmezett beállítás.\n\nMegerősítés az órán: rakj le vagy mozgass egy lapkát, majd kattints a saját órádra a megerősítéshez.\n\nA Dupla kattintás vagy a Megerősítés az órán mód ajánlott. A módot a <settings_link>játékbeállításoknál</settings_link> választhatod ki."
     },
     "game_analysis": {
         "question": "Átnézhetem a befejezett játékokat egy elemző eszközzel?",
-        "answer": "Igen, a befejezett játékoknál van mikroszkóp ikon, amely betölti a játékot elemző módba, de ez a funkció jelenleg fejlesztés alatt áll, ezért még ne várj túl sokat tőle."
+        "answer": "Igen. Egy befejezett játszmánál válaszd a <microscope_icon>mikroszkóp ikont</microscope_icon> az <analysis_link>elemzőeszköz</analysis_link> megnyitásához, a lépések áttekintéséhez és más változatok kipróbálásához. Közvetlenül is megnyithatod az <analysis_link>Elemzést</analysis_link>, hogy üres tábláról indulva szabadon elemezd a saját lépéseidet."
     },
     "play_bots": {
         "question": "Játszhatok bot ellen?",
-        "answer": "Igen, kattints a 'Bot Játék' gombra a főoldalon és válaszd ki a botot, amely ellen játszani akarsz. Egy időtlen játék azonnal kezdődik."
+        "answer": "Igen, kattints a <home_link>főoldalon</home_link> a „Bot ellen” gombra, és válaszd ki a kívánt botot. Azonnal elindul egy időkorlát nélküli játszma. A főoldal Botok fülén további, rangsorolt játszmákat kínáló botokat is találsz."
     },
     "get_better": {
         "question": "Hogyan javulhatok a Hive-ban?",
         "answer": "Nézd meg a weboldal <resources_link>Források Szekció</resources_link>ját egy összeállított lista erejéig a kezdéshez."
     },
     "community_forum": {
-        "question": "Van közösségi fórum?",
-        "answer": "Igen! Csatlakozz a Világ Hive Közösség Discord szerverhez <discord_link>itt</discord_link> - tele barátságos játékosokkal és stratégiai beszélgetésekkel."
+        "question": "Hol találom a Hive közösségét és közösségi oldalait?",
+        "answer": "Csatlakozz a World Hive Community Discord-szerveréhez <discord_link>itt</discord_link>, hogy más játékosokkal találkozz és a Hive-ról beszélgess. Az <resources_link>Források / Közösségi hivatkozások oldalunkon</resources_link> közösségi oldalakat, videókat, könyveket, eszközöket és más hasznos Hive-webhelyeket találsz."
     },
     "play_specific_players": {
-        "question": "Játszhatok meghatározott játékosokkal csak?",
-        "answer": "Természetesen! Használhatod a keresztezett kardok ikonját egy játékos neve mellett, hogy közvetlenül kihívd őt. Alternatívaként hozz létre egy privát játékot (kattints az 'Egyéni' gombra a főoldalon) és oszd meg a linket privátban. Csak olyan játékos tud csatlakozni, akinek megvan a link."
+        "question": "Hogyan játszhatok egy baráttal, vagy hívhatok ki egy adott játékost?",
+        "answer": "Ha egy baráttal szeretnél játszani, hozz létre privát játszmát a <home_link>főoldal</home_link> „Egyéni” gombjával, és oszd meg vele a hivatkozást. Csak olyan játékos csatlakozhat, akinek megvan a hivatkozás.\n\nEgy adott játékost közvetlenül is kihívhatsz a neve melletti keresztezett kardok ikonnal."
     },
     "report_bugs": {
         "question": "Hol jelenthetem a hibákat vagy javasolhatok új funkciókat?",
-        "answer": "Csatlakozz a Hivegame.com Discord szerverhez <discord_link>itt</discord_link> és üzenhetsz a fejlesztőknek a megfelelő csatornákon keresztül."
+        "answer": "Csatlakozz a Hivegame.com Discord-szerveréhez <discord_link>itt</discord_link>, és írj a fejlesztőknek a megfelelő csatornákon. Ha szeretnéd, a <issues_link>GitHubon is jelenthetsz hibát</issues_link>."
     },
     "opponent_is_abusive": {
-        "question": "Mit tehetek, ha az ellenfelem bántalmazó vagy zavaró a játékban/chatben vagy nem megfelelő felhasználóneve van?",
-        "answer": "Készíts képernyőképet a viselkedésről és lépj kapcsolatba velünk Discordon keresztül @klautcomputing / @ionoi és megoldjuk."
+        "question": "Mit tehetek, ha az ellenfelem sérteget vagy zavarja a játékot/csevegést, illetve nem megfelelő a felhasználóneve? Jelenthetem vagy letilthatom?",
+        "answer": "Ha szeretnéd, a profiloldalán a piros Letiltás gombbal letilthatod. Ezután nem küldhet neked közvetlen üzenetet, és a játszmákban vagy versenyeken írt üzenetei alapértelmezés szerint rejtve lesznek. Ezután készíts képernyőképet a viselkedésről, és keress minket Discordon: @klautcomputing / @ionoi. Foglalkozunk az üggyel."
     },
     "why_not_in_top_players": {
-        "question": "Miért nem jelennek meg a legjobban rangsorolt játékosok között?",
-        "answer": "Még nem játszottál elég játékot ahhoz, hogy a rendszer biztosan tudja, milyen pontos az értékelésed. Csak játssz még néhány játékot, remélhetőleg nyerd meg őket és megjelensz."
+        "question": "Miért nem szerepelek a ranglistán?",
+        "answer": "A ranglistára kerüléshez az értékszámodnak elég megalapozottnak kell lennie az adott időbeosztási kategóriában. Ez az értékszám bizonyosságától függ, nem meghatározott számú győzelemtől.\n\nHa teljesíted a feltételeket, a helyezésedet a többi jogosult játékoshoz viszonyított értékszámod határozza meg. Nézd meg az egyes időbeosztások <leaderboard_link>ranglistáit</leaderboard_link>."
     },
     "can_i_play_base_game": {
         "question": "Játszhatok kiegészítők nélkül?",
-        "answer": "Igen. Be-/kikapcsolhatod, hogy használnak-e kiegészítőket játék létrehozásakor, és a kiegészítők nélküli játék jó kezdőknek! A rangsorolt játékok csak akkor elérhetők, ha kiegészítők vannak használatban, mert ez a hivatalos verseny formátum."
+        "answer": "Igen. Játszma létrehozásakor választhatsz kiegészítők nélküli alapjátékot vagy mindhárom kiegészítőt használó teljes játékot (Hive PLM).\n\nAz alapjáték kezdőknek megfelelő, de rangsorolt játszmák csak a teljes játékkal érhetők el, mert ez a hivatalos versenyformátum."
     },
     "how_to_recover_password": {
         "question": "Elfelejtettem a jelszavam! Mit tegyek most?",
-        "answer": "Küldj egy emailt a leex@klautcomputing.de címre ugyanarról az email címről, amelyet a Hivegame.com-on használsz jelszó visszaállítás kérésével."
+        "answer": "Válaszd az <reset_link>Elfelejtetted a jelszavad?</reset_link> lehetőséget a <login_link>bejelentkezési oldalon</login_link>, add meg a fiókodhoz tartozó e-mail-címet, és kövesd az e-mailben kapott jelszó-visszaállítási hivatkozást."
     },
     "can_i_set_up_a_tournament": {
         "question": "Létrehozhatok saját versenyt?",
-        "answer": "Igen! Csak kattints a Verseny Létrehozása gombra és a többi magától értetődő."
+        "answer": "Igen! Kattints a <create_link>Verseny létrehozása</create_link> gombra a verseny formátumának és beállításainak kiválasztásához."
     },
     "donation_amount": {
         "question": "Mi az ajánlott adomány összeg?",
@@ -187,5 +188,56 @@
     "how_donate": {
         "question": "Hogyan adományozhatok?",
         "answer": "Kattints az Adományozás gombra a navigációs sávban vagy <donate_link>használd ezt a linket</donate_link>"
+    },
+    "subtitle": "Segítség a játékhoz, értékszámokhoz, versenyekhez és a fiókodhoz.",
+    "search": {
+        "label": "Keresés a gyakori kérdések között",
+        "placeholder": "Miben segíthetünk?",
+        "clear": "Keresés törlése",
+        "no_results": "Nincs találat. Próbálj másik kulcsszót.",
+        "results": "Talált kérdések: {{count}}"
+    },
+    "rating_system": {
+        "question": "Hogyan működik az értékszámom? Élő-pontszám?",
+        "answer": "A Hivegame.com a Glicko-2 rendszert használja a játékerőd becslésére. Az oldal egyes részein „Elo” néven szerepel az értékszám, de a számítás Glicko-2 alapján történik. Az új értékszámok 1500-ról indulnak.\n\nEgy rangsorolt játszma után az értékszámod az eredmény, az ellenfél játékereje és a két játékos értékszámának becslési bizonyossága alapján változik. A magasabb értékszám nagyobb becsült játékerőt jelez. Egy erősebb ellenfél legyőzése általában több pontot ér, mint egy gyengébbé. A vereség általában csökkenti az értékszámot.\n\nA változások mértéke módosulhat, ahogy a rendszer többet tud meg a játékosokról. A kötetlen játszmák nem befolyásolják az értékszámot."
+    },
+    "different_ratings": {
+        "question": "Miért van több értékszámom?",
+        "answer": "A Hivegame.com külön értékszámot vezet a Bullet, Blitz, Rapid, Classic és levelező játszmákhoz. Az egyes kategóriák értékszáma az adott időbeosztású rangsorolt eredményeidet tükrözi, ezért az egyik kategóriában elért eredmény nem módosítja a többi értékszámodat."
+    },
+    "tournament_terms": {
+        "question": "Mit jelentenek a versenyállásoknál használt kifejezések?",
+        "answer": "A pontos pontozási és holtversenyszabályok a verseny formátumától és beállításaitól függenek. Ezek gyakori kifejezések, amelyekkel találkozhatsz; nem minden verseny használja mindegyiket.",
+        "cut_name": "Cut / Median változatok",
+        "cut_answer": "Meghatározott legalacsonyabb és/vagy legmagasabb ellenfélpontszámokat hagynak figyelmen kívül. A verseny részletei jelzik, melyik változatot használják.",
+        "koya_answer": "A versenyszabályzatban meghatározott ponthatárt elérő ellenfelek ellen szerzett pontok.",
+        "finished_name": "Befejezett",
+        "finished_answer": "A befejezett játszmák száma. Ez a lezárt játszmák darabszáma, nem külön holtversenykritérium."
+    },
+    "game_controls": {
+        "question": "Ajánlhatok döntetlent, feladhatom a játszmát vagy kérhetek lépésvisszavonást?",
+        "answer": "Igen. Játszma közben használd az elérhető vezérlőgombokat. Kattints egyszer egy gombra, majd még egyszer a megerősítéshez.",
+        "draw": "A kézfogás jellel ajánlhatsz döntetlent. Az ellenfél elfogadhatja vagy elutasíthatja; a játszma csak elfogadás esetén lesz döntetlen.",
+        "resign": "A zászló jellel adhatod fel a játszmát. Ezzel átengeded a győzelmet az ellenfélnek, az ő elfogadása nélkül.",
+        "takeback": "A visszavonás nyíllal kérheted egy lépés visszavonását. Az ellenfél elfogadhatja vagy elutasíthatja. Az elérhetőség a játszmától és a játékosok beállításaitól függ; versenyjátszmákban nincs lépésvisszavonás."
+    },
+    "notification_events": {
+        "question": "Miről kapok értesítéseket?",
+        "answer": "A jobb felső sarokban lévő harang pirosra vált, ha értesítésed érkezett. Kattints rá, hogy lásd például ezeket:",
+        "messages": "Új csevegőüzenetek",
+        "challenges": "Közvetlen kihívások egy játszmára",
+        "invitations": "Meghívások versenyre vagy a szervezésben való segítségre",
+        "status": "Versenyek kezdete vagy vége",
+        "pairings": "Új, játékra kész versenyjátszmák",
+        "schedules": "Javasolt vagy elfogadott játékidőpontok",
+        "settings": "A böngészős push- és Discord-értesítéseket az <notifications_link>Értesítések oldalon</notifications_link> kezelheted."
+    },
+    "game_archive": {
+        "question": "Hogyan kereshetek a Hivegame.com-on lejátszott játszmák között?",
+        "answer": "Nyisd meg az <archive_link>Archívumot</archive_link>, állíts be szűrőket, például játékosokat, dátumokat vagy időbeosztást, majd kattints a Keresés gombra."
+    },
+    "opening_statistics": {
+        "question": "Hol találok statisztikákat a Hivegame.com-on játszott megnyitásokról?",
+        "answer": "Nyisd meg az <analysis_link>Elemzést</analysis_link>, és válaszd a Megnyitástár fület a lépések gyakoriságának és eredményeinek megtekintéséhez. Játssz végig lépéseket, hogy különböző megnyitási állások statisztikáit fedezhesd fel."
     }
 }
