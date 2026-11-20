@@ -198,6 +198,15 @@ diesel::table! {
 }
 
 diesel::table! {
+    player_profiles (user_id) {
+        user_id -> Uuid,
+        flag -> Nullable<Text>,
+        bio -> Text,
+        bio_restricted -> Bool,
+    }
+}
+
+diesel::table! {
     push_devices (id) {
         id -> Uuid,
         user_id -> Uuid,
@@ -420,6 +429,7 @@ diesel::joinable!(game_hashes -> games (game_id));
 diesel::joinable!(games_users -> games (game_id));
 diesel::joinable!(games_users -> users (user_id));
 diesel::joinable!(notification_preferences -> users (user_id));
+diesel::joinable!(player_profiles -> users (user_id));
 diesel::joinable!(push_devices -> users (user_id));
 diesel::joinable!(ratings -> users (user_uid));
 diesel::joinable!(tournament_elimination_nodes -> tournaments (tournament_id));
@@ -456,6 +466,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     games_users,
     home_banner,
     notification_preferences,
+    player_profiles,
     push_devices,
     ratings,
     schedule_offers,

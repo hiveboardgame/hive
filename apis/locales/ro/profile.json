@@ -25,5 +25,26 @@
         "highest_rated_players_by_speed": "Jucătorii cu cel mai mare rating, după ritmul de joc.",
         "top_rated_bots": "Boți cu cel mai mare rating",
         "highest_rated_bots_by_speed": "Boții cu cel mai mare rating, după ritmul de joc."
+    },
+    "about": {
+        "title": "Despre mine",
+        "edit": "Editează biografia",
+        "restricted": "Un administrator a restricționat editarea biografiei. Poți schimba în continuare steagul.",
+        "links_hint": "Opțional, până la 300 de caractere. Sunt acceptate linkuri cu nume ([text](https://…)) și adrese web.",
+        "load_error": "Profilul nu a putut fi încărcat.",
+        "too_long": "Biografia trebuie să conțină cel mult 300 de caractere.",
+        "moderate": "Moderează biografia",
+        "moderation_help": "Restricționarea șterge biografia actuală și împiedică proprietarul să o editeze până la restabilirea permisiunii. Textul înlocuitor salvat rămâne public.",
+        "replacement": "Biografie înlocuitoare",
+        "clear": "Șterge biografia",
+        "reinstate": "Restabilește editarea",
+        "restrict": "Șterge și restricționează"
+    },
+    "flag": {
+        "choose": "Alege un steag",
+        "search": "Caută steaguri",
+        "none": "Fără steag",
+        "save_failed": "Steagul nu a putut fi salvat. Încearcă din nou.",
+        "invalid": "Alege un steag acceptat."
     }
 }

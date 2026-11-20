@@ -24,5 +24,26 @@
         "highest_rated_players_by_speed": "Highest rated players by speed.",
         "top_rated_bots": "Top Rated Bots",
         "highest_rated_bots_by_speed": "Highest rated bots by speed."
+    },
+    "about": {
+        "title": "About",
+        "edit": "Edit bio",
+        "restricted": "An administrator has restricted bio editing. You can still change your flag.",
+        "links_hint": "Optional, up to 300 characters. Named links ([label](https://…)) and web addresses are supported.",
+        "load_error": "Could not load the profile.",
+        "too_long": "The bio must contain at most 300 characters.",
+        "moderate": "Moderate bio",
+        "moderation_help": "Restricting clears the current bio and disables owner editing until reinstated. Saved replacement text remains public.",
+        "replacement": "Replacement bio",
+        "clear": "Clear bio",
+        "reinstate": "Reinstate editing",
+        "restrict": "Clear and restrict"
+    },
+    "flag": {
+        "choose": "Choose a flag",
+        "search": "Search flags",
+        "none": "No flag",
+        "save_failed": "Could not save your flag. Please try again.",
+        "invalid": "Choose a supported flag."
     }
 }

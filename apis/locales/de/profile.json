@@ -24,5 +24,26 @@
         "highest_rated_players_by_speed": "Spieler mit der höchsten Wertung je Tempo.",
         "top_rated_bots": "Bots mit der höchsten Wertung",
         "highest_rated_bots_by_speed": "Bots mit der höchsten Wertung je Tempo."
+    },
+    "about": {
+        "title": "Über mich",
+        "edit": "Biografie bearbeiten",
+        "restricted": "Ein Administrator hat die Bearbeitung der Biografie eingeschränkt. Du kannst weiterhin deine Flagge ändern.",
+        "links_hint": "Optional, bis zu 300 Zeichen. Benannte Links ([Text](https://…)) und Webadressen werden unterstützt.",
+        "load_error": "Das Profil konnte nicht geladen werden.",
+        "too_long": "Die Biografie darf höchstens 300 Zeichen enthalten.",
+        "moderate": "Biografie moderieren",
+        "moderation_help": "Eine Einschränkung löscht die aktuelle Biografie und sperrt die Bearbeitung durch den Besitzer bis zur Freigabe. Gespeicherter Ersatztext bleibt öffentlich.",
+        "replacement": "Ersatzbiografie",
+        "clear": "Biografie löschen",
+        "reinstate": "Bearbeitung freigeben",
+        "restrict": "Löschen und einschränken"
+    },
+    "flag": {
+        "choose": "Flagge auswählen",
+        "search": "Flaggen suchen",
+        "none": "Keine Flagge",
+        "save_failed": "Die Flagge konnte nicht gespeichert werden. Bitte versuche es erneut.",
+        "invalid": "Wähle eine unterstützte Flagge."
     }
 }

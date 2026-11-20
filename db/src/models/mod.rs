@@ -11,6 +11,7 @@ mod game_hash;
 mod game_user;
 mod home_banner;
 mod notification_preferences;
+mod player_profile;
 mod push_device;
 mod rating;
 mod schedule;
@@ -42,6 +43,7 @@ pub use notification_preferences::{
     NotificationPreferences,
     NotificationPreferencesUpdate,
 };
+pub use player_profile::{BioModeration, PlayerProfile};
 pub use push_device::{NewPushDevice, PushDevice};
 pub use rating::{NewRating, Rating};
 pub use schedule::ScheduleOffer;

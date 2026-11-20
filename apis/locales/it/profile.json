@@ -24,5 +24,26 @@
         "highest_rated_players_by_speed": "Giocatori con punteggio più alto per cadenza.",
         "top_rated_bots": "Bot con punteggio più alto",
         "highest_rated_bots_by_speed": "Bot con punteggio più alto per cadenza."
+    },
+    "about": {
+        "title": "Informazioni",
+        "edit": "Modifica la bio",
+        "restricted": "Un amministratore ha limitato la modifica della bio. Puoi ancora cambiare la bandiera.",
+        "links_hint": "Facoltativa, fino a 300 caratteri. Sono supportati link con nome ([testo](https://…)) e indirizzi web.",
+        "load_error": "Impossibile caricare il profilo.",
+        "too_long": "La bio deve contenere al massimo 300 caratteri.",
+        "moderate": "Modera la bio",
+        "moderation_help": "La restrizione cancella la bio attuale e impedisce al proprietario di modificarla fino al ripristino del permesso. Il testo sostitutivo salvato resta pubblico.",
+        "replacement": "Bio sostitutiva",
+        "clear": "Cancella la bio",
+        "reinstate": "Riabilita la modifica",
+        "restrict": "Cancella e limita"
+    },
+    "flag": {
+        "choose": "Scegli una bandiera",
+        "search": "Cerca bandiere",
+        "none": "Nessuna bandiera",
+        "save_failed": "Impossibile salvare la bandiera. Riprova.",
+        "invalid": "Scegli una bandiera supportata."
     }
 }

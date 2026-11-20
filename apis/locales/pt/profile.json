@@ -24,5 +24,26 @@
         "highest_rated_players_by_speed": "Jogadores com melhor classificação por ritmo de jogo.",
         "top_rated_bots": "Bots com melhor classificação",
         "highest_rated_bots_by_speed": "Bots com melhor classificação por ritmo de jogo."
+    },
+    "about": {
+        "title": "Sobre mim",
+        "edit": "Editar biografia",
+        "restricted": "Um administrador restringiu a edição da biografia. Ainda podes alterar a tua bandeira.",
+        "links_hint": "Opcional, até 300 caracteres. São aceites ligações com nome ([texto](https://…)) e endereços web.",
+        "load_error": "Não foi possível carregar o perfil.",
+        "too_long": "A biografia deve ter no máximo 300 caracteres.",
+        "moderate": "Moderar biografia",
+        "moderation_help": "Restringir apaga a biografia atual e impede o proprietário de a editar até que a permissão seja restabelecida. O texto de substituição guardado permanece público.",
+        "replacement": "Biografia de substituição",
+        "clear": "Apagar biografia",
+        "reinstate": "Restabelecer edição",
+        "restrict": "Apagar e restringir"
+    },
+    "flag": {
+        "choose": "Escolher bandeira",
+        "search": "Pesquisar bandeiras",
+        "none": "Sem bandeira",
+        "save_failed": "Não foi possível guardar a bandeira. Tenta novamente.",
+        "invalid": "Escolhe uma bandeira suportada."
     }
 }
