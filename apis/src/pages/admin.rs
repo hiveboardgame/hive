@@ -9,7 +9,7 @@ use crate::{
             user_identity::UserIdentity,
             user_search::UserSearch,
         },
-        organisms::chat::ResolvedChatWindow,
+        organisms::{chat::ResolvedChatWindow, honeytrap::Honeytrap},
         update_from_event::update_from_input,
     },
     functions::{home_banner, moderation, realtime_games, users::get_profile},
@@ -23,6 +23,7 @@ use leptos::{html, prelude::*};
 use leptos_use::use_interval_fn;
 use shared_types::ConversationKey;
 
+// TODO: Replace existing admin-only translations with English copy.
 #[component]
 pub fn Admin() -> impl IntoView {
     let i18n = use_i18n();
@@ -57,6 +58,9 @@ pub fn Admin() -> impl IntoView {
                     body_class="space-y-3"
                 >
                     <RealtimeGamesControl />
+                </Panel>
+                <Panel title="Crawler observations" body_class="space-y-2">
+                    <Honeytrap />
                 </Panel>
                 <Panel
                     title=move || t_string!(i18n, common.admin.telemetry.title)

@@ -80,6 +80,9 @@ pub fn Account() -> impl IntoView {
 
     view! {
         <PageShell variant=PageShellVariant::Form>
+            <a href="/site-index/account" rel="external" class="sr-only" tabindex="-1">
+                "Game index"
+            </a>
             <div class="flex flex-col gap-1">
                 <h1 class="ui-page-title">{t!(i18n, common.account.title)}</h1>
                 <p class="ui-page-subtitle">

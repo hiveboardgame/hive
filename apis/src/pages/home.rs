@@ -21,6 +21,9 @@ pub fn Home() -> impl IntoView {
     let banner = OnceResource::new(async move { home_banner::get().await.ok().flatten() });
     view! {
         <PageShell variant=PageShellVariant::Dashboard class="overflow-x-hidden">
+            <a href="/site-index/lobby" rel="external" class="sr-only" tabindex="-1">
+                "Game index"
+            </a>
             <Transition>
                 {move || {
                     banner
