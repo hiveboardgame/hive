@@ -2,7 +2,11 @@ use crate::{
     common::login_redirect_url,
     components::{
         layouts::base_layout::BaseLayout,
-        organisms::{direct_challenge_modal::DirectChallengeModal, display_games::DisplayGames},
+        organisms::{
+            direct_challenge_modal::DirectChallengeModal,
+            display_games::DisplayGames,
+            profile_tournaments::ProfileTournaments,
+        },
     },
     i18n::{t_string, use_i18n, I18nContextProvider},
     pages::{
@@ -162,6 +166,10 @@ pub fn App() -> impl IntoView {
                         <Route path=path!("") view=|| view! { <Home /> } />
                         <Route path=path!("/external-link") view=ExternalLink />
                         <Route path=path!("/@/me") view=|| view! { <ProfileMe /> } />
+                        <Route
+                            path=path!("/@/me/tournaments")
+                            view=|| view! { <ProfileMe tab="/tournaments" /> }
+                        />
                         <ParentRoute
                             path=path!("/@/:username")
                             view=|| {
@@ -188,6 +196,18 @@ pub fn App() -> impl IntoView {
                             <Route
                                 path=path!("unstarted")
                                 view=|| view! { <DisplayGames tab_view=GameProgress::Unstarted /> }
+                            />
+                            <Route
+                                path=path!("tournaments")
+                                view=|| view! { <ProfileTournaments /> }
+                            />
+                            <Route
+                                path=path!("tournaments/upcoming")
+                                view=|| view! { <ProfileTournaments /> }
+                            />
+                            <Route
+                                path=path!("tournaments/finished")
+                                view=|| view! { <ProfileTournaments /> }
                             />
                         </ParentRoute>
                         <Route path=path!("/register") view=|| view! { <Register /> } />
@@ -337,16 +357,14 @@ pub fn App() -> impl IntoView {
                             <Route
                                 path=path!("joined")
                                 view=|| {
-                                    view! {
-                                        <LegacyTournamentsRedirect path="/tournaments/mine/joined" />
-                                    }
+                                    view! { <LegacyTournamentsRedirect path="/@/me/tournaments" /> }
                                 }
                             />
                             <Route
                                 path=path!("hosting")
                                 view=|| {
                                     view! {
-                                        <LegacyTournamentsRedirect path="/tournaments/mine/organizing" />
+                                        <LegacyTournamentsRedirect path="/tournaments/organize" />
                                     }
                                 }
                             />
@@ -357,19 +375,13 @@ pub fn App() -> impl IntoView {
                                 view=|| view! { <Outlet /> }
                             >
                                 <Route path=path!("") view=MineTournamentsRedirect />
-                                <Route
-                                    path=path!("joined")
-                                    view=|| {
-                                        view! {
-                                            <TournamentList category=TournamentCategory::Joined />
-                                        }
-                                    }
-                                />
+                                <Route path=path!("joined") view=MineTournamentsRedirect />
+                                <Route path=path!("history") view=MineTournamentsRedirect />
                                 <Route
                                     path=path!("organizing")
                                     view=|| {
                                         view! {
-                                            <TournamentList category=TournamentCategory::Organizing />
+                                            <LegacyTournamentsRedirect path="/tournaments/organize" />
                                         }
                                     }
                                 />
@@ -377,15 +389,37 @@ pub fn App() -> impl IntoView {
                                     path=path!("invitations")
                                     view=|| {
                                         view! {
-                                            <TournamentList category=TournamentCategory::Invitations />
+                                            <LegacyTournamentsRedirect path="/tournaments/invitations" />
                                         }
                                     }
                                 />
+                            </ProtectedParentRoute>
+                            <ProtectedParentRoute
+                                condition=is_logged_in
+                                path=path!("organize")
+                                redirect_path=|| untrack(login_redirect_url)
+                                view=|| view! { <Outlet /> }
+                            >
                                 <Route
-                                    path=path!("history")
+                                    path=path!("")
                                     view=|| {
                                         view! {
-                                            <TournamentList category=TournamentCategory::History />
+                                            <TournamentList category=TournamentCategory::Organizing />
+                                        }
+                                    }
+                                />
+                            </ProtectedParentRoute>
+                            <ProtectedParentRoute
+                                condition=is_logged_in
+                                path=path!("invitations")
+                                redirect_path=|| untrack(login_redirect_url)
+                                view=|| view! { <Outlet /> }
+                            >
+                                <Route
+                                    path=path!("")
+                                    view=|| {
+                                        view! {
+                                            <TournamentList category=TournamentCategory::Invitations />
                                         }
                                     }
                                 />

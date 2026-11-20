@@ -13,7 +13,7 @@ use crate::{
         },
         molecules::{empty_state::EmptyState, panel::Panel},
     },
-    functions::tournaments::browse_tournaments,
+    functions::tournaments::{browse_tournaments, get_my_tournament_counts},
     i18n::*,
     providers::{AuthContext, AuthIdentity},
     responses::{TournamentBrowsePage, TournamentCategory, TournamentFamily, TournamentTimeFilter},
@@ -34,14 +34,6 @@ fn tournament_tab_class(active: bool) -> &'static str {
         "ui-button ui-button-primary ui-button-md no-link-style"
     } else {
         "ui-button ui-button-secondary ui-button-md no-link-style"
-    }
-}
-
-fn mine_tab_class(active: bool) -> &'static str {
-    if active {
-        "shrink-0 border-b-2 border-pillbug-teal px-3 py-2 text-sm font-semibold no-link-style"
-    } else {
-        "shrink-0 border-b-2 border-transparent px-3 py-2 text-sm text-gray-600 dark:text-gray-300 no-link-style"
     }
 }
 
@@ -106,8 +98,8 @@ fn category_path(category: TournamentCategory) -> &'static str {
         TournamentCategory::InProgress => "/tournaments/in-progress",
         TournamentCategory::Finished => "/tournaments/finished",
         TournamentCategory::Joined => "/tournaments/mine/joined",
-        TournamentCategory::Organizing => "/tournaments/mine/organizing",
-        TournamentCategory::Invitations => "/tournaments/mine/invitations",
+        TournamentCategory::Organizing => "/tournaments/organize",
+        TournamentCategory::Invitations => "/tournaments/invitations",
         TournamentCategory::History => "/tournaments/mine/history",
     }
 }
@@ -134,7 +126,48 @@ pub fn Tournaments(children: Children) -> impl IntoView {
     let location = use_location();
     let logged_in = move || matches!(auth_context.identity.get(), Some(AuthIdentity::User(_)));
     let path_is = move |target: &'static str| location.pathname.get() == target;
-    let mine_is_active = move || location.pathname.get().starts_with("/tournaments/mine/");
+    let counts_revision = RwSignal::new(0_u64);
+    let counts = Resource::new(
+        move || {
+            (
+                identity_key(auth_context.identity.get()),
+                counts_revision.get(),
+            )
+        },
+        move |(identity, _)| async move {
+            if identity.1.is_some() {
+                get_my_tournament_counts().await.ok()
+            } else {
+                None
+            }
+        },
+    );
+    let websocket = expect_context::<WebsocketContext>();
+    Effect::watch(
+        move || websocket.message.get(),
+        move |message, _, _| {
+            if let Some(ServerResult::Ok(message)) = message {
+                if matches!(message.as_ref(), ServerMessage::Tournament(_)) {
+                    counts_revision.update(|value| *value = value.wrapping_add(1));
+                }
+            }
+        },
+        false,
+    );
+    let organizes = move || {
+        path_is("/tournaments/organize")
+            || counts
+                .get()
+                .flatten()
+                .is_some_and(|counts| counts.organizing > 0)
+    };
+    let has_invitations = move || {
+        path_is("/tournaments/invitations")
+            || counts
+                .get()
+                .flatten()
+                .is_some_and(|counts| counts.invitations > 0)
+    };
     let tab_url = move |path| {
         let query = location.query.get();
         browse_url(
@@ -166,64 +199,57 @@ pub fn Tournaments(children: Children) -> impl IntoView {
                 </div>
                 <nav class="flex flex-wrap gap-2">
                     <A
+                        exact=true
                         href=move || tab_url("/tournaments")
                         attr:class=move || tournament_tab_class(path_is("/tournaments"))
                     >
                         {t!(i18n, common.upcoming)}
                     </A>
                     <A
+                        exact=true
                         href=move || tab_url("/tournaments/in-progress")
                         attr:class=move || tournament_tab_class(path_is("/tournaments/in-progress"))
                     >
                         {t!(i18n, common.in_progress)}
                     </A>
                     <A
+                        exact=true
                         href=move || tab_url("/tournaments/finished")
                         attr:class=move || tournament_tab_class(path_is("/tournaments/finished"))
                     >
                         {t!(i18n, common.finished)}
                     </A>
-                    <Show when=logged_in>
+                    <Show when=organizes>
                         <A
-                            href=move || tab_url("/tournaments/mine/joined")
-                            attr:class=move || tournament_tab_class(mine_is_active())
-                        >
-                            {t!(i18n, tournaments.list.mine)}
-                        </A>
-                    </Show>
-                </nav>
-                <Show when=mine_is_active>
-                    <nav class="flex overflow-x-auto gap-0 min-w-0 border-b border-gray-200 dark:border-gray-700">
-                        <A
-                            href=move || tab_url("/tournaments/mine/joined")
-                            attr:class=move || mine_tab_class(path_is("/tournaments/mine/joined"))
-                        >
-                            {t!(i18n, common.joined)}
-                        </A>
-                        <A
-                            href=move || tab_url("/tournaments/mine/organizing")
-                            attr:class=move || mine_tab_class(
-                                path_is("/tournaments/mine/organizing"),
+                            exact=true
+                            href=move || tab_url("/tournaments/organize")
+                            attr:class=move || tournament_tab_class(
+                                path_is("/tournaments/organize"),
                             )
                         >
-                            {t!(i18n, common.organizing)}
+                            {t!(i18n, tournaments.list.organize)}
                         </A>
+                    </Show>
+                    <Show when=has_invitations>
                         <A
-                            href=move || tab_url("/tournaments/mine/invitations")
-                            attr:class=move || mine_tab_class(
-                                path_is("/tournaments/mine/invitations"),
+                            exact=true
+                            href=move || tab_url("/tournaments/invitations")
+                            attr:class=move || tournament_tab_class(
+                                path_is("/tournaments/invitations"),
                             )
                         >
                             {t!(i18n, common.invitations)}
                         </A>
-                        <A
-                            href=move || tab_url("/tournaments/mine/history")
-                            attr:class=move || mine_tab_class(path_is("/tournaments/mine/history"))
+                    </Show>
+                    <Show when=logged_in>
+                        <a
+                            class="inline-flex items-center self-center px-3 ml-auto min-h-10 ui-text-link"
+                            href="/@/me/tournaments"
                         >
-                            {t!(i18n, common.history)}
-                        </A>
-                    </nav>
-                </Show>
+                            {t!(i18n, common.profile)}
+                        </a>
+                    </Show>
+                </nav>
                 {children()}
             </div>
         </PageShell>
@@ -232,7 +258,7 @@ pub fn Tournaments(children: Children) -> impl IntoView {
 
 #[component]
 pub fn MineTournamentsRedirect() -> impl IntoView {
-    view! { <LegacyTournamentsRedirect path="/tournaments/mine/joined" /> }
+    view! { <LegacyTournamentsRedirect path="/@/me/tournaments" /> }
 }
 
 #[component]

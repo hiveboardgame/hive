@@ -6,6 +6,7 @@ pub fn EmptyState(
     #[prop(into)] title: TextProp,
     #[prop(optional, into)] message: Option<TextProp>,
     #[prop(optional, into)] class: Option<String>,
+    #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
     let has_message = message.is_some();
     let message = message.unwrap_or_default();
@@ -18,6 +19,12 @@ pub fn EmptyState(
             <Show when=move || has_message>
                 <div class="mt-1 text-xs">{render_text_prop(message.clone())}</div>
             </Show>
+            {children
+                .map(|children| {
+                    view! {
+                        <div class="flex flex-wrap gap-2 justify-center mt-3">{children()}</div>
+                    }
+                })}
         </div>
     }
 }

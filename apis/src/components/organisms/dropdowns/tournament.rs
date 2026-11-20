@@ -16,10 +16,13 @@ pub fn TournamentDropdown() -> impl IntoView {
             id="Tournaments"
         >
             <a class="ui-dropdown-link" on:click=onclick_close href="/tournaments">
-                {t!(i18n, tournaments.view_list)}
+                {t!(i18n, tournaments.menu.browse)}
+            </a>
+            <a class="ui-dropdown-link" on:click=onclick_close href="/@/me/tournaments">
+                {t!(i18n, tournaments.menu.mine)}
             </a>
             <a class="ui-dropdown-link" on:click=onclick_close href="/tournaments/create">
-                {t!(i18n, tournaments.create)}
+                {t!(i18n, tournaments.menu.create)}
             </a>
         </Hamburger>
     }

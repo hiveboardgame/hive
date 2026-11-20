@@ -5,6 +5,7 @@ mod heartbeat;
 mod home_banner;
 mod notification_preferences;
 mod opening_explorer;
+mod profile_tournaments;
 mod push_device;
 mod rating;
 mod rating_history;
@@ -18,6 +19,13 @@ pub use heartbeat::HeartbeatResponse;
 pub use home_banner::HomeBanner;
 pub use notification_preferences::NotificationPreferencesResponse;
 pub use opening_explorer::ExplorerResponse;
+pub use profile_tournaments::{
+    MyTournamentCounts,
+    ProfileTournamentCard,
+    ProfileTournamentResult,
+    ProfileTournamentRole,
+    ProfileTournamentsPage,
+};
 pub use push_device::PushDeviceResponse;
 pub use rating::RatingResponse;
 pub use rating_history::RatingHistoryResponse;

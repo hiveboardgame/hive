@@ -523,7 +523,7 @@ fn pairing_number_projection(
 }
 
 
-fn tournament_list_query(
+pub(super) fn tournament_list_query(
     category: TournamentCategory,
     viewer_id: Option<Uuid>,
     search_pattern: Option<String>,
@@ -718,14 +718,14 @@ impl TournamentBrowsePage {
     }
 }
 
-struct TournamentRelations {
-    player_counts: HashMap<Uuid, i64>,
-    organized_tournaments: HashSet<Uuid>,
-    joined_tournaments: HashSet<Uuid>,
-    invited_tournaments: HashSet<Uuid>,
+pub(super) struct TournamentRelations {
+    pub(super) player_counts: HashMap<Uuid, i64>,
+    pub(super) organized_tournaments: HashSet<Uuid>,
+    pub(super) joined_tournaments: HashSet<Uuid>,
+    pub(super) invited_tournaments: HashSet<Uuid>,
 }
 
-async fn tournament_relations(tournament_ids: &[Uuid], viewer_id: Option<Uuid>, conn: &mut DbConn<'_>) -> Result<TournamentRelations> {
+pub(super) async fn tournament_relations(tournament_ids: &[Uuid], viewer_id: Option<Uuid>, conn: &mut DbConn<'_>) -> Result<TournamentRelations> {
     use db_lib::schema::{tournaments_invitations, tournaments_organizers, tournaments_users};
     use diesel::{dsl::count_star, ExpressionMethods, QueryDsl};
     use diesel_async::RunQueryDsl;
@@ -792,7 +792,7 @@ impl TournamentCardResponse {
         Self::from_models(&tournaments, viewer_id, conn).await
     }
 
-    async fn from_models(
+    pub(super) async fn from_models(
         tournaments: &[Tournament],
         viewer_id: Option<Uuid>,
         conn: &mut DbConn<'_>,

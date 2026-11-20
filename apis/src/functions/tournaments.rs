@@ -1,6 +1,8 @@
 use crate::{
     responses::{
         tournament::ArenaPairingStatus,
+        MyTournamentCounts,
+        ProfileTournamentsPage,
         TournamentAbstractResponse,
         TournamentBrowsePage,
         TournamentCardResponse,
@@ -35,6 +37,38 @@ pub async fn browse_tournaments(
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
     TournamentBrowsePage::load(category, viewer_id, &search, page, format, mode, &mut conn)
+        .await
+        .map_err(ServerFnError::new)
+}
+
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
+pub async fn get_profile_tournaments(
+    username: String,
+    page: usize,
+) -> Result<ProfileTournamentsPage, ServerFnError> {
+    use crate::functions::{auth::identity::uuid, db::pool};
+    use db_lib::{get_conn, models::User};
+
+    let pool = pool().await?;
+    let mut conn = get_conn(&pool).await?;
+    let user = User::find_by_username(&username, &mut conn)
+        .await
+        .map_err(ServerFnError::new)?;
+    let viewer_id = uuid().await.ok();
+    ProfileTournamentsPage::load(user.id, viewer_id, page, &mut conn)
+        .await
+        .map_err(ServerFnError::new)
+}
+
+#[server(client = CsrfClient, input = codec::Cbor, output = codec::Cbor)]
+pub async fn get_my_tournament_counts() -> Result<MyTournamentCounts, ServerFnError> {
+    use crate::functions::{auth::identity::uuid, db::pool};
+    use db_lib::get_conn;
+
+    let viewer_id = uuid().await?;
+    let pool = pool().await?;
+    let mut conn = get_conn(&pool).await?;
+    MyTournamentCounts::load(viewer_id, &mut conn)
         .await
         .map_err(ServerFnError::new)
 }

@@ -24,6 +24,7 @@ pub mod live_arenas;
 pub mod logout;
 pub mod my_schedules;
 pub mod preview_tiles;
+pub mod profile_tournaments;
 pub mod quickplay;
 pub mod reserve;
 pub mod side_board;

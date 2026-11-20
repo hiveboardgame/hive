@@ -1,5 +1,6 @@
 use crate::{
-    components::molecules::game_row::GameRow,
+    components::molecules::{empty_state::EmptyState, game_row::GameRow},
+    i18n::*,
     providers::{
         calculate_initial_batch_size,
         initial_profile_filters_for_tab,
@@ -124,6 +125,20 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
             .distance(10.0)
             .interval(300.0),
     );
+    let i18n = use_i18n();
+    let version_at_mount = ctx.next_batch.version().get_untracked();
+    let nothing_found = move || {
+        ctx.next_batch.version().get() > version_at_mount
+            && !ctx.next_batch.pending().get()
+            && ctx.games.with(|games| games.is_empty())
+    };
+    let empty_title = move || match tab_view {
+        GameProgress::Unstarted => t_string!(i18n, profile.games.no_pending).to_string(),
+        GameProgress::Playing | GameProgress::All => {
+            t_string!(i18n, profile.games.no_playing).to_string()
+        }
+        GameProgress::Finished => t_string!(i18n, profile.games.no_finished).to_string(),
+    };
     view! {
         <div
             node_ref=el
@@ -135,6 +150,12 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
                 key=|game| (game.uuid, game.updated_at)
                 children=|game| view! { <GameRow game /> }
             />
+            <Show when=nothing_found>
+                <EmptyState
+                    title=empty_title
+                    class="mx-auto w-full max-w-5xl sm:col-span-2 lg:col-span-3"
+                />
+            </Show>
         </div>
     }
 }

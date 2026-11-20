@@ -1,9 +1,16 @@
-use crate::{common::GEN42_URL, components::molecules::hamburger::Hamburger, i18n::*};
+use crate::{
+    common::GEN42_URL,
+    components::molecules::hamburger::Hamburger,
+    i18n::*,
+    providers::{AuthContext, AuthIdentity},
+};
 use leptos::prelude::*;
 use leptos_icons::*;
 
 #[component]
 pub fn MobileDropdown() -> impl IntoView {
+    let auth_context = expect_context::<AuthContext>();
+    let logged_in = move || matches!(auth_context.identity.get(), Some(AuthIdentity::User(_)));
     let hamburger_show = RwSignal::new(false);
     let onclick_close = move |_| hamburger_show.update(|b| *b = false);
     let div_style = "ui-mobile-dropdown-body font-bold dark:text-white";
@@ -67,11 +74,20 @@ pub fn MobileDropdown() -> impl IntoView {
                 <div class=section_style>
                     <span class=label_style>{t!(i18n, common.tournaments)}</span>
                     <a class="ui-dropdown-link" on:click=onclick_close href="/tournaments">
-                        {t!(i18n, tournaments.view_list)}
+                        {t!(i18n, tournaments.menu.browse)}
                     </a>
-                    <a class="ui-dropdown-link" on:click=onclick_close href="/tournaments/create">
-                        {t!(i18n, tournaments.create)}
-                    </a>
+                    <Show when=logged_in>
+                        <a class="ui-dropdown-link" on:click=onclick_close href="/@/me/tournaments">
+                            {t!(i18n, tournaments.menu.mine)}
+                        </a>
+                        <a
+                            class="ui-dropdown-link"
+                            on:click=onclick_close
+                            href="/tournaments/create"
+                        >
+                            {t!(i18n, tournaments.menu.create)}
+                        </a>
+                    </Show>
                 </div>
                 <div class=section_style>
                     <span class=label_style>{t!(i18n, header.support)}</span>
