@@ -185,7 +185,7 @@ pub fn GamesFilter(username: String, ctx: GamesSearchContext) -> impl IntoView {
     view! {
         <div class="relative">
             <details node_ref=dropdown_ref>
-                <summary class="py-1 px-3 ml-0.5 text-sm cursor-pointer ui-button ui-button-secondary ui-button-md max-w-fit [&::-webkit-details-marker]:hidden">
+                <summary class="inline-flex gap-2 items-center px-3 text-sm font-bold leading-tight list-none text-gray-800 rounded-r cursor-pointer dark:text-gray-100 min-h-10 bg-even-light [&::-webkit-details-marker]:hidden sm:min-h-7 dark:bg-surface-raised dark:hover:bg-pillbug-teal/15 hover:bg-blue-light/70 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-pillbug-teal">
                     <Icon icon=icondata_lu::LuSlidersHorizontal attr:class="size-4" />
                     <span>{move || t_string!(i18n, common.filters)}</span>
                 </summary>

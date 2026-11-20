@@ -80,10 +80,14 @@ pub fn MobileDropdown() -> impl IntoView {
                         <a class="ui-dropdown-link" on:click=onclick_close href="/@/me/tournaments">
                             {t!(i18n, tournaments.menu.mine)}
                         </a>
+                        <a
+                            class="ui-dropdown-link"
+                            on:click=onclick_close
+                            href="/tournaments/create"
+                        >
+                            {t!(i18n, tournaments.menu.create)}
+                        </a>
                     </Show>
-                    <a class="ui-dropdown-link" on:click=onclick_close href="/tournaments/create">
-                        {t!(i18n, tournaments.menu.create)}
-                    </a>
                 </div>
                 <div class=section_style>
                     <span class=label_style>{t!(i18n, header.support)}</span>

@@ -151,7 +151,10 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
                 children=|game| view! { <GameRow game /> }
             />
             <Show when=nothing_found>
-                <EmptyState title=empty_title class="sm:col-span-2 lg:col-span-3" />
+                <EmptyState
+                    title=empty_title
+                    class="mx-auto w-full max-w-5xl sm:col-span-2 lg:col-span-3"
+                />
             </Show>
         </div>
     }

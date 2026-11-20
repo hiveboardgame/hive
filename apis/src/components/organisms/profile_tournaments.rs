@@ -7,6 +7,7 @@ use crate::{
     functions::tournaments::get_profile_tournaments,
     hooks::arena_clock::use_ticking_now,
     i18n::*,
+    pages::profile_view::{tournament_view_from_path, TournamentView},
     providers::{AuthContext, AuthIdentity},
     responses::{
         ProfileTournamentCard,
@@ -36,9 +37,9 @@ struct UsernameParams {
 
 fn tournaments_url(username: &str, page: usize) -> String {
     if page > 1 {
-        format!("/@/{username}/tournaments?page={page}")
+        format!("/@/{username}/tournaments/finished?page={page}")
     } else {
-        format!("/@/{username}/tournaments")
+        format!("/@/{username}/tournaments/finished")
     }
 }
 
@@ -121,6 +122,7 @@ pub fn ProfileTournaments() -> impl IntoView {
         );
     });
     let now = use_ticking_now();
+    let view_kind = Signal::derive(move || tournament_view_from_path(&location.pathname.get()));
 
     view! {
         <div class="overflow-y-auto flex-1 min-h-0">
@@ -148,6 +150,7 @@ pub fn ProfileTournaments() -> impl IntoView {
                                                 <ProfileTournamentsContent
                                                     page
                                                     is_owner
+                                                    view_kind
                                                     now
                                                     on_page_change
                                                 />
@@ -166,6 +169,7 @@ pub fn ProfileTournaments() -> impl IntoView {
 fn ProfileTournamentsContent(
     page: ProfileTournamentsPage,
     is_owner: bool,
+    view_kind: Signal<TournamentView>,
     now: Signal<DateTime<Utc>>,
     on_page_change: Callback<usize>,
 ) -> impl IntoView {
@@ -180,10 +184,15 @@ fn ProfileTournamentsContent(
     let finished_total = page.finished_total as usize;
     let show_pagination = finished_total > TOURNAMENT_BROWSE_PAGE_SIZE;
     let no_tournaments = page.active.is_empty() && page.finished.is_empty();
-    let show_current = is_owner || !page.active.is_empty();
-    let show_past = !page.finished.is_empty();
     let organizes = is_owner && page.active.iter().any(|card| card.role.organizing);
-    let active = StoredValue::new(page.active);
+    let (upcoming, current): (Vec<_>, Vec<_>) = page.active.into_iter().partition(|card| {
+        matches!(
+            card.card.summary.progress,
+            TournamentCardProgress::Entrants { .. }
+        )
+    });
+    let upcoming = StoredValue::new(upcoming);
+    let current = StoredValue::new(current);
     let finished = StoredValue::new(page.finished);
     let viewer_status = if is_owner {
         ViewerStatusStyle::Owner
@@ -227,7 +236,7 @@ fn ProfileTournamentsContent(
                 Either::Left(
                     view! {
                         <EmptyState title=move || t_string!(i18n, profile.tournaments.none)>
-                            <EmptyActions is_owner />
+                            <EmptyActions />
                         </EmptyState>
                     },
                 )
@@ -237,31 +246,62 @@ fn ProfileTournamentsContent(
                         <p class="text-xs text-gray-500 dark:text-gray-400">
                             {t!(i18n, tournaments.list.times_shown_in_your_local_time)}
                         </p>
-                        <Show when=move || show_current>
-                            <TournamentGroup
-                                title=t_string!(i18n, profile.tournaments.current).to_string()
-                                empty=t_string!(i18n, profile.tournaments.no_current).to_string()
-                                cards=active.get_value()
-                                category=TournamentCategory::Joined
-                                viewer_status
-                                is_owner
-                                manage_link=organizes
-                                collapse_after=CURRENT_ROWS_BEFORE_SHOW_ALL
-                                now
-                            />
-                        </Show>
-                        <Show when=move || show_past>
-                            <TournamentGroup
-                                title=t_string!(i18n, profile.tournaments.past).to_string()
-                                empty=t_string!(i18n, profile.tournaments.no_past).to_string()
-                                cards=finished.get_value()
-                                category=TournamentCategory::History
-                                viewer_status
-                                is_owner
-                                now
-                            />
-                        </Show>
-                        <Show when=move || show_pagination>
+                        {move || match view_kind.get() {
+                            TournamentView::Upcoming => {
+                                Either::Left(
+                                    view! {
+                                        <TournamentGroup
+                                            title=String::new()
+                                            empty=t_string!(i18n, profile.tournaments.no_upcoming)
+                                                .to_string()
+                                            cards=upcoming.get_value()
+                                            category=TournamentCategory::Joined
+                                            viewer_status
+                                            now
+                                        />
+                                    },
+                                )
+                            }
+                            TournamentView::Current => {
+                                Either::Right(
+                                    Either::Left(
+                                        view! {
+                                            <TournamentGroup
+                                                title=String::new()
+                                                empty=t_string!(i18n, profile.tournaments.no_current)
+                                                    .to_string()
+                                                cards=current.get_value()
+                                                category=TournamentCategory::Joined
+                                                viewer_status
+                                                manage_link=organizes
+                                                collapse_after=CURRENT_ROWS_BEFORE_SHOW_ALL
+                                                now
+                                            />
+                                        },
+                                    ),
+                                )
+                            }
+                            TournamentView::Finished => {
+                                Either::Right(
+                                    Either::Right(
+                                        view! {
+                                            <TournamentGroup
+                                                title=String::new()
+                                                empty=t_string!(i18n, profile.tournaments.no_past)
+                                                    .to_string()
+                                                cards=finished.get_value()
+                                                category=TournamentCategory::History
+                                                viewer_status
+                                                now
+                                            />
+                                        },
+                                    ),
+                                )
+                            }
+                        }}
+                        <Show when=move || {
+                            show_pagination && view_kind.get() == TournamentView::Finished
+                        }>
                             <TournamentPagination
                                 page=current_page
                                 total=finished_total
@@ -276,20 +316,12 @@ fn ProfileTournamentsContent(
 }
 
 #[component]
-fn EmptyActions(is_owner: bool) -> impl IntoView {
+fn EmptyActions() -> impl IntoView {
     let i18n = use_i18n();
     view! {
-        <a class="ui-button ui-button-secondary ui-button-sm no-link-style" href="/tournaments">
+        <a class="ui-button ui-button-primary ui-button-sm no-link-style" href="/tournaments">
             {t!(i18n, tournaments.view_list)}
         </a>
-        <Show when=move || is_owner>
-            <a
-                class="ui-button ui-button-secondary ui-button-sm no-link-style"
-                href="/tournaments/create"
-            >
-                {t!(i18n, tournaments.create)}
-            </a>
-        </Show>
     }
 }
 
@@ -300,7 +332,6 @@ fn TournamentGroup(
     cards: Vec<ProfileTournamentCard>,
     category: TournamentCategory,
     viewer_status: ViewerStatusStyle,
-    is_owner: bool,
     #[prop(optional)] manage_link: bool,
     #[prop(optional)] collapse_after: Option<usize>,
     now: Signal<DateTime<Utc>>,
@@ -321,7 +352,14 @@ fn TournamentGroup(
     view! {
         <section class="flex flex-col gap-2">
             <div class="flex flex-wrap gap-y-1 gap-x-4 justify-between items-baseline">
-                <h2 class="text-base font-bold text-gray-900 dark:text-gray-100">{title}</h2>
+                <Show when={
+                    let has_title = !title.is_empty();
+                    move || has_title
+                }>
+                    <h2 class="text-base font-bold text-gray-900 dark:text-gray-100">
+                        {title.clone()}
+                    </h2>
+                </Show>
                 <Show when=move || manage_link>
                     <a
                         class="text-sm font-medium hover:underline text-pillbug-teal"
@@ -335,7 +373,7 @@ fn TournamentGroup(
                 Either::Left(
                     view! {
                         <EmptyState title=empty>
-                            <EmptyActions is_owner />
+                            <EmptyActions />
                         </EmptyState>
                     },
                 )

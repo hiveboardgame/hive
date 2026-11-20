@@ -201,6 +201,14 @@ pub fn App() -> impl IntoView {
                                 path=path!("tournaments")
                                 view=|| view! { <ProfileTournaments /> }
                             />
+                            <Route
+                                path=path!("tournaments/upcoming")
+                                view=|| view! { <ProfileTournaments /> }
+                            />
+                            <Route
+                                path=path!("tournaments/finished")
+                                view=|| view! { <ProfileTournaments /> }
+                            />
                         </ParentRoute>
                         <Route path=path!("/register") view=|| view! { <Register /> } />
                         <Route path=path!("/archive") view=|| view! { <GameSearch /> } />

@@ -24,6 +24,7 @@
         "past": "Past",
         "none": "No tournaments yet",
         "no_current": "No current tournaments",
+        "no_upcoming": "No upcoming tournaments",
         "no_past": "No past tournaments",
         "manage_organizing": "Manage tournaments you organize",
         "rank_of_total": "Rank {{rank}} of {{total}}",

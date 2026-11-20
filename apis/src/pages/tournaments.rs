@@ -199,18 +199,21 @@ pub fn Tournaments(children: Children) -> impl IntoView {
                 </div>
                 <nav class="flex flex-wrap gap-2">
                     <A
+                        exact=true
                         href=move || tab_url("/tournaments")
                         attr:class=move || tournament_tab_class(path_is("/tournaments"))
                     >
                         {t!(i18n, common.upcoming)}
                     </A>
                     <A
+                        exact=true
                         href=move || tab_url("/tournaments/in-progress")
                         attr:class=move || tournament_tab_class(path_is("/tournaments/in-progress"))
                     >
                         {t!(i18n, common.in_progress)}
                     </A>
                     <A
+                        exact=true
                         href=move || tab_url("/tournaments/finished")
                         attr:class=move || tournament_tab_class(path_is("/tournaments/finished"))
                     >
@@ -218,6 +221,7 @@ pub fn Tournaments(children: Children) -> impl IntoView {
                     </A>
                     <Show when=organizes>
                         <A
+                            exact=true
                             href=move || tab_url("/tournaments/organize")
                             attr:class=move || tournament_tab_class(
                                 path_is("/tournaments/organize"),
@@ -228,6 +232,7 @@ pub fn Tournaments(children: Children) -> impl IntoView {
                     </Show>
                     <Show when=has_invitations>
                         <A
+                            exact=true
                             href=move || tab_url("/tournaments/invitations")
                             attr:class=move || tournament_tab_class(
                                 path_is("/tournaments/invitations"),
@@ -238,7 +243,7 @@ pub fn Tournaments(children: Children) -> impl IntoView {
                     </Show>
                     <Show when=logged_in>
                         <a
-                            class="self-center py-2 px-3 ml-auto text-sm font-medium hover:underline text-pillbug-teal no-link-style"
+                            class="inline-flex items-center self-center px-3 ml-auto min-h-10 ui-text-link"
                             href="/@/me/tournaments"
                         >
                             {t!(i18n, common.profile)}

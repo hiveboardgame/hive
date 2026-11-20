@@ -1,5 +1,5 @@
 use crate::{
-    common::{login_redirect_url, with_class},
+    common::login_redirect_url,
     components::{
         atoms::{
             block_toggle_button::BlockToggleButton,
@@ -28,7 +28,9 @@ use leptos_use::use_element_bounding;
 use shared_types::GameProgress;
 
 pub fn tab_from_path(path: &str) -> GameProgress {
-    if path.ends_with("/unstarted") {
+    if path.ends_with("/tournaments/finished") || path.ends_with("/tournaments/upcoming") {
+        GameProgress::Playing
+    } else if path.ends_with("/unstarted") {
         GameProgress::Unstarted
     } else if path.ends_with("/playing") {
         GameProgress::Playing
@@ -45,8 +47,28 @@ pub enum ProfileTab {
     Tournaments,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum TournamentView {
+    Upcoming,
+    Current,
+    Finished,
+}
+
+pub fn tournament_view_from_path(path: &str) -> TournamentView {
+    if path.ends_with("/tournaments/upcoming") {
+        TournamentView::Upcoming
+    } else if path.ends_with("/tournaments/finished") {
+        TournamentView::Finished
+    } else {
+        TournamentView::Current
+    }
+}
+
 pub fn profile_tab_from_path(path: &str) -> ProfileTab {
-    if path.ends_with("/tournaments") {
+    if path.ends_with("/tournaments")
+        || path.ends_with("/tournaments/upcoming")
+        || path.ends_with("/tournaments/finished")
+    {
         ProfileTab::Tournaments
     } else {
         ProfileTab::Games(tab_from_path(path))
@@ -91,6 +113,8 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     let location = use_location();
     let current_tab = Signal::derive(move || tab_from_path(&location.pathname.get()));
     let profile_tab = Signal::derive(move || profile_tab_from_path(&location.pathname.get()));
+    let tournament_view =
+        Signal::derive(move || tournament_view_from_path(&location.pathname.get()));
 
     let initial_batch_size = Signal::derive(move || {
         calculate_initial_batch_size(bounding.height.get(), bounding.width.get())
@@ -116,14 +140,14 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
 
     let i18n = use_i18n();
     let auth_user = expect_context::<AuthContext>().user;
-    let radio_classes = |active| {
-        with_class(
-            if active {
-                "ui-choice ui-choice-sm ui-choice-active cursor-pointer"
-            } else {
-                "ui-choice ui-choice-sm ui-choice-inactive cursor-pointer"
-            },
-            "no-link-style",
+    let segment_classes = |active| {
+        let state = if active {
+            "bg-button-dawn text-white dark:bg-button-dawn"
+        } else {
+            "bg-even-light text-gray-800 hover:bg-blue-light/70 dark:bg-surface-raised dark:text-gray-100 dark:hover:bg-pillbug-teal/15"
+        };
+        format!(
+            "inline-flex min-h-10 items-center justify-center px-3 text-sm font-bold leading-tight no-link-style transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-pillbug-teal sm:min-h-7 {state}"
         )
     };
 
@@ -206,57 +230,144 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                                                 <div class="lg:flex lg:flex-col lg:items-center lg:mx-auto lg:max-w-4xl">
                                                     <Stats user />
 
-                                                    <div class="grid gap-1 items-start m-1 lg:flex lg:gap-4 lg:items-center lg:mt-4 grid-cols-[1fr_auto]">
-                                                        <div class="grid grid-cols-2 gap-1 min-w-0 sm:flex sm:flex-wrap">
-                                                            <a
-                                                                href=format!("/@/{}/unstarted", username.get_value())
-                                                                class=move || radio_classes(
-                                                                    profile_tab() == ProfileTab::Games(GameProgress::Unstarted),
-                                                                )
+                                                    <div class="flex flex-wrap gap-2 items-center mx-1 mt-1 mb-3 sm:gap-3 sm:mb-4 lg:justify-center lg:mt-4">
+                                                        <Show
+                                                            when=move || profile_tab() != ProfileTab::Tournaments
+                                                            fallback=move || {
+                                                                view! {
+                                                                    <a
+                                                                        href=format!("/@/{}/playing", username.get_value())
+                                                                        class=format!(
+                                                                            "{} {}",
+                                                                            "rounded border border-black/10 dark:border-white/10",
+                                                                            segment_classes(false),
+                                                                        )
+                                                                    >
+                                                                        {t!(i18n, common.games)}
+                                                                    </a>
+                                                                    <span
+                                                                        class="w-px h-6 bg-black/20 dark:bg-white/20"
+                                                                        aria-hidden="true"
+                                                                    ></span>
+                                                                    <div
+                                                                        role="group"
+                                                                        aria-label=move || t_string!(i18n, common.tournaments)
+                                                                        class="inline-flex rounded border divide-x border-black/10 divide-black/10 [&>:first-child]:rounded-l [&>:last-child]:rounded-r dark:border-white/10 dark:divide-white/10"
+                                                                    >
+                                                                        <span class="hidden items-center px-3 text-xs font-bold tracking-wide text-gray-600 uppercase sm:inline-flex dark:text-gray-300 bg-odd-light dark:bg-surface-muted">
+                                                                            {t!(i18n, common.tournaments)}
+                                                                        </span>
+                                                                        <a
+                                                                            href=format!(
+                                                                                "/@/{}/tournaments/upcoming",
+                                                                                username.get_value(),
+                                                                            )
+                                                                            aria-current=move || {
+                                                                                (tournament_view() == TournamentView::Upcoming)
+                                                                                    .then_some("page")
+                                                                            }
+                                                                            class=move || segment_classes(
+                                                                                tournament_view() == TournamentView::Upcoming,
+                                                                            )
+                                                                        >
+                                                                            {t!(i18n, common.upcoming)}
+                                                                        </a>
+                                                                        <a
+                                                                            href=format!("/@/{}/tournaments", username.get_value())
+                                                                            aria-current=move || {
+                                                                                (tournament_view() == TournamentView::Current)
+                                                                                    .then_some("page")
+                                                                            }
+                                                                            class=move || segment_classes(
+                                                                                tournament_view() == TournamentView::Current,
+                                                                            )
+                                                                        >
+                                                                            {t!(i18n, profile.tournaments.current)}
+                                                                        </a>
+                                                                        <a
+                                                                            href=format!(
+                                                                                "/@/{}/tournaments/finished",
+                                                                                username.get_value(),
+                                                                            )
+                                                                            aria-current=move || {
+                                                                                (tournament_view() == TournamentView::Finished)
+                                                                                    .then_some("page")
+                                                                            }
+                                                                            class=move || segment_classes(
+                                                                                tournament_view() == TournamentView::Finished,
+                                                                            )
+                                                                        >
+                                                                            {t!(i18n, common.finished)}
+                                                                        </a>
+                                                                    </div>
+                                                                }
+                                                            }
+                                                        >
+                                                            <div
+                                                                role="group"
+                                                                aria-label=move || t_string!(i18n, common.games)
+                                                                class="inline-flex rounded border divide-x border-black/10 divide-black/10 [&>:first-child]:rounded-l [&>:last-child]:rounded-r dark:border-white/10 dark:divide-white/10"
                                                             >
-                                                                {t!(i18n, common.pending)}
-                                                            </a>
-                                                            <a
-                                                                href=format!("/@/{}/playing", username.get_value())
-                                                                class=move || radio_classes(
-                                                                    profile_tab() == ProfileTab::Games(GameProgress::Playing),
-                                                                )
-                                                            >
-                                                                {t!(i18n, common.playing)}
-                                                            </a>
-                                                            <a
-                                                                href=format!("/@/{}/finished", username.get_value())
-                                                                class=move || radio_classes(
-                                                                    profile_tab() == ProfileTab::Games(GameProgress::Finished),
-                                                                )
-                                                            >
-                                                                {t!(i18n, common.finished)}
-                                                            </a>
+                                                                <span class="hidden items-center px-3 text-xs font-bold tracking-wide text-gray-600 uppercase sm:inline-flex dark:text-gray-300 bg-odd-light dark:bg-surface-muted">
+                                                                    {t!(i18n, common.games)}
+                                                                </span>
+                                                                <a
+                                                                    href=format!("/@/{}/unstarted", username.get_value())
+                                                                    aria-current=move || {
+                                                                        (profile_tab()
+                                                                            == ProfileTab::Games(GameProgress::Unstarted))
+                                                                            .then_some("page")
+                                                                    }
+                                                                    class=move || segment_classes(
+                                                                        profile_tab() == ProfileTab::Games(GameProgress::Unstarted),
+                                                                    )
+                                                                >
+                                                                    {t!(i18n, common.pending)}
+                                                                </a>
+                                                                <a
+                                                                    href=format!("/@/{}/playing", username.get_value())
+                                                                    aria-current=move || {
+                                                                        (profile_tab() == ProfileTab::Games(GameProgress::Playing))
+                                                                            .then_some("page")
+                                                                    }
+                                                                    class=move || segment_classes(
+                                                                        profile_tab() == ProfileTab::Games(GameProgress::Playing),
+                                                                    )
+                                                                >
+                                                                    {t!(i18n, common.playing)}
+                                                                </a>
+                                                                <a
+                                                                    href=format!("/@/{}/finished", username.get_value())
+                                                                    aria-current=move || {
+                                                                        (profile_tab() == ProfileTab::Games(GameProgress::Finished))
+                                                                            .then_some("page")
+                                                                    }
+                                                                    class=move || segment_classes(
+                                                                        profile_tab() == ProfileTab::Games(GameProgress::Finished),
+                                                                    )
+                                                                >
+                                                                    {t!(i18n, common.finished)}
+                                                                </a>
+                                                                <GamesFilter
+                                                                    username=username.get_value()
+                                                                    ctx=ctx.clone()
+                                                                />
+                                                            </div>
+                                                            <span
+                                                                class="w-px h-6 bg-black/20 dark:bg-white/20"
+                                                                aria-hidden="true"
+                                                            ></span>
                                                             <a
                                                                 href=format!("/@/{}/tournaments", username.get_value())
-                                                                class=move || radio_classes(
-                                                                    profile_tab() == ProfileTab::Tournaments,
+                                                                class=format!(
+                                                                    "{} {}",
+                                                                    "rounded border border-black/10 dark:border-white/10",
+                                                                    segment_classes(false),
                                                                 )
                                                             >
                                                                 {t!(i18n, common.tournaments)}
                                                             </a>
-                                                        </div>
-
-                                                        <div
-                                                            class=move || {
-                                                                if profile_tab() == ProfileTab::Tournaments {
-                                                                    "invisible"
-                                                                } else {
-                                                                    ""
-                                                                }
-                                                            }
-                                                            inert=move || profile_tab() == ProfileTab::Tournaments
-                                                        >
-                                                            <GamesFilter
-                                                                username=username.get_value()
-                                                                ctx=ctx.clone()
-                                                            />
-                                                        </div>
+                                                        </Show>
                                                     </div>
                                                 </div>
                                             </div>
