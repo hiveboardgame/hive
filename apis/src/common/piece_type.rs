@@ -21,6 +21,12 @@ pub enum PieceType {
     Spawn,
 }
 
+impl PieceType {
+    pub fn counts_towards_stack_height(self) -> bool {
+        !matches!(self, PieceType::Spawn | PieceType::Premove)
+    }
+}
+
 impl fmt::Display for PieceType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let name = match self {

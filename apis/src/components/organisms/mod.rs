@@ -28,6 +28,7 @@ pub mod quickplay;
 pub mod reserve;
 pub mod side_board;
 pub mod sound_toggle;
+pub mod stack_number_style_toggle;
 pub mod stats;
 pub mod takeback_conf;
 pub mod tile_design_toggle;

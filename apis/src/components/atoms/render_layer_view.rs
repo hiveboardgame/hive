@@ -59,17 +59,53 @@ pub fn RenderLayerView(
     }
 }
 
+pub fn display_level(
+    level: usize,
+    expanded_stack_level: ExpandedStackLevel,
+    stack_level_multiplier: usize,
+) -> usize {
+    match expanded_stack_level {
+        ExpandedStackLevel::Fixed => level,
+        ExpandedStackLevel::Separated => level * stack_level_multiplier,
+        ExpandedStackLevel::Attached => level.saturating_sub(1) * stack_level_multiplier + 1,
+    }
+}
+
 fn display_level_signal(
     level: usize,
     expanded_stack_level: ExpandedStackLevel,
     interaction: HivegroundInteraction,
     position: Position,
 ) -> Signal<usize> {
-    Signal::derive(move || match expanded_stack_level {
-        ExpandedStackLevel::Fixed => level,
-        ExpandedStackLevel::Separated => level * interaction.stack_level_multiplier(position),
-        ExpandedStackLevel::Attached => {
-            level.saturating_sub(1) * interaction.stack_level_multiplier(position) + 1
-        }
+    Signal::derive(move || {
+        display_level(
+            level,
+            expanded_stack_level,
+            interaction.stack_level_multiplier(position),
+        )
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fixed_layers_ignore_the_stack_multiplier() {
+        assert_eq!(display_level(2, ExpandedStackLevel::Fixed, 1), 2);
+        assert_eq!(display_level(2, ExpandedStackLevel::Fixed, 13), 2);
+    }
+
+    #[test]
+    fn separated_layers_spread_with_the_stack_multiplier() {
+        assert_eq!(display_level(2, ExpandedStackLevel::Separated, 1), 2);
+        assert_eq!(display_level(2, ExpandedStackLevel::Separated, 13), 26);
+    }
+
+    #[test]
+    fn attached_layers_sit_one_level_above_the_spread_stack() {
+        assert_eq!(display_level(0, ExpandedStackLevel::Attached, 13), 1);
+        assert_eq!(display_level(3, ExpandedStackLevel::Attached, 1), 3);
+        assert_eq!(display_level(3, ExpandedStackLevel::Attached, 13), 27);
+    }
 }

@@ -61,7 +61,14 @@ pub use challenge_viewer::{
 };
 pub use chat_link::{chat_link_href, external_link_destination, validated_link_url};
 pub use client_message::{ChatSendRequest, ClientRequest, SubscriptionAttempt, TvInterest};
-pub use config_options::{CurrentConfirm, MoveConfirm, TileDesign, TileDots, TileRotation};
+pub use config_options::{
+    CurrentConfirm,
+    MoveConfirm,
+    StackNumberStyle,
+    TileDesign,
+    TileDots,
+    TileRotation,
+};
 pub(crate) use cookie_options::SECURE_COOKIES;
 #[cfg(feature = "ssr")]
 pub(crate) use date_time::format_utc_datetime;
@@ -142,7 +149,7 @@ pub use standings_score::{
     ScorePresentation,
     StandingsCount,
 };
-pub use svg_pos::{position_from_svg, SvgPos};
+pub use svg_pos::{hex_width, position_from_svg, SvgPos, HEX_SIZE};
 pub(crate) use time_control::{
     format_compact_duration,
     format_time_control,

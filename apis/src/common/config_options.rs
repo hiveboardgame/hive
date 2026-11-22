@@ -147,3 +147,10 @@ impl FromStr for TileDots {
         }
     }
 }
+
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub enum StackNumberStyle {
+    #[default]
+    Circles,
+    Hexes,
+}

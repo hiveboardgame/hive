@@ -1,4 +1,11 @@
-use crate::common::{MoveConfirm, TileDesign, TileDots, TileRotation, SECURE_COOKIES};
+use crate::common::{
+    MoveConfirm,
+    StackNumberStyle,
+    TileDesign,
+    TileDots,
+    TileRotation,
+    SECURE_COOKIES,
+};
 use codee::{binary::MsgpackSerdeCodec, string::Base64};
 use leptos::prelude::*;
 use leptos_use::{use_cookie_with_options, SameSite, UseCookieOptions};
@@ -70,6 +77,12 @@ pub struct ConfigOpts {
     pub allow_premove: bool,
     #[serde(default)]
     pub drag_and_drop: bool,
+    #[serde(default)]
+    pub show_stack_height: bool,
+    #[serde(default)]
+    pub show_reserve_counts: bool,
+    #[serde(default)]
+    pub stack_number_style: StackNumberStyle,
 }
 
 impl Default for ConfigOpts {
@@ -90,11 +103,33 @@ impl Default for ConfigOpts {
             video_dismissed: false,
             allow_premove: false,
             drag_and_drop: false,
+            show_stack_height: false,
+            show_reserve_counts: false,
+            stack_number_style: StackNumberStyle::default(),
         }
     }
 }
 #[derive(Clone, Debug)]
 pub struct Config(pub Signal<ConfigOpts>, pub WriteSignal<Option<ConfigOpts>>);
+
+impl Config {
+    pub fn show_stack_height(&self) -> Signal<bool> {
+        let config = self.0;
+        Signal::derive(move || config.with(|config| config.show_stack_height))
+    }
+
+    pub fn show_any_numbers(&self) -> Signal<bool> {
+        let config = self.0;
+        Signal::derive(move || {
+            config.with(|config| config.show_stack_height || config.show_reserve_counts)
+        })
+    }
+
+    pub fn show_reserve_counts(&self) -> Signal<bool> {
+        let config = self.0;
+        Signal::derive(move || config.with(|config| config.show_reserve_counts))
+    }
+}
 
 pub fn provide_config() {
     let (cookie, set_cookie) = use_cookie_with_options::<ConfigOpts, Base64<MsgpackSerdeCodec>>(
@@ -108,4 +143,46 @@ pub fn provide_config() {
     );
     let cookie = Signal::derive(move || cookie().unwrap_or_default());
     provide_context(Config(cookie, set_cookie));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use codee::{Decoder, Encoder};
+
+    #[derive(Serialize)]
+    struct ConfigBeforeStackNumbers {
+        confirm_mode: HashMap<GameSpeed, MoveConfirm>,
+        tile: TileOptions,
+        prefers_sound: bool,
+        prefers_dark: bool,
+        allow_preselect: bool,
+        video_dismissed: bool,
+        allow_premove: bool,
+        drag_and_drop: bool,
+    }
+
+    #[test]
+    fn cookie_saved_before_stack_numbers_decodes_with_them_off() {
+        let defaults = ConfigOpts::default();
+        let old_cookie = MsgpackSerdeCodec::encode(&ConfigBeforeStackNumbers {
+            confirm_mode: defaults.confirm_mode.clone(),
+            tile: defaults.tile.clone(),
+            prefers_sound: true,
+            prefers_dark: true,
+            allow_preselect: true,
+            video_dismissed: true,
+            allow_premove: true,
+            drag_and_drop: true,
+        })
+        .expect("old config encodes");
+
+        let decoded: ConfigOpts =
+            MsgpackSerdeCodec::decode(&old_cookie).expect("old cookie still decodes");
+
+        assert!(decoded.drag_and_drop);
+        assert!(!decoded.show_stack_height);
+        assert!(!decoded.show_reserve_counts);
+        assert_eq!(decoded.stack_number_style, StackNumberStyle::Circles);
+    }
 }
