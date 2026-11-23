@@ -215,7 +215,7 @@ mod preview {
     }
 }
 
-type LayersByPosition = HashMap<Position, Vec<RenderLayer>>;
+pub type LayersByPosition = HashMap<Position, Vec<RenderLayer>>;
 
 pub fn layers_by_position(model: Memo<HivegroundRenderModel>) -> Memo<LayersByPosition> {
     Memo::new(move |_| {

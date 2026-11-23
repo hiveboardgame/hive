@@ -27,6 +27,8 @@ pub use crate::hiveground::ReserveLayout as Alignment;
 
 pub const MOBILE_RESERVE_VIEWBOX: &str = "-42 -52 438 96";
 
+const SINGLE_ROW_BADGE_SCALE: f32 = 1.6;
+
 #[component]
 pub fn Reserve(
     // Analysis/history pass fixed colors; live play passes player-color signals.
@@ -43,6 +45,7 @@ pub fn Reserve(
     let auth_context = expect_context::<AuthContext>();
     let config = expect_context::<Config>().0;
     let tile_opts = Signal::derive(move || config().tile);
+    let show_count = expect_context::<Config>().show_reserve_counts();
     let paint = Memo::new(move |_| tile_opts.with(HivegroundPaint::new));
     let (default_viewbox_str, viewbox_styles) = match alignment {
         Alignment::SingleRow => (
@@ -58,6 +61,10 @@ pub fn Reserve(
         }
     };
     let viewbox_str = viewbox_str.unwrap_or(default_viewbox_str);
+    let badge_scale = match alignment {
+        Alignment::SingleRow => SINGLE_ROW_BADGE_SCALE,
+        Alignment::DoubleRow => 1.0,
+    };
     let board_view = game_state.board_view();
     let move_info = game_state.move_info();
     let state = game_state.state();
@@ -133,7 +140,7 @@ pub fn Reserve(
                 viewBox=viewbox_str
                 xmlns="http://www.w3.org/2000/svg"
             >
-                <HivegroundStacks model=stacked_pieces paint interaction />
+                <HivegroundStacks model=stacked_pieces paint interaction show_count badge_scale />
             </svg>
         </Show>
     }

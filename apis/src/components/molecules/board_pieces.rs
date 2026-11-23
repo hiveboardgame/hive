@@ -4,6 +4,7 @@ use crate::{
     providers::{
         config::TileOptions,
         game_state::{GameStateStore, GameStateStoreFields},
+        Config,
     },
 };
 use leptos::prelude::*;
@@ -17,11 +18,12 @@ pub fn BoardPieces(
     let move_info = game_state.move_info();
     let state = game_state.state();
     let paint = Memo::new(move |_| tile_opts.with(HivegroundPaint::new));
+    let show_count = expect_context::<Config>().show_stack_height();
     let model = Memo::new(move |_| {
         state.with(|state| {
             move_info.with(|move_info| build_board_render_model(&state.board, move_info))
         })
     });
 
-    view! { <HivegroundStacks model paint interaction /> }
+    view! { <HivegroundStacks model paint interaction show_count /> }
 }

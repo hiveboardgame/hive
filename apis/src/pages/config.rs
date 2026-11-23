@@ -9,6 +9,7 @@ use crate::{
             confirm_mode_toggle::ConfirmModeToggle,
             darkmode_toggle::{DarkModeToggle, DarkModeToggleVariant},
             preview_tiles::PreviewTiles,
+            stack_number_style_toggle::StackNumberStyleToggle,
             takeback_conf::TakebackConf,
             tile_design_toggle::TileDesignToggle,
             tile_dots_toggle::TileDotsToggle,
@@ -77,6 +78,13 @@ pub fn Config() -> impl IntoView {
                             <div class="flex flex-col order-first gap-2 lg:order-none ui-setting-group">
                                 <p class="ui-field-label">{t!(i18n, user_config.preview)}</p>
                                 <PreviewTiles />
+                                <p class="ui-field-label">
+                                    {t!(i18n, user_config.stack_number_style)}
+                                </p>
+                                <p class="ui-field-helper">
+                                    {t!(i18n, user_config.stack_number_style_description)}
+                                </p>
+                                <StackNumberStyleToggle />
                             </div>
                         </div>
                     </Panel>
@@ -168,6 +176,28 @@ pub fn Config() -> impl IntoView {
                                         {t!(i18n, user_config.drag_and_drop_description)}
                                     </p>
                                     <ConfigFlagToggle flag=ConfigFlag::DragAndDrop />
+                                </div>
+                            </div>
+                            <div class="ui-setting-group">
+                                <div class="flex flex-col gap-2">
+                                    <p class="ui-field-label">
+                                        {t!(i18n, user_config.stack_height)}
+                                    </p>
+                                    <p class="ui-field-helper">
+                                        {t!(i18n, user_config.stack_height_description)}
+                                    </p>
+                                    <ConfigFlagToggle flag=ConfigFlag::StackHeight />
+                                </div>
+                            </div>
+                            <div class="ui-setting-group">
+                                <div class="flex flex-col gap-2">
+                                    <p class="ui-field-label">
+                                        {t!(i18n, user_config.reserve_counts)}
+                                    </p>
+                                    <p class="ui-field-helper">
+                                        {t!(i18n, user_config.reserve_counts_description)}
+                                    </p>
+                                    <ConfigFlagToggle flag=ConfigFlag::ReserveCounts />
                                 </div>
                             </div>
                             <div class="ui-setting-group">

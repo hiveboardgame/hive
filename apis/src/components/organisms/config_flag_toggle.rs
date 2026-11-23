@@ -9,6 +9,8 @@ pub enum ConfigFlag {
     Preselect,
     Premove,
     DragAndDrop,
+    StackHeight,
+    ReserveCounts,
 }
 
 impl ConfigFlag {
@@ -17,6 +19,8 @@ impl ConfigFlag {
             Self::Preselect => config.allow_preselect,
             Self::Premove => config.allow_premove,
             Self::DragAndDrop => config.drag_and_drop,
+            Self::StackHeight => config.show_stack_height,
+            Self::ReserveCounts => config.show_reserve_counts,
         }
     }
 
@@ -25,6 +29,8 @@ impl ConfigFlag {
             Self::Preselect => config.allow_preselect = enabled,
             Self::Premove => config.allow_premove = enabled,
             Self::DragAndDrop => config.drag_and_drop = enabled,
+            Self::StackHeight => config.show_stack_height = enabled,
+            Self::ReserveCounts => config.show_reserve_counts = enabled,
         }
     }
 }
@@ -61,5 +67,31 @@ fn ConfigFlagButton(flag: ConfigFlag, enabled: bool) -> impl IntoView {
         >
             {if enabled { t!(i18n, common.yes).into_any() } else { t!(i18n, common.no).into_any() }}
         </button>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const ALL_FLAGS: [ConfigFlag; 5] = [
+        ConfigFlag::Preselect,
+        ConfigFlag::Premove,
+        ConfigFlag::DragAndDrop,
+        ConfigFlag::StackHeight,
+        ConfigFlag::ReserveCounts,
+    ];
+
+    #[test]
+    fn setting_a_flag_changes_only_that_flag() {
+        for flag in ALL_FLAGS {
+            let mut config = ConfigOpts::default();
+            flag.set(&mut config, true);
+            for other in ALL_FLAGS {
+                assert_eq!(other.get(&config), other == flag, "{flag:?} vs {other:?}");
+            }
+            flag.set(&mut config, false);
+            assert_eq!(config, ConfigOpts::default());
+        }
     }
 }
