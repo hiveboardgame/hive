@@ -417,9 +417,12 @@ Run the whole window inside tmux: a dropped SSH session kills a foreground `depl
 ## tmux
 
 `scripts/tmux-session.sh` creates (or attaches to) session `hive`: `hive` (slot logs),
-`hydra`, `busybee`, `psql`, `shell`. A crashed window drops to a shell showing the error.
+`hydra`, `busybee`, `psql`, `puzzle-bot`, `shell`. Commands run in the account's interactive
+login shell so cron startup loads the usual PATH. A crashed window drops to a login shell
+showing the error. The `psql` window waits up to 60 seconds for PostgreSQL before connecting.
 Needs `~/.config/hive-hydra/env` and `~/.config/busybee/env` (both 0600; DISCORD_*, BUSYBEE_*),
-`busybee/venv`, the `hive` libpq service, and `drone` in group `systemd-journal`.
+`busybee/venv`, `~/puzzle-bot` with its configured environment and `uv` on PATH, the `hive`
+libpq service, and `drone` in group `systemd-journal`.
 For a session after every reboot: `@reboot /home/drone/hive/scripts/tmux-session.sh` in
 drone's crontab.
 
