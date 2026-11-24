@@ -34,6 +34,8 @@ pub mod pagination_controls;
 pub mod panel;
 pub mod ping;
 pub mod play_history_button;
+pub mod profile_about;
+pub mod profile_flag;
 pub mod rating_and_change;
 pub mod rl_banner;
 pub mod schedule_notification;

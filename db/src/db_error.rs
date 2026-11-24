@@ -26,6 +26,8 @@ pub enum DbError {
     ChatClientIdConflict,
     #[error("You have been muted by an admin")]
     ChatMuted,
+    #[error("Profile bio editing is restricted")]
+    ProfileBioRestricted,
     #[error("Invalid input")]
     InvalidInput { info: String, error: String },
     #[error("Invalid username: {0}")]

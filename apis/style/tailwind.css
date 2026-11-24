@@ -48,6 +48,21 @@ html[data-display-mode="standalone"] {
   }
 }
 
+/* Keep Unicode flags readable on systems without country-flag glyphs. */
+@font-face {
+  font-family: "Profile Flags";
+  src: url("/assets/fonts/profile-flags.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+1F1E6-1F1FF;
+}
+
+.profile-flag-emoji {
+  font-family: "Profile Flags", "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+  font-weight: 400;
+}
+
 /* Theme tokens (pure CSS Tailwind v4) */
 @theme {
   /* Custom breakpoint */

@@ -1,3 +1,5 @@
+pub mod player_profile;
+
 use crate::{responses::UserResponse, security::csrf::CsrfClient};
 use leptos::prelude::*;
 use server_fn::codec;
