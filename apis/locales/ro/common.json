@@ -98,6 +98,7 @@
     "date_time": "{{day}}.{{month}}.{{year}}, {{time}}",
     "join": "Participă",
     "custom": "Personalizat",
+    "play_bot": "Cu un bot",
     "player": "Jucător",
     "white": "Alb",
     "black": "Negru",

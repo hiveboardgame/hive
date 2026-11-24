@@ -702,7 +702,16 @@
             "seed_descending": "Cabeça de série ↓",
             "matches_won": "Encontros ganhos",
             "game_points": "Pontos de partida",
-            "match_points": "Pontos de confronto"
+            "match_points": "Pontos de confronto",
+            "direct_encounter": "Confronto direto",
+            "wins_as_black": "Vitórias com pretas",
+            "sonneborn_berger": "Sonneborn-Berger",
+            "buchholz": "Buchholz",
+            "progressive": "Pontuação progressiva",
+            "koya": "Koya",
+            "score_wins": "Vitórias por pontuação",
+            "games_won": "Partidas ganhas",
+            "round_wins": "Rondas ganhas"
         },
         "label": "Desempates",
         "equal_scores": "Pontuações iguais partilham a posição.",
@@ -729,7 +738,9 @@
         "cut_both": ", excluindo as {{low}} pontuações mais baixas e as {{high}} mais altas",
         "sonneborn_berger": "Pondera os teus resultados pelas pontuações dos adversários{{cut}}.",
         "buchholz": "Soma as pontuações dos adversários{{cut}}.",
-        "koya_threshold": "Pontos contra adversários que obtiveram pelo menos {{numerator}}/{{denominator}} dos pontos disponíveis."
+        "koya_threshold": "Pontos contra adversários que obtiveram pelo menos {{numerator}}/{{denominator}} dos pontos disponíveis.",
+        "game_points": "Pontos que contam cada partida individual",
+        "match_points": "Pontos que contam cada encontro como um único resultado"
     },
     "admission": {
         "invited": "Convidado",

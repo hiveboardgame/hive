@@ -702,7 +702,16 @@
             "seed_descending": "Favorit ↓",
             "matches_won": "Meciuri câștigate",
             "game_points": "Puncte pe partidă",
-            "match_points": "Puncte pe meci"
+            "match_points": "Puncte pe meci",
+            "direct_encounter": "Întâlnire directă",
+            "wins_as_black": "Victorii cu Negru",
+            "sonneborn_berger": "Sonneborn-Berger",
+            "buchholz": "Buchholz",
+            "progressive": "Punctaj progresiv",
+            "koya": "Koya",
+            "score_wins": "Victorii după punctaj",
+            "games_won": "Partide câștigate",
+            "round_wins": "Runde câștigate"
         },
         "label": "Departajări",
         "equal_scores": "Punctajele egale împart un loc.",
@@ -729,7 +738,9 @@
         "cut_both": ", excluzând cele mai mici {{low}} punctaje și cele mai mari {{high}}",
         "sonneborn_berger": "Ponderează rezultatele tale cu punctajele adversarilor{{cut}}.",
         "buchholz": "Adună punctajele adversarilor{{cut}}.",
-        "koya_threshold": "Puncte contra adversarilor care au obținut cel puțin {{numerator}}/{{denominator}} din punctele disponibile."
+        "koya_threshold": "Puncte contra adversarilor care au obținut cel puțin {{numerator}}/{{denominator}} din punctele disponibile.",
+        "game_points": "Puncte care iau în calcul fiecare partidă individuală",
+        "match_points": "Puncte care tratează fiecare meci ca pe un singur rezultat"
     },
     "admission": {
         "invited": "Invitat",

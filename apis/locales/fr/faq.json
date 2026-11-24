@@ -2,18 +2,19 @@
     "title": "Foire Aux Questions",
     "sections": {
         "getting_started": "Premiers pas",
-        "game_settings": "Paramètres du jeu",
-        "account_configuration": "Configuration du compte",
-        "more_features": "Plus de fonctionnalités",
-        "community_support": "Communauté & Support",
-        "donating": "Faire un don à Hivegame.com"
+        "game_settings": "Jouer et paramètres des parties",
+        "account_configuration": "Compte et notifications",
+        "more_features": "Apprendre et s’entraîner",
+        "community_support": "Communauté et assistance",
+        "donating": "Soutenir Hivegame.com",
+        "ratings": "Cotes et classements"
     },
     "how_to_help": {
         "question": "Comment puis-je soutenir le site ?",
         "answers": {
             "item1": "Faites passer le mot pour amener plus de joueurs ici !",
             "item2": "Contribuez au développement du site web, aux améliorations, aux corrections de bugs ou à la maintenance via <github_link>GitHub</github_link>",
-            "item3": "Dons monétaires - voir la section Faire un don à Hivegame.com dans la FAQ"
+            "item3": "Dons financiers : consultez la <donate_link>page Faire un don</donate_link>"
         }
     },
     "how_to_get_crown": {
@@ -26,19 +27,19 @@
     },
     "hive_rules": {
         "question": "Quelles sont les règles de Hive ?",
-        "answer": "Chaque joueur place ou déplace alternativement des tuiles dans le but d'encercler la reine abeille de l'adversaire. Les règles complètes sont <rules_link>ici en format PDF</rules_link> ou si vous préférez une vidéo, vous pouvez regarder une <video_link>courte vidéo YouTube ici</video_link>."
+        "answer": "Les joueurs placent ou déplacent des tuiles à tour de rôle dans le but d’entourer la reine adverse.\nVous pouvez apprendre à jouer avec les <rules_link>règles en PDF</rules_link> ou une <video_link>courte vidéo YouTube</video_link>. Un tutoriel interactif est prévu !"
     },
     "expansions_supported": {
         "question": "Quelles extensions sont supportées ?",
         "answer": "Toutes les trois officielles : Moustique : Copie les capacités des insectes adjacents. Coccinelle : Se déplace exactement de 2 pas sur la ruche, 1 pas vers le bas. Cloporte : Lance les pièces adjacentes une fois par tour."
     },
     "resign_ok": {
-        "question": "Est-il acceptable d'abandonner un jeu que je suis sûr de perdre ?",
+        "question": "Puis-je abandonner une partie ?",
         "answer": "Oui. Tout comme aux échecs, il est parfaitement acceptable de concéder une partie sans la jouer jusqu'à la conclusion sur le plateau si vous pensez que vous n'avez aucune chance de victoire."
     },
     "signup_required": {
         "question": "Puis-je jouer sans m'inscrire ?",
-        "answer": "Non. Mais créer un compte est gratuit et simple."
+        "answer": "Non. Mais <register_link>créer un compte</register_link> est gratuit et simple."
     },
     "mobile_friendly": {
         "question": "Est-ce compatible avec les mobiles ?",
@@ -46,50 +47,42 @@
     },
     "mobile_app": {
         "question": "Y a-t-il une application mobile ?",
-        "answer": "Pas encore. Hivegame.com est disponible comme application web progressive. Ajoutez-la simplement à l'écran d'accueil de votre mobile pour une expérience similaire à une application."
+        "answer": "Pas encore, mais Hivegame.com est disponible sous forme d’application web progressive. Cherchez « Ajouter à l’écran d’accueil » dans les paramètres de votre navigateur pour une expérience similaire à celle d’une application."
     },
     "profile_navigation": {
-        "question": "Comment naviguer vers ma Page de Profil ?",
-        "answer": "Quand vous êtes connecté, cliquez sur votre nom d'utilisateur en haut à droite de l'écran pour aller à la Page de Profil."
-    },
-    "game_types": {
-        "question": "Les jeux sont-ils par correspondance ou en temps réel ?",
-        "answer": "Hivegame.com supporte les deux. Vous pouvez jouer un match en direct ou revenir à votre onglet des heures plus tard, selon les paramètres de temps utilisés lors de la configuration d'un jeu."
+        "question": "Où se trouve ma page de profil ?",
+        "answer": "Une fois connecté, cliquez sur votre nom d’utilisateur en haut à droite de l’écran pour accéder à votre <profile_link>page de profil</profile_link>."
     },
     "start_game": {
         "question": "Comment commencer un jeu ?",
-        "answer": "Sur la page d'accueil, cliquez sur l'un des six paramètres de Contrôle du Temps pour commencer un jeu ou le bouton 'personnalisé' pour choisir différents paramètres."
+        "answer": "Sur la <home_link>page d’accueil</home_link>, cliquez sur l’une des cadences proposées pour lancer une partie, ou sur le bouton « <button_label>$t(common:custom)</button_label> » pour choisir d’autres paramètres."
     },
     "time_controls": {
-        "question": "Que signifient les paramètres de Contrôle du Temps sur la page d'accueil ?",
-        "answer": "Les paramètres de contrôle du temps dictent la vitesse du jeu. Pour illustrer, 3+3 signifie que quand le jeu commence, chaque personne a un total de 3 minutes. Quand c'est son tour, le temps commence à décompter. Quand un tour est terminé, 3 secondes sont ajoutées au temps disponible à la fin du tour. Tous les autres formats de temps fonctionnent de manière similaire."
+        "question": "Que signifie une cadence comme 3+3 ? J’en vois plusieurs sur la page d’accueil",
+        "answer": "Dans une partie en temps réel, 3+3 donne à chaque joueur 3 minutes au départ, puis ajoute 3 secondes après chaque coup joué. Votre temps s’écoule lorsque c’est à vous de jouer.\n\nLes autres cadences avec temps initial et incrément utilisent la même notation. Les parties par correspondance utilisent d’autres paramètres, comme un nombre de jours par coup ou un temps total pour chaque joueur."
     },
     "realtime_vs_correspondence": {
-        "question": "Quelle est la différence entre les jeux en Temps Réel, par Correspondance et Sans Temps ?",
+        "question": "Quelle est la différence entre les parties en temps réel, par correspondance et sans limite de temps ?",
         "answer": "Les jeux en temps réel doivent être terminés dans les paramètres de temps choisis, nécessitant donc typiquement que les deux joueurs soient en ligne simultanément. Les jeux par correspondance s'étendent généralement sur plusieurs jours ou avec au moins 1 coup tous les x jours. Si vous ne jouez pas votre coup dans les temps, vous perdrez le jeu. Les jeux sans temps sont auto-explicatifs."
     },
     "casual_vs_rated": {
-        "question": "Quelle est la différence entre les jeux Casual et Classés ?",
-        "answer": "Vous pouvez choisir que votre jeu soit classé (système Glicko-2) et ainsi obtenir une estimation de votre compétence et suivre la progression dans le temps. Les nouveaux commencent avec un classement de 1500. En général, gagner augmente votre classement, perdre un jeu le diminue. Un classement plus élevé implique une compétence plus élevée. Gagner des jeux contre des adversaires beaucoup moins bien classés n'augmente pas votre classement matériellement. Mais gagner des jeux contre un adversaire mieux classé peut augmenter votre classement significativement. Gagner ou perdre des jeux Casual n'a aucun effet sur votre classement. Rappel : Les jeux classés ne sont disponibles que si les trois extensions sont utilisées (format MLP)."
+        "question": "Quelle est la différence entre les parties libres et évaluées ?",
+        "answer": "Les parties libres n’affectent pas votre cote. Les parties évaluées mettent votre cote à jour selon le résultat et permettent de suivre votre niveau au fil du temps. Elles ne sont disponibles qu’avec les trois extensions (jeu complet)."
     },
     "why_elo_has_questionmark": {
-        "question": "Pourquoi y a-t-il un ? à côté de mon classement ?",
-        "answer": "Un ? à côté de votre classement indique que votre classement est provisoire, c'est-à-dire que vous devriez vous attendre à une volatilité plus élevée des classements jusqu'à ce que vous ayez joué un nombre statistiquement significatif de jeux pour que le système détermine votre classement avec une précision plus élevée."
-    },
-    "base_vs_mlp": {
-        "question": "Quelle est la différence entre le format Base et MLP ?",
-        "answer": "MLP est la configuration compétitive par défaut et utilise les pièces Moustique, Coccinelle et Cloporte (aka MLP). Le jeu de base n'a pas ces 3 insectes."
+        "question": "Que signifient ? et ~ à côté de ma cote ?",
+        "answer": "Un ? signifie que le système est encore très incertain de votre cote. Un ~ signifie que votre cote est provisoire : elle devient plus fiable, mais le système a encore besoin de résultats.\n\nCes symboles reflètent le degré de certitude de l’estimation, pas un nombre fixe de parties. Les cotes sans ces symboles sont suffisamment établies pour figurer au classement."
     },
     "private_vs_public": {
-        "question": "Quelle est la différence entre privé et public ?",
-        "answer": "Un jeu public est disponible sur la page d'accueil pour que n'importe quel autre joueur puisse se joindre. Un jeu privé vous fournit un lien que vous pouvez envoyer à un autre joueur."
+        "question": "Quelle est la différence entre les parties publiques et privées ?",
+        "answer": "Une partie publique est disponible sur la <home_link>page d’accueil</home_link> et n’importe quel autre joueur peut la rejoindre. Une partie privée vous fournit un lien que vous pouvez envoyer à un autre joueur."
     },
     "rating_range": {
-        "question": "Qu'est-ce que la plage de classement ?",
+        "question": "Comment fonctionne la plage de cote ?",
         "answer": "Ce paramètre permet seulement aux adversaires dans une variation de plage spécifique de votre classement d'accepter le match. Cela assure que vous puissiez choisir des adversaires qui sont aussi proches (ou pas !) de votre classement selon votre préférence."
     },
     "color_selection": {
-        "question": "Qu'est-ce que l'hexagone Blanc, Aléatoire, Noir ?",
+        "question": "Comment choisir Blanc, Noir ou Aléatoire ?",
         "answer": "Quand vous configurez un jeu, vous choisissez si vous voulez commencer comme Blanc, Noir, ou comme déterminé aléatoirement par le système."
     },
     "how_to_check_stack": {
@@ -98,35 +91,31 @@
     },
     "spectate_games": {
         "question": "Puis-je regarder des jeux ?",
-        "answer": "Oui ! Les jeux en temps réel en cours sont visibles sur la page d'accueil. Cliquez sur n'importe lequel pour regarder."
+        "answer": "Oui ! Les parties en temps réel en cours sont visibles sur la <home_link>page d’accueil</home_link>. Cliquez sur une partie pour la regarder."
     },
     "turn_alerts": {
-        "question": "Vais-je recevoir une alerte quand c'est mon tour (pour les jeux par tours) ?",
-        "answer": "Oui, vous verrez une icône de message rouge en haut de la page avec un numéro indiquant combien de jeux vous avez en cours. Alternativement, naviguez vers votre Page de Profil et vous pouvez filtrer par jeux actuellement En Cours, Tournois Non Commencés et jeux Terminés."
-    },
-    "correspondence_notifications": {
-        "question": "Puis-je être notifié quand c'est mon tour de jouer dans un jeu par correspondance ?",
-        "answer": "Vous pouvez les recevoir par notifications push du navigateur ou par Discord depuis la page des notifications. Pour Discord, rejoignez notre serveur et liez-y votre compte Discord."
+        "question": "Comment savoir quand c’est à moi de jouer ?",
+        "answer": "Les parties qui attendent votre coup apparaissent sous forme de symboles rouges dans la barre du haut, avec leur nombre. Cliquez sur un symbole pour ouvrir une partie. Vous pouvez aussi consulter votre <profile_link>page de profil</profile_link> pour voir vos parties en cours. Pour les parties par correspondance, vous pouvez activer les notifications push du navigateur ou celles de Discord sur la <notifications_link>page Notifications</notifications_link>. Pour Discord, rejoignez notre serveur et associez-y votre compte Discord."
     },
     "chat_basics": {
         "question": "Comment fonctionne le chat ?",
-        "answer": "Les messages de chat sont enregistrés dans la base de données. Le chat est disponible pour les messages directs, les tournois et les parties, tandis que les fils des joueurs et des spectateurs restent séparés. La page Messages regroupe vos conversations récentes et vos messages non lus."
+        "answer": "Vous pouvez discuter dans les parties et les tournois, ou envoyer des <message_icon>messages directs</message_icon> à d’autres joueurs. Les joueurs et les spectateurs ont des chats de partie distincts. Ouvrez <messages_link>$t(common:messages)</messages_link> pour retrouver vos conversations et vos messages non lus."
     },
     "tournament_entry": {
-        "question": "N'importe qui peut-il rejoindre un tournoi ? Y a-t-il des frais d'entrée ? Qu'en est-il des prix ?",
+        "question": "Qui peut participer à un tournoi ? Y a-t-il des frais ou des prix ?",
         "answer": "Oui, vous pouvez rejoindre un tournoi même si vous êtes débutant. Cependant, certains tournois peuvent être restreints par classement ou pourraient être sur invitation seulement selon la décision de l'organisateur du tournoi. Au moment de l'écriture, il n'y a pas de frais d'entrée et pas de prix (à part les droits de vantardise et les augmentations de points de classement !)"
     },
     "tournament_duration": {
-        "question": "Quelle est la durée d'un tournoi ? Combien de jeux ? Comment coordonner les horaires ?",
-        "answer": "La page du tournoi devrait typiquement esquisser tous ces détails. Si vous avez des questions, contactez l'organisateur du tournoi. Actuellement, seuls les tournois Round-Robin sont disponibles, mais plus de formats seront ajoutés bientôt."
+        "question": "Combien de temps durent les tournois et comment les parties sont-elles programmées ?",
+        "answer": "La durée, le nombre de parties et leur programmation dépendent du format et des paramètres du tournoi. Parcourez les <tournaments_link>tournois</tournaments_link> et ouvrez la page du tournoi, ou contactez l’organisateur pour plus de détails. Hivegame.com propose des tournois toutes rondes, suisses, à élimination et $t(tournaments:format.arena)."
     },
     "tournament_stats": {
-        "question": "Dans un tableau de résultats de tournoi, qu'est-ce que H2H, WB, SB, Terminé ?",
-        "answer": "H2H - Record Face à Face, qui est le premier critère de départage. WB - Victoire en tant que Noir, qui est le deuxième critère de départage. SB - Score Sonnebron-Berger, qui est le troisième critère de départage. Terminé - nombre de jeux terminés."
+        "question": "Comment sont établis les classements et les départages des tournois ?",
+        "answer": "Les joueurs sont classés selon le système de points du tournoi. En cas d’égalité, les critères de départage sélectionnés s’appliquent dans l’ordre indiqué dans les détails du tournoi. Les critères disponibles dépendent du format et des paramètres ; les règles peuvent donc varier d’un tournoi à l’autre.\n\nOuvrez les détails d’un tournoi depuis la <tournaments_link>liste des tournois</tournaments_link> pour voir son système de points et l’ordre des critères de départage."
     },
     "tournament_games": {
-        "question": "Où voir mes jeux en cours / pas encore commencés ?",
-        "answer": "Naviguez vers votre page de profil et vous verrez des filtres pour vos jeux actuellement En Cours et Jeux de Tournoi Non Commencés."
+        "question": "Où trouver mes parties en cours, en attente et terminées ?",
+        "answer": "Ouvrez votre <profile_link>page de profil</profile_link> pour voir vos parties dans les onglets « En jeu », « En attente » et « Terminé »."
     },
     "change_password": {
         "question": "Comment changer mon mot de passe ?",
@@ -134,51 +123,51 @@
     },
     "move_confirmation": {
         "question": "Que signifient les différents modes de Confirmation de Coup ?",
-        "answer": "En faisant un coup il y a 3 modes : 1. Simple clic - Le rapide : si vous ne voulez pas perdre de temps dans les jeux rapides. Attention à ne pas mal placer ou mal bouger la pièce car un simple clic fait et confirme immédiatement le coup. 2. Double clic - Le par défaut : le premier clic pour placer/bouger la pièce et le second clic confirme le coup. 3. Confirmation d'horloge - Le sécurisé : premier clic pour placer/bouger et ensuite pour confirmer le coup, vous cliquez sur votre propre minuteur. Les modes double clic ou confirmation d'horloge sont recommandés."
+        "answer": "Clic simple : placer ou déplacer une tuile confirme immédiatement le coup. C’est l’option la plus rapide, mais attention aux coups accidentels.\n\nDouble clic : cliquez une fois pour placer ou déplacer une tuile, puis une seconde fois pour confirmer. C’est l’option par défaut.\n\nConfirmation à l’horloge : placez ou déplacez une tuile, puis cliquez sur votre propre horloge pour confirmer.\n\nLes modes Double clic ou Confirmation à l’horloge sont recommandés. Vous pouvez choisir votre mode dans les <settings_link>paramètres de jeu</settings_link>."
     },
     "game_analysis": {
         "question": "Puis-je revoir les jeux terminés avec un outil d'analyse ?",
-        "answer": "Oui, les jeux terminés ont une icône de microscope qui chargera le jeu en mode analyse mais cette fonctionnalité est actuellement en développement, donc n'en attendez pas trop encore."
+        "answer": "Oui. Sélectionnez l’<microscope_icon>icône du microscope</microscope_icon> sur une partie terminée pour ouvrir l’<analysis_link>outil d’analyse</analysis_link>, revoir les coups et explorer d’autres variantes. Vous pouvez aussi ouvrir directement <analysis_link>$t(header:learn.analysis)</analysis_link> pour partir d’un plateau vide et analyser librement vos propres coups."
     },
     "play_bots": {
         "question": "Puis-je jouer contre un bot ?",
-        "answer": "Oui, cliquez sur le bouton 'Jouer Bot' sur la page d'accueil et sélectionnez le bot contre lequel vous voulez jouer. Un jeu sans temps commencera immédiatement."
+        "answer": "Oui, cliquez sur le bouton « <button_label>$t(common:play_bot)</button_label> » sur la <home_link>page d’accueil</home_link> et choisissez le bot que vous souhaitez affronter. Une partie sans limite de temps commence immédiatement. Vous trouverez aussi d’autres bots proposant des parties évaluées dans l’onglet Bots de la page d’accueil."
     },
     "get_better": {
         "question": "Comment m'améliorer à Hive ?",
         "answer": "Consultez la <resources_link>Section Ressources</resources_link> du site pour une liste curatée de ressources pour commencer."
     },
     "community_forum": {
-        "question": "Y a-t-il un forum communautaire ?",
-        "answer": "Oui ! Rejoignez le serveur Discord de la Communauté Mondiale Hive <discord_link>ici</discord_link> - plein de joueurs amicaux et de discussions stratégiques."
+        "question": "Où trouver la communauté Hive et ses réseaux sociaux ?",
+        "answer": "Rejoignez le serveur Discord World Hive Community <discord_link>ici</discord_link> pour rencontrer d’autres joueurs et discuter de Hive. Consultez notre <resources_link>page Ressources / Liens communautaires</resources_link> pour trouver les réseaux sociaux de la communauté, des vidéos, des livres, des outils et d’autres sites utiles sur Hive."
     },
     "play_specific_players": {
-        "question": "Puis-je jouer avec des joueurs spécifiques seulement ?",
-        "answer": "Bien sûr ! Vous pouvez utiliser l'icône d'épées croisées à côté du nom d'un joueur pour le défier directement. Alternativement, créez un jeu privé (cliquez sur le bouton 'Personnalisé' sur la page d'accueil) et partagez le lien en privé. Seul un joueur avec le lien peut se joindre."
+        "question": "Comment jouer avec un ami ou défier un joueur précis ?",
+        "answer": "Pour jouer avec un ami, créez une partie privée avec le bouton « <button_label>$t(common:custom)</button_label> » sur la <home_link>page d’accueil</home_link> et partagez le lien avec lui. Seul un joueur disposant du lien peut la rejoindre.\n\nVous pouvez aussi défier directement un joueur précis avec l’icône des épées croisées à côté de son nom."
     },
     "report_bugs": {
         "question": "Où puis-je signaler des bugs ou suggérer de nouvelles fonctionnalités ?",
-        "answer": "Rejoignez le serveur Discord Hivegame.com <discord_link>ici</discord_link> et vous pouvez envoyer des messages aux développeurs en utilisant les canaux correspondants."
+        "answer": "Rejoignez le serveur Discord de Hivegame.com <discord_link>ici</discord_link> et contactez les développeurs dans les canaux prévus. Vous pouvez aussi <issues_link>signaler un bug sur GitHub</issues_link> si vous préférez."
     },
     "opponent_is_abusive": {
-        "question": "Que puis-je faire si mon adversaire est abusif ou perturbateur dans le jeu/chat ou a un nom d'utilisateur inapproprié ?",
-        "answer": "Faites une capture d'écran du comportement et contactez-nous via Discord @klautcomputing / @ionoi et nous le résoudrons."
+        "question": "Si mon adversaire est insultant ou perturbateur en partie/dans le chat, ou a un nom d’utilisateur inapproprié, que puis-je faire ? Puis-je le signaler ou le bloquer ?",
+        "answer": "Si vous le souhaitez, ouvrez sa page de profil et bloquez-le avec le bouton rouge Bloquer. Il ne pourra plus vous envoyer de messages directs, et ses messages dans les chats des parties et des tournois seront masqués par défaut. Faites ensuite une capture d’écran du comportement et contactez-nous sur Discord @klautcomputing / @ionoi ; nous nous en occuperons."
     },
     "why_not_in_top_players": {
-        "question": "Pourquoi n'apparais-je pas dans les meilleurs joueurs classés ?",
-        "answer": "Vous n'avez pas encore joué assez de jeux pour que le système soit vraiment sûr de la précision de votre classement. Continuez juste à jouer quelques jeux de plus, gagnez-les avec un peu de chance et vous apparaîtrez."
+        "question": "Pourquoi est-ce que je n’apparais pas au classement ?",
+        "answer": "Pour figurer au classement, votre cote doit être suffisamment établie dans la catégorie de cadence concernée. Cela dépend du degré de certitude de la cote, pas d’un nombre fixe de victoires.\n\nUne fois ce critère rempli, votre position dépend de votre cote par rapport à celles des autres joueurs admissibles. Consultez les <leaderboard_link>classements</leaderboard_link> de chaque cadence."
     },
     "can_i_play_base_game": {
         "question": "Puis-je jouer sans extensions ?",
-        "answer": "Oui. Vous pouvez basculer si les extensions sont utilisées lors de la création d'un jeu, et jouer sans extensions est bon pour les débutants ! Les jeux classés ne sont disponibles que si les extensions sont utilisées, car c'est le format compétitif officiel."
+        "answer": "Oui. Quand vous créez une partie, vous pouvez choisir de jouer sans extensions (jeu de base) ou avec les trois extensions (jeu complet ou $t(analysis:base_mlp)).\n\nLe jeu de base convient aux débutants, mais les parties évaluées ne sont disponibles qu’avec le jeu complet, qui est le format officiel de compétition."
     },
     "how_to_recover_password": {
         "question": "J'ai oublié mon mot de passe ! Que faire maintenant ?",
-        "answer": "Envoyez un mail à leex@klautcomputing.de depuis la même adresse email que vous utilisez sur Hivegame.com en demandant une réinitialisation de mot de passe."
+        "answer": "Sélectionnez <reset_link>$t(common:auth.forgot_your_password)</reset_link> sur la <login_link>page de connexion</login_link>, saisissez l’adresse e-mail associée à votre compte et suivez le lien de réinitialisation reçu par e-mail."
     },
     "can_i_set_up_a_tournament": {
         "question": "Puis-je créer mon propre tournoi ?",
-        "answer": "Oui ! Cliquez simplement sur Créer un Tournoi et le reste devrait être auto-explicatif."
+        "answer": "Oui ! Cliquez sur <create_link>$t(tournaments:creation.title)</create_link> pour choisir le format et les paramètres de votre tournoi."
     },
     "donation_amount": {
         "question": "Quel est le montant de don recommandé ?",
@@ -187,5 +176,53 @@
     "how_donate": {
         "question": "Comment faire un don ?",
         "answer": "Cliquez sur Faire un Don dans la barre de navigation ou <donate_link>utilisez ce lien</donate_link>"
+    },
+    "subtitle": "De l’aide pour jouer, comprendre les classements, les tournois et gérer votre compte.",
+    "search": {
+        "label": "Rechercher dans la foire aux questions",
+        "placeholder": "De quoi avez-vous besoin ?",
+        "no_results": "Aucune question correspondante. Essayez un autre mot-clé.",
+        "results": "Questions trouvées : {{count}}"
+    },
+    "rating_system": {
+        "question": "Comment fonctionne ma cote ? Est-ce le système Elo ?",
+        "answer": "Hivegame.com utilise Glicko-2 pour estimer votre niveau de jeu. Certaines parties du site appellent votre cote « Elo », mais le calcul utilise Glicko-2. Les nouvelles cotes commencent à 1500.\n\nAprès une partie évaluée, votre cote évolue en fonction du résultat, du niveau de votre adversaire et du degré de certitude du système concernant vos deux cotes. Une cote plus élevée indique un niveau estimé plus élevé. Gagner contre un adversaire plus fort rapporte généralement plus de points que gagner contre un adversaire plus faible. Perdre fait généralement baisser votre cote.\n\nL’ampleur des variations peut changer à mesure que le système dispose de davantage d’informations sur chaque joueur. Les parties libres n’affectent pas votre cote."
+    },
+    "different_ratings": {
+        "question": "Pourquoi ai-je plusieurs cotes ?",
+        "answer": "Hivegame.com maintient une cote distincte pour chaque cadence de jeu : $t(game:speeds.bullet), $t(game:speeds.blitz), $t(game:speeds.rapid), $t(game:speeds.classic) et $t(game:speeds.correspondence). Votre cote dans chaque catégorie reflète vos résultats en parties évaluées à cette cadence ; un résultat dans une catégorie ne modifie donc pas vos cotes dans les autres."
+    },
+    "tournament_terms": {
+        "question": "Que signifient les termes des classements de tournois ?",
+        "answer": "Les règles exactes de calcul des points et de départage dépendent du format et des paramètres du tournoi. Voici des termes courants que vous pourriez rencontrer ; tous les tournois ne les utilisent pas tous.",
+        "cut_name": "Variantes avec exclusion de scores",
+        "cut_answer": "Excluent certains des scores les plus bas et/ou les plus élevés des adversaires. Les détails du tournoi précisent la variante utilisée.",
+        "koya_answer": "Points obtenus contre les adversaires qui atteignent le seuil de points fixé par le règlement du tournoi."
+    },
+    "game_controls": {
+        "question": "Puis-je proposer une nulle, abandonner ou demander à reprendre un coup ?",
+        "answer": "Oui. Utilisez les commandes pendant une partie lorsqu’elles sont disponibles. Cliquez une fois sur une commande, puis une seconde fois pour confirmer.",
+        "draw": "Proposez une nulle avec le symbole de poignée de main. Votre adversaire peut accepter ou refuser ; la partie ne se termine par une nulle que s’il accepte.",
+        "resign": "Abandonnez avec le symbole du drapeau. Vous concédez ainsi la victoire à votre adversaire, sans qu’il ait à accepter.",
+        "takeback": "Demandez à reprendre un coup avec la flèche d’annulation. Votre adversaire peut accepter ou refuser. Cette option dépend de la partie et des paramètres des joueurs ; elle n’est pas disponible dans les parties de tournoi."
+    },
+    "notification_events": {
+        "question": "Pour quels événements est-ce que je reçois des notifications ?",
+        "answer": "La cloche en haut à droite devient rouge lorsque vous avez des notifications. Cliquez dessus pour voir des informations comme :",
+        "messages": "Nouveaux messages de chat",
+        "challenges": "Défis directs pour une partie",
+        "invitations": "Invitations à participer à un tournoi ou à aider à l’organiser",
+        "status": "Début ou fin de tournois",
+        "pairings": "Nouvelles parties de tournoi prêtes à être jouées",
+        "schedules": "Horaires de parties proposés ou acceptés",
+        "settings": "Vous pouvez gérer les notifications push du navigateur et celles de Discord sur la <notifications_link>page Notifications</notifications_link>."
+    },
+    "game_archive": {
+        "question": "Comment rechercher parmi les parties jouées sur Hivegame.com ?",
+        "answer": "Ouvrez les <archive_link>$t(header:learn.archive)</archive_link>, choisissez des filtres comme les joueurs, les dates ou la cadence, puis cliquez sur $t(archive:search)."
+    },
+    "opening_statistics": {
+        "question": "Où trouver des statistiques sur les ouvertures jouées sur Hivegame.com ?",
+        "answer": "Ouvrez <analysis_link>$t(header:learn.analysis)</analysis_link> et sélectionnez l’onglet Explorateur pour voir la fréquence des coups joués et leurs résultats. Jouez des coups pour explorer les statistiques de différentes positions d’ouverture."
     }
 }
